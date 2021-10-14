@@ -29,7 +29,7 @@ class DataLayerRpcApi:
         return {"id": value}
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        store_id = bytes32(bytes(request["id"]))
         key = Program.from_bytes(bytes(request["key"]))
         value = await self.service.data_store.get_node_by_key(key, tree_id=store_id)
         return {"data": value}
@@ -41,6 +41,6 @@ class DataLayerRpcApi:
         """
         changelist = request["changelist"]
 
-        tree_id = bytes32(bytes.fromhex(request["id"]))
+        store_id = bytes32(request["id"])
         # todo input checks
-        await self.service.insert(tree_id, changelist)
+        await self.service.insert(store_id, changelist)

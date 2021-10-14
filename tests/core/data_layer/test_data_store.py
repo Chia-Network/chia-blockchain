@@ -280,7 +280,7 @@ async def test_build_a_tree(
     tree_id: bytes32,
     adder: Callable[[DataStore, bytes32], Example],
 ) -> None:
-    example = await adder(data_store=data_store, tree_id=tree_id)
+    example = await adder(data_store=data_store, tree_id=tree_id)  # type: ignore
 
     await _debug_dump(db=data_store.db, description="final")
     actual = await data_store.get_tree_as_program(tree_id=tree_id)

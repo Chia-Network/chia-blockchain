@@ -11,9 +11,9 @@ def run(coro: Coroutine):
     response = asyncio.run(coro)
 
     success = response is not None and response.get("success", False)
-
-    if not success:
-        raise click.ClickException(message=f"query unsuccessful, response: {response}")
+    # todo make sure all cli methods follow this pattern, uncomment
+    # if not success:
+    #     raise click.ClickException(message=f"query unsuccessful, response: {response}")
 
 
 @click.group("data", short_help="Manage your data")
@@ -36,40 +36,28 @@ def create_changelist_option():
     )
 
 
-def create_row_data_option():
-    return click.option(
-        "-d",
-        "--row_data",
-        "row_data_string",
-        help="The hexadecimal row data.",
-        type=str,
-        required=True,
-    )
-
-
-def create_row_hash_option():
+def create_key_option():
     return click.option(
         "-h",
-        "--row_hash",
-        "row_hash_string",
-        help="The hexadecimal row hash.",
+        "--key",
+        "value key string",
+        help="The hexadecimal value id.",
         type=str,
         required=True,
     )
 
 
-def create_table_option():
+def create_kv_store_id_option():
     return click.option(
-        "-t",
-        "--table",
-        "table_string",
-        help="The hexadecimal table ID.",
+        "-store",
+        "-id",
+        help="The hexadecimal store id.",
         type=str,
         required=True,
     )
 
 
-def create_table_name_option():
+def create_kv_store_name_option():
     return click.option(
         "-n",
         "--table_name",
@@ -91,10 +79,10 @@ def create_rpc_port_option():
     )
 
 
-@data_cmd.command("create_table", short_help="Get a data row by its hash")
-@create_table_option()
+@data_cmd.command("create_kv_store", short_help="Get a data row by its hash")
+@create_kv_store_id_option()
 @create_rpc_port_option()
-def create_table(
+def create_kv_store(
     table_string: str,
     data_rpc_port: int,
 ) -> None:
@@ -103,11 +91,11 @@ def create_table(
     run(create_kv_store_cmd(rpc_port=data_rpc_port, table_string=table_string))
 
 
-@data_cmd.command("get_row", short_help="Get a data row by its hash")
-@create_row_hash_option()
-@create_table_option()
+@data_cmd.command("get_value", short_help="Get a data row by its hash")
+@create_key_option()
+@create_kv_store_id_option()
 @create_rpc_port_option()
-def get_row(
+def get_value(
     tree_id: str,
     key: str,
     data_rpc_port: int,
@@ -117,17 +105,17 @@ def get_row(
     run(get_value_cmd(rpc_port=data_rpc_port, tree_id=tree_id, key=key))
 
 
-@data_cmd.command("update_table", short_help="Update a table.")
-@create_table_option()
+@data_cmd.command("update_kv_store", short_help="Update a table.")
+@create_kv_store_id_option()
 @create_rpc_port_option()
 @create_changelist_option()
-def update_table(
+def update_kv_store(
     tree_id: str,
     changelist_string: str,
     data_rpc_port: int,
 ) -> None:
-    from chia.cmds.data_funcs import update_kv_store
+    from chia.cmds.data_funcs import update_kv_store_cmd
 
     changelist = json.loads(changelist_string)
 
-    run(update_kv_store(rpc_port=data_rpc_port, tree_id=tree_id, changelist=changelist))
+    run(update_kv_store_cmd(rpc_port=data_rpc_port, tree_id=tree_id, changelist=changelist))

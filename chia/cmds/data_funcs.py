@@ -63,7 +63,7 @@ async def get_value_cmd(rpc_port: Optional[int], tree_id: str, key: str) -> Opti
     return response
 
 
-async def update_kv_store(rpc_port: Optional[int], tree_id: str, changelist: Dict) -> Optional[Dict[str, Any]]:
+async def update_kv_store_cmd(rpc_port: Optional[int], tree_id: str, changelist: Dict) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
 
     tree_id_bytes = bytes32(hexstr_to_bytes(tree_id))

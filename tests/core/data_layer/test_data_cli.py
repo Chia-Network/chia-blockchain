@@ -16,6 +16,8 @@ from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_store import DataStore
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from tests.block_tools import create_block_tools_async
@@ -151,13 +153,12 @@ async def test_help(chia_root: ChiaRoot) -> None:
     assert "Show this message and exit" in completed_process.stdout
 
 
-# @pytest.mark.xfail(strict=True)
+@pytest.mark.xfail(strict=True)
 @pytest.mark.asyncio
 def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> None:
     """Create a table, insert a row, get the row by its hash."""
 
     with chia_root.print_log_after():
-        table = "0102030405060708091011121314151617181920212223242526272829303132"
         row_data = "ffff8353594d8083616263"
         row_hash = "1a6f915513173902a7216e7d9e4a16bfd088e20683f45de3b432ce72e9cc7aa8"
 
@@ -165,9 +166,13 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
 
         create = chia_root.run(args=["data", "create_table", "--table", "test table"])
         print(f"create {create}")
-        update = chia_root.run(args=["data", "update_table", "--table", table, "--changelist", json.dumps(changelist)])
+        # TODO get store id from cli response
+        store_id = "0102030405060708091011121314151617181920212223242526272829303132"
+        update = chia_root.run(
+            args=["data", "update_table", "--table", store_id, "--changelist", json.dumps(changelist)]
+        )
         print(f"update {update}")
-        completed_process = chia_root.run(args=["data", "get_row", "--table", table, "--row_hash", row_hash])
+        completed_process = chia_root.run(args=["data", "get_row", "--table", store_id, "--row_hash", row_hash])
         parsed = json.loads(completed_process.stdout)
         expected = {"row_data": row_data, "row_hash": row_hash, "success": True}
 
@@ -176,7 +181,7 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
 
 # todo tmp test
 @pytest.mark.asyncio
-@pytest.mark.skip("tmp test")
+# @pytest.mark.skip("tmp test")
 async def test_create() -> None:
     """Create a table, insert a row, get the row by its hash."""
     root = DEFAULT_ROOT_PATH
@@ -194,8 +199,9 @@ async def test_create() -> None:
     key = Program.to("abc")
     value = Program.to([1, 2])
     changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.as_bin(), "value": value.as_bin()}]
-    tree_id = await rpc_api.create_kv_store()
-    print(tree_id)
+    res = await rpc_api.create_kv_store()
+
+    tree_id = res["id"]
     await rpc_api.update_kv_store({"id": tree_id, "changelist": changelist})
     await rpc_api.get_value({"id": tree_id, "key": key.as_bin()})
     return
