@@ -124,6 +124,7 @@ if (!handleSquirrelEvent()) {
     let isClosing = false;
 
     const createWindow = async () => {
+      console.log('CREATING CONFIG');
       decidedToClose = false;
       mainWindow = new BrowserWindow({
         width: 1200,

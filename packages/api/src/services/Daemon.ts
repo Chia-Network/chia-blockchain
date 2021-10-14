@@ -27,12 +27,10 @@ export default class Daemon extends Service {
     });
   }
 
-  async isRunning(service: string): Promise<boolean> {
-    const { isRunning } = await this.command('is_running', {
+  isRunning(service: string) {
+    return this.command('is_running', {
       service,
     });
-
-    return isRunning;
   }
 
   exit() {

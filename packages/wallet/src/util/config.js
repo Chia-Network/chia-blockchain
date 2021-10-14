@@ -6,11 +6,12 @@ const lodash = require('lodash');
 
 // defaults used in case of error point to the localhost daemon & its certs
 let self_hostname = 'localhost';
-global.daemon_rpc_ws = `wss://${self_hostname}:55401`;
-global.cert_path = 'config/ssl/daemon/private_daemon.crt';
-global.key_path = 'config/ssl/daemon/private_daemon.key';
+// global.daemon_rpc_ws = `wss://${self_hostname}:55400`;
+// global.cert_path = 'config/ssl/daemon/private_daemon.crt';
+// global.key_path = 'config/ssl/daemon/private_daemon.key';
 
 function loadConfig(net) {
+  console.log('LOAD CONFIG', net);
   try {
     // check if CHIA_ROOT is set. it overrides 'net'
     const config_root_dir =

@@ -11,7 +11,6 @@ export default class Service extends EventEmitter {
   private _client: Client;
   private _destination: string;
   private _origin: string;
-  private _registered: boolean = false;
 
   constructor(name: string, client: Client, options: Options = {}) {
     super();
@@ -39,7 +38,7 @@ export default class Service extends EventEmitter {
   }
 
   get registered() {
-    return this._registered;
+    return this.client.isRegistered(this);
   }
 
   handleMessage = (message: Message) => {

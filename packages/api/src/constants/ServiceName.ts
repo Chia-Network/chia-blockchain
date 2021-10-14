@@ -6,6 +6,7 @@ enum ServiceName {
   SIMULATOR = 'chia_full_node_simulator',
   DAEMON = 'daemon',
   PLOTTER = 'chia plots create',
+  EVENTS = 'wallet_ui',
 }
 
 export default ServiceName;

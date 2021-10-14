@@ -26,6 +26,8 @@ export default class Client extends EventEmitter {
   }> = new Map();
 
   private services: Set<Service> = new Set();
+  private registered: Set<Service> = new Set();
+  private connectedPromise: Promise<void> | null = null;
 
   private daemon: Daemon;
 
@@ -60,13 +62,31 @@ export default class Client extends EventEmitter {
     return this.options.debug;
   }
 
-  addService(service: Service) {
-    this.services.add(service);
+  isRegistered(service: Service) {
+    return this.registered.has(service);
+  }
 
-    return this.daemon.registerService(service.destination);
+  addService(service: Service) {
+    if (!this.services.has(service)) {
+      this.services.add(service);
+
+      this.registerServices();
+    }
+  }
+
+  async removeService(service: Service) {
+    if (this.services.has(service)) {
+      this.services.delete(service);
+
+      await this.daemon.stopService(service.destination);
+    }
   }
 
   async connect() {
+    if (this.connectedPromise) {
+      return this.connectedPromise;
+    }
+
     const { url, key, cert, WebSocket } = this.options;
 
     const ws = new WebSocket(url, {
@@ -75,23 +95,73 @@ export default class Client extends EventEmitter {
       rejectUnauthorized: false,
     });
 
+    this.connectedPromise = new Promise((resolve, reject) => {
+      let fullfiled = false;
+
+      ws.once('open', () => {
+        if (fullfiled) {
+          return;
+        }
+
+        fullfiled = true;
+
+        resolve();
+      });
+
+      ws.once('error', (error) => {
+        if (fullfiled) {
+          return;
+        }
+
+        fullfiled = true;
+
+        reject(error);
+      });
+    });
+
     ws.on('open', this.handleOpen);
     ws.on('close', this.handleClose);
     ws.on('error', this.handleError);
     ws.on('message', this.handleMessage);
 
     this.ws = ws;
+
+    return this.connectedPromise;
+  }
+
+  private async registerServices() {
+    if (!this.connected) {
+      return;
+    }
+
+    this.services.forEach((service) => {
+      if (!this.registered.has(service)) {
+        console.log('registering', service.destination, service);
+        this.daemon.registerService(service.destination);
+        
+        this.registered.add(service);
+      }
+    });
   }
 
   private handleOpen = () => {
     this.connected = true;
+
+    this.registered.clear();
+    this.registerServices();
   }
 
   private handleClose = () => {
     this.connected = false;
+    this.connectedPromise = null;
+
+    this.requests.forEach((request) => {
+      request.reject(new Error(`Connection closed`));
+    });
   }
 
   private handleError = (error: any) => {
+    console.log('api ws error', error);
     this.emit('error', error);
   }
 
@@ -140,6 +210,8 @@ export default class Client extends EventEmitter {
 
       this.requests.set(requestId, { resolve, reject });
       this.ws.send(message.toJSON(camelCase));
+
+      console.log('SENDING MESSAGE API', message.toJSON(camelCase));
 
       if (timeout) {
         setTimeout(() => {

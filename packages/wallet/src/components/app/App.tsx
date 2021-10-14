@@ -6,6 +6,8 @@ import isElectron from 'is-electron';
 import { createGlobalStyle } from 'styled-components';
 import { ConnectedRouter } from 'connected-react-router';
 import { ThemeProvider } from '@chia/core';
+import Client, { FullNode, Wallet } from '@chia/api';
+import { ApiProvider } from '@reduxjs/toolkit/query/react';
 import AppRouter from './AppRouter';
 import darkTheme from '../../theme/dark';
 import lightTheme from '../../theme/light';
@@ -72,21 +74,63 @@ export default function App() {
     });
   }, []);
 
+  const [client, fullNode, wallet ] = useMemo(() => {
+    const { remote } = window.require('electron');
+    const fs = remote.require('fs');
+    const WS = window.require('ws');
+
+    const keyPath = remote.getGlobal('key_path');
+    const certPath = remote.getGlobal('cert_path');
+
+    console.log('keyPath', keyPath);
+    console.log('certPath', certPath);
+
+    const client = new Client({
+      url: daemon_uri,
+      cert: fs.readFileSync(certPath),
+      key: fs.readFileSync(keyPath),
+      WebSocket: WS,
+      origin: 'standalone-wallet',
+    });
+
+    const fullNode = new FullNode(client);
+    const wallet = new Wallet(client);
+
+    return [client, fullNode, wallet];
+  }, []);
+
+  console.log('client', client);
+  console.log('fullNode', fullNode);
+  console.log('wallet', wallet);
+
+  useEffect(async () => {
+    if (wallet) {
+      await client.connect();
+      console.log('get public keys');
+      setTimeout(async () => {
+        const data = await wallet.getPublicKeys();
+        console.log('getPublicKeys', data);
+      }, 3000);
+
+    }
+  }, [wallet]);
+
   return (
-    <Provider store={store}>
-      <ConnectedRouter history={history}>
-        <I18nProvider i18n={i18n}>
-          <WebSocketConnection host={daemon_uri}>
-            <ThemeProvider theme={theme}>
-              <GlobalStyle />
-              <Fonts />
-              <AppRouter />
-              <AppModalDialogs />
-              <AppLoading />
-            </ThemeProvider>
-          </WebSocketConnection>
-        </I18nProvider>
-      </ConnectedRouter>
-    </Provider>
+
+      <Provider store={store}>
+        <ConnectedRouter history={history}>
+          <I18nProvider i18n={i18n}>
+            <WebSocketConnection host={daemon_uri}>
+              <ThemeProvider theme={theme}>
+                <GlobalStyle />
+                <Fonts />
+                <AppRouter />
+                <AppModalDialogs />
+                <AppLoading />
+              </ThemeProvider>
+            </WebSocketConnection>
+          </I18nProvider>
+        </ConnectedRouter>
+      </Provider>
   );
 }

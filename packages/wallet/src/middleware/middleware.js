@@ -58,6 +58,7 @@ const socketMiddleware = () => {
 
   const onMessage = (store) => (event) => {
     const payload = JSON.parse(event.data);
+    console.log('RECEIVED', payload);
     const { request_id } = payload;
     const action = callback_map[request_id];
     if (action) {
@@ -83,6 +84,7 @@ const socketMiddleware = () => {
           // connect to the remote host
           try {
             const key_path = remote.getGlobal('key_path');
+            console.log('KEY PATH', key_path);
             const cert_path = remote.getGlobal('cert_path');
 
             const options = {
@@ -121,6 +123,7 @@ const socketMiddleware = () => {
           if (action.resolve) {
             callback_map[message.request_id] = action;
           }
+          console.log('SEND', message);
           socket.send(JSON.stringify(message));
         } else {
           console.log('Socket not connected');

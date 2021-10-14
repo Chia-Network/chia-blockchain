@@ -91,6 +91,10 @@ export default class Wallet extends Service {
     return this.command('generate_mnemonic');
   }
 
+  async getPublicKeys() {
+    return this.command('get_public_keys');
+  }
+
   async addKey(
     mnemonic: string, 
     type: 'new_wallet' | 'skip' | 'restore_backup', 
