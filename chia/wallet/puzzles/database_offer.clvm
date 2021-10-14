@@ -1,7 +1,7 @@
 (mod (
     DB_LAYER_MOD_HASH
     DB_SINGLETON_STRUCT
-    K_V_PAIR_NEEDED
+    LEAF_REVEAL
     CLAIM_TARGET
     RECOVERY_TARGET
     RECOVERY_TIMELOCK
@@ -11,21 +11,21 @@
     current_root
     inclusion_proof
   )
-  ; DB_SINGLETON_STRUCT is (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
-  ; current_root is a bytes32 of the top of the merkle tree in the db_host - also known as current_state
-  ; inclusion_proof is a list where first entry is a binary representation of path, and subsequent entries are corresponding merkle hashes
-  (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)
+    ; DB_SINGLETON_STRUCT is (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
+    ; current_root is a bytes32 of the top of the merkle tree in the db_host - also known as current_state
+    ; inclusion_proof is a list where first entry is a binary representation of path, and subsequent entries are corresponding merkle hashes
+    (include condition_codes.clvm)
+    (include curry-and-treehash.clinc)
 
-  (defun sha256tree
-      (TREE)
-      (if (l TREE)
-          (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
-          (sha256 1 TREE)
-      )
-  )
+    (defun sha256tree
+        (TREE)
+        (if (l TREE)
+            (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+            (sha256 1 TREE)
+        )
+    )
 
-  (defun-inline tree_branch_hash (left right) (sha256 2 left right))
+    (defun-inline tree_branch_hash (left right) (sha256 2 left right))
 
     (defun calculate_merkle_root (path current_hash additional_steps)
      (if additional_steps
@@ -47,10 +47,10 @@
      )
    )
 
-   (defun calculate_merkle_root_for_merkle_proof (leaf_content proof_of_inclusion)
+   (defun calculate_merkle_root_for_merkle_proof (LEAF_REVEAL proof_of_inclusion)
      (calculate_merkle_root
        (f proof_of_inclusion)
-       (sha256tree leaf_content)
+       (sha256tree LEAF_REVEAL)  ; should this be tree-hashed when curried in?
        (if (r proof_of_inclusion) (f (r proof_of_inclusion)) ())
      )
    )
@@ -68,7 +68,7 @@
 
   (if spend_type
     ; CLAIM
-    (if (= current_root (calculate_merkle_root_for_merkle_proof K_V_PAIR_NEEDED inclusion_proof))  ; current root is validated in assert_puzzle_announcement below
+    (if (= current_root (calculate_merkle_root_for_merkle_proof LEAF_REVEAL inclusion_proof))  ; current root is validated in assert_puzzle_announcement below
       (list (list CREATE_COIN CLAIM_TARGET my_amount) (list ASSERT_MY_AMOUNT my_amount) (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_db_current_puzzlehash DB_SINGLETON_STRUCT DB_LAYER_MOD_HASH current_root db_innerpuz_hash) current_root)))
       (x)
     )
