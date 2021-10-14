@@ -26,7 +26,7 @@ def meets_memory_requirement(plotters_root_path: Path) -> Tuple[bool, Optional[s
     if get_bladebit_executable_path(plotters_root_path).exists():
         try:
             proc = run_command(
-                [os.fspath(get_bladebit_executable_path(plotters_root_path)), "--memory-json-xyz"],
+                [os.fspath(get_bladebit_executable_path(plotters_root_path)), "--memory-json"],
                 "Failed to call bladebit with --memory-json option",
                 capture_output=True,
                 text=True,
