@@ -71,10 +71,8 @@ class DataStore:
     async def create_tree(self, tree_id: bytes32, *, lock: bool = True) -> bool:
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute("INSERT INTO tree(id) VALUES(:id)", {"id": tree_id.hex()})
-            await self.db.execute(
-                "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
-                {"tree_id": tree_id.hex(), "generation": 0, "node_hash": None},
-            )
+            await self._insert_root(tree_id=tree_id, node_hash=None)
+
         return True
 
     async def table_is_empty(self, tree_id: bytes32, *, lock: bool = True) -> bool:
@@ -292,20 +290,11 @@ class DataStore:
                 },
             )
 
-            generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
-
             if was_empty:
                 # TODO: a real exception
                 assert side is None
 
-                await self.db.execute(
-                    "INSERT INTO root(tree_id, generation, node_hash)" " VALUES(:tree_id, :generation, :node_hash)",
-                    {
-                        "tree_id": tree_id.hex(),
-                        "generation": generation + 1,
-                        "node_hash": new_terminal_node_hash.hex(),
-                    },
-                )
+                await self._insert_root(tree_id=tree_id, node_hash=new_terminal_node_hash)
             else:
                 # TODO: a real exception
                 assert side is not None
@@ -403,34 +392,37 @@ class DataStore:
                         },
                     )
 
-                await self.db.execute(
-                    "INSERT INTO root(tree_id, generation, node_hash)" " VALUES(:tree_id, :generation, :node_hash)",
-                    {
-                        "tree_id": tree_id.hex(),
-                        "generation": generation + 1,
-                        "node_hash": new_hash.hex(),
-                    },
-                )
+                await self._insert_root(tree_id=tree_id, node_hash=new_hash)
 
         return new_terminal_node_hash
+
+    async def _insert_root(self, tree_id: bytes32, node_hash: Optional[bytes32]) -> None:
+        # TODO: maybe verify a transaction is active
+
+        existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
+
+        if existing_generation is None:
+            generation = 0
+        else:
+            generation = existing_generation + 1
+
+        await self.db.execute(
+            "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
+            {
+                "tree_id": tree_id.hex(),
+                "generation": generation,
+                "node_hash": None if node_hash is None else node_hash.hex(),
+            },
+        )
 
     async def delete(self, key: Program, tree_id: bytes32, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             ancestors = await self.get_ancestors(node_hash=node.hash, tree_id=tree_id, lock=False)
 
-            existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
-
             if len(ancestors) == 0:
                 # the only node is being deleted
-                await self.db.execute(
-                    "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
-                    {
-                        "tree_id": tree_id.hex(),
-                        "generation": existing_generation + 1,
-                        "node_hash": None,
-                    },
-                )
+                await self._insert_root(tree_id=tree_id, node_hash=None)
 
                 return
 
@@ -443,14 +435,7 @@ class DataStore:
 
             if len(ancestors) == 1:
                 # the parent is the root so the other side will become the new root
-                await self.db.execute(
-                    "INSERT INTO root(tree_id, generation, node_hash)" " VALUES(:tree_id, :generation, :node_hash)",
-                    {
-                        "tree_id": tree_id.hex(),
-                        "generation": existing_generation + 1,
-                        "node_hash": other_hash,
-                    },
-                )
+                await self._insert_root(tree_id=tree_id, node_hash=other_hash)
 
                 return
 
@@ -493,14 +478,7 @@ class DataStore:
                     },
                 )
 
-            await self.db.execute(
-                "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
-                {
-                    "tree_id": tree_id.hex(),
-                    "generation": existing_generation + 1,
-                    "node_hash": new_ancestors[-1].hash.hex(),
-                },
-            )
+            await self._insert_root(tree_id=tree_id, node_hash=new_ancestors[-1].hash)
 
         return
 
