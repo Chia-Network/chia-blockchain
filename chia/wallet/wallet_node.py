@@ -662,6 +662,7 @@ class WalletNode:
             if previous is None:
                 break
             current_count += 1
+            blocks.append(previous)
             bottom = previous
 
         blocks.reverse()
@@ -778,7 +779,13 @@ class WalletNode:
                         continue
                     await self.wallet_state_manager.coin_store.set_spent(removed_coin.name(), block.height)
 
+        await self.update_ui()
         return header_block_records
+
+    async def update_ui(self):
+        for wallet_id, wallet in self.wallet_state_manager.wallets.items():
+            self.wallet_state_manager.state_changed("coin_removed", wallet_id)
+            self.wallet_state_manager.state_changed("coin_added", wallet_id)
 
     async def get_additions(
         self, peer: WSChiaConnection, block_i, additions: Optional[List[bytes32]], get_all_additions: bool = False
