@@ -185,6 +185,8 @@ def get_block_challenge(
             else:
                 challenges_to_look_for = 1
             reversed_challenge_hashes: List[bytes32] = []
+            if header_block.height == 0:
+                return constants.GENESIS_CHALLENGE
             if header_block.prev_header_hash not in all_blocks:
                 return None
             curr: Optional[FullBlock] = all_blocks[header_block.prev_header_hash]
