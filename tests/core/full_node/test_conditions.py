@@ -73,8 +73,8 @@ async def check_spend_bundle_validity(
     `SpendBundle`, and then invokes `receive_block` to ensure that it's accepted (if `expected_err=None`)
     or fails with the correct error code.
     """
+    connection, blockchain = await create_ram_blockchain(constants)
     try:
-        connection, blockchain = await create_ram_blockchain(constants)
         for block in blocks:
             received_block_result, err, fork_height, coin_changes = await blockchain.receive_block(block)
             assert err is None

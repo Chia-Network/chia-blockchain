@@ -1,4 +1,6 @@
 import pytest
+import tempfile
+from pathlib import Path
 
 
 # TODO: tests.setup_nodes (which is also imported by tests.util.blockchain) creates a
@@ -80,3 +82,9 @@ async def default_10000_blocks_compact():
         normalized_to_identity_cc_ip=True,
         normalized_to_identity_cc_sp=True,
     )
+
+
+@pytest.fixture(scope="function")
+async def tmp_dir():
+    with tempfile.TemporaryDirectory() as folder:
+        yield Path(folder)

@@ -5,6 +5,7 @@ import multiprocessing
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple, Union
+from pathlib import Path
 
 from clvm.casts import int_from_bytes
 
@@ -94,7 +95,11 @@ class Blockchain(BlockchainInterface):
 
     @staticmethod
     async def create(
-        coin_store: CoinStore, block_store: BlockStore, consensus_constants: ConsensusConstants, hint_store: HintStore
+        coin_store: CoinStore,
+        block_store: BlockStore,
+        consensus_constants: ConsensusConstants,
+        hint_store: HintStore,
+        blockchain_dir: Path,
     ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -116,7 +121,7 @@ class Blockchain(BlockchainInterface):
         self.block_store = block_store
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
         self._shut_down = False
-        await self._load_chain_from_store()
+        await self._load_chain_from_store(blockchain_dir)
         self._seen_compact_proofs = set()
         self.hint_store = hint_store
         return self
@@ -125,11 +130,11 @@ class Blockchain(BlockchainInterface):
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self):
+    async def _load_chain_from_store(self, blockchain_dir):
         """
         Initializes the state of the Blockchain class from the database.
         """
-        self.__height_map = await BlockHeightMap.create(self.block_store.db)
+        self.__height_map = await BlockHeightMap.create(blockchain_dir, self.block_store.db)
         self.__block_records = {}
         self.__heights_in_cache = {}
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
@@ -282,6 +287,7 @@ class Blockchain(BlockchainInterface):
                     )
                 if peak_height is not None:
                     self._peak_height = peak_height
+                    await self.__height_map.maybe_flush()
             except BaseException:
                 self.block_store.rollback_cache_block(header_hash)
                 await self.block_store.db_wrapper.rollback_transaction()

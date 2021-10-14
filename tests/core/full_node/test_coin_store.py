@@ -240,7 +240,7 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_basic_reorg(self, cache_size: uint32):
+    async def test_basic_reorg(self, cache_size: uint32, tmp_dir):
 
         async with DBConnection() as db_wrapper:
             initial_block_count = 30
@@ -249,7 +249,7 @@ class TestCoinStoreWithBlocks:
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
             hint_store = await HintStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store)
+            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir)
             try:
 
                 records: List[Optional[CoinRecord]] = []
@@ -300,7 +300,7 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_get_puzzle_hash(self, cache_size: uint32):
+    async def test_get_puzzle_hash(self, cache_size: uint32, tmp_dir):
         async with DBConnection() as db_wrapper:
             num_blocks = 20
             farmer_ph = 32 * b"0"
@@ -314,7 +314,7 @@ class TestCoinStoreWithBlocks:
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
             hint_store = await HintStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store)
+            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir)
             for block in blocks:
                 res, err, _, _ = await b.receive_block(block)
                 assert err is None
