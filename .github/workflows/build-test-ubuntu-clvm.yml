@@ -65,13 +65,6 @@ jobs:
 
 # Omitted checking out blocks and plots repo Chia-Network/test-cache
 
-    - name: Link home directory
-      run: |
-        cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
-
     - name: Install ubuntu dependencies
       run: |
         sudo apt-get install software-properties-common
