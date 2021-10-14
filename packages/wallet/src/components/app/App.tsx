@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
 import useDarkMode from 'use-dark-mode';
@@ -42,7 +42,25 @@ const GlobalStyle = createGlobalStyle`
   }
 `;
 
+async function waitForConfig() {
+  const { remote } = window.require('electron');
+
+  let keyPath = null;
+
+  while(true) {
+    keyPath = remote.getGlobal('key_path');
+    if (keyPath) {
+      return;
+    }
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 50);
+    });
+  }
+}
+
 export default function App() {
+  const [host, setHost] = useState(null);
   const { value: darkMode } = useDarkMode();
   const [locale] = useLocale(defaultLocale);
 
@@ -50,14 +68,6 @@ export default function App() {
     const material = getMaterialLocale(locale);
     return darkMode ? darkTheme(material) : lightTheme(material);
   }, [locale, darkMode]);
-
-  // get the daemon's uri from global storage (put there by loadConfig)
-  let daemon_uri = null;
-  if (isElectron()) {
-    const electron = window.require('electron');
-    const { remote: r } = electron;
-    daemon_uri = r.getGlobal('daemon_rpc_ws');
-  }
 
   useEffect(() => {
     activateLocale(locale);
@@ -74,53 +84,58 @@ export default function App() {
     });
   }, []);
 
-  const [client, fullNode, wallet ] = useMemo(() => {
+  useEffect(async () => {
+    await waitForConfig();
+
     const { remote } = window.require('electron');
     const fs = remote.require('fs');
     const WS = window.require('ws');
 
     const keyPath = remote.getGlobal('key_path');
     const certPath = remote.getGlobal('cert_path');
+    const url = remote.getGlobal('daemon_rpc_ws');
 
+    setHost(url);
+
+    console.log('url', url);
     console.log('keyPath', keyPath);
     console.log('certPath', certPath);
 
     const client = new Client({
-      url: daemon_uri,
+      url,
       cert: fs.readFileSync(certPath),
       key: fs.readFileSync(keyPath),
       WebSocket: WS,
-      origin: 'standalone-wallet',
     });
 
     const fullNode = new FullNode(client);
     const wallet = new Wallet(client);
 
-    return [client, fullNode, wallet];
+    await client.connect();
+    console.log('get public keys');
+
+    const data = await wallet.getPublicKeys();
+    console.log('getPublicKeys', data);
+
+    wallet.onSyncChanged((...args) => {
+      console.log('!!!!SYNC CHANGED', ...args);
+    });
+
+    wallet.onNewBlock((...args) => {
+      console.log('!!!!NEW BLOCK', ...args);
+    });
+
   }, []);
 
-  console.log('client', client);
-  console.log('fullNode', fullNode);
-  console.log('wallet', wallet);
-
-  useEffect(async () => {
-    if (wallet) {
-      await client.connect();
-      console.log('get public keys');
-      setTimeout(async () => {
-        const data = await wallet.getPublicKeys();
-        console.log('getPublicKeys', data);
-      }, 3000);
-
-    }
-  }, [wallet]);
+  if (!host) {
+    return null;
+  }
 
   return (
-
       <Provider store={store}>
         <ConnectedRouter history={history}>
           <I18nProvider i18n={i18n}>
-            <WebSocketConnection host={daemon_uri}>
+            <WebSocketConnection host={host}>
               <ThemeProvider theme={theme}>
                 <GlobalStyle />
                 <Fonts />

@@ -1,6 +1,8 @@
 import EventEmitter from 'events';
+import ServiceName from './constants/ServiceName';
 import Message from './Message';
 import Daemon from './services/Daemon';
+import Events from './services/Events';
 import type Service from './services/Service';
 
 type Options = {
@@ -8,7 +10,7 @@ type Options = {
   cert: string;
   key: string;
   WebSocket: any;
-  origin: string;
+  origin?: string;
   timeout?: number;
   camelCase?: boolean;
   backupHost?: string;
@@ -40,6 +42,7 @@ export default class Client extends EventEmitter {
       backupHost: 'https://backup.chia.net',
       debug: false,
       ...options,
+      origin: ServiceName.EVENTS,
     };
 
     const { url } = this.options;
@@ -70,7 +73,7 @@ export default class Client extends EventEmitter {
     if (!this.services.has(service)) {
       this.services.add(service);
 
-      this.registerServices();
+      this.startServices();
     }
   }
 
@@ -96,27 +99,10 @@ export default class Client extends EventEmitter {
     });
 
     this.connectedPromise = new Promise((resolve, reject) => {
-      let fullfiled = false;
-
-      ws.once('open', () => {
-        if (fullfiled) {
-          return;
-        }
-
-        fullfiled = true;
-
-        resolve();
-      });
-
-      ws.once('error', (error) => {
-        if (fullfiled) {
-          return;
-        }
-
-        fullfiled = true;
-
-        reject(error);
-      });
+      this.connectedPromiseResponse = {
+        resolve,
+        reject,
+      };
     });
 
     ws.on('open', this.handleOpen);
@@ -129,26 +115,38 @@ export default class Client extends EventEmitter {
     return this.connectedPromise;
   }
 
-  private async registerServices() {
+  private async startServices() {
     if (!this.connected) {
       return;
     }
 
-    this.services.forEach((service) => {
+    await Promise.all(Array.from(this.services).map(async (service) => {
       if (!this.registered.has(service)) {
-        console.log('registering', service.destination, service);
-        this.daemon.registerService(service.destination);
-        
+        const response = await this.daemon.isRunning(service.destination);
+        if (!response.isRunning) {
+          // this.daemon.registerService(service.destination);
+          await this.daemon.startService(service.destination);
+        }
+
+        // await service.ping();
+
         this.registered.add(service);
       }
-    });
+    }));
   }
 
-  private handleOpen = () => {
+  private handleOpen = async () => {
     this.connected = true;
 
     this.registered.clear();
-    this.registerServices();
+
+    await this.daemon.registerService(ServiceName.EVENTS);
+    await this.startServices();
+
+    if (this.connectedPromiseResponse) {
+      this.connectedPromiseResponse.resolve();
+      this.connectedPromiseResponse = null;
+    }
   }
 
   private handleClose = () => {
@@ -163,6 +161,11 @@ export default class Client extends EventEmitter {
   private handleError = (error: any) => {
     console.log('api ws error', error);
     this.emit('error', error);
+
+    if (this.connectedPromiseResponse) {
+      this.connectedPromiseResponse.reject(error);
+      this.connectedPromiseResponse = null;
+    }
   }
 
   private handleMessage = (data: string) => {
@@ -210,8 +213,6 @@ export default class Client extends EventEmitter {
 
       this.requests.set(requestId, { resolve, reject });
       this.ws.send(message.toJSON(camelCase));
-
-      console.log('SENDING MESSAGE API', message.toJSON(camelCase));
 
       if (timeout) {
         setTimeout(() => {

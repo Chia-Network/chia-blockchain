@@ -2,6 +2,7 @@ import Client from '../Client';
 import Service from './Service';
 import type { Options } from './Service';
 import ServiceName from '../constants/ServiceName';
+import type Message from '../Message';
 
 export default class Wallet extends Service {
   constructor(client: Client, options?: Options) {
@@ -219,5 +220,13 @@ export default class Wallet extends Service {
     return this.command('create_backup', {
       filePath,
     });
+  }
+
+  onSyncChanged(callback: (data: any, message: Message) => void) {
+    return this.onStateChanged('sync_changed', callback);
+  }
+
+  onNewBlock(callback: (data: any, message: Message) => void) {
+    return this.onStateChanged('new_block', callback);
   }
 }

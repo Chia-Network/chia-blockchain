@@ -43,7 +43,12 @@ function loadConfig(net) {
         'config/ssl/daemon/private_daemon.key',
       ),
     ); // jshint ignore:line
+
+    console.log('daemon_rpc_ws', global.daemon_rpc_ws);
+    console.log('cert_path', global.cert_path);
+    console.log('key_path', global.key_path);
   } catch (e) {
+    console.log('error', e);
     console.log('Error loading config - using defaults');
   }
 }

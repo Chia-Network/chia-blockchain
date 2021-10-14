@@ -84,7 +84,6 @@ const socketMiddleware = () => {
           // connect to the remote host
           try {
             const key_path = remote.getGlobal('key_path');
-            console.log('KEY PATH', key_path);
             const cert_path = remote.getGlobal('cert_path');
 
             const options = {

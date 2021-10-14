@@ -1,27 +1,32 @@
 import EventEmitter from 'events';
 import { isUndefined, omitBy } from 'lodash';
 import type Client from '../Client';
+import ServiceName from '../constants/ServiceName';
 import Message from '../Message';
 
 export type Options = {
-  origin?: string;
+  origin?: ServiceName;
+  skipAddService?: boolean;
 };
 
 export default class Service extends EventEmitter {
   private _client: Client;
-  private _destination: string;
-  private _origin: string;
+  private _destination: ServiceName;
+  private _origin: ServiceName;
 
-  constructor(name: string, client: Client, options: Options = {}) {
+  constructor(name: ServiceName, client: Client, options: Options = {}) {
     super();
 
-    const { origin } = options;
+    const { origin, skipAddService } = options;
 
     this._client = client;
     this._destination = name;
     this._origin = origin ?? client.origin;
 
-    client.addService(this);
+    if (!skipAddService) {
+      client.addService(this);
+    }
+    
     client.on('message', this.handleMessage);
   }
 
@@ -42,7 +47,7 @@ export default class Service extends EventEmitter {
   }
 
   handleMessage = (message: Message) => {
-    if (message.destination !== this.destination) {
+    if (message.origin !== this.destination) {
       return;
     }
 
@@ -50,12 +55,6 @@ export default class Service extends EventEmitter {
   }
 
   processMessage(message: Message) {
-    if (message.command === 'register_service') {
-      console.log('service was registered', this.destination);
-      this._registered = true;
-      this.emit('ready');
-    }
-
     if (message.command) {
       this.emit(message.command, message.data, message);
     }    
@@ -79,8 +78,6 @@ export default class Service extends EventEmitter {
       ack,
     }));
 
-    console.log('response', response);
-
     return response?.data;
   }
 
@@ -93,17 +90,17 @@ export default class Service extends EventEmitter {
     callback: (data: any, message: Message) => void,
     processData?: (data: any) => any,
   ): () => void {
-    function handleCommand(currentCommand: string, data: any, message: Message) {
-      if (currentCommand === command) {
-        const updatedData = processData ? processData(data, message) : data;
-        callback(updatedData, message);
-      }
+    function handleCommand(data: any, message: Message) {
+      const updatedData = processData
+        ? processData(data, message)
+        : data;
+      callback(updatedData, message);
     }
 
-    this.on('command', handleCommand);
+    this.on(command, handleCommand);
 
     return () => {
-      this.off('command', handleCommand);
+      this.off(command, handleCommand);
     };
   }
 

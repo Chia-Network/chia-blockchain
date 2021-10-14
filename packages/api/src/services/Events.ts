@@ -5,6 +5,9 @@ import ServiceName from '../constants/ServiceName';
 
 export default class Events extends Service {
   constructor(client: Client, options?: Options) {
-    super(ServiceName.EVENTS, client, options);
+    super(ServiceName.EVENTS, client, {
+      skipAddService: true,
+      ...options,
+    });
   }
 }

@@ -5,7 +5,10 @@ import ServiceName from '../constants/ServiceName';
 
 export default class Daemon extends Service {
   constructor(client: Client, options?: Options) {
-    super(ServiceName.DAEMON, client, options);
+    super(ServiceName.DAEMON, client, {
+      skipAddService: true,
+      ...options,
+    });
   }
 
   registerService(service: string) {
