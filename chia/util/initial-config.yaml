@@ -408,7 +408,7 @@ wallet:
 
   # see description for full_node.db_sync
   db_sync: auto
-
+  connect_to_unknown_peers: True
   # The minimum height that we care about for our transactions. Set to zero
   # If we are restoring from private key and don't know the height.
   starting_height: 0

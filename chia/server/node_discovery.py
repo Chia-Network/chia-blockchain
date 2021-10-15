@@ -702,7 +702,7 @@ class WalletPeers(FullNodeDiscovery):
         )
 
     async def start(self) -> None:
-        self.initial_wait = 60
+        self.initial_wait = 1
         await self.initialize_address_manager()
         await self.start_tasks()
 
