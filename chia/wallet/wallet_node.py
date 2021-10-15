@@ -625,6 +625,8 @@ class WalletNode:
                     self.wallet_state_manager.blockchain.new_weight_proof(weight_proof)
                     self.wallet_state_manager.set_sync_mode(False)
                     self.synced_peers.add(peer.peer_node_id)
+                    await self.wallet_state_manager.blockchain.set_latest_tx_block(last_tx_block)
+                    self.wallet_state_manager.state_changed("new_block")
                 else:
                     if peer.peer_node_id not in self.synced_peers:
                         # Edge case, we still want to subscribe for all phs
@@ -632,6 +634,9 @@ class WalletNode:
                         await self.untrusted_subscribe_to_puzzle_hashes(peer, False, None, None)
                         self.synced_peers.add(peer.peer_node_id)
                     await self.wallet_short_sync_backtrack(peak_block, peer)
+                    self.wallet_state_manager.set_sync_mode(False)
+                    await self.wallet_state_manager.blockchain.set_latest_tx_block(last_tx_block)
+                    self.wallet_state_manager.state_changed("new_block")
 
         self._pending_tx_handler()
 
