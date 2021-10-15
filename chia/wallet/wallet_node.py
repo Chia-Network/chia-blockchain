@@ -496,6 +496,7 @@ class WalletNode:
         async with self.wallet_state_manager.lock:
             if self.is_trusted(peer):
                 await self.wallet_state_manager.new_coin_state(request.items, peer, request.fork_height, request.height)
+                await self.update_ui()
             else:
                 async with self.new_peak_lock:
                     # Ignore state_update_received if untrusted, we'll sync from block messages where we check filter
