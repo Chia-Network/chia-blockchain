@@ -759,7 +759,8 @@ class ChiaServer:
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict) -> bool:
         if trusted_peers is None:
             return False
-
+        if not self.config["testing"] and peer.peer_host == "127.0.0.1":
+            return True
         if peer.peer_node_id not in trusted_peers:
             return False
 
