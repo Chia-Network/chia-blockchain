@@ -332,8 +332,8 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
     ancestors = await data_store.get_ancestors(node_hash=reference_node_hash, tree_id=tree_id)
     hashes = [node.hash.hex() for node in ancestors]
     assert hashes == [
-        "f3bb419ad917572fd2f46291f627a00c3a315ffd2fdc5ac408935cbb51d78fc8",
-        "1c71210dbb62bc617e7e192b8aca1031ff0f1189bb7ae686ecaa98d9611108a9",
+        "abe4cab7f377a7dd3cbc8e76b8e191bed03da8f8d5235f1d98d7e0b043c3b5c7",
+        "c4d62d5fdd4296bce13349bd349b475ba7e43f0e28e0a29d16ba3ba015cea4cc",
     ]
 
 

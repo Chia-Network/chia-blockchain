@@ -93,14 +93,19 @@ class DataStore:
             },
         )
 
-    async def _insert_internal_node(self, hash: bytes32, left_hash: bytes32, right_hash: bytes32) -> None:
+    async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
         # TODO: maybe verify a transaction is active
 
+        # TODO: verify this is the hashing we want
+        node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
+
+        # TODO: Review the OR IGNORE bit, should more be done to validate it is
+        #       "the same row"?
         await self.db.execute(
-            "INSERT INTO node(hash, node_type, left, right, key, value)"
+            "INSERT OR IGNORE INTO node(hash, node_type, left, right, key, value)"
             " VALUES(:hash, :node_type, :left, :right, :key, :value)",
             {
-                "hash": hash.hex(),
+                "hash": node_hash.hex(),
                 "node_type": NodeType.INTERNAL,
                 "left": left_hash.hex(),
                 "right": right_hash.hex(),
@@ -108,6 +113,8 @@ class DataStore:
                 "value": None,
             },
         )
+
+        return node_hash
 
     async def _insert_terminal_node(self, hash: bytes32, key: bytes, value: bytes) -> None:
         # TODO: maybe verify a transaction is active
@@ -447,10 +454,8 @@ class DataStore:
                     left = reference_node_hash
                     right = new_terminal_node_hash
 
-                new_hash = Program.to([left, right]).get_tree_hash()
-
                 # create first new internal node
-                await self._insert_internal_node(hash=new_hash, left_hash=left, right_hash=right)
+                new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
 
                 traversal_node_hash = reference_node_hash
 
@@ -467,11 +472,7 @@ class DataStore:
 
                     traversal_node_hash = ancestor.hash
 
-                    # TODO: shouldn't this be more like:
-                    #       new_hash = Program.to((left, right)).get_tree_hash(left, right)
-                    new_hash = Program.to([left, right]).get_tree_hash()
-
-                    await self._insert_internal_node(hash=new_hash, left_hash=left, right_hash=right)
+                    new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
 
                 await self._insert_root(tree_id=tree_id, node_hash=new_hash)
 
@@ -511,23 +512,13 @@ class DataStore:
                     # TODO real checking and errors
                     raise Exception("internal error")
 
-                new_node_program = Program.to((left_hash, right_hash))
-                new_node_hash = new_node_program.get_tree_hash(left_hash, right_hash)
-
-                new_node = InternalNode(hash=new_node_hash, left_hash=left_hash, right_hash=right_hash)
-
-                old_child_hash = ancestor.hash
-                new_child_hash = new_node.hash
-
                 # TODO: handle if it already exists, recheck other places too.
                 #       INSERT OR IGNORE?
-                await self._insert_internal_node(
-                    hash=new_node.hash,
-                    left_hash=new_node.left_hash,
-                    right_hash=new_node.right_hash,
-                )
+                new_child_hash = await self._insert_internal_node(left_hash=left_hash, right_hash=right_hash)
 
-            await self._insert_root(tree_id=tree_id, node_hash=new_node.hash)
+                old_child_hash = ancestor.hash
+
+            await self._insert_root(tree_id=tree_id, node_hash=new_child_hash)
 
         return
 
