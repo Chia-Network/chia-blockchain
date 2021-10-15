@@ -5,19 +5,19 @@ const Tokens: CATToken = [{
   icon: AsteroidIcon,
   symbol: 'AST',
   name: 'Asteroid',
-  tail: '8cbc44d2230d42405df3846f5f124c38a824f96419cecea8ef7f49787e1d05c5',
+  tail: '783cd84333cacd7e3f6292963b59dd5855ce6a609b9992a60392725a3ed719de',
   description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
 }, {
   icon: WaterIcon,
   symbol: 'WAT',
   name: 'Water',
-  tail: 'c227d12fbcf14ed3cb66730971117bf7c25f0a14f3c4916a2f9c91dc452fab8e',
+  tail: '28307353c18ef004294d266fbd4a753eef3b60e2c98ba648b271ac277d33073f',
   description: 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
 }, {
   icon: EnergyIcon,
   symbol: 'ENG',
   name: 'Energy',
-  tail: '916d3b662263a8afa6fd7b5c0d5c79d6652677a6279217fd667f60a8ee8c83a8',
+  tail: '1c0304430aa61c3448c3effed0e5a13f017ddd53557f84029f047b82097d2ccc',
   description: 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.',
 }];
 
