@@ -163,7 +163,6 @@ class WalletStateManager:
         self.user_settings = await UserSettings.create(self.basic_store)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
         self.blockchain = await WalletBlockchain.create(self.basic_store)
-        await self.coin_store._clear_database()
         # await self.basic_store._clear_database()
         self.wallet_node = wallet_node
         self.sync_mode = False
