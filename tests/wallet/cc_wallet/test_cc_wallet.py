@@ -643,7 +643,6 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
         assert cc_wallet.cc_info.limitations_program_hash is not None
-        colour = cc_wallet.get_colour()
 
         cc_2_hash = await wallet2.get_new_puzzlehash()
         tx_records = await cc_wallet.generate_signed_transaction([uint64(60)], [cc_2_hash], memos=[[cc_2_hash]])
@@ -666,7 +665,6 @@ class TestCCWallet:
 
         await time_out_assert(10, check_wallets, 2, wallet_node_2)
         cc_wallet_2 = wallet_node_2.wallet_state_manager.wallets[2]
-        cc_color_2 = cc_wallet_2.get_colour()
 
         await time_out_assert(30, cc_wallet_2.get_confirmed_balance, 60)
         await time_out_assert(30, cc_wallet_2.get_unconfirmed_balance, 60)

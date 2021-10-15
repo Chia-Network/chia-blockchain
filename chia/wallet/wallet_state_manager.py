@@ -1,5 +1,4 @@
 import asyncio
-import base64
 import json
 import logging
 import time
@@ -9,11 +8,9 @@ from secrets import token_bytes
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import aiosqlite
-from blspy import AugSchemeMPL, G1Element, PrivateKey
+from blspy import G1Element, PrivateKey
 from chiabip158 import PyBIP158
-from cryptography.fernet import Fernet
 
-from chia import __version__
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.protocols import wallet_protocol

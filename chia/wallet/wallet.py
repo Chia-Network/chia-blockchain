@@ -332,7 +332,7 @@ class Wallet:
         assert change >= 0
 
         if announcements_to_consume is not None:
-            announcements_to_consume = [a.name() for a in announcements_to_consume]
+            announcements_to_consume = {a.name() for a in announcements_to_consume}
 
         spends: List[CoinSpend] = []
         primary_announcement_hash: Optional[bytes32] = None

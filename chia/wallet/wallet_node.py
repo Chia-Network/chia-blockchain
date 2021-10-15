@@ -63,7 +63,6 @@ from chia.wallet.util.wallet_sync_utils import (
 )
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.backup_utils import open_backup_file
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action import WalletAction
 from chia.util.profiler import profile_task
@@ -927,7 +926,6 @@ class WalletNode:
 
         start_time = time.time()
         peer_request_cache = PeerRequestCache()
-        all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
         # Always sync fully from untrusted
         # current_height = await self.wallet_state_manager.blockchain.get_synced_height()
         # Get state for puzzle hashes

@@ -9,7 +9,7 @@ from chia.util.hash import std_hash
 class Announcement:
     origin_info: bytes32
     message: bytes
-    morph_bytes: Optional[bytes] = None # CATs morph their announcements and other puzzles may choose to do so too
+    morph_bytes: Optional[bytes] = None  # CATs morph their announcements and other puzzles may choose to do so too
 
     def name(self) -> bytes32:
         if self.morph_bytes is not None:
