@@ -853,7 +853,6 @@ class WalletStateManager:
 
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash.hex())
         if derivation_record is None:
-            breakpoint()
             return
 
         self.log.info(f"Adding coin: {coin} at {height}")
