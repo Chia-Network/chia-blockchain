@@ -28,20 +28,18 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
-from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.db_synchronous import db_synchronous_on
 from chia.wallet.cc_wallet.cc_utils import match_cat_puzzle, construct_cc_puzzle
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.derive_keys import master_sk_to_backup_sk, master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.puzzles.cc_loader import CC_MOD
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.backup_utils import open_backup_file
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -51,7 +49,7 @@ from chia.wallet.wallet_block_store import WalletBlockStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
-from chia.wallet.wallet_info import WalletInfo, WalletInfoBackup
+from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_sync_store import WalletSyncStore
@@ -656,8 +654,7 @@ class WalletStateManager:
             elif interested_wallet_id is not None:
                 wallet_id = uint32(interested_wallet_id)
                 wallet_type = WalletType(self.wallets[wallet_id].type())
-            else:
-                # Fetch parent and see if this is CAT
+            elif coin_state.created_height is not None:
                 wallet_id, wallet_type = await self.fetch_parent_and_check_for_cat(peer, coin_state)
                 if wallet_id is None or wallet_type is None:
                     continue
@@ -1048,56 +1045,6 @@ class WalletStateManager:
         """
 
         return 0
-
-    async def create_wallet_backup(self, file_path: Path):
-        all_wallets = await self.get_all_wallet_info_entries()
-        for wallet in all_wallets:
-            if wallet.id == 1:
-                all_wallets.remove(wallet)
-                break
-
-        backup_pk = master_sk_to_backup_sk(self.private_key)
-        now = uint64(int(time.time()))
-        wallet_backup = WalletInfoBackup(all_wallets)
-
-        backup: Dict[str, Any] = {}
-
-        data = wallet_backup.to_json_dict()
-        data["version"] = __version__
-        data["fingerprint"] = self.private_key.get_g1().get_fingerprint()
-        data["timestamp"] = now
-        data["start_height"] = await self.get_start_height()
-        key_base_64 = base64.b64encode(bytes(backup_pk))
-        f = Fernet(key_base_64)
-        data_bytes = json.dumps(data).encode()
-        encrypted = f.encrypt(data_bytes)
-
-        meta_data: Dict[str, Any] = {"timestamp": now, "pubkey": bytes(backup_pk.get_g1()).hex()}
-
-        meta_data_bytes = json.dumps(meta_data).encode()
-        signature = bytes(AugSchemeMPL.sign(backup_pk, std_hash(encrypted) + std_hash(meta_data_bytes))).hex()
-
-        backup["data"] = encrypted.decode()
-        backup["meta_data"] = meta_data
-        backup["signature"] = signature
-
-        backup_file_text = json.dumps(backup)
-        file_path.write_text(backup_file_text)
-
-    async def import_backup_info(self, file_path) -> None:
-        json_dict = open_backup_file(file_path, self.private_key)
-        wallet_list_json = json_dict["data"]["wallet_list"]
-
-        for wallet_info in wallet_list_json:
-            await self.user_store.create_wallet(
-                wallet_info["name"],
-                wallet_info["type"],
-                wallet_info["data"],
-                wallet_info["id"],
-            )
-        await self.load_wallets()
-        await self.user_settings.user_imported_backup()
-        await self.create_more_puzzle_hashes(from_zero=True)
 
     async def get_wallet_for_colour(self, colour):
         for wallet_id in self.wallets:
