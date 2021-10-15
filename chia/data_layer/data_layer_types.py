@@ -1,14 +1,12 @@
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Tuple, Optional, Union, Dict, Type
+from typing import Dict, Optional, Tuple, Type, Union
 
 import aiosqlite as aiosqlite
+from clvm.CLVMObject import CLVMObject
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-
-from clvm.CLVMObject import CLVMObject
-
 from chia.util.byte_types import hexstr_to_bytes
 
 

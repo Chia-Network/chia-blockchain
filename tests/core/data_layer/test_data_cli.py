@@ -1,5 +1,4 @@
 import contextlib
-from dataclasses import dataclass
 import json
 import os
 import pathlib
@@ -7,8 +6,10 @@ import subprocess
 import sys
 import sysconfig
 import time
-from typing import Any, IO, Iterator, List, Optional, Union, Dict, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import IO, TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Union
 
+import aiosqlite
 import pytest
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -21,7 +22,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from tests.block_tools import create_block_tools_async
-import aiosqlite
 
 scripts_string = sysconfig.get_path("scripts")
 if scripts_string is None:

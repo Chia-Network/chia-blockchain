@@ -1,7 +1,7 @@
 # TODO: remove or formalize this
 import aiosqlite as aiosqlite
 
-from chia.data_layer.data_layer_types import node_type_to_class, Node
+from chia.data_layer.data_layer_types import Node, node_type_to_class
 
 
 async def _debug_dump(db: aiosqlite.Connection, description: str = "") -> None:

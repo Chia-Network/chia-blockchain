@@ -1,8 +1,6 @@
+import logging
 from collections import defaultdict
 from dataclasses import dataclass, replace
-
-import logging
-
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 import aiosqlite
@@ -11,17 +9,16 @@ from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
     InternalLeftRightNotBytes32Error,
     NodeHashError,
-    TerminalLeftRightError,
     TerminalInvalidKeyOrValueProgramError,
+    TerminalLeftRightError,
     TreeGenerationIncrementingError,
 )
-from chia.data_layer.data_layer_types import Root, Side, Node, TerminalNode, NodeType, InternalNode
+from chia.data_layer.data_layer_types import InternalNode, Node, NodeType, Root, Side, TerminalNode
 from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
-
 
 log = logging.getLogger(__name__)
 
