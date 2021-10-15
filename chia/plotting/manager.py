@@ -354,15 +354,13 @@ class PlotManager:
                     self.cache.update(prover.get_id(), cache_entry)
 
                 with self.plot_filename_paths_lock:
-                    if file_path.name not in self.plot_filename_paths:
-                        self.plot_filename_paths[file_path.name] = (str(Path(prover.get_filename()).parent), set())
+                    paths: Optional[Tuple[str, Set[str]]] = self.plot_filename_paths.get(file_path.name)
+                    if paths is None:
+                        paths = (str(Path(prover.get_filename()).parent), set())
+                        self.plot_filename_paths[file_path.name] = paths
                     else:
-                        self.plot_filename_paths[file_path.name][1].add(str(Path(prover.get_filename()).parent))
-                    if len(self.plot_filename_paths[file_path.name][1]) > 0:
-                        log.warning(
-                            f"Have multiple copies of the plot {file_path} in "
-                            f"{self.plot_filename_paths[file_path.name][1]}."
-                        )
+                        paths[1].add(str(Path(prover.get_filename()).parent))
+                        log.warning(f"Have multiple copies of the plot {file_path.name} in {[paths[0], *paths[1]]}.")
                         return None
 
                 new_plot_info: PlotInfo = PlotInfo(
