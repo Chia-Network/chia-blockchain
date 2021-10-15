@@ -277,14 +277,10 @@ class PlotManager:
             ):
                 # Try once every `refresh_parameter.retry_invalid_seconds` seconds to open the file
                 return None
+
             if file_path in self.plots:
-                try:
-                    stat_info = file_path.stat()
-                except Exception as e:
-                    log.error(f"Failed to open file {file_path}. {e}")
-                    return None
-                if stat_info.st_mtime == self.plots[file_path].time_modified:
-                    return self.plots[file_path]
+                return self.plots[file_path]
+
             entry: Optional[Tuple[str, Set[str]]] = self.plot_filename_paths.get(file_path.name)
             if entry is not None:
                 loaded_parent, duplicates = entry
