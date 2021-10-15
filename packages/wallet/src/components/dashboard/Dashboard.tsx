@@ -50,7 +50,6 @@ export default function Dashboard() {
 
   return (
     <StyledRoot>
-      <BackupCreate />
       <StyledAppBar position="fixed" color="transparent" elevation={0}>
         <Toolbar>
           <Container maxWidth="lg">
