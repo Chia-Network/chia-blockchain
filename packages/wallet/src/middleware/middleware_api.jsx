@@ -133,9 +133,6 @@ export function refreshAllState() {
       dispatch(startService(service_simulator));
     } else {
       dispatch(startService(service_wallet));
-      dispatch(startService(service_full_node));
-      // dispatch(startService(service_farmer));
-      // dispatch(startService(service_harvester));
     }
 
     dispatch(getNetworkInfo());
