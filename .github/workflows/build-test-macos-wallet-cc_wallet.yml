@@ -6,7 +6,7 @@ name: MacOS wallet-cc_wallet Tests
 on:
   push:
     branches:
-      - main
+      - protocol_and_cats_rebased
     tags:
         - '**'
   pull_request:
@@ -28,7 +28,7 @@ jobs:
     steps:
     - name: Cancel previous runs on the same branch
       if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.9.1
+      uses: styfle/cancel-workflow-action@0.9.0
       with:
         access_token: ${{ github.token }}
 
@@ -100,7 +100,7 @@ jobs:
     - name: Test wallet-cc_wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet/cc_wallet/test_cc_wallet.py tests/wallet/cc_wallet/test_trades.py -s -v --durations 0
+        ./venv/bin/py.test tests/wallet/cc_wallet/test_cc_lifecycle.py tests/wallet/cc_wallet/test_cc_wallet.py tests/wallet/cc_wallet/test_trades.py -s -v --durations 0
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
