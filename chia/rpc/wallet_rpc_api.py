@@ -445,7 +445,7 @@ class WalletRpcApi:
             fee: uint64 = request["fee"]
         else:
             fee = uint64(0)
-        name = request.get("name", "CAT WALLET")
+        name = request.get("name", "CAT Wallet")
         if request["wallet_type"] == "cat_wallet":
             if request["mode"] == "new":
                 async with self.service.wallet_state_manager.lock:
@@ -728,7 +728,7 @@ class WalletRpcApi:
 
         memos: Optional[bytes] = None
         if "memos" in request:
-            memos = [mem.encode("utf-8") for mem in request["memos"]]
+            memos = [hexstr_to_bytes(mem) for mem in request["memos"]]
 
         if "fee" in request:
             fee = uint64(request["fee"])
@@ -1169,7 +1169,7 @@ class WalletRpcApi:
         if len(puzzle_hash_0) != 32:
             raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0.hex()}")
 
-        memos_0 = None if "memos" not in additions[0] else [mem.encode("utf-8") for mem in additions[0]["memos"]]
+        memos_0 = None if "memos" not in additions[0] else [hexstr_to_bytes(mem) for mem in additions[0]["memos"]]
 
         additional_outputs = []
         for addition in additions[1:]:
@@ -1179,7 +1179,7 @@ class WalletRpcApi:
             amount = uint64(addition["amount"])
             if amount > self.service.constants.MAX_COIN_AMOUNT:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
-            memos = None if "memos" not in addition else [mem.encode("utf-8") for mem in addition["memos"]]
+            memos = None if "memos" not in addition else [hexstr_to_bytes(mem) for mem in addition["memos"]]
             additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount, "memos": memos})
 
         fee = uint64(0)
