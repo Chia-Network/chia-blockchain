@@ -9,9 +9,15 @@ from typing import AsyncIterable, Callable, Dict, List, Optional, Tuple
 import aiosqlite
 import pytest
 
-from chia.data_layer.data_layer_types import Side
+from chia.data_layer.data_layer_types import NodeType, Side
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
+from chia.data_layer.data_layer_errors import (
+    InternalKeyValueError,
+    InternalLeftRightNotBytes32Error,
+    TerminalLeftRightError,
+    TerminalInvalidKeyOrValueProgramError,
+)
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.tree_hash import bytes32
 
@@ -55,8 +61,10 @@ async def raw_data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
 @pytest.fixture(name="data_store", scope="function")
 async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> DataStore:
     await raw_data_store.create_tree(tree_id=tree_id)
-    # await raw_data_store.create_root(tree_id=tree_id)
-    return raw_data_store
+
+    await raw_data_store.check()
+    yield raw_data_store
+    await raw_data_store.check()
 
 
 # @pytest.fixture(name="root", scope="function")
@@ -500,3 +508,114 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
 #
 #
 #     await data_store.create_pair(key=key, value=value)
+
+
+def test_all_checks_collected():
+    expected = {value for name, value in vars(DataStore).items() if name.startswith("_check_") and callable(value)}
+
+    assert set(DataStore._checks) == expected
+
+
+a_bytes_32 = bytes32(range(32))
+another_bytes_32 = bytes(reversed(a_bytes_32))
+
+valid_program_hex = Program.to((b"abc", 2)).as_bin().hex()
+invalid_program_hex = b"\xab\xcd".hex()
+
+
+@pytest.mark.parametrize(
+    argnames="key_value",
+    argvalues=[
+        {"key": another_bytes_32.hex(), "value": None},
+        {"key": None, "value": another_bytes_32.hex()},
+    ],
+    ids=["key", "value"],
+)
+@pytest.mark.asyncio
+async def test_check_internal_key_value_are_null(raw_data_store: DataStore, key_value):
+    async with raw_data_store.db_wrapper.locked_transaction():
+        await raw_data_store.db.execute(
+            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
+            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **key_value},
+        )
+
+    with pytest.raises(
+        InternalKeyValueError,
+        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
+    ):
+        await raw_data_store._check_internal_key_value_are_null()
+
+
+@pytest.mark.parametrize(
+    argnames="left_right",
+    argvalues=[
+        {"left": a_bytes_32.hex(), "right": b"abc".hex()},
+        {"left": b"abc".hex(), "right": a_bytes_32.hex()},
+    ],
+    ids=["left", "right"],
+)
+@pytest.mark.asyncio
+async def test_check_internal_left_right_are_bytes32(raw_data_store: DataStore, left_right):
+    async with raw_data_store.db_wrapper.locked_transaction():
+        # needed to satisfy foreign key constraints
+        await raw_data_store.db.execute(
+            "INSERT INTO node(hash, node_type) VALUES(:hash, :node_type)",
+            {"hash": b"abc".hex(), "node_type": NodeType.TERMINAL},
+        )
+
+        await raw_data_store.db.execute(
+            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
+            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **left_right},
+        )
+
+    with pytest.raises(
+        InternalLeftRightNotBytes32Error,
+        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
+    ):
+        await raw_data_store._check_internal_left_right_are_bytes32()
+
+
+@pytest.mark.parametrize(
+    argnames="left_right",
+    argvalues=[
+        {"left": a_bytes_32.hex(), "right": None},
+        {"left": None, "right": a_bytes_32.hex()},
+    ],
+    ids=["left", "right"],
+)
+@pytest.mark.asyncio
+async def test_check_terminal_left_right_are_null(raw_data_store: DataStore, left_right: Dict[str, str]):
+    async with raw_data_store.db_wrapper.locked_transaction():
+        await raw_data_store.db.execute(
+            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
+            {"hash": a_bytes_32.hex(), "node_type": NodeType.TERMINAL, **left_right},
+        )
+
+    with pytest.raises(
+        TerminalLeftRightError,
+        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
+    ):
+        await raw_data_store._check_terminal_left_right_are_null()
+
+
+@pytest.mark.parametrize(
+    argnames="key_value",
+    argvalues=[
+        {"key": valid_program_hex, "value": invalid_program_hex},
+        {"key": invalid_program_hex, "value": valid_program_hex},
+    ],
+    ids=["key", "value"],
+)
+@pytest.mark.asyncio
+async def test_check_terminal_key_value_are_serialized_programs(raw_data_store: DataStore, key_value):
+    async with raw_data_store.db_wrapper.locked_transaction():
+        await raw_data_store.db.execute(
+            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
+            {"hash": a_bytes_32.hex(), "node_type": NodeType.TERMINAL, **key_value},
+        )
+
+    with pytest.raises(
+        TerminalInvalidKeyOrValueProgramError,
+        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
+    ):
+        await raw_data_store._check_terminal_key_value_are_serialized_programs()

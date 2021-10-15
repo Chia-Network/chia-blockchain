@@ -2,10 +2,16 @@ from dataclasses import dataclass, replace
 
 import logging
 
-from typing import Dict, List, Optional, Set
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 import aiosqlite
 
+from chia.data_layer.data_layer_errors import (
+    InternalKeyValueError,
+    InternalLeftRightNotBytes32Error,
+    TerminalLeftRightError,
+    TerminalInvalidKeyOrValueProgramError,
+)
 from chia.data_layer.data_layer_types import Root, Side, Node, TerminalNode, NodeType, InternalNode
 from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
@@ -118,6 +124,75 @@ class DataStore:
                 "value": value.hex(),
             },
         )
+
+    async def check(self):
+        for check in self._checks:
+            await check(self=self)
+
+    async def _check_internal_key_value_are_null(self, *, lock: bool = True):
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                """SELECT * FROM node WHERE node_type == :node_type AND (key NOT NULL OR value NOT NULL)""",
+                {"node_type": NodeType.INTERNAL},
+            )
+            hashes = [hexstr_to_bytes(row["hash"]) async for row in cursor]
+
+            if len(hashes) > 0:
+                raise InternalKeyValueError(node_hashes=hashes)
+
+    async def _check_internal_left_right_are_bytes32(self, *, lock: bool = True):
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                """SELECT * FROM node WHERE node_type == :node_type""",
+                {"node_type": NodeType.INTERNAL},
+            )
+
+            hashes = []
+            async for row in cursor:
+                try:
+                    bytes32(hexstr_to_bytes(row["left"]))
+                    bytes32(hexstr_to_bytes(row["right"]))
+                except ValueError:
+                    hashes.append(hexstr_to_bytes(row["hash"]))
+
+            if len(hashes) > 0:
+                raise InternalLeftRightNotBytes32Error(node_hashes=hashes)
+
+    async def _check_terminal_left_right_are_null(self, *, lock: bool = True):
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                """SELECT * FROM node WHERE node_type == :node_type AND (left NOT NULL OR right NOT NULL)""",
+                {"node_type": NodeType.TERMINAL},
+            )
+            hashes = [hexstr_to_bytes(row["hash"]) async for row in cursor]
+
+            if len(hashes) > 0:
+                raise TerminalLeftRightError(node_hashes=hashes)
+
+    async def _check_terminal_key_value_are_serialized_programs(self, *, lock: bool = True):
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                """SELECT * FROM node WHERE node_type == :node_type""",
+                {"node_type": NodeType.TERMINAL},
+            )
+
+            hashes = []
+            async for row in cursor:
+                try:
+                    Program.fromhex(row["key"])
+                    Program.fromhex(row["value"])
+                except ValueError:
+                    hashes.append(hexstr_to_bytes(row["hash"]))
+
+            if len(hashes) > 0:
+                raise TerminalInvalidKeyOrValueProgramError(node_hashes=hashes)
+
+    _checks: Tuple[Callable[["DataStore", bool], Awaitable[None]]] = (
+        _check_internal_key_value_are_null,
+        _check_internal_left_right_are_bytes32,
+        _check_terminal_left_right_are_null,
+        _check_terminal_key_value_are_serialized_programs,
+    )
 
     async def create_tree(self, tree_id: bytes32, *, lock: bool = True) -> bool:
         async with self.db_wrapper.locked_transaction(lock=lock):
