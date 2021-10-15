@@ -17,9 +17,11 @@ from chia.data_layer.data_layer_errors import (
     InternalLeftRightNotBytes32Error,
     TerminalLeftRightError,
     TerminalInvalidKeyOrValueProgramError,
+    TreeGenerationIncrementingError,
 )
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.tree_hash import bytes32
+from chia.util.byte_types import hexstr_to_bytes
 
 
 from chia.util.db_wrapper import DBWrapper
@@ -625,3 +627,47 @@ async def test_check_terminal_key_value_are_serialized_programs(
         match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
     ):
         await raw_data_store._check_terminal_key_value_are_serialized_programs()
+
+
+@pytest.mark.asyncio
+async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataStore) -> None:
+    tree_id = hexstr_to_bytes("c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd")
+
+    async with raw_data_store.db_wrapper.locked_transaction():
+        await raw_data_store.db.execute("INSERT INTO tree(id) VALUES(:id)", {"id": tree_id.hex()})
+        for generation in range(1, 5):
+            await raw_data_store.db.execute(
+                "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
+                {"tree_id": tree_id.hex(), "generation": generation, "node_hash": None},
+            )
+
+    with pytest.raises(
+        TreeGenerationIncrementingError,
+        match=r"\n +c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd$",
+    ):
+        await raw_data_store._check_roots_are_incrementing()
+
+
+@pytest.mark.asyncio
+async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> None:
+    tree_id = hexstr_to_bytes("c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd")
+
+    async with raw_data_store.db_wrapper.locked_transaction():
+        await raw_data_store.db.execute("INSERT INTO tree(id) VALUES(:id)", {"id": tree_id.hex()})
+        for generation in range(5):
+            await raw_data_store.db.execute(
+                "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
+                {"tree_id": tree_id.hex(), "generation": generation, "node_hash": None},
+            )
+
+        for generation in range(6, 10):
+            await raw_data_store.db.execute(
+                "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
+                {"tree_id": tree_id.hex(), "generation": generation, "node_hash": None},
+            )
+
+    with pytest.raises(
+        TreeGenerationIncrementingError,
+        match=r"\n +c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd$",
+    ):
+        await raw_data_store._check_roots_are_incrementing()

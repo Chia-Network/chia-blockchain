@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass, replace
 
 import logging
@@ -11,6 +12,7 @@ from chia.data_layer.data_layer_errors import (
     InternalLeftRightNotBytes32Error,
     TerminalLeftRightError,
     TerminalInvalidKeyOrValueProgramError,
+    TreeGenerationIncrementingError,
 )
 from chia.data_layer.data_layer_types import Root, Side, Node, TerminalNode, NodeType, InternalNode
 from chia.data_layer.data_layer_util import row_to_node
@@ -43,6 +45,7 @@ class DataStore:
         await self.db.execute("pragma journal_mode=wal")
         # https://github.com/Chia-Network/chia-blockchain/pull/8514#issuecomment-923310041
         await self.db.execute("pragma synchronous=OFF")
+        # if foreign key checking gets turned off, please add corresponding check methods
         await self.db.execute("PRAGMA foreign_keys=ON")
 
         async with self.db_wrapper.locked_transaction():
@@ -189,11 +192,32 @@ class DataStore:
             if len(hashes) > 0:
                 raise TerminalInvalidKeyOrValueProgramError(node_hashes=hashes)
 
+    async def _check_roots_are_incrementing(self, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute("SELECT * FROM root ORDER BY tree_id, generation")
+            roots = [Root.from_row(row=row) async for row in cursor]
+
+            roots_by_tree: Dict[bytes32, List[Root]] = defaultdict(list)
+            for root in roots:
+                roots_by_tree[root.tree_id].append(root)
+
+            bad_trees = []
+            for tree_id, roots in roots_by_tree.items():
+                current_generation = roots[-1].generation
+                expected_generations = list(range(current_generation + 1))
+                actual_generations = [root.generation for root in roots]
+                if actual_generations != expected_generations:
+                    bad_trees.append(tree_id)
+
+            if len(bad_trees) > 0:
+                raise TreeGenerationIncrementingError(tree_ids=bad_trees)
+
     _checks: Tuple[Callable[["DataStore"], Awaitable[None]], ...] = (
         _check_internal_key_value_are_null,
         _check_internal_left_right_are_bytes32,
         _check_terminal_left_right_are_null,
         _check_terminal_key_value_are_serialized_programs,
+        _check_roots_are_incrementing,
     )
 
     async def create_tree(self, tree_id: bytes32, *, lock: bool = True) -> bool:

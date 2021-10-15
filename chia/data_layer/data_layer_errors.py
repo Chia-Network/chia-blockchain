@@ -7,8 +7,8 @@ class IntegrityError(Exception):
     pass
 
 
-def build_message_with_hashes(message: str, node_hashes: List[bytes32]) -> str:
-    return "\n".join([message, *[f"    {hash.hex()}" for hash in node_hashes]])
+def build_message_with_hashes(message: str, bytes_objects: List[bytes]) -> str:
+    return "\n".join([message, *[f"    {b.hex()}" for b in bytes_objects]])
 
 
 class InternalKeyValueError(IntegrityError):
@@ -16,7 +16,7 @@ class InternalKeyValueError(IntegrityError):
         super().__init__(
             build_message_with_hashes(
                 message="Found internal nodes with key or value specified:",
-                node_hashes=node_hashes,
+                bytes_objects=node_hashes,
             )
         )
 
@@ -26,7 +26,7 @@ class InternalLeftRightNotBytes32Error(IntegrityError):
         super().__init__(
             build_message_with_hashes(
                 message="Found internal nodes with left or right that are not bytes32:",
-                node_hashes=node_hashes,
+                bytes_objects=node_hashes,
             )
         )
 
@@ -36,7 +36,7 @@ class TerminalLeftRightError(IntegrityError):
         super().__init__(
             build_message_with_hashes(
                 message="Found terminal nodes with left or right specified:",
-                node_hashes=node_hashes,
+                bytes_objects=node_hashes,
             )
         )
 
@@ -46,6 +46,16 @@ class TerminalInvalidKeyOrValueProgramError(IntegrityError):
         super().__init__(
             build_message_with_hashes(
                 message="Found terminal nodes with keys or values that are invalid programs:",
-                node_hashes=node_hashes,
+                bytes_objects=node_hashes,
+            )
+        )
+
+
+class TreeGenerationIncrementingError(IntegrityError):
+    def __init__(self, tree_ids: List[bytes32]) -> None:
+        super().__init__(
+            build_message_with_hashes(
+                message="Found trees with generations not properly incrementing:",
+                bytes_objects=tree_ids,
             )
         )
