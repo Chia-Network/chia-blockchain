@@ -139,8 +139,8 @@ class DataStore:
             )
             hashes = [hexstr_to_bytes(row["hash"]) async for row in cursor]
 
-            if len(hashes) > 0:
-                raise InternalKeyValueError(node_hashes=hashes)
+        if len(hashes) > 0:
+            raise InternalKeyValueError(node_hashes=hashes)
 
     async def _check_internal_left_right_are_bytes32(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -157,8 +157,8 @@ class DataStore:
                 except ValueError:
                     hashes.append(hexstr_to_bytes(row["hash"]))
 
-            if len(hashes) > 0:
-                raise InternalLeftRightNotBytes32Error(node_hashes=hashes)
+        if len(hashes) > 0:
+            raise InternalLeftRightNotBytes32Error(node_hashes=hashes)
 
     async def _check_terminal_left_right_are_null(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -168,8 +168,8 @@ class DataStore:
             )
             hashes = [hexstr_to_bytes(row["hash"]) async for row in cursor]
 
-            if len(hashes) > 0:
-                raise TerminalLeftRightError(node_hashes=hashes)
+        if len(hashes) > 0:
+            raise TerminalLeftRightError(node_hashes=hashes)
 
     async def _check_terminal_key_value_are_serialized_programs(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -186,8 +186,8 @@ class DataStore:
                 except ValueError:
                     hashes.append(hexstr_to_bytes(row["hash"]))
 
-            if len(hashes) > 0:
-                raise TerminalInvalidKeyOrValueProgramError(node_hashes=hashes)
+        if len(hashes) > 0:
+            raise TerminalInvalidKeyOrValueProgramError(node_hashes=hashes)
 
     async def _check_roots_are_incrementing(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
