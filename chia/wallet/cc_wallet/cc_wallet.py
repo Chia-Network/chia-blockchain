@@ -23,6 +23,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.json_util import dict_to_json_str
+from chia.wallet.cc_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cc_wallet.cc_info import CCInfo
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
@@ -165,7 +166,16 @@ class CCWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
 
+        for id, wallet in wallet_state_manager.wallets.items():
+            if wallet.type() == CCWallet.type():
+                if wallet.get_colour() == limitations_program_hash_hex:
+                    self.log.warning(f"Not creating wallet for already existing CAT wallet")
+                    raise ValueError(f"Wallet already exists")
+
         self.wallet_state_manager = wallet_state_manager
+        if limitations_program_hash_hex in DEFAULT_CATS:
+            cat_info = DEFAULT_CATS[limitations_program_hash_hex]
+            name = cat_info["name"]
 
         limitations_program_hash = hexstr_to_bytes(limitations_program_hash_hex)
         self.cc_info = CCInfo(limitations_program_hash, None, [])
