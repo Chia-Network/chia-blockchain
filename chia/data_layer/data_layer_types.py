@@ -79,6 +79,15 @@ class InternalNode:
             right_hash=bytes32(hexstr_to_bytes(row["right"])),
         )
 
+    def other_child_hash(self, hash: bytes32) -> bytes32:
+        if self.left_hash == hash:
+            return self.right_hash
+        elif self.right_hash == hash:
+            return self.left_hash
+
+        # TODO: real exception considerations
+        raise Exception("provided hash not present")
+
 
 @dataclass(frozen=True)
 class Root:

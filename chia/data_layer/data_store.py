@@ -339,44 +339,8 @@ class DataStore:
                 assert side is not None
                 assert reference_node_hash is not None
                 assert root.node_hash  # todo handle errors
-                traversal_hash = reference_node_hash
-                parents = []
-                print(f"traversal hash: {traversal_hash}")
 
-                while True:
-                    # TODO: uh yeah, let's not do this a bunch of times in the while loop...
-                    cursor = await self.db.execute(
-                        """
-                        WITH RECURSIVE
-                            tree_from_root_hash(hash, node_type, left, right, key, value) AS (
-                                SELECT node.* FROM node WHERE node.hash == :root_hash
-                                UNION ALL
-                                SELECT node.* FROM node, tree_from_root_hash
-                                WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
-                            )
-                        SELECT * FROM tree_from_root_hash
-                        WHERE left == :hash OR right == :hash
-                        """,
-                        {"hash": traversal_hash.hex(), "root_hash": root.node_hash.hex()},
-                    )
-                    row = await cursor.fetchone()
-
-                    if row is None:
-                        break
-
-                    # TODO: debugging stuff
-                    abc = await cursor.fetchone()
-                    if abc is not None:
-                        1 / 0
-
-                    new_node = row_to_node(row=row)
-                    parents.append(new_node)
-                    traversal_hash = new_node.hash
-
-                # TODO: debug, remove
-                print(" +++++++++++")
-                for parent in parents:
-                    print(f"        {parent}")
+                ancestors = await self.get_ancestors(node_hash=reference_node_hash, tree_id=tree_id, lock=False)
 
                 # create the new internal node
                 if side == Side.LEFT:
@@ -393,18 +357,21 @@ class DataStore:
 
                 traversal_node_hash = reference_node_hash
 
-                for parent in parents:
+                # update the rest of the internal nodes
+                for ancestor in ancestors:
                     # TODO: really handle
-                    assert isinstance(parent, InternalNode)
-                    if parent.left_hash == traversal_node_hash:
+                    assert isinstance(ancestor, InternalNode)
+                    if ancestor.left_hash == traversal_node_hash:
                         left = new_hash
-                        right = parent.right_hash
-                    elif parent.right_hash == traversal_node_hash:
-                        left = parent.left_hash
+                        right = ancestor.right_hash
+                    elif ancestor.right_hash == traversal_node_hash:
+                        left = ancestor.left_hash
                         right = new_hash
 
-                    traversal_node_hash = parent.hash
+                    traversal_node_hash = ancestor.hash
 
+                    # TODO: shouldn't this be more like:
+                    #       new_hash = Program.to((left, right)).get_tree_hash(left, right)
                     new_hash = Program.to([left, right]).get_tree_hash()
 
                     await self._insert_internal_node(hash=new_hash, left_hash=left, right_hash=right)
@@ -425,19 +392,13 @@ class DataStore:
                 return
 
             parent = ancestors[0]
-
-            if parent.left_hash == node.hash:
-                other_hash = parent.right_hash
-            else:
-                other_hash = parent.left_hash
+            other_hash = parent.other_child_hash(hash=node.hash)
 
             if len(ancestors) == 1:
                 # the parent is the root so the other side will become the new root
                 await self._insert_root(tree_id=tree_id, node_hash=other_hash)
 
                 return
-
-            new_ancestors: List[InternalNode] = []
 
             old_child_hash = parent.hash
             new_child_hash = other_hash
@@ -456,18 +417,20 @@ class DataStore:
                 new_node_program = Program.to((left_hash, right_hash))
                 new_node_hash = new_node_program.get_tree_hash(left_hash, right_hash)
 
-                new_node = replace(ancestor, hash=new_node_hash, left_hash=left_hash, right_hash=right_hash)
+                new_node = InternalNode(hash=new_node_hash, left_hash=left_hash, right_hash=right_hash)
 
-                new_ancestors.append(new_node)
-                old_child_hash, new_child_hash = ancestor.hash, new_node.hash
+                old_child_hash = ancestor.hash
+                new_child_hash = new_node.hash
 
-            for new_node in new_ancestors:
-                # TODO: handle collision, recheck other places too
+                # TODO: handle if it already exists, recheck other places too.
+                #       INSERT OR IGNORE?
                 await self._insert_internal_node(
-                    hash=new_node.hash, left_hash=new_node.left_hash, right_hash=new_node.right_hash
+                    hash=new_node.hash,
+                    left_hash=new_node.left_hash,
+                    right_hash=new_node.right_hash,
                 )
 
-            await self._insert_root(tree_id=tree_id, node_hash=new_ancestors[-1].hash)
+            await self._insert_root(tree_id=tree_id, node_hash=new_node.hash)
 
         return
 
