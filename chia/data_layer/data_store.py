@@ -10,6 +10,7 @@ import aiosqlite
 from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
     InternalLeftRightNotBytes32Error,
+    NodeHashError,
     TerminalLeftRightError,
     TerminalInvalidKeyOrValueProgramError,
     TreeGenerationIncrementingError,
@@ -116,7 +117,7 @@ class DataStore:
 
         return node_hash
 
-    async def _insert_terminal_node(self, key: Program, value: Program) -> None:
+    async def _insert_terminal_node(self, key: Program, value: Program) -> bytes32:
         # TODO: maybe verify a transaction is active
 
         node_hash = Program.to((key, value)).get_tree_hash()
@@ -220,12 +221,35 @@ class DataStore:
             if len(bad_trees) > 0:
                 raise TreeGenerationIncrementingError(tree_ids=bad_trees)
 
+    async def _check_hashes(self, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute("SELECT * FROM node")
+
+            bad_node_hashes: bytes32 = []
+            async for row in cursor:
+                node = row_to_node(row=row)
+                if isinstance(node, InternalNode):
+                    expected_hash = Program.to((node.left_hash, node.right_hash)).get_tree_hash(
+                        node.left_hash, node.right_hash
+                    )
+                elif isinstance(node, TerminalNode):
+                    # TODO: what form of key and value to hash?  tuple or list for Program.to()?
+                    # expected_hash = Program.to((node.key, node.value)).get_tree_hash()
+                    expected_hash = Program.to((node.key, node.value)).get_tree_hash()
+
+                if node.hash != expected_hash:
+                    bad_node_hashes.append(node.hash)
+
+        if len(bad_node_hashes) > 0:
+            raise NodeHashError(node_hashes=bad_node_hashes)
+
     _checks: Tuple[Callable[["DataStore"], Awaitable[None]], ...] = (
         _check_internal_key_value_are_null,
         _check_internal_left_right_are_bytes32,
         _check_terminal_left_right_are_null,
         _check_terminal_key_value_are_serialized_programs,
         _check_roots_are_incrementing,
+        _check_hashes,
     )
 
     async def create_tree(self, tree_id: bytes32, *, lock: bool = True) -> bool:

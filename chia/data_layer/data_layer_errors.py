@@ -59,3 +59,13 @@ class TreeGenerationIncrementingError(IntegrityError):
                 bytes_objects=tree_ids,
             )
         )
+
+
+class NodeHashError(IntegrityError):
+    def __init__(self, node_hashes: List[bytes32]) -> None:
+        super().__init__(
+            build_message_with_hashes(
+                message="Found nodes with incorrect hashes:",
+                bytes_objects=node_hashes,
+            )
+        )
