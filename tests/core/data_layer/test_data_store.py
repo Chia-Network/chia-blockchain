@@ -59,7 +59,7 @@ async def raw_data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
 
 
 @pytest.fixture(name="data_store", scope="function")
-async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> DataStore:
+async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> AsyncIterable[DataStore]:
     await raw_data_store.create_tree(tree_id=tree_id)
 
     await raw_data_store.check()
@@ -510,7 +510,7 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
 #     await data_store.create_pair(key=key, value=value)
 
 
-def test_all_checks_collected():
+def test_all_checks_collected() -> None:
     expected = {value for name, value in vars(DataStore).items() if name.startswith("_check_") and callable(value)}
 
     assert set(DataStore._checks) == expected
@@ -532,7 +532,10 @@ invalid_program_hex = b"\xab\xcd".hex()
     ids=["key", "value"],
 )
 @pytest.mark.asyncio
-async def test_check_internal_key_value_are_null(raw_data_store: DataStore, key_value):
+async def test_check_internal_key_value_are_null(
+    raw_data_store: DataStore,
+    key_value: Dict[str, Optional[str]],
+) -> None:
     async with raw_data_store.db_wrapper.locked_transaction():
         await raw_data_store.db.execute(
             "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
@@ -555,7 +558,7 @@ async def test_check_internal_key_value_are_null(raw_data_store: DataStore, key_
     ids=["left", "right"],
 )
 @pytest.mark.asyncio
-async def test_check_internal_left_right_are_bytes32(raw_data_store: DataStore, left_right):
+async def test_check_internal_left_right_are_bytes32(raw_data_store: DataStore, left_right: Dict[str, str]) -> None:
     async with raw_data_store.db_wrapper.locked_transaction():
         # needed to satisfy foreign key constraints
         await raw_data_store.db.execute(
@@ -584,7 +587,7 @@ async def test_check_internal_left_right_are_bytes32(raw_data_store: DataStore, 
     ids=["left", "right"],
 )
 @pytest.mark.asyncio
-async def test_check_terminal_left_right_are_null(raw_data_store: DataStore, left_right: Dict[str, str]):
+async def test_check_terminal_left_right_are_null(raw_data_store: DataStore, left_right: Dict[str, str]) -> None:
     async with raw_data_store.db_wrapper.locked_transaction():
         await raw_data_store.db.execute(
             "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
@@ -607,7 +610,10 @@ async def test_check_terminal_left_right_are_null(raw_data_store: DataStore, lef
     ids=["key", "value"],
 )
 @pytest.mark.asyncio
-async def test_check_terminal_key_value_are_serialized_programs(raw_data_store: DataStore, key_value):
+async def test_check_terminal_key_value_are_serialized_programs(
+    raw_data_store: DataStore,
+    key_value: Dict[str, str],
+) -> None:
     async with raw_data_store.db_wrapper.locked_transaction():
         await raw_data_store.db.execute(
             "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",

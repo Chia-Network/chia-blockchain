@@ -125,11 +125,11 @@ class DataStore:
             },
         )
 
-    async def check(self):
+    async def check(self) -> None:
         for check in self._checks:
-            await check(self=self)
+            await check(self)
 
-    async def _check_internal_key_value_are_null(self, *, lock: bool = True):
+    async def _check_internal_key_value_are_null(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
                 """SELECT * FROM node WHERE node_type == :node_type AND (key NOT NULL OR value NOT NULL)""",
@@ -140,7 +140,7 @@ class DataStore:
             if len(hashes) > 0:
                 raise InternalKeyValueError(node_hashes=hashes)
 
-    async def _check_internal_left_right_are_bytes32(self, *, lock: bool = True):
+    async def _check_internal_left_right_are_bytes32(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
                 """SELECT * FROM node WHERE node_type == :node_type""",
@@ -158,7 +158,7 @@ class DataStore:
             if len(hashes) > 0:
                 raise InternalLeftRightNotBytes32Error(node_hashes=hashes)
 
-    async def _check_terminal_left_right_are_null(self, *, lock: bool = True):
+    async def _check_terminal_left_right_are_null(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
                 """SELECT * FROM node WHERE node_type == :node_type AND (left NOT NULL OR right NOT NULL)""",
@@ -169,7 +169,7 @@ class DataStore:
             if len(hashes) > 0:
                 raise TerminalLeftRightError(node_hashes=hashes)
 
-    async def _check_terminal_key_value_are_serialized_programs(self, *, lock: bool = True):
+    async def _check_terminal_key_value_are_serialized_programs(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
                 """SELECT * FROM node WHERE node_type == :node_type""",
@@ -187,7 +187,7 @@ class DataStore:
             if len(hashes) > 0:
                 raise TerminalInvalidKeyOrValueProgramError(node_hashes=hashes)
 
-    _checks: Tuple[Callable[["DataStore", bool], Awaitable[None]]] = (
+    _checks: Tuple[Callable[["DataStore"], Awaitable[None]], ...] = (
         _check_internal_key_value_are_null,
         _check_internal_left_right_are_bytes32,
         _check_terminal_left_right_are_null,
