@@ -43,15 +43,11 @@ const socketMiddleware = () => {
     connected = true;
     store.dispatch(actions.wsConnected(event.target.url));
     store.dispatch(registerService('wallet_ui'));
-    store.dispatch(registerService(service_plotter));
     if (config.local_test) {
       store.dispatch(startServiceTest(service_wallet));
       store.dispatch(startService(service_simulator));
     } else {
       store.dispatch(startService(service_wallet));
-      store.dispatch(startService(service_full_node));
-      store.dispatch(startService(service_farmer));
-      store.dispatch(startService(service_harvester));
     }
   };
 
