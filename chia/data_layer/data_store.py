@@ -51,26 +51,27 @@ class DataStore:
 
         async with self.db_wrapper.locked_transaction():
             await self.db.execute(
-                "CREATE TABLE IF NOT EXISTS node("
-                "hash TEXT PRIMARY KEY NOT NULL,"
-                # " generation INTEGER NOT NULL",
-                "node_type INTEGER NOT NULL,"
-                "left TEXT REFERENCES node,"
-                "right TEXT REFERENCES node,"
-                "key TEXT,"
-                "value TEXT"
-                # "FOREIGN KEY(left) REFERENCES node(hash),"
-                # " FOREIGN KEY(right) REFERENCES node(hash)"
-                ")"
+                """
+                CREATE TABLE IF NOT EXISTS node(
+                    hash TEXT PRIMARY KEY NOT NULL,
+                    node_type INTEGER NOT NULL,
+                    left TEXT REFERENCES node,
+                    right TEXT REFERENCES node,
+                    key TEXT,
+                    value TEXT
+                )
+                """
             )
             await self.db.execute(
-                "CREATE TABLE IF NOT EXISTS root("
-                "tree_id TEXT NOT NULL,"
-                " generation INTEGER NOT NULL,"
-                " node_hash TEXT,"
-                " PRIMARY KEY(tree_id, generation),"
-                " FOREIGN KEY(node_hash) REFERENCES node(hash)"
-                ")"
+                """
+                CREATE TABLE IF NOT EXISTS root(
+                    tree_id TEXT NOT NULL,
+                    generation INTEGER NOT NULL,
+                    node_hash TEXT,
+                    PRIMARY KEY(tree_id, generation),
+                    FOREIGN KEY(node_hash) REFERENCES node(hash)
+                )
+                """
             )
 
         return self
@@ -103,8 +104,10 @@ class DataStore:
         # TODO: Review the OR IGNORE bit, should more be done to validate it is
         #       "the same row"?
         await self.db.execute(
-            "INSERT OR IGNORE INTO node(hash, node_type, left, right, key, value)"
-            " VALUES(:hash, :node_type, :left, :right, :key, :value)",
+            """
+            INSERT OR IGNORE INTO node(hash, node_type, left, right, key, value)
+            VALUES(:hash, :node_type, :left, :right, :key, :value)
+            """,
             {
                 "hash": node_hash.hex(),
                 "node_type": NodeType.INTERNAL,
