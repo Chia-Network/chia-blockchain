@@ -116,8 +116,10 @@ class DataStore:
 
         return node_hash
 
-    async def _insert_terminal_node(self, hash: bytes32, key: bytes, value: bytes) -> None:
+    async def _insert_terminal_node(self, key: Program, value: Program) -> None:
         # TODO: maybe verify a transaction is active
+
+        node_hash = Program.to((key, value)).get_tree_hash()
 
         await self.db.execute(
             """
@@ -125,14 +127,16 @@ class DataStore:
             VALUES(:hash, :node_type, :left, :right, :key, :value)
             """,
             {
-                "hash": hash.hex(),
+                "hash": node_hash.hex(),
                 "node_type": NodeType.TERMINAL,
                 "left": None,
                 "right": None,
-                "key": key.hex(),
-                "value": value.hex(),
+                "key": key.as_bin().hex(),
+                "value": value.as_bin().hex(),
             },
         )
+
+        return node_hash
 
     async def check(self) -> None:
         for check in self._checks:
@@ -427,11 +431,8 @@ class DataStore:
                 if reference_node_type == NodeType.INTERNAL:
                     raise Exception("can not insert a new key/value on an internal node")
 
-            # TODO: don't we decode from a program...?  and this undoes that...?
-            new_terminal_node_hash = Program.to([key.as_bin(), value.as_bin()]).get_tree_hash()
-
             # create new terminal node
-            await self._insert_terminal_node(hash=new_terminal_node_hash, key=bytes(key), value=bytes(value))
+            new_terminal_node_hash = await self._insert_terminal_node(key=key, value=value)
 
             if was_empty:
                 # TODO: a real exception

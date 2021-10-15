@@ -167,7 +167,7 @@ async def test_insert_over_empty(data_store: DataStore, tree_id: bytes32) -> Non
     value = Program.to("abc")
 
     node_hash = await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
-    assert node_hash == Program.to([key.as_bin(), value.as_bin()]).get_tree_hash()
+    assert node_hash == Program.to((key, value)).get_tree_hash()
 
 
 @pytest.mark.asyncio
@@ -331,9 +331,11 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
 
     ancestors = await data_store.get_ancestors(node_hash=reference_node_hash, tree_id=tree_id)
     hashes = [node.hash.hex() for node in ancestors]
+
+    # TODO: reverify these are correct
     assert hashes == [
-        "abe4cab7f377a7dd3cbc8e76b8e191bed03da8f8d5235f1d98d7e0b043c3b5c7",
-        "c4d62d5fdd4296bce13349bd349b475ba7e43f0e28e0a29d16ba3ba015cea4cc",
+        "eba9a0627b6c1956e33abd233a216e1bb977a5af6e76045b4f2e9de79e6b526e",
+        "5fa24f8b8cedf2e1603a7827ad1187e79e1e98e990ed57a4e339dba45f0862cf",
     ]
 
 
