@@ -113,8 +113,10 @@ class DataStore:
         # TODO: maybe verify a transaction is active
 
         await self.db.execute(
-            "INSERT INTO node(hash, node_type, left, right, key, value)"
-            " VALUES(:hash, :node_type, :left, :right, :key, :value)",
+            """
+            INSERT INTO node(hash, node_type, left, right, key, value)
+            VALUES(:hash, :node_type, :left, :right, :key, :value)
+            """,
             {
                 "hash": hash.hex(),
                 "node_type": NodeType.TERMINAL,
@@ -132,7 +134,7 @@ class DataStore:
     async def _check_internal_key_value_are_null(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
-                """SELECT * FROM node WHERE node_type == :node_type AND (key NOT NULL OR value NOT NULL)""",
+                "SELECT * FROM node WHERE node_type == :node_type AND (key NOT NULL OR value NOT NULL)",
                 {"node_type": NodeType.INTERNAL},
             )
             hashes = [hexstr_to_bytes(row["hash"]) async for row in cursor]
@@ -143,7 +145,7 @@ class DataStore:
     async def _check_internal_left_right_are_bytes32(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
-                """SELECT * FROM node WHERE node_type == :node_type""",
+                "SELECT * FROM node WHERE node_type == :node_type",
                 {"node_type": NodeType.INTERNAL},
             )
 
@@ -161,7 +163,7 @@ class DataStore:
     async def _check_terminal_left_right_are_null(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
-                """SELECT * FROM node WHERE node_type == :node_type AND (left NOT NULL OR right NOT NULL)""",
+                "SELECT * FROM node WHERE node_type == :node_type AND (left NOT NULL OR right NOT NULL)",
                 {"node_type": NodeType.TERMINAL},
             )
             hashes = [hexstr_to_bytes(row["hash"]) async for row in cursor]
@@ -172,7 +174,7 @@ class DataStore:
     async def _check_terminal_key_value_are_serialized_programs(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
-                """SELECT * FROM node WHERE node_type == :node_type""",
+                "SELECT * FROM node WHERE node_type == :node_type",
                 {"node_type": NodeType.TERMINAL},
             )
 
