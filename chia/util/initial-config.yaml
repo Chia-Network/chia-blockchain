@@ -417,7 +417,8 @@ wallet:
   num_sync_batches: 50
   initial_num_public_keys: 100
   initial_num_public_keys_new_wallet: 5
-
+  dns_servers:
+    - "dns-introducer.chia.net"
   full_node_peer:
     host: *self_hostname
     port: 8444
