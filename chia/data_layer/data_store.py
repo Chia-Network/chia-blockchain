@@ -49,7 +49,6 @@ class DataStore:
         await self.db.execute("PRAGMA foreign_keys=ON")
 
         async with self.db_wrapper.locked_transaction():
-            await self.db.execute("CREATE TABLE IF NOT EXISTS tree(id TEXT PRIMARY KEY NOT NULL)")
             # TODO: figure out the use of the generation
             await self.db.execute(
                 "CREATE TABLE IF NOT EXISTS node("
@@ -70,7 +69,6 @@ class DataStore:
                 " generation INTEGER NOT NULL,"
                 " node_hash TEXT,"
                 " PRIMARY KEY(tree_id, generation),"
-                " FOREIGN KEY(tree_id) REFERENCES tree(id),"
                 " FOREIGN KEY(node_hash) REFERENCES node(hash)"
                 ")"
             )
@@ -222,7 +220,6 @@ class DataStore:
 
     async def create_tree(self, tree_id: bytes32, *, lock: bool = True) -> bool:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            await self.db.execute("INSERT INTO tree(id) VALUES(:id)", {"id": tree_id.hex()})
             await self._insert_root(tree_id=tree_id, node_hash=None)
 
         return True
@@ -235,9 +232,9 @@ class DataStore:
 
     async def get_tree_ids(self, *, lock: bool = True) -> Set[bytes32]:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute("SELECT id FROM tree")
+            cursor = await self.db.execute("SELECT DISTINCT tree_id FROM root")
 
-        tree_ids = {bytes32(hexstr_to_bytes(row["id"])) async for row in cursor}
+        tree_ids = {bytes32(hexstr_to_bytes(row["tree_id"])) async for row in cursor}
 
         return tree_ids
 

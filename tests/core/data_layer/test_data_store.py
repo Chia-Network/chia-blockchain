@@ -75,7 +75,6 @@ async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> Asy
 
 
 table_columns: Dict[str, List[str]] = {
-    "tree": ["id"],
     "node": ["hash", "node_type", "left", "right", "key", "value"],
     "root": ["tree_id", "generation", "node_hash"],
 }
@@ -634,7 +633,6 @@ async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataSto
     tree_id = hexstr_to_bytes("c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd")
 
     async with raw_data_store.db_wrapper.locked_transaction():
-        await raw_data_store.db.execute("INSERT INTO tree(id) VALUES(:id)", {"id": tree_id.hex()})
         for generation in range(1, 5):
             await raw_data_store.db.execute(
                 "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
@@ -653,7 +651,6 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
     tree_id = hexstr_to_bytes("c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd")
 
     async with raw_data_store.db_wrapper.locked_transaction():
-        await raw_data_store.db.execute("INSERT INTO tree(id) VALUES(:id)", {"id": tree_id.hex()})
         for generation in range(5):
             await raw_data_store.db.execute(
                 "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
