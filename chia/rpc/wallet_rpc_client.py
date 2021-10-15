@@ -115,7 +115,7 @@ class WalletRpcClient(RpcClient):
         return (await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))["address"]
 
     async def send_transaction(
-        self, wallet_id: str, amount: uint64, address: str, fee: uint64 = uint64(0), memos: Optional[List[bytes]] = None
+        self, wallet_id: str, amount: uint64, address: str, fee: uint64 = uint64(0), memos: Optional[List[str]] = None
     ) -> TransactionRecord:
         if memos is None:
             send_dict: Dict = {"wallet_id": wallet_id, "amount": amount, "address": address, "fee": fee}
@@ -125,7 +125,7 @@ class WalletRpcClient(RpcClient):
                 "amount": amount,
                 "address": address,
                 "fee": fee,
-                "memos": [mem.hex() for mem in memos],
+                "memos": memos,
             }
         res = await self.fetch("send_transaction", send_dict)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
@@ -138,7 +138,7 @@ class WalletRpcClient(RpcClient):
         for ad in additions:
             additions_hex.append({"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()})
             if "memos" in ad:
-                additions_hex[-1]["memos"] = [mem.hex() for mem in ad["memos"]]
+                additions_hex[-1]["memos"] = ad["memos"]
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
             response: Dict = await self.fetch(
@@ -173,7 +173,7 @@ class WalletRpcClient(RpcClient):
         for ad in additions:
             additions_hex.append({"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()})
             if "memos" in ad:
-                additions_hex[-1]["memos"] = [mem.hex() for mem in ad["memos"]]
+                additions_hex[-1]["memos"] = ad["memos"]
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
             response: Dict = await self.fetch(
@@ -229,17 +229,14 @@ class WalletRpcClient(RpcClient):
         amount: uint64,
         inner_address: str,
         fee: uint64 = uint64(0),
-        memos: Optional[List[bytes]] = None,
+        memos: Optional[List[str]] = None,
     ) -> TransactionRecord:
-        if memos is None:
-            send_dict: Dict = {"wallet_id": wallet_id, "amount": amount, "inner_address": inner_address, "fee": fee}
-        else:
-            send_dict = {
+        send_dict = {
                 "wallet_id": wallet_id,
                 "amount": amount,
                 "inner_address": inner_address,
                 "fee": fee,
-                "memos": [mem.hex() for mem in memos] if memos else [],
+                "memos": memos if memos else [],
             }
         res = await self.fetch("cc_spend", send_dict)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
