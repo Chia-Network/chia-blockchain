@@ -36,6 +36,7 @@ from chia.protocols.wallet_protocol import (
     RespondRemovals,
     RejectRemovalsRequest,
 )
+from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -102,6 +103,7 @@ class WalletNode:
     wallet_peers_initialized: bool
     keychain_proxy: Optional[KeychainProxy]
     weight_proof_handler: WeightProofHandler
+    wallet_peers: WalletPeers
 
     def __init__(
         self,
@@ -135,6 +137,9 @@ class WalletNode:
         self.local_keychain = local_keychain
         self.height_to_time: Dict[uint32, uint64] = {}
         self.synced_peers: Set[bytes32] = set()
+        self.wallet_peers = None
+        self.wallet_peers_initialized = False
+        self.valid_wp_cache = {}
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
@@ -223,6 +228,10 @@ class WalletNode:
 
         self.backup_initialized = True
 
+        if self.wallet_peers_initialized is False and self.wallet_peers is not None:
+            asyncio.create_task(self.wallet_peers.start())
+            self.wallet_peers_initialized = True
+
         if backup_file is not None:
             json_dict = open_backup_file(backup_file, self.wallet_state_manager.private_key)
             if "start_height" in json_dict["data"]:
@@ -258,6 +267,8 @@ class WalletNode:
     async def _await_closed(self):
         self.log.info("self._await_closed")
         await self.server.close_all_connections()
+        if self.wallet_peers is not None:
+            asyncio.create_task(self.wallet_peers.ensure_is_closed())
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager.close_all_stores()
             self.wallet_state_manager = None
@@ -352,6 +363,24 @@ class WalletNode:
     def set_server(self, server: ChiaServer):
         self.server = server
         server.on_connect = self.on_connect
+        connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", False)
+
+        network_name = self.config["selected_network"]
+        default_port = self.config["network_overrides"]["config"][network_name]["default_full_node_port"]
+
+        if connect_to_unknown_peers:
+            self.wallet_peers = WalletPeers(
+                self.server,
+                self.root_path,
+                self.config["target_peer_count"],
+                self.config["wallet_peers_path"],
+                self.config["introducer_peer"],
+                self.config["dns_servers"],
+                self.config["peer_connect_interval"],
+                self.config["selected_network"],
+                default_port,
+                self.log,
+            )
 
     async def on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None or self.backup_initialized is False:
@@ -369,6 +398,9 @@ class WalletNode:
             if peer.peer_node_id in peer_ids:
                 continue
             await peer.send_message(msg)
+
+        if not self.has_full_node() and self.wallet_peers is not None:
+            asyncio.create_task(self.wallet_peers.on_connect(peer))
 
     async def trusted_sync(self, full_node: WSChiaConnection):
         assert self.wallet_state_manager is not None
@@ -612,7 +644,6 @@ class WalletNode:
                     peer.peer_node_id not in self.synced_peers
                     and peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS
                 ):
-                    self.wallet_state_manager.set_sync_mode(True)
 
                     valid_weight_proof, weight_proof = await self.fetch_and_validate_the_weight_proof(
                         peer, response.header_block
@@ -621,6 +652,7 @@ class WalletNode:
                         await peer.close()
                         return
 
+                    self.wallet_state_manager.set_sync_mode(True)
                     await self.untrusted_sync_to_peer(peer, peak, weight_proof)
                     self.wallet_state_manager.blockchain.new_weight_proof(weight_proof)
                     self.wallet_state_manager.set_sync_mode(False)
@@ -883,14 +915,20 @@ class WalletNode:
 
         if weight_proof_response is None:
             return False, None
-        weight_proof = weight_proof_response.wp
         start_validation = time.time()
-        (
-            valid,
-            fork_point,
-            _,
-        ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
 
+        weight_proof = weight_proof_response.wp
+        if weight_proof.get_hash() in self.valid_wp_cache:
+            valid, fork_point = self.valid_wp_cache[weight_proof.get_hash()]
+        else:
+            start_validation = time.time()
+            (
+                valid,
+                fork_point,
+                _,
+            ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
+            if valid:
+                self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point
         end_validation = time.time()
         self.log.warning(f"It took {end_validation - start_validation} time to validate the weight proof!!!")
         return valid, weight_proof

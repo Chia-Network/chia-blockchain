@@ -67,7 +67,7 @@ class WalletBlockchain:
 
     def new_weight_proof(self, weight_proof):
         self.synced_weight_proof = weight_proof
-        for block in weight_proof.recent_blocks:
+        for block in weight_proof.recent_chain_data:
             self.recent_blocks_dict[block.header_hash] = block
             self.height_to_hash[block.height] = block.header_hash
 
