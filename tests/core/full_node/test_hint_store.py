@@ -51,7 +51,7 @@ class TestHintStore:
             assert coins_for_non_hint == []
 
     @pytest.mark.asyncio
-    async def test_hints_in_blockchain(self, empty_blockchain):
+    async def test_hints_in_blockchain(self, empty_blockchain):  # noqa: F811
         blockchain: Blockchain = empty_blockchain
 
         blocks = bt.get_consecutive_blocks(

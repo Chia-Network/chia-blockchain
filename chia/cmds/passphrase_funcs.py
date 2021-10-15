@@ -146,7 +146,7 @@ def initialize_passphrase() -> None:
     Keychain.set_master_passphrase(current_passphrase=None, new_passphrase=passphrase, save_passphrase=save_passphrase)
 
 
-def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Optional[str]) -> bool:
+def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Optional[str], hint: Optional[str]) -> bool:
     # Prompt for the current passphrase, if necessary
     if Keychain.has_master_passphrase():
         # Try the default passphrase first
@@ -173,7 +173,10 @@ def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Opti
             raise ValueError("passphrase is unchanged")
 
         Keychain.set_master_passphrase(
-            current_passphrase=current_passphrase, new_passphrase=new_passphrase, save_passphrase=save_passphrase
+            current_passphrase=current_passphrase,
+            new_passphrase=new_passphrase,
+            passphrase_hint=hint,
+            save_passphrase=save_passphrase,
         )
         success = True
     except Exception as e:
@@ -246,6 +249,44 @@ def using_default_passphrase() -> bool:
         return False
 
     return Keychain.master_passphrase_is_valid(default_passphrase())
+
+
+def display_passphrase_hint() -> None:
+    passphrase_hint = Keychain.get_master_passphrase_hint()
+    if passphrase_hint is not None:
+        print(f"Passphrase hint: {passphrase_hint}")  # lgtm [py/clear-text-logging-sensitive-data]
+    else:
+        print("Passphrase hint is not set")
+
+
+def update_passphrase_hint(hint: Optional[str] = None) -> bool:
+    updated: bool = False
+    if Keychain.has_master_passphrase() is False or using_default_passphrase():
+        print("Updating the passphrase hint requires that a passphrase has been set")
+    else:
+        current_passphrase: Optional[str] = get_current_passphrase()
+        if current_passphrase is None:
+            print("Keyring is not passphrase-protected")
+        else:
+            # Set or remove the passphrase hint
+            Keychain.set_master_passphrase_hint(current_passphrase, hint)
+            updated = True
+
+    return updated
+
+
+def set_passphrase_hint(hint: str) -> None:
+    if update_passphrase_hint(hint):
+        print("Passphrase hint set")
+    else:
+        print("Passphrase hint was not updated")
+
+
+def remove_passphrase_hint() -> None:
+    if update_passphrase_hint(None):
+        print("Passphrase hint removed")
+    else:
+        print("Passphrase hint was not removed")
 
 
 async def async_update_daemon_passphrase_cache_if_running(root_path: Path) -> None:
