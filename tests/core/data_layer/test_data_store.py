@@ -651,13 +651,7 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
     tree_id = hexstr_to_bytes("c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd")
 
     async with raw_data_store.db_wrapper.locked_transaction():
-        for generation in range(5):
-            await raw_data_store.db.execute(
-                "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
-                {"tree_id": tree_id.hex(), "generation": generation, "node_hash": None},
-            )
-
-        for generation in range(6, 10):
+        for generation in [*range(5), *range(6, 10)]:
             await raw_data_store.db.execute(
                 "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
                 {"tree_id": tree_id.hex(), "generation": generation, "node_hash": None},

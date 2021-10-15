@@ -49,7 +49,6 @@ class DataStore:
         await self.db.execute("PRAGMA foreign_keys=ON")
 
         async with self.db_wrapper.locked_transaction():
-            # TODO: figure out the use of the generation
             await self.db.execute(
                 "CREATE TABLE IF NOT EXISTS node("
                 "hash TEXT PRIMARY KEY NOT NULL,"
