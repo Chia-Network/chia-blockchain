@@ -175,6 +175,7 @@ class WalletNode:
         backup_file: Optional[Path] = None,
         skip_backup_import: bool = False,
     ) -> bool:
+        self.synced_peers = {}
         private_key = await self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
             self.logged_in = False
