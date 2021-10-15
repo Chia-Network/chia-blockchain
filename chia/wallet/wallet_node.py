@@ -19,7 +19,6 @@ from chia.daemon.keychain_proxy import (
     KeyringIsEmpty,
 )
 from chia.full_node.weight_proof import WeightProofHandler
-from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight, RequestBlocks, RespondBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -54,8 +53,6 @@ from chia.util.keychain import KeyringIsLocked
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.derivation_record import DerivationRecord
-
-from chia.wallet.settings.settings_objects import BackupInitialized
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import (
     validate_additions,
@@ -126,7 +123,6 @@ class WalletNode:
         self.proof_hashes: List = []
         self.state_changed_callback = None
         self.wallet_state_manager = None
-        self.backup_initialized = False  # Delay first launch sync after user imports backup info or decides to skip
         self.server = None
         self.wsm_close_task = None
         self.sync_task: Optional[asyncio.Task] = None
@@ -171,9 +167,6 @@ class WalletNode:
     async def _start(
         self,
         fingerprint: Optional[int] = None,
-        new_wallet: bool = False,
-        backup_file: Optional[Path] = None,
-        skip_backup_import: bool = False,
     ) -> bool:
         self.synced_peers = set()
         private_key = await self.get_key_for_fingerprint(fingerprint)
@@ -210,38 +203,11 @@ class WalletNode:
         self.wsm_close_task = None
 
         assert self.wallet_state_manager is not None
-
-        backup_settings: BackupInitialized = self.wallet_state_manager.user_settings.get_backup_settings()
-        if backup_settings.user_initialized is False:
-            if new_wallet is True:
-                await self.wallet_state_manager.user_settings.user_created_new_wallet()
-                self.wallet_state_manager.new_wallet = True
-            elif skip_backup_import is True:
-                await self.wallet_state_manager.user_settings.user_skipped_backup_import()
-            elif backup_file is not None:
-                await self.wallet_state_manager.import_backup_info(backup_file)
-            else:
-                self.backup_initialized = False
-                await self.wallet_state_manager.close_all_stores()
-                self.wallet_state_manager = None
-                self.logged_in = False
-                return False
-
-        self.backup_initialized = True
-
         if self.wallet_peers_initialized is False and self.wallet_peers is not None:
             asyncio.create_task(self.wallet_peers.start())
             self.wallet_peers_initialized = True
 
-        if backup_file is not None:
-            json_dict = open_backup_file(backup_file, self.wallet_state_manager.private_key)
-            if "start_height" in json_dict["data"]:
-                start_height = json_dict["data"]["start_height"]
-                self.config["starting_height"] = max(0, start_height - self.config["start_height_buffer"])
-            else:
-                self.config["starting_height"] = 0
-        else:
-            self.config["starting_height"] = 0
+        self.config["starting_height"] = 0
 
         if self.state_changed_callback is not None:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
@@ -283,12 +249,12 @@ class WalletNode:
             self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
 
     def _pending_tx_handler(self):
-        if self.wallet_state_manager is None or self.backup_initialized is False:
+        if self.wallet_state_manager is None:
             return None
         asyncio.create_task(self._resend_queue())
 
     async def _action_messages(self) -> List[Message]:
-        if self.wallet_state_manager is None or self.backup_initialized is False:
+        if self.wallet_state_manager is None:
             return []
         actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
         result: List[Message] = []
@@ -307,21 +273,11 @@ class WalletNode:
         return result
 
     async def _resend_queue(self):
-        if (
-            self._shut_down
-            or self.server is None
-            or self.wallet_state_manager is None
-            or self.backup_initialized is None
-        ):
+        if self._shut_down or self.server is None or self.wallet_state_manager is None:
             return None
 
         for msg, sent_peers in await self._messages_to_resend():
-            if (
-                self._shut_down
-                or self.server is None
-                or self.wallet_state_manager is None
-                or self.backup_initialized is None
-            ):
+            if self._shut_down or self.server is None or self.wallet_state_manager is None:
                 return None
             full_nodes = self.server.get_full_node_connections()
             for peer in full_nodes:
@@ -330,17 +286,12 @@ class WalletNode:
                 await peer.send_message(msg)
 
         for msg in await self._action_messages():
-            if (
-                self._shut_down
-                or self.server is None
-                or self.wallet_state_manager is None
-                or self.backup_initialized is None
-            ):
+            if self._shut_down or self.server is None or self.wallet_state_manager is None:
                 return None
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def _messages_to_resend(self) -> List[Tuple[Message, Set[bytes32]]]:
-        if self.wallet_state_manager is None or self.backup_initialized is False or self._shut_down:
+        if self.wallet_state_manager is None or self._shut_down:
             return []
         messages: List[Tuple[Message, Set[bytes32]]] = []
 
@@ -384,7 +335,7 @@ class WalletNode:
             )
 
     async def on_connect(self, peer: WSChiaConnection):
-        if self.wallet_state_manager is None or self.backup_initialized is False:
+        if self.wallet_state_manager is None:
             return None
 
         if Version(peer.protocol_version) < Version("0.0.33"):
@@ -505,7 +456,7 @@ class WalletNode:
                         info = await self.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash(
                             coin_state.coin.puzzle_hash
                         )
-                        if info is not None:
+                        if coin_state.created_height is None or info is not None:
                             continue
                         wallet_id, wallet_type = await self.wallet_state_manager.fetch_parent_and_check_for_cat(
                             peer, coin_state

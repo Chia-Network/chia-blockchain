@@ -1,6 +1,4 @@
-import asyncio
 import logging
-import time
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -27,7 +25,6 @@ from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.backup_utils import download_backup, get_backup_info, upload_backup
 from chia.wallet.util.trade_utils import trade_record_to_dict
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -77,7 +74,6 @@ class WalletRpcApi:
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
             "/send_transaction_multi": self.send_transaction_multi,
-            "/create_backup": self.create_backup,
             "/get_transaction_count": self.get_transaction_count,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
@@ -153,45 +149,9 @@ class WalletRpcApi:
             return {"fingerprint": fingerprint}
 
         await self._stop_wallet()
-        log_in_type = request["type"]
-        recovery_host = request["host"]
-        testing = False
-
-        if "testing" in self.service.config and self.service.config["testing"] is True:
-            testing = True
-        if log_in_type == "skip":
-            started = await self.service._start(fingerprint=fingerprint, skip_backup_import=True)
-        elif log_in_type == "restore_backup":
-            file_path = Path(request["file_path"])
-            started = await self.service._start(fingerprint=fingerprint, backup_file=file_path)
-        else:
-            started = await self.service._start(fingerprint)
-
+        started = await self.service._start(fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}
-        elif testing is True and self.service.backup_initialized is False:
-            response = {"success": False, "error": "not_initialized"}
-            return response
-        elif self.service.backup_initialized is False:
-            backup_info = None
-            backup_path = None
-            try:
-                private_key = await self.service.get_key_for_fingerprint(fingerprint)
-                last_recovery = await download_backup(recovery_host, private_key)
-                backup_path = path_from_root(self.service.root_path, "last_recovery")
-                if backup_path.exists():
-                    backup_path.unlink()
-                backup_path.write_text(last_recovery)
-                backup_info = get_backup_info(backup_path, private_key)
-                backup_info["backup_host"] = recovery_host
-                backup_info["downloaded"] = True
-            except Exception as e:
-                log.error(f"error {e}")
-            response = {"success": False, "error": "not_initialized"}
-            if backup_info is not None:
-                response["backup_info"] = backup_info
-                response["backup_path"] = f"{backup_path}"
-            return response
 
         return {"success": False, "error": "Unknown Error"}
 
@@ -267,14 +227,7 @@ class WalletRpcApi:
         except Exception as e:
             log.error(f"Failed to check_keys after adding a new key: {e}")
         request_type = request["type"]
-        if request_type == "new_wallet":
-            started = await self.service._start(fingerprint=fingerprint, new_wallet=True)
-        elif request_type == "skip":
-            started = await self.service._start(fingerprint=fingerprint, skip_backup_import=True)
-        elif request_type == "restore_backup":
-            file_path = Path(request["file_path"])
-            started = await self.service._start(fingerprint=fingerprint, backup_file=file_path)
-
+        started = await self.service._start(fingerprint=fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}
         raise ValueError("Failed to start")
@@ -343,7 +296,7 @@ class WalletRpcApi:
 
             if self.service.logged_in_fingerprint != fingerprint:
                 await self._stop_wallet()
-                await self.service._start(fingerprint=fingerprint, skip_backup_import=True)
+                await self.service._start(fingerprint=fingerprint)
 
             async with self.service.wallet_state_manager.lock:
                 wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
@@ -417,30 +370,10 @@ class WalletRpcApi:
 
         return {"wallets": wallets}
 
-    async def _create_backup_and_upload(self, host) -> None:
-        assert self.service.wallet_state_manager is not None
-        try:
-            if "testing" in self.service.config and self.service.config["testing"] is True:
-                return None
-            now = time.time()
-            file_name = f"backup_{now}"
-            path = path_from_root(self.service.root_path, file_name)
-            await self.service.wallet_state_manager.create_wallet_backup(path)
-            backup_text = path.read_text()
-            response = await upload_backup(host, backup_text)
-            success = response["success"]
-            if success is False:
-                log.error("Failed to upload backup to wallet backup service")
-            elif success is True:
-                log.info("Finished upload of the backup file")
-        except Exception as e:
-            log.error(f"Exception in upload backup. Error: {e}")
-
     async def create_new_wallet(self, request: Dict):
         assert self.service.wallet_state_manager is not None
         wallet_state_manager = self.service.wallet_state_manager
         main_wallet = wallet_state_manager.main_wallet
-        host = request["host"]
         if "fee" in request:
             fee: uint64 = request["fee"]
         else:
@@ -457,7 +390,6 @@ class WalletRpcApi:
                         name,
                     )
                     colour = cc_wallet.get_colour()
-                    asyncio.create_task(self._create_backup_and_upload(host))
                 self.service.wallet_state_manager.state_changed("wallet_created")
                 return {"type": cc_wallet.type(), "colour": colour, "wallet_id": cc_wallet.id()}
 
@@ -466,7 +398,6 @@ class WalletRpcApi:
                     cc_wallet = await CCWallet.create_wallet_for_cc(
                         wallet_state_manager, main_wallet, request["colour"]
                     )
-                    asyncio.create_task(self._create_backup_and_upload(host))
                 self.service.wallet_state_manager.state_changed("wallet_created")
                 return {"type": cc_wallet.type(), "colour": request["colour"], "wallet_id": cc_wallet.id()}
 
@@ -485,7 +416,6 @@ class WalletRpcApi:
                         uint64(int(request["amount"])),
                         uint64(int(request["fee"])) if "fee" in request else uint64(0),
                     )
-                    asyncio.create_task(self._create_backup_and_upload(host))
                 assert rl_admin.rl_info.admin_pubkey is not None
                 return {
                     "success": success,
@@ -499,7 +429,6 @@ class WalletRpcApi:
                 log.info("Create rl user wallet")
                 async with self.service.wallet_state_manager.lock:
                     rl_user: RLWallet = await RLWallet.create_rl_user(wallet_state_manager)
-                    asyncio.create_task(self._create_backup_and_upload(host))
                 assert rl_user.rl_info.user_pubkey is not None
                 return {
                     "id": rl_user.id(),
@@ -781,12 +710,6 @@ class WalletRpcApi:
         count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(wallet_id)
         return {"wallet_id": wallet_id, "count": count}
 
-    async def create_backup(self, request):
-        assert self.service.wallet_state_manager is not None
-        file_path = Path(request["file_path"])
-        await self.service.wallet_state_manager.create_wallet_backup(file_path)
-        return {}
-
     ##########################################################################################
     # Coloured Coins and Trading
     ##########################################################################################
@@ -924,31 +847,6 @@ class WalletRpcApi:
             else:
                 await wsm.trade_manager.cancel_pending_offer(trade_id)
         return {}
-
-    async def get_backup_info(self, request: Dict):
-        file_path = Path(request["file_path"])
-        sk = None
-        if "words" in request:
-            mnemonic = request["words"]
-            passphrase = ""
-            try:
-                assert self.service.keychain_proxy is not None  # An offering to the mypy gods
-                sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic), passphrase)
-            except KeyError as e:
-                return {
-                    "success": False,
-                    "error": f"The word '{e.args[0]}' is incorrect.'",
-                    "word": e.args[0],
-                }
-            except Exception as e:
-                return {"success": False, "error": str(e)}
-        elif "fingerprint" in request:
-            sk, seed = await self._get_private_key(request["fingerprint"])
-
-        if sk is None:
-            raise ValueError("Unable to decrypt the backup file.")
-        backup_info = get_backup_info(file_path, sk)
-        return {"backup_info": backup_info}
 
     ##########################################################################################
     # Distributed Identities

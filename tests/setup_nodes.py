@@ -177,7 +177,7 @@ async def setup_wallet_node(
 
         service = Service(**kwargs)
 
-        await service.start(new_wallet=True)
+        await service.start()
 
         yield service._node, service._node.server
 

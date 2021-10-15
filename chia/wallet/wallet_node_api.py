@@ -78,7 +78,7 @@ class WalletNodeAPI:
         assert peer.peer_node_id is not None
         name = peer.peer_node_id.hex()
         status = MempoolInclusionStatus(ack.status)
-        if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
+        if self.wallet_node.wallet_state_manager is None:
             return None
         if status == MempoolInclusionStatus.SUCCESS:
             self.wallet_node.log.info(f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}")
@@ -106,7 +106,7 @@ class WalletNodeAPI:
 
     @api_request
     async def respond_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):
-        if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
+        if self.wallet_node.wallet_state_manager is None:
             return None
         await self.wallet_node.wallet_state_manager.puzzle_solution_received(request)
 
