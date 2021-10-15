@@ -331,6 +331,9 @@ class Wallet:
 
         assert change >= 0
 
+        if announcements_to_consume is not None:
+            announcements_to_consume = [a.name() for a in announcements_to_consume]
+
         spends: List[CoinSpend] = []
         primary_announcement_hash: Optional[bytes32] = None
 
@@ -346,7 +349,10 @@ class Wallet:
             # Only one coin creates outputs
             if primary_announcement_hash is None and origin_id in (None, coin.name()):
                 if primaries is None:
-                    primaries = [{"puzzlehash": newpuzzlehash, "amount": amount, "memos": memos}]
+                    if amount > 0:
+                        primaries = [{"puzzlehash": newpuzzlehash, "amount": amount, "memos": memos}]
+                    else:
+                        primaries = []
                 else:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": amount, "memos": memos})
                 if change > 0:

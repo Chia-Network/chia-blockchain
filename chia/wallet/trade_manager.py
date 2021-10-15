@@ -231,9 +231,10 @@ class TradeManager:
                 continue
             new_ph = await wallet.get_new_puzzlehash()
             if wallet.type() == WalletType.COLOURED_COIN.value:
-                tx = await wallet.generate_signed_transaction(
+                txs = await wallet.generate_signed_transaction(
                     [coin.amount], [new_ph], 0, coins={coin}, ignore_max_send_amount=True
                 )
+                tx = txs[0]
             else:
                 tx = await wallet.generate_signed_transaction(
                     coin.amount, new_ph, 0, coins={coin}, ignore_max_send_amount=True
