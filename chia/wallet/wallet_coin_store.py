@@ -6,7 +6,7 @@ import sqlite3
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
@@ -135,15 +135,8 @@ class WalletCoinStore:
 
     @staticmethod
     def coin_record_from_row(row: sqlite3.Row) -> WalletCoinRecord:
-        coin = Coin(
-            bytes32(bytes.fromhex(row[6])),
-            bytes32(bytes.fromhex(row[5])),
-            uint64.from_bytes(
-                row[7],
-            ),
-        )
         return WalletCoinRecord(
-            coin, uint32(row[1]), uint32(row[2]), bool(row[3]), bool(row[4]), WalletType(row[8]), row[9]
+            Coin.from_row(row), uint32(row[1]), uint32(row[2]), bool(row[3]), bool(row[4]), WalletType(row[8]), row[9]
         )
 
     async def get_coin_record(self, coin_name: bytes32) -> Optional[WalletCoinRecord]:

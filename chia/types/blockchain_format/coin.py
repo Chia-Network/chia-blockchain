@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from aiosqlite import Row
 from typing import Any, List
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -50,6 +51,10 @@ class Coin(Streamable):
         # this function is never called and calling it would be ambiguous. Do
         # you want the format that's hashed or the format that's serialized?
         assert False
+
+    @staticmethod
+    def from_row(row: Row):
+        return Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
 
 
 def hash_coin_list(coin_list: List[Coin]) -> bytes32:

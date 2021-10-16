@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from aiosqlite import Row
 from typing import Optional
 
 from chia.protocols.wallet_protocol import CoinState
@@ -36,3 +37,7 @@ class CoinRecord(Streamable):
         if self.confirmed_block_index == 0 and self.timestamp == 0:
             confirmed_height = None
         return CoinState(self.coin, spent_h, confirmed_height)
+
+    @staticmethod
+    def from_row(row: Row):
+        return CoinRecord(Coin.from_row(row), row[1], row[2], row[3], row[4], row[8])
