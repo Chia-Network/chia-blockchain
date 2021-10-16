@@ -181,7 +181,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
             for bad_plot_path in bad_plots_list:
                 log.warning(f"{bad_plot_path}")
         if len(plot_manager.failed_to_open_filenames.keys()) > 0:
-            log.warning("    {len(plot_manager.failed_to_open_filenames)} unopenable plots:")
+            log.warning(f"    {len(plot_manager.failed_to_open_filenames)} unopenable plots:")
             for unopenable_plot_path in plot_manager.failed_to_open_filenames.keys():
                 log.warning(f"{unopenable_plot_path}")
     if len(plot_manager.no_key_filenames) > 0:
