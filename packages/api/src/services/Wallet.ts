@@ -88,18 +88,24 @@ export default class Wallet extends Service {
     });
   }
 
-  async generateMnemonic() {
+  async generateMnemonic(): Promise<{
+    mnemonic: string[];
+    success: boolean;
+  }> {
     return this.command('generate_mnemonic');
   }
 
-  async getPublicKeys() {
+  async getPublicKeys(): Promise<{
+    publicKeyFingerprints: number[];
+    success: boolean;
+  }> {
     return this.command('get_public_keys');
   }
 
   async addKey(
-    mnemonic: string, 
+    mnemonic: string[], 
     type: 'new_wallet' | 'skip' | 'restore_backup', 
-    filePath: string,
+    filePath?: string,
   ) {
     return this.command('add_key', {
       mnemonic,
@@ -187,14 +193,14 @@ export default class Wallet extends Service {
     });
   }
 
-  async getNextAddress(walletId: number, newAddress: string) {
+  async getNextAddress(walletId: number, newAddress: boolean) {
     return this.command('get_next_address', {
       walletId,
       newAddress,
     });
   }
 
-  async getFarmBlock(address: string) {
+  async farmBlock(address: string) {
     return this.command('farm_block', {
       address,
     });

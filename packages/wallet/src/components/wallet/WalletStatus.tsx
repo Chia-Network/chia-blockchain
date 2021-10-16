@@ -1,7 +1,8 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
-import { State, StateIndicator } from '@chia/core';
+import { Loading, State, StateIndicator } from '@chia/core';
+import { useGetSyncStatusQuery } from '@chia/api-react';
 import { Typography } from '@material-ui/core';
 import type { RootState } from '../../modules/rootReducer';
 import getWalletSyncingStatus from '../../util/getWalletSyncingStatus';
@@ -16,8 +17,13 @@ type Props = {
 
 export default function WalletStatus(props: Props) {
   const { variant, height, indicator } = props;
+  const { data: walletState, isLoading } = useGetSyncStatusQuery();
 
-  const walletState = useSelector((state: RootState) => state.wallet_state);
+  if (isLoading || !walletState) {
+    return (
+      <Loading />
+    );
+  }
 
   const syncingStatus = getWalletSyncingStatus(walletState);
 

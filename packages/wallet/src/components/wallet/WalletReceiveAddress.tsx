@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { CopyToClipboard, Card } from '@chia/core';
-import { useDispatch } from 'react-redux';
+import { CopyToClipboard, Card, Loading } from '@chia/core';
+import { useGetCurrentAddressQuery, useGetNextAddressMutation } from '@chia/api-react';
 import {
   Box,
   Button,
@@ -9,8 +9,6 @@ import {
   InputAdornment,
   Grid,
 } from '@material-ui/core';
-import { get_address } from '../../modules/message';
-import useWallet from '../../hooks/useWallet';
 
 type WalletReceiveAddressProps = {
   walletId: number;
@@ -18,24 +16,23 @@ type WalletReceiveAddressProps = {
 
 export default function WalletReceiveAddress(props: WalletReceiveAddressProps) {
   const { walletId } = props;
+  const { data: address, isLoading } = useGetCurrentAddressQuery({
+    walletId,
+  });
+  const [newAddress] = useGetNextAddressMutation();
 
-  const dispatch = useDispatch();
-  const { wallet, loading } = useWallet(walletId);
-  if (!wallet || loading) {
-    return null;
-  }
-
-  const { address } = wallet;
-
-  function newAddress() {
-    dispatch(get_address(walletId, true));
+  async function handleNewAddress() {
+    await newAddress({
+      walletId,
+      newAddress: true,
+    }).unwrap();
   }
 
   return (
     <Card
       title={<Trans>Receive Address</Trans>}
       action={
-        <Button onClick={newAddress} variant="outlined">
+        <Button onClick={handleNewAddress} variant="outlined">
           <Trans>New Address</Trans>
         </Button>
       }
@@ -52,20 +49,24 @@ export default function WalletReceiveAddress(props: WalletReceiveAddressProps) {
       <Grid item xs={12}>
         <Box display="flex">
           <Box flexGrow={1}>
-            <TextField
-              label={<Trans>Address</Trans>}
-              value={address}
-              variant="filled"
-              InputProps={{
-                readOnly: true,
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <CopyToClipboard value={address} />
-                  </InputAdornment>
-                ),
-              }}
-              fullWidth
-            />
+            {isLoading ? (
+              <Loading center />
+            ) : (
+              <TextField
+                label={<Trans>Address</Trans>}
+                value={address}
+                variant="filled"
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <CopyToClipboard value={address} />
+                    </InputAdornment>
+                  ),
+                }}
+                fullWidth
+              />
+            )}
           </Box>
         </Box>
       </Grid>

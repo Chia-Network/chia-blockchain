@@ -27,7 +27,7 @@ export default function StandardWallet(props: StandardWalletProps) {
       <Flex flexDirection="column" gap={3}>
         <WalletStandardCards walletId={walletId} />
         <WalletReceiveAddress walletId={walletId} />
-        <WalletSend wallet_id={walletId} />
+        <WalletSend walletId={walletId} />
         <WalletHistory walletId={walletId} />
       </Flex>
     </Flex>

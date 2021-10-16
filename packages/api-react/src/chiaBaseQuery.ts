@@ -1,23 +1,49 @@
 import { BaseQueryFn } from '@reduxjs/toolkit/query/react';
-import { Client, ServiceName } from '@chia/api';
+import Client, { Service } from '@chia/api';
 
-export const chiaBaseQuery = (
-  options: { 
-    client: Client,
-  }
-): BaseQueryFn<
-  { 
-    service: ServiceName;
+type Options = {
+  client: Client;
+  service: Service;
+};
+
+export default function chiaBaseQuery(options: Options): BaseQueryFn<
+  {
     command: string; 
-    variables?: any[],
+    args?: any[],
   },
   unknown,
-  Pick<ClientError, "name" | "message" | "stack">,
-  Partial<Pick<ClientError, "request" | "response">>
-> => {
-  const { client } = options;
+  unknown,
+  {},
+  {
+    timestamp: number;
+    command: string;
+    args?: any[];
+  }
+> {
+  const { 
+    client, 
+    service: Service,
+  } = options;
 
-  return async (service, command, args) => {
-    return client.service[command](command, ...args);
+  const service = new Service(client);
+
+  return async ({ command, args = [] }) => {
+    const meta = { 
+      timestamp: Date.now(),
+      command,
+      args,
+    };
+
+    try {
+      return { 
+        data: await service[command](...args),
+        meta,
+      };
+    } catch(error) {
+      return { 
+        error,
+        meta,
+      };
+    }
   };
-};
+}

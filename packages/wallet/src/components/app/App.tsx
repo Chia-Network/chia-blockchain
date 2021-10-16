@@ -2,17 +2,19 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
 import useDarkMode from 'use-dark-mode';
+import { createHashHistory } from 'history';
+import { Router } from 'react-router-dom';
 import isElectron from 'is-electron';
 import { createGlobalStyle } from 'styled-components';
 import { ConnectedRouter } from 'connected-react-router';
-import { ThemeProvider } from '@chia/core';
+import { Loading, ThemeProvider, ModalDialogsProvider, ModalDialogs } from '@chia/core';
 import Client, { FullNode, Wallet } from '@chia/api';
 import { ApiProvider } from '@reduxjs/toolkit/query/react';
 import AppRouter from './AppRouter';
 import darkTheme from '../../theme/dark';
 import lightTheme from '../../theme/light';
 import WebSocketConnection from '../../hocs/WebsocketConnection';
-import store, { history } from '../../modules/store';
+// import store, { history } from '../../modules/store';
 import { exit_and_close } from '../../modules/message';
 import useLocale from '../../hooks/useLocale';
 import AppModalDialogs from './AppModalDialogs';
@@ -24,6 +26,10 @@ import {
   getMaterialLocale,
 } from '../../config/locales';
 import Fonts from './fonts/Fonts';
+import { store, api } from '@chia/api-react';
+
+export const history = createHashHistory();
+
 
 const GlobalStyle = createGlobalStyle`
   html,
@@ -60,7 +66,7 @@ async function waitForConfig() {
 }
 
 export default function App() {
-  const [host, setHost] = useState(null);
+  const [isReady, setIsReady] = useState<boolean>(false);
   const { value: darkMode } = useDarkMode();
   const [locale] = useLocale(defaultLocale);
 
@@ -73,6 +79,7 @@ export default function App() {
     activateLocale(locale);
   }, [locale]);
 
+  /*
   useEffect(() => {
     window.addEventListener('load', () => {
       if (isElectron()) {
@@ -83,8 +90,16 @@ export default function App() {
       }
     });
   }, []);
+  */
 
+  const { api: { config } } = store.getState();
+  
   useEffect(async () => {
+    if (config) {
+      setIsReady(true);
+      return;
+    }
+
     await waitForConfig();
 
     const { remote } = window.require('electron');
@@ -95,57 +110,36 @@ export default function App() {
     const certPath = remote.getGlobal('cert_path');
     const url = remote.getGlobal('daemon_rpc_ws');
 
-    setHost(url);
-
-    console.log('url', url);
-    console.log('keyPath', keyPath);
-    console.log('certPath', certPath);
-
-    const client = new Client({
+    store.dispatch(api.initializeConfig({
       url,
-      cert: fs.readFileSync(certPath),
-      key: fs.readFileSync(keyPath),
-      WebSocket: WS,
-    });
+      cert: fs.readFileSync(certPath).toString(),
+      key: fs.readFileSync(keyPath).toString(),
+      webSocket: WS,
+    }));
 
-    const fullNode = new FullNode(client);
-    const wallet = new Wallet(client);
+    setIsReady(true);
+  }, [config]);
 
-    await client.connect();
-    console.log('get public keys');
 
-    const data = await wallet.getPublicKeys();
-    console.log('getPublicKeys', data);
-
-    wallet.onSyncChanged((...args) => {
-      console.log('!!!!SYNC CHANGED', ...args);
-    });
-
-    wallet.onNewBlock((...args) => {
-      console.log('!!!!NEW BLOCK', ...args);
-    });
-
-  }, []);
-
-  if (!host) {
-    return null;
+  if (!isReady) {
+    return "Loading...";
   }
 
   return (
-      <Provider store={store}>
-        <ConnectedRouter history={history}>
-          <I18nProvider i18n={i18n}>
-            <WebSocketConnection host={host}>
-              <ThemeProvider theme={theme}>
-                <GlobalStyle />
-                <Fonts />
-                <AppRouter />
-                <AppModalDialogs />
-                <AppLoading />
-              </ThemeProvider>
-            </WebSocketConnection>
-          </I18nProvider>
-        </ConnectedRouter>
-      </Provider>
+    <Provider store={store}>
+      <Router history={history}>
+        <I18nProvider i18n={i18n}>
+          <ThemeProvider theme={theme}>
+            <GlobalStyle />
+            <Fonts />
+            <ModalDialogsProvider>
+              <AppRouter />
+              {/* <AppLoading /> */}
+              <ModalDialogs />
+            </ModalDialogsProvider>
+          </ThemeProvider>
+        </I18nProvider>
+      </Router>
+    </Provider>
   );
 }

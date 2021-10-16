@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
+import { orderBy } from 'lodash';
 import { Box, Tooltip, Typography } from '@material-ui/core';
-import { Card, CopyToClipboard, Flex, Table } from '@chia/core';
+import { Card, CopyToClipboard, Flex, Loading, Table } from '@chia/core';
+import { useGetTransactionsQuery } from '@chia/api-react';
 import type { Row } from '../core/components/Table/Table';
 import {
   mojo_to_chia_string,
@@ -30,25 +32,25 @@ const getCols = (type: WalletType) => [
       <Tooltip
         title={
           <Flex alignItems="center" gap={1}>
-            <Box maxWidth={200}>{row.to_address}</Box>
-            <CopyToClipboard value={row.to_address} fontSize="small" />
+            <Box maxWidth={200}>{row.toAddress}</Box>
+            <CopyToClipboard value={row.toAddress} fontSize="small" />
           </Flex>
         }
         interactive
       >
-        <span>{row.to_address}</span>
+        <span>{row.toAddress}</span>
       </Tooltip>
     ),
     title: <Trans>To</Trans>,
   },
   {
-    field: (row: Row) => unix_to_short_date(row.created_at_time),
+    field: (row: Row) => unix_to_short_date(row.createdAtTime),
     title: <Trans>Date</Trans>,
   },
   {
     field: (row: Row) =>
       row.confirmed ? (
-        <Trans>Confirmed at height {row.confirmed_at_height}</Trans>
+        <Trans>Confirmed at height {row.confirmedAtHeight}</Trans>
       ) : (
         <Trans>Pending</Trans>
       ),
@@ -62,7 +64,7 @@ const getCols = (type: WalletType) => [
     title: <Trans>Amount</Trans>,
   },
   {
-    field: (row: Row) => mojo_to_chia_string(row.fee_amount),
+    field: (row: Row) => mojo_to_chia_string(row.feeAmount),
     title: <Trans>Fee</Trans>,
   },
 ];
@@ -73,7 +75,22 @@ type Props = {
 
 export default function WalletHistory(props: Props) {
   const { walletId } = props;
-  const { wallet, transactions } = useWallet(walletId);
+  const { data: transactions, isTransactionsLoading } = useGetTransactionsQuery({
+    walletId,
+  });
+  const { wallet, loading: isWalletLoading } = useWallet(walletId);
+
+  const isLoading = isTransactionsLoading || isWalletLoading;
+
+  const transactionsOrdered = useMemo(() => {
+    if (transactions) {
+      return orderBy(
+        transactions,
+        ['confirmed', 'confirmedAtHeight', 'createdAtTime'],
+        ['asc', 'desc', 'desc'],
+      );
+    }
+  }, [transactions]);
 
   const cols = useMemo(() => {
     if (!wallet) {
@@ -83,16 +100,15 @@ export default function WalletHistory(props: Props) {
     return getCols(wallet.type);
   }, [wallet?.type]);
 
-  if (!wallet) {
-    return null;
-  }
 
   return (
     <Card title={<Trans>History</Trans>}>
-      {transactions?.length ? (
+      {isLoading ? (
+        <Loading center />
+      ) : transactionsOrdered?.length ? (
         <Table
           cols={cols}
-          rows={transactions}
+          rows={transactionsOrdered}
           rowsPerPageOptions={[10, 25, 100]}
           rowsPerPage={10}
           pages

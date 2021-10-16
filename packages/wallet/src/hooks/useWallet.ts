@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
-import { useSelector } from 'react-redux';
 import { orderBy } from 'lodash';
+import { useGetWalletsQuery } from '@chia/api-react';
 import Wallet from '../types/Wallet';
 import Transaction from '../types/Transaction';
-import type { RootState } from '../modules/rootReducer';
 import WalletType from '../constants/WalletType';
 import useCurrencyCode from './useCurrencyCode';
 import getCATToken from '../util/getCATToken';
@@ -15,13 +14,11 @@ export default function useWallet(walletId: number): {
   unit?: string;
 } {
   const currencyCode = useCurrencyCode();
-  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
+  const { data: wallets, isLoading } = useGetWalletsQuery();
 
   const wallet = useMemo(() => {
     return wallets?.find((item) => item.id === walletId);
   }, [wallets, walletId]);
-
-  const isLoading = !wallets;
 
   const transactions = useMemo(() => {
     const transactions = wallet?.transactions;

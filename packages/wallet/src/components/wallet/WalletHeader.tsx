@@ -1,13 +1,12 @@
 import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import {
-  Back,
   More,
   Flex,
   ConfirmDialog,
+  useOpenDialog,
 } from '@chia/core';
 import { useHistory } from 'react-router';
-import { useDispatch } from 'react-redux';
 import {
   Box,
   Typography,
@@ -18,9 +17,8 @@ import {
 import {
   Delete as DeleteIcon,
 } from '@material-ui/icons';
-import { deleteUnconfirmedTransactions } from '../../modules/incoming';
+import { useDeleteUnconfirmedTransactionsMutation } from '@chia/api-react';
 import WalletStatus from './WalletStatus';
-import useOpenDialog from '../../hooks/useOpenDialog';
 import WalletsDropdodown from './WalletsDropdown';
 
 type StandardWalletProps = {
@@ -30,25 +28,21 @@ type StandardWalletProps = {
 
 export default function WalletHeader(props: StandardWalletProps) {
   const { walletId, actions } = props;
-  const dispatch = useDispatch();
   const openDialog = useOpenDialog();
+  const [deleteUnconfirmedTransactions] = useDeleteUnconfirmedTransactionsMutation();
   const history = useHistory();
 
   async function handleDeleteUnconfirmedTransactions() {
-    const deleteConfirmed = await openDialog(
+    await openDialog(
       <ConfirmDialog
         title={<Trans>Confirmation</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
         confirmColor="danger"
+        onConfirm={() => deleteUnconfirmedTransactions({ walletId }).unwrap()}
       >
         <Trans>Are you sure you want to delete unconfirmed transactions?</Trans>
       </ConfirmDialog>,
     );
-
-    // @ts-ignore
-    if (deleteConfirmed) {
-      dispatch(deleteUnconfirmedTransactions(walletId));
-    }
   }
 
   function handleAddToken() {

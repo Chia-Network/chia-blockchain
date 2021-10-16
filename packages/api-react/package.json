@@ -19,7 +19,7 @@
   "dependencies": {
     "@babel/runtime": "^7.15.4",
     "@chia/api": "^1.0.0",
-    "core-js": "^3.18.2",
+    "core-js": "^3.18.3",
     "lodash": "^4.17.21",
     "regenerator-runtime": "^0.13.9"
   },
@@ -40,12 +40,12 @@
     "@rollup/plugin-node-resolve": "^13.0.5",
     "@types/core-js": "^2.5.5",
     "@types/lodash": "^4.14.175",
-    "@types/node": "^16.10.3",
+    "@types/node": "^16.11.0",
     "@types/react-redux": "^7.1.19",
     "cross-env": "^7.0.3",
     "react-redux": "^7.2.5",
     "rollup": "^2.58.0",
     "rollup-plugin-node-externals": "^2.2.0",
-    "typescript": "^4.4.3"
+    "typescript": "^4.4.4"
   }
 }

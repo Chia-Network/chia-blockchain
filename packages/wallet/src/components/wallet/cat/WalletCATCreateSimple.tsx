@@ -4,7 +4,8 @@ import { Trans } from '@lingui/macro';
 import { Grid } from '@material-ui/core';
 import { Add as AddIcon } from '@material-ui/icons';
 import { Back, Flex, Loading } from '@chia/core';
-import { useDispatch, useSelector } from 'react-redux';
+import { useGetWalletsQuery } from '@chia/api-react';
+import { useDispatch } from 'react-redux';
 import WalletCreateCard from '../create/WalletCreateCard';
 import { createCATWalletFromToken } from '../../../modules/message';
 import Tokens from '../../../constants/Tokens';
@@ -18,8 +19,7 @@ export default function WalletCATCreateSimple() {
   const dispatch = useDispatch();
   const { url } = useRouteMatch();
   const showError = useShowError();
-  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
-  const isLoading = !wallets;
+  const { data: wallets, isLoading } = useGetWalletsQuery();
 
   function handleCreateExisting() {
     history.push(`/dashboard/wallets/create/cat/existing`);
@@ -58,7 +58,7 @@ export default function WalletCATCreateSimple() {
           }
 
           return (
-            <Grid xs={12} sm={6} md={4} item>
+            <Grid key={token.tail} xs={12} sm={6} md={4} item>
               <WalletCreateCard
                 key={token.symbol}
                 onSelect={handleSelect}

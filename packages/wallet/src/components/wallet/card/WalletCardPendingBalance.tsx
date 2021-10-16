@@ -1,5 +1,6 @@
 import React, { useMemo, ReactElement } from 'react';
 import { Trans } from '@lingui/macro';
+import { useGetWalletBalanceQuery } from '@chia/api-react';
 import FarmCard from '../../farm/card/FarmCard';
 import useWallet from '../../../hooks/useWallet';
 import getWalletHumanValue from '../../../util/getWalletHumanValue';
@@ -11,10 +12,17 @@ type Props = {
 
 export default function WalletCardPendingBalance(props: Props) {
   const { walletId, tooltip } = props;
+  const { 
+    data: walletBalance, 
+    isLoading: isLoadingWalletBalance,
+  } = useGetWalletBalanceQuery({
+    walletId,
+  });
+
   const { wallet, unit = '', loading } = useWallet(walletId);
 
-  const isLoading = loading || !wallet?.wallet_balance;
-  const value = wallet?.wallet_balance?.balance_pending;
+  const isLoading = loading || isLoadingWalletBalance;
+  const value = walletBalance?.pendingBalance;
 
   const humanValue = useMemo(() => wallet && value !== undefined
       ? `${getWalletHumanValue(wallet, value)} ${unit}`

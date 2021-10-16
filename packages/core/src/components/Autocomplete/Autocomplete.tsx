@@ -38,6 +38,7 @@ export default function Autocomplete(props: Props) {
     fullWidth,
     freeSolo,
     forcePopupIcon,
+    disableClearable,
     onChange: defaultOnChange,
     ...rest
   } = props;
@@ -66,6 +67,12 @@ export default function Autocomplete(props: Props) {
     }
   }
 
+  function handleTextFieldChange(event) {
+    if (freeSolo) {
+      handleChange(event.target.value);
+    }
+  }
+
   const errorMessage = get(errors, name);
 
   return (
@@ -78,7 +85,7 @@ export default function Autocomplete(props: Props) {
         <TextField
           autoComplete="off"
           error={errorMessage}
-          onChange={(e) => handleChange(e.target.value)}
+          onChange={handleTextFieldChange}
           onBlur={onBlur}
           inputRef={ref}
           {...rest}
@@ -88,6 +95,7 @@ export default function Autocomplete(props: Props) {
       freeSolo={freeSolo}
       fullWidth={fullWidth}
       forcePopupIcon={forcePopupIcon}
+      disableClearable={disableClearable}
     />
   );
 }

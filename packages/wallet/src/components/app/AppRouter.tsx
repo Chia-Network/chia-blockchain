@@ -13,6 +13,10 @@ import LayoutLoading from '../layout/LayoutLoading';
 import WalletHero from '../wallet/hero/WalletHero';
 
 export default function AppRouter() {
+  const loggedInReceived = true;
+  const walletConnected = true;
+  const exiting = false;
+/*
   const loggedInReceived = useSelector(
     (state: RootState) => state.wallet_state.logged_in_received,
   );
@@ -21,6 +25,7 @@ export default function AppRouter() {
   );
 
   const exiting = useSelector((state: RootState) => state.daemon_state.exiting);
+  */
 
   if (exiting) {
     return (

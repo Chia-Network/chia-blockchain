@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import { Trans } from '@lingui/macro';
 import {
   ButtonProps,
@@ -9,6 +9,8 @@ import {
 } from '@material-ui/core';
 import DialogActions from '../DialogActions';
 import Button from '../Button';
+import ButtonLoading from '../ButtonLoading';
+import useShowError from '../../hooks/useShowError';
 
 type Props = {
   title?: ReactNode;
@@ -18,6 +20,7 @@ type Props = {
   confirmTitle: ReactNode;
   cancelTitle: ReactNode;
   confirmColor?: ButtonProps['color'] | 'danger';
+  onConfirm?: () => Promise<void>;
 };
 
 export default function ConfirmDialog(props: Props) {
@@ -29,10 +32,25 @@ export default function ConfirmDialog(props: Props) {
     cancelTitle,
     confirmTitle,
     confirmColor,
+    onConfirm,
     ...rest
   } = props;
 
-  function handleConfirm() {
+  const [loading, setLoading] = useState<boolean>(false);
+  const showError = useShowError();
+
+  async function handleConfirm() {
+    if (onConfirm) {
+      try {
+        setLoading(true);
+        await onConfirm();
+      } catch (error: any) {
+        showError(error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     onClose(true);
   }
 
@@ -66,13 +84,14 @@ export default function ConfirmDialog(props: Props) {
         >
           {cancelTitle}
         </Button>
-        <Button
+        <ButtonLoading
           onClick={handleConfirm}
           color={confirmColor}
           variant="contained"
+          loading={loading}
         >
           {confirmTitle}
-        </Button>
+        </ButtonLoading>
       </DialogActions>
     </Dialog>
   );

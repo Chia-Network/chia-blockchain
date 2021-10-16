@@ -1,28 +1,30 @@
-import { useSelector } from 'react-redux';
-import { RootState } from '../modules/rootReducer';
 import type Peak from '../types/Peak';
+import { useGetBlockchainStateQuery } from '@chia/api-react';
 
 export default function usePeak(): {
   peak?: Peak;
   loading: boolean;
 } {
-  const height = useSelector(
-    (state: RootState) => state.full_node_state.blockchain_state?.peak?.height,
-  );
+  const { data: blockchainState, isLoading, error } = useGetBlockchainStateQuery();
+  console.log('blockchainState', blockchainState, isLoading, error);
 
+  /*
   const timestamp = useSelector(
     (state: RootState) => state.full_node_state.latest_peak_timestamp,
   );
+  */
 
-  const loading = height === undefined || timestamp === undefined;
+  if (isLoading || !blockchainState) {
+    return {
+      loading: isLoading,
+    };
+  }
 
   return {
-    peak: loading
-      ? undefined
-      : {
-          height,
-          timestamp,
-        },
-    loading,
+    peak: {
+      height: blockchainState.peak?.height,
+      timestamp: undefined,
+    },
+    loading: isLoading,
   };
 }

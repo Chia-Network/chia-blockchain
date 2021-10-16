@@ -1,12 +1,11 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import {  useSelector } from 'react-redux';
+import { useGetWalletsQuery } from '@chia/api-react';
 import StandardWallet from './standard/WalletStandard';
 import { CreateWalletView } from './create/WalletCreate';
 import WalletCAT from './cat/WalletCAT';
 import RateLimitedWallet from './rateLimited/WalletRateLimited';
 import DistributedWallet from './did/WalletDID';
-import type { RootState } from '../../modules/rootReducer';
 import WalletType from '../../constants/WalletType';
 import LayoutMain from '../layout/LayoutMain';
 import { Switch, Route, useRouteMatch } from 'react-router-dom';
@@ -14,12 +13,11 @@ import WalletsList from './WalletsList';
 
 export default function Wallets() {
   const { path } = useRouteMatch();
-  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
-  const loading = !wallets;
+  const { data: wallets, isLoading } = useGetWalletsQuery();
 
   return (
     <LayoutMain
-      loading={loading}
+      loading={isLoading}
       loadingTitle={<Trans>Loading list of wallets</Trans>}
       title={<Trans>Wallets</Trans>}
     >

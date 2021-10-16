@@ -96,3 +96,4 @@ daemon/
 win_code_sign_cert.p12
 
 .env
+dist

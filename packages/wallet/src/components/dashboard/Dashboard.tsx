@@ -1,7 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Route, Switch, useRouteMatch } from 'react-router';
-import { useDispatch } from 'react-redux';
+import { Route, Switch, useHistory, useRouteMatch } from 'react-router';
 import { AppBar, Toolbar, IconButton, Container } from '@material-ui/core';
 import {
   DarkModeToggle,
@@ -10,12 +9,11 @@ import {
   Logo,
   ToolbarSpacing,
 } from '@chia/core';
+import { useAppDispatch, walletApi } from '@chia/api-react';
 import { t } from '@lingui/macro';
 import { ExitToApp as ExitToAppIcon } from '@material-ui/icons';
-import { logOut } from '../../modules/message';
 import { defaultLocale, locales } from '../../config/locales';
 import Wallets from '../wallet/Wallets';
-import BackupCreate from '../backup/BackupCreate';
 
 const StyledRoot = styled(Flex)`
   height: 100%;
@@ -41,11 +39,14 @@ const StyledBrandWrapper = styled(Flex)`
 `;
 
 export default function Dashboard() {
+  const history = useHistory();
   const { path } = useRouteMatch();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
-  function handleLogout() {
-    dispatch(logOut('log_out', {}));
+  async function handleLogout() {
+    dispatch(walletApi.util.resetApiState());
+
+    history.push('/');
   }
 
   return (

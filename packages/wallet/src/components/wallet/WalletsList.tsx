@@ -3,11 +3,10 @@ import { Trans } from '@lingui/macro';
 import {
   Grid, Typography,
 } from '@material-ui/core';
-import { useSelector } from 'react-redux';
+import { useGetWalletsQuery } from '@chia/api-react';
 import { Flex, Loading } from '@chia/core';
 import { useHistory } from 'react-router';
 import { Eco as HomeWorkIcon, Add as AddIcon } from '@material-ui/icons';
-import type { RootState } from '../../modules/rootReducer';
 import Wallet from '../../types/Wallet';
 import WalletCreateCard from './create/WalletCreateCard';
 import WalletName from '../../constants/WalletName';
@@ -16,7 +15,7 @@ import useTrans from '../../hooks/useTrans';
 export default function WalletsList() {
   const history = useHistory();
   const trans = useTrans();
-  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
+  const { data: wallets, isLoading } = useGetWalletsQuery();
 
   function handleSelectWallet(wallet: Wallet) {
     console.log('wallet', wallet);
@@ -35,10 +34,9 @@ export default function WalletsList() {
         </Typography>
       </Flex>
       <Grid spacing={3} alignItems="stretch" container>
-        {!wallets && (
+        {isLoading ? (
           <Loading center />
-        )}
-        {wallets && (
+        ) : (
           <>
             {wallets.map(wallet => (
               <Grid key={wallet.id} xs={12} sm={6} md={4} item>

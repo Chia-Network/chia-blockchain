@@ -1,10 +1,11 @@
-import { useSelector } from 'react-redux';
-import type { RootState } from '../modules/rootReducer';
+import { useGetNetworkInfoQuery } from '@chia/api-react';
 
 export default function useCurrencyCode(): string | undefined {
-  const networkPrefix = useSelector(
-    (state: RootState) => state.wallet_state.network_info?.network_prefix,
-  );
+  const { data: networkInfo, isLoading } = useGetNetworkInfoQuery();
 
-  return networkPrefix && networkPrefix.toUpperCase();
+  if (isLoading || !networkInfo) {
+    return undefined;
+  }
+
+  return networkInfo.networkPrefix.toUpperCase();
 }

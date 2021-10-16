@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import {
   TextField,
@@ -7,6 +7,7 @@ import {
   Grid,
   Container,
 } from '@material-ui/core';
+import { useGenerateMnemonicMutation } from '@chia/api-react';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useEffectOnce } from 'react-use';
@@ -37,11 +38,11 @@ const MnemonicField = (props: any) => (
 
 export default function WalletAdd() {
   const dispatch = useDispatch();
-  const words = useSelector((state: RootState) => state.wallet_state.mnemonic);
+  // const [words, setWords] = useState([]);
+  const [generateMnemonic, { data: words, isLoading }] = useGenerateMnemonicMutation();
 
   useEffectOnce(() => {
-    const get_mnemonics = genereate_mnemonics();
-    dispatch(get_mnemonics);
+    generateMnemonic();
   });
 
   function handleNext() {
@@ -70,7 +71,7 @@ export default function WalletAdd() {
               (Order is important)
             </Trans>
           </Typography>
-          {words.length ? (
+          {!isLoading && words ? (
             <Grid container spacing={2}>
               {words.map((word: string, index: number) => (
                 <MnemonicField

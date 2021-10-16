@@ -1,10 +1,7 @@
-import type { IncomingState } from '../modules/incoming';
 import SyncingStatus from '../constants/SyncingStatus';
 
-export default function getWalletSyncingStatus(walletState: IncomingState) {
-  const {
-    status: { syncing, synced },
-  } = walletState;
+export default function getWalletSyncingStatus(walletState) {
+  const { syncing, synced } = walletState;
 
   if (syncing) {
     return SyncingStatus.SYNCING;

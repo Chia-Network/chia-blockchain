@@ -2,15 +2,15 @@ import EventEmitter from 'events';
 import ServiceName from './constants/ServiceName';
 import Message from './Message';
 import Daemon from './services/Daemon';
-import Events from './services/Events';
+import sleep from './utils/sleep';
 import type Service from './services/Service';
+import ErrorData from './utils/ErrorData';
 
 type Options = {
   url: string;
   cert: string;
   key: string;
-  WebSocket: any;
-  origin?: string;
+  webSocket: any;
   timeout?: number;
   camelCase?: boolean;
   backupHost?: string;
@@ -28,7 +28,7 @@ export default class Client extends EventEmitter {
   }> = new Map();
 
   private services: Set<Service> = new Set();
-  private registered: Set<Service> = new Set();
+  private started: Set<ServiceName> = new Set();
   private connectedPromise: Promise<void> | null = null;
 
   private daemon: Daemon;
@@ -42,7 +42,6 @@ export default class Client extends EventEmitter {
       backupHost: 'https://backup.chia.net',
       debug: false,
       ...options,
-      origin: ServiceName.EVENTS,
     };
 
     const { url } = this.options;
@@ -54,7 +53,7 @@ export default class Client extends EventEmitter {
   }
 
   get origin() {
-    return this.options.origin;
+    return ServiceName.EVENTS;
   }
 
   get backupHost() {
@@ -65,8 +64,8 @@ export default class Client extends EventEmitter {
     return this.options.debug;
   }
 
-  isRegistered(service: Service) {
-    return this.registered.has(service);
+  isStarted(serviceName: ServiceName) {
+    return this.started.has(serviceName);
   }
 
   addService(service: Service) {
@@ -77,11 +76,13 @@ export default class Client extends EventEmitter {
     }
   }
 
-  async removeService(service: Service) {
+  async stopService(service: Service) {
     if (this.services.has(service)) {
       this.services.delete(service);
 
-      await this.daemon.stopService(service.destination);
+      this.started.delete(service.name);
+
+      await this.daemon.stopService(service.name);
     }
   }
 
@@ -90,7 +91,17 @@ export default class Client extends EventEmitter {
       return this.connectedPromise;
     }
 
-    const { url, key, cert, WebSocket } = this.options;
+    const { url, key, cert, webSocket: WebSocket } = this.options;
+
+    if (!url) {
+      throw new Error('Url is not defined');
+    } else if (!key) {
+      throw new Error('Key is not defined');
+    } else if (!cert) {
+      throw new Error('Cert is not defined');
+    } else if (!WebSocket) {
+      throw new Error('WebSocket is not defined');
+    }
 
     const ws = new WebSocket(url, {
       key,
@@ -121,16 +132,23 @@ export default class Client extends EventEmitter {
     }
 
     await Promise.all(Array.from(this.services).map(async (service) => {
-      if (!this.registered.has(service)) {
-        const response = await this.daemon.isRunning(service.destination);
+      if (!this.started.has(service.name)) {
+        const response = await this.daemon.isRunning(service.name);
         if (!response.isRunning) {
-          // this.daemon.registerService(service.destination);
-          await this.daemon.startService(service.destination);
+          await this.daemon.startService(service.name);
         }
 
-        // await service.ping();
+        // wait for service initialisation
+        while(true) {
+          try {
+            const pingResponse = await service.ping();
+            break;
+          } catch (error) {
+            await sleep(1000);
+          }
+        }
 
-        this.registered.add(service);
+        this.started.add(service.name);
       }
     }));
   }
@@ -138,7 +156,7 @@ export default class Client extends EventEmitter {
   private handleOpen = async () => {
     this.connected = true;
 
-    this.registered.clear();
+    this.started.clear();
 
     await this.daemon.registerService(ServiceName.EVENTS);
     await this.startServices();
@@ -179,12 +197,12 @@ export default class Client extends EventEmitter {
       this.requests.delete(requestId);
 
       if (message.data?.error) {
-        reject(new Error(message.data?.error));
+        reject(new ErrorData(message.data?.error, message.data));
         return;
       }
 
       if (message.data?.success === false) {
-        reject(new Error(`Request ${requestId} failed: ${JSON.stringify(message.data)}`));
+        reject(new ErrorData(`Request ${requestId} failed: ${JSON.stringify(message.data)}`, message.data));
         return;
       }
 
@@ -205,7 +223,8 @@ export default class Client extends EventEmitter {
     } = this;
 
     if (!connected) {
-      throw new Error('You need to connect first');
+      console.log('API is not connected trying to connect');
+      await this.connect();
     }
 
     return new Promise((resolve, reject) => {
@@ -219,7 +238,7 @@ export default class Client extends EventEmitter {
           if (this.requests.has(requestId)) {
             this.requests.delete(requestId);
   
-            reject(new Error(`The request ${requestId} has timed out ${timeout / 1000} seconds.`));
+            reject(new ErrorData(`The request ${requestId} has timed out ${timeout / 1000} seconds.`));
           }
         }, timeout);
       }

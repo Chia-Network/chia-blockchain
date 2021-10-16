@@ -11,7 +11,7 @@ export type Options = {
 
 export default class Service extends EventEmitter {
   private _client: Client;
-  private _destination: ServiceName;
+  private _name: ServiceName;
   private _origin: ServiceName;
 
   constructor(name: ServiceName, client: Client, options: Options = {}) {
@@ -20,7 +20,7 @@ export default class Service extends EventEmitter {
     const { origin, skipAddService } = options;
 
     this._client = client;
-    this._destination = name;
+    this._name = name;
     this._origin = origin ?? client.origin;
 
     if (!skipAddService) {
@@ -30,8 +30,8 @@ export default class Service extends EventEmitter {
     client.on('message', this.handleMessage);
   }
 
-  get destination() {
-    return this._destination;
+  get name() {
+    return this._name;
   }
 
   get client() {
@@ -47,7 +47,7 @@ export default class Service extends EventEmitter {
   }
 
   handleMessage = (message: Message) => {
-    if (message.origin !== this.destination) {
+    if (message.origin !== this.name) {
       return;
     }
 
@@ -61,7 +61,7 @@ export default class Service extends EventEmitter {
   }
 
   async command(command: string, data: Object = {}, ack: boolean = false): Promise<any> {
-    const { client, origin, destination } = this;
+    const { client, origin, name } = this;
 
     if (!command) {
       throw new Error('Command is required parameter');
@@ -72,7 +72,7 @@ export default class Service extends EventEmitter {
 
     const response = await client.send(new Message({
       origin,
-      destination,
+      destination: name,
       command,
       data: updatedData,
       ack,
@@ -81,7 +81,9 @@ export default class Service extends EventEmitter {
     return response?.data;
   }
 
-  async ping() {
+  async ping(): Promise<{
+    success: boolean;
+  }> {
     return this.command('ping');
   }
 

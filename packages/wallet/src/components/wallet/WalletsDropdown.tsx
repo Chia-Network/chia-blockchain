@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react';
 import { ListItemIcon, ListItemText, Typography } from '@material-ui/core';
-import { useSelector } from 'react-redux';
-import { Dropdown, Flex } from '@chia/core';
+import { Dropdown, Flex, Loading } from '@chia/core';
+import { useGetWalletsQuery } from '@chia/api-react';
 import { useHistory } from 'react-router';
-import type { RootState } from '../../modules/rootReducer';
 import WalletName from '../../constants/WalletName';
 import useTrans from '../../hooks/useTrans';
 import WalletIcon from './WalletIcon';
@@ -17,10 +16,10 @@ export default function WalletsDropdown(props: Props) {
   const { walletId } = props;
   const history = useHistory();
   const trans = useTrans();
-  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
+  const { data: wallets, isLoading } = useGetWalletsQuery();
 
   const options = useMemo(() => {
-    if (!wallets) {
+    if (isLoading) {
       return [];
     }
 
@@ -49,20 +48,19 @@ export default function WalletsDropdown(props: Props) {
                 variant: 'caption',
               }}
             />
-            
           </>
         ),
       };
     });
-  }, [wallets, walletId]);
+  }, [wallets, walletId, isLoading]);
 
   function handleSelectWallet(walletId: number) {
     history.push(`/dashboard/wallets/${walletId}`);
   }
 
-  if (!wallets) {
+  if (isLoading) {
     return (
-      <Loading />
+      <Loading size="small" />
     );
   }
 

@@ -1,37 +1,21 @@
-import React, { cloneElement } from 'react';
-import type { Dialog } from '../../../../modules/dialog';
+import React, { cloneElement, useContext } from 'react';
+import ModalDialogsContext from './ModalDialogsContext';
 
-type Props = {
-  dialogs: Dialog[];
-};
-
-export default function ModalDialogs(props: Props) {
-  const { dialogs } = props;
-
-  function handleClose(value: any, dialog: Dialog) {
-    const { resolve, reject } = dialog;
-
-    if (value instanceof Error) {
-      reject(value);
-      return;
-    }
-
-    resolve(value);
-  }
+export default function ModalDialogs() {
+  const { dialogs } = useContext(ModalDialogsContext);
 
   return (
     <>
-      {dialogs.map((dialog) =>
-        cloneElement(
-          // @ts-ignore
-          dialog.element,
-          {
-            key: dialog.id,
-            open: true,
-            onClose: (value: any) => handleClose(value, dialog),
-          },
-        ),
-      )}
+      {dialogs.map((item) => {
+        const { id, dialog, handleClose } = item;
+
+        return cloneElement(dialog, {
+          key: id,
+          show: true,
+          onClose: handleClose,
+          open: true,
+        });
+      })}
     </>
   );
 }
