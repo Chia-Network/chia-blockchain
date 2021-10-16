@@ -16,7 +16,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.coin_spend import CoinSpend
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_manager import MempoolManager
-from chia.full_node.coin_store import CoinStore
+from chia.full_node.coin_store import CoinStore, get_coin
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -98,14 +98,7 @@ class SpendSim:
 
         await cursor.close()
         for row in rows:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])),
-                bytes32(bytes.fromhex(row[5])),
-                uint64.from_bytes(
-                    row[7],
-                ),
-            )
-            coins.add(coin)
+            coins.add(get_coin(row))
         return list(coins)
 
     @staticmethod
