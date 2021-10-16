@@ -76,7 +76,7 @@ export default function WalletCATCreateExisting() {
     <Form methods={methods} onSubmit={handleSubmit}>
       <Flex flexDirection="column" gap={3}>
         <Back variant="h5">
-          <Trans>Create Token</Trans>
+          <Trans>Add Token</Trans>
         </Back>
         <Card>
         <Grid spacing={2} direction="column" container>

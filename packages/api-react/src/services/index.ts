@@ -50,4 +50,11 @@ export const {
   useGetSyncStatusQuery,
   useGetConnectionsQuery: useGetWalletConnectionsQuery,
   useCreateBackupMutation,
+  // CAT
+  useCreateNewCATWalletMutation,
+  useCreateCATWalletForExistingMutation,
+  useGetCATTailQuery,
+  useGetCATNameQuery,
+  useSetCATNameMutation,
+  useSpendCATMutation,
 } = wallet;

@@ -57,7 +57,7 @@ export default class Wallet extends Service {
     options: Object = {},
   ) {
     return this.command('create_new_wallet', {
-      host: this.connection.backupHost,
+      host: this.client.backupHost,
       walletType,
       ...options,
     });

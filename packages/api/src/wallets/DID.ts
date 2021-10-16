@@ -5,7 +5,7 @@ export default class DIDWallet extends Wallet {
     amount: string,
     backupDids: string,
     numOfBackupIdsNeeded: number,
-    host?: string,
+    host: string = this.client.backupHost,
   ) {
     return super.createNewWallet('did_wallet', {
       did_type: 'new',
@@ -16,7 +16,7 @@ export default class DIDWallet extends Wallet {
     });
   }
 
-  async createNewRecoveryWallet(filename: string, host?: string) {
+  async createNewRecoveryWallet(filename: string, host: string = this.client.backupHost) {
     return super.createNewWallet('did_wallet', {
       did_type: 'recovery',
       filename,

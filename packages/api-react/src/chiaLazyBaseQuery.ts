@@ -23,7 +23,8 @@ type Options = {
 
 export default function chiaLazyBaseQuery(options: Options): BaseQueryFn<
   {
-    command: string; 
+    command: string;
+    service?: Service;
     args?: any[],
   },
   unknown,
@@ -36,22 +37,23 @@ export default function chiaLazyBaseQuery(options: Options): BaseQueryFn<
   }
 > {
   const { 
-    service: Service,
+    service: DefaultService,
   } = options;
 
-  let serviceInstance: Service;
+  const services = new Map<Service, Service>();
 
-  async function getServiceInstance(api: BaseQueryApi): Promise<Service> {
-    if (!serviceInstance) {
+  async function getServiceInstance(api: BaseQueryApi, ServiceClass: Service): Promise<Service> {
+    if (!services.has(ServiceClass)) {
       const client = await getClientInstance(api);
-      serviceInstance = new Service(client);
+      const serviceInstance = new ServiceClass(client);
+      services.set(ServiceClass, serviceInstance);
     }
     
-    return serviceInstance;
+    return services.get(ServiceClass);
   }
 
-  return async ({ command, args = [] }, api) => {
-    const service = await getServiceInstance(api);
+  return async ({ command, service: ServiceClass = DefaultService, args = [] }, api) => {
+    const serviceInstance = await getServiceInstance(api, ServiceClass);
 
     const meta = { 
       timestamp: Date.now(),
@@ -61,7 +63,7 @@ export default function chiaLazyBaseQuery(options: Options): BaseQueryFn<
 
     try {
       return { 
-        data: await service[command](...args),
+        data: await serviceInstance[command](...args),
         meta,
       };
     } catch(error) {

@@ -1,6 +1,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
-import { Wallet } from '@chia/api';
+import { Wallet, CAT } from '@chia/api';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
+import type Transaction from '../@types/Transaction';
 
 export const walletApi = createApi({
   reducerPath: 'walletApi',
@@ -13,7 +14,7 @@ export const walletApi = createApi({
       query: () => ({
         command: 'getWallets',
       }),
-      transformResponse: (response) => response?.wallets,
+      transformResponse: (response: any) => response?.wallets,
       providesTags(result) {
         return result ? [
           ...result.map(({ id }) => ({ type: 'Wallets', id } as const)),
@@ -84,6 +85,7 @@ export const walletApi = createApi({
         command: 'createNewWallet',
         args: [walletType, options],
       }),
+      invalidatesTags: [{ type: 'Wallets', id: 'LIST' }],
     }),
 
     deleteUnconfirmedTransactions: build.mutation<any, { 
@@ -160,14 +162,14 @@ export const walletApi = createApi({
       query: () => ({
         command: 'generateMnemonic',
       }),
-      transformResponse: (response) => response?.mnemonic,
+      transformResponse: (response: any) => response?.mnemonic,
     }),
 
     getPublicKeys: build.query<number[], undefined>({
       query: () => ({
         command: 'getPublicKeys',
       }),
-      transformResponse: (response) => response?.publicKeyFingerprints,
+      transformResponse: (response: any) => response?.publicKeyFingerprints,
       providesTags: (keys) => keys
         ? [
           ...keys.map((key) => ({ type: 'Keys', id: key } as const)),
@@ -320,7 +322,7 @@ export const walletApi = createApi({
         command: 'getPrivateKey',
         args: [fingerprint],
       }),
-      transformResponse: (response) => response?.privateKey,
+      transformResponse: (response: any) => response?.privateKey,
     }),
 
     getTransactions: build.query<Transaction[], {
@@ -332,7 +334,7 @@ export const walletApi = createApi({
         command: 'getTransactions',
         args: [walletId],
       }),
-      transformResponse: (response) => response?.transactions,
+      transformResponse: (response: any) => response?.transactions,
       providesTags(result) {
         return result ? [
           ...result.map(({ name }) => ({ type: 'Transactions', id: name } as const)),
@@ -350,7 +352,7 @@ export const walletApi = createApi({
         command: 'getNextAddress',
         args: [walletId, false],
       }),
-      transformResponse: (response) => response?.address,
+      transformResponse: (response: any) => response?.address,
       providesTags: (result, _error, { walletId }) => result 
         ? [{ type: 'Address', id: walletId }]
         : [],
@@ -367,7 +369,7 @@ export const walletApi = createApi({
         command: 'getNextAddress',
         args: [walletId, newAddress],
       }),
-      transformResponse: (response) => response?.address,
+      transformResponse: (response: any) => response?.address,
       invalidatesTags: (result, _error, { walletId }) => result
         ? [{ type: 'Address', id: walletId }]
         : [],
@@ -418,6 +420,97 @@ export const walletApi = createApi({
         args: [filePath],
       }),
     }),
+
+    // CAT
+    createNewCATWallet: build.mutation<any, {
+      amount: string;
+      fee: string;
+      host?: string;
+    }>({
+      query: ({
+        amount,
+        fee,
+        host
+      }) => ({
+        command: 'createNewWallet',
+        service: CAT,
+        args: [amount, fee, host],
+      }),
+      invalidatesTags: [{ type: 'Wallets', id: 'LIST' }],
+    }),
+
+    createCATWalletForExisting: build.mutation<any, {
+      tail: string;
+      fee: string;
+      host?: string;
+    }>({
+      query: ({
+        tail,
+        fee,
+        host
+      }) => ({
+        command: 'createWalletForExisting',
+        service: CAT,
+        args: [tail, fee, host],
+      }),
+      invalidatesTags: [{ type: 'Wallets', id: 'LIST' }],
+    }),
+  
+    getCATTail: build.query<string, {
+      walletId: number;
+    }>({
+      query: ({
+        walletId,
+      }) => ({
+        command: 'getTail',
+        service: CAT,
+        args: [walletId],
+      }),
+    }),
+  
+    getCATName: build.query<string, {
+      walletId: number;
+    }>({
+      query: ({
+        walletId,
+      }) => ({
+        command: 'cc_get_name',
+        service: CAT,
+        args: [walletId],
+      }),
+    }),
+  
+    setCATName: build.mutation<any, {
+      walletId: number;
+      name: string;
+    }>({
+      query: ({
+        walletId,
+        name,
+      }) => ({
+        command: 'cc_set_name',
+        service: CAT,
+        args: [walletId, name],
+      }),
+    }),
+  
+    spendCAT: build.mutation<any, {
+      walletId: number;
+      innerAddress: string;
+      amount: string;
+      fee: string;
+    }>({
+      query: ({
+        walletId,
+        innerAddress,
+        amount,
+        fee,
+      }) => ({
+        command: 'cc_set_name',
+        service: CAT,
+        args: [walletId, innerAddress, amount, fee],
+      }),
+    }),
   }),
 });
 
@@ -455,4 +548,12 @@ export const {
   useGetSyncStatusQuery,
   useGetConnectionsQuery,
   useCreateBackupMutation,
+
+  // CAT
+  useCreateNewCATWalletMutation,
+  useCreateCATWalletForExistingMutation,
+  useGetCATTailQuery,
+  useGetCATNameQuery,
+  useSetCATNameMutation,
+  useSpendCATMutation,
 } = walletApi;

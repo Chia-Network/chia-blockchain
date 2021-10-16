@@ -37,7 +37,7 @@ export default class Client extends EventEmitter {
     super();
 
     this.options = {
-      timeout: 60 * 1000, // 60 seconds
+      timeout: 60 * 1000 * 10, // 10 minutes
       camelCase: true,
       backupHost: 'https://backup.chia.net',
       debug: false,

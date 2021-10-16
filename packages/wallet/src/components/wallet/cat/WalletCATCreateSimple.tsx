@@ -1,35 +1,62 @@
 import React from 'react';
 import { useRouteMatch, useHistory } from 'react-router-dom';
-import { Trans } from '@lingui/macro';
+import { Trans, t } from '@lingui/macro';
 import { Grid } from '@material-ui/core';
 import { Add as AddIcon } from '@material-ui/icons';
 import { Back, Flex, Loading } from '@chia/core';
-import { useGetWalletsQuery } from '@chia/api-react';
-import { useDispatch } from 'react-redux';
+import { useGetWalletsQuery, useCreateCATWalletForExistingMutation, useSetCATNameMutation } from '@chia/api-react';
 import WalletCreateCard from '../create/WalletCreateCard';
-import { createCATWalletFromToken } from '../../../modules/message';
 import Tokens from '../../../constants/Tokens';
 import useShowError from '../../../hooks/useShowError';
 import isCATWalletPresent from '../../../util/isCATWalletPresent';
-import type { RootState } from '../../../modules/rootReducer';
 import type CATToken from '../../../types/CATToken';
 
 export default function WalletCATCreateSimple() {
   const history = useHistory();
-  const dispatch = useDispatch();
   const { url } = useRouteMatch();
   const showError = useShowError();
   const { data: wallets, isLoading } = useGetWalletsQuery();
-
+  const [createCATWalletForExisting] = useCreateCATWalletForExistingMutation();
+  const [setCATName] = useSetCATNameMutation();
+  
   function handleCreateExisting() {
     history.push(`/dashboard/wallets/create/cat/existing`);
   }
 
   async function handleCreateNewToken(token: CATToken) {
     try {
-      const walletId = await dispatch(createCATWalletFromToken(token));
+      console.log('token', token);
+      const { name, tail } = token;
+
+      if (!name) {
+        throw new Error(t`Token has empty name`);
+      }
+    
+      if (!tail) {
+        throw new Error(t`Token has empty tail`);
+      }
+
+      console.log('creating cat', tail);
+      const response = await createCATWalletForExisting({
+        tail,
+        fee: '0',
+      }).unwrap();
+
+      console.log('response', response);
+      
+      const walletId = response?.walletId;
+      if (!walletId) {
+        throw new Error(t`Wallet id is not defined`);
+      }
+
+      await setCATName({
+        walletId,
+        name,
+      });
+
       history.push(`/dashboard/wallets/${walletId}`);
-    } catch (error) {
+    } catch(error: any) {
+      console.log('error', error);
       showError(error);
     }
   }
