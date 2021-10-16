@@ -18,5 +18,5 @@ class TestDaemonRpc:
         client = await connect_to_daemon(config["self_hostname"], config["daemon_port"], bt.get_daemon_ssl_context())
         response = await client.get_version()
 
-        assert response["data"]["success"] == True
+        assert response["data"]["success"]
         assert response["data"]["version"] == __version__
