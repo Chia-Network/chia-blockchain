@@ -47,7 +47,7 @@ class uint128(int):
         read_bytes = f.read(16)
         assert len(read_bytes) == 16
         n = int.from_bytes(read_bytes, "big", signed=False)
-        assert (2 ** 128) - 1 >= n >= 0
+        assert 0 <= n <= (2 ** 128) - 1
         return cls(n)
 
     def stream(self, f):
