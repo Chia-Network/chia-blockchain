@@ -1,3 +1,4 @@
+from sqlite3 import Row
 from typing import List, Optional, Set, Dict
 import aiosqlite
 from chia.protocols.wallet_protocol import CoinState
@@ -11,6 +12,14 @@ from time import time
 import logging
 
 log = logging.getLogger(__name__)
+
+
+def get_coin(row: Row) -> Coin:
+    return Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+
+
+def get_coinrecord(row: Row) -> CoinRecord:
+    return CoinRecord(get_coin(row), row[1], row[2], row[3], row[4], row[8])
 
 
 class CoinStore:
@@ -134,14 +143,7 @@ class CoinStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])),
-                bytes32(bytes.fromhex(row[5])),
-                uint64.from_bytes(
-                    row[7],
-                ),
-            )
-            record = CoinRecord(coin, row[1], row[2], row[3], row[4], row[8])
+            record = get_coinrecord(row)
             self.coin_record_cache.put(record.coin.name(), record)
             return record
         return None
@@ -152,14 +154,7 @@ class CoinStore:
         await cursor.close()
         coins = []
         for row in rows:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])),
-                bytes32(bytes.fromhex(row[5])),
-                uint64.from_bytes(
-                    row[7],
-                ),
-            )
-            coins.append(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+            coins.append(get_coinrecord(row))
         return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
@@ -173,15 +168,7 @@ class CoinStore:
         for row in rows:
             spent: bool = bool(row[3])
             if spent:
-                coin = Coin(
-                    bytes32(bytes.fromhex(row[6])),
-                    bytes32(bytes.fromhex(row[5])),
-                    uint64.from_bytes(
-                        row[7],
-                    ),
-                )
-                coin_record = CoinRecord(coin, row[1], row[2], spent, row[4], row[8])
-                coins.append(coin_record)
+                coins.append(get_coinrecord(row))
         return coins
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
@@ -204,14 +191,7 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])),
-                bytes32(bytes.fromhex(row[5])),
-                uint64.from_bytes(
-                    row[7],
-                ),
-            )
-            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+            coins.add(get_coinrecord(row))
         return list(coins)
 
     async def get_coin_records_by_puzzle_hashes(
@@ -238,14 +218,7 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])),
-                bytes32(bytes.fromhex(row[5])),
-                uint64.from_bytes(
-                    row[7],
-                ),
-            )
-            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+            coins.add(get_coinrecord(row))
         return list(coins)
 
     async def get_coin_records_by_names(
@@ -270,26 +243,13 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])),
-                bytes32(bytes.fromhex(row[5])),
-                uint64.from_bytes(
-                    row[7],
-                ),
-            )
-            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+            coins.add(get_coinrecord(row))
 
         return list(coins)
 
     @staticmethod
     def row_to_coin_state(row):
-        coin = Coin(
-            bytes32(bytes.fromhex(row[6])),
-            bytes32(bytes.fromhex(row[5])),
-            uint64.from_bytes(
-                row[7],
-            ),
-        )
+        coin = get_coin(row)
         spent_h = None
         if row[3]:
             spent_h = row[2]
@@ -345,14 +305,7 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])),
-                bytes32(bytes.fromhex(row[5])),
-                uint64.from_bytes(
-                    row[7],
-                ),
-            )
-            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+            coins.add(get_coinrecord(row))
         return list(coins)
 
     async def get_coin_state_by_ids(
@@ -411,14 +364,7 @@ class CoinStore:
         )
         rows = await cursor_deleted.fetchall()
         for row in rows:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])),
-                bytes32(bytes.fromhex(row[5])),
-                uint64.from_bytes(
-                    row[7],
-                ),
-            )
-            record = CoinRecord(coin, uint32(0), row[2], row[3], row[4], uint64(0))
+            record = CoinRecord(get_coin(row), uint32(0), row[2], row[3], row[4], uint64(0))
             coin_changes[record.name] = record
         await cursor_deleted.close()
 
@@ -431,14 +377,7 @@ class CoinStore:
         )
         rows = await cursor_unspent.fetchall()
         for row in rows:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])),
-                bytes32(bytes.fromhex(row[5])),
-                uint64.from_bytes(
-                    row[7],
-                ),
-            )
-            record = CoinRecord(coin, row[1], uint32(0), False, row[4], row[8])
+            record = CoinRecord(get_coin(row), row[1], uint32(0), False, row[4], row[8])
             if record.name not in coin_changes:
                 coin_changes[record.name] = record
         await cursor_unspent.close()
