@@ -46,9 +46,7 @@ class KeyValStore:
         if row is None:
             return None
 
-        return type.from_bytes(
-            hexstr_to_bytes(row[1]),
-        )
+        return type.from_bytes(hexstr_to_bytes(row[1]))
 
     async def set_object(self, key: str, obj: Streamable):
         """

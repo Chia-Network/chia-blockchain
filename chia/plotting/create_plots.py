@@ -63,8 +63,9 @@ class PlotKeysResolver:
         if self.resolved_keys is not None:
             return self.resolved_keys
 
+        keychain_proxy: Optional[KeychainProxy] = None
         if self.connect_to_daemon:
-            keychain_proxy: Optional[KeychainProxy] = await connect_to_keychain_and_validate(self.root_path, self.log)
+            keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
         else:
             keychain_proxy = wrap_local_keychain(Keychain(), log=self.log)
 
@@ -98,11 +99,10 @@ class PlotKeysResolver:
             except Exception as e:
                 log.error(f"Keychain proxy failed with error: {e}")
         else:
+            sk_ent: Optional[Tuple[PrivateKey, bytes]] = None
             keychain: Keychain = Keychain()
             if self.alt_fingerprint is not None:
-                sk_ent: Optional[Tuple[PrivateKey, bytes]] = keychain.get_private_key_by_fingerprint(
-                    self.alt_fingerprint
-                )
+                sk_ent = keychain.get_private_key_by_fingerprint(self.alt_fingerprint)
             else:
                 sk_ent = keychain.get_first_private_key()
 

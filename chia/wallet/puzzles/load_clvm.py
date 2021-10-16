@@ -20,7 +20,6 @@ if "CLVM_TOOLS_RS" in os.environ:
             m.update(open(f).read().encode("utf8"))
             return m.hexdigest()
 
-        # noinspection PyUnresolvedReferences
         from clvm_tools_rs import compile_clvm as compile_clvm_rs
 
         def translate_path(p_):

@@ -26,9 +26,7 @@ class ClassgroupElement(Streamable):
     def get_default_element() -> "ClassgroupElement":
         # Bit 3 in the first byte of serialized compressed form indicates if
         # it's the default generator element.
-        return ClassgroupElement.from_bytes(
-            b"\x08",
-        )
+        return ClassgroupElement.from_bytes(b"\x08")
 
     @staticmethod
     def get_size(constants: ConsensusConstants):
