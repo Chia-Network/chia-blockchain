@@ -4,8 +4,8 @@ import { useGetWalletsQuery } from '@chia/api-react';
 import StandardWallet from './standard/WalletStandard';
 import { CreateWalletView } from './create/WalletCreate';
 import WalletCAT from './cat/WalletCAT';
-import RateLimitedWallet from './rateLimited/WalletRateLimited';
-import DistributedWallet from './did/WalletDID';
+// import RateLimitedWallet from './rateLimited/WalletRateLimited';
+// import DistributedWallet from './did/WalletDID';
 import WalletType from '../../constants/WalletType';
 import LayoutMain from '../layout/LayoutMain';
 import { Switch, Route, useRouteMatch } from 'react-router-dom';
@@ -35,13 +35,13 @@ export default function Wallets() {
               <WalletCAT walletId={wallet.id} />
             )}
 
-            {wallet.type === WalletType.RATE_LIMITED && (
+            {/* wallet.type === WalletType.RATE_LIMITED && (
               <RateLimitedWallet wallet_id={wallet.id} />
-            )}
+            ) */}
 
-            {wallet.type === WalletType.DISTRIBUTED_ID && (
+            {/* wallet.type === WalletType.DISTRIBUTED_ID && (
               <DistributedWallet walletId={wallet.id} />
-            )}
+            ) */}
           </Route>
         ))}
         <Route path={`/dashboard/wallets/create`}>

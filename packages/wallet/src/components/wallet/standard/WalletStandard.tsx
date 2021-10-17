@@ -1,11 +1,8 @@
-import React /* , { ReactNode } */ from 'react';
+import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Flex, ConfirmDialog } from '@chia/core';
-import { useDispatch } from 'react-redux';
+import { Flex } from '@chia/core';
 import WalletHistory from '../WalletHistory';
-import { deleteUnconfirmedTransactions } from '../../../modules/incoming';
 import WalletStandardCards from './WalletStandardCards';
-import useOpenDialog from '../../../hooks/useOpenDialog';
 import WalletReceiveAddress from '../WalletReceiveAddress';
 import WalletSend from '../WalletSend';
 import WalletHeader from '../WalletHeader';

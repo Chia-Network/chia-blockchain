@@ -33,11 +33,13 @@ export default class Client extends EventEmitter {
 
   private daemon: Daemon;
 
+  private startingServices: boolean = false;
+
   constructor(options: Options) {
     super();
 
     this.options = {
-      timeout: 60 * 1000 * 10, // 10 minutes
+      timeout: 60 * 1000 * 0.1, // 10 minutes
       camelCase: true,
       backupHost: 'https://backup.chia.net',
       debug: false,
@@ -127,10 +129,11 @@ export default class Client extends EventEmitter {
   }
 
   private async startServices() {
-    if (!this.connected) {
+    if (!this.connected || this.startingServices) {
       return;
     }
 
+    this.startingServices = true;
     await Promise.all(Array.from(this.services).map(async (service) => {
       if (!this.started.has(service.name)) {
         const response = await this.daemon.isRunning(service.name);
@@ -142,7 +145,10 @@ export default class Client extends EventEmitter {
         while(true) {
           try {
             const pingResponse = await service.ping();
-            break;
+            if (pingResponse.success) {
+              break;
+            }
+            
           } catch (error) {
             await sleep(1000);
           }
@@ -151,6 +157,7 @@ export default class Client extends EventEmitter {
         this.started.add(service.name);
       }
     }));
+    this.startingServices = false;
   }
 
   private handleOpen = async () => {
@@ -158,8 +165,10 @@ export default class Client extends EventEmitter {
 
     this.started.clear();
 
+    this.startingServices = true;
     await this.daemon.registerService(ServiceName.EVENTS);
     await this.startServices();
+    this.startingServices = false;
 
     if (this.connectedPromiseResponse) {
       this.connectedPromiseResponse.resolve();
@@ -190,6 +199,7 @@ export default class Client extends EventEmitter {
     const { options: { camelCase } } = this;
 
     const message = Message.fromJSON(data, camelCase);
+    console.log('RESPONSE', data.toString());
     const { requestId } = message;
 
     if (this.requests.has(requestId)) {
@@ -214,12 +224,12 @@ export default class Client extends EventEmitter {
 
   async send(message: Message): Promise<Response> {
     const { 
+      startingServices,
       connected,
       options: {
         timeout,
         camelCase,
       },
-      
     } = this;
 
     if (!connected) {
@@ -227,11 +237,17 @@ export default class Client extends EventEmitter {
       await this.connect();
     }
 
+    if (!startingServices) {
+      await this.startServices();
+    }
+
     return new Promise((resolve, reject) => {
       const { requestId } = message;
 
       this.requests.set(requestId, { resolve, reject });
       this.ws.send(message.toJSON(camelCase));
+
+      console.log('SEND', message.toJSON(camelCase));
 
       if (timeout) {
         setTimeout(() => {

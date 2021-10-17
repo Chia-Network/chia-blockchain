@@ -9,21 +9,23 @@ import {
   ButtonLoading,
   TextFieldNumber,
   TextField,
+  useOpenDialog,
 } from '@chia/core';
-import { useDispatch, useSelector } from 'react-redux';
+import { 
+  useSpendCATMutation,
+  useGetSyncStatusQuery,
+  useFarmBlockMutation,
+} from '@chia/api-react';
 import isNumeric from 'validator/es/lib/isNumeric';
 import { useForm, useWatch } from 'react-hook-form';
 import { Button, Grid } from '@material-ui/core';
-import { cc_spend, farm_block } from '../../../modules/message';
 import { chia_to_mojo, colouredcoin_to_mojo } from '../../../util/chia';
-import useOpenDialog from '../../../hooks/useOpenDialog';
 import { get_transaction_result } from '../../../util/transaction_result';
 import config from '../../../config/config';
-import type { RootState } from '../../../modules/rootReducer';
+import useWallet from '../../../hooks/useWallet';
 
 type Props = {
-  wallet_id: number;
-  currency?: string;
+  walletId: number;
 };
 
 type SendTransactionData = {
@@ -34,9 +36,11 @@ type SendTransactionData = {
 };
 
 export default function WalletSend(props: Props) {
-  const { wallet_id, currency } = props;
-  const dispatch = useDispatch();
+  const { walletId } = props;
   const openDialog = useOpenDialog();
+  const [farmBlock] = useFarmBlockMutation();
+  const [spendCAT, { isLoading: isSpendCatLoading }] = useSpendCATMutation();
+  const { data: walletState, isLoading: isWalletSyncLoading } = useGetSyncStatusQuery();
 
   const methods = useForm<SendTransactionData>({
     shouldUnregister: false,
@@ -48,105 +52,99 @@ export default function WalletSend(props: Props) {
     },
   });
 
-  const { formState: { isSubmitting }} = methods;
+  const { formState: { isSubmitting } } = methods;
 
   const addressValue = useWatch<string>({
     control: methods.control,
     name: 'address',
   });
 
-  const syncing = useSelector(
-    (state: RootState) => state.wallet_state.status.syncing,
-  );
+  const { wallet, data, unit, loading } = useWallet(walletId);
 
-  const wallet = useSelector((state: RootState) =>
-    state.wallet_state.wallets?.find((item) => item.id === wallet_id),
-  );
-
-  if (!wallet) {
+  const isLoading = isSpendCatLoading || isWalletSyncLoading || loading;
+  if (!wallet || isLoading) {
     return null;
   }
 
-  const { colour, id } = wallet;
+  const { colour } = data;
+  const syncing = walletState.syncing;
 
-  function farm() {
+  async function farm() {
     if (addressValue) {
-      dispatch(farm_block(addressValue));
+      await farmBlock({
+        address: addressValue,
+      }).unwrap();
     }
   }
 
   async function handleSubmit(data: SendTransactionData) {
-    if (isSubmitting) {
+    if (isSpendCatLoading) {
       return;
     }
 
-    try {
-      if (syncing) {
-        throw new Error(t`Please finish syncing before making a transaction`);
-      }
-
-      const amount = data.amount.trim();
-      if (!isNumeric(amount)) {
-        throw new Error(t`Please enter a valid numeric amount`);
-      }
-
-      const fee = data.fee.trim() || '0';
-      if (!isNumeric(fee)) {
-        throw new Error(t`Please enter a valid numeric fee`);
-      }
-
-      let address = data.address;
-      if (address.includes('colour')) {
-        throw new Error(t`Cannot send chia to coloured address. Please enter a chia address.`);
-      }
-
-      if (address.includes('chia_addr') || address.includes('colour_desc')) {
-        throw new Error(t`Recipient address is not a coloured wallet address. Please enter a coloured wallet address`);
-      }
-      if (address.slice(0, 14) === 'colour_addr://') {
-        const colour_id = address.slice(14, 78);
-        address = address.slice(79);
-        if (colour_id !== colour) {
-          throw new Error(t`Error the entered address appears to be for a different colour.`);
-        }
-      }
-
-      if (address.slice(0, 12) === 'chia_addr://') {
-        address = address.slice(12);
-      }
-      if (address.startsWith('0x') || address.startsWith('0X')) {
-        address = address.slice(2);
-      }
-
-      const amountValue = Number.parseFloat(colouredcoin_to_mojo(amount));
-      const feeValue = Number.parseFloat(chia_to_mojo(fee));
-
-      const memo = data.memo.trim();
-      const memos = memo ? [memo] : undefined;
-
-      const response = await dispatch(cc_spend(id, address, amountValue, feeValue, memos));
-      if (response && response.data && response.data.success === true) {
-        const result = get_transaction_result(response.data);
-        if (result.success) {
-            openDialog(
-              <AlertDialog title={<Trans>Success</Trans>}>
-                {result.message ?? <Trans>Transaction has successfully been sent to a full node and included in the mempool.</Trans>}
-              </AlertDialog>,
-            );
-        } else {
-          throw new Error(result.message ?? 'Something went wrong');
-        }
-      } else {
-        throw new Error(response?.data?.error ?? 'Something went wrong');
-      }
-      methods.reset();
-    } catch (error: Error) {
-      openDialog(
-        <AlertDialog title={<Trans>Error</Trans>}>
-          {error.message}
-        </AlertDialog>,
-      );
+    if (syncing) {
+      throw new Error(t`Please finish syncing before making a transaction`);
     }
+
+    const amount = data.amount.trim();
+    if (!isNumeric(amount)) {
+      throw new Error(t`Please enter a valid numeric amount`);
+    }
+
+    const fee = data.fee.trim() || '0';
+    if (!isNumeric(fee)) {
+      throw new Error(t`Please enter a valid numeric fee`);
+    }
+
+    let address = data.address;
+    if (address.includes('colour')) {
+      throw new Error(t`Cannot send chia to coloured address. Please enter a chia address.`);
+    }
+
+    if (address.includes('chia_addr') || address.includes('colour_desc')) {
+      throw new Error(t`Recipient address is not a coloured wallet address. Please enter a coloured wallet address`);
+    }
+    if (address.slice(0, 14) === 'colour_addr://') {
+      const colour_id = address.slice(14, 78);
+      address = address.slice(79);
+      if (colour_id !== colour) {
+        throw new Error(t`Error the entered address appears to be for a different colour.`);
+      }
+    }
+
+    if (address.slice(0, 12) === 'chia_addr://') {
+      address = address.slice(12);
+    }
+    if (address.startsWith('0x') || address.startsWith('0X')) {
+      address = address.slice(2);
+    }
+
+    const amountValue = Number.parseFloat(colouredcoin_to_mojo(amount));
+    const feeValue = Number.parseFloat(chia_to_mojo(fee));
+
+    const memo = data.memo.trim();
+    const memos = memo ? [memo] : undefined;
+
+    const response = await spendCAT({
+      walletId,
+      address,
+      amount: amountValue,
+      fee: feeValue,
+      memos,
+    }).unwrap();
+
+    const result = get_transaction_result(response);
+    if (result.success) {
+        openDialog(
+          <AlertDialog title={<Trans>Success</Trans>}>
+            {result.message ?? <Trans>Transaction has successfully been sent to a full node and included in the mempool.</Trans>}
+          </AlertDialog>,
+        );
+    } else {
+      throw new Error(result.message ?? 'Something went wrong');
+    }
+
+    methods.reset();
   }
 
   return (
@@ -181,7 +179,7 @@ export default function WalletSend(props: Props) {
               name="amount"
               disabled={isSubmitting}
               label={<Trans>Amount</Trans>}
-              currency={currency}
+              currency={unit}
               fullWidth
               required
             />
@@ -218,8 +216,8 @@ export default function WalletSend(props: Props) {
                 variant="contained"
                 color="primary"
                 type="submit"
-                disabled={isSubmitting}
-                loading={isSubmitting}
+                disabled={isSpendCatLoading}
+                loading={isSpendCatLoading}
               >
                 <Trans>Send</Trans>
               </ButtonLoading>

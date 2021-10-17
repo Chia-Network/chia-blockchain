@@ -5,7 +5,7 @@ import Button, { ButtonProps } from '../Button';
 
 const StyledWrapper = styled.div`
   position: relative;
-  display: inline-block;
+  display: ${({ fullWidth }) => fullWidth ?'block' : 'inline-block'};
 `;
 
 const StyledLoading = styled(CircularProgress)`
@@ -37,7 +37,7 @@ export default function ButtonLoading(props: Props) {
   const disabledButton = mode === 'autodisable' && loading ? true : disabled;
 
   return (
-    <StyledWrapper>
+    <StyledWrapper {...rest}>
       <Button onClick={handleClick} {...rest} disabled={disabledButton}>
         <StyledButtonContent hide={mode === 'hidecontent' && loading}>
           {children}

@@ -57,4 +57,5 @@ export const {
   useGetCATNameQuery,
   useSetCATNameMutation,
   useSpendCATMutation,
+  useAddCATTokenMutation,
 } = wallet;

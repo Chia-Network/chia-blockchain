@@ -53,4 +53,18 @@ export default class FullNode extends Service {
       headerHash,
     });
   }
+
+  onBlockchainState(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onCommand('get_blockchain_state', callback, processData);
+  }
+
+  onConnections(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onCommand('get_connections', callback, processData);
+  }
 }

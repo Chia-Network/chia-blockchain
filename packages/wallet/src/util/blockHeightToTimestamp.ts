@@ -1,13 +1,13 @@
-import type Peak from '../types/Peak';
+import type Transaction from '../types/Transaction';
 
 const BLOCK_DURATION_SECONDS = (24 * 60 * 60) / 4608;
 
 export default function blockHeightToTimestamp(
   height: number,
-  peak: Peak,
+  peakTransaction: Transaction,
 ): number {
-  const diff = peak.height - height;
+  const diff = peakTransaction.confirmedAtHeight - height;
   const seconds = diff * BLOCK_DURATION_SECONDS;
 
-  return peak.timestamp - seconds;
+  return peakTransaction.createdAtTime - seconds;
 }

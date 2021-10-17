@@ -2,17 +2,14 @@ import React, { ReactNode } from 'react';
 import { linearGradientDef } from '@nivo/core';
 import { ResponsiveLine } from '@nivo/line';
 import { orderBy, groupBy, sumBy, map } from 'lodash';
-// import { Flex, FormatLargeNumber } from '@chia/core';
 import { /* Typography, */ Paper } from '@material-ui/core';
 import styled from 'styled-components';
-import useWallet from '../../hooks/useWallet';
+import { useGetWalletBalanceQuery } from '@chia/api-react';
 import TransactionType from '../../constants/TransactionType';
 import type Transaction from '../../types/Transaction';
-import type Peak from '../../types/Peak';
 import { mojo_to_chia } from '../../util/chia';
-import usePeak from '../../hooks/usePeak';
-import useCurrencyCode from '../../hooks/useCurrencyCode';
 import blockHeightToTimestamp from '../../util/blockHeightToTimestamp';
+import useWalletTransactions from '../../hooks/useWalletTransactions';
 
 /*
 const HOUR_SECONDS = 60 * 60;
@@ -33,6 +30,7 @@ const StyledGraphContainer = styled.div`
 
 const StyledTooltip = styled(Paper)`
   padding: 0.25rem 0.5rem;
+  display: none;
 `;
 
 /*
@@ -125,7 +123,6 @@ function aggregatePoints(
 
 function generateTransactionGraphData(
   transactions: Transaction[],
-  peak: Peak,
 ): {
   value: number;
   timestamp: number;
@@ -135,23 +132,25 @@ function generateTransactionGraphData(
     (transaction) => transaction.confirmed,
   );
 
+  const [peakTransaction] = confirmedTransactions;
+
   // extract and compute values
   let results = confirmedTransactions.map<{
     value: number;
     timestamp: number;
   }>((transaction) => {
-    const { type, confirmed_at_height, amount, fee_amount } = transaction;
+    const { type, confirmedAtHeight, amount, feeAmount } = transaction;
 
     const isOutgoing = [
       TransactionType.OUTGOING,
       TransactionType.OUTGOING_TRADE,
     ].includes(type);
 
-    const value = (amount + fee_amount) * (isOutgoing ? -1 : 1);
+    const value = (amount + feeAmount) * (isOutgoing ? -1 : 1);
 
     return {
       value,
-      timestamp: blockHeightToTimestamp(confirmed_at_height, peak),
+      timestamp: blockHeightToTimestamp(confirmedAtHeight, peakTransaction),
     };
   });
 
@@ -173,19 +172,20 @@ function generateTransactionGraphData(
 function prepareGraphPoints(
   balance: number,
   transactions: Transaction[],
-  peak: Peak,
   aggregate?: Aggregate,
 ): {
   x: number;
   y: number;
   tooltip?: ReactNode;
 }[] {
-  if (!transactions || !transactions.length || !peak) {
+  if (!transactions || !transactions.length) {
     return [];
   }
 
   let start = balance;
-  let data = generateTransactionGraphData(transactions, peak);
+  let data = generateTransactionGraphData(transactions);
+
+  const [peakTransaction] = transactions;
 
   /*
   if (aggregate) {
@@ -196,7 +196,7 @@ function prepareGraphPoints(
 
   const points = [
     {
-      x: peak.height,
+      x: peakTransaction.confirmedAtHeight,
       y: Math.max(0, mojo_to_chia(start)),
       tooltip: mojo_to_chia(balance),
     },
@@ -224,26 +224,36 @@ type Props = {
 
 export default function WalletGraph(props: Props) {
   const { walletId, height } = props;
-  const { peak } = usePeak();
-  const { wallet, transactions } = useWallet(walletId);
-  const balance = wallet?.wallet_balance?.confirmed_wallet_balance;
-  const currencyCode = useCurrencyCode();
-  if (!transactions || !balance || !peak) {
+  const { transactions, isLoading: isWalletTransactionsLoading } = useWalletTransactions(walletId);
+  const { 
+    data: walletBalance, 
+    isLoading: isWalletBalanceLoading,
+  } = useGetWalletBalanceQuery({
+    walletId,
+  });
+
+  const isLoading = isWalletTransactionsLoading || isWalletBalanceLoading || !transactions;
+  if (isLoading) {
     return null;
   }
 
-  const points = prepareGraphPoints(balance, transactions, peak, {
+  const confirmedTransactions = transactions.filter((transaction) => transaction.confirmed);
+  if (!confirmedTransactions.length) {
+    return null;
+  }
+
+  const balance = walletBalance.confirmedWalletBalance;
+
+  const points = prepareGraphPoints(balance, confirmedTransactions, {
     interval: 60 * 60,
     count: 24,
     offset: 0,
   });
 
-  const data = [
-    {
-      id: 'Points',
-      data: points,
-    },
-  ];
+  const data = [{
+    id: 'Points',
+    data: points,
+  }];
 
   const min = points.length ? Math.min(...points.map((item) => item.y)) : 0;
   const max = Math.max(min, ...points.map((item) => item.y));
@@ -263,7 +273,7 @@ export default function WalletGraph(props: Props) {
         }}
         tooltip={({ point }) => (
           <StyledTooltip>
-            {point?.data?.tooltip} {currencyCode}
+            {point?.data?.tooltip}
           </StyledTooltip>
         )}
         xScale={{

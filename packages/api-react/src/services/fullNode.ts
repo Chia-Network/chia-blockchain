@@ -8,11 +8,14 @@ import type BlockHeader from '../@types/BlockHeader';
 import type BlockchainState from '../@types/BlockchainState';
 import type BlockchainConnection from '../@types/BlockchainConnection';
 
+const baseQuery = chiaLazyBaseQuery({
+  service: FullNode,
+});
+
 export const fullNodeApi = createApi({
   reducerPath: 'fullNodeApi',
-  baseQuery: chiaLazyBaseQuery({
-    service: FullNode,
-  }),
+  baseQuery,
+  tagTypes: ['BlockchainState'],
   endpoints: (build) => ({
     getBlockRecords: build.query<BlockRecord[], { 
       end: number; 
@@ -34,35 +37,62 @@ export const fullNodeApi = createApi({
       query: () => ({
         command: 'getBlockchainState',
       }),
-      async onCacheEntryAdded(
-        arg,
-        { updateCachedData, cacheDataLoaded, cacheEntryRemoved },
-      ) {
-        /*
-        console.log('lalala', arg, rest, rest2, this, build);
-
-        fullNodeApi.util.
+      providesTags: ['BlockchainState'],
+      async onCacheEntryAdded(_arg, api) {
+        const { updateCachedData, cacheDataLoaded, cacheEntryRemoved } = api;
+        let unsubscribe;
         try {
           await cacheDataLoaded;
 
-          updateCachedData((draft) => {
-            Object.assign(draft, {
-              added: 1,
-            });
-          });
+          const response = await baseQuery({
+            command: 'onBlockchainState',
+            args: [(data: any) => {
+              updateCachedData((draft) => {
+                Object.assign(draft, {
+                  ...data.blockchainState,
+                });
+              });
+            }],
+          }, api, {});
+
+          unsubscribe = response.data;
         } finally {
           await cacheEntryRemoved;
-          ws.close();
+          if (unsubscribe) {
+            unsubscribe();
+          }
         }
-        */
       },
-      // transformResponse: (response: PostResponse) => response.data.post,
+      transformResponse: (response: any) => response?.blockchainState,
     }),
-    getConnections: build.query<BlockchainConnection[]>({
+    getConnections: build.query<BlockchainConnection[], undefined>({
       query: () => ({
         command: 'getConnections',
       }),
-      // transformResponse: (response: PostResponse) => response.data.post,
+      transformResponse: (response: any) => response?.connections,
+      async onCacheEntryAdded(_arg, api) {
+        const { updateCachedData, cacheDataLoaded, cacheEntryRemoved } = api;
+        let unsubscribe;
+        try {
+          await cacheDataLoaded;
+
+          const response = await baseQuery({
+            command: 'onConnections',
+            args: [(data: any) => {
+              updateCachedData((draft) => {
+                Object.assign(draft, data.connections);
+              });
+            }],
+          }, api, {});
+
+          unsubscribe = response.data;
+        } finally {
+          await cacheEntryRemoved;
+          if (unsubscribe) {
+            unsubscribe();
+          }
+        }
+      },
     }),
     getBlock: build.query<Block, { 
       headerHash: string;

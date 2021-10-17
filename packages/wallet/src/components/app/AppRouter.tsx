@@ -63,9 +63,11 @@ export default function AppRouter() {
       <Route path="/wallet/import" exact>
         <WalletImport />
       </Route>
+      {/*
       <Route path="/wallet/restore" exact>
         <BackupRestore />
       </Route>
+      */}
       <PrivateRoute path="/dashboard">
         <Dashboard />
       </PrivateRoute>

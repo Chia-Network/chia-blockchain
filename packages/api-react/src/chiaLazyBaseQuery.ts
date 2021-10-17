@@ -17,6 +17,18 @@ async function getClientInstance(api: BaseQueryApi): Promise<Client> {
   return clientInstance;
 }
 
+const services = new Map<Service, Service>();
+
+async function getServiceInstance(api: BaseQueryApi, ServiceClass: Service): Promise<Service> {
+  if (!services.has(ServiceClass)) {
+    const client = await getClientInstance(api);
+    const serviceInstance = new ServiceClass(client);
+    services.set(ServiceClass, serviceInstance);
+  }
+  
+  return services.get(ServiceClass);
+}
+
 type Options = {
   service: Service;
 };
@@ -40,20 +52,8 @@ export default function chiaLazyBaseQuery(options: Options): BaseQueryFn<
     service: DefaultService,
   } = options;
 
-  const services = new Map<Service, Service>();
-
-  async function getServiceInstance(api: BaseQueryApi, ServiceClass: Service): Promise<Service> {
-    if (!services.has(ServiceClass)) {
-      const client = await getClientInstance(api);
-      const serviceInstance = new ServiceClass(client);
-      services.set(ServiceClass, serviceInstance);
-    }
-    
-    return services.get(ServiceClass);
-  }
-
-  return async ({ command, service: ServiceClass = DefaultService, args = [] }, api) => {
-    const serviceInstance = await getServiceInstance(api, ServiceClass);
+  return async ({ command, service: ServiceClass, args = [] }, api) => {
+    const serviceInstance = await getServiceInstance(api, ServiceClass || DefaultService);
 
     const meta = { 
       timestamp: Date.now(),

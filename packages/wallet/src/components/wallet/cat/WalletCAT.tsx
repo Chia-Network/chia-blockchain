@@ -1,9 +1,7 @@
 import React from 'react';
-import Grid from '@material-ui/core/Grid';
 import { Alert } from '@material-ui/lab';
-import { useDispatch, useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
-import { Card, CopyToClipboard, Flex, Loading } from '@chia/core';
+import { Card, CopyToClipboard, Flex, Loading, useOpenDialog } from '@chia/core';
 import { InputAdornment, Typography } from '@material-ui/core';
 import { Edit as RenameIcon, Fingerprint as FingerprintIcon } from '@material-ui/icons';
 import {
@@ -12,10 +10,8 @@ import {
   ListItemIcon,
   MenuItem,
 } from '@material-ui/core';
-import { rename_cc_wallet } from '../../../modules/message';
-import type { RootState } from '../../../modules/rootReducer';
+import { useSetCATNameMutation } from '@chia/api-react';
 import WalletHistory from '../WalletHistory';
-import useOpenDialog from '../../../hooks/useOpenDialog';
 import useWallet from '../../../hooks/useWallet';
 import WalletReceiveAddress from '../WalletReceiveAddress';
 import WalletCards from '../WalletCards';
@@ -33,7 +29,7 @@ export default function WalletCAT(props: Props) {
   const { walletId } = props;
   const { wallet, loading } = useWallet(walletId);
   const openDialog = useOpenDialog();
-  const dispatch = useDispatch();
+  const [setCATName] = useSetCATNameMutation();
 
   function handleRename() {
     if (!wallet) {
@@ -45,7 +41,7 @@ export default function WalletCAT(props: Props) {
     openDialog((
       <WalletRenameDialog
         name={name}
-        onSave={(newName) => dispatch(rename_cc_wallet(id, newName))}
+        onSave={(newName) => setCATName({ walletId, name: newName}).unwrap()}
       />
     ));
   }
@@ -113,7 +109,7 @@ export default function WalletCAT(props: Props) {
       <Flex flexDirection="column" gap={3}>
         <WalletCards walletId={walletId} />
         <WalletReceiveAddress walletId={walletId} />
-        <WalletCATSend wallet_id={walletId} currency={wallet.name} />
+        <WalletCATSend walletId={walletId} />
         <WalletHistory walletId={walletId} />
       </Flex>
     </Flex>

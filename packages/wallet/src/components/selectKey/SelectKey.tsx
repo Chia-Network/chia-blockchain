@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Button, ConfirmDialog, Flex, Logo, useOpenDialog } from '@chia/core';
+import { Button, ConfirmDialog, Flex, Logo, Loading, useOpenDialog } from '@chia/core';
 import {
   Card,
   Typography,
@@ -22,8 +22,8 @@ const StyledContainer = styled(Container)`
 export default function SelectKey() {
   const openDialog = useOpenDialog();
   const [deleteAllKeys] = useDeleteAllKeysMutation();
-  const { data: publicKeyFingerprints } = useGetPublicKeysQuery();
-  const hasFingerprints = publicKeyFingerprints && !!publicKeyFingerprints.length;
+  const { data: publicKeyFingerprints, isLoading } = useGetPublicKeysQuery();
+  const hasFingerprints = !!publicKeyFingerprints?.length;
 
   async function handleDeleteAllKeys() {
     await openDialog(
@@ -47,7 +47,9 @@ export default function SelectKey() {
       <StyledContainer maxWidth="xs">
         <Flex flexDirection="column" alignItems="center" gap={3}>
           <Logo width={130} />
-          {hasFingerprints ? (
+          {isLoading ? (
+            <Loading center />
+          ) : hasFingerprints ? (
             <Typography variant="h5" component="h1">
               <Trans>Select Key</Trans>
             </Typography>

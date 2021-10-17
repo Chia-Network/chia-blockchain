@@ -2,12 +2,9 @@ import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { AlertDialog, Amount, Fee, Back, ButtonLoading, Card, Flex, Form } from '@chia/core';
 import { Box, Grid } from '@material-ui/core';
-import { useDispatch } from 'react-redux';
 import { useForm } from 'react-hook-form';
-import { create_cc_action } from '../../../modules/message';
-import { chia_to_mojo } from '../../../util/chia';
-import { openDialog } from '../../../modules/dialog';
 import { useHistory } from 'react-router';
+import { chia_to_mojo } from '../../../util/chia';
 
 type CreateCATWalletData = {
   amount: string;
@@ -24,7 +21,7 @@ export default function WalletCATCreateNew() {
     },
   });
   const [loading, setLoading] = useState<boolean>(false);
-  const dispatch = useDispatch();
+  const [addCATToken, { isLoading: isAddCATTokenLoading }] = useAddCATTokenMutation();
 
   async function handleSubmit(values: CreateCATWalletData) {
     try {
@@ -61,10 +58,13 @@ export default function WalletCATCreateNew() {
       const amountMojos = chia_to_mojo(amount || '0');
       const feeMojos = chia_to_mojo(fee || '0');
 
+
+      /*
       const response = await dispatch(create_cc_action(amountMojos, feeMojos));
       if (response && response.data && response.data.success === true) {
         history.push(`/dashboard/wallets/${response.data.wallet_id}`);
       }
+      */
     } finally {
       setLoading(false);
     }

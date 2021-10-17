@@ -4,21 +4,12 @@ import { I18nProvider } from '@lingui/react';
 import useDarkMode from 'use-dark-mode';
 import { createHashHistory } from 'history';
 import { Router } from 'react-router-dom';
-import isElectron from 'is-electron';
 import { createGlobalStyle } from 'styled-components';
-import { ConnectedRouter } from 'connected-react-router';
 import { Loading, ThemeProvider, ModalDialogsProvider, ModalDialogs } from '@chia/core';
-import Client, { FullNode, Wallet } from '@chia/api';
-import { ApiProvider } from '@reduxjs/toolkit/query/react';
 import AppRouter from './AppRouter';
 import darkTheme from '../../theme/dark';
 import lightTheme from '../../theme/light';
-import WebSocketConnection from '../../hocs/WebsocketConnection';
-// import store, { history } from '../../modules/store';
-import { exit_and_close } from '../../modules/message';
 import useLocale from '../../hooks/useLocale';
-import AppModalDialogs from './AppModalDialogs';
-import AppLoading from './AppLoading';
 import {
   i18n,
   activateLocale,
@@ -29,7 +20,6 @@ import Fonts from './fonts/Fonts';
 import { store, api } from '@chia/api-react';
 
 export const history = createHashHistory();
-
 
 const GlobalStyle = createGlobalStyle`
   html,

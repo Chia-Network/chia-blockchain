@@ -1,7 +1,7 @@
 import React from 'react';
 import { Switch, Route, useRouteMatch } from 'react-router-dom';
 import WalletCreateList from './WalletCreateList';
-import WalletDIDList from '../did/WalletDIDList';
+// import WalletDIDList from '../did/WalletDIDList';
 import WalletCATList from '../cat/WalletCATList';
 import WalletCATCreateSimple from '../cat/WalletCATCreateSimple';
 
@@ -115,9 +115,11 @@ export function CreateWalletView() {
       <Route path={path} exact>
         <WalletCreateList />
       </Route>
+      {/* 
       <Route path={`${path}/did`}>
         <WalletDIDList />
       </Route>
+      */}
       <Route path={`${path}/cat`}>
         <WalletCATList />
       </Route>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Trans } from '@lingui/macro';
 import {
   TextField,
@@ -7,14 +7,11 @@ import {
   Grid,
   Container,
 } from '@material-ui/core';
-import { useGenerateMnemonicMutation } from '@chia/api-react';
+import { useGenerateMnemonicMutation, useAddKeyMutation } from '@chia/api-react';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
-import { useSelector, useDispatch } from 'react-redux';
 import { useEffectOnce } from 'react-use';
-import { Flex, Loading, Link, Logo } from '@chia/core';
-import { genereate_mnemonics, add_new_key_action } from '../../modules/message';
+import { ButtonLoading, Flex, Loading, Link, Logo } from '@chia/core';
 import LayoutHero from '../layout/LayoutHero';
-import type { RootState } from '../../modules/rootReducer';
 
 const MnemonicField = (props: any) => (
   <Grid item xs={2}>
@@ -37,16 +34,20 @@ const MnemonicField = (props: any) => (
 );
 
 export default function WalletAdd() {
-  const dispatch = useDispatch();
-  // const [words, setWords] = useState([]);
   const [generateMnemonic, { data: words, isLoading }] = useGenerateMnemonicMutation();
+  const [addKey, { isLoading: isAddKeyLoading }] = useAddKeyMutation();
 
   useEffectOnce(() => {
     generateMnemonic();
   });
 
-  function handleNext() {
-    dispatch(add_new_key_action(words));
+  async function handleNext() {
+    if (words && !isAddKeyLoading) {
+      await addKey({
+        mnemonic: words,
+        type: 'new_wallet',
+      }).unwrap();
+    }
   }
 
   return (
@@ -86,15 +87,17 @@ export default function WalletAdd() {
             <Loading />
           )}
           <Container maxWidth="xs">
-            <Button
+            <ButtonLoading
               onClick={handleNext}
               type="submit"
               variant="contained"
               color="primary"
+              disabled={!words}
+              loading={isAddKeyLoading}
               fullWidth
             >
               <Trans>Next</Trans>
-            </Button>
+            </ButtonLoading>
           </Container>
         </Flex>
       </Container>

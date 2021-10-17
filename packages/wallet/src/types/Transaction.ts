@@ -3,22 +3,22 @@ import type SpendBundle from './SpendBundle';
 import type TransactionType from '../constants/TransactionType';
 
 type Transaction = {
-  confirmed_at_height: number;
-  created_at_time: number;
-  to_address: string;
-  to_puzzle_hash?: string;
+  confirmedAtHeight: number;
+  createdAtTime: number;
+  toAddress: string;
+  toPuzzleHash?: string;
   amount: number;
   sent: number;
-  fee_amount: number;
+  feeAmount: number;
   incoming: boolean;
   confirmed: boolean;
-  spend_bundle?: SpendBundle;
+  spendBundle?: SpendBundle;
   additions: Coin[];
   removals: Coin[];
-  wallet_id: number;
-  trade_id?: number;
+  walletId: number;
+  tradeId?: number;
   name?: string;
-  sent_to?: string[];
+  sentTo?: string[];
   type: TransactionType;
 };
 

@@ -26,7 +26,7 @@ export default function WalletCATTAILDialog(props: Props) {
     walletId,
   } = props;
 
-  const { wallet, loading } = useWallet(walletId);
+  const { wallet, loading, data } = useWallet(walletId);
 
   function handleClose() {
     onClose(false);
@@ -55,13 +55,13 @@ export default function WalletCATTAILDialog(props: Props) {
               <Box flexGrow={1}>
                 <TextField
                   label={<Trans>Token and Asset Issuance Limitations</Trans>}
-                  value={wallet.colour}
+                  value={data.colour}
                   variant="filled"
                   InputProps={{
                     readOnly: true,
                     endAdornment: (
                       <InputAdornment position="end">
-                        <CopyToClipboard value={wallet.colour} />
+                        <CopyToClipboard value={data.colour} />
                       </InputAdornment>
                     ),
                   }}

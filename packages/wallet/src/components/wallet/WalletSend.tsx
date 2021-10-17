@@ -6,12 +6,15 @@ import {
   useFarmBlockMutation,
 } from '@chia/api-react';
 import {
+  AlertDialog,
   Amount,
+  ButtonLoading,
   Fee,
   Form,
   TextField,
   Flex,
   Card,
+  useOpenDialog,
 } from '@chia/core';
 import isNumeric from 'validator/es/lib/isNumeric';
 import { useForm, useWatch } from 'react-hook-form';
@@ -22,6 +25,7 @@ import {
 import { chia_to_mojo } from '../../util/chia';
 import config from '../../config/config';
 import useWallet from '../../hooks/useWallet';
+import { get_transaction_result } from '../../util/transaction_result';
 
 type SendCardProps = {
   walletId: number;
@@ -36,7 +40,8 @@ type SendTransactionData = {
 export default function WalletSend(props: SendCardProps) {
   const { walletId } = props;
 
-  const [sendTransaction] = useSendTransactionMutation();
+  const openDialog = useOpenDialog();
+  const [sendTransaction, { isLoading: isSendTransactionLoading }] = useSendTransactionMutation();
   const [farmBlock] = useFarmBlockMutation();
   const methods = useForm<SendTransactionData>({
     shouldUnregister: false,
@@ -71,6 +76,10 @@ export default function WalletSend(props: SendCardProps) {
   }
 
   async function handleSubmit(data: SendTransactionData) {
+    if (isSendTransactionLoading) {
+      return;
+    }
+
     if (syncing) {
       throw new Error(t`Please finish syncing before making a transaction`);
     }
@@ -104,12 +113,25 @@ export default function WalletSend(props: SendCardProps) {
       fee: Number.parseFloat(chia_to_mojo(fee)),
     });
 
-    await sendTransaction({
+    const response = await sendTransaction({
       walletId,
       address,
       amount: Number.parseFloat(chia_to_mojo(amount)),
       fee: Number.parseFloat(chia_to_mojo(fee)),
     }).unwrap();
+
+    console.log('response', response);
+
+    const result = get_transaction_result(response);
+    if (result.success) {
+        openDialog(
+          <AlertDialog title={<Trans>Success</Trans>}>
+            {result.message ?? <Trans>Transaction has successfully been sent to a full node and included in the mempool.</Trans>}
+          </AlertDialog>,
+        );
+    } else {
+      throw new Error(result.message ?? 'Something went wrong');
+    }
 
     methods.reset();
   }
@@ -166,13 +188,14 @@ export default function WalletSend(props: SendCardProps) {
                 </Button>
               )}
 
-              <Button
+              <ButtonLoading
                 variant="contained"
                 color="primary"
                 type="submit"
+                loading={isSendTransactionLoading}
               >
                 <Trans>Send</Trans>
-              </Button>
+              </ButtonLoading>
             </Flex>
           </Grid>
         </Grid>

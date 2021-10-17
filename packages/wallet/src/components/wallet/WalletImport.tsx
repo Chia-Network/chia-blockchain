@@ -3,23 +3,22 @@ import { Trans } from '@lingui/macro';
 import {
   Typography,
   Container,
-  Button,
   Grid,
 } from '@material-ui/core';
-import { shuffle } from 'lodash';
+// import { shuffle } from 'lodash';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useAddKeyMutation } from '@chia/api-react';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useHistory } from 'react-router';
-import { Autocomplete, Form, Flex, Logo } from '@chia/core';
+import { Autocomplete, ButtonLoading, Form, Flex, Logo } from '@chia/core';
 import LayoutHero from '../layout/LayoutHero';
 import english from '../../util/english';
 import useTrans from '../../hooks/useTrans';
 
+/*
 const shuffledEnglish = shuffle(english);
-
 const test = new Array(24).fill('').map((item, index) => shuffledEnglish[index].word);
-console.log('test', test);
+*/
 
 const options = english.map((item) => item.word);
 
@@ -29,12 +28,12 @@ type FormData = {
 
 export default function WalletImport() {
   const history = useHistory();
-  const [addKey, rest] = useAddKeyMutation();
+  const [addKey, { isLoading }] = useAddKeyMutation();
   const trans = useTrans();
 
   const methods = useForm<FormData>({
     defaultValues: {
-      mnemonic: shuffle(test), //new Array(24).fill(''),
+      mnemonic: new Array(24).fill(''),
     },
   });
 
@@ -48,23 +47,21 @@ export default function WalletImport() {
   }
 
   async function handleSubmit(values: FormData) {
+    if (isLoading) {
+      return;
+    }
+
     const { mnemonic } = values;
     const hasEmptyWord = !!mnemonic.find((word) => !word);
     if (hasEmptyWord) {
       throw new Error(trans('Please fill all words'));
     }
 
-    
     await addKey({
       mnemonic,
       type: 'skip',
     }).unwrap();
-
   }
-
-  console.log('rest', rest);
-
-  const errorIndex = -1;
 
   return (
     <LayoutHero
@@ -97,7 +94,6 @@ export default function WalletImport() {
                     name={`mnemonic.${index}`}
                     label={index + 1}
                     autoFocus={index === 0}
-                    error={index === errorIndex}
                     variant="filled"
                     disableClearable
                   />
@@ -105,14 +101,15 @@ export default function WalletImport() {
               ))}
             </Grid>
             <Container maxWidth="xs">
-              <Button
+              <ButtonLoading
                 type="submit"
                 variant="contained"
                 color="primary"
+                loading={isLoading}
                 fullWidth
               >
                 <Trans>Next</Trans>
-              </Button>
+              </ButtonLoading>
             </Container>
           </Flex>
         </Container>

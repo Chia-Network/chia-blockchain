@@ -1,9 +1,7 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
-import { orderBy } from 'lodash';
 import { Box, Tooltip, Typography } from '@material-ui/core';
 import { Card, CopyToClipboard, Flex, Loading, Table } from '@chia/core';
-import { useGetTransactionsQuery } from '@chia/api-react';
 import type { Row } from '../core/components/Table/Table';
 import {
   mojo_to_chia_string,
@@ -13,6 +11,7 @@ import { unix_to_short_date } from '../../util/utils';
 import TransactionType from '../../constants/TransactionType';
 import WalletType from '../../constants/WalletType';
 import useWallet from '../../hooks/useWallet';
+import useWalletTransactions from '../../hooks/useWalletTransactions';
 
 const getCols = (type: WalletType) => [
   {
@@ -75,22 +74,11 @@ type Props = {
 
 export default function WalletHistory(props: Props) {
   const { walletId } = props;
-  const { data: transactions, isTransactionsLoading } = useGetTransactionsQuery({
-    walletId,
-  });
+
   const { wallet, loading: isWalletLoading } = useWallet(walletId);
+  const { transactions, isLoading: isWalletTransactionsLoading } = useWalletTransactions(walletId);
 
-  const isLoading = isTransactionsLoading || isWalletLoading;
-
-  const transactionsOrdered = useMemo(() => {
-    if (transactions) {
-      return orderBy(
-        transactions,
-        ['confirmed', 'confirmedAtHeight', 'createdAtTime'],
-        ['asc', 'desc', 'desc'],
-      );
-    }
-  }, [transactions]);
+  const isLoading = isWalletTransactionsLoading || isWalletLoading;
 
   const cols = useMemo(() => {
     if (!wallet) {
@@ -105,10 +93,10 @@ export default function WalletHistory(props: Props) {
     <Card title={<Trans>History</Trans>}>
       {isLoading ? (
         <Loading center />
-      ) : transactionsOrdered?.length ? (
+      ) : transactions?.length ? (
         <Table
           cols={cols}
-          rows={transactionsOrdered}
+          rows={transactions}
           rowsPerPageOptions={[10, 25, 100]}
           rowsPerPage={10}
           pages

@@ -3,11 +3,13 @@ import { Wallet, CAT } from '@chia/api';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import type Transaction from '../@types/Transaction';
 
+const baseQuery = chiaLazyBaseQuery({
+  service: Wallet,
+});
+
 export const walletApi = createApi({
   reducerPath: 'walletApi',
-  baseQuery: chiaLazyBaseQuery({
-    service: Wallet,
-  }),
+  baseQuery,
   tagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions'],
   endpoints: (build) => ({
     getWallets: build.query<Wallet[], undefined>({
@@ -49,6 +51,7 @@ export const walletApi = createApi({
         command: 'pwAbsorbRewards',
         args: [walletId, fee],
       }),
+      invalidatesTags: [{ type: 'Transactions', id: 'LIST' }],
     }),
 
     pwJoinPool: build.mutation<any, { 
@@ -156,6 +159,7 @@ export const walletApi = createApi({
           address,
         ],
       }),
+      invalidatesTags: [{ type: 'Transactions', id: 'LIST' }],
     }),
 
     generateMnemonic: build.mutation<string[], undefined>({
@@ -402,6 +406,30 @@ export const walletApi = createApi({
       query: () => ({
         command: 'getSyncStatus',
       }),
+      async onCacheEntryAdded(_args, api) {
+        const { cacheDataLoaded, cacheEntryRemoved, dispatch } = api;
+        let unsubscribe;
+        try {
+          await cacheDataLoaded;
+
+          const response = await baseQuery({
+            command: 'onSyncChanged',
+            args: [() => {
+              dispatch(walletApi.endpoints.getSyncStatus.initiate(undefined, { 
+                subscribe: false,
+                forceRefetch: true,
+              }));
+            }],
+          }, api, {});
+
+          unsubscribe = response.data;
+        } finally {
+          await cacheEntryRemoved;
+          if (unsubscribe) {
+            unsubscribe();
+          }
+        }
+      },
     }),
 
     getConnections: build.query<any, undefined>({
@@ -436,7 +464,7 @@ export const walletApi = createApi({
         service: CAT,
         args: [amount, fee, host],
       }),
-      invalidatesTags: [{ type: 'Wallets', id: 'LIST' }],
+      invalidatesTags: [{ type: 'Wallets', id: 'LIST' }, { type: 'Transactions', id: 'LIST' }],
     }),
 
     createCATWalletForExisting: build.mutation<any, {
@@ -453,7 +481,7 @@ export const walletApi = createApi({
         service: CAT,
         args: [tail, fee, host],
       }),
-      invalidatesTags: [{ type: 'Wallets', id: 'LIST' }],
+      invalidatesTags: [{ type: 'Wallets', id: 'LIST' }, { type: 'Transactions', id: 'LIST' }],
     }),
   
     getCATTail: build.query<string, {
@@ -496,20 +524,62 @@ export const walletApi = createApi({
   
     spendCAT: build.mutation<any, {
       walletId: number;
-      innerAddress: string;
+      address: string;
       amount: string;
       fee: string;
+      memos?: string[];
     }>({
       query: ({
         walletId,
-        innerAddress,
+        address,
         amount,
         fee,
+        memos,
       }) => ({
         command: 'cc_set_name',
         service: CAT,
-        args: [walletId, innerAddress, amount, fee],
+        args: [walletId, address, amount, fee, memos],
       }),
+      invalidatesTags: [{ type: 'Transactions', id: 'LIST' }],
+    }),
+
+    addCATToken: build.mutation<any, {
+      tail: string;
+      name: string;
+      fee: string;
+      host?: string;
+    }>({
+      async queryFn({ tail, name, fee, host }, _queryApi, _extraOptions, fetchWithBQ) {
+        try {
+          const response = await fetchWithBQ({
+            command: 'createWalletForExisting',
+            service: CAT,
+            args: [tail, fee, host],
+          });
+    
+          console.log('createWalletForExisting response', response);
+          
+          const walletId = response?.walletId;
+          if (!walletId) {
+            throw new Error('Wallet id is not defined');
+          }
+
+          await fetchWithBQ({
+            command: 'cc_set_name',
+            service: CAT,
+            args: [walletId, name],
+          });
+
+          return {
+            data: walletId,
+          };
+        } catch (error: any) {
+          return {
+            error,
+          };
+        }
+      },
+      invalidatesTags: [{ type: 'Wallets', id: 'LIST' }, { type: 'Transactions', id: 'LIST' }],
     }),
   }),
 });
@@ -556,4 +626,5 @@ export const {
   useGetCATNameQuery,
   useSetCATNameMutation,
   useSpendCATMutation,
+  useAddCATTokenMutation,
 } = walletApi;

@@ -1,8 +1,6 @@
 import { useMemo } from 'react';
-import { orderBy } from 'lodash';
 import { useGetWalletsQuery } from '@chia/api-react';
 import Wallet from '../types/Wallet';
-import Transaction from '../types/Transaction';
 import WalletType from '../constants/WalletType';
 import useCurrencyCode from './useCurrencyCode';
 import getCATToken from '../util/getCATToken';
@@ -10,8 +8,8 @@ import getCATToken from '../util/getCATToken';
 export default function useWallet(walletId: number): {
   loading: boolean;
   wallet?: Wallet;
-  transactions?: Transaction[];
   unit?: string;
+  data?: any;
 } {
   const currencyCode = useCurrencyCode();
   const { data: wallets, isLoading } = useGetWalletsQuery();
@@ -19,19 +17,6 @@ export default function useWallet(walletId: number): {
   const wallet = useMemo(() => {
     return wallets?.find((item) => item.id === walletId);
   }, [wallets, walletId]);
-
-  const transactions = useMemo(() => {
-    const transactions = wallet?.transactions;
-    if (transactions) {
-      return orderBy(
-        transactions,
-        ['confirmed', 'confirmed_at_height', 'created_at_time'],
-        ['asc', 'desc', 'desc'],
-      );
-    }
-
-    return transactions;
-  }, [wallet]);
 
   const unit = useMemo(() => {
     if (wallet) {
@@ -48,10 +33,17 @@ export default function useWallet(walletId: number): {
     } 
   }, [wallet, currencyCode]);
 
+  const data = useMemo(() => {
+    if (wallet?.data) {
+      return JSON.parse(wallet.data);
+    }
+
+  }, [wallet?.data]);
+
   return { 
     wallet, 
-    transactions, 
     loading: isLoading,
     unit,
+    data,
   };
 }

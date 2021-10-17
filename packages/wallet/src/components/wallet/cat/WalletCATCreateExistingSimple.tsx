@@ -1,16 +1,10 @@
-import React, { useState } from 'react';
-import { Trans } from '@lingui/macro';
-import { AlertDialog, Fee, Back, ButtonLoading, Card, Flex, Form, TextField } from '@chia/core';
+import React from 'react';
+import { Trans, t } from '@lingui/macro';
+import { Back, ButtonLoading, Card, Flex, Form, TextField } from '@chia/core';
 import { Box, Grid } from '@material-ui/core';
-import { useDispatch } from 'react-redux';
+import { useAddCATTokenMutation } from '@chia/api-react';
 import { useForm } from 'react-hook-form';
 import { useHistory } from 'react-router';
-import { createCATWalletFromToken } from '../../../modules/message';
-import { chia_to_mojo } from '../../../util/chia';
-import { openDialog } from '../../../modules/dialog';
-import config from '../../../config/config';
-import useShowError from '../../../hooks/useShowError';
-
 
 type CreateExistingCATWalletData = {
   name: string;
@@ -27,49 +21,31 @@ export default function WalletCATCreateExisting() {
       symbol: '',
     },
   });
-  const [loading, setLoading] = useState<boolean>(false);
-  const dispatch = useDispatch();
   const history = useHistory();
-  const showError = useShowError();
+  const [addCATToken, { isLoading: isAddCATTokenLoading }] = useAddCATTokenMutation();
 
   async function handleSubmit(values: CreateExistingCATWalletData) {
-    try {
-      const { name, tail } = values;
-      setLoading(true);
+    const { name, tail } = values;
 
-
-      if (!tail) {
-        dispatch(
-          openDialog(
-            <AlertDialog>
-              <Trans>Please enter a valid TAIL</Trans>
-            </AlertDialog>,
-          ),
-        );
-        return;
-      }
-
-      if (!name) {
-        dispatch(
-          openDialog(
-            <AlertDialog>
-              <Trans>Please enter a valid token name</Trans>
-            </AlertDialog>,
-          ),
-        );
-        return;
-      }
-
-      const walletId = await dispatch(createCATWalletFromToken({
-        name,
-        tail,
-      }));
-      history.push(`/dashboard/wallets/${walletId}`);
-    } catch (error) {
-      showError(error);
-    } finally {
-      setLoading(false);
+    if (isAddCATTokenLoading) {
+      return;
     }
+
+    if (!tail) {
+      throw new Error(t`Please enter a valid TAIL`);
+    }
+
+    if (!name) {
+      throw new Error(t`Please enter a valid token name`);
+    }
+
+    const walletId = await addCATToken({
+      name,
+      tail,
+      fee: '0',
+    }).unwrap();
+
+    history.push(`/dashboard/wallets/${walletId}`);
   }
 
   return (
@@ -109,7 +85,7 @@ export default function WalletCATCreateExisting() {
             type="submit"
             variant="contained"
             color="primary"
-            loading={loading}
+            loading={isAddCATTokenLoading}
           >
             <Trans>Create</Trans>
           </ButtonLoading>

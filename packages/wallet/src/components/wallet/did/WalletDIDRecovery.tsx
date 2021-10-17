@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useHistory } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
-import { AlertDialog, Back, ButtonLoading, Card, Flex, Dropzone } from '@chia/core';
+import { AlertDialog, Back, ButtonLoading, Card, Flex, Dropzone, useOpenDialog } from '@chia/core';
 import { Trans } from '@lingui/macro';
 import {
   Typography,
@@ -11,7 +11,6 @@ import {
 import { Backup as BackupIcon } from '@material-ui/icons';
 import type { RootState } from '../../../modules/rootReducer';
 import { recover_did_action } from '../../../modules/message';
-import useOpenDialog from '../../../hooks/useOpenDialog';
 import SyncingStatus from '../../../constants/SyncingStatus';
 import getWalletSyncingStatus from '../../../util/getWalletSyncingStatus';
 

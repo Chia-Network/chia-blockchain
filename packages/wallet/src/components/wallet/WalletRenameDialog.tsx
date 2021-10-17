@@ -7,8 +7,7 @@ import {
   DialogTitle,
   DialogContent,
 } from '@material-ui/core';
-import { AlertDialog, ButtonLoading, DialogActions, Flex, Form, TextField } from '@chia/core';
-import useOpenDialog from '../../hooks/useOpenDialog';
+import { AlertDialog, ButtonLoading, DialogActions, Flex, Form, TextField, useOpenDialog } from '@chia/core';
 
 type WalletRenameDialogFormData = {
   name: string;
