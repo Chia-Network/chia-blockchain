@@ -42,8 +42,7 @@ class TransactionPushError(Exception):
 
 class TestSingleton:
     # Helper function
-    @staticmethod
-    def sign_delegated_puz(del_puz: Program, coin: Coin) -> G2Element:
+    def sign_delegated_puz(self, del_puz: Program, coin: Coin) -> G2Element:
         synthetic_secret_key: PrivateKey = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_secret_key(  # noqa
             PrivateKey.from_bytes(
                 secret_exponent_for_index(1).to_bytes(32, "big"),

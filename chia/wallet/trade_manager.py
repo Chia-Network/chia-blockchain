@@ -312,8 +312,7 @@ class TradeManager:
             self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
             return False, None, str(e)
 
-    @staticmethod
-    def write_offer_to_disk(file_path: Path, offer: TradeRecord):
+    def write_offer_to_disk(self, file_path: Path, offer: TradeRecord):
         if offer is not None:
             file_path.write_text(bytes(offer).hex())
 

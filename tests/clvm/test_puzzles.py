@@ -199,8 +199,7 @@ class TestPuzzles(TestCase):
 
         do_test_spend(puzzle, solution, payments, key_lookup)
 
-    @staticmethod
-    def do_test_spend_p2_delegated_puzzle_or_hidden_puzzle_with_delegated_puzzle(hidden_pub_key_index):
+    def do_test_spend_p2_delegated_puzzle_or_hidden_puzzle_with_delegated_puzzle(self, hidden_pub_key_index):
         key_lookup = KeyTool()
         payments, conditions = default_payments_and_conditions(1, key_lookup)
 

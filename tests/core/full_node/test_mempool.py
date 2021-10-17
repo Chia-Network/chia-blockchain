@@ -331,8 +331,7 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.PENDING
         assert err == Err.MEMPOOL_CONFLICT
 
-    @staticmethod
-    async def send_sb(node, peer, sb):
+    async def send_sb(self, node, peer, sb):
         tx = full_node_protocol.RespondTransaction(sb)
         await node.respond_transaction(tx, peer)
 
@@ -343,12 +342,10 @@ class TestMempoolManager:
         await self.send_sb(node, peer, sb)
         return sb
 
-    @staticmethod
-    def assert_sb_in_pool(node, sb):
+    def assert_sb_in_pool(self, node, sb):
         assert sb == node.full_node.mempool_manager.get_spendbundle(sb.name())
 
-    @staticmethod
-    def assert_sb_not_in_pool(node, sb):
+    def assert_sb_not_in_pool(self, node, sb):
         assert node.full_node.mempool_manager.get_spendbundle(sb.name()) is None
 
     @pytest.mark.asyncio
@@ -428,8 +425,8 @@ class TestMempoolManager:
         self.assert_sb_not_in_pool(full_node_1, sb12)
         self.assert_sb_not_in_pool(full_node_1, sb3)
 
-    @staticmethod
     async def condition_tester(
+        self,
         two_nodes,
         dic: Dict[ConditionOpcode, List[ConditionWithArgs]],
         fee: int = 0,

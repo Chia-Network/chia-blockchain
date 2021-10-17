@@ -766,8 +766,8 @@ class WalletNode:
             await self.wallet_state_manager.create_more_puzzle_hashes()
         return True, advanced_peak
 
-    @staticmethod
     def validate_additions(
+        self,
         coins: List[Tuple[bytes32, List[Coin]]],
         proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]],
         root,
@@ -825,8 +825,7 @@ class WalletNode:
 
         return True
 
-    @staticmethod
-    def validate_removals(coins, proofs, root):
+    def validate_removals(self, coins, proofs, root):
         if proofs is None:
             # If there are no proofs, it means all removals were returned in the response.
             # we must find the ones relevant to our wallets.
@@ -873,8 +872,7 @@ class WalletNode:
                         return False
         return True
 
-    @staticmethod
-    async def fetch_puzzle_solution(peer, height: uint32, coin: Coin) -> CoinSpend:
+    async def fetch_puzzle_solution(self, peer, height: uint32, coin: Coin) -> CoinSpend:
         solution_response = await peer.request_puzzle_solution(
             wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )

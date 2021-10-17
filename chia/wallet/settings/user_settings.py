@@ -19,8 +19,7 @@ class UserSettings:
         await self.load_store()
         return self
 
-    @staticmethod
-    def _keys():
+    def _keys(self):
         all_keys = [BackupInitialized]
         return all_keys
 

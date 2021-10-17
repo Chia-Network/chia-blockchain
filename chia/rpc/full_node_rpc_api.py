@@ -73,8 +73,7 @@ class FullNodeRpcApi:
 
     # this function is just here for backwards-compatibility. It will probably
     # be removed in the future
-    @staticmethod
-    async def get_initial_freeze_period(_: Dict):
+    async def get_initial_freeze_period(self, _: Dict):
         # Mon May 03 2021 17:00:00 GMT+0000
         return {"INITIAL_FREEZE_END_TIMESTAMP": 1620061200}
 

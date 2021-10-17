@@ -144,8 +144,7 @@ class Wallet:
 
         return uint64(addition_amount)
 
-    @staticmethod
-    def puzzle_for_pk(pubkey: bytes) -> Program:
+    def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
 
     async def hack_populate_secret_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> G1Element:
@@ -194,8 +193,8 @@ class Wallet:
     async def get_new_puzzlehash(self, in_transaction: bool = False) -> bytes32:
         return (await self.wallet_state_manager.get_unused_derivation_record(self.id(), in_transaction)).puzzle_hash
 
-    @staticmethod
     def make_solution(
+        self,
         primaries: Optional[List[Dict[str, Any]]] = None,
         min_time=0,
         me=None,

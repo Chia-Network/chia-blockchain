@@ -335,14 +335,12 @@ class WebSocketServer:
         full_response = format_response(message, response)
         return full_response, [websocket]
 
-    @staticmethod
-    async def is_keyring_locked() -> Dict[str, Any]:
+    async def is_keyring_locked(self) -> Dict[str, Any]:
         locked: bool = Keychain.is_keyring_locked()
         response: Dict[str, Any] = {"success": True, "is_keyring_locked": locked}
         return response
 
-    @staticmethod
-    async def keyring_status() -> Dict[str, Any]:
+    async def keyring_status(self) -> Dict[str, Any]:
         passphrase_support_enabled: bool = supports_keyring_passphrase()
         can_save_passphrase: bool = supports_os_passphrase_storage()
         user_passphrase_is_set: bool = Keychain.has_master_passphrase() and not using_default_passphrase()
@@ -539,8 +537,7 @@ class WebSocketServer:
         response: Dict[str, Any] = {"success": success, "error": error}
         return response
 
-    @staticmethod
-    def get_status() -> Dict[str, Any]:
+    def get_status(self) -> Dict[str, Any]:
         response = {"success": True, "genesis_initialized": True}
         return response
 
@@ -571,8 +568,7 @@ class WebSocketServer:
     def keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):
         asyncio.create_task(self._keyring_status_changed(keyring_status, destination))
 
-    @staticmethod
-    def plot_queue_to_payload(plot_queue_item, send_full_log: bool) -> Dict[str, Any]:
+    def plot_queue_to_payload(self, plot_queue_item, send_full_log: bool) -> Dict[str, Any]:
         error = plot_queue_item.get("error")
         has_error = error is not None
 

@@ -294,8 +294,7 @@ class Blockchain(BlockchainInterface):
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None, ([], {})
 
-    @staticmethod
-    def get_hint_list(npc_result: NPCResult) -> List[Tuple[bytes32, bytes]]:
+    def get_hint_list(self, npc_result: NPCResult) -> List[Tuple[bytes32, bytes]]:
         h_list = []
         for npc in npc_result.npc_list:
             for opcode, conditions in npc.conditions:

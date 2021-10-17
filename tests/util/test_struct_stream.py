@@ -5,8 +5,7 @@ from chia.util.ints import int8, uint8, int16, uint16, int32, uint32, int64, uin
 
 
 class TestStructStream:
-    @staticmethod
-    def _test_impl(cls, upper_boundary, lower_boundary):
+    def _test_impl(self, cls, upper_boundary, lower_boundary):
 
         with pytest.raises(ValueError):
             t = cls(upper_boundary + 1)

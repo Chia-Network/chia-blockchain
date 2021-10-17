@@ -118,8 +118,8 @@ class TempKeyring:
         self.delete_on_cleanup = delete_on_cleanup
         self.cleaned_up = False
 
-    @staticmethod
     def _patch_and_create_keychain(
+        self,
         *,
         user: str,
         service: str,

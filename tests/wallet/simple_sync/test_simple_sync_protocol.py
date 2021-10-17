@@ -51,8 +51,7 @@ class TestSimpleSyncProtocol:
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
-    @staticmethod
-    async def get_all_messages_in_queue(queue):
+    async def get_all_messages_in_queue(self, queue):
         all_messages = []
         await asyncio.sleep(2)
         while not queue.empty():

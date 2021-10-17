@@ -439,8 +439,8 @@ class WeightProofHandler:
 
         return sub_slots_data, first_rc_end_of_slot_vdf
 
-    @staticmethod
     def first_rc_end_of_slot_vdf(
+        self,
         header_block,
         blocks: Dict[bytes32, BlockRecord],
         header_blocks: Dict[bytes32, HeaderBlock],

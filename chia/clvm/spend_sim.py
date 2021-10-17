@@ -101,8 +101,7 @@ class SpendSim:
             coins.add(Coin.from_row(row=row))
         return list(coins)
 
-    @staticmethod
-    async def generate_transaction_generator(bundle: Optional[SpendBundle]) -> Optional[BlockGenerator]:
+    async def generate_transaction_generator(self, bundle: Optional[SpendBundle]) -> Optional[BlockGenerator]:
         if bundle is None:
             return None
         return simple_solution_generator(bundle)

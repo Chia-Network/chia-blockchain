@@ -133,8 +133,7 @@ class WalletCoinStore:
         await self.add_coin_record(spent)
         return spent
 
-    @staticmethod
-    def coin_record_from_row(row: sqlite3.Row) -> WalletCoinRecord:
+    def coin_record_from_row(self, row: sqlite3.Row) -> WalletCoinRecord:
         return WalletCoinRecord(
             Coin.from_row(row), uint32(row[1]), uint32(row[2]), bool(row[3]), bool(row[4]), WalletType(row[8]), row[9]
         )

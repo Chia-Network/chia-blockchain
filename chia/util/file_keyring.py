@@ -305,8 +305,7 @@ class FileKeyring(FileSystemEventHandler):
             return False
         return self.have_valid_checkbytes(decrypted_data)
 
-    @staticmethod
-    def have_valid_checkbytes(decrypted_data: bytes) -> bool:
+    def have_valid_checkbytes(self, decrypted_data: bytes) -> bool:
         checkbytes = decrypted_data[: len(CHECKBYTES_VALUE)]
         return checkbytes == CHECKBYTES_VALUE
 
@@ -326,14 +325,12 @@ class FileKeyring(FileSystemEventHandler):
 
         return FileKeyring.symmetric_key_from_passphrase(passphrase, salt)
 
-    @staticmethod
-    def encrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
+    def encrypt_data(self, input_data: bytes, key: bytes, nonce: bytes) -> bytes:
         encryptor = ChaCha20Poly1305(key)
         data = encryptor.encrypt(nonce, input_data, None)
         return data
 
-    @staticmethod
-    def decrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
+    def decrypt_data(self, input_data: bytes, key: bytes, nonce: bytes) -> bytes:
         decryptor = ChaCha20Poly1305(key)
         output = decryptor.decrypt(nonce, input_data, None)
         return output
