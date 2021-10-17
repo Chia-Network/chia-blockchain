@@ -27,9 +27,20 @@ jobs:
             of further review, please comment on it with an update to
             keep it from auto closing in 7 days.
           close-issue-message: >-
+<<<<<<< Updated upstream
             This was flagged as stale 7 days ago and has not been updated since
             by the submitter or watchers, and as a result has been closed.
           stale-pr-message: >-
             There has been no activity on this PR for 45 days, and it has now
             been tagged with a stale-pr label. It should be manually reviewed 
             by the relevant parties at the earliest convenience.
+=======
+            This issue was automatically closed because it has been 
+            flagged as stale, and subsequently passed 7 days with no 
+            further activity from the submitter or watchers.
+          stale-pr-message: >-
+            This PR has been flagged as stale due to no activity for over 
+            60 days. It will not be automatically closed, but it has been
+            given a stale-pr label and should be manually reviewed by the 
+            relevant parties.
+>>>>>>> Stashed changes
