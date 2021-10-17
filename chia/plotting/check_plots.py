@@ -1,5 +1,6 @@
 import logging
 from collections import Counter
+import os
 from pathlib import Path
 from time import time, sleep
 from typing import List
@@ -179,11 +180,11 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         if len(bad_plots_list) > 0:
             log.warning(f"    {len(bad_plots_list)} bad plots:")
             for bad_plot_path in bad_plots_list:
-                log.warning(f"{bad_plot_path}")
+                log.warning(os.fspath(bad_plot_path))
         if len(plot_manager.failed_to_open_filenames.keys()) > 0:
             log.warning(f"    {len(plot_manager.failed_to_open_filenames)} unopenable plots:")
             for unopenable_plot_path in plot_manager.failed_to_open_filenames.keys():
-                log.warning(f"{unopenable_plot_path}")
+                log.warning(os.fspath(unopenable_plot_path))
     if len(plot_manager.no_key_filenames) > 0:
         log.warning(
             f"There are {len(plot_manager.no_key_filenames)} plots with a farmer or pool public key that "
