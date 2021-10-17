@@ -551,15 +551,19 @@ export const walletApi = createApi({
     }>({
       async queryFn({ tail, name, fee, host }, _queryApi, _extraOptions, fetchWithBQ) {
         try {
-          const response = await fetchWithBQ({
+          const { data, error } = await fetchWithBQ({
             command: 'createWalletForExisting',
             service: CAT,
             args: [tail, fee, host],
           });
+
+          if (error) {
+            throw error;
+          }
     
           console.log('createWalletForExisting response', response);
           
-          const walletId = response?.walletId;
+          const walletId = data?.walletId;
           if (!walletId) {
             throw new Error('Wallet id is not defined');
           }
