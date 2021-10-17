@@ -17,8 +17,6 @@ from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_store import DataStore
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from tests.block_tools import create_block_tools_async
@@ -106,7 +104,7 @@ class ChiaRoot:
 def chia_root_fixture(tmp_path: pathlib.Path) -> ChiaRoot:
     root = ChiaRoot(path=tmp_path.joinpath("chia_root"))
     root.run(args=["init"])
-    root.run(args=["configure", "--set-log-level", "DEBUG"])
+    root.run(args=["configure", "--set-log-level", "INFO"])
 
     return root
 

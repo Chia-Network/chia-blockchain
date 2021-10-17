@@ -1,6 +1,7 @@
 from typing import List, Dict
 import pytest
 
+# flake8: noqa: F401
 import aiosqlite
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.data_layer.data_layer import DataLayer

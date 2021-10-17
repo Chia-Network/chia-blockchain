@@ -1,7 +1,10 @@
 import json
+import logging
 from typing import Coroutine
 
 import click
+
+logger = logging.getLogger(__name__)
 
 
 # TODO: this is more general and should be part of refactoring the overall CLI code duplication
@@ -11,9 +14,10 @@ def run(coro: Coroutine):
     response = asyncio.run(coro)
 
     success = response is not None and response.get("success", False)
+    logger.info(f"data layer cli call response:{success}")
     # todo make sure all cli methods follow this pattern, uncomment
     # if not success:
-    #     raise click.ClickException(message=f"query unsuccessful, response: {response}")
+    # raise click.ClickException(message=f"query unsuccessful, response: {response}")
 
 
 @click.group("data", short_help="Manage your data")

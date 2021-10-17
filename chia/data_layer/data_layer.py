@@ -84,7 +84,7 @@ class DataLayer:
         # todo  create singelton with wavaluellet and get id
         store_id = await self.wallet.create_data_store()
         res = await self.data_store.create_tree(store_id)
-        if res == False:
+        if res is False:
             self.log.error("Failed to create tree")
         return store_id
 
@@ -118,7 +118,7 @@ class DataLayer:
         # todo  create singelton with wallet and get id
         id = "0102030405060708091011121314151617181920212223242526272829303132"
         res = await self.data_store.create_tree(id)
-        if res == False:
+        if res is False:
             self.log.error("Failed to create tree")
         return id
 

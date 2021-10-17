@@ -5,7 +5,6 @@ from chia.data_layer.data_layer import DataLayer
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 
 # todo input assertions for all rpc's
 
