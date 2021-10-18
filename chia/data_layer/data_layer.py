@@ -114,13 +114,17 @@ class DataLayer:
         # todo need to mark data as pending and change once tx is confirmed
         return True
 
-    async def get_value(self) -> bytes32:
-        # todo  create singelton with wallet and get id
-        id = "0102030405060708091011121314151617181920212223242526272829303132"
-        res = await self.data_store.create_tree(id)
-        if res is False:
+    async def get_value(self, store_id: bytes32, key: bytes32) -> bytes32:
+        res = await self.data_store.get_node_by_key(tree_id=store_id, key=key)
+        if res is None:
             self.log.error("Failed to create tree")
-        return id
+        return res.value
+
+    async def get_pairs(self, store_id: bytes32) -> bytes32:
+        res = await self.data_store.get_pairs(store_id)
+        if res is None:
+            self.log.error("Failed to create tree")
+        return res
 
     # def _state_changed(self, change: str):
     #     if self.state_changed_callback is not None:

@@ -30,7 +30,12 @@ class DataLayerRpcApi:
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(bytes(request["id"]))
         key = Program.from_bytes(bytes(request["key"]))
-        value = await self.service.data_store.get_node_by_key(key, tree_id=store_id)
+        value = await self.service.get_value(store_id=store_id, key=key)
+        return {"data": value}
+
+    async def get_pairs(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        store_id = bytes32(bytes(request["id"]))
+        value = await self.service.get_pairs(store_id)
         return {"data": value}
 
     async def update_kv_store(self, request: Dict[str, Any]):
