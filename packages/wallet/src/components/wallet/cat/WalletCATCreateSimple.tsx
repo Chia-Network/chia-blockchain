@@ -27,7 +27,6 @@ export default function WalletCATCreateSimple() {
     }
 
     try {
-      console.log('token', token);
       const { name, tail } = token;
 
       if (!name) {
@@ -38,18 +37,14 @@ export default function WalletCATCreateSimple() {
         throw new Error(t`Token has empty tail`);
       }
 
-      console.log('creating cat', tail, name);
       const walletId = await addCATToken({
         tail,
         name,
         fee: '0',
       }).unwrap();
 
-      console.log('createCATWalletForExisting response', walletId);
-
       history.push(`/dashboard/wallets/${walletId}`);
     } catch(error: any) {
-      console.log('error', error);
       showError(error);
     }
   }
@@ -59,8 +54,6 @@ export default function WalletCATCreateSimple() {
       <Loading center />
     );
   }
-
-  console.log('wallets', wallets);
 
   return (
     <Flex flexDirection="column" gap={3}>
@@ -73,9 +66,9 @@ export default function WalletCATCreateSimple() {
         {Tokens.map((token) => {
           const isPresent = isCATWalletPresent(wallets, token);
 
-          function handleSelect() {
+          async function handleSelect() {
             if (!isPresent) {
-              handleCreateNewToken(token);
+              await handleCreateNewToken(token);
             }
           }
 
@@ -88,6 +81,7 @@ export default function WalletCATCreateSimple() {
                 symbol={token.symbol}
                 disabled={isPresent}
                 description={token.description}
+                loadingDescription={<Trans>Adding {token.symbol} token</Trans>}
               />
             </Grid>
           );

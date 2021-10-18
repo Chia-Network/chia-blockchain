@@ -18,7 +18,7 @@ export const walletApi = createApi({
         command: 'getWallets',
       }),
       */
-      async queryFn(_args, { dispatch }, _extraOptions, fetchWithBQ) {
+      async queryFn(_args, _queryApi, _extraOptions, fetchWithBQ) {
         try {
           const { data, error } = await fetchWithBQ({
             command: 'getWallets',
