@@ -41,7 +41,7 @@
     "@material-ui/styles": "^4.11.4",
     "@nivo/core": "^0.74.0",
     "@nivo/line": "^0.74.0",
-    "@rehooks/local-storage": "2.4.3",
+    "@rehooks/local-storage": "2.4.0",
     "bech32": "^2.0.0",
     "big.js": "^6.1.1",
     "byte-size": "^7.0.1",
