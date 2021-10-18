@@ -286,6 +286,91 @@ async def test_inserting_duplicate_key_fails(data_store: DataStore, tree_id: byt
 
 
 @pytest.mark.asyncio()
+async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: bytes32) -> None:
+    expected = Program.to(
+        (
+            (
+                (
+                    kv(b"\x00", [b"\x10", b"\x00"]),
+                    kv(b"\x01", [b"\x11", b"\x01"]),
+                ),
+                (
+                    kv(b"\x02", [b"\x12", b"\x02"]),
+                    kv(b"\x03", [b"\x13", b"\x03"]),
+                ),
+            ),
+            (
+                (
+                    kv(b"\x04", [b"\x14", b"\x04"]),
+                    kv(b"\x05", [b"\x15", b"\x05"]),
+                ),
+                (
+                    kv(b"\x06", [b"\x16", b"\x06"]),
+                    kv(b"\x07", [b"\x17", b"\x07"]),
+                ),
+            ),
+        ),
+    )
+
+    for n in [0, 4, 2, 6, 1, 3, 5, 7]:
+        await data_store.autoinsert(
+            key=Program.to(bytes([n])),
+            value=Program.to([bytes([0x10 + n]), bytes([n])]),
+            tree_id=tree_id,
+        )
+
+    result = await data_store.get_tree_as_program(tree_id=tree_id)
+
+    assert result == expected
+
+
+@pytest.mark.asyncio()
+async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    expected = Program.to(
+        (
+            (
+                (
+                    kv(b"\x00", [b"\x10", b"\x00"]),
+                    kv(b"\x01", [b"\x11", b"\x01"]),
+                ),
+                (
+                    kv(b"\x02", [b"\x12", b"\x02"]),
+                    kv(b"\x03", [b"\x13", b"\x03"]),
+                ),
+            ),
+            (
+                (
+                    kv(b"\x04", [b"\x14", b"\x04"]),
+                    kv(b"\x05", [b"\x15", b"\x05"]),
+                ),
+                (
+                    kv(b"\x06", [b"\x16", b"\x06"]),
+                    kv(b"\x07", [b"\x17", b"\x07"]),
+                ),
+            ),
+        ),
+    )
+
+    ns = [1, 5]
+
+    for n in ns:
+        await data_store.delete(key=Program.to(bytes([n])), tree_id=tree_id)
+
+    for n in ns:
+        await data_store.autoinsert(
+            key=Program.to(bytes([n])),
+            value=Program.to([bytes([0x10 + n]), bytes([n])]),
+            tree_id=tree_id,
+        )
+
+    result = await data_store.get_tree_as_program(tree_id=tree_id)
+
+    assert result == expected
+
+
+@pytest.mark.asyncio()
 async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: bytes32) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
 

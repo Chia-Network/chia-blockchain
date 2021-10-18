@@ -449,6 +449,33 @@ class DataStore:
 
         return NodeType(raw_node_type["node_type"])
 
+    async def autoinsert(
+        self,
+        key: Program,
+        value: Program,
+        tree_id: bytes32,
+        *,
+        lock: bool = True,
+    ) -> bytes32:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            pairs = await self.get_pairs(tree_id=tree_id, lock=False)
+
+            if len(pairs) == 0:
+                reference_node_hash = None
+                side = None
+            else:
+                reference_node_hash = pairs[0].hash
+                side = Side.RIGHT
+
+            return await self.insert(
+                key=key,
+                value=value,
+                tree_id=tree_id,
+                reference_node_hash=reference_node_hash,
+                side=side,
+                lock=False,
+            )
+
     async def insert(
         self,
         key: Program,
