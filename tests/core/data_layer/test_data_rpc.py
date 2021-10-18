@@ -10,7 +10,8 @@ from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.types.blockchain_format.program import Program
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
-from tests.core.data_layer.test_data_cli import ChiaRoot, chia_root_fixture
+
+from tests.core.data_layer.util import ChiaRoot
 
 
 @pytest.mark.asyncio
