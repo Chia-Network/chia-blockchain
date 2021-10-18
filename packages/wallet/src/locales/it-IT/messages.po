@@ -872,6 +872,7 @@ msgstr "Coltiva"
 #~ msgid "Farmer is not running"
 #~ msgstr "Il farmer non è in esecuzione"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:66
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:66
 msgid "Farmer public key:"
 msgstr "Chiave pubblica del farmer:"
@@ -1314,6 +1315,7 @@ msgstr "Nickname"
 msgid "No"
 msgstr "No"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:92
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:92
 msgid "No 24 word seed, since this key is imported."
 msgstr "Nessun seed di 24 parole, dato che la chiave è importata."
@@ -1744,6 +1746,7 @@ msgstr "Attendi la fine della sincronizzazione del wallet"
 #~ msgid "Pool does not provide target_puzzle_hash."
 #~ msgstr "La pool non fornisce target_puzzle_hash."
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:74
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:74
 msgid "Pool public key:"
 msgstr "Chiave Pubblica Pool:"
@@ -1803,11 +1806,14 @@ msgstr "Chiave privata con impronta pubblica {fingerprint}"
 #~ msgid "Private key {0}"
 #~ msgstr "Chiave privata {0}"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:27
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:39
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:27
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:39
 msgid "Private key {fingerprint}"
 msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:50
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:50
 msgid "Private key:"
 msgstr "Chiave privata:"
@@ -1829,6 +1835,7 @@ msgstr "Chiave privata:"
 msgid "Pubkey"
 msgstr "Pubkey"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:58
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:58
 msgid "Public key:"
 msgstr "Chiave pubblica:"
@@ -1988,6 +1995,7 @@ msgstr "Salva"
 msgid "See private key"
 msgstr "Vedi chiave privata"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:84
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:84
 msgid "Seed:"
 msgstr "Seed:"

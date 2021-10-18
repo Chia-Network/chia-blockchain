@@ -872,6 +872,7 @@ msgstr "Farma"
 #~ msgid "Farmer is not running"
 #~ msgstr "Farmer nije pokrenut"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:66
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:66
 msgid "Farmer public key:"
 msgstr ""
@@ -1314,6 +1315,7 @@ msgstr "Nadimak"
 msgid "No"
 msgstr "Ne"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:92
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:92
 msgid "No 24 word seed, since this key is imported."
 msgstr "Nema sjemena od 24 riječi, pošto je ovaj ključ uvezen."
@@ -1744,6 +1746,7 @@ msgstr ""
 #~ msgid "Pool does not provide target_puzzle_hash."
 #~ msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:74
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:74
 msgid "Pool public key:"
 msgstr ""
@@ -1803,11 +1806,14 @@ msgstr "Privatni ključ sa javnim otiskom {fingerprint}"
 #~ msgid "Private key {0}"
 #~ msgstr "Privatni ključ {0}"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:27
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:39
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:27
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:39
 msgid "Private key {fingerprint}"
 msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:50
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:50
 msgid "Private key:"
 msgstr "Privatni ključ:"
@@ -1829,6 +1835,7 @@ msgstr "Privatni ključ:"
 msgid "Pubkey"
 msgstr "Pubkey"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:58
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:58
 msgid "Public key:"
 msgstr "Javni ključ:"
@@ -1988,6 +1995,7 @@ msgstr "Spremi"
 msgid "See private key"
 msgstr "Pogledaj privatni ključ"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:84
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:84
 msgid "Seed:"
 msgstr "Sjeme:"

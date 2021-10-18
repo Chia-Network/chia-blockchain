@@ -872,6 +872,7 @@ msgstr "Çiftlik"
 #~ msgid "Farmer is not running"
 #~ msgstr "Çiftçi çalışmıyor"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:66
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:66
 msgid "Farmer public key:"
 msgstr ""
@@ -1314,6 +1315,7 @@ msgstr "Kullanıcı adı"
 msgid "No"
 msgstr "Hayır"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:92
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:92
 msgid "No 24 word seed, since this key is imported."
 msgstr "Bu anahtar içe aktarıldığı için 24 kelimeye ihtiyaç yok."
@@ -1744,6 +1746,7 @@ msgstr ""
 #~ msgid "Pool does not provide target_puzzle_hash."
 #~ msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:74
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:74
 msgid "Pool public key:"
 msgstr "Herkese Açık Havuz Anahtarı:"
@@ -1803,11 +1806,14 @@ msgstr "Herkese açık parmak izi ile gizli anahtar {fingerprint}"
 #~ msgid "Private key {0}"
 #~ msgstr "Özel anahtar"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:27
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:39
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:27
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:39
 msgid "Private key {fingerprint}"
 msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:50
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:50
 msgid "Private key:"
 msgstr "Özel Anahtar:"
@@ -1829,6 +1835,7 @@ msgstr "Özel Anahtar:"
 msgid "Pubkey"
 msgstr "Herkese açık anahtar"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:58
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:58
 msgid "Public key:"
 msgstr "Açık anahtar"
@@ -1988,6 +1995,7 @@ msgstr "Kaydet"
 msgid "See private key"
 msgstr "Gizli anahtarı gör"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:84
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:84
 msgid "Seed:"
 msgstr "Tohum:"

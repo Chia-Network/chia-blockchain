@@ -1044,6 +1044,7 @@ msgstr "Ферма"
 #~ msgid "Farmer is not running"
 #~ msgstr "Фермер не запущен"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:66
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:66
 msgid "Farmer public key:"
 msgstr "Открытый ключ фермера:"
@@ -1486,6 +1487,7 @@ msgstr "Псевдоним"
 msgid "No"
 msgstr "Нет"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:92
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:92
 msgid "No 24 word seed, since this key is imported."
 msgstr "Нет 24 слов семя, так как этот ключ импортируется."
@@ -1916,6 +1918,7 @@ msgstr "Дождитесь окончания синхронизации кош�
 #~ msgid "Pool does not provide target_puzzle_hash."
 #~ msgstr "Пул не предоставляет target_puzzle_hash."
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:74
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:74
 msgid "Pool public key:"
 msgstr "Публичный ключ пула:"
@@ -1975,11 +1978,14 @@ msgstr "Приватный ключ с публичным отпечатком {
 #~ msgid "Private key {0}"
 #~ msgstr "Закрытый ключ {0}"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:27
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:39
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:27
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:39
 msgid "Private key {fingerprint}"
 msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:50
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:50
 msgid "Private key:"
 msgstr "Закрытый ключ:"
@@ -2001,6 +2007,7 @@ msgstr "Закрытый ключ:"
 msgid "Pubkey"
 msgstr "Публичный ключ"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:58
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:58
 msgid "Public key:"
 msgstr "Открытый ключ:"
@@ -2160,6 +2167,7 @@ msgstr "Сохранить"
 msgid "See private key"
 msgstr "Посмотреть закрытый ключ"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:84
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:84
 msgid "Seed:"
 msgstr "Семя:"

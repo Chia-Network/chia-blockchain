@@ -872,6 +872,7 @@ msgstr "Ferma"
 #~ msgid "Farmer is not running"
 #~ msgstr "Ferma nuk është në gjendje pune"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:66
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:66
 msgid "Farmer public key:"
 msgstr "Çelësi publik i fermerit:"
@@ -1314,6 +1315,7 @@ msgstr "Pseudonimi"
 msgid "No"
 msgstr "Jo"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:92
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:92
 msgid "No 24 word seed, since this key is imported."
 msgstr "Nuk ka farë 24 fjalësh, pasi që ky çelës importohet."
@@ -1744,6 +1746,7 @@ msgstr "Ju lutemi të prisni për sinkronizimin e portofolit"
 #~ msgid "Pool does not provide target_puzzle_hash."
 #~ msgstr "Polli nuk ofron target_puzzle_hash."
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:74
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:74
 msgid "Pool public key:"
 msgstr "Çelësi publik i pollit:"
@@ -1803,11 +1806,14 @@ msgstr "Çelës privat me gjurmë gishtash publike {fingerprint}"
 #~ msgid "Private key {0}"
 #~ msgstr "Çelësi privat {0}"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:27
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:39
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:27
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:39
 msgid "Private key {fingerprint}"
 msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:50
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:50
 msgid "Private key:"
 msgstr "Çelësi privat:"
@@ -1829,6 +1835,7 @@ msgstr "Çelësi privat:"
 msgid "Pubkey"
 msgstr "Pubkey"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:58
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:58
 msgid "Public key:"
 msgstr "Çelësi publik:"
@@ -1988,6 +1995,7 @@ msgstr "Ruaj"
 msgid "See private key"
 msgstr "Shiko çelësin privat"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:84
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:84
 msgid "Seed:"
 msgstr "Fara:"

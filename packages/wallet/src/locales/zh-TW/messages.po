@@ -872,6 +872,7 @@ msgstr "耕種"
 #~ msgid "Farmer is not running"
 #~ msgstr "塊農未運作"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:66
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:66
 msgid "Farmer public key:"
 msgstr "農夫公鑰:"
@@ -1314,6 +1315,7 @@ msgstr "暱稱"
 msgid "No"
 msgstr "否"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:92
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:92
 msgid "No 24 word seed, since this key is imported."
 msgstr "由這個鑰匙是匯入的，沒有 24 個字種子。"
@@ -1744,6 +1746,7 @@ msgstr "請等候錢包同步"
 #~ msgid "Pool does not provide target_puzzle_hash."
 #~ msgstr "農會未提供 目標_拼圖_雜湊值。"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:74
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:74
 msgid "Pool public key:"
 msgstr "礦池公鑰 (PPK):"
@@ -1803,11 +1806,14 @@ msgstr "帶有公有指紋 {fingerprint} 的私鑰"
 #~ msgid "Private key {0}"
 #~ msgstr "私鑰 {0}"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:27
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:39
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:27
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:39
 msgid "Private key {fingerprint}"
 msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:50
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:50
 msgid "Private key:"
 msgstr "私鑰："
@@ -1829,6 +1835,7 @@ msgstr "私鑰："
 msgid "Pubkey"
 msgstr "公鑰"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:58
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:58
 msgid "Public key:"
 msgstr "公鑰："
@@ -1988,6 +1995,7 @@ msgstr "儲存"
 msgid "See private key"
 msgstr "看私鑰"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:84
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:84
 msgid "Seed:"
 msgstr "種子："

@@ -872,6 +872,7 @@ msgstr "Lootin'"
 #~ msgid "Farmer is not running"
 #~ msgstr "Plunderer nah plunderin'"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:66
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:66
 msgid "Farmer public key:"
 msgstr ""
@@ -1314,6 +1315,7 @@ msgstr "Nickname"
 msgid "No"
 msgstr "Nay"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:92
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:92
 msgid "No 24 word seed, since this key is imported."
 msgstr "No 24 word seed 'cause this treasure map be imported."
@@ -1744,6 +1746,7 @@ msgstr ""
 #~ msgid "Pool does not provide target_puzzle_hash."
 #~ msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:74
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:74
 msgid "Pool public key:"
 msgstr ""
@@ -1803,11 +1806,14 @@ msgstr "Private treasure map wit' public fingerprint {fingerprint}"
 #~ msgid "Private key {0}"
 #~ msgstr "Private treasure map {0}"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:27
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:39
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:27
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:39
 msgid "Private key {fingerprint}"
 msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:50
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:50
 msgid "Private key:"
 msgstr "Private treasure map:"
@@ -1829,6 +1835,7 @@ msgstr "Private treasure map:"
 msgid "Pubkey"
 msgstr "Pubkey"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:58
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:58
 msgid "Public key:"
 msgstr "Public treasure map:"
@@ -1988,6 +1995,7 @@ msgstr "Save"
 msgid "See private key"
 msgstr "Look at private treasure map"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:84
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:84
 msgid "Seed:"
 msgstr "Seed:"

@@ -205,7 +205,7 @@ export default class Client extends EventEmitter {
     const { options: { camelCase } } = this;
 
     const message = Message.fromJSON(data, camelCase);
-    // console.log('RESPONSE', data.toString());
+    console.log('RESPONSE', data.toString());
     const { requestId } = message;
 
     if (this.requests.has(requestId)) {
@@ -228,15 +228,17 @@ export default class Client extends EventEmitter {
     this.emit('message', message);
   }
 
-  async send(message: Message): Promise<Response> {
+  async send(message: Message, timeout?: number): Promise<Response> {
     const { 
       startingServices,
       connected,
       options: {
-        timeout,
+        timeout: defaultTimeout,
         camelCase,
       },
     } = this;
+
+    const currentTimeout = timeout ?? defaultTimeout;
 
     if (!connected) {
       console.log('API is not connected trying to connect');
@@ -253,16 +255,16 @@ export default class Client extends EventEmitter {
       this.requests.set(requestId, { resolve, reject });
       this.ws.send(message.toJSON(camelCase));
 
-      // console.log('SEND', message.toJSON(camelCase));
+      console.log('SEND', message.toJSON(camelCase));
 
-      if (timeout) {
+      if (currentTimeout) {
         setTimeout(() => {
           if (this.requests.has(requestId)) {
             this.requests.delete(requestId);
   
-            reject(new ErrorData(`The request ${requestId} has timed out ${timeout / 1000} seconds.`));
+            reject(new ErrorData(`The request ${requestId} has timed out ${currentTimeout / 1000} seconds.`));
           }
-        }, timeout);
+        }, currentTimeout);
       }
     });
   }

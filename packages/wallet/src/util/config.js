@@ -11,7 +11,6 @@ let self_hostname = 'localhost';
 // global.key_path = 'config/ssl/daemon/private_daemon.key';
 
 function loadConfig(net) {
-  console.log('LOAD CONFIG', net);
   try {
     // check if CHIA_ROOT is set. it overrides 'net'
     const config_root_dir =

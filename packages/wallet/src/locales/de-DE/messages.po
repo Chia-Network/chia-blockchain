@@ -878,6 +878,7 @@ msgstr "Farm"
 #~ msgid "Farmer is not running"
 #~ msgstr "Farmer läuft nicht"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:66
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:66
 msgid "Farmer public key:"
 msgstr "Öffentlicher Schlüssel des Farmers:"
@@ -1320,6 +1321,7 @@ msgstr "Spitzname"
 msgid "No"
 msgstr "Nein"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:92
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:92
 msgid "No 24 word seed, since this key is imported."
 msgstr "Kein 24 Wort Seed seit dieser Schlüssel importiert wurde."
@@ -1752,6 +1754,7 @@ msgstr "Bitte auf Abschluss der Wallet-Synchronisierung warten"
 #~ msgid "Pool does not provide target_puzzle_hash."
 #~ msgstr "Pool stellt keine target_puzzle_hash bereit."
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:74
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:74
 msgid "Pool public key:"
 msgstr "Öffentlicher Pool-Schlüssel:"
@@ -1811,11 +1814,14 @@ msgstr "Privater Schlüssel mit öffentlichem Fingerabdruck {fingerprint}"
 #~ msgid "Private key {0}"
 #~ msgstr "Privater Schlüssel {0}"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:27
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:39
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:27
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:39
 msgid "Private key {fingerprint}"
 msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:50
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:50
 msgid "Private key:"
 msgstr "Privater Schlüssel:"
@@ -1837,6 +1843,7 @@ msgstr "Privater Schlüssel:"
 msgid "Pubkey"
 msgstr "Pubkey"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:58
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:58
 msgid "Public key:"
 msgstr "Öffentlicher Schlüssel:"
@@ -1996,6 +2003,7 @@ msgstr "Speichern"
 msgid "See private key"
 msgstr "Privaten Schlüssel anzeigen"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:84
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:84
 msgid "Seed:"
 msgstr "Seed:"

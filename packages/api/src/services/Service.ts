@@ -60,7 +60,7 @@ export default class Service extends EventEmitter {
     }    
   }
 
-  async command(command: string, data: Object = {}, ack: boolean = false): Promise<any> {
+  async command(command: string, data: Object = {}, ack: boolean = false, timeout?: number): Promise<any> {
     const { client, origin, name } = this;
 
     if (!command) {
@@ -76,7 +76,7 @@ export default class Service extends EventEmitter {
       command,
       data: updatedData,
       ack,
-    }));
+    }), timeout);
 
     return response?.data;
   }
@@ -84,7 +84,7 @@ export default class Service extends EventEmitter {
   async ping(): Promise<{
     success: boolean;
   }> {
-    return this.command('ping');
+    return this.command('ping', undefined, undefined, 1000);
   }
 
   onCommand(

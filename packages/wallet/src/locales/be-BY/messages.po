@@ -872,6 +872,7 @@ msgstr "Ферма"
 #~ msgid "Farmer is not running"
 #~ msgstr "Фермер не працуе"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:66
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:66
 msgid "Farmer public key:"
 msgstr ""
@@ -1314,6 +1315,7 @@ msgstr "Псеўданім"
 msgid "No"
 msgstr "Не"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:92
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:92
 msgid "No 24 word seed, since this key is imported."
 msgstr "Мнеманічнае зерне (24 ключавыя словы) адсутнічае, паколькі гэты ключ імпартаваны."
@@ -1744,6 +1746,7 @@ msgstr ""
 #~ msgid "Pool does not provide target_puzzle_hash."
 #~ msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:74
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:74
 msgid "Pool public key:"
 msgstr ""
@@ -1803,11 +1806,14 @@ msgstr "Закрыты ключ з адкрытым лічбавым адбіт�
 #~ msgid "Private key {0}"
 #~ msgstr "Закрыты ключ {0}"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:27
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:39
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:27
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:39
 msgid "Private key {fingerprint}"
 msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:50
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:50
 msgid "Private key:"
 msgstr "Закрыты ключ:"
@@ -1829,6 +1835,7 @@ msgstr "Закрыты ключ:"
 msgid "Pubkey"
 msgstr "Адкрыты ключ"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:58
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:58
 msgid "Public key:"
 msgstr "Адкрыты ключ:"
@@ -1988,6 +1995,7 @@ msgstr "Захаваць"
 msgid "See private key"
 msgstr "Паглядзець закрыты ключ"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:84
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:84
 msgid "Seed:"
 msgstr "Зерне:"

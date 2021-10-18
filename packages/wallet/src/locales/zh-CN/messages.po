@@ -872,6 +872,7 @@ msgstr "农场"
 #~ msgid "Farmer is not running"
 #~ msgstr "农民节点没有运行"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:66
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:66
 msgid "Farmer public key:"
 msgstr "农民公钥："
@@ -1314,6 +1315,7 @@ msgstr "昵称"
 msgid "No"
 msgstr "否"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:92
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:92
 msgid "No 24 word seed, since this key is imported."
 msgstr "没有24个助记词种子，因为此密钥已导入。"
@@ -1744,6 +1746,7 @@ msgstr "请等待钱包同步"
 #~ msgid "Pool does not provide target_puzzle_hash."
 #~ msgstr "农业合作社未提供 target_puzzle_hash。"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:74
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:74
 msgid "Pool public key:"
 msgstr "奖励池公钥："
@@ -1803,11 +1806,14 @@ msgstr "公共指纹为 {fingerprint} 的私钥"
 #~ msgid "Private key {0}"
 #~ msgstr "私钥 {0}"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:27
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:39
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:27
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:39
 msgid "Private key {fingerprint}"
 msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:50
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:50
 msgid "Private key:"
 msgstr "私钥:"
@@ -1829,6 +1835,7 @@ msgstr "私钥:"
 msgid "Pubkey"
 msgstr "公钥"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:58
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:58
 msgid "Public key:"
 msgstr "公钥："
@@ -1988,6 +1995,7 @@ msgstr "保存"
 msgid "See private key"
 msgstr "查看私钥："
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:84
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:84
 msgid "Seed:"
 msgstr "种子："

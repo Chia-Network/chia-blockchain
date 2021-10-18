@@ -872,6 +872,7 @@ msgstr "Granja"
 #~ msgid "Farmer is not running"
 #~ msgstr "El Agricultor no está funcionando"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:66
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:66
 msgid "Farmer public key:"
 msgstr "Llave pública de Agricultor:"
@@ -1314,6 +1315,7 @@ msgstr "Nickname"
 msgid "No"
 msgstr "No"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:92
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:92
 msgid "No 24 word seed, since this key is imported."
 msgstr "No hay semilla de 24 palabras, desde que esta llave esta importada."
@@ -1744,6 +1746,7 @@ msgstr "Por favor, espere a la sincronización de cartera"
 #~ msgid "Pool does not provide target_puzzle_hash."
 #~ msgstr "Pool no proporciona target_puzzle_hash."
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:74
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:74
 msgid "Pool public key:"
 msgstr "Llave Pública de Conjunto:"
@@ -1803,11 +1806,14 @@ msgstr "Llave privada con huella pública {fingerprint}"
 #~ msgid "Private key {0}"
 #~ msgstr "Llave privada {0}"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:27
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:39
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:27
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:39
 msgid "Private key {fingerprint}"
 msgstr ""
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:50
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:50
 msgid "Private key:"
 msgstr "Llave privada:"
@@ -1829,6 +1835,7 @@ msgstr "Llave privada:"
 msgid "Pubkey"
 msgstr "Llave Pública"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:58
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:58
 msgid "Public key:"
 msgstr "Llave pública:"
@@ -1988,6 +1995,7 @@ msgstr "Guardar"
 msgid "See private key"
 msgstr "Ver llave privada"
 
+#: src/components/selectKey/SelectKeyDeleteKeyDialog.tsx:84
 #: src/components/selectKey/SelectKeyDetailDialog.tsx:84
 msgid "Seed:"
 msgstr "Semilla:"
