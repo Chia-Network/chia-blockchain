@@ -6,11 +6,14 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.wallet.util.merkle_tree import MerkleTree
 
 
 def test_create_db_report():
-    innerpuz: Program = Program.to(1)  # (x)
-    current_root: bytes32 = innerpuz.get_tree_hash()  # just need a bytes32
+    innerpuz: Program = Program.to(1)
+    nodes = [innerpuz.get_tree_hash(), Program.to([8]).get_tree_hash()]
+    current_tree = MerkleTree(nodes)
+    current_root: bytes32 = current_tree.calculate_root()  # just need a bytes32
     genesis_id: bytes32 = Coin(current_root, SINGLETON_LAUNCHER.get_tree_hash(), 201).name()  # see above
     full_puz = create_host_fullpuz(innerpuz, current_root, genesis_id)
     assert full_puz is not None
@@ -26,3 +29,4 @@ def test_create_db_report():
 
     cost, result = full_puz.run_with_cost(INFINITE_COST, full_solution)
     assert len(result.as_python()) == 5
+    assert result.as_python()[1][1] == current_root
