@@ -15,7 +15,6 @@ export default function AppDisconnect(props: Props) {
   const [closing, setClosing] = useState<boolean>(false);
 
   async function handleClose(event) {
-    console.log('closing');
     setClosing(true);
 
     await close({
@@ -28,7 +27,6 @@ export default function AppDisconnect(props: Props) {
   useEffect(() => {
     window.addEventListener('load', () => {
       if (isElectron()) {
-        console.log('bind exit-deamon');
         // @ts-ignore
         window.ipcRenderer.on('exit-daemon', handleClose);
       }

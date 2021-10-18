@@ -89,13 +89,13 @@ export default class Client extends EventEmitter {
     }
   }
 
-  async connect() {
+  async connect(reconnect?: boolean) {
     if (this.closed) {
       console.log('Client is closed');
       return;
     }
 
-    if (this.connectedPromise) {
+    if (this.connectedPromise && !reconnect) {
       return this.connectedPromise;
     }
 
@@ -111,18 +111,23 @@ export default class Client extends EventEmitter {
       throw new Error('WebSocket is not defined');
     }
 
+    // const dd = 'wss://localhost:51000';
+    console.log(`Connecting to ${url}`);
+
     const ws = new WebSocket(url, {
       key,
       cert,
       rejectUnauthorized: false,
     });
 
-    this.connectedPromise = new Promise((resolve, reject) => {
-      this.connectedPromiseResponse = {
-        resolve,
-        reject,
-      };
-    });
+    if (!reconnect) {
+      this.connectedPromise = new Promise((resolve, reject) => {
+        this.connectedPromiseResponse = {
+          resolve,
+          reject,
+        };
+      });
+    }
 
     ws.on('open', this.handleOpen);
     ws.on('close', this.handleClose);
@@ -191,13 +196,14 @@ export default class Client extends EventEmitter {
     });
   }
 
-  private handleError = (error: any) => {
-    console.log('api ws error', error);
-    this.emit('error', error);
-
+  private handleError = async (error: any) => {
     if (this.connectedPromiseResponse) {
-      this.connectedPromiseResponse.reject(error);
-      this.connectedPromiseResponse = null;
+      await sleep(1000);
+      console.log('RECONNECTING');
+      this.connect(true);
+      return;
+      // this.connectedPromiseResponse.reject(error);
+      // this.connectedPromiseResponse = null;
     }
   }
 
