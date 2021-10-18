@@ -48,7 +48,9 @@ export default function SelectKey() {
         <Flex flexDirection="column" alignItems="center" gap={3}>
           <Logo width={130} />
           {isLoading ? (
-            <Loading center />
+            <Loading center>
+              <Trans>Loading list of the keys</Trans>
+            </Loading>
           ) : hasFingerprints ? (
             <Typography variant="h5" component="h1">
               <Trans>Select Key</Trans>

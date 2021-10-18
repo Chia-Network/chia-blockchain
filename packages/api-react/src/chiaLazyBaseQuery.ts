@@ -30,13 +30,14 @@ async function getServiceInstance(api: BaseQueryApi, ServiceClass: Service): Pro
 }
 
 type Options = {
-  service: Service;
+  service?: Service;
 };
 
-export default function chiaLazyBaseQuery(options: Options): BaseQueryFn<
+export default function chiaLazyBaseQuery(options: Options = {}): BaseQueryFn<
   {
     command: string;
     service?: Service;
+    client?: boolean;
     args?: any[],
   },
   unknown,
@@ -45,6 +46,7 @@ export default function chiaLazyBaseQuery(options: Options): BaseQueryFn<
   {
     timestamp: number;
     command: string;
+    client?: boolean;
     args?: any[];
   }
 > {
@@ -52,18 +54,21 @@ export default function chiaLazyBaseQuery(options: Options): BaseQueryFn<
     service: DefaultService,
   } = options;
 
-  return async ({ command, service: ServiceClass, args = [] }, api) => {
-    const serviceInstance = await getServiceInstance(api, ServiceClass || DefaultService);
+  return async ({ command, service: ServiceClass, client = false, args = [] }, api) => {
+    const instance = client 
+      ? await getClientInstance(api)
+      : await getServiceInstance(api, ServiceClass || DefaultService);
 
     const meta = { 
       timestamp: Date.now(),
       command,
+      client,
       args,
     };
 
     try {
       return { 
-        data: await serviceInstance[command](...args),
+        data: await instance[command](...args),
         meta,
       };
     } catch(error) {

@@ -34,6 +34,7 @@ export default class Client extends EventEmitter {
   private daemon: Daemon;
 
   private startingServices: boolean = false;
+  private closed: boolean = false;
 
   constructor(options: Options) {
     super();
@@ -89,6 +90,11 @@ export default class Client extends EventEmitter {
   }
 
   async connect() {
+    if (this.closed) {
+      console.log('Client is closed');
+      return;
+    }
+
     if (this.connectedPromise) {
       return this.connectedPromise;
     }
@@ -261,10 +267,24 @@ export default class Client extends EventEmitter {
     });
   }
 
-  async close() {
+  async close(force: true) {
+    if (force) {
+      this.closed = true;
+    }
+
     if (!this.connected) {
       return;
     }
+
+    this.startingServices = true;
+
+    await Promise.all(Array.from(this.started).map(async (serviceName) => {
+      return await this.daemon.stopService(serviceName);
+    }));
+
+    await this.daemon.exit();
+
+    this.startingServices = false;
 
     this.ws.close();
   }

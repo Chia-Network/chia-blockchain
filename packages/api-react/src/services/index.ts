@@ -1,5 +1,12 @@
+import * as client from './client';
 import * as fullNode from './fullNode';
 import * as wallet from './wallet';
+
+export const {
+  clientApi,
+
+  useCloseMutation,
+} = client;
 
 export const {
   fullNodeApi,

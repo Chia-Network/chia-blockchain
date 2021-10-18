@@ -6,6 +6,8 @@ import { createHashHistory } from 'history';
 import { Router } from 'react-router-dom';
 import { createGlobalStyle } from 'styled-components';
 import { Loading, ThemeProvider, ModalDialogsProvider, ModalDialogs } from '@chia/core';
+import { store, api } from '@chia/api-react';
+import LayoutHero from '../layout/LayoutHero';
 import AppRouter from './AppRouter';
 import darkTheme from '../../theme/dark';
 import lightTheme from '../../theme/light';
@@ -17,7 +19,7 @@ import {
   getMaterialLocale,
 } from '../../config/locales';
 import Fonts from './fonts/Fonts';
-import { store, api } from '@chia/api-react';
+import AppDisconnect from './AppDisconnect';
 
 export const history = createHashHistory();
 
@@ -69,19 +71,6 @@ export default function App() {
     activateLocale(locale);
   }, [locale]);
 
-  /*
-  useEffect(() => {
-    window.addEventListener('load', () => {
-      if (isElectron()) {
-        // @ts-ignore
-        window.ipcRenderer.on('exit-daemon', (event) => {
-          store.dispatch(exit_and_close(event));
-        });
-      }
-    });
-  }, []);
-  */
-
   const { api: { config } } = store.getState();
   
   useEffect(async () => {
@@ -110,26 +99,28 @@ export default function App() {
     setIsReady(true);
   }, [config]);
 
-
-  if (!isReady) {
-    return "Loading...";
-  }
-
   return (
     <Provider store={store}>
-      <Router history={history}>
-        <I18nProvider i18n={i18n}>
-          <ThemeProvider theme={theme}>
-            <GlobalStyle />
-            <Fonts />
-            <ModalDialogsProvider>
-              <AppRouter />
-              {/* <AppLoading /> */}
-              <ModalDialogs />
-            </ModalDialogsProvider>
-          </ThemeProvider>
-        </I18nProvider>
-      </Router>
+        <Router history={history}>
+          <I18nProvider i18n={i18n}>
+            <ThemeProvider theme={theme}>
+              <GlobalStyle />
+              <Fonts />
+              {isReady ? (
+                <AppDisconnect>
+                  <ModalDialogsProvider>
+                    <AppRouter />
+                    <ModalDialogs />
+                  </ModalDialogsProvider>
+                </AppDisconnect>
+              ) : (
+                <LayoutHero>
+                  <Loading center />
+                </LayoutHero>
+              )}
+            </ThemeProvider>
+          </I18nProvider>
+        </Router>
     </Provider>
   );
 }
