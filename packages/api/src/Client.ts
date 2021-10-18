@@ -205,7 +205,7 @@ export default class Client extends EventEmitter {
     const { options: { camelCase } } = this;
 
     const message = Message.fromJSON(data, camelCase);
-    console.log('RESPONSE', data.toString());
+    // console.log('RESPONSE', data.toString());
     const { requestId } = message;
 
     if (this.requests.has(requestId)) {
@@ -253,7 +253,7 @@ export default class Client extends EventEmitter {
       this.requests.set(requestId, { resolve, reject });
       this.ws.send(message.toJSON(camelCase));
 
-      console.log('SEND', message.toJSON(camelCase));
+      // console.log('SEND', message.toJSON(camelCase));
 
       if (timeout) {
         setTimeout(() => {
