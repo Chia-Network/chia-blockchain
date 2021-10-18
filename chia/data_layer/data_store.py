@@ -354,20 +354,41 @@ class DataStore:
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
-                    tree_from_root_hash(hash, node_type, left, right, key, value, depth) AS (
-                        SELECT node.*, 0 AS depth FROM node WHERE node.hash == :root_hash
+                    tree_from_root_hash(hash, node_type, left, right, key, value, depth, rights) AS (
+                        SELECT node.*, 0 AS depth, 0 AS rights FROM node WHERE node.hash == :root_hash
                         UNION ALL
-                        SELECT node.*, tree_from_root_hash.depth + 1 AS depth FROM node, tree_from_root_hash
+                        SELECT
+                            node.*,
+                            tree_from_root_hash.depth + 1 AS depth,
+                            CASE
+                                WHEN node.hash == tree_from_root_hash.right
+                                THEN tree_from_root_hash.rights + (1 << (62 - tree_from_root_hash.depth))
+                                ELSE tree_from_root_hash.rights
+                                END AS rights
+                            FROM node, tree_from_root_hash
                         WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
                     )
                 SELECT * FROM tree_from_root_hash
                 WHERE node_type == :node_type
+                ORDER BY depth ASC, rights ASC
                 """,
                 {"root_hash": root.node_hash.hex(), "node_type": NodeType.TERMINAL},
             )
 
             terminal_nodes: List[TerminalNode] = []
             async for row in cursor:
+                if row["depth"] > 62:
+                    # TODO: Review the value and implementation of left-to-right order
+                    #       reporting.  Initial use is for balanced insertion with the
+                    #       work done in the query.
+
+                    # This is limited based on the choice of 63 for the maximum left
+                    # shift in the query.  This is in turn based on the SQLite integers
+                    # ranging in size up to signed 8 bytes, 64 bits.  If we exceed this then
+                    # we no longer guarantee the left-to-right ordering of the node
+                    # list.  While 63 allows for a lot of nodes in a balanced tree, in
+                    # the worst case it allows only 62 terminal nodes.
+                    raise Exception("Tree depth exceeded 62, unable to guarantee left-to-right node order.")
                 node = row_to_node(row=row)
                 assert isinstance(node, TerminalNode)
                 terminal_nodes.append(node)

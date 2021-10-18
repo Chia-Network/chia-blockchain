@@ -242,12 +242,16 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_pairs(data_store: DataStore, tree_id: bytes32) -> None:
-    example = await add_0123_example(data_store=data_store, tree_id=tree_id)
+async def test_get_pairs(
+    data_store: DataStore,
+    tree_id: bytes32,
+    create_example: Callable[[DataStore, bytes32], Example],
+) -> None:
+    example = await create_example(data_store=data_store, tree_id=tree_id)
 
     pairs = await data_store.get_pairs(tree_id=tree_id)
 
-    assert {node.hash for node in pairs} == set(example.terminal_nodes)
+    assert [node.hash for node in pairs] == example.terminal_nodes
 
 
 @pytest.mark.asyncio
