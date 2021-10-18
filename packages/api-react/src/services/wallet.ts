@@ -565,7 +565,7 @@ export const walletApi = createApi({
       query: ({
         walletId,
       }) => ({
-        command: 'cc_get_name',
+        command: 'getName',
         service: CAT,
         args: [walletId],
       }),
@@ -580,10 +580,11 @@ export const walletApi = createApi({
         walletId,
         name,
       }) => ({
-        command: 'cc_set_name',
+        command: 'setName',
         service: CAT,
         args: [walletId, name],
       }),
+      invalidatesTags: [{ type: 'Wallets', id: 'LIST' }],
     }),
   
     spendCAT: build.mutation<any, {
@@ -600,7 +601,7 @@ export const walletApi = createApi({
         fee,
         memos,
       }) => ({
-        command: 'cc_set_name',
+        command: 'spend',
         service: CAT,
         args: [walletId, address, amount, fee, memos],
       }),

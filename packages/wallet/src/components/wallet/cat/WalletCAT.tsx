@@ -36,7 +36,7 @@ export default function WalletCAT(props: Props) {
       return;
     }
 
-    const { id, name } = wallet;
+    const { name } = wallet;
 
     openDialog((
       <WalletRenameDialog

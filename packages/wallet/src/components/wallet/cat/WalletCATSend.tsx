@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trans, t } from '@lingui/macro';
 import {
+  AdvancedOptions,
   Fee,
   Form,
   AlertDialog,
@@ -78,6 +79,7 @@ export default function WalletCATSend(props: Props) {
   }
 
   async function handleSubmit(data: SendTransactionData) {
+    try {
     if (isSpendCatLoading) {
       return;
     }
@@ -125,13 +127,20 @@ export default function WalletCATSend(props: Props) {
     const memo = data.memo.trim();
     const memos = memo ? [memo] : undefined;
 
-    const response = await spendCAT({
+    const queryData = {
       walletId,
       address,
       amount: amountValue,
       fee: feeValue,
-      memos,
-    }).unwrap();
+    };
+
+    if (memos) {
+      queryData.memos = memos;
+    }
+
+    console.log('queryData', queryData);
+    const response = await spendCAT(queryData).unwrap();
+    console.log('response', response);
 
     const result = get_transaction_result(response);
     if (result.success) {
@@ -145,6 +154,9 @@ export default function WalletCATSend(props: Props) {
     }
 
     methods.reset();
+  } catch (error) {
+    console.log(error);
+  }
   }
 
   return (
@@ -196,14 +208,16 @@ export default function WalletCATSend(props: Props) {
             />
           </Grid>
           <Grid xs={12} item>
-            <TextField
-              name="memo"
-              variant="filled"
-              color="secondary"
-              fullWidth
-              disabled={isSubmitting}
-              label={<Trans>Memo</Trans>}
-            />
+            <AdvancedOptions>
+              <TextField
+                name="memo"
+                variant="filled"
+                color="secondary"
+                fullWidth
+                disabled={isSubmitting}
+                label={<Trans>Memo</Trans>}
+              />
+            </AdvancedOptions>
           </Grid>
           <Grid xs={12} item>
             <Flex justifyContent="flex-end" gap={1}>
