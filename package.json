@@ -13,7 +13,8 @@
     "build": "lerna run build",
     "start:gui": "lerna run start --scope @chia/gui",
     "dev:gui": "lerna run dev --scope @chia/gui --stream",
-    "dev:wallet": "lerna run dev --scope @chia/wallet --stream"
+    "dev:wallet": "lerna run dev --scope @chia/wallet --stream",
+    "locale:extract": "lerna run locale:extract"
   },
   "devDependencies": {
     "lerna": "^4.0.0"
