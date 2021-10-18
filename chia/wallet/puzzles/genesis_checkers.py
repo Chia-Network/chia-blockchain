@@ -104,7 +104,7 @@ class GenesisById(LimitationsProgram):
                 False,
             )
 
-        return SpendBundle.aggregate([tx_record.spend_bundle, signed_eve_spend])
+        return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, signed_eve_spend])
 
 
 class GenesisByPuzhash(LimitationsProgram):

@@ -90,7 +90,7 @@ class CCWallet:
             raise ValueError("Internal Error")
 
         try:
-            spend_bundle = await ALL_LIMITATIONS_PROGRAMS[cat_tail_info["identifier"]].generate_issuance_bundle(
+            chia_tx, spend_bundle = await ALL_LIMITATIONS_PROGRAMS[cat_tail_info["identifier"]].generate_issuance_bundle(
                 self,
                 cat_tail_info,
                 amount,
@@ -121,23 +121,6 @@ class CCWallet:
         if cc_coin is None:
             raise ValueError("Internal Error, unable to generate new coloured coin")
 
-        regular_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=cc_coin.puzzle_hash,
-            amount=uint64(cc_coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.wallet_state_manager.main_wallet.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
-        )
         cc_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -147,15 +130,16 @@ class CCWallet:
             confirmed=False,
             sent=uint32(10),
             spend_bundle=None,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
+            additions=[cc_coin],
+            removals=list(filter(lambda c: c.name() == cc_coin.parent_coin_info, spend_bundle.removals())),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
             name=token_bytes(),
         )
-        await self.standard_wallet.push_transaction(regular_record)
+        chia_tx = replace(chia_tx, spend_bundle=spend_bundle)
+        await self.standard_wallet.push_transaction(chia_tx)
         await self.standard_wallet.push_transaction(cc_record)
         return self
 
@@ -758,53 +742,3 @@ class CCWallet:
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
-
-    async def create_spend_bundle_relative_amount(self, cc_amount, zero_coin: Coin = None) -> Optional[SpendBundle]:
-        # If we're losing value then get coloured coins with at least that much value
-        # If we're gaining value then our amount doesn't matter
-        if cc_amount < 0:
-            cc_spends = await self.select_coins(abs(cc_amount))
-        else:
-            if zero_coin is None:
-                return None
-            cc_spends = set()
-            cc_spends.add(zero_coin)
-
-        if cc_spends is None:
-            return None
-
-        # Calculate output amount given relative difference and sum of actual values
-        spend_value = sum([coin.amount for coin in cc_spends])
-        cc_amount = spend_value + cc_amount
-
-        # Loop through coins and create solution for innerpuzzle
-        list_of_solutions = []
-        output_created = None
-        for coin in cc_spends:
-            if output_created is None:
-                newinnerpuzhash = await self.get_new_inner_hash()
-                innersol = self.standard_wallet.make_solution(
-                    primaries=[{"puzzlehash": newinnerpuzhash, "amount": cc_amount}]
-                )
-                output_created = coin
-            else:
-                innersol = self.standard_wallet.make_solution(consumed=[output_created.name()])
-            innerpuz: Program = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
-            lineage_proof = await self.get_lineage_proof_for_coin(coin)
-            if self.cc_info.my_genesis_checker is None:
-                raise ValueError("My genesis checker is None")
-            puzzle_reveal = construct_cc_puzzle(CC_MOD, self.cc_info.limitations_program_hash, innerpuz)
-            # Use coin info to create solution and add coin and solution to list of CoinSpends
-            solution = [
-                innersol,
-                coin.as_list(),
-                lineage_proof,
-                None,
-                None,
-                None,
-                None,
-                None,
-            ]
-            list_of_solutions.append(CoinSpend(coin, puzzle_reveal, Program.to(solution)))
-
-        return await self.sign(SpendBundle(list_of_solutions, G2Element()))

@@ -12,6 +12,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cc_wallet.cc_utils import construct_cc_puzzle
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
+from chia.wallet.cc_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.puzzles.cc_loader import CC_MOD
 from chia.wallet.transaction_record import TransactionRecord
 from tests.setup_nodes import setup_simulators_and_wallets
@@ -83,15 +84,21 @@ class TestCCWallet:
             cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
                 wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
             )
+            # The next 2 lines are basically a noop, it just adds test coverage
+            cc_wallet = await CCWallet.create(wallet_node.wallet_state_manager, wallet, cc_wallet.wallet_info)
+            await wallet_node.wallet_state_manager.add_new_wallet(cc_wallet, cc_wallet.id())
+
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
         await time_out_assert(
             15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
         )
+
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
+        await time_out_assert(15, cc_wallet.get_spendable_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
     @pytest.mark.parametrize(
@@ -163,6 +170,8 @@ class TestCCWallet:
                     15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
                 )
 
+        assert await cc_wallet.get_pending_change_balance() == 40
+
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
@@ -231,6 +240,14 @@ class TestCCWallet:
         colour = cc_wallet.get_colour()
         await cc_wallet.set_tail_program(bytes(cc_wallet.cc_info.my_genesis_checker).hex())
         assert await wallet_node.wallet_state_manager.get_wallet_for_colour(colour) == cc_wallet
+
+        # Test that the a default CAT will initialize correctly
+        asset = DEFAULT_CATS[next(iter(DEFAULT_CATS))]
+        asset_id = asset["asset_id"]
+        cat_wallet_2 = await CCWallet.create_wallet_for_cc(wallet_node.wallet_state_manager, wallet, asset_id)
+        assert await cat_wallet_2.get_name() == asset["name"]
+        await cat_wallet_2.set_name("Test Name")
+        assert await cat_wallet_2.get_name() == "Test Name"
 
     @pytest.mark.parametrize(
         "trusted",
