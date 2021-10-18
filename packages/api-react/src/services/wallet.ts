@@ -182,7 +182,7 @@ export const walletApi = createApi({
         :  [{ type: 'Keys', id: 'LIST' }],
     }),
 
-    addKey: build.mutation<any, {
+    addKey: build.mutation<number, {
       mnemonic: string[];
       type: 'new_wallet' | 'skip' | 'restore_backup';
       filePath?: string;
@@ -191,6 +191,7 @@ export const walletApi = createApi({
         command: 'addKey',
         args: [mnemonic, type, filePath],
       }),
+      transformResponse: (response: any) => response?.fingerprint,
       invalidatesTags: [{ type: 'Keys', id: 'LIST' }],
     }),
   

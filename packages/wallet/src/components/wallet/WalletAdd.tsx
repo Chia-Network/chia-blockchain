@@ -3,14 +3,14 @@ import { Trans } from '@lingui/macro';
 import {
   TextField,
   Typography,
-  Button,
   Grid,
   Container,
 } from '@material-ui/core';
-import { useGenerateMnemonicMutation, useAddKeyMutation } from '@chia/api-react';
+import { useGenerateMnemonicMutation, useAddKeyMutation, useLogInMutation } from '@chia/api-react';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
+import { useHistory } from 'react-router';
 import { useEffectOnce } from 'react-use';
-import { ButtonLoading, Flex, Loading, Link, Logo } from '@chia/core';
+import { ButtonLoading, Flex, Loading, Link, Logo, useShowError } from '@chia/core';
 import LayoutHero from '../layout/LayoutHero';
 
 const MnemonicField = (props: any) => (
@@ -34,19 +34,36 @@ const MnemonicField = (props: any) => (
 );
 
 export default function WalletAdd() {
+  const history = useHistory();
   const [generateMnemonic, { data: words, isLoading }] = useGenerateMnemonicMutation();
   const [addKey, { isLoading: isAddKeyLoading }] = useAddKeyMutation();
+  const [logIn, { isLoading: isLogInLoading }] = useLogInMutation();
+  const showError = useShowError();
 
   useEffectOnce(() => {
     generateMnemonic();
   });
 
+  const isProcessing = isAddKeyLoading || isLogInLoading;
+
   async function handleNext() {
-    if (words && !isAddKeyLoading) {
-      await addKey({
+    if (!words || isProcessing) {
+      return;
+    }
+
+    try {
+      const fingerprint = await addKey({
         mnemonic: words,
         type: 'new_wallet',
       }).unwrap();
+
+      await logIn({
+        fingerprint,
+      }).unwrap();
+
+      history.push('/dashboard/wallets/1');
+    } catch (error) {
+      showError(error);
     }
   }
 
@@ -93,7 +110,7 @@ export default function WalletAdd() {
               variant="contained"
               color="primary"
               disabled={!words}
-              loading={isAddKeyLoading}
+              loading={isProcessing}
               fullWidth
             >
               <Trans>Next</Trans>

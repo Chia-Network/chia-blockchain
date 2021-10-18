@@ -7,10 +7,10 @@ import {
 } from '@material-ui/core';
 // import { shuffle } from 'lodash';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { useAddKeyMutation } from '@chia/api-react';
+import { useAddKeyMutation, useLogInMutation } from '@chia/api-react';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useHistory } from 'react-router';
-import { Autocomplete, ButtonLoading, Form, Flex, Logo } from '@chia/core';
+import { Autocomplete, ButtonLoading, Form, Flex, Logo, useShowError } from '@chia/core';
 import LayoutHero from '../layout/LayoutHero';
 import english from '../../util/english';
 import useTrans from '../../hooks/useTrans';
@@ -28,8 +28,12 @@ type FormData = {
 
 export default function WalletImport() {
   const history = useHistory();
-  const [addKey, { isLoading }] = useAddKeyMutation();
+  const [addKey, { isLoading: isAddKeyLoading }] = useAddKeyMutation();
+  const [logIn, { isLoading: isLogInLoading }] = useLogInMutation();
   const trans = useTrans();
+  const showError = useShowError();
+
+  const isProcessing = isAddKeyLoading || isLogInLoading;
 
   const methods = useForm<FormData>({
     defaultValues: {
@@ -47,7 +51,7 @@ export default function WalletImport() {
   }
 
   async function handleSubmit(values: FormData) {
-    if (isLoading) {
+    if (isProcessing) {
       return;
     }
 
@@ -57,10 +61,16 @@ export default function WalletImport() {
       throw new Error(trans('Please fill all words'));
     }
 
-    await addKey({
+    const fingerprint = await addKey({
       mnemonic,
-      type: 'skip',
+      type: 'new_wallet',
     }).unwrap();
+
+    await logIn({
+      fingerprint,
+    }).unwrap();
+
+    history.push('/dashboard/wallets/1');
   }
 
   return (
@@ -105,7 +115,7 @@ export default function WalletImport() {
                 type="submit"
                 variant="contained"
                 color="primary"
-                loading={isLoading}
+                loading={isProcessing}
                 fullWidth
               >
                 <Trans>Next</Trans>
