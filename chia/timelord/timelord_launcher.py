@@ -39,7 +39,7 @@ def find_vdf_client() -> pathlib.Path:
     raise FileNotFoundError("can't find vdf_client binary")
 
 
-async def spawn_process(host: str, port: int, counter: int):
+async def spawn_process(host: str, port: int, counter: int, prefer_ipv6: bool):
     global stopped
     global active_processes
     path_to_vdf_client = find_vdf_client()
@@ -49,7 +49,7 @@ async def spawn_process(host: str, port: int, counter: int):
         try:
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
-            resolved = get_host_addr(host)
+            resolved = get_host_addr(host, prefer_ipv6)
             proc = await asyncio.create_subprocess_shell(
                 f"{basename} {resolved} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,
@@ -82,7 +82,7 @@ async def spawn_all_processes(config: Dict, net_config: Dict):
     hostname = net_config["self_hostname"] if "host" not in config else config["host"]
     port = config["port"]
     process_count = config["process_count"]
-    awaitables = [spawn_process(hostname, port, i) for i in range(process_count)]
+    awaitables = [spawn_process(hostname, port, i, net_config.get("prefer_ipv6", True)) for i in range(process_count)]
     await asyncio.gather(*awaitables)
 
 

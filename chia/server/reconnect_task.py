@@ -5,7 +5,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.network import get_host_addr
 
 
-def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth: bool):
+def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth: bool, prefer_ipv6: bool):
     """
     Start a background task that checks connection and reconnects periodically to a peer.
     """
@@ -13,7 +13,7 @@ def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth:
     if peer_info_arg.is_valid():
         peer_info = peer_info_arg
     else:
-        peer_info = PeerInfo(get_host_addr(peer_info_arg.host), peer_info_arg.port)
+        peer_info = PeerInfo(get_host_addr(peer_info_arg.host, prefer_ipv6), peer_info_arg.port)
 
     async def connection_check():
         while True:

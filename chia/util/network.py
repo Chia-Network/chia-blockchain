@@ -1,10 +1,8 @@
 import socket
 from ipaddress import ip_address, IPv4Network, IPv6Network
-from typing import Iterable, Union, Any, Optional
+from typing import Iterable, Union, Any
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
-from chia.util.config import load_config, save_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 
 
@@ -48,18 +46,16 @@ def class_for_type(type: NodeType) -> Any:
     raise ValueError("No class for type")
 
 
-def get_host_addr(hoststr: str, prefer_ipv6: Optional[bool] = None) -> str:
+def get_host_addr(host: Union[PeerInfo, str], prefer_ipv6: bool) -> str:
     # Use PeerInfo.is_valid() to see if it's already an address
+    if isinstance(host, PeerInfo):
+        hoststr = host.host
+        if host.is_valid(True):
+            return hoststr
+    else:
+        hoststr = host
     if PeerInfo(hoststr, uint16(0)).is_valid(True):
         return hoststr
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    if prefer_ipv6 is None:
-        if "prefer_ipv6" not in config:
-            config["prefer_ipv6"] = True
-            # Ensure to write this to config, so those who wish to can easily
-            # choose to prefer IPv4 addresses.
-            save_config(DEFAULT_ROOT_PATH, "config.yaml", config)
-        prefer_ipv6 = config.get("prefer_ipv6")
     addrset = socket.getaddrinfo(hoststr, None)
     # Addrset is never empty, an exception is thrown or data is returned.
     for t in addrset:

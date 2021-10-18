@@ -45,6 +45,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.check_fork_next_block import check_fork_next_block
+from chia.util.config import load_config
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint128
 from chia.util.keychain import Keychain
@@ -400,7 +401,10 @@ class WalletNode:
             if full_node_peer.is_valid():
                 full_node_resolved = full_node_peer
             else:
-                full_node_resolved = PeerInfo(get_host_addr(full_node_peer.host), full_node_peer.port)
+                root_config = load_config(self.root_path, "config.yaml")
+                full_node_resolved = PeerInfo(
+                    get_host_addr(full_node_peer.host, root_config.get("prefer_ipv6", True)), full_node_peer.port
+                )
             if full_node_peer in peers or full_node_resolved in peers:
                 self.log.info(f"Will not attempt to connect to other nodes, already connected to {full_node_peer}")
                 for connection in self.server.get_full_node_connections():
