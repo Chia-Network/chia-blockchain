@@ -1,5 +1,8 @@
-import pytest
-from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz, create_offer_fullpuz, SINGLETON_LAUNCHER
+from chia.wallet.db_wallet.db_wallet_puzzles import (
+    create_host_fullpuz,
+    # create_offer_fullpuz,
+    SINGLETON_LAUNCHER,
+)
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32

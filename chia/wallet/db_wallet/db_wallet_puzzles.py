@@ -1,14 +1,10 @@
-from clvm_tools import binutils
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
-from typing import List, Optional, Tuple
-from blspy import G1Element
-from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.wallet.util.merkle_tree import MerkleTree, TreeType
+
+# from chia.types.condition_opcodes import ConditionOpcode
+# from chia.wallet.util.merkle_tree import MerkleTree, TreeType
 
 
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -32,10 +28,12 @@ def create_offer_fullpuz(
     host_genesis_id: bytes32,
     claim_target: bytes32,
     recovery_target: bytes32,
-    recovery_timelock: uint64
+    recovery_timelock: uint64,
 ) -> Program:
     mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
     singleton_struct = Program.to((mod_hash, (host_genesis_id, SINGLETON_LAUNCHER.get_tree_hash())))
-    full_puz = DB_OFFER_MOD.curry(DB_HOST_MOD_HASH, singleton_struct, leaf_reveal, claim_target, recovery_target, recovery_timelock)
+    full_puz = DB_OFFER_MOD.curry(
+        DB_HOST_MOD_HASH, singleton_struct, leaf_reveal, claim_target, recovery_target, recovery_timelock
+    )
     return full_puz
