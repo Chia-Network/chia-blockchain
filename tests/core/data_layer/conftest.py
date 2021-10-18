@@ -5,11 +5,14 @@ import subprocess
 import sys
 import sysconfig
 import time
-from typing import Iterator, List
+from typing import Callable, Iterator, List
 
 import pytest
 
-from tests.core.data_layer.util import ChiaRoot
+from chia.data_layer.data_store import DataStore
+from chia.types.blockchain_format.tree_hash import bytes32
+
+from tests.core.data_layer.util import add_0123_example, add_01234567_example, ChiaRoot, Example
 
 
 # TODO: These are more general than the data layer and should either move elsewhere or
@@ -66,3 +69,8 @@ def chia_data_fixture(chia_root: ChiaRoot, chia_daemon: None, scripts_path: path
         # let it settle
         time.sleep(5)
         yield
+
+
+@pytest.fixture(name="create_example", params=[add_0123_example, add_01234567_example])
+def create_example_fixture(request) -> Callable[[DataStore, bytes32], Example]:
+    return request.param

@@ -186,14 +186,13 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
     assert generations == expected
 
 
-@pytest.mark.parametrize(argnames=["adder"], argvalues=[[add_0123_example], [add_01234567_example]])
 @pytest.mark.asyncio
 async def test_build_a_tree(
     data_store: DataStore,
     tree_id: bytes32,
-    adder: Callable[[DataStore, bytes32], Example],
+    create_example: Callable[[DataStore, bytes32], Example],
 ) -> None:
-    example = await adder(data_store=data_store, tree_id=tree_id)  # type: ignore
+    example = await create_example(data_store=data_store, tree_id=tree_id)  # type: ignore
 
     await _debug_dump(db=data_store.db, description="final")
     actual = await data_store.get_tree_as_program(tree_id=tree_id)
