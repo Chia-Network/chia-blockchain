@@ -1,6 +1,11 @@
+import socket
 from ipaddress import ip_address, IPv4Network, IPv6Network
-from typing import Iterable, Union, Any
+from typing import Iterable, Union, Any, Optional
 from chia.server.outbound_message import NodeType
+from chia.types.peer_info import PeerInfo
+from chia.util.config import load_config
+from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.ints import uint16
 
 
 def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]) -> bool:
@@ -41,3 +46,21 @@ def class_for_type(type: NodeType) -> Any:
 
         return HarvesterAPI
     raise ValueError("No class for type")
+
+
+def get_host_addr(hoststr: str, prefer_ipv6: Optional[bool] = None) -> str:
+    # Use PeerInfo.is_valid() to see if it's already an address
+    if PeerInfo(hoststr, uint16(0)).is_valid(True):
+        return hoststr
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    if prefer_ipv6 is None:
+        prefer_ipv6 = config.get("prefer_ipv6")
+    addrset = socket.getaddrinfo(hoststr, None)
+    # Addrset is never empty, an exception is thrown or data is returned.
+    for t in addrset:
+        if prefer_ipv6 and t[0] == socket.AF_INET6:
+            return t[4][0]
+        if not prefer_ipv6 and t[0] == socket.AF_INET:
+            return t[4][0]
+    # If neither matched preference, just return the first available
+    return addrset[0][4][0]

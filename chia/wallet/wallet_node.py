@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import socket
 import time
 import traceback
 from pathlib import Path
@@ -51,6 +50,7 @@ from chia.util.ints import uint32, uint128
 from chia.util.keychain import Keychain
 from chia.util.lru_cache import LRUCache
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
+from chia.util.network import get_host_addr
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.derivation_record import DerivationRecord
@@ -400,7 +400,7 @@ class WalletNode:
             if full_node_peer.is_valid():
                 full_node_resolved = full_node_peer
             else:
-                full_node_resolved = PeerInfo(socket.gethostbyname(full_node_peer.host), full_node_peer.port)
+                full_node_resolved = PeerInfo(get_host_addr(full_node_peer.host), full_node_peer.port)
             if full_node_peer in peers or full_node_resolved in peers:
                 self.log.info(f"Will not attempt to connect to other nodes, already connected to {full_node_peer}")
                 for connection in self.server.get_full_node_connections():
