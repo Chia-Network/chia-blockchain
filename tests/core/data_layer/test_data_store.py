@@ -1,7 +1,5 @@
-import functools
 import itertools
 import logging
-from dataclasses import dataclass
 from typing import AsyncIterable, Callable, Dict, List, Optional, Tuple
 
 import aiosqlite
@@ -23,13 +21,10 @@ from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 
+from tests.core.data_layer.util import add_0123_example, add_01234567_example, Example, kv
 # from tests.setup_nodes import bt, test_constants
 
 log = logging.getLogger(__name__)
-
-
-def kv(k: bytes, v: List[bytes]) -> Tuple[bytes, bytes]:
-    return Program.to(k).as_bin(), Program.to(v).as_bin()
 
 
 @pytest.fixture(name="db_connection", scope="function")
@@ -189,95 +184,6 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
         expected.append(expected_generation)
 
     assert generations == expected
-
-
-async def general_insert(
-    data_store: DataStore,
-    tree_id: bytes32,
-    key: bytes,
-    value: List[bytes],
-    reference_node_hash: bytes32,
-    side: Optional[Side],
-) -> bytes32:
-    return await data_store.insert(
-        key=Program.to(key),
-        value=Program.to(value),
-        tree_id=tree_id,
-        reference_node_hash=reference_node_hash,
-        side=side,
-    )
-
-
-@dataclass(frozen=True)
-class Example:
-    expected: Program
-    terminal_nodes: List[bytes32]
-
-
-async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
-    expected = Program.to(
-        (
-            (
-                kv(b"\x00", [b"\x10", b"\x00"]),
-                kv(b"\x01", [b"\x11", b"\x01"]),
-            ),
-            (
-                kv(b"\x02", [b"\x12", b"\x02"]),
-                kv(b"\x03", [b"\x13", b"\x03"]),
-            ),
-        ),
-    )
-
-    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
-
-    c_hash = await insert(key=b"\x02", value=[b"\x12", b"\x02"], reference_node_hash=None, side=None)
-    b_hash = await insert(key=b"\x01", value=[b"\x11", b"\x01"], reference_node_hash=c_hash, side=Side.LEFT)
-    d_hash = await insert(key=b"\x03", value=[b"\x13", b"\x03"], reference_node_hash=c_hash, side=Side.RIGHT)
-    a_hash = await insert(key=b"\x00", value=[b"\x10", b"\x00"], reference_node_hash=b_hash, side=Side.LEFT)
-
-    return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash])
-
-
-async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Example:
-    expected = Program.to(
-        (
-            (
-                (
-                    kv(b"\x00", [b"\x10", b"\x00"]),
-                    kv(b"\x01", [b"\x11", b"\x01"]),
-                ),
-                (
-                    kv(b"\x02", [b"\x12", b"\x02"]),
-                    kv(b"\x03", [b"\x13", b"\x03"]),
-                ),
-            ),
-            (
-                (
-                    kv(b"\x04", [b"\x14", b"\x04"]),
-                    kv(b"\x05", [b"\x15", b"\x05"]),
-                ),
-                (
-                    kv(b"\x06", [b"\x16", b"\x06"]),
-                    kv(b"\x07", [b"\x17", b"\x07"]),
-                ),
-            ),
-        ),
-    )
-
-    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
-
-    g_hash = await insert(key=b"\x06", value=[b"\x16", b"\x06"], reference_node_hash=None, side=None)
-
-    c_hash = await insert(key=b"\x02", value=[b"\x12", b"\x02"], reference_node_hash=g_hash, side=Side.LEFT)
-    b_hash = await insert(key=b"\x01", value=[b"\x11", b"\x01"], reference_node_hash=c_hash, side=Side.LEFT)
-    d_hash = await insert(key=b"\x03", value=[b"\x13", b"\x03"], reference_node_hash=c_hash, side=Side.RIGHT)
-    a_hash = await insert(key=b"\x00", value=[b"\x10", b"\x00"], reference_node_hash=b_hash, side=Side.LEFT)
-
-    f_hash = await insert(key=b"\x05", value=[b"\x15", b"\x05"], reference_node_hash=g_hash, side=Side.LEFT)
-    h_hash = await insert(key=b"\x07", value=[b"\x17", b"\x07"], reference_node_hash=g_hash, side=Side.RIGHT)
-    e_hash = await insert(key=b"\x04", value=[b"\x14", b"\x04"], reference_node_hash=f_hash, side=Side.LEFT)
-
-    return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash, e_hash, f_hash, g_hash, h_hash])
 
 
 @pytest.mark.parametrize(argnames=["adder"], argvalues=[[add_0123_example], [add_01234567_example]])
