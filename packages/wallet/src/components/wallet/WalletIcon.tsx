@@ -23,10 +23,10 @@ export default function WalletIcon(props: Props) {
   }
 
   if (wallet.type === WalletType.CAT) {
-    const token = Tokens.find((token) => token.tail === wallet.colour);
+    const token = Tokens.find((token) => token.tail === wallet.meta?.tail);
     if (token) {
       return <StyledSymbol color="primary">{token.symbol}</StyledSymbol>;
-      return <token.icon fontSize="large" />
+      // return <token.icon fontSize="large" />
     }
   }
 

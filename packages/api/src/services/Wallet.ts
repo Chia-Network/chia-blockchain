@@ -53,7 +53,7 @@ export default class Wallet extends Service {
   }
 
   async createNewWallet(
-    walletType: 'pool_wallet' | 'rl_wallet' | 'did_wallet' | 'cc_wallet',
+    walletType: 'pool_wallet' | 'rl_wallet' | 'did_wallet' | 'cat_wallet',
     options: Object = {},
   ) {
     return this.command('create_new_wallet', {

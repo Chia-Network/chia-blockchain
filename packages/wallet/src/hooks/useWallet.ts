@@ -9,7 +9,6 @@ export default function useWallet(walletId: number): {
   loading: boolean;
   wallet?: Wallet;
   unit?: string;
-  data?: any;
 } {
   const currencyCode = useCurrencyCode();
   const { data: wallets, isLoading } = useGetWalletsQuery();
@@ -33,17 +32,9 @@ export default function useWallet(walletId: number): {
     } 
   }, [wallet, currencyCode]);
 
-  const data = useMemo(() => {
-    if (wallet?.data) {
-      return JSON.parse(wallet.data);
-    }
-
-  }, [wallet?.data]);
-
   return { 
     wallet, 
     loading: isLoading,
     unit,
-    data,
   };
 }

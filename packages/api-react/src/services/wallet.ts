@@ -1,5 +1,5 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
-import { Wallet, CAT } from '@chia/api';
+import { Wallet, CAT, WalletType } from '@chia/api';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import type Transaction from '../@types/Transaction';
 
@@ -13,10 +13,71 @@ export const walletApi = createApi({
   tagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions'],
   endpoints: (build) => ({
     getWallets: build.query<Wallet[], undefined>({
+      /*
       query: () => ({
         command: 'getWallets',
       }),
-      transformResponse: (response: any) => response?.wallets,
+      */
+      async queryFn(_args, { dispatch }, _extraOptions, fetchWithBQ) {
+        try {
+          const { data, error } = await fetchWithBQ({
+            command: 'getWallets',
+          });
+
+          if (error) {
+            throw error;
+          }
+          
+          const wallets = data?.wallets;
+          if (!wallets) {
+            throw new Error('List of the wallets is not defined');
+          }
+
+          return {
+            data: await Promise.all(wallets.map(async (wallet: Wallet) => {
+              const { type } = wallet;
+              const meta = {};
+              if (type === WalletType.CAT) {
+                // get CAT tail
+                const { data: tailData, tailError } = await fetchWithBQ({
+                  command: 'getTail',
+                  service: CAT,
+                  args: [wallet.id],
+                });
+
+                if (tailError) {
+                  throw tailError;
+                }
+
+                meta.tail = tailData.colour;
+
+                // get CAT name
+                const { data: nameData, error: nameError } = await fetchWithBQ({
+                  command: 'getName',
+                  service: CAT,
+                  args: [wallet.id],
+                });
+
+                if (nameError) {
+                  throw nameError;
+                }
+
+                meta.name = nameData.name;
+              }
+
+              return {
+                ...wallet,
+                meta,
+              };
+            })),
+          };
+        } catch (error: any) {
+          return {
+            error,
+          };
+        }
+      },
+      // transformResponse: (response: any) => response?.wallets,
       providesTags(result) {
         return result ? [
           ...result.map(({ id }) => ({ type: 'Wallets', id } as const)),
@@ -495,6 +556,7 @@ export const walletApi = createApi({
         service: CAT,
         args: [walletId],
       }),
+      transformResponse: (response: any) => response?.colour,
     }),
   
     getCATName: build.query<string, {
@@ -507,6 +569,7 @@ export const walletApi = createApi({
         service: CAT,
         args: [walletId],
       }),
+      transformResponse: (response: any) => response?.name,
     }),
   
     setCATName: build.mutation<any, {
@@ -561,8 +624,6 @@ export const walletApi = createApi({
           if (error) {
             throw error;
           }
-    
-          console.log('createWalletForExisting response', response);
           
           const walletId = data?.walletId;
           if (!walletId) {

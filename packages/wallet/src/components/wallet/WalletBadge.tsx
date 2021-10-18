@@ -19,7 +19,7 @@ export default function WalletBadge(props: Props) {
   const { wallet, tooltip, ...rest } = props;
 
   if (wallet.type === WalletType.CAT) {
-    const token = Tokens.find((token) => token.tail === wallet.colour);
+    const token = Tokens.find((token) => token.tail === wallet.meta?.tail);
     if (token) {
       return (
         <Tooltip title={<Trans>This access token is whitelisted</Trans>}>

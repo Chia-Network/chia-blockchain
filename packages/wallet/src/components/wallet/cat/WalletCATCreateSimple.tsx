@@ -60,6 +60,8 @@ export default function WalletCATCreateSimple() {
     );
   }
 
+  console.log('wallets', wallets);
+
   return (
     <Flex flexDirection="column" gap={3}>
       <Flex flexGrow={1}>

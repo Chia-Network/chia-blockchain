@@ -35,7 +35,7 @@ type SendTransactionData = {
   memo: string;
 };
 
-export default function WalletSend(props: Props) {
+export default function WalletCATSend(props: Props) {
   const { walletId } = props;
   const openDialog = useOpenDialog();
   const [farmBlock] = useFarmBlockMutation();
@@ -59,14 +59,14 @@ export default function WalletSend(props: Props) {
     name: 'address',
   });
 
-  const { wallet, data, unit, loading } = useWallet(walletId);
+  const { wallet, unit, loading } = useWallet(walletId);
 
   const isLoading = isSpendCatLoading || isWalletSyncLoading || loading;
   if (!wallet || isLoading) {
     return null;
   }
 
-  const { colour } = data;
+  const { tail } = wallet.meta;
   const syncing = walletState.syncing;
 
   async function farm() {
@@ -107,7 +107,7 @@ export default function WalletSend(props: Props) {
     if (address.slice(0, 14) === 'colour_addr://') {
       const colour_id = address.slice(14, 78);
       address = address.slice(79);
-      if (colour_id !== colour) {
+      if (colour_id !== tail) {
         throw new Error(t`Error the entered address appears to be for a different colour.`);
       }
     }

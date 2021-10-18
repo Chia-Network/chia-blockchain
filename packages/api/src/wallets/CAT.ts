@@ -6,7 +6,7 @@ export default class CATWallet extends Wallet {
     fee: string, 
     host: string = this.client.backupHost,
   ) {
-    return super.createNewWallet('cc_wallet', {
+    return super.createNewWallet('cat_wallet', {
       mode: 'new',
       amount,
       fee,
@@ -19,7 +19,7 @@ export default class CATWallet extends Wallet {
     fee: string, 
     host: string = this.client.backupHost,
   ) {
-    return super.createNewWallet('cc_wallet', {
+    return super.createNewWallet('cat_wallet', {
       mode: 'existing',
       colour: tail,
       fee,

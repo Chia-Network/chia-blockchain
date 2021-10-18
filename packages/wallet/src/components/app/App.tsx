@@ -7,6 +7,7 @@ import { Router } from 'react-router-dom';
 import { createGlobalStyle } from 'styled-components';
 import { Loading, ThemeProvider, ModalDialogsProvider, ModalDialogs } from '@chia/core';
 import { store, api } from '@chia/api-react';
+import { Trans } from '@lingui/macro';
 import LayoutHero from '../layout/LayoutHero';
 import AppRouter from './AppRouter';
 import darkTheme from '../../theme/dark';
@@ -115,7 +116,9 @@ export default function App() {
                 </AppDisconnect>
               ) : (
                 <LayoutHero>
-                  <Loading center />
+                  <Loading center>
+                    <Trans>Loading configuration</Trans>
+                  </Loading>
                 </LayoutHero>
               )}
             </ThemeProvider>
