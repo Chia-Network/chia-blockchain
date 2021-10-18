@@ -18,7 +18,7 @@ from tests.core.data_layer.util import ChiaRoot
 
 
 @pytest.fixture(name="scripts_path", scope="session")
-def scripts_path_fixture():
+def scripts_path_fixture() -> pathlib.Path:
     scripts_string = sysconfig.get_path("scripts")
     if scripts_string is None:
         raise Exception("These tests depend on the scripts path existing")
