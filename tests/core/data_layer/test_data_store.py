@@ -1,6 +1,6 @@
 import itertools
 import logging
-from typing import AsyncIterable, Callable, Dict, List, Optional, Tuple
+from typing import AsyncIterable, Awaitable, Callable, Dict, List, Optional
 
 import aiosqlite
 import pytest
@@ -246,9 +246,9 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
 async def test_get_pairs(
     data_store: DataStore,
     tree_id: bytes32,
-    create_example: Callable[[DataStore, bytes32], Example],
+    create_example: Callable[[DataStore, bytes32], Awaitable[Example]],
 ) -> None:
-    example = await create_example(data_store=data_store, tree_id=tree_id)
+    example = await create_example(data_store, tree_id)
 
     pairs = await data_store.get_pairs(tree_id=tree_id)
 

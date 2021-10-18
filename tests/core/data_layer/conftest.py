@@ -5,8 +5,10 @@ import subprocess
 import sys
 import sysconfig
 import time
-from typing import Callable, Iterator, List
+from typing import Awaitable, Callable, Iterator, List
 
+# https://github.com/pytest-dev/pytest/issues/7469
+from _pytest.fixtures import SubRequest
 import pytest
 
 from chia.data_layer.data_store import DataStore
@@ -72,5 +74,5 @@ def chia_data_fixture(chia_root: ChiaRoot, chia_daemon: None, scripts_path: path
 
 
 @pytest.fixture(name="create_example", params=[add_0123_example, add_01234567_example])
-def create_example_fixture(request) -> Callable[[DataStore, bytes32], Example]:
-    return request.param
+def create_example_fixture(request: SubRequest) -> Callable[[DataStore, bytes32], Awaitable[Example]]:
+    return request.param  # type: ignore[no-any-return]
