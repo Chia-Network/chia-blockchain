@@ -7,6 +7,7 @@ import { Router } from 'react-router-dom';
 import { createGlobalStyle } from 'styled-components';
 import { Loading, ThemeProvider, ModalDialogsProvider, ModalDialogs } from '@chia/core';
 import { store, api } from '@chia/api-react';
+import { Wallet, ServiceName } from '@chia/api';
 import { Trans } from '@lingui/macro';
 import LayoutHero from '../layout/LayoutHero';
 import AppRouter from './AppRouter';
@@ -20,7 +21,7 @@ import {
   getMaterialLocale,
 } from '../../config/locales';
 import Fonts from './fonts/Fonts';
-import AppDisconnect from './AppDisconnect';
+import AppState from './AppState';
 
 export const history = createHashHistory();
 
@@ -95,6 +96,7 @@ export default function App() {
       cert: fs.readFileSync(certPath).toString(),
       key: fs.readFileSync(keyPath).toString(),
       webSocket: WS,
+      services: [ServiceName.WALLET],
     }));
 
     setIsReady(true);
@@ -102,28 +104,28 @@ export default function App() {
 
   return (
     <Provider store={store}>
-        <Router history={history}>
-          <I18nProvider i18n={i18n}>
-            <ThemeProvider theme={theme}>
-              <GlobalStyle />
-              <Fonts />
-              {isReady ? (
-                <AppDisconnect>
-                  <ModalDialogsProvider>
-                    <AppRouter />
-                    <ModalDialogs />
-                  </ModalDialogsProvider>
-                </AppDisconnect>
-              ) : (
-                <LayoutHero>
-                  <Loading center>
-                    <Trans>Loading configuration</Trans>
-                  </Loading>
-                </LayoutHero>
-              )}
-            </ThemeProvider>
-          </I18nProvider>
-        </Router>
+      <Router history={history}>
+        <I18nProvider i18n={i18n}>
+          <ThemeProvider theme={theme}>
+            <GlobalStyle />
+            <Fonts />
+            {isReady ? (
+              <AppState>
+                <ModalDialogsProvider>
+                  <AppRouter />
+                  <ModalDialogs />
+                </ModalDialogsProvider>
+              </AppState>
+            ) : (
+              <LayoutHero>
+                <Loading center>
+                  <Trans>Loading configuration</Trans>
+                </Loading>
+              </LayoutHero>
+            )}
+          </ThemeProvider>
+        </I18nProvider>
+      </Router>
     </Provider>
   );
 }

@@ -1,12 +1,12 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
+import { ConnectionState, ServiceName } from '@chia/api';
 
 const baseQuery = chiaLazyBaseQuery();
 
 export const clientApi = createApi({
-  reducerPath: 'fullNodeApi',
+  reducerPath: 'clientApi',
   baseQuery,
-  tagTypes: ['BlockchainState'],
   endpoints: (build) => ({
     close: build.mutation<boolean, {
       force?: boolean;
@@ -17,9 +17,46 @@ export const clientApi = createApi({
         args: [force]
       }),
     }),
+    getState: build.query<{
+      state: ConnectionState;
+      attempt: number;
+      serviceName?: ServiceName;
+    }, undefined>({
+      query: () => ({
+        command: 'getState',
+        client: true,
+      }),
+      async onCacheEntryAdded(_arg, api) {
+        const { updateCachedData, cacheDataLoaded, cacheEntryRemoved } = api;
+        let unsubscribe;
+        try {
+          await cacheDataLoaded;
+
+          const response = await baseQuery({
+            command: 'onStateChange',
+            client: true,
+            args: [(data: any) => {
+              updateCachedData((draft) => {
+                Object.assign(draft, {
+                  ...data,
+                });
+              });
+            }],
+          }, api, {});
+
+          unsubscribe = response.data;
+        } finally {
+          await cacheEntryRemoved;
+          if (unsubscribe) {
+            unsubscribe();
+          }
+        }
+      },
+    }),
   }),
 });
 
 export const { 
   useCloseMutation,
+  useGetStateQuery,
 } = clientApi;

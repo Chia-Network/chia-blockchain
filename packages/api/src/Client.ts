@@ -5,12 +5,14 @@ import Daemon from './services/Daemon';
 import sleep from './utils/sleep';
 import type Service from './services/Service';
 import ErrorData from './utils/ErrorData';
+import ConnectionState from './constants/ConnectionState';
 
 type Options = {
   url: string;
   cert: string;
   key: string;
   webSocket: any;
+  services?: ServiceName[];
   timeout?: number;
   camelCase?: boolean;
   backupHost?: string;
@@ -27,7 +29,7 @@ export default class Client extends EventEmitter {
     reject: (reason: Error) => void;
   }> = new Map();
 
-  private services: Set<Service> = new Set();
+  private services: Set<ServiceName> = new Set();
   private started: Set<ServiceName> = new Set();
   private connectedPromise: Promise<void> | null = null;
 
@@ -35,6 +37,9 @@ export default class Client extends EventEmitter {
 
   private startingServices: boolean = false;
   private closed: boolean = false;
+  private state: ConnectionState = ConnectionState.DISCONNECTED;
+  private reconnectAttempt: number = 0;
+  private startingService?: ServiceName;
 
   constructor(options: Options) {
     super();
@@ -44,6 +49,7 @@ export default class Client extends EventEmitter {
       camelCase: true,
       backupHost: 'https://backup.chia.net',
       debug: false,
+      services: [],
       ...options,
     };
 
@@ -53,6 +59,49 @@ export default class Client extends EventEmitter {
     }
 
     this.daemon = new Daemon(this);
+
+    this.options.services.forEach((service) => {
+      this.services.add(service);
+    });
+
+    if (this.options.services.length) {
+      this.connect();
+    } 
+  }
+
+  getState(): {
+    state: ConnectionState,
+    attempt: number;
+    startingService?: string;
+  } {
+    return {
+      state: this.state,
+      attempt: this.reconnectAttempt,
+      startingService: this.startingService,
+    };
+  }
+
+  changeState(state: ConnectionState) {
+    if (state === ConnectionState.CONNECTING && state === this.state) {
+      this.reconnectAttempt += 1;
+    } else {
+      this.reconnectAttempt = 0;
+    }
+
+    if (state !== ConnectionState.CONNECTING) {
+      this.startingService = undefined;
+    }
+
+    this.state = state;
+    this.emit('state', this.getState());
+  }
+
+  onStateChange(callback: (state: { state: ConnectionState, attempt: number }) => void) {
+    this.on('state', callback);
+
+    return () => {
+      this.off('state', callback);
+    };
   }
 
   get origin() {
@@ -72,17 +121,16 @@ export default class Client extends EventEmitter {
   }
 
   addService(service: Service) {
-    if (!this.services.has(service)) {
-      this.services.add(service);
+    if (!this.services.has(service.name)) {
+      this.services.add(service.name);
 
       this.startServices();
     }
   }
 
   async stopService(service: Service) {
-    if (this.services.has(service)) {
-      this.services.delete(service);
-
+    if (this.services.has(service.name)) {
+      this.services.delete(service.name);
       this.started.delete(service.name);
 
       await this.daemon.stopService(service.name);
@@ -110,6 +158,8 @@ export default class Client extends EventEmitter {
     } else if (!WebSocket) {
       throw new Error('WebSocket is not defined');
     }
+
+    this.changeState(ConnectionState.CONNECTING);
 
     // const dd = 'wss://localhost:51000';
     console.log(`Connecting to ${url}`);
@@ -145,29 +195,69 @@ export default class Client extends EventEmitter {
     }
 
     this.startingServices = true;
-    await Promise.all(Array.from(this.services).map(async (service) => {
-      if (!this.started.has(service.name)) {
-        const response = await this.daemon.isRunning(service.name);
+
+    const services = Array.from(this.services);
+
+    for (const serviceName of services) {
+      if (!this.started.has(serviceName)) {
+        this.startingService = serviceName;
+        this.emit('state', this.getState());
+
+        const response = await this.daemon.isRunning(serviceName);
         if (!response.isRunning) {
-          await this.daemon.startService(service.name);
+          await this.daemon.startService(serviceName);
         }
 
         // wait for service initialisation
         while(true) {
           try {
-            const pingResponse = await service.ping();
+            const { data: pingResponse } = await this.send(new Message({
+              command: 'ping',
+              origin: this.origin,
+              destination: serviceName,
+            }), 1000);
+            
             if (pingResponse.success) {
               break;
             }
-            
           } catch (error) {
             await sleep(1000);
           }
         }
 
-        this.started.add(service.name);
+        this.started.add(serviceName);
+      }
+    }
+
+    /*
+    await Promise.all(Array.from(this.services).map(async (serviceName) => {
+      if (!this.started.has(serviceName)) {
+        const response = await this.daemon.isRunning(serviceName);
+        if (!response.isRunning) {
+          await this.daemon.startService(serviceName);
+        }
+
+        // wait for service initialisation
+        while(true) {
+          try {
+            const { data: pingResponse } = await this.send(new Message({
+              command: 'ping',
+              origin: this.origin,
+              destination: serviceName,
+            }), 1000);
+            
+            if (pingResponse.success) {
+              break;
+            }
+          } catch (error) {
+            await sleep(1000);
+          }
+        }
+
+        this.started.add(serviceName);
       }
     }));
+    */
     this.startingServices = false;
   }
 
@@ -178,8 +268,11 @@ export default class Client extends EventEmitter {
 
     this.startingServices = true;
     await this.daemon.registerService(ServiceName.EVENTS);
-    await this.startServices();
     this.startingServices = false;
+
+    await this.startServices();
+
+    this.changeState(ConnectionState.CONNECTED);
 
     if (this.connectedPromiseResponse) {
       this.connectedPromiseResponse.resolve();
@@ -199,7 +292,6 @@ export default class Client extends EventEmitter {
   private handleError = async (error: any) => {
     if (this.connectedPromiseResponse) {
       await sleep(1000);
-      console.log('RECONNECTING');
       this.connect(true);
       return;
       // this.connectedPromiseResponse.reject(error);
@@ -211,7 +303,7 @@ export default class Client extends EventEmitter {
     const { options: { camelCase } } = this;
 
     const message = Message.fromJSON(data, camelCase);
-    console.log('RESPONSE', data.toString());
+    // console.log('RESPONSE', data.toString());
     const { requestId } = message;
 
     if (this.requests.has(requestId)) {
@@ -261,7 +353,7 @@ export default class Client extends EventEmitter {
       this.requests.set(requestId, { resolve, reject });
       this.ws.send(message.toJSON(camelCase));
 
-      console.log('SEND', message.toJSON(camelCase));
+      // console.log('SEND', message.toJSON(camelCase));
 
       if (currentTimeout) {
         setTimeout(() => {
@@ -295,5 +387,6 @@ export default class Client extends EventEmitter {
     this.startingServices = false;
 
     this.ws.close();
+    // this.changeState(ConnectionState.DISCONNECTED);
   }
 }

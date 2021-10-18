@@ -18,7 +18,6 @@ export default function WalletsList() {
   const { data: wallets, isLoading } = useGetWalletsQuery();
 
   function handleSelectWallet(wallet: Wallet) {
-    console.log('wallet', wallet);
     history.push(`/dashboard/wallets/${wallet.id}`);
   }
 

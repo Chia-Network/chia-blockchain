@@ -6,6 +6,7 @@ export const {
   clientApi,
 
   useCloseMutation,
+  useGetStateQuery,
 } = client;
 
 export const {
