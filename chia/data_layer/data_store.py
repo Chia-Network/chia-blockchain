@@ -122,9 +122,11 @@ class DataStore:
 
         node_hash = Program.to((key, value)).get_tree_hash()
 
+        # TODO: Review the OR IGNORE bit, should more be done to validate it is
+        #       "the same row"?
         await self.db.execute(
             """
-            INSERT INTO node(hash, node_type, left, right, key, value)
+            INSERT OR IGNORE INTO node(hash, node_type, left, right, key, value)
             VALUES(:hash, :node_type, :left, :right, :key, :value)
             """,
             {
