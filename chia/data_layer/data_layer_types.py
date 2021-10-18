@@ -3,7 +3,6 @@ from enum import IntEnum
 from typing import Dict, Optional, Tuple, Type, Union
 
 import aiosqlite as aiosqlite
-from clvm.CLVMObject import CLVMObject
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -39,22 +38,22 @@ Node = Union["TerminalNode", "InternalNode"]
 class TerminalNode:
     hash: bytes32
     # generation: int
-    key: Program
-    value: Program
+    key: bytes32
+    value: bytes32
 
     atom: None = field(init=False, default=None)
 
     @property
-    def pair(self) -> Tuple[Program, Program]:
-        return Program.to(CLVMObject(v=self.key.as_bin())), Program.to(CLVMObject(self.value.as_bin()))
+    def pair(self) -> Tuple[bytes32, bytes32]:
+        return Program.to(self.key), Program.to(self.value)
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":
         return cls(
             hash=bytes32(hexstr_to_bytes(row["hash"])),
             # generation=row["generation"],
-            key=Program.fromhex(row["key"]),
-            value=Program.fromhex(row["value"]),
+            key=hexstr_to_bytes(row["key"]),
+            value=hexstr_to_bytes(row["value"]),
         )
 
 

@@ -4,7 +4,7 @@ import functools
 import os
 import pathlib
 import subprocess
-from typing import Any, Iterator, IO, List, Optional, Tuple, TYPE_CHECKING, Union
+from typing import Any, Iterator, IO, List, Optional, TYPE_CHECKING, Union
 
 from chia.data_layer.data_layer_types import Side
 from chia.data_layer.data_store import DataStore
@@ -25,21 +25,17 @@ else:
     subprocess_CompletedProcess_str = subprocess.CompletedProcess
 
 
-def kv(k: bytes, v: List[bytes]) -> Tuple[bytes, bytes]:
-    return Program.to(k).as_bin(), Program.to(v).as_bin()
-
-
 async def general_insert(
     data_store: DataStore,
     tree_id: bytes32,
     key: bytes,
-    value: List[bytes],
+    value: bytes,
     reference_node_hash: bytes32,
     side: Optional[Side],
 ) -> bytes32:
     return await data_store.insert(
-        key=Program.to(key),
-        value=Program.to(value),
+        key=key,
+        value=value,
         tree_id=tree_id,
         reference_node_hash=reference_node_hash,
         side=side,
@@ -56,22 +52,22 @@ async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
     expected = Program.to(
         (
             (
-                kv(b"\x00", [b"\x10", b"\x00"]),
-                kv(b"\x01", [b"\x11", b"\x01"]),
+                (b"\x00", b"\x10\x00"),
+                (b"\x01", b"\x11\x01"),
             ),
             (
-                kv(b"\x02", [b"\x12", b"\x02"]),
-                kv(b"\x03", [b"\x13", b"\x03"]),
+                (b"\x02", b"\x12\x02"),
+                (b"\x03", b"\x13\x03"),
             ),
         ),
     )
 
     insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
 
-    c_hash = await insert(key=b"\x02", value=[b"\x12", b"\x02"], reference_node_hash=None, side=None)
-    b_hash = await insert(key=b"\x01", value=[b"\x11", b"\x01"], reference_node_hash=c_hash, side=Side.LEFT)
-    d_hash = await insert(key=b"\x03", value=[b"\x13", b"\x03"], reference_node_hash=c_hash, side=Side.RIGHT)
-    a_hash = await insert(key=b"\x00", value=[b"\x10", b"\x00"], reference_node_hash=b_hash, side=Side.LEFT)
+    c_hash = await insert(key=b"\x02", value=b"\x12\x02", reference_node_hash=None, side=None)
+    b_hash = await insert(key=b"\x01", value=b"\x11\x01", reference_node_hash=c_hash, side=Side.LEFT)
+    d_hash = await insert(key=b"\x03", value=b"\x13\x03", reference_node_hash=c_hash, side=Side.RIGHT)
+    a_hash = await insert(key=b"\x00", value=b"\x10\x00", reference_node_hash=b_hash, side=Side.LEFT)
 
     return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash])
 
@@ -81,22 +77,22 @@ async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Examp
         (
             (
                 (
-                    kv(b"\x00", [b"\x10", b"\x00"]),
-                    kv(b"\x01", [b"\x11", b"\x01"]),
+                    (b"\x00", b"\x10\x00"),
+                    (b"\x01", b"\x11\x01"),
                 ),
                 (
-                    kv(b"\x02", [b"\x12", b"\x02"]),
-                    kv(b"\x03", [b"\x13", b"\x03"]),
+                    (b"\x02", b"\x12\x02"),
+                    (b"\x03", b"\x13\x03"),
                 ),
             ),
             (
                 (
-                    kv(b"\x04", [b"\x14", b"\x04"]),
-                    kv(b"\x05", [b"\x15", b"\x05"]),
+                    (b"\x04", b"\x14\x04"),
+                    (b"\x05", b"\x15\x05"),
                 ),
                 (
-                    kv(b"\x06", [b"\x16", b"\x06"]),
-                    kv(b"\x07", [b"\x17", b"\x07"]),
+                    (b"\x06", b"\x16\x06"),
+                    (b"\x07", b"\x17\x07"),
                 ),
             ),
         ),
@@ -104,16 +100,16 @@ async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Examp
 
     insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
 
-    g_hash = await insert(key=b"\x06", value=[b"\x16", b"\x06"], reference_node_hash=None, side=None)
+    g_hash = await insert(key=b"\x06", value=b"\x16\x06", reference_node_hash=None, side=None)
 
-    c_hash = await insert(key=b"\x02", value=[b"\x12", b"\x02"], reference_node_hash=g_hash, side=Side.LEFT)
-    b_hash = await insert(key=b"\x01", value=[b"\x11", b"\x01"], reference_node_hash=c_hash, side=Side.LEFT)
-    d_hash = await insert(key=b"\x03", value=[b"\x13", b"\x03"], reference_node_hash=c_hash, side=Side.RIGHT)
-    a_hash = await insert(key=b"\x00", value=[b"\x10", b"\x00"], reference_node_hash=b_hash, side=Side.LEFT)
+    c_hash = await insert(key=b"\x02", value=b"\x12\x02", reference_node_hash=g_hash, side=Side.LEFT)
+    b_hash = await insert(key=b"\x01", value=b"\x11\x01", reference_node_hash=c_hash, side=Side.LEFT)
+    d_hash = await insert(key=b"\x03", value=b"\x13\x03", reference_node_hash=c_hash, side=Side.RIGHT)
+    a_hash = await insert(key=b"\x00", value=b"\x10\x00", reference_node_hash=b_hash, side=Side.LEFT)
 
-    f_hash = await insert(key=b"\x05", value=[b"\x15", b"\x05"], reference_node_hash=g_hash, side=Side.LEFT)
-    h_hash = await insert(key=b"\x07", value=[b"\x17", b"\x07"], reference_node_hash=g_hash, side=Side.RIGHT)
-    e_hash = await insert(key=b"\x04", value=[b"\x14", b"\x04"], reference_node_hash=f_hash, side=Side.LEFT)
+    f_hash = await insert(key=b"\x05", value=b"\x15\x05", reference_node_hash=g_hash, side=Side.LEFT)
+    h_hash = await insert(key=b"\x07", value=b"\x17\x07", reference_node_hash=g_hash, side=Side.RIGHT)
+    e_hash = await insert(key=b"\x04", value=b"\x14\x04", reference_node_hash=f_hash, side=Side.LEFT)
 
     return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash, e_hash, f_hash, g_hash, h_hash])
 

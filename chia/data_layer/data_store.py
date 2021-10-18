@@ -9,7 +9,6 @@ from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
     InternalLeftRightNotBytes32Error,
     NodeHashError,
-    TerminalInvalidKeyOrValueProgramError,
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
 )
@@ -117,7 +116,7 @@ class DataStore:
 
         return node_hash
 
-    async def _insert_terminal_node(self, key: Program, value: Program) -> bytes32:
+    async def _insert_terminal_node(self, key: bytes32, value: bytes32) -> bytes32:
         # TODO: maybe verify a transaction is active
 
         node_hash = Program.to((key, value)).get_tree_hash()
@@ -134,8 +133,8 @@ class DataStore:
                 "node_type": NodeType.TERMINAL,
                 "left": None,
                 "right": None,
-                "key": key.as_bin().hex(),
-                "value": value.as_bin().hex(),
+                "key": key.hex(),
+                "value": value.hex(),
             },
         )
 
@@ -185,24 +184,6 @@ class DataStore:
         if len(hashes) > 0:
             raise TerminalLeftRightError(node_hashes=hashes)
 
-    async def _check_terminal_key_value_are_serialized_programs(self, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
-                "SELECT * FROM node WHERE node_type == :node_type",
-                {"node_type": NodeType.TERMINAL},
-            )
-
-            hashes = []
-            async for row in cursor:
-                try:
-                    Program.fromhex(row["key"])
-                    Program.fromhex(row["value"])
-                except ValueError:
-                    hashes.append(hexstr_to_bytes(row["hash"]))
-
-        if len(hashes) > 0:
-            raise TerminalInvalidKeyOrValueProgramError(node_hashes=hashes)
-
     async def _check_roots_are_incrementing(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT * FROM root ORDER BY tree_id, generation")
@@ -249,7 +230,6 @@ class DataStore:
         _check_internal_key_value_are_null,
         _check_internal_left_right_are_bytes32,
         _check_terminal_left_right_are_null,
-        _check_terminal_key_value_are_serialized_programs,
         _check_roots_are_incrementing,
         _check_hashes,
     )
@@ -451,8 +431,8 @@ class DataStore:
 
     async def autoinsert(
         self,
-        key: Program,
-        value: Program,
+        key: bytes32,
+        value: bytes32,
         tree_id: bytes32,
         *,
         lock: bool = True,
@@ -478,8 +458,8 @@ class DataStore:
 
     async def insert(
         self,
-        key: Program,
-        value: Program,
+        key: bytes32,
+        value: bytes32,
         tree_id: bytes32,
         reference_node_hash: Optional[bytes32],
         side: Optional[Side],
@@ -553,7 +533,7 @@ class DataStore:
 
         return new_terminal_node_hash
 
-    async def delete(self, key: Program, tree_id: bytes32, *, lock: bool = True) -> None:
+    async def delete(self, key: bytes32, tree_id: bytes32, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             ancestors = await self.get_ancestors(node_hash=node.hash, tree_id=tree_id, lock=False)
@@ -597,7 +577,7 @@ class DataStore:
 
         return
 
-    async def get_node_by_key(self, key: Program, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
+    async def get_node_by_key(self, key: bytes32, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):
             nodes = await self.get_pairs(tree_id=tree_id, lock=False)
 
@@ -613,7 +593,7 @@ class DataStore:
             nodes = await self.get_pairs(tree_id=tree_id, lock=False)
 
         for node in nodes:
-            if node.key.as_bin() == key:
+            if node.key == key:
                 return node
 
         # TODO: fill out the exception
@@ -665,9 +645,6 @@ class DataStore:
             print(root_node)
             # TODO: clvm needs py.typed, SExp.to() needs def to(class_: Type[T], v: CastableType) -> T:
             program: Program = Program.to(root_node)
-            program.as_bin()
-            print(program)
-            print(program.as_bin())
             # for node in reversed(nodes):
             #     print('    ', node)
             # async for row in cursor:

@@ -9,7 +9,6 @@ from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
     InternalLeftRightNotBytes32Error,
     NodeHashError,
-    TerminalInvalidKeyOrValueProgramError,
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
 )
@@ -21,7 +20,7 @@ from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 
-from tests.core.data_layer.util import add_0123_example, add_01234567_example, Example, kv
+from tests.core.data_layer.util import add_0123_example, add_01234567_example, Example
 
 # from tests.setup_nodes import bt, test_constants
 
@@ -136,8 +135,8 @@ async def test_table_is_empty(data_store: DataStore, tree_id: bytes32) -> None:
 
 @pytest.mark.asyncio
 async def test_table_is_not_empty(data_store: DataStore, tree_id: bytes32) -> None:
-    key = Program.to([1, 2])
-    value = Program.to("abc")
+    key = b"\x01\x02"
+    value = b"abc"
 
     await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
 
@@ -156,8 +155,8 @@ async def test_table_is_not_empty(data_store: DataStore, tree_id: bytes32) -> No
 
 @pytest.mark.asyncio
 async def test_insert_over_empty(data_store: DataStore, tree_id: bytes32) -> None:
-    key = Program.to([1, 2])
-    value = Program.to("abc")
+    key = b"\x01\x02"
+    value = b"abc"
 
     node_hash = await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
     assert node_hash == Program.to((key, value)).get_tree_hash()
@@ -165,8 +164,8 @@ async def test_insert_over_empty(data_store: DataStore, tree_id: bytes32) -> Non
 
 @pytest.mark.asyncio
 async def test_insert_increments_generation(data_store: DataStore, tree_id: bytes32) -> None:
-    keys = list("abcd")  # efghijklmnopqrstuvwxyz")
-    value = Program.to([1, 2, 3])
+    keys = [b"a", b"b", b"c", b"d"]  # efghijklmnopqrstuvwxyz")
+    value = b"\x01\x02\x03"
 
     generations = []
     expected = []
@@ -174,7 +173,7 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
     node_hash = None
     for key, expected_generation in zip(keys, itertools.count(start=1)):
         node_hash = await data_store.insert(
-            key=Program.to(key),
+            key=key,
             value=value,
             tree_id=tree_id,
             reference_node_hash=node_hash,
@@ -197,8 +196,8 @@ async def test_build_a_tree(
 
     await _debug_dump(db=data_store.db, description="final")
     actual = await data_store.get_tree_as_program(tree_id=tree_id)
-    print("actual  ", actual.as_python())
-    print("expected", example.expected.as_python())
+    # print("actual  ", actual.as_python())
+    # print("expected", example.expected.as_python())
     assert actual == example.expected
 
 
@@ -210,7 +209,7 @@ async def test_get_node_by_key(data_store: DataStore, tree_id: bytes32) -> None:
 
     # TODO: make a nicer relationship between the hash and the key
 
-    actual = await data_store.get_node_by_key(key=Program.to(b"\x02"), tree_id=tree_id)
+    actual = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
     assert actual.hash == key_node_hash
 
 
@@ -237,8 +236,8 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
 
     # TODO: reverify these are correct
     assert hashes == [
-        "eba9a0627b6c1956e33abd233a216e1bb977a5af6e76045b4f2e9de79e6b526e",
-        "5fa24f8b8cedf2e1603a7827ad1187e79e1e98e990ed57a4e339dba45f0862cf",
+        "3ab212e30b0e746d81a993e39f2cb4ba843412d44b402c1117a500d6451309e3",
+        "c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2",
     ]
 
 
@@ -264,11 +263,11 @@ async def test_get_pairs_when_empty(data_store: DataStore, tree_id: bytes32) -> 
 
 @pytest.mark.asyncio()
 async def test_inserting_duplicate_key_fails(data_store: DataStore, tree_id: bytes32) -> None:
-    key = Program.to(5)
+    key = b"\x05"
 
     first_hash = await data_store.insert(
         key=key,
-        value=Program.to(6),
+        value=b"\x06",
         tree_id=tree_id,
         reference_node_hash=None,
         side=None,
@@ -278,7 +277,7 @@ async def test_inserting_duplicate_key_fails(data_store: DataStore, tree_id: byt
     with pytest.raises(Exception):
         await data_store.insert(
             key=key,
-            value=Program.to(7),
+            value=b"\x07",
             tree_id=tree_id,
             reference_node_hash=first_hash,
             side=Side.RIGHT,
@@ -291,22 +290,22 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
         (
             (
                 (
-                    kv(b"\x00", [b"\x10", b"\x00"]),
-                    kv(b"\x01", [b"\x11", b"\x01"]),
+                    (b"\x00", b"\x10\x00"),
+                    (b"\x01", b"\x11\x01"),
                 ),
                 (
-                    kv(b"\x02", [b"\x12", b"\x02"]),
-                    kv(b"\x03", [b"\x13", b"\x03"]),
+                    (b"\x02", b"\x12\x02"),
+                    (b"\x03", b"\x13\x03"),
                 ),
             ),
             (
                 (
-                    kv(b"\x04", [b"\x14", b"\x04"]),
-                    kv(b"\x05", [b"\x15", b"\x05"]),
+                    (b"\x04", b"\x14\x04"),
+                    (b"\x05", b"\x15\x05"),
                 ),
                 (
-                    kv(b"\x06", [b"\x16", b"\x06"]),
-                    kv(b"\x07", [b"\x17", b"\x07"]),
+                    (b"\x06", b"\x16\x06"),
+                    (b"\x07", b"\x17\x07"),
                 ),
             ),
         ),
@@ -314,8 +313,8 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
 
     for n in [0, 4, 2, 6, 1, 3, 5, 7]:
         await data_store.autoinsert(
-            key=Program.to(bytes([n])),
-            value=Program.to([bytes([0x10 + n]), bytes([n])]),
+            key=bytes([n]),
+            value=bytes([0x10 + n, n]),
             tree_id=tree_id,
         )
 
@@ -332,22 +331,22 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
         (
             (
                 (
-                    kv(b"\x00", [b"\x10", b"\x00"]),
-                    kv(b"\x01", [b"\x11", b"\x01"]),
+                    (b"\x00", b"\x10\x00"),
+                    (b"\x01", b"\x11\x01"),
                 ),
                 (
-                    kv(b"\x02", [b"\x12", b"\x02"]),
-                    kv(b"\x03", [b"\x13", b"\x03"]),
+                    (b"\x02", b"\x12\x02"),
+                    (b"\x03", b"\x13\x03"),
                 ),
             ),
             (
                 (
-                    kv(b"\x04", [b"\x14", b"\x04"]),
-                    kv(b"\x05", [b"\x15", b"\x05"]),
+                    (b"\x04", b"\x14\x04"),
+                    (b"\x05", b"\x15\x05"),
                 ),
                 (
-                    kv(b"\x06", [b"\x16", b"\x06"]),
-                    kv(b"\x07", [b"\x17", b"\x07"]),
+                    (b"\x06", b"\x16\x06"),
+                    (b"\x07", b"\x17\x07"),
                 ),
             ),
         ),
@@ -360,8 +359,8 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
 
     for n in ns:
         await data_store.autoinsert(
-            key=Program.to(bytes([n])),
-            value=Program.to([bytes([0x10 + n]), bytes([n])]),
+            key=bytes([n]),
+            value=bytes([0x10 + n, n]),
             tree_id=tree_id,
         )
 
@@ -378,19 +377,19 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
         (
             (
                 (
-                    kv(b"\x00", [b"\x10", b"\x00"]),
-                    kv(b"\x01", [b"\x11", b"\x01"]),
+                    (b"\x00", b"\x10\x00"),
+                    (b"\x01", b"\x11\x01"),
                 ),
                 (
-                    kv(b"\x02", [b"\x12", b"\x02"]),
-                    kv(b"\x03", [b"\x13", b"\x03"]),
+                    (b"\x02", b"\x12\x02"),
+                    (b"\x03", b"\x13\x03"),
                 ),
             ),
             (
-                kv(b"\x05", [b"\x15", b"\x05"]),
+                (b"\x05", b"\x15\x05"),
                 (
-                    kv(b"\x06", [b"\x16", b"\x06"]),
-                    kv(b"\x07", [b"\x17", b"\x07"]),
+                    (b"\x06", b"\x16\x06"),
+                    (b"\x07", b"\x17\x07"),
                 ),
             ),
         ),
@@ -410,17 +409,17 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_i
         (
             (
                 (
-                    kv(b"\x00", [b"\x10", b"\x00"]),
-                    kv(b"\x01", [b"\x11", b"\x01"]),
+                    (b"\x00", b"\x10\x00"),
+                    (b"\x01", b"\x11\x01"),
                 ),
                 (
-                    kv(b"\x02", [b"\x12", b"\x02"]),
-                    kv(b"\x03", [b"\x13", b"\x03"]),
+                    (b"\x02", b"\x12\x02"),
+                    (b"\x03", b"\x13\x03"),
                 ),
             ),
             (
-                kv(b"\x06", [b"\x16", b"\x06"]),
-                kv(b"\x07", [b"\x17", b"\x07"]),
+                (b"\x06", b"\x16\x06"),
+                (b"\x07", b"\x17\x07"),
             ),
         ),
     )
@@ -440,19 +439,19 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: b
         (
             (
                 (
-                    kv(b"\x00", [b"\x10", b"\x00"]),
-                    kv(b"\x01", [b"\x11", b"\x01"]),
+                    (b"\x00", b"\x10\x00"),
+                    (b"\x01", b"\x11\x01"),
                 ),
-                kv(b"\x02", [b"\x12", b"\x02"]),
+                (b"\x02", b"\x12\x02"),
             ),
             (
                 (
-                    kv(b"\x04", [b"\x14", b"\x04"]),
-                    kv(b"\x05", [b"\x15", b"\x05"]),
+                    (b"\x04", b"\x14\x04"),
+                    (b"\x05", b"\x15\x05"),
                 ),
                 (
-                    kv(b"\x06", [b"\x16", b"\x06"]),
-                    kv(b"\x07", [b"\x17", b"\x07"]),
+                    (b"\x06", b"\x16\x06"),
+                    (b"\x07", b"\x17\x07"),
                 ),
             ),
         ),
@@ -471,17 +470,17 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
     expected = Program.to(
         (
             (
-                kv(b"\x00", [b"\x10", b"\x00"]),
-                kv(b"\x01", [b"\x11", b"\x01"]),
+                (b"\x00", b"\x10\x00"),
+                (b"\x01", b"\x11\x01"),
             ),
             (
                 (
-                    kv(b"\x04", [b"\x14", b"\x04"]),
-                    kv(b"\x05", [b"\x15", b"\x05"]),
+                    (b"\x04", b"\x14\x04"),
+                    (b"\x05", b"\x15\x05"),
                 ),
                 (
-                    kv(b"\x06", [b"\x16", b"\x06"]),
-                    kv(b"\x07", [b"\x17", b"\x07"]),
+                    (b"\x06", b"\x16\x06"),
+                    (b"\x07", b"\x17\x07"),
                 ),
             ),
         ),
@@ -594,32 +593,6 @@ async def test_check_terminal_left_right_are_null(raw_data_store: DataStore, lef
         match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
     ):
         await raw_data_store._check_terminal_left_right_are_null()
-
-
-@pytest.mark.parametrize(
-    argnames="key_value",
-    argvalues=[
-        {"key": valid_program_hex, "value": invalid_program_hex},
-        {"key": invalid_program_hex, "value": valid_program_hex},
-    ],
-    ids=["key", "value"],
-)
-@pytest.mark.asyncio
-async def test_check_terminal_key_value_are_serialized_programs(
-    raw_data_store: DataStore,
-    key_value: Dict[str, str],
-) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
-        await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.TERMINAL, **key_value},
-        )
-
-    with pytest.raises(
-        TerminalInvalidKeyOrValueProgramError,
-        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
-    ):
-        await raw_data_store._check_terminal_key_value_are_serialized_programs()
 
 
 @pytest.mark.asyncio
