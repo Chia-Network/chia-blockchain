@@ -87,7 +87,7 @@ export default function WalletCATCreateExisting() {
             color="primary"
             loading={isAddCATTokenLoading}
           >
-            <Trans>Create</Trans>
+            <Trans>Add</Trans>
           </ButtonLoading>
         </Box>
       </Flex>
