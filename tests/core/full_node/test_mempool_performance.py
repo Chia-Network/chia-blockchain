@@ -13,9 +13,6 @@ from chia.wallet.transaction_record import TransactionRecord
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
-from tests.core.fixtures import (
-    default_400_blocks,
-)
 
 
 def wallet_height_at_least(wallet_node, h):
