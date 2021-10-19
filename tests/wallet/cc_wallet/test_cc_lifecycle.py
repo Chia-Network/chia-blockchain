@@ -53,6 +53,7 @@ class TestCCLifecycle:
         lineage_proofs: List[Program],
         inner_solutions: List[Program],
         expected_result: Tuple[MempoolInclusionStatus, Err],
+        reveal_limitations_program: bool = True,
         signatures: List[G2Element] = [],
         extra_deltas: Optional[List[int]] = None,
         additional_spends: List[SpendBundle] = [],
@@ -76,7 +77,7 @@ class TestCCLifecycle:
                     limitations_solution=limitations_solution,
                     lineage_proof=proof,
                     extra_delta=extra_delta,
-                    limitations_program_reveal=genesis_checker,
+                    limitations_program_reveal=genesis_checker if reveal_limitations_program else Program.to([]),
                 )
             )
 
@@ -167,7 +168,7 @@ class TestCCLifecycle:
                 limitations_solutions=[checker_solution] * 3,
             )
 
-            # Spend with a standard lineage proof (THIS CURRENTLY DOES NOT ACTUALLY TEST THIS)
+            # Spend with a standard lineage proof
             parent_coin: Coin = coins[0]  # The first one is the one we didn't light on fire
             _, curried_args = cc_puzzle.uncurry()
             _, _, innerpuzzle = curried_args.as_iter()
@@ -180,6 +181,7 @@ class TestCCLifecycle:
                 [lineage_proof],
                 [Program.to([[51, acs.get_tree_hash(), total_amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
+                reveal_limitations_program = False,
             )
 
             # Melt some value
