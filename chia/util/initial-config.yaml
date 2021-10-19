@@ -255,6 +255,18 @@ full_node:
   # The full node server (if run) will run on this port
   port: 8444
 
+  # controls the sync-to-disk behavior of the database connection. Can be one of:
+  # "on"    enables syncing to disk, minimizes risk of corrupting the DB in
+  #         power-loss, disk failure or kernel panics
+  # "full"  enables extra syncing to disk for additional safety from
+  #         power-failures and kernel panics
+  # "off"   disables syncing, lightens disk load and improves performance.
+  #         increases risk of corrupting DB in power-loss, disk failure or
+  #         kernel panics
+  # "auto"  on/off is decided based on a heuristic of how likely a failure is on
+  #         the particular system we're running on. Defaults to "full".
+  db_sync: auto
+
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v1_CHALLENGE.sqlite
   peer_db_path: db/peer_table_node.sqlite
@@ -379,6 +391,9 @@ wallet:
 
   enable_profiler: False
 
+  # see description for full_node.db_sync
+  db_sync: auto
+
   # The minimum height that we care about for our transactions. Set to zero
   # If we are restoring from private key and don't know the height.
   starting_height: 0
@@ -419,3 +434,25 @@ wallet:
     trusted_node_1: "config/ssl/full_node/public_full_node.crt"
 
   short_sync_blocks_behind_threshold: 20
+
+data_layer:
+  # TODO: consider name
+  # TODO: organize consistently with other sections
+
+  # TODO: shouldn't we not need this since we have no actual public interface (yet)?
+  port: 1234
+  database_path: "data_layer/db/data_layer_CHALLENGE.sqlite"
+  selected_network: *selected_network
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
+  # TODO: what considerations are there in choosing this?
+  rpc_port: 8561
+  logging: *logging
+
+  # TODO: which of these are really appropriate?
+
+  ssl:
+    private_crt:  "config/ssl/data_layer/private_data_layer.crt"
+    private_key:  "config/ssl/data_layer/private_data_layer.key"
+    public_crt:  "config/ssl/data_layer/public_data_layer.crt"
+    public_key:  "config/ssl/data_layer/public_data_layer.key"

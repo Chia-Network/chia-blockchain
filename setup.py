@@ -67,6 +67,7 @@ kwargs = dict(
         "chia.clvm",
         "chia.consensus",
         "chia.daemon",
+        "chia.data_layer",
         "chia.full_node",
         "chia.timelord",
         "chia.farmer",
@@ -103,6 +104,7 @@ kwargs = dict(
             "chia_timelord = chia.server.start_timelord:main",
             "chia_timelord_launcher = chia.timelord.timelord_launcher:main",
             "chia_full_node_simulator = chia.simulator.start_simulator:main",
+            "chia_data_layer = chia.server.start_data_layer:main",
         ]
     },
     package_data={
@@ -120,4 +122,4 @@ kwargs = dict(
 
 
 if __name__ == "__main__":
-    setup(**kwargs)
+    setup(**kwargs)  # type: ignore

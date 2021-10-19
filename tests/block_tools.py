@@ -165,12 +165,11 @@ class BlockTools:
         self.expected_plots: Dict[bytes32, Path] = {}
 
         def test_callback(update_result: PlotRefreshResult):
-            if update_result.remaining_files == 0:
+            if update_result.remaining == 0:
                 assert len(self.plot_manager.plots) == len(self.expected_plots)
             else:
-                assert 0 < update_result.loaded_plots <= self.refresh_parameter.batch_size
-                assert update_result.loaded_plots == update_result.processed_files
-                assert update_result.loaded_size > 0
+                assert 0 < update_result.loaded <= self.refresh_parameter.batch_size
+                assert update_result.loaded == update_result.processed
                 assert 0 < update_result.duration < 5
 
         self.plot_manager: PlotManager = PlotManager(

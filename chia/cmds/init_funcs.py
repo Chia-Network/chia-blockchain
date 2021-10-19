@@ -25,7 +25,7 @@ from chia.util.config import (
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain
 from chia.util.path import mkdir
-from chia.util.ssl import (
+from chia.util.ssl_check import (
     DEFAULT_PERMISSIONS_CERT_FILE,
     DEFAULT_PERMISSIONS_KEY_FILE,
     RESTRICT_MASK_CERT_FILE,
@@ -35,8 +35,8 @@ from chia.util.ssl import (
 )
 from chia.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
 
-private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
-public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord"}
+private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "data_layer", "daemon"}
+public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"}
 
 
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):

@@ -40,13 +40,6 @@ from chia.full_node.weight_proof import (  # type: ignore
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32, uint64
-from tests.core.fixtures import (
-    default_400_blocks,
-    default_1000_blocks,
-    default_10000_blocks,
-    default_10000_blocks_compact,
-    pre_genesis_empty_slots_1000_blocks,
-)
 
 
 @pytest.fixture(scope="session")
