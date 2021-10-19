@@ -1,9 +1,14 @@
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Set
+
+import blspy
+from blspy import G1Element, G2Element
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -14,8 +19,13 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
+from chia.types.blockchain_format.coin import Coin
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
+from chia.wallet.wallet import Wallet
 
 
 class FullNodeRpcApi:
@@ -47,6 +57,8 @@ class FullNodeRpcApi:
             "/get_coin_record_by_name": self.get_coin_record_by_name,
             "/get_coin_records_by_names": self.get_coin_records_by_names,
             "/get_coin_records_by_parent_ids": self.get_coin_records_by_parent_ids,
+            "/create_unsigned_transaction": self.create_unsigned_transaction,
+            "/puzzle_hash_for_pk": self.puzzle_hash_for_pk,
             "/push_tx": self.push_tx,
             "/get_puzzle_and_solution": self.get_puzzle_and_solution,
             # Mempool
@@ -512,6 +524,162 @@ class FullNodeRpcApi:
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_parent_ids(**kwargs)
 
         return {"coin_records": coin_records}
+
+    async def puzzle_hash_for_pk(self, request):
+        pk = G1Element.from_bytes(hexstr_to_bytes(request["public_key"]))
+        puzzle_hash = puzzle_for_pk(pk).get_tree_hash()
+        if len(puzzle_hash) != 32:
+            raise ValueError(f"Address must be 32 bytes. {puzzle_hash}")
+        return {
+            "puzzle_hash": puzzle_hash
+        }
+        
+    # Make this method as independent from wallet state as possible
+    async def _generate_unsigned_transaction(
+            self,
+            pk: G1Element,
+            spend_amount: uint64,
+            to_puzzle_hash: bytes32,
+            fee: uint64 = uint64(0),
+            coins: Set[Coin] = None,
+            primaries: Optional[List[Dict[str, bytes32]]] = None,
+        ) -> List[CoinSpend]:
+        """
+        Generates a unsigned transaction in form of List(Puzzle, Solutions)
+        Note: this must be called under a wallet state manager lock
+        """
+        if primaries is None:
+            total_amount = spend_amount + fee
+        else:
+            primaries = primaries.copy()
+            primaries_amount = 0
+            for prim in primaries:
+                primaries_amount += prim["amount"]
+            total_amount = spend_amount + fee + primaries_amount
+
+        if coins is None or len(coins) == 0:
+            raise ValueError("Need pre-selected coins")
+
+        # Select coins that suffice total_amount
+        selected_coins: List[Coin] = []
+        total_selected_amount = 0
+        for coin in coins:
+            total_selected_amount += coin.amount
+            assert coin not in selected_coins
+            selected_coins.append(coin)
+
+            if total_selected_amount >= total_amount:
+                break
+        if total_selected_amount < total_amount:
+            raise ValueError(f"Not enough coins, total value {total_selected_amount}, need {total_amount}")
+
+        change = total_selected_amount - total_amount
+        assert change >= 0
+
+        spends: List[CoinSpend] = []
+        primary_announcement_hash: Optional[bytes32] = None
+        for coin in selected_coins:
+            puzzle: Program = puzzle_for_pk(pk)
+            from_puzzle_hash = puzzle.get_tree_hash()
+            if coin.puzzle_hash != from_puzzle_hash:
+                raise ValueError(
+                    f"Coin puzzle hash[{coin.puzzle_hash}] doesnt match: pk puzzle[{from_puzzle_hash}]"
+                )
+
+            # Only one coin creates outputs
+            if primary_announcement_hash is None:
+                if primaries is None:
+                    primaries = [{"puzzlehash": to_puzzle_hash, "amount": spend_amount}]
+                else:
+                    primaries.append({"puzzlehash": to_puzzle_hash, "amount": spend_amount})
+                if change > 0:
+                    # Send the change back to the original owner
+                    primaries.append({"puzzlehash": from_puzzle_hash, "amount": change})
+
+                message_list: List[bytes32] = [c.name() for c in selected_coins]
+                for primary in primaries:
+                    message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
+                message: bytes32 = std_hash(b"".join(message_list))
+                solution: Program = Wallet().make_solution(
+                    primaries=primaries,
+                    fee=fee,
+                    coin_announcements={message},
+                )
+                primary_announcement_hash = Announcement(coin.name(), message).name()
+            else:
+                solution = Wallet().make_solution(coin_announcements_to_assert={primary_announcement_hash})
+
+            spends.append(
+                CoinSpend(
+                    coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
+                )
+            )
+
+        return spends
+
+    async def create_unsigned_transaction(self, request):
+        if "additions" not in request or len(request["additions"]) < 1:
+            raise ValueError("Specify additions list")
+
+        additions: List[Dict] = request["additions"]
+        spend_amount: uint64 = uint64(additions[0]["amount"])
+        assert spend_amount <= self.service.constants.MAX_COIN_AMOUNT
+
+        to_puzzle_hash = hexstr_to_bytes(additions[0]["puzzle_hash"])
+        if len(to_puzzle_hash) != 32:
+            raise ValueError(f"Address must be 32 bytes. {to_puzzle_hash}")
+
+        from_pk = G1Element.from_bytes(hexstr_to_bytes(request["from_pk"]))
+
+        additional_outputs = []
+        for addition in additions[1:]:
+            receiver_ph = hexstr_to_bytes(addition["puzzle_hash"])
+            if len(receiver_ph) != 32:
+                raise ValueError(f"Address must be 32 bytes. {receiver_ph}")
+            amount = uint64(addition["amount"])
+            if amount > self.service.constants.MAX_COIN_AMOUNT:
+                raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
+            additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount})
+
+        fee = uint64(0)
+        if "fee" in request:
+            fee = uint64(request["fee"])
+
+        if "coins" in request and len(request["coins"]) > 0:
+            coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
+
+        unsigned_tx = await self._generate_unsigned_transaction(
+            from_pk, spend_amount, to_puzzle_hash, fee, coins=coins, primaries=additional_outputs
+        )
+
+        pk_list: List[blspy.G1Element] = []
+        msg_list: List[bytes] = []
+        if len(unsigned_tx) <= 0:
+            raise ValueError("spends is zero")
+
+        for coin_spend in unsigned_tx:
+            # Get AGG_SIG conditions
+            err, conditions_dict, _ = conditions_dict_for_solution(
+                coin_spend.puzzle_reveal, coin_spend.solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            )
+            if err or conditions_dict is None:
+                raise ValueError(f"Create Unsigned transaction failed, con:{conditions_dict}, error: {err}")
+
+            for pk, msg in pkm_pairs_for_conditions_dict(conditions_dict, bytes(coin_spend.coin.name()), DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA):
+                pk_list.append(pk)
+                msg_list.append(msg)
+
+        spend_bundle: SpendBundle = SpendBundle(unsigned_tx, G2Element())
+        addition_coins = spend_bundle.additions()
+        if len(addition_coins) <= 0:
+            raise ValueError("addition_coins is empty")
+
+        return {
+            "solution": unsigned_tx,
+            "pk_list": [bytes(pk).hex() for pk in pk_list],
+            "msg_list": [msg.hex() for msg in msg_list],
+            "addition_coin_ids": [ac.name() for ac in addition_coins],
+        }
 
     async def push_tx(self, request: Dict) -> Optional[Dict]:
         if "spend_bundle" not in request:
