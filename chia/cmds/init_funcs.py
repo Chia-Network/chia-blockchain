@@ -271,7 +271,8 @@ def init(create_certs: Optional[Path], root_path: Path, fix_ssl_permissions: boo
         else:
             print(f"** {root_path} does not exist. Executing core init **")
             # sanity check here to prevent infinite recursion
-            if chia_init(root_path, fix_ssl_permissions=fix_ssl_permissions, testnet=testnet) == 0 and root_path.exists():
+            if chia_init(root_path, fix_ssl_permissions=fix_ssl_permissions, testnet=testnet) \
+            == 0 and root_path.exists():
                 return init(create_certs, root_path, fix_ssl_permissions)
 
             print(f"** {root_path} was not created. Exiting **")
@@ -338,8 +339,8 @@ def chia_full_version_str() -> str:
     major, minor, patch, dev = chia_version_number()
     return f"{major}.{minor}.{patch}{dev}"
 
-
-def chia_init(root_path: Path, *, should_check_keys: bool = True, fix_ssl_permissions: bool = False, testnet: bool = False):
+def chia_init(root_path: Path, *, should_check_keys: bool = True, fix_ssl_permissions: bool = False, \
+testnet: bool = False):
     """
     Standard first run initialization or migration steps. Handles config creation,
     generation of SSL certs, and setting target addresses (via check_keys).
@@ -360,7 +361,7 @@ def chia_init(root_path: Path, *, should_check_keys: bool = True, fix_ssl_permis
         # This is reached if CHIA_ROOT is set, or if user has run chia init twice
         # before a new update.
         if testnet:
-            configure(root_path, None, None, None, None, None, None, None, None, testnet, None)
+            configure(root_path=root_path, testnet=testnet)
         if fix_ssl_permissions:
             fix_ssl(root_path)
         if should_check_keys:
@@ -370,7 +371,7 @@ def chia_init(root_path: Path, *, should_check_keys: bool = True, fix_ssl_permis
 
     create_default_chia_config(root_path)
     if testnet:
-        configure(root_path, None, None, None, None, None, None, None, None, testnet, None)
+        configure(root_path=root_path, testnet=testnet)
     create_all_ssl(root_path)
     if fix_ssl_permissions:
         fix_ssl(root_path)
