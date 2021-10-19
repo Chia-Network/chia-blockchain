@@ -134,8 +134,8 @@ def streamable(cls: Any):
     and adds parse, from bytes, stream, and __bytes__ methods.
 
     The primitives are:
-    * Sized ints serialized in big endian format, i.e uint64
-    * Sized bytes serialized in big endian format, i.e bytes32
+    * Sized ints serialized in big endian format, e.g. uint64
+    * Sized bytes serialized in big endian format, e.g. bytes32
     * BLS public keys serialized in bls format (48 bytes)
     * BLS signatures serialized in bls format (96 bytes)
     * bool serialized into 1 byte (0x01 or 0x00)
@@ -156,7 +156,7 @@ def streamable(cls: Any):
     1. A tuple of x items is serialized by appending the serialization of each item.
     2. A List is serialized into a 4 byte size prefix (number of items) and the serialization of each item.
     3. An Optional is serialized into a 1 byte prefix of 0x00 or 0x01, and if it's one, it's followed by the serialization of the item.
-    4. A Custom item is serialized by calling the .parse method, passing in the stream of bytes into it. And example is a CLVM program.
+    4. A Custom item is serialized by calling the .parse method, passing in the stream of bytes into it. An example is a CLVM program.
 
     All of the constituents must have parse/from_bytes, and stream/__bytes__ and therefore
     be of fixed size. For example, int cannot be a constituent since it is not a fixed size,
