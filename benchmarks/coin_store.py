@@ -31,7 +31,7 @@ async def setup_db() -> DBWrapper:
         pass
     connection = await aiosqlite.connect(db_filename)
     await connection.execute("pragma journal_mode=wal")
-    await connection.execute("pragma synchronous=OFF")
+    await connection.execute("pragma synchronous=FULL")
     return DBWrapper(connection)
 
 
@@ -64,6 +64,7 @@ async def run_new_block_benchmark():
 
     db_wrapper: DBWrapper = await setup_db()
 
+    verbose: bool = "--verbose" in sys.argv
     try:
         coin_store = await CoinStore.create(db_wrapper)
 
@@ -102,14 +103,17 @@ async def run_new_block_benchmark():
             # 19 seconds per block
             timestamp += 19
 
-            print(".", end="")
-            sys.stdout.flush()
+            if verbose:
+                print(".", end="")
+                sys.stdout.flush()
         block_height += NUM_ITERS
 
         total_time = 0
         total_add = 0
         total_remove = 0
-        print("\nProfiling mostly additions ", end="")
+        print("")
+        if verbose:
+            print("Profiling mostly additions ", end="")
         for height in range(block_height, block_height + NUM_ITERS):
 
             # add some new coins
@@ -143,14 +147,18 @@ async def run_new_block_benchmark():
             timestamp += 19
 
             total_time += stop - start
-            print(".", end="")
-            sys.stdout.flush()
+            if verbose:
+                print(".", end="")
+                sys.stdout.flush()
 
         block_height += NUM_ITERS
 
-        print(f"\nMOSTLY ADDITIONS, time: {total_time:0.4f}s additions: {total_add} removals: {total_remove}")
+        if verbose:
+            print("")
+        print(f"{total_time:0.4f}s, MOSTLY ADDITIONS additions: {total_add} removals: {total_remove}")
 
-        print("Profiling mostly removals ", end="")
+        if verbose:
+            print("Profiling mostly removals ", end="")
         total_add = 0
         total_remove = 0
         total_time = 0
@@ -190,14 +198,18 @@ async def run_new_block_benchmark():
             timestamp += 19
 
             total_time += stop - start
-            print(".", end="")
-            sys.stdout.flush()
+            if verbose:
+                print(".", end="")
+                sys.stdout.flush()
 
         block_height += NUM_ITERS
 
-        print(f"\nMOSTLY REMOVALS, time: {total_time:0.4f}s additions: {total_add} removals: {total_remove}")
+        if verbose:
+            print("")
+        print(f"{total_time:0.4f}s, MOSTLY REMOVALS additions: {total_add} removals: {total_remove}")
 
-        print("Profiling full block transactions", end="")
+        if verbose:
+            print("Profiling full block transactions", end="")
         total_add = 0
         total_remove = 0
         total_time = 0
@@ -234,14 +246,18 @@ async def run_new_block_benchmark():
             timestamp += 19
 
             total_time += stop - start
-            print(".", end="")
-            sys.stdout.flush()
+            if verbose:
+                print(".", end="")
+                sys.stdout.flush()
 
         block_height += NUM_ITERS
 
-        print(f"\nFULLBLOCKS, time: {total_time:0.4f}s additions: {total_add} removals: {total_remove}")
+        if verbose:
+            print("")
+        print(f"{total_time:0.4f}s, FULLBLOCKS additions: {total_add} removals: {total_remove}")
 
-        print("profiling get_coin_records_by_names, include_spent ", end="")
+        if verbose:
+            print("profiling get_coin_records_by_names, include_spent ", end="")
         total_time = 0
         found_coins = 0
         for i in range(NUM_ITERS):
@@ -251,15 +267,19 @@ async def run_new_block_benchmark():
             total_time += time() - start
             assert len(records) == 200
             found_coins += len(records)
-            print(".", end="")
-            sys.stdout.flush()
+            if verbose:
+                print(".", end="")
+                sys.stdout.flush()
 
+        if verbose:
+            print("")
         print(
-            f"\nGET RECORDS BY NAMES with spent, time: {total_time:0.4f}s {NUM_ITERS} "
+            f"{total_time:0.4f}s, GET RECORDS BY NAMES with spent {NUM_ITERS} "
             f"lookups found {found_coins} coins in total"
         )
 
-        print("profiling get_coin_records_by_names, without spent coins ", end="")
+        if verbose:
+            print("profiling get_coin_records_by_names, without spent coins ", end="")
         total_time = 0
         found_coins = 0
         for i in range(NUM_ITERS):
@@ -269,15 +289,19 @@ async def run_new_block_benchmark():
             total_time += time() - start
             assert len(records) <= 200
             found_coins += len(records)
-            print(".", end="")
-            sys.stdout.flush()
+            if verbose:
+                print(".", end="")
+                sys.stdout.flush()
 
+        if verbose:
+            print("")
         print(
-            f"\nGET RECORDS BY NAMES without spent, time: {total_time:0.4f}s {NUM_ITERS} "
+            f"{total_time:0.4f}s, GET RECORDS BY NAMES without spent {NUM_ITERS} "
             f"lookups found {found_coins} coins in total"
         )
 
-        print("profiling get_coin_removed_at_height ", end="")
+        if verbose:
+            print("profiling get_coin_removed_at_height ", end="")
         total_time = 0
         found_coins = 0
         for i in range(1, block_height):
@@ -285,11 +309,14 @@ async def run_new_block_benchmark():
             records = await coin_store.get_coins_removed_at_height(i)
             total_time += time() - start
             found_coins += len(records)
-            print(".", end="")
-            sys.stdout.flush()
+            if verbose:
+                print(".", end="")
+                sys.stdout.flush()
 
+        if verbose:
+            print("")
         print(
-            f"\nGET COINS REMOVED AT HEIGHT, time: {total_time:0.4f}s {block_height-1} blocks, "
+            f"{total_time:0.4f}s, GET COINS REMOVED AT HEIGHT {block_height-1} blocks, "
             f"found {found_coins} coins in total"
         )
 
