@@ -157,7 +157,7 @@ class WalletStateManager:
         self.trade_manager = await TradeManager.create(self, self.db_wrapper)
         self.user_settings = await UserSettings.create(self.basic_store)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
-        self.blockchain = await WalletBlockchain.create(self.basic_store)
+        self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants)
         # await self.basic_store._clear_database()
         self.wallet_node = wallet_node
         self.sync_mode = False
@@ -573,7 +573,7 @@ class WalletStateManager:
                 removals[coin.name()] = coin
         return removals
 
-    async def fetch_parent_and_check_for_cat(self, peer, coin_state) -> Tuple[Optional[int], Optional[WalletType]]:
+    async def fetch_parent_and_check_for_cat(self, peer, coin_state) -> Tuple[Optional[uint32], Optional[WalletType]]:
         response: List[CoinState] = await self.wallet_node.get_coin_state([coin_state.coin.parent_coin_info])
         parent_coin_state = response[0]
         assert parent_coin_state.spent_height == coin_state.created_height
@@ -601,8 +601,8 @@ class WalletStateManager:
             if derivation_record is None:
                 self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             else:
-                inner_puzzle: Program = self.main_wallet.puzzle_for_pk(bytes(derivation_record.pubkey))
-                cc_puzzle = construct_cc_puzzle(CC_MOD, bytes(genesis_coin_checker_hash)[1:], inner_puzzle)
+                our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(bytes(derivation_record.pubkey))
+                cc_puzzle = construct_cc_puzzle(CC_MOD, bytes(genesis_coin_checker_hash)[1:], our_inner_puzzle)
                 if cc_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                     return None, None
                 cc_wallet = await CCWallet.create_wallet_for_cc(
@@ -655,6 +655,8 @@ class WalletStateManager:
                 wallet_id, wallet_type = await self.fetch_parent_and_check_for_cat(peer, coin_state)
                 if wallet_id is None or wallet_type is None:
                     continue
+            else:
+                continue
 
             if coin_state.created_height is None:
                 # TODO implements this coin got reorged
@@ -842,11 +844,11 @@ class WalletStateManager:
         """
         existing: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.name())
         if existing is not None:
-            return
+            return None
 
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash.hex())
         if derivation_record is None:
-            return
+            return None
 
         self.log.info(f"Adding coin: {coin} at {height}")
         farmer_reward = False
