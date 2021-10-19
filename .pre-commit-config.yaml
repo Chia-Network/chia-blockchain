@@ -22,3 +22,8 @@ repos:
     hooks:
     - id: mypy
       additional_dependencies: [types-setuptools, types-PyYAML]
+-   # this is slow so keep it last
+    repo: https://github.com/pycqa/pylint
+    rev: v2.11.1
+    hooks:
+    -   id: pylint
