@@ -41,8 +41,6 @@ async def test_create_insert_get(chia_root: ChiaRoot) -> None:
     await connection.close()
 
 
-
-
 @pytest.mark.asyncio
 async def test_create_double_insert(chia_root: ChiaRoot) -> None:
     root = chia_root.path
@@ -76,7 +74,6 @@ async def test_create_double_insert(chia_root: ChiaRoot) -> None:
     with pytest.raises(Exception):
         val = await rpc_api.get_value({"id": store_id, "key": key1.as_bin()})
     await connection.close()
-
 
 
 # @pytest.mark.skip("batches are currently broken")
