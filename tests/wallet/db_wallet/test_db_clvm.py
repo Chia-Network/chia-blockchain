@@ -2,6 +2,7 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_host_fullpuz,
     # create_offer_fullpuz,
     SINGLETON_LAUNCHER,
+    create_host_layer_puzzle,
 )
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.blockchain_format.coin import Coin
@@ -36,13 +37,18 @@ def test_create_db_update():
     genesis_id: bytes32 = Coin(current_root, SINGLETON_LAUNCHER.get_tree_hash(), 201).name()  # see above
     full_puz = create_host_fullpuz(innerpuz, current_root, genesis_id)
     assert full_puz is not None
-    inner_solution = Program.to([[51, innerpuz, 201]])
+    nodes.append(Program.to("blah").get_tree_hash())
+    new_tree = MerkleTree(nodes)
+    new_root = new_tree.calculate_root()
+    host_puz = create_host_layer_puzzle(innerpuz, new_root)
+    inner_solution = Program.to([[51, host_puz.get_tree_hash(), 201]])
     db_solution = Program.to([0, inner_solution])
     # lineage_proof my_amount inner_solution
     launcher_amount = 201
     lineage_proof = Program.to([current_root, launcher_amount])
     full_solution = Program.to([lineage_proof, 201, db_solution])
-
+    full_puz = create_host_fullpuz(innerpuz, new_root, genesis_id)
     cost, result = full_puz.run_with_cost(INFINITE_COST, full_solution)
-    # assert len(result.as_python()) == 5
-    # assert result.as_python()[1][1] == current_root
+
+    assert len(result.as_python()) == 2
+    assert result.as_python()[1][1] == full_puz.get_tree_hash()
