@@ -17,11 +17,7 @@ def test_create_db_report():
     genesis_id: bytes32 = Coin(current_root, SINGLETON_LAUNCHER.get_tree_hash(), 201).name()  # see above
     full_puz = create_host_fullpuz(innerpuz, current_root, genesis_id)
     assert full_puz is not None
-    # spend_type
-    # my_puzhash
-    # my_amount
-    # inner_solution
-    db_solution = Program.to([1, full_puz.get_tree_hash(), 201, 0])
+    db_solution = Program.to([1, (full_puz.get_tree_hash(), 201)])
     # lineage_proof my_amount inner_solution
     launcher_amount = 201
     lineage_proof = Program.to([current_root, launcher_amount])
@@ -30,3 +26,23 @@ def test_create_db_report():
     cost, result = full_puz.run_with_cost(INFINITE_COST, full_solution)
     assert len(result.as_python()) == 5
     assert result.as_python()[1][1] == current_root
+
+
+def test_create_db_update():
+    innerpuz: Program = Program.to(1)
+    nodes = [innerpuz.get_tree_hash(), Program.to([8]).get_tree_hash()]
+    current_tree = MerkleTree(nodes)
+    current_root: bytes32 = current_tree.calculate_root()  # just need a bytes32
+    genesis_id: bytes32 = Coin(current_root, SINGLETON_LAUNCHER.get_tree_hash(), 201).name()  # see above
+    full_puz = create_host_fullpuz(innerpuz, current_root, genesis_id)
+    assert full_puz is not None
+    inner_solution = Program.to([[51, innerpuz, 201]])
+    db_solution = Program.to([0, inner_solution])
+    # lineage_proof my_amount inner_solution
+    launcher_amount = 201
+    lineage_proof = Program.to([current_root, launcher_amount])
+    full_solution = Program.to([lineage_proof, 201, db_solution])
+
+    cost, result = full_puz.run_with_cost(INFINITE_COST, full_solution)
+    # assert len(result.as_python()) == 5
+    # assert result.as_python()[1][1] == current_root
