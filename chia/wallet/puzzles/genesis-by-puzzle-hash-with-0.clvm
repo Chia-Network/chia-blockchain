@@ -17,7 +17,7 @@
     (if delta
         (x)
         (if (= (sha256 parent_parent_id GENESIS_PUZZLE_HASH parent_amount) (my_parent_cat_truth Truths))
-            inner_conditions
+            ()
             (x)
         )
     )
