@@ -156,7 +156,8 @@ class FullNode:
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants, self.hint_store)
-        self.mempool_manager = MempoolManager(self.coin_store, self.constants)
+        mempool_size_in_blocks: uint32 = uint32(self.config.get("mempool_size_in_blocks", 256))
+        self.mempool_manager = MempoolManager(self.coin_store, self.constants, mempool_size_in_blocks)
         self.weight_proof_handler = None
         self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 

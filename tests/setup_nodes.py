@@ -80,6 +80,7 @@ async def setup_full_node(
     send_uncompact_interval=0,
     sanitize_weight_proof_only=False,
     connect_to_daemon=False,
+    mempool_size_in_blocks:Optional[uint32]=None,
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -90,6 +91,8 @@ async def setup_full_node(
     config["target_uncompact_proofs"] = 30
     config["peer_connect_interval"] = 50
     config["sanitize_weight_proof_only"] = sanitize_weight_proof_only
+    if mempool_size_in_blocks is not None:
+        config["mempool_size_in_blocks"] = mempool_size_in_blocks
     if introducer_port is not None:
         config["introducer_peer"]["host"] = self_hostname
         config["introducer_peer"]["port"] = introducer_port
@@ -408,6 +411,7 @@ async def setup_simulators_and_wallets(
     starting_height=None,
     key_seed=None,
     starting_port=50000,
+    mempool_size_in_blocks:Optional[uint32] = None
 ):
     with TempKeyring() as keychain1, TempKeyring() as keychain2:
         simulators: List[FullNodeAPI] = []
@@ -427,6 +431,7 @@ async def setup_simulators_and_wallets(
                 port,
                 bt_tools,
                 simulator=True,
+                mempool_size_in_blocks=mempool_size_in_blocks
             )
             simulators.append(await sim.__anext__())
             node_iters.append(sim)

@@ -100,7 +100,7 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def wallet_nodes():
-    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 400000000})
+    async_gen = setup_simulators_and_wallets(2, 1, {"MAX_BLOCK_COST_CLVM": 400000000}, mempool_size_in_blocks=uint32(2))
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -818,8 +818,6 @@ class TestFullNodeProtocol:
         fake_peer = server_1.all_connections[node_id]
         # Mempool has capacity of 100, make 110 unspents that we can use
         puzzle_hashes = []
-
-        block_buffer_count = full_node_1.full_node.constants.MEMPOOL_BLOCK_BUFFER
 
         # Makes a bunch of coins
         for i in range(5):

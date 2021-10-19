@@ -112,7 +112,6 @@ test_constants = DEFAULT_CONSTANTS.replace(
         * 24
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
         "COST_PER_BYTE": 1337,
-        "MEMPOOL_BLOCK_BUFFER": 6,
         "NETWORK_TYPE": 1,
     }
 )
@@ -148,6 +147,7 @@ class BlockTools:
         self._config = load_config(self.root_path, "config.yaml")
         self._config["logging"]["log_stdout"] = True
         self._config["selected_network"] = "testnet0"
+        self._config["full_node"]["mempool_size_in_blocks"] = 6
         for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
             self._config[service]["selected_network"] = "testnet0"
         save_config(self.root_path, "config.yaml", self._config)

@@ -43,7 +43,7 @@ def get_npc_multiprocess(spend_bundle_bytes: bytes, max_cost: int, cost_per_byte
 
 
 class MempoolManager:
-    def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants):
+    def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants, mempool_size_in_blocks: uint32):
         self.constants: ConsensusConstants = consensus_constants
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
 
@@ -58,7 +58,7 @@ class MempoolManager:
         self.nonzero_fee_minimum_fpc = 5
 
         self.limit_factor = 0.5
-        self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
+        self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * mempool_size_in_blocks)
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 5)

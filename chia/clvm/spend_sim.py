@@ -62,11 +62,11 @@ class SpendSim:
     defaults: ConsensusConstants
 
     @classmethod
-    async def create(cls, defaults=DEFAULT_CONSTANTS):
+    async def create(cls, defaults=DEFAULT_CONSTANTS, mempool_size_in_blocks=uint32(10)):
         self = cls()
         self.connection = await aiosqlite.connect(":memory:")
         coin_store = await CoinStore.create(DBWrapper(self.connection))
-        self.mempool_manager = MempoolManager(coin_store, defaults)
+        self.mempool_manager = MempoolManager(coin_store, defaults, mempool_size_in_blocks)
         self.block_records = []
         self.blocks = []
         self.timestamp = 1

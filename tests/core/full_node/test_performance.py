@@ -16,7 +16,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.clvm import int_to_bytes
-from chia.util.ints import uint64
+from chia.util.ints import uint64, uint32
 from tests.wallet_tools import WalletTool
 
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
@@ -46,7 +46,7 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def wallet_nodes():
-    async_gen = setup_simulators_and_wallets(1, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000})
+    async_gen = setup_simulators_and_wallets(1, 1, {"MAX_BLOCK_COST_CLVM": 11000000000}, mempool_size_in_blocks=uint32(1))
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     server_1 = full_node_1.full_node.server
