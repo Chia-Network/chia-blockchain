@@ -102,10 +102,9 @@ class TestCCLifecycle:
         sim, sim_client = setup_sim
 
         try:
-            FIRST = 5
-            REST = 6
-            # This program always returns the 4th argument to the limiter (inner_conditions)
-            genesis_checker = Program.to([FIRST, [REST, [REST, [REST, [REST, 1]]]]])
+            # This program is the equivalent of `(i () () ())`
+            # It's a hacky workaround to the fact that `()` is not a valid tail
+            genesis_checker = Program.to([3, [], [], []])
             checker_solution = Program.to([])
             cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()

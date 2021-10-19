@@ -11,5 +11,5 @@
 
     (include condition_codes.clvm)
 
-    (c (list AGG_SIG_ME PUBKEY delta) inner_conditions) ; Careful with a delta of zero, the bytecode is 80 not 00
+    (list (list AGG_SIG_ME PUBKEY delta)) ; Careful with a delta of zero, the bytecode is 80 not 00
 )

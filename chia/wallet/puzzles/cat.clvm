@@ -91,8 +91,9 @@
 ;;  extra_delta: an amount that is added to our delta and checked by the TAIL program
 ;;
 
-(mod (MOD_HASH                 ;; curried into puzzle
-      TAIL_PROGRAM_HASH ;; curried into puzzle
+(mod (
+      MOD_HASH                 ;; curried into puzzle
+      TAIL_PROGRAM_HASH        ;; curried into puzzle
       INNER_PUZZLE             ;; curried into puzzle
       inner_puzzle_solution    ;; if invalid, INNER_PUZZLE will fail
       ;;; These arguments are optional depending on how you want to verify that this is a valid spend
@@ -120,21 +121,25 @@
          )
      )
 
-     (defun-inline not (arg)
-      (i arg 0 1)
-     )
-
      ; takes a lisp tree and returns the hash of it
      (defun sha256tree1 (TREE)
            (if (l TREE)
                (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
                (sha256 1 TREE)))
 
+    ; take two lists and merge them into one
+    (defun merge_list (list_a list_b)
+      (if (r list_a)
+        (merge_list (r list_a) (c (f list_a) list_b))
+        (c (f list_a) list_b)
+      )
+    )
+
     ; cat_mod_struct = (MOD_HASH MOD_HASH_hash GENESIS_COIN_CHECKER GENESIS_COIN_CHECKER_hash)
 
     (defun-inline mod_hash_from_cat_mod_struct (cat_mod_struct) (f cat_mod_struct))
     (defun-inline mod_hash_hash_from_cat_mod_struct (cat_mod_struct) (f (r cat_mod_struct)))
-    (defun-inline genesis_coin_checker_hash_from_cat_mod_struct (cat_mod_struct) (f (r (r (r cat_mod_struct)))))
+    (defun-inline tail_program_hash_from_cat_mod_struct (cat_mod_struct) (f (r (r (r cat_mod_struct)))))
 
      ;;;;; end library code
 
@@ -142,7 +147,7 @@
      (defun-inline cat_puzzle_hash (cat_mod_struct inner_puzzle_hash)
        (puzzle-hash-of-curried-function (mod_hash_from_cat_mod_struct cat_mod_struct)
                                         inner_puzzle_hash
-                                        (sha256 ONE (genesis_coin_checker_hash_from_cat_mod_struct cat_mod_struct))
+                                        (sha256 ONE (tail_program_hash_from_cat_mod_struct cat_mod_struct))
                                         (mod_hash_hash_from_cat_mod_struct cat_mod_struct)
        )
      )
@@ -175,7 +180,7 @@
      )
 
      ;; given a coin's parent, inner_puzzle and amount, and the cat_mod_struct, calculate the id of the coin
-     (defun-inline coin_id_for_coin (coin cat_mod_struct)
+     (defun-inline coin_id_for_proof (coin cat_mod_struct)
        (sha256 (f coin) (cat_puzzle_hash cat_mod_struct (f (r coin))) (f (r (r coin))))
      )
 
@@ -282,15 +287,18 @@
       )
       (if tail_program_reveal
           (assert (= (sha256tree1 tail_program_reveal) (cat_tail_program_hash_truth Truths))
-            (a tail_program_reveal
-                (list
-                  Truths
-                  parent_is_cat
-                  lineage_proof
-                  extra_delta
-                  inner_conditions
-                  tail_solution
-                )
+            (merge_list
+              inner_conditions
+              (a  tail_program_reveal
+                  (list
+                    Truths
+                    parent_is_cat
+                    lineage_proof
+                    extra_delta
+                    inner_conditions
+                    tail_solution
+                  )
+              )
             )
           )
           (assert parent_is_cat (not extra_delta)
@@ -335,7 +343,7 @@
 
     ; CAT TRUTHS struct is: ; CAT Truths is: (((innerpuzhash . my_amount) . (lineage_proof . cat_struct)) . ((my_id . full_puzhash) . (my_parent . ())))
     ; create truths - this_coin_info verified true because we calculated my ID from it!
-    ; lineage proof is verified later by cat parent check or genesis_checker_program
+    ; lineage proof is verified later by cat parent check or tail_program
 
     (defun stager (
         cat_mod_struct
@@ -363,7 +371,7 @@
         lineage_proof
         prev_coin_id
         this_coin_info
-        (coin_id_for_coin next_coin_proof cat_mod_struct)
+        (coin_id_for_proof next_coin_proof cat_mod_struct)
         prev_subtotal
         extra_delta
       ))
