@@ -18,7 +18,7 @@ from chia.util.keychain import supports_keyring_passphrase
 @click.option(
     "--testnet",
     is_flag=True,
-    help="Configure this chia install for connecting to a testnet"
+    help="Configure this chia install to connect to the testnet"
 )
 
 @click.option("--set-passphrase", "-s", is_flag=True, help="Protect your keyring with a passphrase")
