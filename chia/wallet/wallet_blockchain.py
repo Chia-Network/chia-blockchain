@@ -1,8 +1,14 @@
 import asyncio
 import logging
 from typing import Dict, Optional, List
+from chia.consensus.block_header_validation import validate_finished_header_block
+from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import WeightProof
 from chia.util.ints import uint32
@@ -11,7 +17,7 @@ from chia.wallet.key_val_store import KeyValStore
 log = logging.getLogger(__name__)
 
 
-class WalletBlockchain:
+class WalletBlockchain(BlockchainInterface):
     constants: ConsensusConstants
     constants_json: Dict
     # peak of the blockchain
@@ -28,12 +34,13 @@ class WalletBlockchain:
     peak: Optional[HeaderBlock]
     peak_verified_by_peer: Dict[bytes32, HeaderBlock]  # Peer node id / Header block that we validated the weight for
     synced_weight_proof: Optional[WeightProof]
-    recent_blocks: List[HeaderBlock]
+    synced_summaries: List[SubEpochSummary]
     recent_blocks_dict: Dict[bytes32, HeaderBlock]
-    height_to_hash: Dict[uint32, bytes32]
+    _height_to_hash: Dict[uint32, bytes32]
+    _block_records: Dict[bytes32, BlockRecord]
 
     @staticmethod
-    async def create(basic_store: KeyValStore):
+    async def create(basic_store: KeyValStore, constants):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
         validated. Uses the genesis block given in override_constants, or as a fallback,
@@ -53,33 +60,31 @@ class WalletBlockchain:
             self._peak_height = uint32(int(stored_height))
 
         self.synced_weight_proof = None
-        self.recent_blocks = []
         self.recent_blocks_dict = {}
-        self.height_to_hash = {}
-
+        self._height_to_hash = {}
+        self._block_records = {}
+        self.synced_summaries = []
+        self.constants = constants
         return self
 
-    def contains_block(self, header_hash):
-        if header_hash in self.recent_blocks_dict:
-            return True
-        else:
-            return False
-
-    def new_weight_proof(self, weight_proof):
+    def new_weight_proof(self, weight_proof, summaries, block_records):
         self.synced_weight_proof = weight_proof
+        self.synced_summaries = summaries
         for block in weight_proof.recent_chain_data:
             self.recent_blocks_dict[block.header_hash] = block
-            self.height_to_hash[block.height] = block.header_hash
+            self._height_to_hash[block.height] = block.header_hash
+        for block_record in block_records:
+            self._block_records[block_record.header_hash] = block_record
 
-    async def new_recent_blocks(self, recent_blocks):
+    async def new_blocks(self, recent_blocks):
         for block in recent_blocks:
-            if block.height in self.height_to_hash:
-                current_hash = self.height_to_hash[block.height]
+            if block.height in self._height_to_hash:
+                current_hash = self._height_to_hash[block.height]
                 if current_hash in self.recent_blocks_dict:
                     self.recent_blocks_dict.pop(current_hash)
 
             self.recent_blocks_dict[block.header_hash] = block
-            self.height_to_hash[block.height] = block.header_hash
+            self._height_to_hash[block.height] = block.header_hash
             if self.peak is None or block.height > self.peak.height:
                 await self.set_peak_block(block)
                 await self.set_peak_height(block.height)
@@ -125,3 +130,49 @@ class WalletBlockchain:
             return self.peak
         obj = await self.basic_store.get_object("PEAK_BLOCK", HeaderBlock)
         return obj
+
+    def contains_block(self, header_hash: bytes32) -> bool:
+        return header_hash in self._block_records
+
+    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+        if self.contains_block(header_hash):
+            return self.block_record(header_hash)
+        return None
+
+    def block_record(self, header_hash: bytes32) -> BlockRecord:
+        return self._block_records[header_hash]
+
+    def add_block_record(self, block_record: BlockRecord):
+        self._block_records[block_record.header_hash] = block_record
+
+    async def validate_blocks(self, blocks: List[HeaderBlock]) -> bool:
+        for block in blocks:
+            if block.height == 0:
+                prev_b: Optional[BlockRecord] = None
+                sub_slot_iters, difficulty = self.constants.SUB_SLOT_ITERS_STARTING, self.constants.DIFFICULTY_STARTING
+            else:
+                if block.prev_header_hash not in self._block_records:
+                    breakpoint()
+                prev_b = self.block_record(block.prev_header_hash)
+                sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+                    self.constants, len(block.finished_sub_slots) > 0, prev_b, self
+                )
+            required_iters, error = validate_finished_header_block(
+                self.constants, self, block, False, difficulty, sub_slot_iters, False
+            )
+            if error is not None:
+                breakpoint()
+                return False
+            if required_iters is None:
+                breakpoint()
+                return False
+            block_record = block_to_block_record(
+                self.constants,
+                self,
+                required_iters,
+                None,
+                block,
+            )
+            self.add_block_record(block_record)
+
+        return True

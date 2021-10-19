@@ -9,8 +9,9 @@ from typing import Callable, Dict, List, Optional, Set, Tuple, Union, Any
 
 from blspy import PrivateKey, AugSchemeMPL
 from packaging.version import Version
+
+from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block, calculate_sp_interval_iters
 from chia.daemon.keychain_proxy import (
     KeychainProxyConnectionFailure,
     connect_to_keychain_and_validate,
@@ -20,7 +21,7 @@ from chia.daemon.keychain_proxy import (
 )
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import wallet_protocol
-from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight, RequestBlocks, RespondBlocks
+from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight, RequestBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
@@ -34,6 +35,8 @@ from chia.protocols.wallet_protocol import (
     RespondSESInfo,
     RespondRemovals,
     RejectRemovalsRequest,
+    RequestHeaderBlocks,
+    RespondHeaderBlocks,
 )
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -41,6 +44,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
@@ -59,7 +63,6 @@ from chia.wallet.util.wallet_sync_utils import (
     validate_removals,
     request_and_validate_removals,
     request_and_validate_additions,
-    get_block_challenge,
 )
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.transaction_record import TransactionRecord
@@ -99,7 +102,7 @@ class WalletNode:
     wallet_peers_initialized: bool
     keychain_proxy: Optional[KeychainProxy]
     weight_proof_handler: WeightProofHandler
-    wallet_peers: WalletPeers
+    wallet_peers: Optional[WalletPeers]
 
     def __init__(
         self,
@@ -134,7 +137,7 @@ class WalletNode:
         self.synced_peers: Set[bytes32] = set()
         self.wallet_peers = None
         self.wallet_peers_initialized = False
-        self.valid_wp_cache = {}
+        self.valid_wp_cache: Dict[bytes32, Any] = {}
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
@@ -221,6 +224,8 @@ class WalletNode:
         return True
 
     async def new_puzzle_hash_created(self, puzzle_hashes):
+        if len(puzzle_hashes) == 0:
+            return
         full_nodes: Dict[bytes32, WSChiaConnection] = self.server.connection_by_type[NodeType.FULL_NODE]
         for node_id, node in full_nodes.items():
             await self.subscribe_to_phs(puzzle_hashes, node)
@@ -439,7 +444,8 @@ class WalletNode:
         return coin_state.coin_states
 
     def is_trusted(self, peer):
-        return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
+        return False
+        # return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
 
     async def state_update_received(self, request: wallet_protocol.CoinStateUpdate, peer):
         assert self.wallet_state_manager is not None
@@ -461,8 +467,8 @@ class WalletNode:
                             peer, coin_state
                         )
                         if wallet_id is not None:
-                            if request.height in self.wallet_state_manager.blockchain.height_to_hash:
-                                header_hash = self.wallet_state_manager.blockchain.height_to_hash[request.height]
+                            if request.height in self.wallet_state_manager.blockchain._height_to_hash:
+                                header_hash = self.wallet_state_manager.blockchain._height_to_hash[request.height]
                                 header_block = self.wallet_state_manager.blockchain.recent_blocks_dict[header_hash]
                                 # re-check the block filter for any new addition /removals
                                 await self.complete_blocks([header_block], peer)
@@ -596,17 +602,19 @@ class WalletNode:
                     peer.peer_node_id not in self.synced_peers
                     and peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS
                 ):
-
-                    valid_weight_proof, weight_proof = await self.fetch_and_validate_the_weight_proof(
-                        peer, response.header_block
-                    )
+                    (
+                        valid_weight_proof,
+                        weight_proof,
+                        summaries,
+                        block_records,
+                    ) = await self.fetch_and_validate_the_weight_proof(peer, response.header_block)
                     if valid_weight_proof is False:
                         await peer.close()
                         return
 
                     self.wallet_state_manager.set_sync_mode(True)
                     await self.untrusted_sync_to_peer(peer, peak, weight_proof)
-                    self.wallet_state_manager.blockchain.new_weight_proof(weight_proof)
+                    self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, summaries, block_records)
                     self.wallet_state_manager.set_sync_mode(False)
                     self.synced_peers.add(peer.peer_node_id)
                     await self.wallet_state_manager.blockchain.set_latest_tx_block(last_tx_block)
@@ -625,6 +633,8 @@ class WalletNode:
         self._pending_tx_handler()
 
     async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer):
+        assert self.wallet_state_manager is not None
+
         top = header_block
         blocks = [top]
         # Fetch blocks backwards until we hit the one that we have,
@@ -643,64 +653,12 @@ class WalletNode:
             top = prev_head
             fork_height = top.height - 1
 
-        max_blocks = 60
-        current_count = 0
-        bottom = blocks[-1]
-        while not current_count > max_blocks and bottom.height > 0:
-            previous = self.wallet_state_manager.blockchain.recent_blocks_dict.get(bottom.prev_header_hash)
-            if previous is None:
-                break
-            current_count += 1
-            blocks.append(previous)
-            bottom = previous
-
         blocks.reverse()
-        found_ses_hash = None
-
-        if self.wallet_state_manager.blockchain.peak is not None:
-            # Find previous last difficulty and last sub slot iters
-            last_difficulty = self.constants.DIFFICULTY_STARTING
-            last_sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
-
-            # Try to find latest SES data by going backwards from peak
-            current = self.wallet_state_manager.blockchain.peak
-            while True:
-                current: Optional[HeaderBlock] = self.wallet_state_manager.blockchain.recent_blocks_dict.get(
-                    current.prev_header_hash
-                )
-                if current is None:
-                    break
-
-                if len(current.finished_sub_slots) > 0:
-                    for sub_slot in current.finished_sub_slots:
-                        if sub_slot.challenge_chain.subepoch_summary_hash is not None:
-                            found_ses_hash = sub_slot.challenge_chain.subepoch_summary_hash
-                            last_difficulty = current.finished_sub_slots[0].challenge_chain.new_difficulty
-                            last_sub_slot_iters = current.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
-                            break
-
-            # IF we didn't find SES data above use the last SES from the weight proof
-            wp = self.wallet_state_manager.blockchain.synced_weight_proof
-            if found_ses_hash is None and wp is not None:
-                if top.height > wp.recent_chain_data[0].height:
-                    for ses in wp.sub_epochs:
-                        if ses.new_difficulty is not None:
-                            last_difficulty = ses.new_difficulty
-                        if ses.new_sub_slot_iters is not None:
-                            last_sub_slot_iters = ses.new_sub_slot_iters
-        else:
-            last_difficulty = self.constants.DIFFICULTY_STARTING
-            last_sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
-
-        validation_dict = self.wallet_state_manager.blockchain.recent_blocks_dict.copy()
-        for block in blocks:
-            validation_dict[block.header_hash] = block
-        validation = self.validate_weight_in_span(blocks, last_difficulty, last_sub_slot_iters, validation_dict)
-        assert validation
-
+        validate_blocks = await self.wallet_state_manager.blockchain.validate_blocks(blocks)
+        assert validate_blocks
         await self.wallet_state_manager.reorg_rollback(fork_height)
         await self.complete_blocks(blocks, peer)
-        await self.wallet_state_manager.blockchain.new_recent_blocks(blocks)
+        await self.wallet_state_manager.blockchain.new_blocks(blocks)
         await self.wallet_state_manager.create_more_puzzle_hashes()
 
     async def complete_blocks(self, header_blocks: List[HeaderBlock], peer: WSChiaConnection):
@@ -726,10 +684,6 @@ class WalletNode:
                 removed_coins = await self.get_removals(peer, block, added_coins, removals)
                 if removed_coins is None:
                     raise ValueError("Failed to fetch removals")
-                # If there is a launcher created, or we have a singleton spent, fetches the required solutions
-                # additional_coin_spends: List[CoinSpend] = await self.get_additional_coin_spends(
-                #     peer, block, added_coins, removed_coins
-                # )
 
                 hbr = HeaderBlockRecord(block, added_coins, removed_coins)
                 header_block_records.append(hbr)
@@ -859,31 +813,36 @@ class WalletNode:
         else:
             return []
 
-    async def fetch_and_validate_the_weight_proof(self, peer, peak) -> Tuple[bool, Optional[WeightProof]]:
+    async def fetch_and_validate_the_weight_proof(
+        self, peer, peak
+    ) -> Tuple[bool, Optional[WeightProof], List[SubEpochSummary], List[BlockRecord]]:
         assert self.wallet_state_manager is not None
 
         weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
         weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(weight_request, timeout=360)
 
         if weight_proof_response is None:
-            return False, None
+            return False, None, [], []
         start_validation = time.time()
 
         weight_proof = weight_proof_response.wp
+
         if weight_proof.get_hash() in self.valid_wp_cache:
-            valid, fork_point = self.valid_wp_cache[weight_proof.get_hash()]
+            valid, fork_point, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
         else:
             start_validation = time.time()
             (
                 valid,
                 fork_point,
-                _,
+                summaries,
+                block_records,
             ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
             if valid:
-                self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point
+                self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point, summaries, block_records
+
         end_validation = time.time()
         self.log.warning(f"It took {end_validation - start_validation} time to validate the weight proof!!!")
-        return valid, weight_proof
+        return valid, weight_proof, summaries, block_records
 
     async def untrusted_subscribe_to_puzzle_hashes(self, peer, save_state, peer_request_cache, weight_proof):
         already_checked = set()
@@ -900,7 +859,6 @@ class WalletNode:
                 else:
                     to_check.append(ph)
                     already_checked.add(ph)
-
             msg = wallet_protocol.RegisterForPhUpdates(all_puzzle_hashes, uint32(0))
             all_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
             assert all_state is not None
@@ -1039,127 +997,104 @@ class WalletNode:
     async def validate_state(
         self, weight_proof: WeightProof, block: FullBlock, peer, peer_request_cache: PeerRequestCache
     ) -> bool:
+        assert self.wallet_state_manager is not None
 
         if block.height >= weight_proof.recent_chain_data[0].height:
             # this was already validated as part of the wp validation
             index = block.height - weight_proof.recent_chain_data[0].height
-            assert weight_proof.recent_chain_data[index].header_hash == block.header_hash
+            if weight_proof.recent_chain_data[index].header_hash != block.header_hash:
+                return False
             return True
         else:
-            request = RequestSESInfo(block.height, block.height + 32)
-            if request.get_hash() in peer_request_cache.ses_requests:
-                res_ses: RespondSESInfo = peer_request_cache.ses_requests[request.get_hash()]
+            start = block.height + 1
+            compare_to_recent = False
+            current_ses: Optional[SubEpochData] = None
+            inserted: Optional[SubEpochData] = None
+            first_height_recent = weight_proof.recent_chain_data[0].height
+            if start > first_height_recent - 1000:
+                compare_to_recent = True
+                end = first_height_recent
             else:
-                res_ses = await peer.request_ses_hashes(request)
+                request = RequestSESInfo(block.height, block.height + 32)
+                if request.get_hash() in peer_request_cache.ses_requests:
+                    res_ses: RespondSESInfo = peer_request_cache.ses_requests[request.get_hash()]
+                else:
+                    res_ses = await peer.request_ses_hashes(request)
+                ses_0 = res_ses.reward_chain_hash[0]
+                last_height = res_ses.heights[0][-1]  # Last height in sub epoch
+                end = last_height
+                for idx, ses in enumerate(weight_proof.sub_epochs):
+                    if idx > len(weight_proof.sub_epochs) - 3:
+                        break
+                    if ses.reward_chain_hash == ses_0:
+                        current_ses = ses
+                        inserted = weight_proof.sub_epochs[idx + 2]
+                        break
+                if current_ses is None:
+                    return False
 
-            ses_0 = res_ses.reward_chain_hash[0]
-            last_height = res_ses.heights[0][-1]
             blocks = []
             blocks_dict = {}
-            diff = last_height - block.height
-            start = block.height
-            end = last_height
-            # get at least 50 block to check
-            if diff < 50:
-                start -= 50 - diff
-            elif diff > 96:
-                end = start + 96
 
             for i in range(start, end + 1, 32):
-                request_h_response = RequestBlocks(min(uint32(i), last_height), min(uint32(i + 31), last_height), True)
+                request_start = min(uint32(i), end)
+                request_end = min(uint32(i + 31), end)
+                request_h_response = RequestHeaderBlocks(request_start, request_end)
                 if request_h_response.get_hash() in peer_request_cache.block_requests:
-                    res_h_blocks: RespondBlocks = peer_request_cache.block_requests[request_h_response.get_hash()]
+                    res_h_blocks: RespondHeaderBlocks = peer_request_cache.block_requests[request_h_response.get_hash()]
                 else:
-                    res_h_blocks = await peer.request_blocks(request_h_response)
+                    res_h_blocks = await peer.request_header_blocks(request_h_response)
                     peer_request_cache.block_requests[request_h_response.get_hash()] = res_h_blocks
-                self.log.info(f"Fetching blocks: {res_h_blocks.blocks[0].height} - {res_h_blocks.blocks[-1].height} ")
-                blocks.extend(res_h_blocks.blocks)
-                for block in res_h_blocks.blocks:
-                    blocks_dict[block.header_hash] = block
+                self.log.info(f"Fetching blocks: {request_start} - {request_end}")
+                blocks.extend(res_h_blocks.header_blocks)
+                for bl in res_h_blocks.header_blocks:
+                    blocks_dict[block.header_hash] = bl
 
-            current_ses: Optional[SubEpochData] = None
-            last_difficulty = self.constants.DIFFICULTY_STARTING
-            last_sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
-            for idx, ses in enumerate(weight_proof.sub_epochs):
-                if ses.new_difficulty is not None:
-                    last_difficulty = ses.new_difficulty
-                if ses.new_sub_slot_iters is not None:
-                    last_sub_slot_iters = ses.new_sub_slot_iters
-                if ses.reward_chain_hash == ses_0:
-                    current_ses = ses
-                    break
-
-            assert current_ses is not None
+            if compare_to_recent and weight_proof.recent_chain_data[0] != blocks[-1]:
+                return False
 
             reversed_blocks = blocks.copy()
             reversed_blocks.reverse()
-            weight_validated = self.validate_weight_in_span(blocks, last_difficulty, last_sub_slot_iters, blocks_dict)
-            return weight_validated
 
-    def validate_weight_in_span(self, blocks, last_difficulty, last_sub_slot_iters, blocks_dict):
-        reversed_blocks = blocks.copy()
-        reversed_blocks.reverse()
-        last_tx_block = None
-        challenge_none = 0
-
-        for idx, block in enumerate(reversed_blocks):
-
-            if idx != 0:
-                if block.header_hash != reversed_blocks[idx - 1].prev_header_hash:
-                    pass
-
-            if block.is_transaction_block and last_tx_block is None:
-                last_tx_block = block
-            elif block.is_transaction_block and last_tx_block is not None:
-                if last_tx_block.foliage_transaction_block.prev_transaction_block_hash != block.header_hash:
+            if not compare_to_recent:
+                last = reversed_blocks[0].finished_sub_slots[-1].reward_chain.get_hash()
+                if inserted is None or last != inserted.reward_chain_hash:
                     return False
+
+            for idx, en_block in enumerate(reversed_blocks):
+                en_block.reward_chain_block.get_hash()
+                if idx == len(reversed_blocks) - 1:
+                    next_block_rc_hash = block.reward_chain_block.get_hash()
+                    prev_hash = block.header_hash
                 else:
-                    last_tx_block = block
+                    next_block_rc_hash = reversed_blocks[idx + 1].reward_chain_block.get_hash()
+                    prev_hash = reversed_blocks[idx + 1].header_hash
 
-            if block.foliage.foliage_transaction_block_hash is not None:
-                valid = AugSchemeMPL.verify(
-                    block.reward_chain_block.proof_of_space.plot_public_key,
-                    block.foliage.foliage_transaction_block_hash,
-                    block.foliage.foliage_transaction_block_signature,
-                )
-                if not valid:
+                if not en_block.prev_header_hash == prev_hash:
                     return False
 
-            overflow = is_overflow_block(self.constants, block.reward_chain_block.signage_point_index)
-            challenge = get_block_challenge(self.constants, block, blocks_dict, False, overflow, False)
-
-            if challenge is not None:
-                if block.reward_chain_block.challenge_chain_sp_vdf is None:
-                    # Edge case of first sp (start of slot), where sp_iters == 0
-                    cc_sp_hash: bytes32 = challenge
+                if len(en_block.finished_sub_slots) > 0:
+                    #  What to do here
+                    reversed_slots = en_block.finished_sub_slots.copy()
+                    reversed_slots.reverse()
+                    for slot_idx, slot in enumerate(reversed_slots[:-1]):
+                        hash_val = reversed_slots[slot_idx + 1].reward_chain.get_hash()
+                        if not hash_val == slot.reward_chain.end_of_slot_vdf.challenge:
+                            return False
+                    if not next_block_rc_hash == reversed_slots[-1].reward_chain.end_of_slot_vdf.challenge:
+                        return False
                 else:
-                    cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+                    if not next_block_rc_hash == en_block.reward_chain_block.reward_chain_ip_vdf.challenge:
+                        return False
 
-                q_str: Optional[bytes32] = block.reward_chain_block.proof_of_space.verify_and_get_quality_string(
-                    self.constants, challenge, cc_sp_hash
-                )
-
-                if q_str is None:
-                    return False
-
-                required_iters: uint64 = calculate_iterations_quality(
-                    self.constants.DIFFICULTY_CONSTANT_FACTOR,
-                    q_str,
-                    block.reward_chain_block.proof_of_space.size,
-                    last_difficulty,
-                    cc_sp_hash,
-                )
-
-                if required_iters >= calculate_sp_interval_iters(self.constants, last_sub_slot_iters):
-                    return False
-            else:
-                challenge_none += 1
-
-        not_none = len(blocks) - challenge_none
-        if blocks[0].height > 32:
-            assert not_none > 32
-
-        return True
+                if idx > len(reversed_blocks) - 50:
+                    if not AugSchemeMPL.verify(
+                        en_block.reward_chain_block.proof_of_space.plot_public_key,
+                        en_block.foliage.foliage_block_data.get_hash(),
+                        en_block.foliage.foliage_block_data_signature,
+                    ):
+                        return False
+            return True
 
     async def fetch_puzzle_solution(self, peer, height: uint32, coin: Coin) -> CoinSpend:
         solution_response = await peer.request_puzzle_solution(
