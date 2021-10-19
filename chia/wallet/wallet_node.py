@@ -102,6 +102,7 @@ class WalletNode:
         self.keychain_proxy = None
         self.local_keychain = local_keychain
         self.root_path = root_path
+        self.base_config = load_config(root_path, "config.yaml")
         self.log = logging.getLogger(name if name else __name__)
         # Normal operation data
         self.cached_blocks: Dict = {}
@@ -401,9 +402,8 @@ class WalletNode:
             if full_node_peer.is_valid():
                 full_node_resolved = full_node_peer
             else:
-                root_config = load_config(self.root_path, "config.yaml")
                 full_node_resolved = PeerInfo(
-                    get_host_addr(full_node_peer.host, root_config.get("prefer_ipv6", True)), full_node_peer.port
+                    get_host_addr(full_node_peer.host, self.base_config.get("prefer_ipv6", True)), full_node_peer.port
                 )
             if full_node_peer in peers or full_node_resolved in peers:
                 self.log.info(f"Will not attempt to connect to other nodes, already connected to {full_node_peer}")
