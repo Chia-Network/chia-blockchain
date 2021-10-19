@@ -40,8 +40,9 @@ class DataStore:
         self.db.row_factory = aiosqlite.Row
 
         await self.db.execute("pragma journal_mode=wal")
-        # https://github.com/Chia-Network/chia-blockchain/pull/8514#issuecomment-923310041
-        await self.db.execute("pragma synchronous=OFF")
+        # Setting to FULL despite other locations being configurable.  If there are
+        # performance issues we can consider other the implications of other options.
+        await self.db.execute("pragma synchronous=FULL")
         # if foreign key checking gets turned off, please add corresponding check methods
         await self.db.execute("PRAGMA foreign_keys=ON")
 
