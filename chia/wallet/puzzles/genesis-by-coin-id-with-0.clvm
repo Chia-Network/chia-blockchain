@@ -18,7 +18,7 @@
     (if delta
         (x)
         (if (= (my_parent_cat_truth Truths) GENESIS_ID)
-          inner_conditions
+          ()
           (x)
         )
     )
