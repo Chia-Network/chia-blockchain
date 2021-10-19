@@ -30,9 +30,7 @@ class DataStore:
     """A key/value store with the pairs being terminal nodes in a CLVM object tree."""
 
     db: aiosqlite.Connection
-    # block_cache: LRUCache
     db_wrapper: DBWrapper
-    # ses_challenge_cache: LRUCache
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper) -> "DataStore":
@@ -43,7 +41,8 @@ class DataStore:
         # Setting to FULL despite other locations being configurable.  If there are
         # performance issues we can consider other the implications of other options.
         await self.db.execute("pragma synchronous=FULL")
-        # if foreign key checking gets turned off, please add corresponding check methods
+        # If foreign key checking gets turned off, please add corresponding check
+        # methods.
         await self.db.execute("PRAGMA foreign_keys=ON")
 
         async with self.db_wrapper.locked_transaction():
@@ -95,7 +94,6 @@ class DataStore:
     async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
         # TODO: maybe verify a transaction is active
 
-        # TODO: verify this is the hashing we want
         node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
 
         # TODO: Review the OR IGNORE bit, should more be done to validate it is
@@ -217,8 +215,6 @@ class DataStore:
                         node.left_hash, node.right_hash
                     )
                 elif isinstance(node, TerminalNode):
-                    # TODO: what form of key and value to hash?  tuple or list for Program.to()?
-                    # expected_hash = Program.to((node.key, node.value)).get_tree_hash()
                     expected_hash = Program.to((node.key, node.value)).get_tree_hash()
 
                 if node.hash != expected_hash:
@@ -255,16 +251,6 @@ class DataStore:
 
         return tree_ids
 
-    # async def get_tree_generation(self, tree_id: bytes32) -> int:
-    #     async with self.db_wrapper.locked_transaction():
-    #         cursor = await self.db.execute(
-    #             "SELECT max(generation) FROM nodes WHERE tree_id == :tree_id",
-    #             {"tree_id": tree_id.hex()},
-    #         )
-    #         [generation] = (row["generation"] async for row in cursor)
-    #
-    #     return generation
-
     async def get_tree_generation(self, tree_id: bytes32, *, lock: bool = True) -> int:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
@@ -289,8 +275,6 @@ class DataStore:
 
         return Root.from_row(row=root_dict)
 
-    # TODO: If we exclude the requested node from the result then we could have a
-    #       consistent List[InternalNode] return type.
     async def get_ancestors(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> List[InternalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
@@ -421,9 +405,6 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT node_type FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
             raw_node_type = await cursor.fetchone()
-            # [node_type] = await cursor.fetchall()
-            # TODO: i'm pretty curious why this one fails...
-            # [node_type] = (NodeType(row["node_type"]) async for row in cursor)
 
         # TODO: real handling
         assert raw_node_type is not None
@@ -502,7 +483,6 @@ class DataStore:
 
                 ancestors = await self.get_ancestors(node_hash=reference_node_hash, tree_id=tree_id, lock=False)
 
-                # create the new internal node
                 if side == Side.LEFT:
                     left = new_terminal_node_hash
                     right = reference_node_hash
@@ -515,7 +495,7 @@ class DataStore:
 
                 traversal_node_hash = reference_node_hash
 
-                # update the rest of the internal nodes
+                # create updated replacements for the rest of the internal nodes
                 for ancestor in ancestors:
                     # TODO: really handle
                     assert isinstance(ancestor, InternalNode)
@@ -616,9 +596,6 @@ class DataStore:
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
             root_node = await self.get_node(node_hash=root.node_hash, lock=False)
 
-            # await self.db.execute("SELECT * FROM node WHERE node.left ==
-            # :hash OR node.right == :hash", {"hash": root_node.hash})
-
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
@@ -635,51 +612,12 @@ class DataStore:
             nodes = [row_to_node(row=row) async for row in cursor]
             hash_to_node: Dict[bytes32, Node] = {}
             for node in reversed(nodes):
-                # node = row_to_node(row)
                 if isinstance(node, InternalNode):
                     node = replace(node, pair=(hash_to_node[node.left_hash], hash_to_node[node.right_hash]))
                 hash_to_node[node.hash] = node
 
-            # nodes = [row_to_node(row=row) async for row in cursor]
-            print(" ++++++++++++++++++++++++++++++++++++++")
             root_node = hash_to_node[root_node.hash]
-            print(root_node)
             # TODO: clvm needs py.typed, SExp.to() needs def to(class_: Type[T], v: CastableType) -> T:
             program: Program = Program.to(root_node)
-            # for node in reversed(nodes):
-            #     print('    ', node)
-            # async for row in cursor:
-            #     # row = {key: value.hex() for key, value in dict(row).items()}
-            #     print(f"    {dict(row)}")
-            print(" ++++++++++++++++++++++++++++++++++++++")
 
         return program
-
-    # async def create_root(self, tree_id: bytes32, node_hash: bytes32):
-    #     # generation = 0
-    #
-    #     async with self.db_wrapper.locked_transaction():
-    #         await _debug_dump(db=self.db, description="before")
-    #
-    #         # await self.db.execute(
-    #         #     "INSERT INTO node(hash, node_type, left, right, key, value)"
-    #         #     " VALUES(:hash, :node_type, :left, :right, :key, :value)",
-    #         #     {
-    #         #         "hash": node_hash.hex(),
-    #         #         "node_type": NodeType.EMPTY,
-    #         #         # "generation": generation,
-    #         #         "left": None,
-    #         #         "right": None,
-    #         #         "key": None,
-    #         #         "value": None,
-    #         #     },
-    #         # )
-    #
-    #         cursor = await self.db.execute(
-    #             "INSERT INTO root(tree_id, generation, node_hash)"
-    #             " VALUES(:tree_id, (SELECT max(generation) + 1 FROM root WHERE tree_id == :tree_id), :node_hash)",
-    #             {"tree_id": tree_id.hex(), "node_hash": None},
-    #         )
-    #         x = list(row async for row in cursor)
-    #
-    #     return node_hash
