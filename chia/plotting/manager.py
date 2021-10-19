@@ -217,6 +217,9 @@ class PlotManager:
             while not self.needs_refresh() and self._refreshing_enabled:
                 time.sleep(1)
 
+            if not self._refreshing_enabled:
+                return
+
             plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(self.root_path)
             plot_directories: Set[Path] = set(plot_filenames.keys())
             plot_paths: List[Path] = []
@@ -237,10 +240,10 @@ class PlotManager:
                     yield 0, []
 
             for remaining, batch in batches():
+                batch_result: PlotRefreshResult = self.refresh_batch(batch, plot_directories)
                 if not self._refreshing_enabled:
                     self.log.debug("refresh_plots: Aborted")
                     break
-                batch_result: PlotRefreshResult = self.refresh_batch(batch, plot_directories)
                 # Set the remaining files since `refresh_batch()` doesn't know them but we want to report it
                 batch_result.remaining = remaining
                 total_result.loaded += batch_result.loaded
@@ -286,6 +289,8 @@ class PlotManager:
             log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')
 
         def process_file(file_path: Path) -> Optional[PlotInfo]:
+            if not self._refreshing_enabled:
+                return None
             filename_str = str(file_path)
             if self.match_str is not None and self.match_str not in filename_str:
                 return None
