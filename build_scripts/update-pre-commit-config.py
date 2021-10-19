@@ -76,4 +76,4 @@ def main(pre_commit_yaml, fail_on_change):
             sys.exit(1)
 
 
-main()
+main()  # pylint: disable=no-value-for-parameter
