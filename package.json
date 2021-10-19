@@ -16,9 +16,15 @@
     "start:wallet": "lerna run start --scope @chia/wallet",
     "dev:gui": "lerna run dev --scope @chia/gui --stream",
     "dev:wallet": "lerna run dev --scope @chia/wallet --stream",
-    "locale:extract": "lerna run locale:extract"
+    "electron": "npm run start:wallet",
+    "locale:extract": "lerna run locale:extract",
+    "audit": "lerna-audit --no-fix",
+    "audit:fix": "lerna-audit"
   },
   "devDependencies": {
-    "lerna": "^4.0.0"
-  }
+    "lerna": "^4.0.0",
+    "lerna-audit": "^1.3.3"
+  },
+
+  "version": "1.2.10-dev132"
 }

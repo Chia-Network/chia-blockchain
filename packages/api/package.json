@@ -12,7 +12,7 @@
   "module": "dist/esm.js",
   "scripts": {
     "build": "npm run build:js",
-    "build:js": "npx rollup -c",
+    "build:js": "rollup -c",
     "build:watch": "rollup -c -w",
     "build:types": "tsc --emitDeclarationOnly"
   },
@@ -24,8 +24,7 @@
     "lodash": "^4.17.21",
     "regenerator-runtime": "^0.13.9"
   },
-  "peerDependencies": {
-  },
+  "peerDependencies": {},
   "devDependencies": {
     "@babel/core": "7.15.8",
     "@babel/plugin-proposal-class-properties": "^7.14.5",

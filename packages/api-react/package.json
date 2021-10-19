@@ -12,7 +12,7 @@
   "module": "dist/esm.js",
   "scripts": {
     "build": "npm run build:js",
-    "build:js": "npx rollup -c",
+    "build:js": "rollup -c",
     "build:watch": "rollup -c -w",
     "build:types": "tsc --emitDeclarationOnly"
   },
