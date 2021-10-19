@@ -15,9 +15,15 @@ from chia.util.keychain import supports_keyring_passphrase
     is_flag=True,
     help="Attempt to fix SSL certificate/key file permissions",
 )
+@click.option(
+    "--testnet",
+    is_flag=True,
+    help="Configure this chia install for connecting to a testnet"
+)
+
 @click.option("--set-passphrase", "-s", is_flag=True, help="Protect your keyring with a passphrase")
 @click.pass_context
-def init_cmd(ctx: click.Context, create_certs: str, fix_ssl_permissions: bool, **kwargs):
+def init_cmd(ctx: click.Context, create_certs: str, fix_ssl_permissions: bool, testnet: bool, **kwargs):
     """
     Create a new configuration or migrate from previous versions to current
 
@@ -38,7 +44,7 @@ def init_cmd(ctx: click.Context, create_certs: str, fix_ssl_permissions: bool, *
     if set_passphrase:
         initialize_passphrase()
 
-    init(Path(create_certs) if create_certs is not None else None, ctx.obj["root_path"], fix_ssl_permissions)
+    init(Path(create_certs) if create_certs is not None else None, ctx.obj["root_path"], fix_ssl_permissions, testnet)
 
 
 if not supports_keyring_passphrase():
