@@ -28,6 +28,7 @@ from chia.wallet.puzzles.genesis_checkers import (
 )
 
 from tests.clvm.test_puzzles import secret_exponent_for_index
+from tests.clvm.benchmark_costs import cost_of_spend_bundle
 
 acs = Program.to(1)
 acs_ph = acs.get_tree_hash()
@@ -58,6 +59,7 @@ class TestCCLifecycle:
         extra_deltas: Optional[List[int]] = None,
         additional_spends: List[SpendBundle] = [],
         limitations_solutions: Optional[List[Program]] = None,
+        cost_str: str = "",
     ):
         if limitations_solutions is None:
             limitations_solutions = [Program.to([])] * len(coins)
@@ -96,6 +98,7 @@ class TestCCLifecycle:
             )
         )
         assert result == expected_result
+        self.cost[cost_str] = cost_of_spend_bundle(spend_bundle)
         await sim.farm_block()
 
     @pytest.mark.asyncio()
@@ -130,6 +133,7 @@ class TestCCLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
+                cost_str="Eve Spend"
             )
 
             # There's 4 total coins at this point. A farming reward and the three children of the spend above.
@@ -149,6 +153,7 @@ class TestCCLifecycle:
                 [Program.to([[51, acs.get_tree_hash(), coins[0].amount + coins[1].amount]]), Program.to([])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 2,
+                cost_str="Two CATs",
             )
 
             # Testing a combination of three
@@ -166,6 +171,7 @@ class TestCCLifecycle:
                 [Program.to([[51, acs.get_tree_hash(), total_amount]]), Program.to([]), Program.to([])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 3,
+                cost_str="Three CATs",
             )
 
             # Spend with a standard lineage proof
@@ -182,6 +188,7 @@ class TestCCLifecycle:
                 [Program.to([[51, acs.get_tree_hash(), total_amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 reveal_limitations_program = False,
+                cost_str="Standard Lineage Check",
             )
 
             # Melt some value
@@ -195,6 +202,7 @@ class TestCCLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[-1],
                 limitations_solutions=[checker_solution],
+                cost_str="Melting Value",
             )
 
             # Mint some value
@@ -225,6 +233,7 @@ class TestCCLifecycle:
                 extra_deltas=[1],
                 additional_spends=[acs_bundle],
                 limitations_solutions=[checker_solution],
+                cost_str="Mint Value",
             )
 
         finally:
@@ -261,6 +270,7 @@ class TestCCLifecycle:
                 [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[GenesisById.solve([], {})],
+                cost_str="Genesis by ID",
             )
 
         finally:
@@ -297,6 +307,7 @@ class TestCCLifecycle:
                 [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[GenesisByPuzhash.solve([], starting_coin.to_json_dict())],
+                cost_str="Genesis by Puzhash",
             )
 
         finally:
@@ -330,6 +341,7 @@ class TestCCLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[EverythingWithSig.solve([], {})],
                 signatures=[signature],
+                cost_str="Signature Issuance",
             )
 
             # Test melting value
@@ -349,6 +361,7 @@ class TestCCLifecycle:
                 extra_deltas=[-1],
                 limitations_solutions=[EverythingWithSig.solve([], {})],
                 signatures=[signature],
+                cost_str="Signature Melt",
             )
 
             # Test minting value
@@ -385,6 +398,7 @@ class TestCCLifecycle:
                 limitations_solutions=[EverythingWithSig.solve([], {})],
                 signatures=[signature],
                 additional_spends=[acs_bundle],
+                cost_str="Signature Mint",
             )
 
         finally:
@@ -439,7 +453,14 @@ class TestCCLifecycle:
                         },
                     )
                 ],
+                cost_str="Delegated Genesis",
             )
 
         finally:
             await sim.close()
+
+    def test_cost(self):
+        import json
+        import logging
+        log = logging.getLogger(__name__)
+        log.warning(json.dumps(self.cost))
