@@ -11,6 +11,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import disconnect_all_and_reconnect
+from tests.core.fixtures import default_400_blocks, default_1000_blocks, default_10000_blocks
 from tests.setup_nodes import bt, self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 
@@ -72,6 +73,33 @@ class TestWalletSync:
         await time_out_assert(
             100, wallet_height_at_least, True, wallet_node, len(default_400_blocks) + num_blocks - 5 - 1
         )
+
+    @pytest.mark.asyncio
+    async def test_almost_recent(self, wallet_node, default_1000_blocks):
+
+        full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
+
+        for block in default_1000_blocks:
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+
+        # Tests a reorg with the wallet
+        num_blocks = 30
+        new_blocks = bt.get_consecutive_blocks(
+            num_blocks, block_list_input=default_1000_blocks, pool_reward_puzzle_hash=ph
+        )
+        for i in range(1000, len(new_blocks)):
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[i]))
+
+        new_blocks = bt.get_consecutive_blocks(500, block_list_input=new_blocks)
+        for i in range(1030, len(new_blocks)):
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[i]))
+
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+
+        await time_out_assert(10, wallet.get_confirmed_balance(), 30 * calculate_pool_reward(1000))
 
     @pytest.mark.asyncio
     async def test_backtrack_sync_wallet(self, wallet_node, default_400_blocks):

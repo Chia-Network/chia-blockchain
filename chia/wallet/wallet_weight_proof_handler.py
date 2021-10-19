@@ -4,6 +4,7 @@ import random
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import List, Optional, Tuple, Any
 
+from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.weight_proof import (
     _validate_sub_epoch_summaries,
@@ -11,6 +12,7 @@ from chia.full_node.weight_proof import (
     validate_sub_epoch_sampling,
     _validate_recent_blocks,
     _validate_sub_epoch_segments,
+    _validate_recent_blocks_and_get_records,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -81,10 +83,12 @@ class WalletWeightProofHandler:
             return False, uint32(0)
         return True, self.get_fork_point(summaries)
 
-    async def validate_weight_proof(self, weight_proof: WeightProof) -> Tuple[bool, uint32, List[SubEpochSummary]]:
+    async def validate_weight_proof(
+        self, weight_proof: WeightProof
+    ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
         assert len(weight_proof.sub_epochs) > 0
         if len(weight_proof.sub_epochs) == 0:
-            return False, uint32(0), []
+            return False, uint32(0), [], []
 
         peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
         log.info(f"validate weight proof peak height {peak_height}")
@@ -92,13 +96,13 @@ class WalletWeightProofHandler:
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
         if summaries is None:
             log.error("weight proof failed sub epoch data validation")
-            return False, uint32(0), []
+            return False, uint32(0), [], []
 
         seed = summaries[-2].get_hash()
         rng = random.Random(seed)
         if not validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
             log.error("failed weight proof sub epoch sample validation")
-            return False, uint32(0), []
+            return False, uint32(0), [], []
 
         executor = ProcessPoolExecutor(1)
         constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
@@ -109,25 +113,25 @@ class WalletWeightProofHandler:
         )
 
         recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
-            executor, _validate_recent_blocks, constants, wp_recent_chain_bytes, summary_bytes
+            executor, _validate_recent_blocks_and_get_records, constants, wp_recent_chain_bytes, summary_bytes
         )
 
-        valid_recent_blocks = await recent_blocks_validation_task
-        # valid_recent_blocks, recent_block_records = _validate_recent_blocks(
-        #     constants, wp_recent_chain_bytes, summary_bytes, True
-        # )
+        valid_recent_blocks, sub_block_bytes = await recent_blocks_validation_task
+
         if not valid_recent_blocks:
             log.error("failed validating weight proof recent blocks")
             # Verify the data
-            return False, uint32(0), []
+            return False, uint32(0), [], []
 
         valid_segments = await segment_validation_task
         if not valid_segments:
             log.error("failed validating weight proof sub epoch segments")
-            return False, uint32(0), []
+            return False, uint32(0), [], []
+
+        sub_blocks = [BlockRecord.from_bytes(b) for b in sub_block_bytes]
 
         # TODO fix find fork point
-        return True, uint32(0), summaries
+        return True, uint32(0), summaries, sub_blocks
 
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point

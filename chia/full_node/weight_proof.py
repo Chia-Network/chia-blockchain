@@ -1173,14 +1173,14 @@ def sub_slot_data_vdf_input(
     return cc_input
 
 
-def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, summaries_bytes: List[bytes]) -> bool:
-    constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
-    recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
+def validate_recent_blocks(
+    constants: ConsensusConstants, recent_chain: RecentChainData, summaries: List[SubEpochSummary]
+) -> Tuple[bool, List[bytes]]:
     sub_blocks = BlockCache({})
     first_ses_idx = _get_ses_idx(recent_chain.recent_chain_data)
     ses_idx = len(summaries) - len(first_ses_idx)
     ssi: uint64 = constants.SUB_SLOT_ITERS_STARTING
-    diff: Optional[uint64] = constants.DIFFICULTY_STARTING
+    diff: uint64 = constants.DIFFICULTY_STARTING
     last_blocks_to_validate = 100  # todo remove cap after benchmarks
     for summary in summaries[:ses_idx]:
         if summary.new_sub_slot_iters is not None:
@@ -1189,10 +1189,11 @@ def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, sum
             diff = summary.new_difficulty
 
     ses_blocks, sub_slots, transaction_blocks = 0, 0, 0
-    challenge, prev_challenge = None, None
+    challenge, prev_challenge = recent_chain.recent_chain_data[0].reward_chain_block.pos_ss_cc_challenge_hash, None
     tip_height = recent_chain.recent_chain_data[-1].height
     prev_block_record = None
     deficit = uint8(0)
+    adjusted = False
     for idx, block in enumerate(recent_chain.recent_chain_data):
         required_iters = uint64(0)
         overflow = False
@@ -1213,21 +1214,30 @@ def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, sum
 
         if (challenge is not None) and (prev_challenge is not None):
             overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+            if not adjusted:
+                prev_block_record = dataclasses.replace(
+                    prev_block_record, deficit=deficit % constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
+                )
+                assert prev_block_record is not None
+                sub_blocks.add_block_record(prev_block_record)
+                adjusted = True
             deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
             log.debug(f"wp, validate block {block.height}")
             if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
-                required_iters, error = validate_finished_header_block(
+                caluclated_required_iters, error = validate_finished_header_block(
                     constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
                 )
                 if error is not None:
                     log.error(f"block {block.header_hash} failed validation {error}")
-                    return False
+                    return False, []
+                assert caluclated_required_iters is not None
+                required_iters = caluclated_required_iters
             else:
                 required_iters = _validate_pospace_recent_chain(
                     constants, block, challenge, diff, overflow, prev_challenge
                 )
                 if required_iters is None:
-                    return False
+                    return False, []
 
         curr_block_ses = None if not ses else summaries[ses_idx - 1]
         block_record = header_block_to_sub_block_record(
@@ -1244,7 +1254,22 @@ def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, sum
             ses_blocks += 1
         prev_block_record = block_record
 
-    return True
+    return True, [bytes(sub) for sub in sub_blocks._block_records.values()]
+
+
+def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, summaries_bytes: List[bytes]) -> bool:
+    constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
+    recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
+    success, records = validate_recent_blocks(constants, recent_chain, summaries)
+    return success
+
+
+def _validate_recent_blocks_and_get_records(
+    constants_dict: Dict, recent_chain_bytes: bytes, summaries_bytes: List[bytes]
+) -> Tuple[bool, List[bytes]]:
+    constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
+    recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
+    return validate_recent_blocks(constants, recent_chain, summaries)
 
 
 def _validate_pospace_recent_chain(
@@ -1494,13 +1519,13 @@ def _get_ses_idx(recent_reward_chain: List[HeaderBlock]) -> List[int]:
 def get_deficit(
     constants: ConsensusConstants,
     curr_deficit: uint8,
-    prev_block: BlockRecord,
+    prev_block: Optional[BlockRecord],
     overflow: bool,
     num_finished_sub_slots: int,
 ) -> uint8:
     if prev_block is None:
         if curr_deficit >= 1 and not (overflow and curr_deficit == constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK):
-            curr_deficit -= 1
+            curr_deficit = uint8(curr_deficit - 1)
         return curr_deficit
 
     return calculate_deficit(constants, uint32(prev_block.height + 1), prev_block, overflow, num_finished_sub_slots)
