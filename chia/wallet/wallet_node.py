@@ -403,7 +403,7 @@ class WalletNode:
                 full_node_resolved = full_node_peer
             else:
                 full_node_resolved = PeerInfo(
-                    get_host_addr(full_node_peer.host, self.base_config.get("prefer_ipv6", True)), full_node_peer.port
+                    get_host_addr(full_node_peer.host, self.base_config.get("prefer_ipv6")), full_node_peer.port
                 )
             if full_node_peer in peers or full_node_resolved in peers:
                 self.log.info(f"Will not attempt to connect to other nodes, already connected to {full_node_peer}")
