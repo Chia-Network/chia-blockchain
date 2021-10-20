@@ -6,21 +6,18 @@ import click
 from chia.util.config import load_config, save_config, str2bool
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
-# the use of any type here is because calling this from click passes None type for nay of these, and when calling from upstream outside of click
-# you cannot pass mypy because mypy evaluates the upstream None you must set i.e.: configure(root_path, None, None, None, None, None, None, None, None, "true", None)
-# as being the incorrect variable type for this class. This is a massive kludge imo, open to suggestions. 
 def configure(
     root_path: Path,
-    set_farmer_peer: any,
-    set_node_introducer: any,
-    set_fullnode_port: any,
-    set_harvester_port: any,
-    set_log_level: any,
-    enable_upnp: any,
-    set_outbound_peer_count: any,
-    set_peer_count: any,
-    testnet: any,
-    peer_connect_timeout: any,
+    set_farmer_peer: str,
+    set_node_introducer: str,
+    set_fullnode_port: str,
+    set_harvester_port: str,
+    set_log_level: str,
+    enable_upnp: str,
+    set_outbound_peer_count: str,
+    set_peer_count: str,
+    testnet: str,
+    peer_connect_timeout: str,
 ):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False
@@ -76,22 +73,22 @@ def configure(
             change_made = True
         else:
             print(f"Logging level not updated. Use one of: {levels}")
-    if enable_upnp is not None:
+    if enable_upnp:
         config["full_node"]["enable_upnp"] = str2bool(enable_upnp)
         if str2bool(enable_upnp):
             print("uPnP enabled")
         else:
             print("uPnP disabled")
         change_made = True
-    if set_outbound_peer_count is not None:
+    if set_outbound_peer_count:
         config["full_node"]["target_outbound_peer_count"] = int(set_outbound_peer_count)
         print("Target outbound peer count updated")
         change_made = True
-    if set_peer_count is not None:
+    if set_peer_count:
         config["full_node"]["target_peer_count"] = int(set_peer_count)
         print("Target peer count updated")
         change_made = True
-    if testnet is not None:
+    if testnet:
         if testnet == "true" or testnet == "t":
             print("Setting Testnet")
             testnet_port = "58444"
@@ -148,7 +145,7 @@ def configure(
         else:
             print("Please choose True or False")
 
-    if peer_connect_timeout is not None:
+    if peer_connect_timeout:
         config["full_node"]["peer_connect_timeout"] = int(peer_connect_timeout)
         change_made = True
 
