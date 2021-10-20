@@ -54,6 +54,7 @@ class TestStrictClass(unittest.TestCase):
 
         assert TestClass2(25)
         try:
+            # pylint: disable=too-many-function-args
             TestClass2(1, 2)  # type: ignore
             assert False
         except TypeError:
