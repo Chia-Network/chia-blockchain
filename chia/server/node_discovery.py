@@ -78,6 +78,7 @@ class FullNodeDiscovery:
         self.serialize_task: Optional[asyncio.Task] = None
         self.cleanup_task: Optional[asyncio.Task] = None
         self.initial_wait: int = 0
+        self.connection = None
         try:
             self.resolver: Optional[dns.asyncresolver.Resolver] = dns.asyncresolver.Resolver()
         except Exception:
@@ -117,7 +118,8 @@ class FullNodeDiscovery:
             self.cancel_task_safe(t)
         if len(self.pending_tasks) > 0:
             await asyncio.wait(self.pending_tasks)
-        await self.connection.close()
+        if self.connection is not None:
+            await self.connection.close()
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:
