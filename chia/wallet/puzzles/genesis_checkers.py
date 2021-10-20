@@ -36,7 +36,9 @@ class LimitationsProgram:
         raise NotImplementedError("Need to implement 'solve' on limitations programs")
 
     @classmethod
-    async def generate_issuance_bundle(cls, wallet, cat_tail_info: Dict, amount: uint64) -> SpendBundle:
+    async def generate_issuance_bundle(
+        cls, wallet, cat_tail_info: Dict, amount: uint64
+    ) -> Tuple[TransactionRecord, SpendBundle]:
         raise NotImplementedError("Need to implement 'generate_issuance_bundle' on limitations programs")
 
 
@@ -63,7 +65,7 @@ class GenesisById(LimitationsProgram):
         return Program.to([])
 
     @classmethod
-    async def generate_issuance_bundle(cls, wallet, _: Dict, amount: uint64) -> SpendBundle:
+    async def generate_issuance_bundle(cls, wallet, _: Dict, amount: uint64) -> Tuple[TransactionRecord, SpendBundle]:
         coins = await wallet.standard_wallet.select_coins(amount)
 
         origin = coins.copy().pop()
