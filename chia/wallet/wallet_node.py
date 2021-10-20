@@ -601,7 +601,7 @@ class WalletNode:
                     await peer.close()
                     return
 
-                far_behind: bool = peak.height - (await self.wallet_state_manager.blockchain.get_synced_height()) > 200
+                far_behind: bool = peak.height - self.wallet_state_manager.blockchain.get_peak_height() > 200
 
                 # check if claimed peak is heavier or same as our current peak
                 # if we haven't synced fully to this peer sync again
