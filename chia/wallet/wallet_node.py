@@ -101,7 +101,6 @@ class WalletNode:
     logged_in: bool
     wallet_peers_initialized: bool
     keychain_proxy: Optional[KeychainProxy]
-    weight_proof_handler: WeightProofHandler
     wallet_peers: Optional[WalletPeers]
 
     def __init__(
@@ -138,7 +137,6 @@ class WalletNode:
         self.wallet_peers = None
         self.wallet_peers_initialized = False
         self.valid_wp_cache: Dict[bytes32, Any] = {}
-        self.weight_proof_task: Optional[asyncio.Task] = None
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
@@ -235,19 +233,15 @@ class WalletNode:
 
     async def _await_closed(self) -> Optional[asyncio.Task]:
         self.log.info("self._await_closed")
-        await self.server.close_all_connections()
+        if self.server is not None:
+            await self.server.close_all_connections()
         wallet_peers_close_task = None
         if self.wallet_peers is not None:
             wallet_peers_close_task = asyncio.create_task(self.wallet_peers.ensure_is_closed())
         if self.wallet_state_manager is not None:
-            await self.wallet_state_manager.close_all_stores()
-            self.wallet_state_manager = None
+            await self.wallet_state_manager._await_closed()
         self.logged_in = False
         self.wallet_peers = None
-
-        if self.weight_proof_task is not None:
-            self.weight_proof_task.cancel()
-            self.weight_proof_task = None
         return wallet_peers_close_task
 
     def _set_state_changed_callback(self, callback: Callable):
@@ -526,7 +520,7 @@ class WalletNode:
                 return True
         return False
 
-    async def fetch_last_tx_from_peer(self, height, peer) -> Optional[HeaderBlock]:
+    async def fetch_last_tx_from_peer(self, height: uint32, peer: WSChiaConnection) -> Optional[HeaderBlock]:
         request_height = height
         while True:
             if request_height == 0:
@@ -538,7 +532,7 @@ class WalletNode:
                     return response.header_block
             else:
                 break
-            request_height -= 1
+            request_height = uint32(request_height - 1)
         return None
 
     async def fetch_block(self, height):
@@ -825,9 +819,10 @@ class WalletNode:
             return []
 
     async def fetch_and_validate_the_weight_proof(
-        self, peer, peak
+        self, peer: WSChiaConnection, peak: HeaderBlock
     ) -> Tuple[bool, Optional[WeightProof], List[SubEpochSummary], List[BlockRecord]]:
         assert self.wallet_state_manager is not None
+        assert self.wallet_state_manager.weight_proof_handler is not None
 
         weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
         weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(weight_request, timeout=360)
@@ -842,18 +837,17 @@ class WalletNode:
             valid, fork_point, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
         else:
             start_validation = time.time()
-            self.weight_proof_task = asyncio.create_task(self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof))
             (
                 valid,
                 fork_point,
                 summaries,
                 block_records,
-            ) = await self.weight_proof_task
+            ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
             if valid:
                 self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point, summaries, block_records
 
         end_validation = time.time()
-        self.log.warning(f"It took {end_validation - start_validation} time to validate the weight proof!!!")
+        self.log.warning(f"It took {end_validation - start_validation} time to validate the weight proof")
         return valid, weight_proof, summaries, block_records
 
     async def untrusted_subscribe_to_puzzle_hashes(self, peer, save_state, peer_request_cache, weight_proof):

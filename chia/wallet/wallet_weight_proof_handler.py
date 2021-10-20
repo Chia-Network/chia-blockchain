@@ -38,11 +38,20 @@ class WalletWeightProofHandler:
         constants: ConsensusConstants,
         blockchain: Any,
     ):
-        self.tip: Optional[bytes32] = None
-        self.proof: Optional[WeightProof] = None
-        self.constants = constants
-        self.blockchain = blockchain
-        self.lock = asyncio.Lock()
+        self._constants = constants
+        self._blockchain = blockchain
+        self._executor: ProcessPoolExecutor = ProcessPoolExecutor(1)
+        self._weight_proof_tasks: List[asyncio.Task] = []
+
+    def cancel_weight_proof_tasks(self):
+        log.warning("CANCELLING WEIGHT PROOF TASKS")
+        old_executor = self._executor
+        self._executor = ProcessPoolExecutor(1)
+        old_executor.shutdown(wait=False)
+        for task in self._weight_proof_tasks:
+            if not task.done():
+                task.cancel()
+        self._weight_proof_tasks = []
 
     def validate_weight_proof_single_proc(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
         assert len(weight_proof.sub_epochs) > 0
@@ -51,12 +60,12 @@ class WalletWeightProofHandler:
 
         peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
         log.info(f"validate weight proof peak height {peak_height}")
-        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
+        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
         if summaries is None:
             log.warning("weight proof failed sub epoch data validation")
             return False, uint32(0)
         constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
-            self.constants, summaries, weight_proof
+            self._constants, summaries, weight_proof
         )
         log.info("validate sub epoch challenge segments")
         seed = summaries[-2].get_hash()
@@ -77,13 +86,22 @@ class WalletWeightProofHandler:
         assert len(weight_proof.sub_epochs) > 0
         if len(weight_proof.sub_epochs) == 0:
             return False, uint32(0)
-        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
+        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
         if summaries is None:
             log.warning("weight proof failed to validate sub epoch summaries")
             return False, uint32(0)
         return True, self.get_fork_point(summaries)
 
     async def validate_weight_proof(
+        self, weight_proof: WeightProof
+    ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
+        task: asyncio.Task = asyncio.create_task(self.validate_weight_proof_inner(weight_proof))
+        self._weight_proof_tasks.append(task)
+        valid, fork_point, summaries, block_records = await task
+        self._weight_proof_tasks.remove(task)
+        return valid, fork_point, summaries, block_records
+
+    async def validate_weight_proof_inner(
         self, weight_proof: WeightProof
     ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
         assert len(weight_proof.sub_epochs) > 0
@@ -93,7 +111,7 @@ class WalletWeightProofHandler:
         peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
         log.info(f"validate weight proof peak height {peak_height}")
 
-        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
+        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
         if summaries is None:
             log.error("weight proof failed sub epoch data validation")
             return False, uint32(0), [], []
@@ -104,16 +122,15 @@ class WalletWeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0), [], []
 
-        executor = ProcessPoolExecutor(1)
         constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
-            self.constants, summaries, weight_proof
+            self._constants, summaries, weight_proof
         )
         segment_validation_task = asyncio.get_running_loop().run_in_executor(
-            executor, _validate_sub_epoch_segments, constants, rng, wp_segment_bytes, summary_bytes
+            self._executor, _validate_sub_epoch_segments, constants, rng, wp_segment_bytes, summary_bytes
         )
 
         recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
-            executor, _validate_recent_blocks_and_get_records, constants, wp_recent_chain_bytes, summary_bytes
+            self._executor, _validate_recent_blocks_and_get_records, constants, wp_recent_chain_bytes, summary_bytes
         )
 
         valid_recent_blocks, sub_block_bytes = await recent_blocks_validation_task
@@ -136,10 +153,10 @@ class WalletWeightProofHandler:
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point
         fork_point_index = 0
-        ses_heights = self.blockchain.get_ses_heights()
+        ses_heights = self._blockchain.get_ses_heights()
         for idx, summary_height in enumerate(ses_heights):
             log.debug(f"check summary {idx} height {summary_height}")
-            local_ses = self.blockchain.get_ses(summary_height)
+            local_ses = self._blockchain.get_ses(summary_height)
             if idx == len(received_summaries) - 1:
                 # end of wp summaries, local chain is longer or equal to wp chain
                 break
@@ -148,7 +165,7 @@ class WalletWeightProofHandler:
             fork_point_index = idx
 
         if fork_point_index > 2:
-            # Two summeries can have different blocks and still be identical
+            # Two summaries can have different blocks and still be identical
             # This gets resolved after one full sub epoch
             height = ses_heights[fork_point_index - 2]
         else:

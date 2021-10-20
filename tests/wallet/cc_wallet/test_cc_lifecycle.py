@@ -133,7 +133,7 @@ class TestCCLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
-                cost_str="Eve Spend"
+                cost_str="Eve Spend",
             )
 
             # There's 4 total coins at this point. A farming reward and the three children of the spend above.
@@ -187,7 +187,7 @@ class TestCCLifecycle:
                 [lineage_proof],
                 [Program.to([[51, acs.get_tree_hash(), total_amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
-                reveal_limitations_program = False,
+                reveal_limitations_program=False,
                 cost_str="Standard Lineage Check",
             )
 
@@ -462,5 +462,6 @@ class TestCCLifecycle:
     def test_cost(self):
         import json
         import logging
+
         log = logging.getLogger(__name__)
         log.warning(json.dumps(self.cost))

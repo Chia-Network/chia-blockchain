@@ -8,6 +8,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 
+
 def cost_of_spend_bundle(spend_bundle: SpendBundle) -> int:
     program: BlockGenerator = simple_solution_generator(spend_bundle)
     npc_result: NPCResult = get_name_puzzle_conditions(
