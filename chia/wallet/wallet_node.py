@@ -223,7 +223,7 @@ class WalletNode:
         if len(puzzle_hashes) == 0:
             return
         full_nodes: Dict[bytes32, WSChiaConnection] = self.server.connection_by_type[NodeType.FULL_NODE]
-        for node_id, node in full_nodes.items():
+        for node_id, node in full_nodes.copy().items():
             await self.subscribe_to_phs(puzzle_hashes, node)
 
     def _close(self):
