@@ -49,31 +49,3 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
         expected = {"row_data": row_data, "row_hash": row_hash, "success": True}
 
         assert parsed == expected
-
-
-# todo tmp test
-@pytest.mark.asyncio
-# @pytest.mark.skip("tmp test")
-async def test_create() -> None:
-    """Create a table, insert a row, get the row by its hash."""
-    root = DEFAULT_ROOT_PATH
-    bt = await create_block_tools_async()
-    config = bt.config
-    config["database_path"] = "data_layer_test"
-    data_layer = DataLayer(config, root_path=root, consensus_constants=DEFAULT_CONSTANTS)
-    connection = await aiosqlite.connect(data_layer.db_path)
-    data_layer.connection = connection
-    data_layer.db_wrapper = DBWrapper(data_layer.connection)
-    data_layer.data_store = await DataStore.create(data_layer.db_wrapper)
-    data_layer.initialized = True
-
-    rpc_api = DataLayerRpcApi(data_layer)
-    key = Program.to("abc")
-    value = Program.to([1, 2])
-    changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.as_bin(), "value": value.as_bin()}]
-    res = await rpc_api.create_kv_store()
-
-    tree_id = res["id"]
-    await rpc_api.update_kv_store({"id": tree_id, "changelist": changelist})
-    await rpc_api.get_value({"id": tree_id, "key": key.as_bin()})
-    return
