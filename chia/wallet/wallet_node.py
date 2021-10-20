@@ -444,8 +444,7 @@ class WalletNode:
         return coin_state.coin_states
 
     def is_trusted(self, peer):
-        return False
-        # return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
+        return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
 
     async def state_update_received(self, request: wallet_protocol.CoinStateUpdate, peer):
         assert self.wallet_state_manager is not None
@@ -590,7 +589,10 @@ class WalletNode:
                     return
                 assert last_tx_block is not None
                 assert last_tx_block.foliage_transaction_block is not None
-                if last_tx_block.foliage_transaction_block.timestamp < int(time.time()) - 600:
+                if (
+                    self.config["testing"] is False
+                    and last_tx_block.foliage_transaction_block.timestamp < int(time.time()) - 600
+                ):
                     # Full node not synced, don't sync to it
                     self.log.info("Peer we connected to is not fully synced, dropping connection...")
                     await peer.close()
