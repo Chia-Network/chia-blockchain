@@ -95,18 +95,20 @@ class DataLayer:
     ) -> bool:
         for change in changelist:
             if change["action"] == "insert":
-                key = Program.from_bytes(bytes(change["key"]))
-                value = Program.from_bytes(bytes(change["value"]))
+                key = bytes32(change["key"])
+                value = bytes32(change["value"])
                 reference_node_hash = None
                 if "reference_node_hash" in change:
                     reference_node_hash = Program.from_bytes(change["reference_node_hash"])
                 side = None
                 if side in change:
                     side = Side(change["side"])
-                await self.data_store.insert(key, value, tree_id, reference_node_hash, side)
+                if reference_node_hash or side:
+                    await self.data_store.insert(key, value, tree_id, reference_node_hash, side)
+                await self.data_store.autoinsert(key, value, tree_id)
             else:
                 assert change["action"] == "delete"
-                key = Program.from_bytes(change["key"])
+                key = bytes32(change["key"])
                 await self.data_store.delete(key, tree_id)
 
         # state = await self.data_store.get_table_state(table)

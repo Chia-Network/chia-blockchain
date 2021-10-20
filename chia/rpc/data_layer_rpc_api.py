@@ -29,7 +29,7 @@ class DataLayerRpcApi:
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(bytes(request["id"]))
-        key = Program.from_bytes(bytes(request["key"]))
+        key = bytes32(bytes(request["key"]))
         value = await self.service.get_value(store_id=store_id, key=key)
         return {"data": value}
 
