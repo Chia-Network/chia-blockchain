@@ -36,6 +36,7 @@ from chia.wallet.cc_wallet.cc_utils import (
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.genesis_checkers import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -47,14 +48,6 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-
-
-# This should probably not live in this file but it's for experimental right now
-@dataclasses.dataclass
-class Payment:
-    puzzle_hash: bytes32
-    amount: uint64
-    memos: Optional[List[Optional[bytes]]] = None
 
 
 class CCWallet:
