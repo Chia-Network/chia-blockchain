@@ -16,8 +16,9 @@ root_path = Path(__file__).parent.resolve()
 
 def subdirs() -> List[Path]:
     dirs: List[Path] = []
-    for r in testconfig.root_test_dirs:
-        dirs.extend(Path(root_path / r).rglob("**/"))
+    for r in root_path.iterdir():
+        if r.is_dir():
+            dirs.extend(Path(r).rglob("**/"))
     return [d for d in dirs if not (any(c.startswith("_") for c in d.parts) or any(c.startswith(".") for c in d.parts))]
 
 
