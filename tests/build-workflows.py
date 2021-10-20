@@ -36,14 +36,12 @@ def dir_config(dir):
 
 
 def read_file(filename: Path) -> str:
-    with open(filename, encoding="utf8") as f:
-        return f.read()
-    return None
+    return filename.read_bytes().decode("utf8")
 
 
 # Input file
 def workflow_yaml_template_text(os):
-    return Path(root_path / f"runner-templates/build-test-{os}").read_text()
+    return read_file(Path(root_path / f"runner-templates/build-test-{os}"))
 
 
 # Output files
@@ -141,7 +139,7 @@ for os in testconfig.oses:
         workflow_yaml_path: Path = workflow_yaml_file(args.output_dir, os, test_name(dir))
         if workflow_yaml_path not in current_workflows or current_workflows[workflow_yaml_path] != txt:
             changed = True
-        workflow_yaml_path.write_text(txt)
+        workflow_yaml_path.write_bytes(txt.encode("utf8"))
 
 if changed:
     print("New workflow updates available.")
