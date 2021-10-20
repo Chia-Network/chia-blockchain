@@ -205,9 +205,6 @@ class WalletNode:
         self.wsm_close_task = None
 
         assert self.wallet_state_manager is not None
-        if self.wallet_peers_initialized is False and self.wallet_peers is not None:
-            asyncio.create_task(self.wallet_peers.start())
-            self.wallet_peers_initialized = True
 
         self.config["starting_height"] = 0
 
@@ -235,15 +232,18 @@ class WalletNode:
         self.logged_in_fingerprint = None
         self._shut_down = True
 
-    async def _await_closed(self):
+    async def _await_closed(self) -> Optional[asyncio.Task]:
         self.log.info("self._await_closed")
         await self.server.close_all_connections()
+        wallet_peers_close_task = None
         if self.wallet_peers is not None:
-            asyncio.create_task(self.wallet_peers.ensure_is_closed())
+            wallet_peers_close_task = asyncio.create_task(self.wallet_peers.ensure_is_closed())
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager.close_all_stores()
             self.wallet_state_manager = None
         self.logged_in = False
+        self.wallet_peers = None
+        return wallet_peers_close_task
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -297,6 +297,7 @@ class WalletNode:
     async def _messages_to_resend(self) -> List[Tuple[Message, Set[bytes32]]]:
         if self.wallet_state_manager is None or self._shut_down:
             return []
+        self.wallet_peers = None
         messages: List[Tuple[Message, Set[bytes32]]] = []
 
         records: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_not_sent()
@@ -318,12 +319,14 @@ class WalletNode:
 
     def set_server(self, server: ChiaServer):
         self.server = server
-        server.on_connect = self.on_connect
-        connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", False)
+        self.initialize_wallet_peers()
 
+    def initialize_wallet_peers(self):
+        self.server.on_connect = self.on_connect
         network_name = self.config["selected_network"]
         default_port = self.config["network_overrides"]["config"][network_name]["default_full_node_port"]
 
+        connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", False)
         if connect_to_unknown_peers:
             self.wallet_peers = WalletPeers(
                 self.server,
@@ -337,6 +340,7 @@ class WalletNode:
                 default_port,
                 self.log,
             )
+            asyncio.create_task(self.wallet_peers.start())
 
     async def on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None:
