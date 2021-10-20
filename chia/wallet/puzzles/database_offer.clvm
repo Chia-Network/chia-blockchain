@@ -5,7 +5,7 @@
     CLAIM_TARGET
     RECOVERY_TARGET
     RECOVERY_TIMELOCK
-    spend_type
+    spend_type  ; 1 is claim, 0 is recover
     my_amount
     db_innerpuz_hash
     current_root

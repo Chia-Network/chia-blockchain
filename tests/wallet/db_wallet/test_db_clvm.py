@@ -1,12 +1,13 @@
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_host_fullpuz,
-    # create_offer_fullpuz,
+    create_offer_fullpuz,
     SINGLETON_LAUNCHER,
     create_host_layer_puzzle,
 )
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.announcement import Announcement
 from chia.wallet.util.merkle_tree import MerkleTree
 
 
@@ -52,3 +53,30 @@ def test_create_db_update():
 
     assert len(result.as_python()) == 2
     assert result.as_python()[1][1] == full_puz.get_tree_hash()
+
+
+def test_create_offer():
+    innerpuz: Program = Program.to(1)
+    nodes = [innerpuz.get_tree_hash(), Program.to([8]).get_tree_hash()]
+    current_tree = MerkleTree(nodes)
+    current_root: bytes32 = current_tree.calculate_root()  # just need a bytes32
+    genesis_id: bytes32 = Coin(current_root, SINGLETON_LAUNCHER.get_tree_hash(), 201).name()  # see above
+    full_puz = create_host_fullpuz(innerpuz, current_root, genesis_id)
+    assert full_puz is not None
+    # leaf_reveal: bytes,
+    # host_genesis_id: bytes32,
+    # claim_target: bytes32,
+    # recovery_target: bytes32,
+    # recovery_timelock: uint64,
+    recovery_target = Program.to("recovery").get_tree_hash()
+    claim_target = Program.to("claim").get_tree_hash()
+    offer_puz = create_offer_fullpuz(innerpuz.get_tree_hash(), genesis_id, claim_target, recovery_target, 1000)
+    # spend_type
+    # my_amount
+    # db_innerpuz_hash
+    # current_root
+    leaf = innerpuz.get_tree_hash()
+    inclusion_proof = current_tree.generate_proof(leaf)
+    expected_announcement = Announcement(full_puz.get_tree_hash(), current_root)
+    cost, result = offer_puz.run_with_cost(INFINITE_COST, Program.to([1, 201, leaf, current_root, inclusion_proof]))
+    assert result.as_python()[2][1] == expected_announcement.name()

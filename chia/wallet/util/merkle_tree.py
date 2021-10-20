@@ -84,6 +84,6 @@ class MerkleTree:
 
             return (final_path, final_list, pair_hash, bit_num + 1 if bit_num is not None else None)
 
-    def generate_proof(self, puzzle_hash: bytes32):
-        proof = self._proof(self.nodes, puzzle_hash)
+    def generate_proof(self, leaf_reveal: bytes):
+        proof = self._proof(self.nodes, leaf_reveal)
         return (proof[0], [proof[1]])
