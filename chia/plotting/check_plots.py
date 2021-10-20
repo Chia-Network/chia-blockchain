@@ -94,7 +94,6 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.info("")
         log.info(f"Starting to test each plot with {num} challenges each\n")
     total_good_plots: Counter = Counter()
-    total_bad_plots = 0
     total_size = 0
     bad_plots_list: List[Path] = []
 
@@ -165,7 +164,6 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                 total_good_plots[pr.get_size()] += 1
                 total_size += plot_path.stat().st_size
             else:
-                total_bad_plots += 1
                 log.error(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
                 bad_plots_list.append(plot_path)
     log.info("")
@@ -175,11 +173,17 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     log.info(f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
     for (k, count) in sorted(dict(total_good_plots).items()):
         log.info(f"{count} plots of size {k}")
-    grand_total_bad = total_bad_plots + len(plot_manager.failed_to_open_filenames)
+    grand_total_bad = len(bad_plots_list) + len(plot_manager.failed_to_open_filenames)
     if grand_total_bad > 0:
         log.warning(f"{grand_total_bad} invalid plots found:")
-        for bad_plot_path in bad_plots_list:
-            log.warning(f"{bad_plot_path}")
+        if len(bad_plots_list) > 0:
+            log.warning(f"    {len(bad_plots_list)} bad plots:")
+            for bad_plot_path in bad_plots_list:
+                log.warning(f"{bad_plot_path}")
+        if len(plot_manager.failed_to_open_filenames) > 0:
+            log.warning(f"    {len(plot_manager.failed_to_open_filenames)} unopenable plots:")
+            for unopenable_plot_path in plot_manager.failed_to_open_filenames.keys():
+                log.warning(f"{unopenable_plot_path}")
     if len(plot_manager.no_key_filenames) > 0:
         log.warning(
             f"There are {len(plot_manager.no_key_filenames)} plots with a farmer or pool public key that "
