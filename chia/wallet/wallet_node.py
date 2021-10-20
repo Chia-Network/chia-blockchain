@@ -237,7 +237,7 @@ class WalletNode:
             await self.server.close_all_connections()
         wallet_peers_close_task = None
         if self.wallet_peers is not None:
-            wallet_peers_close_task = asyncio.create_task(self.wallet_peers.ensure_is_closed())
+            asyncio.create_task(self.wallet_peers.ensure_is_closed())
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager._await_closed()
         self.logged_in = False
@@ -296,7 +296,6 @@ class WalletNode:
     async def _messages_to_resend(self) -> List[Tuple[Message, Set[bytes32]]]:
         if self.wallet_state_manager is None or self._shut_down:
             return []
-        self.wallet_peers = None
         messages: List[Tuple[Message, Set[bytes32]]] = []
 
         records: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_not_sent()

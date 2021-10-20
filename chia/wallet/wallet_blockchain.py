@@ -21,7 +21,6 @@ class WalletBlockchain(BlockchainInterface):
     constants: ConsensusConstants
     constants_json: Dict
     # peak of the blockchain
-    _peak_height: uint32
     wallet_state_manager_lock: asyncio.Lock
     # Whether blockchain is shut down or not
     _shut_down: bool
@@ -49,26 +48,30 @@ class WalletBlockchain(BlockchainInterface):
         self = WalletBlockchain()
         self.peak_verified_by_peer = {}
         self.basic_store = basic_store
-        stored_height = await self.basic_store.get_str("STORED_HEIGHT")
         self.latest_tx_block = None
         self.latest_tx_block = await self.get_latest_tx_block()
         self.peak = None
         self.peak = await self.get_peak_block()
-        if stored_height is None:
-            self._peak_height = uint32(0)
-        else:
-            self._peak_height = uint32(int(stored_height))
-
-        self.synced_weight_proof = None
+        self.synced_weight_proof = await self.get_stored_wp()
         self.recent_blocks_dict = {}
         self._height_to_hash = {}
         self._block_records = {}
         self.synced_summaries = []
+        if self.synced_weight_proof is not None:
+            await self.new_blocks(self.synced_weight_proof.recent_chain_data)
         self.constants = constants
         return self
 
-    def new_weight_proof(self, weight_proof, summaries, block_records):
+    async def get_stored_wp(self):
+        return await self.basic_store.get_object("SYNCED_WIEGHT_PROOF", WeightProof)
+
+    async def get_synced_summaries(self):
+        return await self.basic_store.get_object("SYNCED_SUMMARIES", WeightProof)
+
+    async def new_weight_proof(self, weight_proof, summaries, block_records):
         self.synced_weight_proof = weight_proof
+        await self.basic_store.set_object("SYNCED_WIEGHT_PROOF", weight_proof)
+
         self.synced_summaries = summaries
         for block in weight_proof.recent_chain_data:
             self.recent_blocks_dict[block.header_hash] = block
@@ -87,7 +90,6 @@ class WalletBlockchain(BlockchainInterface):
             self._height_to_hash[block.height] = block.header_hash
             if self.peak is None or block.height > self.peak.height:
                 await self.set_peak_block(block)
-                await self.set_peak_height(block.height)
 
     async def rollback_to_height(self, height):
         pass
@@ -95,27 +97,17 @@ class WalletBlockchain(BlockchainInterface):
     def get_last_peak_from_peer(self, peer_node_id) -> Optional[HeaderBlock]:
         return self.peak_verified_by_peer.get(peer_node_id, None)
 
-    async def set_peak_height(self, height):
-        self._peak_height = height
-        await self.basic_store.set_str("STORED_HEIGHT", f"{height}")
-
-    async def set_synced_height(self, height):
-        await self.basic_store.set_str("SYNCED_HEIGHT", f"{height}")
-
-    async def get_synced_height(self) -> int:
-        synced_height = await self.basic_store.get_str("SYNCED_HEIGHT")
-        if synced_height is not None:
-            return int(synced_height)
-        return 0
-
-    def get_peak_height(self) -> Optional[uint32]:
-        return self._peak_height
+    def get_peak_height(self) -> uint32:
+        if self.peak is None:
+            return uint32(0)
+        return self.peak.height
 
     async def set_latest_tx_block(self, block: HeaderBlock):
         await self.basic_store.set_object("LATEST_TX_BLOCK", block)
         self.latest_tx_block = block
 
     async def get_latest_tx_block(self) -> Optional[HeaderBlock]:
+        """Used to show the synced status to the ui"""
         if self.latest_tx_block is not None:
             return self.latest_tx_block
         obj = await self.basic_store.get_object("LATEST_TX_BLOCK", HeaderBlock)
@@ -151,8 +143,6 @@ class WalletBlockchain(BlockchainInterface):
                 prev_b: Optional[BlockRecord] = None
                 sub_slot_iters, difficulty = self.constants.SUB_SLOT_ITERS_STARTING, self.constants.DIFFICULTY_STARTING
             else:
-                if block.prev_header_hash not in self._block_records:
-                    breakpoint()
                 prev_b = self.block_record(block.prev_header_hash)
                 sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
                     self.constants, len(block.finished_sub_slots) > 0, prev_b, self
@@ -161,10 +151,8 @@ class WalletBlockchain(BlockchainInterface):
                 self.constants, self, block, False, difficulty, sub_slot_iters, False
             )
             if error is not None:
-                breakpoint()
                 return False
             if required_iters is None:
-                breakpoint()
                 return False
             block_record = block_to_block_record(
                 self.constants,

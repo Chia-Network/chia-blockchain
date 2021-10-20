@@ -54,45 +54,6 @@ class WalletWeightProofHandler:
                 task.cancel()
         self._weight_proof_tasks = []
 
-    def validate_weight_proof_single_proc(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
-        assert len(weight_proof.sub_epochs) > 0
-        if len(weight_proof.sub_epochs) == 0:
-            return False, uint32(0)
-
-        peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
-        log.info(f"validate weight proof peak height {peak_height}")
-        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
-        if summaries is None:
-            log.warning("weight proof failed sub epoch data validation")
-            return False, uint32(0)
-        constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
-            self._constants, summaries, weight_proof
-        )
-        log.info("validate sub epoch challenge segments")
-        seed = summaries[-2].get_hash()
-        rng = random.Random(seed)
-        if not validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
-            log.error("failed weight proof sub epoch sample validation")
-            return False, uint32(0)
-
-        if not _validate_sub_epoch_segments(constants, rng, wp_segment_bytes, summary_bytes):
-            return False, uint32(0)
-        log.info("validate weight proof recent blocks")
-        if not _validate_recent_blocks(constants, wp_recent_chain_bytes, summary_bytes):
-            return False, uint32(0)
-        return True, self.get_fork_point(summaries)
-
-    def get_fork_point_no_validations(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
-        log.debug("get fork point skip validations")
-        assert len(weight_proof.sub_epochs) > 0
-        if len(weight_proof.sub_epochs) == 0:
-            return False, uint32(0)
-        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
-        if summaries is None:
-            log.warning("weight proof failed to validate sub epoch summaries")
-            return False, uint32(0)
-        return True, self.get_fork_point(summaries)
-
     async def validate_weight_proof(
         self, weight_proof: WeightProof
     ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
@@ -151,25 +112,25 @@ class WalletWeightProofHandler:
         # TODO fix find fork point
         return True, uint32(0), summaries, sub_blocks
 
-    def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
+    def get_fork_point(self, old_summaries: List[SubEpochSummary], received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point
-        fork_point_index = 0
-        ses_heights = self._blockchain.get_ses_heights()
-        for idx, summary_height in enumerate(ses_heights):
-            log.debug(f"check summary {idx} height {summary_height}")
-            local_ses = self._blockchain.get_ses(summary_height)
-            if idx == len(received_summaries) - 1:
-                # end of wp summaries, local chain is longer or equal to wp chain
-                break
-            if local_ses is None or local_ses.get_hash() != received_summaries[idx].get_hash():
-                break
-            fork_point_index = idx
+        if len(old_summaries) == 0:
+            return uint32(0)
 
-        if fork_point_index > 2:
-            # Two summaries can have different blocks and still be identical
-            # This gets resolved after one full sub epoch
-            height = ses_heights[fork_point_index - 2]
-        else:
-            height = uint32(0)
+        old_ses = set()
 
-        return height
+        for ses in old_summaries:
+            old_ses.add(ses.reward_chain_hash)
+
+        overflow = 0
+        count = 0
+        for idx, new_ses in enumerate(received_summaries):
+            if new_ses.reward_chain_hash in old_ses:
+                count += 1
+                overflow += new_ses.num_blocks_overflow
+                continue
+            else:
+                break
+
+        fork_point = uint32((self._constants.SUB_EPOCH_BLOCKS * count) - overflow)
+        return fork_point
