@@ -40,13 +40,14 @@ class WalletWeightProofHandler:
     ):
         self._constants = constants
         self._blockchain = blockchain
-        self._executor: ProcessPoolExecutor = ProcessPoolExecutor(1)
+        self._num_processes = 4
+        self._executor: ProcessPoolExecutor = ProcessPoolExecutor(self._num_processes)
         self._weight_proof_tasks: List[asyncio.Task] = []
 
     def cancel_weight_proof_tasks(self):
         log.warning("CANCELLING WEIGHT PROOF TASKS")
         old_executor = self._executor
-        self._executor = ProcessPoolExecutor(1)
+        self._executor = ProcessPoolExecutor(self._num_processes)
         old_executor.shutdown(wait=False)
         for task in self._weight_proof_tasks:
             if not task.done():
