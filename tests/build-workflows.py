@@ -28,15 +28,15 @@ def module_dict(module):
 def dir_config(dir):
     import importlib
 
-    module_name = str(dir.relative_to(root_path)).replace("/", ".") + ".config"
+    module_name = ".".join([*dir.relative_to(root_path).parts, "config"])
     try:
         return module_dict(importlib.import_module(module_name))
     except ModuleNotFoundError:
         return {}
 
 
-def read_file(filename):
-    with open(filename) as f:
+def read_file(filename: Path) -> str:
+    with open(filename, encoding="utf8") as f:
         return f.read()
     return None
 
@@ -53,7 +53,7 @@ def workflow_yaml_file(dir, os, test_name):
 
 # String function from test dir to test name
 def test_name(dir):
-    return str(dir.relative_to(root_path)).replace("/", "-")
+    return "-".join(dir.relative_to(root_path).parts)
 
 
 def transform_template(template_text, replacements):
@@ -85,7 +85,7 @@ def generate_replacements(conf, dir):
         replacements["PYTEST_PARALLEL_ARGS"] = " -n auto"
     if conf["job_timeout"]:
         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
-    replacements["TEST_DIR"] = str(dir.relative_to(root_path.parent) / "test_*.py")
+    replacements["TEST_DIR"] = "/".join([*dir.relative_to(root_path.parent).parts, "test_*.py"])
     replacements["TEST_NAME"] = test_name(dir)
     if "test_name" in conf:
         replacements["TEST_NAME"] = conf["test_name"]
@@ -125,7 +125,7 @@ if args.verbose:
 
 # main
 test_dirs = subdirs()
-current_workflows: Dict[Path, str] = {file: file.read_text() for file in args.output_dir.iterdir()}
+current_workflows: Dict[Path, str] = {file: read_file(file) for file in args.output_dir.iterdir()}
 changed: bool = False
 
 for os in testconfig.oses:
