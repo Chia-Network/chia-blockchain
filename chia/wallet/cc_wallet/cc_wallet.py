@@ -90,7 +90,9 @@ class CCWallet:
             raise ValueError("Internal Error")
 
         try:
-            chia_tx, spend_bundle = await ALL_LIMITATIONS_PROGRAMS[cat_tail_info["identifier"]].generate_issuance_bundle(
+            chia_tx, spend_bundle = await ALL_LIMITATIONS_PROGRAMS[
+                cat_tail_info["identifier"]
+            ].generate_issuance_bundle(
                 self,
                 cat_tail_info,
                 amount,

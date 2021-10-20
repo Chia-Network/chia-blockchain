@@ -99,7 +99,7 @@ class TestWalletSync:
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-        await time_out_assert(10, wallet.get_confirmed_balance(), 30 * calculate_pool_reward(1000))
+        await time_out_assert(10, wallet.get_confirmed_balance, 30 * calculate_pool_reward(1000))
 
     @pytest.mark.asyncio
     async def test_backtrack_sync_wallet(self, wallet_node, default_400_blocks):
