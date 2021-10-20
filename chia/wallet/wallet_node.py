@@ -624,7 +624,7 @@ class WalletNode:
                     if far_behind:
                         self.wallet_state_manager.set_sync_mode(True)
                     await self.untrusted_sync_to_peer(peer, peak, weight_proof)
-                    self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, summaries, block_records)
+                    await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, summaries, block_records)
                     if far_behind:
                         self.wallet_state_manager.set_sync_mode(False)
                     self.synced_peers.add(peer.peer_node_id)
