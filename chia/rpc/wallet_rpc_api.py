@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
@@ -133,7 +134,9 @@ class WalletRpcApi:
         """
         if self.service is not None:
             self.service._close()
-            await self.service._await_closed()
+            peers_close_task: Optional[asyncio.Task] = await self.service._await_closed()
+            if peers_close_task is not None:
+                await peers_close_task
 
     ##########################################################################################
     # Key management
