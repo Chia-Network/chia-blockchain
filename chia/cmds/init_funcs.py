@@ -34,7 +34,7 @@ from chia.util.ssl_check import (
     fix_ssl,
 )
 from chia.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
-from chia.cmd.configure import configure
+from chia.cmds.configure import configure
 
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
 public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord"}
