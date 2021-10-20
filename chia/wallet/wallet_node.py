@@ -138,6 +138,7 @@ class WalletNode:
         self.wallet_peers = None
         self.wallet_peers_initialized = False
         self.valid_wp_cache: Dict[bytes32, Any] = {}
+        self.weight_proof_task: Optional[asyncio.Task] = None
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
@@ -243,6 +244,10 @@ class WalletNode:
             self.wallet_state_manager = None
         self.logged_in = False
         self.wallet_peers = None
+
+        if self.weight_proof_task is not None:
+            self.weight_proof_task.cancel()
+            self.weight_proof_task = None
         return wallet_peers_close_task
 
     def _set_state_changed_callback(self, callback: Callable):
@@ -837,12 +842,13 @@ class WalletNode:
             valid, fork_point, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
         else:
             start_validation = time.time()
+            self.weight_proof_task = asyncio.create_task(self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof))
             (
                 valid,
                 fork_point,
                 summaries,
                 block_records,
-            ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
+            ) = await self.weight_proof_task
             if valid:
                 self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point, summaries, block_records
 
