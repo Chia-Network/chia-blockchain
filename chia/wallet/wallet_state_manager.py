@@ -109,7 +109,7 @@ class WalletStateManager:
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
     interested_store: WalletInterestedStore
-    weight_proof_handler: Any
+    weight_proof_handler: Optional[WalletWeightProofHandler] = None
     server: ChiaServer
     root_path: Path
     wallet_node: Any
@@ -1021,15 +1021,10 @@ class WalletStateManager:
                 await self.tx_store.tx_reorged(record)
         self.tx_pending_changed()
 
-    async def close_all_stores(self) -> None:
+    async def _await_closed(self) -> None:
         await self.db_connection.close()
-
-    async def clear_all_stores(self):
-        await self.coin_store._clear_database()
-        await self.tx_store._clear_database()
-        await self.puzzle_store._clear_database()
-        await self.user_store._clear_database()
-        await self.basic_store._clear_database()
+        if self.weight_proof_handler is not None:
+            self.weight_proof_handler.cancel_weight_proof_tasks()
 
     def unlink_db(self):
         Path(self.db_path).unlink()

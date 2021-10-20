@@ -78,7 +78,7 @@ class FullNodeDiscovery:
         self.serialize_task: Optional[asyncio.Task] = None
         self.cleanup_task: Optional[asyncio.Task] = None
         self.initial_wait: int = 0
-        self.connection = None
+        self.connection: Optional[aiosqlite.Connection] = None
         try:
             self.resolver: Optional[dns.asyncresolver.Resolver] = dns.asyncresolver.Resolver()
         except Exception:
@@ -93,6 +93,7 @@ class FullNodeDiscovery:
     async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
         self.connection = await aiosqlite.connect(self.peer_db_path)
+        assert self.connection is not None
         await self.connection.execute("pragma journal_mode=wal")
         await self.connection.execute("pragma synchronous=OFF")
         self.address_manager_store = await AddressManagerStore.create(self.connection)

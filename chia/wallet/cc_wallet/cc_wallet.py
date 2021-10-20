@@ -122,6 +122,7 @@ class CCWallet:
 
         if cc_coin is None:
             raise ValueError("Internal Error, unable to generate new coloured coin")
+        assert cc_coin is not None
 
         cc_record = TransactionRecord(
             confirmed_at_height=uint32(0),
