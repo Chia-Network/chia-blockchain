@@ -104,6 +104,7 @@ def configure(
             config["wallet"]["introducer_peer"]["port"] = int(testnet_port)
             config["introducer"]["port"] = int(testnet_port)
             config["full_node"]["introducer_peer"]["host"] = testnet_introducer
+            config["wallet"]["introducer_peer"]["host"] = testnet_introducer
             config["full_node"]["dns_servers"] = [testnet_dns_introducer]
             config["wallet"]["dns_servers"] = [testnet_dns_introducer]
 
