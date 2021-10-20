@@ -629,7 +629,6 @@ class WalletNode:
                         self.wallet_state_manager.set_sync_mode(False)
                     self.synced_peers.add(peer.peer_node_id)
                     await self.wallet_state_manager.blockchain.set_latest_tx_block(last_tx_block)
-                    await self.wallet_state_manager.blockchain.set_synced_height(peak.height)
                     self.wallet_state_manager.state_changed("new_block")
                     await self.update_ui()
                 else:
