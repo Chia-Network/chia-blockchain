@@ -6,19 +6,21 @@ import click
 from chia.util.config import load_config, save_config, str2bool
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
-
+# the use of any type here is because calling this from click passes None type for nay of these, and when calling from upstream outside of click
+# you cannot pass mypy because mypy evaluates the upstream None you must set i.e.: configure(root_path, None, None, None, None, None, None, None, None, "true", None)
+# as being the incorrect variable type for this class. This is a massive kludge imo, open to suggestions. 
 def configure(
     root_path: Path,
-    set_farmer_peer: str,
-    set_node_introducer: str,
-    set_fullnode_port: str,
-    set_harvester_port: str,
-    set_log_level: str,
-    enable_upnp: str,
-    set_outbound_peer_count: str,
-    set_peer_count: str,
-    testnet: str,
-    peer_connect_timeout: str,
+    set_farmer_peer: any,
+    set_node_introducer: any,
+    set_fullnode_port: any,
+    set_harvester_port: any,
+    set_log_level: any,
+    enable_upnp: any,
+    set_outbound_peer_count: any,
+    set_peer_count: any,
+    testnet: any,
+    peer_connect_timeout: any,
 ):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False
