@@ -719,7 +719,7 @@ class WalletRpcApi:
     ##########################################################################################
 
     async def get_cat_list(self, request):
-        return {"cat_list": DEFAULT_CATS}
+        return {"cat_list": list(DEFAULT_CATS.values())}
 
     async def cc_set_name(self, request):
         assert self.service.wallet_state_manager is not None
