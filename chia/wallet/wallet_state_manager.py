@@ -158,7 +158,7 @@ class WalletStateManager:
         self.user_settings = await UserSettings.create(self.basic_store)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
         self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants)
-        # await self.basic_store._clear_database()
+
         self.wallet_node = wallet_node
         self.sync_mode = False
         self.weight_proof_handler = WalletWeightProofHandler(self.constants, self.blockchain)
@@ -415,12 +415,6 @@ class WalletStateManager:
         Callback to be called when new coin is seen with specified puzzlehash
         """
         self.puzzle_hash_created_callbacks[puzzlehash] = callback
-
-    def set_new_peak_callback(self, wallet_id: int, callback: Callable):
-        """
-        Callback to be called when blockchain adds new peak
-        """
-        self.new_peak_callbacks[wallet_id] = callback
 
     async def puzzle_hash_created(self, coin: Coin):
         callback = self.puzzle_hash_created_callbacks[coin.puzzle_hash]
@@ -1125,7 +1119,6 @@ class WalletStateManager:
                         await callback(unwrapped, action.id)
 
     async def new_peak(self, peak: wallet_protocol.NewPeakWallet):
-        await self.blockchain.set_peak_height(peak.height)
         for wallet_id, callback in self.new_peak_callbacks.items():
             await callback(peak)
 
