@@ -7,9 +7,8 @@ import sys
 
 import testconfig
 import logging
-import subprocess
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 root_path = Path(__file__).parent.resolve()
 
@@ -126,6 +125,8 @@ if args.verbose:
 
 # main
 test_dirs = subdirs()
+current_workflows: Dict[Path, str] = {file: file.read_text() for file in args.output_dir.iterdir()}
+changed: bool = False
 
 for os in testconfig.oses:
     template_text = workflow_yaml_template_text(os)
@@ -137,9 +138,12 @@ for os in testconfig.oses:
         replacements = generate_replacements(conf, dir)
         txt = transform_template(template_text, replacements)
         logging.info(f"Writing {os}-{test_name(dir)}")
-        workflow_yaml_file(args.output_dir, os, test_name(dir)).write_text(txt)
+        workflow_yaml_path: Path = workflow_yaml_file(args.output_dir, os, test_name(dir))
+        if workflow_yaml_path not in current_workflows or current_workflows[workflow_yaml_path] != txt:
+            changed = True
+        workflow_yaml_path.write_text(txt)
 
-if subprocess.run(["git", "--no-pager", "diff", args.output_dir], capture_output=True).stdout:
+if changed:
     print("New workflow updates available.")
     if args.fail_on_update:
         sys.exit(1)
