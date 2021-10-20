@@ -19,6 +19,7 @@ from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
+from chia.wallet.cc_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
@@ -90,6 +91,7 @@ class WalletRpcApi:
             "/get_trade": self.get_trade,
             "/get_all_trades": self.get_all_trades,
             "/cancel_trade": self.cancel_trade,
+            "/get_cat_list": self.get_cat_list,
             # DID Wallet
             "/did_update_recovery_ids": self.did_update_recovery_ids,
             "/did_get_pubkey": self.did_get_pubkey,
@@ -715,6 +717,9 @@ class WalletRpcApi:
     ##########################################################################################
     # Coloured Coins and Trading
     ##########################################################################################
+
+    async def get_cat_list(self, request):
+        return {"cat_list": DEFAULT_CATS}
 
     async def cc_set_name(self, request):
         assert self.service.wallet_state_manager is not None
