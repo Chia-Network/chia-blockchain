@@ -601,12 +601,17 @@ class WalletNode:
                     await peer.close()
                     return
 
+                far_behind: bool = peak.height - (await self.wallet_state_manager.blockchain.get_synced_height()) > 200
+
                 # check if claimed peak is heavier or same as our current peak
                 # if we haven't synced fully to this peer sync again
                 if (
-                    peer.peer_node_id not in self.synced_peers
+                    (peer.peer_node_id not in self.synced_peers or far_behind)
                     and peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS
                 ):
+                    if far_behind:
+                        self.wallet_state_manager.set_sync_mode(True)
+
                     (
                         valid_weight_proof,
                         weight_proof,
@@ -616,14 +621,16 @@ class WalletNode:
                     if valid_weight_proof is False:
                         await peer.close()
                         return
-
-                    self.wallet_state_manager.set_sync_mode(True)
+                    if far_behind:
+                        self.wallet_state_manager.set_sync_mode(True)
                     await self.untrusted_sync_to_peer(peer, peak, weight_proof)
                     self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, summaries, block_records)
-                    self.wallet_state_manager.set_sync_mode(False)
+                    if far_behind:
+                        self.wallet_state_manager.set_sync_mode(False)
                     self.synced_peers.add(peer.peer_node_id)
                     await self.wallet_state_manager.blockchain.set_latest_tx_block(last_tx_block)
                     self.wallet_state_manager.state_changed("new_block")
+                    await self.update_ui()
                 else:
                     if peer.peer_node_id not in self.synced_peers:
                         # Edge case, we still want to subscribe for all phs
@@ -832,6 +839,11 @@ class WalletNode:
         start_validation = time.time()
 
         weight_proof = weight_proof_response.wp
+
+        if weight_proof.recent_chain_data[-1].reward_chain_block.height != peak.height:
+            return False, None, [], []
+        if weight_proof.recent_chain_data[-1].reward_chain_block.weight != peak.weight:
+            return False, None, [], []
 
         if weight_proof.get_hash() in self.valid_wp_cache:
             valid, fork_point, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
