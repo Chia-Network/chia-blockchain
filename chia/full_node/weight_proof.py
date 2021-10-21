@@ -570,9 +570,9 @@ class WeightProofHandler:
             return False, uint32(0)
         return True, self.get_fork_point(summaries)
 
-    def chunks(self, l, n):
-        n = max(1, n)
-        return (l[i : i + n] for i in range(0, len(l), n))
+    def chunks(self, some_list, chunk_size):
+        chunk_size = max(1, chunk_size)
+        return (some_list[i : i + chunk_size] for i in range(0, len(some_list), chunk_size))
 
     async def validate_weight_proof(self, weight_proof: WeightProof) -> Tuple[bool, uint32, List[SubEpochSummary]]:
         assert self.blockchain is not None
@@ -612,9 +612,7 @@ class WeightProofHandler:
             for vdf_proof, classgroup, vdf_info in chunk:
                 byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
 
-            vdf_task = asyncio.get_running_loop().run_in_executor(
-                executor, _validate_vdf_batch, constants, byte_chunks
-            )
+            vdf_task = asyncio.get_running_loop().run_in_executor(executor, _validate_vdf_batch, constants, byte_chunks)
             vdf_tasks.append(vdf_task)
 
         for vdf_task in vdf_tasks:

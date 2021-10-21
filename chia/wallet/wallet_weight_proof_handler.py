@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 from concurrent.futures.process import ProcessPoolExecutor
-from typing import List, Optional, Tuple, Any
+from typing import List, Tuple, Any
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
@@ -10,23 +10,18 @@ from chia.full_node.weight_proof import (
     _validate_sub_epoch_summaries,
     vars_to_bytes,
     validate_sub_epoch_sampling,
-    _validate_recent_blocks,
     _validate_sub_epoch_segments,
     _validate_recent_blocks_and_get_records,
     chunks,
     _validate_vdf_batch,
 )
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import VDFProof, VDFInfo
 
 from chia.types.weight_proof import (
     WeightProof,
 )
 
 from chia.util.ints import uint32
-from chia.util.streamable import dataclass_from_dict
 
 log = logging.getLogger(__name__)
 
@@ -67,10 +62,6 @@ class WalletWeightProofHandler:
         valid, fork_point, summaries, block_records = await task
         self._weight_proof_tasks.remove(task)
         return valid, fork_point, summaries, block_records
-
-    def chunks(self, l, n):
-        n = max(1, n)
-        return (l[i : i + n] for i in range(0, len(l), n))
 
     async def validate_weight_proof_inner(
         self, weight_proof: WeightProof

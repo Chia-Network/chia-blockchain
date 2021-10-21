@@ -109,7 +109,7 @@ class WalletStateManager:
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
     interested_store: WalletInterestedStore
-    weight_proof_handler: Optional[WalletWeightProofHandler] = None
+    weight_proof_handler: WalletWeightProofHandler
     server: ChiaServer
     root_path: Path
     wallet_node: Any

@@ -19,7 +19,6 @@ from chia.daemon.keychain_proxy import (
     KeychainProxy,
     KeyringIsEmpty,
 )
-from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight, RequestBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -626,8 +625,10 @@ class WalletNode:
                     if far_behind:
                         self.wallet_state_manager.set_sync_mode(True)
                     await self.untrusted_sync_to_peer(peer, peak, weight_proof, summaries)
+                    assert weight_proof is not None
                     if (
-                        self.wallet_state_manager.blockchain.synced_weight_proof is None or weight_proof.recent_chain_data[-1].weight
+                        self.wallet_state_manager.blockchain.synced_weight_proof is None
+                        or weight_proof.recent_chain_data[-1].weight
                         > self.wallet_state_manager.blockchain.synced_weight_proof.recent_chain_data[-1].weight
                     ):
                         await self.wallet_state_manager.blockchain.new_weight_proof(
@@ -908,7 +909,6 @@ class WalletNode:
 
     async def untrusted_sync_to_peer(self, peer, peak: wallet_protocol.NewPeakWallet, weight_proof, summaries):
         assert self.wallet_state_manager is not None
-
         # If new weight proof is higher than the old one, rollback to the fork point and than apply new coin_states
         synced_summaries = self.wallet_state_manager.blockchain.synced_summaries
         fork_height = 0
