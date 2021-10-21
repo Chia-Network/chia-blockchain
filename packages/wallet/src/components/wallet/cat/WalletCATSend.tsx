@@ -24,6 +24,8 @@ import { chia_to_mojo, colouredcoin_to_mojo } from '../../../util/chia';
 import getTransactionResult from '../../../util/getTransactionResult';
 import config from '../../../config/config';
 import useWallet from '../../../hooks/useWallet';
+import useWalletState from '../../../hooks/useWalletState';
+import SyncingStatus from '../../../constants/SyncingStatus';
 
 type Props = {
   walletId: number;
@@ -41,7 +43,7 @@ export default function WalletCATSend(props: Props) {
   const openDialog = useOpenDialog();
   const [farmBlock] = useFarmBlockMutation();
   const [spendCAT, { isLoading: isSpendCatLoading }] = useSpendCATMutation();
-  const { data: walletState, isLoading: isWalletSyncLoading } = useGetSyncStatusQuery();
+  const { state } = useWalletState();
 
   const methods = useForm<SendTransactionData>({
     shouldUnregister: false,
@@ -62,8 +64,6 @@ export default function WalletCATSend(props: Props) {
 
   const { wallet, unit, loading } = useWallet(walletId);
 
-  // const isLoading = isSpendCatLoading || isWalletSyncLoading || loading;  
-
   async function farm() {
     if (addressValue) {
       await farmBlock({
@@ -77,7 +77,7 @@ export default function WalletCATSend(props: Props) {
   async function handleSubmit(data: SendTransactionData) {
     const tail = wallet?.meta?.tail;
 
-    if (!walletState?.synced) {
+    if (state !== SyncingStatus.SYNCED) {
       throw new Error(t`Please finish syncing before making a transaction`);
     }
 

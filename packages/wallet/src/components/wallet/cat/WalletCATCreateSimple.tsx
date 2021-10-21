@@ -9,6 +9,8 @@ import WalletCreateCard from '../create/WalletCreateCard';
 import Tokens from '../../../constants/Tokens';
 import isCATWalletPresent from '../../../util/isCATWalletPresent';
 import type CATToken from '../../../types/CATToken';
+import useWalletState from '../../../hooks/useWalletState';
+import SyncingStatus from '../../../constants/SyncingStatus';
 
 export default function WalletCATCreateSimple() {
   const history = useHistory();
@@ -16,19 +18,24 @@ export default function WalletCATCreateSimple() {
   const showError = useShowError();
   const { data: wallets, isLoading } = useGetWalletsQuery();
   const [addCATToken, { isLoading: isAddCATTokenLoading }] = useAddCATTokenMutation();
+  const { state } = useWalletState();
   
   function handleCreateExisting() {
     history.push(`/dashboard/wallets/create/cat/existing`);
   }
 
   async function handleCreateNewToken(token: CATToken) {
-    if (isAddCATTokenLoading) {
-      return;
-    }
-
     try {
       const { name, tail } = token;
 
+      if (isAddCATTokenLoading) {
+        return;
+      }
+  
+      if (state !== SyncingStatus.SYNCED) {
+        throw new Error(t`Please wait for wallet synchronization`);
+      }
+      
       if (!name) {
         throw new Error(t`Token has empty name`);
       }

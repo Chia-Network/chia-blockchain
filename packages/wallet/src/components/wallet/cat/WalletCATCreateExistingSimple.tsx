@@ -5,6 +5,8 @@ import { Box, Grid } from '@material-ui/core';
 import { useAddCATTokenMutation } from '@chia/api-react';
 import { useForm } from 'react-hook-form';
 import { useHistory } from 'react-router';
+import useWalletState from '../../../hooks/useWalletState';
+import SyncingStatus from '../../../constants/SyncingStatus';
 
 type CreateExistingCATWalletData = {
   name: string;
@@ -23,12 +25,17 @@ export default function WalletCATCreateExisting() {
   });
   const history = useHistory();
   const [addCATToken, { isLoading: isAddCATTokenLoading }] = useAddCATTokenMutation();
+  const { state } = useWalletState();
 
   async function handleSubmit(values: CreateExistingCATWalletData) {
     const { name, tail } = values;
 
     if (isAddCATTokenLoading) {
       return;
+    }
+
+    if (state !== SyncingStatus.SYNCED) {
+      throw new Error(t`Please wait for wallet synchronization`);
     }
 
     if (!tail) {
