@@ -62,29 +62,29 @@ export default function WalletCATCreateExisting() {
           <Trans>Add Token</Trans>
         </Back>
         <Card>
-        <Grid spacing={2} direction="column" container>
+          <Grid spacing={2} direction="column" container>
             <Grid xs={12} md={8} lg={6} item>
-          <Grid spacing={2} container>
-            <Grid xs={12} item>
-              <TextField
-                  name="name"
-                  variant="outlined"
-                  label={<Trans>Name</Trans>}
-                  fullWidth
-                  autoFocus
-                />
+              <Grid spacing={2} container>
+                <Grid xs={12} item>
+                  <TextField
+                      name="name"
+                      variant="outlined"
+                      label={<Trans>Name</Trans>}
+                      fullWidth
+                      autoFocus
+                    />
+                </Grid>
+                <Grid xs={12} item>
+                  <TextField
+                    name="tail"
+                    variant="outlined"
+                    label={<Trans>Token and Asset Issuance Limitations</Trans>}
+                    multiline
+                    fullWidth
+                  />
+                </Grid>
+              </Grid>
             </Grid>
-            <Grid xs={12} item>
-              <TextField
-                name="tail"
-                variant="outlined"
-                label={<Trans>Token and Asset Issuance Limitations</Trans>}
-                multiline
-                fullWidth
-              />
-            </Grid>
-          </Grid>
-          </Grid>
           </Grid>
         </Card>
         <Box>

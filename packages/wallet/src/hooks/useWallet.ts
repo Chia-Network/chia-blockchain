@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
-import { useGetWalletsQuery } from '@chia/api-react';
+import { useGetWalletsQuery, useGetCatListQuery } from '@chia/api-react';
 import Wallet from '../types/Wallet';
 import WalletType from '../constants/WalletType';
 import useCurrencyCode from './useCurrencyCode';
-import getCATToken from '../util/getCATToken';
 
 export default function useWallet(walletId: number): {
   loading: boolean;
@@ -12,6 +11,7 @@ export default function useWallet(walletId: number): {
 } {
   const currencyCode = useCurrencyCode();
   const { data: wallets, isLoading } = useGetWalletsQuery();
+  const { data: catList = [], isLoading: isCatListLoading } = useGetCatListQuery();
 
   const wallet = useMemo(() => {
     return wallets?.find((item) => item.id === walletId);
@@ -19,8 +19,8 @@ export default function useWallet(walletId: number): {
 
   const unit = useMemo(() => {
     if (wallet) {
-      if (wallet.type === WalletType.CAT) {
-        const token = getCATToken(wallet);
+      if (!isCatListLoading && wallet.type === WalletType.CAT) {
+        const token = catList.find((item) => item.assetId === wallet.meta?.tail);
         if (token) {
           return token.symbol;
         }
@@ -30,7 +30,7 @@ export default function useWallet(walletId: number): {
       
       return currencyCode;
     } 
-  }, [wallet, currencyCode]);
+  }, [wallet, currencyCode, isCatListLoading]);
 
   return { 
     wallet, 

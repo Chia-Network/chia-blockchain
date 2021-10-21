@@ -10,7 +10,7 @@ import {
   ListItemIcon,
   MenuItem,
 } from '@material-ui/core';
-import { useSetCATNameMutation } from '@chia/api-react';
+import { useSetCATNameMutation, useGetCatListQuery } from '@chia/api-react';
 import WalletHistory from '../WalletHistory';
 import useWallet from '../../../hooks/useWallet';
 import WalletReceiveAddress from '../WalletReceiveAddress';
@@ -19,7 +19,6 @@ import WalletCATSend from './WalletCATSend';
 import WalletHeader from '../WalletHeader';
 import WalletRenameDialog from '../WalletRenameDialog';
 import WalletCATTAILDialog from './WalletCATTAILDialog';
-import getCATToken from '../../../util/getCATToken';
 
 type Props = {
   walletId: number;
@@ -28,6 +27,7 @@ type Props = {
 export default function WalletCAT(props: Props) {
   const { walletId } = props;
   const { wallet, loading } = useWallet(walletId);
+  const { data: catList = [], isLoading: isCatListLoading } = useGetCatListQuery();
   const openDialog = useOpenDialog();
   const [setCATName] = useSetCATNameMutation();
 
@@ -52,7 +52,7 @@ export default function WalletCAT(props: Props) {
     ));
   }
 
-  if (loading) {
+  if (loading || isCatListLoading) {
     return (
       <Loading center />
     );
@@ -66,7 +66,7 @@ export default function WalletCAT(props: Props) {
     );
   }
 
-  const token = getCATToken(wallet);
+  const token = catList.find((item) => item.assetId === wallet.meta?.tail);
   const canRename = !token;
 
   return (

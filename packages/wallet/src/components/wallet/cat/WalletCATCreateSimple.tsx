@@ -4,9 +4,8 @@ import { Trans, t } from '@lingui/macro';
 import { Grid } from '@material-ui/core';
 import { Add as AddIcon } from '@material-ui/icons';
 import { Back, Flex, Loading, useShowError } from '@chia/core';
-import { useGetWalletsQuery, useAddCATTokenMutation } from '@chia/api-react';
+import { useGetWalletsQuery, useAddCATTokenMutation, useGetCatListQuery } from '@chia/api-react';
 import WalletCreateCard from '../create/WalletCreateCard';
-import Tokens from '../../../constants/Tokens';
 import isCATWalletPresent from '../../../util/isCATWalletPresent';
 import type CATToken from '../../../types/CATToken';
 import useWalletState from '../../../hooks/useWalletState';
@@ -16,9 +15,12 @@ export default function WalletCATCreateSimple() {
   const history = useHistory();
   const { url } = useRouteMatch();
   const showError = useShowError();
-  const { data: wallets, isLoading } = useGetWalletsQuery();
+  const { data: wallets, isWalletsLoading } = useGetWalletsQuery();
   const [addCATToken, { isLoading: isAddCATTokenLoading }] = useAddCATTokenMutation();
+  const { data: catList, isCatListLoading } = useGetCatListQuery();
   const { state } = useWalletState();
+
+  const isLoading = isWalletsLoading || isCatListLoading;
   
   function handleCreateExisting() {
     history.push(`/dashboard/wallets/create/cat/existing`);
@@ -26,7 +28,7 @@ export default function WalletCATCreateSimple() {
 
   async function handleCreateNewToken(token: CATToken) {
     try {
-      const { name, tail } = token;
+      const { name, assetId: tail } = token;
 
       if (isAddCATTokenLoading) {
         return;
@@ -69,38 +71,42 @@ export default function WalletCATCreateSimple() {
           <Trans>Add Token</Trans>
         </Back>
       </Flex>
-      <Grid spacing={3} alignItems="stretch" container>
-        {Tokens.map((token) => {
-          const isPresent = isCATWalletPresent(wallets, token);
+      {isLoading ? (
+        <Loading center />
+      ) : (
+        <Grid spacing={3} alignItems="stretch" container>
+          {catList?.map((token) => {
+            const isPresent = isCATWalletPresent(wallets, token);
 
-          async function handleSelect() {
-            if (!isPresent) {
-              await handleCreateNewToken(token);
+            async function handleSelect() {
+              if (!isPresent) {
+                await handleCreateNewToken(token);
+              }
             }
-          }
 
-          return (
-            <Grid key={token.tail} xs={12} sm={6} md={4} item>
-              <WalletCreateCard
-                key={token.symbol}
-                onSelect={handleSelect}
-                title={token.name}
-                symbol={token.symbol}
-                disabled={isPresent}
-                description={token.description}
-                loadingDescription={<Trans>Adding {token.symbol} token</Trans>}
-              />
-            </Grid>
-          );
-        })}
-        <Grid xs={12} sm={6} md={4} item>
-          <WalletCreateCard
-            onSelect={() => handleCreateExisting()}
-            title={<Trans>Custom</Trans>}
-            icon={<AddIcon fontSize="large" color="primary" />}
-          />
+            return (
+              <Grid key={token.assetId} xs={12} sm={6} md={4} item>
+                <WalletCreateCard
+                  key={token.symbol}
+                  onSelect={handleSelect}
+                  title={token.name}
+                  symbol={token.symbol}
+                  disabled={isPresent}
+                  description={token.description}
+                  loadingDescription={<Trans>Adding {token.symbol} token</Trans>}
+                />
+              </Grid>
+            );
+          })}
+          <Grid xs={12} sm={6} md={4} item>
+            <WalletCreateCard
+              onSelect={() => handleCreateExisting()}
+              title={<Trans>Custom</Trans>}
+              icon={<AddIcon fontSize="large" color="primary" />}
+            />
+          </Grid>
         </Grid>
-      </Grid>
+      )}
     </Flex>
   );
 }

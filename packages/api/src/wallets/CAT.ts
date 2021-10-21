@@ -54,4 +54,8 @@ export default class CATWallet extends Wallet {
       fee,
     });
   }
+
+  async getCatList() {
+    return this.command('get_cat_list');
+  }
 }

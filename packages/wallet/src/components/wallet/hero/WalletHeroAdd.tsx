@@ -30,7 +30,6 @@ import { Switch, Route, useHistory, useRouteMatch, useParams } from 'react-route
 import useTrans from '../../../hooks/useTrans';
 import WalletsList from '../WalletsList';
 import WalletHeroLayout from './WalletHeroLayout';
-import Tokens from '../../../constants/Tokens';
 
 const StyledListItem = styled(ListItem)`
   min-width: 300px;
@@ -69,7 +68,7 @@ export default function Wallets() {
       ) : (
         <Card>
           <List>
-            {Tokens.map((token: Wallet) => (
+            {/* catList?.map((token: Wallet) => (
               <StyledListItem
                 onClick={() => handleChange(null, token)}
                 key={token.name}
@@ -87,7 +86,7 @@ export default function Wallets() {
                   <ChevronRightIcon />
                 </Flex>
               </StyledListItem>
-            ))}
+            )) */}
           </List>
         </Card>
       )}

@@ -1,10 +1,7 @@
-import { ReactNode } from 'react';
-
 type CATToken = {
-  icon: ReactNode;
-  symbol: string;
+  assetId: string;
   name: string;
-  tail: string;
+  symbol: string;
 };
 
 export default CATToken;

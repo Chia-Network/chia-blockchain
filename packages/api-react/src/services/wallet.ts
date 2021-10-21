@@ -585,6 +585,18 @@ export const walletApi = createApi({
       }),
       transformResponse: (response: any) => response?.colour,
     }),
+
+    getCatList: build.query<{
+      assetId: string;
+      name: string;
+      symbol: string;
+    }[], undefined>({
+      query: () => ({
+        command: 'getCatList',
+        service: CAT,
+      }),
+      transformResponse: (response: any) => response?.catList,
+    }),
   
     getCATName: build.query<string, {
       walletId: number;
@@ -717,6 +729,7 @@ export const {
   useCreateNewCATWalletMutation,
   useCreateCATWalletForExistingMutation,
   useGetCATTailQuery,
+  useGetCatListQuery,
   useGetCATNameQuery,
   useSetCATNameMutation,
   useSpendCATMutation,
