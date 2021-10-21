@@ -20,6 +20,6 @@ class TestNetwork:
         assert get_host_addr("2000:1000::1234:abcd", prefer_ipv6) == "2000:1000::1234:abcd"
         # ip6-localhost is not always available, and localhost is IPv4 only
         # on some systems.  Just test neither here.
-        #assert get_host_addr("ip6-localhost", prefer_ipv6) == "::1"
-        #assert get_host_addr("localhost", prefer_ipv6) == "::1"
+        # assert get_host_addr("ip6-localhost", prefer_ipv6) == "::1"
+        # assert get_host_addr("localhost", prefer_ipv6) == "::1"
         assert get_host_addr("example.net", prefer_ipv6) == "2606:2800:220:1:248:1893:25c8:1946"
