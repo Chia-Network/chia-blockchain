@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
 
-from chia.cmds.init_funcs import check_keys, chia_init
+from chia.cmds.init_funcs import chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
