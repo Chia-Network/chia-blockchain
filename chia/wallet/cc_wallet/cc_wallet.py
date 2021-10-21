@@ -690,7 +690,7 @@ class CCWallet:
                 created_at_time=uint64(int(time.time())),
                 to_puzzle_hash=puzzle_hashes[0],
                 amount=uint64(payment_sum),
-                fee_amount=uint64(0),
+                fee_amount=fee,
                 confirmed=False,
                 sent=uint32(0),
                 spend_bundle=spend_bundle,
