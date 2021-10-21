@@ -2,6 +2,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { Wallet, CAT, WalletType } from '@chia/api';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import type Transaction from '../@types/Transaction';
+import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 
 const baseQuery = chiaLazyBaseQuery({
   service: Wallet,
@@ -84,6 +85,10 @@ export const walletApi = createApi({
           { type: 'Wallets', id: 'LIST' },
         ] :  [{ type: 'Wallets', id: 'LIST' }];
       },
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
+        command: 'onWalletCreated',
+        endpoint: () => walletApi.endpoints.getWallets,
+      }]),
     }),
 
     getTransaction: build.query<any, { 
@@ -197,6 +202,13 @@ export const walletApi = createApi({
           pendingTotalBalance,
         };
       },
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
+        command: 'onCoinAdded',
+        endpoint: () => walletApi.endpoints.getWalletBalance,
+      }, {
+        command: 'onCoinRemoved',
+        endpoint: () => walletApi.endpoints.getWalletBalance,
+      }]),
     }),
 
     getFarmedAmount: build.query<any, undefined>({
@@ -407,6 +419,13 @@ export const walletApi = createApi({
           { type: 'Transactions', id: 'LIST' },
         ] :  [{ type: 'Transactions', id: 'LIST' }];
       },
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
+        command: 'onCoinAdded',
+        endpoint: () => walletApi.endpoints.getTransactions,
+      }, {
+        command: 'onCoinRemoved',
+        endpoint: () => walletApi.endpoints.getTransactions,
+      }]),
     }),
 
     getCurrentAddress: build.query<string, {
@@ -468,19 +487,33 @@ export const walletApi = createApi({
       query: () => ({
         command: 'getSyncStatus',
       }),
-      async onCacheEntryAdded(_args, api) {
-        const { cacheDataLoaded, cacheEntryRemoved, dispatch } = api;
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
+        command: 'onSyncChanged',
+        endpoint: () => walletApi.endpoints.getSyncStatus,
+      }]),
+    }),
+
+    getConnections: build.query<any, undefined>({
+      query: () => ({
+        command: 'getConnections',
+      }),
+      transformResponse: (response: any) => response?.connections,
+      async onCacheEntryAdded(_arg, api) {
+        const { updateCachedData, cacheDataLoaded, cacheEntryRemoved } = api;
         let unsubscribe;
         try {
           await cacheDataLoaded;
 
           const response = await baseQuery({
-            command: 'onSyncChanged',
-            args: [() => {
-              dispatch(walletApi.endpoints.getSyncStatus.initiate(undefined, { 
-                subscribe: false,
-                forceRefetch: true,
-              }));
+            command: 'onConnections',
+            args: [(data: any) => {
+              updateCachedData((draft) => {
+                // empty base array
+                draft.splice(0);
+
+                // assign new items
+                Object.assign(draft, data.connections);
+              });
             }],
           }, api, {});
 
@@ -492,12 +525,6 @@ export const walletApi = createApi({
           }
         }
       },
-    }),
-
-    getConnections: build.query<any, undefined>({
-      query: () => ({
-        command: 'getConnections',
-      }),
     }),
 
     createBackup: build.mutation<any, {

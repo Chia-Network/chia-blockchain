@@ -20,6 +20,7 @@ import {
 import { useDeleteUnconfirmedTransactionsMutation } from '@chia/api-react';
 import WalletStatus from './WalletStatus';
 import WalletsDropdodown from './WalletsDropdown';
+import isDebug from '../../util/isdebug';
 
 type StandardWalletProps = {
   walletId: number;
@@ -66,7 +67,7 @@ export default function WalletHeader(props: StandardWalletProps) {
             <Trans>Status:</Trans>
           </Typography>
           &nbsp;
-          <WalletStatus />
+          <WalletStatus height={isDebug} />
         </Flex>
         <More>
           {({ onClose }) => (

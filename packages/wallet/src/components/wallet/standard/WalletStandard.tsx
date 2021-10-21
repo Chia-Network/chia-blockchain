@@ -6,6 +6,8 @@ import WalletStandardCards from './WalletStandardCards';
 import WalletReceiveAddress from '../WalletReceiveAddress';
 import WalletSend from '../WalletSend';
 import WalletHeader from '../WalletHeader';
+import WalletConnections from '../WalletConnections';
+import isDebug from '../../../util/isDebug';
 
 type StandardWalletProps = {
   walletId: number;
@@ -26,6 +28,9 @@ export default function StandardWallet(props: StandardWalletProps) {
         <WalletReceiveAddress walletId={walletId} />
         <WalletSend walletId={walletId} />
         <WalletHistory walletId={walletId} />
+        {isDebug && (
+          <WalletConnections walletId={walletId} />
+        )}
       </Flex>
     </Flex>
   );

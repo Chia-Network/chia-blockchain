@@ -21,7 +21,7 @@ import isNumeric from 'validator/es/lib/isNumeric';
 import { useForm, useWatch } from 'react-hook-form';
 import { Button, Grid } from '@material-ui/core';
 import { chia_to_mojo, colouredcoin_to_mojo } from '../../../util/chia';
-import { get_transaction_result } from '../../../util/transaction_result';
+import getTransactionResult from '../../../util/getTransactionResult';
 import config from '../../../config/config';
 import useWallet from '../../../hooks/useWallet';
 
@@ -62,13 +62,7 @@ export default function WalletCATSend(props: Props) {
 
   const { wallet, unit, loading } = useWallet(walletId);
 
-  const isLoading = isSpendCatLoading || isWalletSyncLoading || loading;
-  if (!wallet || isLoading) {
-    return null;
-  }
-
-  const { tail } = wallet.meta;
-  const syncing = walletState.syncing;
+  // const isLoading = isSpendCatLoading || isWalletSyncLoading || loading;  
 
   async function farm() {
     if (addressValue) {
@@ -78,14 +72,17 @@ export default function WalletCATSend(props: Props) {
     }
   }
 
+  const canSubmit = wallet && !isSpendCatLoading && !loading;
+
   async function handleSubmit(data: SendTransactionData) {
-    try {
-    if (isSpendCatLoading) {
-      return;
+    const tail = wallet?.meta?.tail;
+
+    if (!walletState?.synced) {
+      throw new Error(t`Please finish syncing before making a transaction`);
     }
 
-    if (syncing) {
-      throw new Error(t`Please finish syncing before making a transaction`);
+    if (!canSubmit) {
+      return;
     }
 
     const amount = data.amount.trim();
@@ -142,7 +139,7 @@ export default function WalletCATSend(props: Props) {
     const response = await spendCAT(queryData).unwrap();
     console.log('response', response);
 
-    const result = get_transaction_result(response);
+    const result = getTransactionResult(response.transaction);
     if (result.success) {
         openDialog(
           <AlertDialog title={<Trans>Success</Trans>}>
@@ -154,9 +151,6 @@ export default function WalletCATSend(props: Props) {
     }
 
     methods.reset();
-  } catch (error) {
-    console.log(error);
-  }
   }
 
   return (
@@ -230,7 +224,7 @@ export default function WalletCATSend(props: Props) {
                 variant="contained"
                 color="primary"
                 type="submit"
-                disabled={isSpendCatLoading}
+                disabled={!canSubmit}
                 loading={isSpendCatLoading}
               >
                 <Trans>Send</Trans>

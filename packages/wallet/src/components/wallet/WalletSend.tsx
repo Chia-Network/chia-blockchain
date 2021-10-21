@@ -25,7 +25,7 @@ import {
 import { chia_to_mojo } from '../../util/chia';
 import config from '../../config/config';
 import useWallet from '../../hooks/useWallet';
-import { get_transaction_result } from '../../util/transaction_result';
+import getTransactionResult from '../../util/getTransactionResult';
 
 type SendCardProps = {
   walletId: number;
@@ -106,13 +106,6 @@ export default function WalletSend(props: SendCardProps) {
       address = address.slice(2);
     }
 
-    console.log({
-      walletId,
-      address,
-      amount: Number.parseFloat(chia_to_mojo(amount)),
-      fee: Number.parseFloat(chia_to_mojo(fee)),
-    });
-
     const response = await sendTransaction({
       walletId,
       address,
@@ -122,7 +115,7 @@ export default function WalletSend(props: SendCardProps) {
 
     console.log('response', response);
 
-    const result = get_transaction_result(response);
+    const result = getTransactionResult(response.transaction);
     if (result.success) {
         openDialog(
           <AlertDialog title={<Trans>Success</Trans>}>

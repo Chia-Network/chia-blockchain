@@ -235,4 +235,39 @@ export default class Wallet extends Service {
   onNewBlock(callback: (data: any, message: Message) => void) {
     return this.onStateChanged('new_block', callback);
   }
+
+  onCoinAdded(callback: (
+    data: {
+      additionalData: Object;
+      state: 'coin_added';
+      success: boolean;
+      walletId: number;
+    }, 
+    message: Message,
+  ) => void) {
+    return this.onStateChanged('coin_added', callback);
+  }
+
+  onCoinRemoved(callback: (
+    data: {
+      additionalData: Object;
+      state: "coin_removed"
+      success: boolean;
+      walletId: number;
+    }, 
+    message: Message,
+  ) => void) {
+    return this.onStateChanged('coin_removed', callback);
+  }
+
+  onWalletCreated(callback: (data: any, message: Message) => void) {
+    return this.onStateChanged('wallet_created', callback);
+  }
+
+  onConnections(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onCommand('get_connections', callback, processData);
+  }
 }

@@ -21,6 +21,7 @@ import {
   useLogInAndSkipImportMutation,
 } from '@chia/api-react';
 import SelectKeyDetailDialog from './SelectKeyDetailDialog';
+import LoadingOverlay from './LoadingOverlay';
 
 const StyledFingerprintListItem = styled(ListItem)`
   padding-right: ${({ theme }) => `${theme.spacing(11)}px`};
@@ -119,15 +120,12 @@ export default function SelectKeyItem(props: Props) {
   }
 
   return (
-    <StyledFingerprintListItem
-      onClick={handleLogin}
-      key={fingerprint}
-      button
-    >
-      {loading ? (
-        <Loading center />
-      ) : (
-        <>
+    <LoadingOverlay loading={loading}>
+      <StyledFingerprintListItem
+        onClick={handleLogin}
+        key={fingerprint}
+        button
+      >
         <ListItemText
           primary={
             <Trans>
@@ -164,8 +162,7 @@ export default function SelectKeyItem(props: Props) {
             </IconButton>
           </Tooltip>
         </ListItemSecondaryAction>
-        </>
-      )}
-    </StyledFingerprintListItem>
+      </StyledFingerprintListItem>
+    </LoadingOverlay>
   );
 }

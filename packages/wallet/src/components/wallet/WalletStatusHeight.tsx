@@ -1,13 +1,14 @@
 import React from 'react';
-import { useSelector } from 'react-redux';
 import { FormatLargeNumber } from '@chia/core';
-import type { RootState } from '../../modules/rootReducer';
+import { useGetSyncStatusQuery } from '@chia/api-react';
 
 export default function WalletStatusHeight() {
-  const walletState = useSelector((state: RootState) => state.wallet_state);
+  const { data: walletState, isLoading } = useGetSyncStatusQuery();
+  if (isLoading || !walletState) {
+    return null;
+  }
 
-  const currentHeight = walletState?.status?.height;
-
+  const currentHeight = walletState?.height;
   if (currentHeight === undefined || currentHeight === null) {
     return null;
   }

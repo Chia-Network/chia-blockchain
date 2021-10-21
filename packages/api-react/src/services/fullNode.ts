@@ -80,6 +80,10 @@ export const fullNodeApi = createApi({
             command: 'onConnections',
             args: [(data: any) => {
               updateCachedData((draft) => {
+                // empty base array
+                draft.splice(0);
+
+                // assign new items
                 Object.assign(draft, data.connections);
               });
             }],

@@ -233,7 +233,7 @@ export default function WalletGraph(props: Props) {
   });
 
   const isLoading = isWalletTransactionsLoading || isWalletBalanceLoading || !transactions;
-  if (isLoading) {
+  if (isLoading || !walletBalance) {
     return null;
   }
 
