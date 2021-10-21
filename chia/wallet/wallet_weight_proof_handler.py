@@ -13,15 +13,20 @@ from chia.full_node.weight_proof import (
     _validate_recent_blocks,
     _validate_sub_epoch_segments,
     _validate_recent_blocks_and_get_records,
+    chunks,
+    _validate_vdf_batch,
 )
+from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.blockchain_format.vdf import VDFProof, VDFInfo
 
 from chia.types.weight_proof import (
     WeightProof,
 )
 
 from chia.util.ints import uint32
+from chia.util.streamable import dataclass_from_dict
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +36,7 @@ class WalletWeightProofHandler:
     LAMBDA_L = 100
     C = 0.5
     MAX_SAMPLES = 20
-    blockchain: Any
+    _blockchain: Any
 
     def __init__(
         self,
@@ -63,6 +68,10 @@ class WalletWeightProofHandler:
         self._weight_proof_tasks.remove(task)
         return valid, fork_point, summaries, block_records
 
+    def chunks(self, l, n):
+        n = max(1, n)
+        return (l[i : i + n] for i in range(0, len(l), n))
+
     async def validate_weight_proof_inner(
         self, weight_proof: WeightProof
     ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
@@ -87,9 +96,30 @@ class WalletWeightProofHandler:
         constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
             self._constants, summaries, weight_proof
         )
-        segment_validation_task = asyncio.get_running_loop().run_in_executor(
-            self._executor, _validate_sub_epoch_segments, constants, rng, wp_segment_bytes, summary_bytes
+
+        segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
+            constants, rng, wp_segment_bytes, summary_bytes
         )
+
+        if not segments_validated:
+            return False, uint32(0), [], []
+
+        vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
+        vdf_tasks = []
+        for chunk in vdf_chunks:
+            byte_chunks = []
+            for vdf_proof, classgroup, vdf_info in chunk:
+                byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
+
+            vdf_task = asyncio.get_running_loop().run_in_executor(
+                self._executor, _validate_vdf_batch, constants, byte_chunks
+            )
+            vdf_tasks.append(vdf_task)
+
+        for vdf_task in vdf_tasks:
+            validated = await vdf_task
+            if not validated:
+                return False, uint32(0), [], []
 
         recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
             self._executor, _validate_recent_blocks_and_get_records, constants, wp_recent_chain_bytes, summary_bytes
@@ -102,15 +132,17 @@ class WalletWeightProofHandler:
             # Verify the data
             return False, uint32(0), [], []
 
-        valid_segments = await segment_validation_task
-        if not valid_segments:
-            log.error("failed validating weight proof sub epoch segments")
-            return False, uint32(0), [], []
-
         sub_blocks = [BlockRecord.from_bytes(b) for b in sub_block_bytes]
 
         # TODO fix find fork point
         return True, uint32(0), summaries, sub_blocks
+
+    def get_recent_chain_fork(self, new_wp: WeightProof) -> uint32:
+        for nblock in reversed(new_wp.recent_chain_data):
+            if self._blockchain.contains_block(nblock.prev_header_hash):
+                return uint32(nblock.height - 1)
+
+        return uint32(0)
 
     def get_fork_point(self, old_summaries: List[SubEpochSummary], received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point

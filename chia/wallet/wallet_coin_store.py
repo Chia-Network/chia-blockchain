@@ -243,7 +243,8 @@ class WalletCoinStore:
                     coin_record.wallet_id,
                 )
                 self.coin_record_cache[coin_record.coin.name()] = new_record
-                self.unspent_coin_wallet_cache[coin_record.wallet_id][coin_record.coin.name()] = new_record
+                if coin_record.wallet_id in self.unspent_coin_wallet_cache:
+                    self.unspent_coin_wallet_cache[coin_record.wallet_id][coin_record.coin.name()] = new_record
             if coin_record.confirmed_block_height > height:
                 delete_queue.append(coin_record)
 

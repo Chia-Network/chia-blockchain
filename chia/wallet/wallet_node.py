@@ -218,7 +218,7 @@ class WalletNode:
 
         self.peer_task = asyncio.create_task(self._periodically_check_full_node())
         self.sync_event = asyncio.Event()
-        self.logged_in_fingerprint = fingerprint
+        self.logged_in_fingerprint = private_key.get_g1().get_fingerprint()
         self.logged_in = True
         return True
 
@@ -609,9 +609,8 @@ class WalletNode:
                 # check if claimed peak is heavier or same as our current peak
                 # if we haven't synced fully to this peer sync again
                 if (
-                    (peer.peer_node_id not in self.synced_peers or far_behind)
-                    and peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS
-                ):
+                    peer.peer_node_id not in self.synced_peers or far_behind
+                ) and peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                     if far_behind:
                         self.wallet_state_manager.set_sync_mode(True)
 
@@ -626,8 +625,14 @@ class WalletNode:
                         return
                     if far_behind:
                         self.wallet_state_manager.set_sync_mode(True)
-                    await self.untrusted_sync_to_peer(peer, peak, weight_proof)
-                    await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, summaries, block_records)
+                    await self.untrusted_sync_to_peer(peer, peak, weight_proof, summaries)
+                    if (
+                        self.wallet_state_manager.blockchain.synced_weight_proof is None or weight_proof.recent_chain_data[-1].weight
+                        > self.wallet_state_manager.blockchain.synced_weight_proof.recent_chain_data[-1].weight
+                    ):
+                        await self.wallet_state_manager.blockchain.new_weight_proof(
+                            weight_proof, summaries, block_records
+                        )
                     if far_behind:
                         self.wallet_state_manager.set_sync_mode(False)
                     self.synced_peers.add(peer.peer_node_id)
@@ -901,8 +906,26 @@ class WalletNode:
                     continue
             all_checked = True
 
-    async def untrusted_sync_to_peer(self, peer, peak: wallet_protocol.NewPeakWallet, weight_proof):
+    async def untrusted_sync_to_peer(self, peer, peak: wallet_protocol.NewPeakWallet, weight_proof, summaries):
         assert self.wallet_state_manager is not None
+
+        # If new weight proof is higher than the old one, rollback to the fork point and than apply new coin_states
+        synced_summaries = self.wallet_state_manager.blockchain.synced_summaries
+        fork_height = 0
+        if (
+            weight_proof.recent_chain_data[-1].height - self.wallet_state_manager.blockchain.get_peak_height()
+            < self.constants.WEIGHT_PROOF_RECENT_BLOCKS
+        ):
+            fork_height = self.wallet_state_manager.weight_proof_handler.get_recent_chain_fork(weight_proof)
+
+        if fork_height == 0:
+            summary_fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point(
+                old_summaries=synced_summaries, received_summaries=summaries
+            )
+            # Extra conservative
+            fork_height = max(0, summary_fork_point - 1000)
+
+        await self.wallet_state_manager.reorg_rollback(fork_height)
 
         start_time = time.time()
         peer_request_cache = PeerRequestCache()
