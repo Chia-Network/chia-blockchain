@@ -6,7 +6,7 @@ name: MacOS wallet-did_wallet Tests
 on:
   push:
     branches:
-      - protocol_and_cats_rebased
+      - main
     tags:
         - '**'
   pull_request:

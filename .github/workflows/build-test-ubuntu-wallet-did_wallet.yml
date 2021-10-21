@@ -6,7 +6,7 @@ name: Ubuntu wallet-did_wallet Test
 on:
   push:
     branches:
-      - protocol_and_cats_rebased
+      - main
     tags:
         - '**'
   pull_request:
