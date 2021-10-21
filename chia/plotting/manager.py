@@ -4,7 +4,7 @@ import threading
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Iterator
 from concurrent.futures.thread import ThreadPoolExecutor
 
 from blspy import G1Element
@@ -15,6 +15,7 @@ from chia.plotting.util import (
     PlotInfo,
     PlotRefreshResult,
     PlotsRefreshParameter,
+    PlotRefreshEvents,
     get_plot_filenames,
     parse_plot_info,
     stream_plot_info_pk,
@@ -216,6 +217,9 @@ class PlotManager:
             while not self.needs_refresh() and self._refreshing_enabled:
                 time.sleep(1)
 
+            if not self._refreshing_enabled:
+                return
+
             plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(self.root_path)
             plot_directories: Set[Path] = set(plot_filenames.keys())
             plot_paths: List[Path] = []
@@ -223,19 +227,39 @@ class PlotManager:
                 plot_paths += paths
 
             total_result: PlotRefreshResult = PlotRefreshResult()
-            while self.needs_refresh() and self._refreshing_enabled:
-                batch_result: PlotRefreshResult = self.refresh_batch(plot_paths, plot_directories)
+            total_size = len(plot_paths)
+
+            self._refresh_callback(PlotRefreshEvents.started, PlotRefreshResult(remaining=total_size))
+
+            def batches() -> Iterator[Tuple[int, List[Path]]]:
+                if total_size > 0:
+                    for batch_start in range(0, total_size, self.refresh_parameter.batch_size):
+                        batch_end = min(batch_start + self.refresh_parameter.batch_size, total_size)
+                        yield total_size - batch_end, plot_paths[batch_start:batch_end]
+                else:
+                    yield 0, []
+
+            for remaining, batch in batches():
+                batch_result: PlotRefreshResult = self.refresh_batch(batch, plot_directories)
+                if not self._refreshing_enabled:
+                    self.log.debug("refresh_plots: Aborted")
+                    break
+                # Set the remaining files since `refresh_batch()` doesn't know them but we want to report it
+                batch_result.remaining = remaining
                 total_result.loaded += batch_result.loaded
                 total_result.removed += batch_result.removed
                 total_result.processed += batch_result.processed
-                total_result.remaining = batch_result.remaining
                 total_result.duration += batch_result.duration
-                self._refresh_callback(batch_result)
-                if batch_result.remaining == 0:
+
+                self._refresh_callback(PlotRefreshEvents.batch_processed, batch_result)
+                if remaining == 0:
                     break
                 batch_sleep = self.refresh_parameter.batch_sleep_milliseconds
                 self.log.debug(f"refresh_plots: Sleep {batch_sleep} milliseconds")
                 time.sleep(float(batch_sleep) / 1000.0)
+
+            if self._refreshing_enabled:
+                self._refresh_callback(PlotRefreshEvents.done, total_result)
 
             # Cleanup unused cache
             available_ids = set([plot_info.prover.get_id() for plot_info in self.plots.values()])
@@ -256,7 +280,7 @@ class PlotManager:
 
     def refresh_batch(self, plot_paths: List[Path], plot_directories: Set[Path]) -> PlotRefreshResult:
         start_time: float = time.time()
-        result: PlotRefreshResult = PlotRefreshResult()
+        result: PlotRefreshResult = PlotRefreshResult(processed=len(plot_paths))
         counter_lock = threading.Lock()
 
         log.debug(f"refresh_batch: {len(plot_paths)} files in directories {plot_directories}")
@@ -265,6 +289,8 @@ class PlotManager:
             log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')
 
         def process_file(file_path: Path) -> Optional[PlotInfo]:
+            if not self._refreshing_enabled:
+                return None
             filename_str = str(file_path)
             if self.match_str is not None and self.match_str not in filename_str:
                 return None
@@ -288,12 +314,6 @@ class PlotManager:
                     log.debug(f"Skip duplicated plot {str(file_path)}")
                     return None
             try:
-                with counter_lock:
-                    if result.processed >= self.refresh_parameter.batch_size:
-                        result.remaining += 1
-                        return None
-                    result.processed += 1
-
                 prover = DiskProver(str(file_path))
 
                 log.debug(f"process_file {str(file_path)}")
@@ -402,8 +422,11 @@ class PlotManager:
                 filenames_to_remove: List[str] = []
                 for plot_filename, paths_entry in self.plot_filename_paths.items():
                     loaded_path, duplicated_paths = paths_entry
-                    if plot_removed(Path(loaded_path) / Path(plot_filename)):
+                    loaded_plot = Path(loaded_path) / Path(plot_filename)
+                    if plot_removed(loaded_plot):
                         filenames_to_remove.append(plot_filename)
+                        if loaded_plot in self.plots:
+                            del self.plots[loaded_plot]
                         result.removed += 1
                         # No need to check the duplicates here since we drop the whole entry
                         continue
@@ -423,7 +446,7 @@ class PlotManager:
             for new_plot in executor.map(process_file, plot_paths):
                 if new_plot is not None:
                     plots_refreshed[Path(new_plot.prover.get_filename())] = new_plot
-            self.plots = plots_refreshed
+            self.plots.update(plots_refreshed)
 
         result.duration = time.time() - start_time
 

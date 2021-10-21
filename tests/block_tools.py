@@ -47,7 +47,7 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.full_node.signage_point import SignagePoint
-from chia.plotting.util import PlotsRefreshParameter, PlotRefreshResult, parse_plot_info
+from chia.plotting.util import PlotsRefreshParameter, PlotRefreshResult, PlotRefreshEvents, parse_plot_info
 from chia.plotting.manager import PlotManager
 from chia.server.server import ssl_context_for_server
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -163,14 +163,28 @@ class BlockTools:
         mkdir(self.plot_dir)
         mkdir(self.temp_dir)
         self.expected_plots: Dict[bytes32, Path] = {}
+        self.total_result = PlotRefreshResult()
 
-        def test_callback(update_result: PlotRefreshResult):
-            if update_result.remaining == 0:
+        def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult):
+            assert update_result.duration < 5
+            if event == PlotRefreshEvents.started:
+                self.total_result = PlotRefreshResult()
+
+            if event == PlotRefreshEvents.batch_processed:
+                self.total_result.loaded += update_result.loaded
+                self.total_result.removed += update_result.removed
+                self.total_result.processed += update_result.processed
+                self.total_result.duration += update_result.duration
+                assert update_result.remaining == len(self.expected_plots) - self.total_result.processed
+                assert update_result.loaded <= self.refresh_parameter.batch_size
+
+            if event == PlotRefreshEvents.done:
+                assert self.total_result.loaded == update_result.loaded
+                assert self.total_result.removed == update_result.removed
+                assert self.total_result.processed == update_result.processed
+                assert self.total_result.duration == update_result.duration
+                assert update_result.remaining == 0
                 assert len(self.plot_manager.plots) == len(self.expected_plots)
-            else:
-                assert 0 < update_result.loaded <= self.refresh_parameter.batch_size
-                assert update_result.loaded == update_result.processed
-                assert 0 < update_result.duration < 5
 
         self.plot_manager: PlotManager = PlotManager(
             self.root_path, refresh_parameter=self.refresh_parameter, refresh_callback=test_callback
@@ -294,6 +308,9 @@ class BlockTools:
             sys.exit(1)
 
     async def refresh_plots(self):
+        self.plot_manager.refresh_parameter.batch_size = (
+            4 if len(self.expected_plots) % 3 == 0 else 3
+        )  # Make sure we have at least some batches + a remainder
         self.plot_manager.trigger_refresh()
         assert self.plot_manager.needs_refresh()
         self.plot_manager.start_refreshing()

@@ -11,6 +11,7 @@ from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
     PlotRefreshResult,
     PlotsRefreshParameter,
+    PlotRefreshEvents,
     get_plot_filenames,
     find_duplicate_plot_IDs,
     parse_plot_info,
@@ -23,8 +24,8 @@ from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_s
 log = logging.getLogger(__name__)
 
 
-def plot_refresh_callback(refresh_result: PlotRefreshResult):
-    log.info(f"loaded {refresh_result.loaded} plots, {refresh_result.remaining} remaining")
+def plot_refresh_callback(event: PlotRefreshEvents, refresh_result: PlotRefreshResult):
+    log.info(f"event: {event.name}, loaded {refresh_result.loaded} plots, {refresh_result.remaining} remaining")
 
 
 def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo):
