@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import pathlib
 import random
+import tempfile
 from concurrent.futures.process import ProcessPoolExecutor
-from typing import List, Tuple, Any
+from typing import IO, List, Tuple, Any
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
@@ -26,6 +28,10 @@ from chia.util.ints import uint32
 log = logging.getLogger(__name__)
 
 
+def _create_shutdown_file() -> IO:
+    return tempfile.NamedTemporaryFile(prefix="chia_executor_shutdown_trigger")
+
+
 class WalletWeightProofHandler:
 
     LAMBDA_L = 100
@@ -41,13 +47,17 @@ class WalletWeightProofHandler:
         self._constants = constants
         self._blockchain = blockchain
         self._num_processes = 4
+        self._executor_shutdown_tempfile: IO = _create_shutdown_file()
         self._executor: ProcessPoolExecutor = ProcessPoolExecutor(self._num_processes)
         self._weight_proof_tasks: List[asyncio.Task] = []
 
     def cancel_weight_proof_tasks(self):
         log.warning("CANCELLING WEIGHT PROOF TASKS")
+        old_shutdown_tempfile = self._executor_shutdown_tempfile
         old_executor = self._executor
+        self._executor_shutdown_tempfile = _create_shutdown_file()
         self._executor = ProcessPoolExecutor(self._num_processes)
+        old_shutdown_tempfile.close()
         old_executor.shutdown(wait=False)
         for task in self._weight_proof_tasks:
             if not task.done():
@@ -89,7 +99,12 @@ class WalletWeightProofHandler:
         )
 
         recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
-            self._executor, _validate_recent_blocks_and_get_records, constants, wp_recent_chain_bytes, summary_bytes
+            self._executor,
+            _validate_recent_blocks_and_get_records,
+            constants,
+            wp_recent_chain_bytes,
+            summary_bytes,
+            pathlib.Path(self._executor_shutdown_tempfile.name),
         )
 
         segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
@@ -107,7 +122,11 @@ class WalletWeightProofHandler:
                 byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
 
             vdf_task = asyncio.get_running_loop().run_in_executor(
-                self._executor, _validate_vdf_batch, constants, byte_chunks
+                self._executor,
+                _validate_vdf_batch,
+                constants,
+                byte_chunks,
+                pathlib.Path(self._executor_shutdown_tempfile.name),
             )
             vdf_tasks.append(vdf_task)
 
