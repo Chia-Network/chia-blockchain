@@ -570,10 +570,6 @@ class WeightProofHandler:
             return False, uint32(0)
         return True, self.get_fork_point(summaries)
 
-    def chunks(self, some_list, chunk_size):
-        chunk_size = max(1, chunk_size)
-        return (some_list[i : i + chunk_size] for i in range(0, len(some_list), chunk_size))
-
     async def validate_weight_proof(self, weight_proof: WeightProof) -> Tuple[bool, uint32, List[SubEpochSummary]]:
         assert self.blockchain is not None
         assert len(weight_proof.sub_epochs) > 0
@@ -824,9 +820,9 @@ def handle_end_of_slot(
     )
 
 
-def chunks(l, n):
-    n = max(1, n)
-    return (l[i : i + n] for i in range(0, len(l), n))
+def chunks(some_list, chunk_size):
+    chunk_size = max(1, chunk_size)
+    return (some_list[i : i + chunk_size] for i in range(0, len(some_list), chunk_size))
 
 
 def compress_segments(full_segment_index, segments: List[SubEpochChallengeSegment]) -> List[SubEpochChallengeSegment]:
