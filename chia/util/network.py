@@ -51,7 +51,7 @@ def get_host_addr(host: Union[PeerInfo, str], prefer_ipv6: Optional[bool]) -> st
     # default here.  Not a great place to locate a default value, and we should
     # probabaly do something to write it into the config, but.  For now...
     if prefer_ipv6 is None:
-        prefer_ipv6 = False
+        prefer_ipv6 = True
     # Use PeerInfo.is_valid() to see if it's already an address
     if isinstance(host, PeerInfo):
         hoststr = host.host

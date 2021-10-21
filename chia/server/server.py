@@ -233,6 +233,7 @@ class ChiaServer:
 
         self.site = web.TCPSite(
             self.runner,
+            host="::",
             port=self._port,
             shutdown_timeout=3,
             ssl_context=ssl_context,
