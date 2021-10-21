@@ -610,37 +610,41 @@ class WalletNode:
                 if (
                     peer.peer_node_id not in self.synced_peers or far_behind
                 ) and peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
-                    if far_behind:
+                    if peak.height - self.wallet_state_manager.blockchain.get_peak_height() > 1:
                         self.wallet_state_manager.set_sync_mode(True)
-
-                    (
-                        valid_weight_proof,
-                        weight_proof,
-                        summaries,
-                        block_records,
-                    ) = await self.fetch_and_validate_the_weight_proof(peer, response.header_block)
-                    if valid_weight_proof is False:
+                    try:
+                        (
+                            valid_weight_proof,
+                            weight_proof,
+                            summaries,
+                            block_records,
+                        ) = await self.fetch_and_validate_the_weight_proof(peer, response.header_block)
+                        if valid_weight_proof is False:
+                            await peer.close()
+                            self.wallet_state_manager.set_sync_mode(False)
+                            return
+                        if far_behind:
+                            self.wallet_state_manager.set_sync_mode(True)
+                        await self.untrusted_sync_to_peer(peer, peak, weight_proof, summaries)
+                        assert weight_proof is not None
+                        if (
+                            self.wallet_state_manager.blockchain.synced_weight_proof is None
+                            or weight_proof.recent_chain_data[-1].weight
+                            > self.wallet_state_manager.blockchain.synced_weight_proof.recent_chain_data[-1].weight
+                        ):
+                            await self.wallet_state_manager.blockchain.new_weight_proof(
+                                weight_proof, summaries, block_records
+                            )
+                        self.synced_peers.add(peer.peer_node_id)
+                        await self.wallet_state_manager.blockchain.set_latest_tx_block(last_tx_block)
+                        await self.wallet_state_manager.blockchain.set_peak_block(response.header_block)
+                        self.wallet_state_manager.state_changed("new_block")
+                        await self.update_ui()
+                    except Exception as e:
+                        self.log.error(f"Error syncing to {peer.get_peer_info()} {e}")
                         await peer.close()
-                        return
-                    if far_behind:
-                        self.wallet_state_manager.set_sync_mode(True)
-                    await self.untrusted_sync_to_peer(peer, peak, weight_proof, summaries)
-                    assert weight_proof is not None
-                    if (
-                        self.wallet_state_manager.blockchain.synced_weight_proof is None
-                        or weight_proof.recent_chain_data[-1].weight
-                        > self.wallet_state_manager.blockchain.synced_weight_proof.recent_chain_data[-1].weight
-                    ):
-                        await self.wallet_state_manager.blockchain.new_weight_proof(
-                            weight_proof, summaries, block_records
-                        )
-                    if far_behind:
-                        self.wallet_state_manager.set_sync_mode(False)
-                    self.synced_peers.add(peer.peer_node_id)
-                    await self.wallet_state_manager.blockchain.set_latest_tx_block(last_tx_block)
-                    await self.wallet_state_manager.blockchain.set_peak_block(response.header_block)
-                    self.wallet_state_manager.state_changed("new_block")
-                    await self.update_ui()
+                    self.wallet_state_manager.set_sync_mode(False)
+
                 else:
                     if peer.peer_node_id not in self.synced_peers:
                         # Edge case, we still want to subscribe for all phs
