@@ -207,6 +207,9 @@ class WalletNode:
 
         self.config["starting_height"] = 0
 
+        if self.wallet_peers is None:
+            self.initialize_wallet_peers()
+
         if self.state_changed_callback is not None:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
 
@@ -237,7 +240,7 @@ class WalletNode:
             await self.server.close_all_connections()
         wallet_peers_close_task = None
         if self.wallet_peers is not None:
-            asyncio.create_task(self.wallet_peers.ensure_is_closed())
+            await self.wallet_peers.ensure_is_closed()
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager._await_closed()
         self.logged_in = False
@@ -903,7 +906,6 @@ class WalletNode:
         start_time = time.time()
         peer_request_cache = PeerRequestCache()
         # Always sync fully from untrusted
-        # current_height = await self.wallet_state_manager.blockchain.get_synced_height()
         # Get state for puzzle hashes
         await self.untrusted_subscribe_to_puzzle_hashes(peer, True, peer_request_cache, weight_proof)
 
