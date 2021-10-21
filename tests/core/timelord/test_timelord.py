@@ -31,6 +31,19 @@ async def setup_timelord_and_node_big_disc():
         yield _
 
 
+@pytest.fixture(scope="function")
+async def setup_timelord_2():
+    constants = {
+        "DISCRIMINANT_SIZE_BITS": 16,
+        "SUB_SLOT_ITERS_STARTING": 2 ** 20,
+        "MAX_SUB_SLOT_BLOCKS": 200,
+        "EPOCH_BLOCKS": 2000,
+        "SUB_EPOCH_BLOCKS": 1000,
+    }
+    async for _ in setup_timelord_and_node(constants):
+        yield _
+
+
 class TestTimelord:
     @pytest.mark.asyncio
     async def test_have_signage_points_or_eos_from_genesis(self, setup_timelord_and_node_big_disc):
@@ -118,3 +131,44 @@ class TestTimelord:
         )
         await full_node.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished_block), None)
         await time_out_assert(30, node_height_at_least, True, full_node, 3)
+
+    @pytest.mark.asyncio
+    async def test_timelord_infuses_long_chain(self, setup_timelord_2):
+        vdf_client, timelord, timelord_server, full_node, full_node_server = setup_timelord_2
+        constants = constants_for_dic(
+            {
+                "DISCRIMINANT_SIZE_BITS": 16,
+                "SUB_SLOT_ITERS_STARTING": 2 ** 20,
+                "MAX_SUB_SLOT_BLOCKS": 200,
+                "EPOCH_BLOCKS": 2000,
+                "SUB_EPOCH_BLOCKS": 1000,
+            }
+        )
+        bt = BlockTools(constants)
+        await bt.setup_keys()
+        await bt.setup_plots()
+        blocks = bt.get_consecutive_blocks(200)
+        # NOTE: There seem to be tricky cases around infusing right from genesis: genesis challenge might not be saved
+        # in last_state's challenge cache, making some infusions not work properly. For avoiding this issue,
+        # it's recommended we start infusing after a relatively stable chain is established.
+        for block in blocks[:100]:
+            await full_node.full_node.respond_block(fnp.RespondBlock(block))
+        for i in range(100, 200):
+            block = blocks[i]
+            if is_overflow_block(constants, block.reward_chain_block.signage_point_index):
+                finished_ss = block.finished_sub_slots[:-1]
+            else:
+                finished_ss = block.finished_sub_slots
+            unfinished_block = UnfinishedBlock(
+                finished_ss,
+                block.reward_chain_block.get_unfinished(),
+                block.challenge_chain_sp_proof,
+                block.reward_chain_sp_proof,
+                block.foliage,
+                block.foliage_transaction_block,
+                block.transactions_info,
+                block.transactions_generator,
+                [],
+            )
+            await full_node.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished_block), None)
+            await time_out_assert(30, node_height_at_least, True, full_node, i)
