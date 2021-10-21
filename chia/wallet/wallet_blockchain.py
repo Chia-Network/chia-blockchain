@@ -8,7 +8,6 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import WeightProof
 from chia.util.ints import uint32
@@ -33,7 +32,6 @@ class WalletBlockchain(BlockchainInterface):
     peak: Optional[HeaderBlock]
     peak_verified_by_peer: Dict[bytes32, HeaderBlock]  # Peer node id / Header block that we validated the weight for
     synced_weight_proof: Optional[WeightProof]
-    synced_summaries: List[SubEpochSummary]
     recent_blocks_dict: Dict[bytes32, HeaderBlock]
     _height_to_hash: Dict[uint32, bytes32]
     _block_records: Dict[bytes32, BlockRecord]
@@ -56,7 +54,6 @@ class WalletBlockchain(BlockchainInterface):
         self.recent_blocks_dict = {}
         self._height_to_hash = {}
         self._block_records = {}
-        self.synced_summaries = []
         if self.synced_weight_proof is not None:
             await self.new_blocks(self.synced_weight_proof.recent_chain_data)
         self.constants = constants
@@ -64,9 +61,6 @@ class WalletBlockchain(BlockchainInterface):
 
     async def get_stored_wp(self):
         return await self.basic_store.get_object("SYNCED_WIEGHT_PROOF", WeightProof)
-
-    async def get_synced_summaries(self):
-        return await self.basic_store.get_object("SYNCED_SUMMARIES", WeightProof)
 
     async def new_weight_proof(self, weight_proof, summaries, block_records):
         self.synced_weight_proof = weight_proof

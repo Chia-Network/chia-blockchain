@@ -638,6 +638,8 @@ class WalletStateManager:
             interested_wallet_id = await self.interested_store.get_interested_puzzle_hash_wallet_id(
                 puzzle_hash=coin_state.coin.puzzle_hash
             )
+            self.log.info(f"coin state received: {coin_state.coin.name()}")
+
             wallet_id = None
             wallet_type = None
             if info is not None:
@@ -787,6 +789,14 @@ class WalletStateManager:
                             await self.tx_store.add_transaction_record(tx_record, False)
                 else:
                     await self.coin_store.set_spent(coin_state.coin.name(), coin_state.spent_height)
+                    rem_tx_records: List[TransactionRecord] = []
+                    for out_tx_record in all_outgoing:
+                        for rem_coin in out_tx_record.removals:
+                            if rem_coin.name() == coin_state.coin.name():
+                                rem_tx_records.append(out_tx_record)
+
+                    for tx_record in rem_tx_records:
+                        await self.tx_store.set_confirmed(tx_record.name, coin_state.spent_height)
                     await self.coin_store.db_connection.commit()
                 for unconfirmed_record in all_unconfirmed:
                     for rem_coin in unconfirmed_record.removals:
