@@ -50,7 +50,7 @@ class TestTimelord:
         vdf_client, timelord, timelord_server, full_node, full_node_server = setup_timelord_and_node_big_disc
         incoming_queue, _ = await add_dummy_connection(full_node_server, 12312)
         await time_out_assert(
-            30,
+            300,
             time_out_messages(
                 incoming_queue,
                 "new_signage_point_or_end_of_sub_slot",
@@ -71,7 +71,7 @@ class TestTimelord:
         await asyncio.sleep(3)
         incoming_queue, _ = await add_dummy_connection(full_node_server, 12312)
         await time_out_assert(
-            30,
+            300,
             time_out_messages(
                 incoming_queue,
                 "new_signage_point_or_end_of_sub_slot",
@@ -100,7 +100,7 @@ class TestTimelord:
             [],
         )
         await full_node.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished_block), None)
-        await time_out_assert(30, node_height_at_least, True, full_node, 0)
+        await time_out_assert(300, node_height_at_least, True, full_node, 0)
 
     @pytest.mark.asyncio
     async def test_timelord_infuses_from_blocks(self, setup_timelord_and_node_big_disc):
@@ -130,7 +130,7 @@ class TestTimelord:
             [],
         )
         await full_node.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished_block), None)
-        await time_out_assert(30, node_height_at_least, True, full_node, 3)
+        await time_out_assert(300, node_height_at_least, True, full_node, 3)
 
     @pytest.mark.asyncio
     async def test_timelord_infuses_long_chain(self, setup_timelord_2):
@@ -171,4 +171,4 @@ class TestTimelord:
                 [],
             )
             await full_node.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished_block), None)
-            await time_out_assert(30, node_height_at_least, True, full_node, i)
+            await time_out_assert(300, node_height_at_least, True, full_node, i)
