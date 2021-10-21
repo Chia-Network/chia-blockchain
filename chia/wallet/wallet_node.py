@@ -876,13 +876,14 @@ class WalletNode:
         self.log.warning(f"It took {end_validation - start_validation} time to validate the weight proof")
         return valid, weight_proof, summaries, block_records
 
-    async def untrusted_subscribe_to_puzzle_hashes(self, peer, save_state, peer_request_cache, weight_proof):
+    async def untrusted_subscribe_to_puzzle_hashes(
+        self, peer: WSChiaConnection, save_state: bool, peer_request_cache: PeerRequestCache, weight_proof: WeightProof
+    ):
         already_checked = set()
         all_checked = False
 
-        while True:
-            if all_checked:
-                break
+        continue_while = True
+        while continue_while:
             all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
             to_check = []
             for ph in all_puzzle_hashes:
@@ -905,13 +906,15 @@ class WalletNode:
 
             # Check if new puzzle hashed have been created
             check_again = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+            continue_while = False
             for ph in check_again:
                 if ph not in already_checked:
-                    all_checked = False
-                    continue
-            all_checked = True
+                    continue_while = True
+                    break
 
-    async def untrusted_sync_to_peer(self, peer, peak: wallet_protocol.NewPeakWallet, weight_proof, summaries):
+    async def untrusted_sync_to_peer(
+        self, peer, peak: wallet_protocol.NewPeakWallet, weight_proof: WeightProof, summaries: List[SubEpochSummary]
+    ):
         assert self.wallet_state_manager is not None
         # If new weight proof is higher than the old one, rollback to the fork point and than apply new coin_states
         synced_summaries = self.wallet_state_manager.blockchain.synced_summaries
@@ -931,8 +934,8 @@ class WalletNode:
 
         await self.wallet_state_manager.reorg_rollback(fork_height)
 
-        start_time = time.time()
-        peer_request_cache = PeerRequestCache()
+        start_time: float = time.time()
+        peer_request_cache: PeerRequestCache = PeerRequestCache()
         # Always sync fully from untrusted
         # Get state for puzzle hashes
         await self.untrusted_subscribe_to_puzzle_hashes(peer, True, peer_request_cache, weight_proof)
