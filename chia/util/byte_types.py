@@ -41,11 +41,6 @@ def make_sized_bytes(size: int):
         assert f.read() == b""
         return result
 
-    def __bytes__(self: Any) -> bytes:
-        f = io.BytesIO()
-        self.stream(f)
-        return bytes(f.getvalue())
-
     def __str__(self):
         return self.hex()
 
@@ -57,7 +52,6 @@ def make_sized_bytes(size: int):
         parse=parse,
         stream=stream,
         from_bytes=from_bytes,
-        __bytes__=__bytes__,
         __str__=__str__,
         __repr__=__repr__,
     )
