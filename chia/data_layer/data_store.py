@@ -115,7 +115,7 @@ class DataStore:
 
         return node_hash
 
-    async def _insert_terminal_node(self, key: bytes32, value: bytes32) -> bytes32:
+    async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
         # TODO: maybe verify a transaction is active
 
         node_hash = Program.to((key, value)).get_tree_hash()
@@ -413,8 +413,8 @@ class DataStore:
 
     async def autoinsert(
         self,
-        key: bytes32,
-        value: bytes32,
+        key: bytes,
+        value: bytes,
         tree_id: bytes32,
         *,
         lock: bool = True,
@@ -440,8 +440,8 @@ class DataStore:
 
     async def insert(
         self,
-        key: bytes32,
-        value: bytes32,
+        key: bytes,
+        value: bytes,
         tree_id: bytes32,
         reference_node_hash: Optional[bytes32],
         side: Optional[Side],
@@ -514,7 +514,7 @@ class DataStore:
 
         return new_terminal_node_hash
 
-    async def delete(self, key: bytes32, tree_id: bytes32, *, lock: bool = True) -> None:
+    async def delete(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             ancestors = await self.get_ancestors(node_hash=node.hash, tree_id=tree_id, lock=False)
@@ -558,7 +558,7 @@ class DataStore:
 
         return
 
-    async def get_node_by_key(self, key: bytes32, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
+    async def get_node_by_key(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):
             nodes = await self.get_pairs(tree_id=tree_id, lock=False)
 
@@ -569,7 +569,7 @@ class DataStore:
         # TODO: fill out the exception
         raise Exception("node not found")
 
-    async def get_node_by_key_bytes(self, key: bytes32, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
+    async def get_node_by_key_bytes(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):
             nodes = await self.get_pairs(tree_id=tree_id, lock=False)
 

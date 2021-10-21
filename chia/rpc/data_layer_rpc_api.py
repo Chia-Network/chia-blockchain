@@ -2,10 +2,36 @@ from typing import Any, Callable, Dict
 
 
 from chia.data_layer.data_layer import DataLayer
+from chia.data_layer.data_layer_types import Side
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
 
 # todo input assertions for all rpc's
+
+
+def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
+    # TODO: A full class would likely be nice for this so downstream doesn't
+    #       have to deal with maybe-present attributes or Dict[str, Any] hints.
+    reference_node_hash = change.get("reference_node_hash")
+    if reference_node_hash is not None:
+        reference_node_hash = bytes32(hexstr_to_bytes(reference_node_hash))
+
+    side = change.get("side")
+    if side is not None:
+        side = Side(side)
+
+    value = change.get("value")
+    if value is not None:
+        value = hexstr_to_bytes(value)
+
+    return {
+        **change,
+        "key": hexstr_to_bytes(change["key"]),
+        "value": value,
+        "reference_node_hash": reference_node_hash,
+        "side": side,
+    }
 
 
 class DataLayerRpcApi:
@@ -24,26 +50,26 @@ class DataLayerRpcApi:
 
     async def create_kv_store(self, request: Dict[str, Any] = None) -> Dict[str, Any]:
         value = await self.service.create_store()
-        return {"id": value}
+        return {"id": value.hex()}
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        store_id = bytes32(bytes(request["id"]))
-        key = bytes32(bytes(request["key"]))
+        store_id = hexstr_to_bytes(request["id"])
+        key = hexstr_to_bytes(request["key"])
         value = await self.service.get_value(store_id=store_id, key=key)
-        return {"data": value}
+        return {"data": value.hex()}
 
     async def get_pairs(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        store_id = bytes32(bytes(request["id"]))
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
         value = await self.service.get_pairs(store_id)
-        return {"data": value}
+        return {"data": value.hex()}
 
     async def update_kv_store(self, request: Dict[str, Any]):
         """
         rows_to_add a list of clvmobjects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove
         """
-        changelist = request["changelist"]
+        changelist = [process_change(change) for change in request["changelist"]]
 
-        store_id = bytes32(request["id"])
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
         # todo input checks
         await self.service.insert(store_id, changelist)
