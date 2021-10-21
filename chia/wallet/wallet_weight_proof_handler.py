@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 from concurrent.futures.process import ProcessPoolExecutor
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
@@ -135,19 +135,19 @@ class WalletWeightProofHandler:
 
         return uint32(0)
 
-    def get_fork_point(self, old_summaries: List[SubEpochSummary], received_summaries: List[SubEpochSummary]) -> uint32:
+    def get_fork_point(self, old_wp: Optional[WeightProof], new_wp: WeightProof) -> uint32:
         # iterate through sub epoch summaries to find fork point
-        if len(old_summaries) == 0:
+        if old_wp is None:
             return uint32(0)
 
         old_ses = set()
 
-        for ses in old_summaries:
+        for ses in old_wp.sub_epochs:
             old_ses.add(ses.reward_chain_hash)
 
         overflow = 0
         count = 0
-        for idx, new_ses in enumerate(received_summaries):
+        for idx, new_ses in enumerate(new_wp.sub_epochs):
             if new_ses.reward_chain_hash in old_ses:
                 count += 1
                 overflow += new_ses.num_blocks_overflow
