@@ -652,19 +652,18 @@ class WalletStateManager:
             else:
                 continue
 
+            if wallet_id in all_outgoing_per_wallet:
+                all_outgoing = all_outgoing_per_wallet[wallet_id]
+            else:
+                all_outgoing = await self.tx_store.get_all_transactions_for_wallet(
+                    wallet_id, TransactionType.OUTGOING_TX
+                )
+                all_outgoing_per_wallet[wallet_id] = all_outgoing
+
             if coin_state.created_height is None:
                 # TODO implements this coin got reorged
                 pass
             if coin_state.created_height is not None and coin_state.spent_height is None:
-                # Coin was just added
-                if wallet_id in all_outgoing_per_wallet:
-                    all_outgoing = all_outgoing_per_wallet[wallet_id]
-                else:
-                    all_outgoing = await self.tx_store.get_all_transactions_for_wallet(
-                        wallet_id, TransactionType.OUTGOING_TX
-                    )
-                    all_outgoing_per_wallet[wallet_id] = all_outgoing
-
                 added_coin_record = await self.coin_added(
                     coin_state.coin, coin_state.created_height, all_outgoing, wallet_id, wallet_type, trade_additions
                 )
@@ -755,25 +754,37 @@ class WalletStateManager:
 
                         spent_timestamp = await self.wallet_node.get_timestamp_for_height(coin_state.spent_height)
 
-                        tx_record = TransactionRecord(
-                            confirmed_at_height=coin_state.spent_height,
-                            created_at_time=uint64(spent_timestamp),
-                            to_puzzle_hash=to_puzzle_hash,
-                            amount=uint64(int(amount)),
-                            fee_amount=uint64(fee),
-                            confirmed=True,
-                            sent=uint32(0),
-                            spend_bundle=None,
-                            additions=additions,
-                            removals=[coin_state.coin],
-                            wallet_id=wallet_id,
-                            sent_to=[],
-                            trade_id=None,
-                            type=uint32(TransactionType.OUTGOING_TX.value),
-                            name=token_bytes(),
-                        )
+                        # Reorg rollback adds reorged transactions so it's possible there is tx_record already
+                        # Even though we are just adding coin record to the db (after reorg)
+                        tx_records: List[TransactionRecord] = []
+                        for out_tx_record in all_outgoing:
+                            for rem_coin in out_tx_record.removals:
+                                if rem_coin.name() == coin_state.coin.name():
+                                    tx_records.append(out_tx_record)
 
-                        await self.tx_store.add_transaction_record(tx_record, False)
+                        if len(tx_records) > 0:
+                            for tx_record in tx_records:
+                                await self.tx_store.set_confirmed(tx_record.name, coin_state.spent_height)
+                        else:
+                            tx_record = TransactionRecord(
+                                confirmed_at_height=coin_state.spent_height,
+                                created_at_time=uint64(spent_timestamp),
+                                to_puzzle_hash=to_puzzle_hash,
+                                amount=uint64(int(amount)),
+                                fee_amount=uint64(fee),
+                                confirmed=True,
+                                sent=uint32(0),
+                                spend_bundle=None,
+                                additions=additions,
+                                removals=[coin_state.coin],
+                                wallet_id=wallet_id,
+                                sent_to=[],
+                                trade_id=None,
+                                type=uint32(TransactionType.OUTGOING_TX.value),
+                                name=token_bytes(),
+                            )
+
+                            await self.tx_store.add_transaction_record(tx_record, False)
                 else:
                     await self.coin_store.set_spent(coin_state.coin.name(), coin_state.spent_height)
                     await self.coin_store.db_connection.commit()
@@ -867,25 +878,24 @@ class WalletStateManager:
                 tx_type = TransactionType.FEE_REWARD.value
             timestamp = await self.wallet_node.get_timestamp_for_height(height)
 
-            if not change:
-                tx_record = TransactionRecord(
-                    confirmed_at_height=uint32(height),
-                    created_at_time=timestamp,
-                    to_puzzle_hash=coin.puzzle_hash,
-                    amount=coin.amount,
-                    fee_amount=uint64(0),
-                    confirmed=True,
-                    sent=uint32(0),
-                    spend_bundle=None,
-                    additions=[coin],
-                    removals=[],
-                    wallet_id=wallet_id,
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(tx_type),
-                    name=coin.name(),
-                )
-                await self.tx_store.add_transaction_record(tx_record, True)
+            tx_record = TransactionRecord(
+                confirmed_at_height=uint32(height),
+                created_at_time=timestamp,
+                to_puzzle_hash=coin.puzzle_hash,
+                amount=coin.amount,
+                fee_amount=uint64(0),
+                confirmed=True,
+                sent=uint32(0),
+                spend_bundle=None,
+                additions=[coin],
+                removals=[],
+                wallet_id=wallet_id,
+                sent_to=[],
+                trade_id=None,
+                type=uint32(tx_type),
+                name=coin.name(),
+            )
+            await self.tx_store.add_transaction_record(tx_record, True)
         else:
             records: List[TransactionRecord] = []
             for record in all_outgoing_transaction_records:
