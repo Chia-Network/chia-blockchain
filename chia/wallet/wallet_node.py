@@ -1021,7 +1021,7 @@ class WalletNode:
                     validated = await self.validate_state(weight_proof, spent_state_block, peer, peer_request_cache)
                     if not validated:
                         raise ValueError("Validation failed")
-                    all_validated_states.append(coin_state)
+                all_validated_states.append(coin_state)
             peer_request_cache.states_validated[coin_state.get_hash()] = coin_state
         return all_validated_states
 
