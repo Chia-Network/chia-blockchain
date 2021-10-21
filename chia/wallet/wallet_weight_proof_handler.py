@@ -88,6 +88,10 @@ class WalletWeightProofHandler:
             self._constants, summaries, weight_proof
         )
 
+        recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
+            self._executor, _validate_recent_blocks_and_get_records, constants, wp_recent_chain_bytes, summary_bytes
+        )
+
         segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
             constants, rng, wp_segment_bytes, summary_bytes
         )
@@ -111,10 +115,6 @@ class WalletWeightProofHandler:
             validated = await vdf_task
             if not validated:
                 return False, uint32(0), [], []
-
-        recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
-            self._executor, _validate_recent_blocks_and_get_records, constants, wp_recent_chain_bytes, summary_bytes
-        )
 
         valid_recent_blocks, sub_block_bytes = await recent_blocks_validation_task
 
