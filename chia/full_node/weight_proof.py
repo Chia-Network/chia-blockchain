@@ -598,10 +598,14 @@ class WeightProofHandler:
         constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
             self.constants, summaries, weight_proof
         )
+
+        recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
+            executor, _validate_recent_blocks, constants, wp_recent_chain_bytes, summary_bytes
+        )
+
         segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
             constants, rng, wp_segment_bytes, summary_bytes
         )
-
         if not segments_validated:
             return False, uint32(0), []
 
@@ -619,10 +623,6 @@ class WeightProofHandler:
             validated = await vdf_task
             if not validated:
                 return False, uint32(0), []
-
-        recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
-            executor, _validate_recent_blocks, constants, wp_recent_chain_bytes, summary_bytes
-        )
 
         valid_recent_blocks_task = recent_blocks_validation_task
         valid_recent_blocks = await valid_recent_blocks_task
