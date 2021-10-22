@@ -1273,9 +1273,7 @@ def validate_recent_blocks(
             ses_blocks += 1
         prev_block_record = block_record
 
-        # TODO: Where do we really want to be checking this?
         if shutdown_file_path is not None and not shutdown_file_path.is_file():
-            # TODO: Should we pretend invalidity or raise an exception?
             log.info(f"cancelling block {block.header_hash} validation, shutdown requested")
             return False, []
 
@@ -1654,9 +1652,7 @@ def _validate_vdf_batch(
         if not vdf.is_valid(constants, class_group, vdf_info):
             return False
 
-        # TODO: Where do we really want to be checking this?
         if shutdown_file_path is not None and not shutdown_file_path.is_file():
-            # TODO: Should we pretend invalidity or raise an exception?
             log.info("cancelling VDF validation, shutdown requested")
             return False
 
