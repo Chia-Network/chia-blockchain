@@ -20,7 +20,7 @@ import {
 import { useDeleteUnconfirmedTransactionsMutation } from '@chia/api-react';
 import WalletStatus from './WalletStatus';
 import WalletsDropdodown from './WalletsDropdown';
-import isDebug from '../../util/isdebug';
+import isDebug from '../../util/isDebug';
 
 type StandardWalletProps = {
   walletId: number;
