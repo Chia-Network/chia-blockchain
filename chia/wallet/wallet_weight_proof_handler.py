@@ -57,12 +57,12 @@ class WalletWeightProofHandler:
         old_executor = self._executor
         self._executor_shutdown_tempfile = _create_shutdown_file()
         self._executor = ProcessPoolExecutor(self._num_processes)
-        old_shutdown_tempfile.close()
-        old_executor.shutdown(wait=False)
         for task in self._weight_proof_tasks:
             if not task.done():
                 task.cancel()
         self._weight_proof_tasks = []
+        old_executor.shutdown(wait=False)
+        old_shutdown_tempfile.close()
 
     async def validate_weight_proof(
         self, weight_proof: WeightProof
@@ -98,44 +98,51 @@ class WalletWeightProofHandler:
             self._constants, summaries, weight_proof
         )
 
-        recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
-            self._executor,
-            _validate_recent_blocks_and_get_records,
-            constants,
-            wp_recent_chain_bytes,
-            summary_bytes,
-            pathlib.Path(self._executor_shutdown_tempfile.name),
-        )
-
-        segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
-            constants, rng, wp_segment_bytes, summary_bytes
-        )
-
-        if not segments_validated:
-            return False, uint32(0), [], []
-
-        vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
         vdf_tasks = []
-        for chunk in vdf_chunks:
-            byte_chunks = []
-            for vdf_proof, classgroup, vdf_info in chunk:
-                byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
-
-            vdf_task = asyncio.get_running_loop().run_in_executor(
+        recent_blocks_validation_task = None
+        try:
+            recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
                 self._executor,
-                _validate_vdf_batch,
+                _validate_recent_blocks_and_get_records,
                 constants,
-                byte_chunks,
+                wp_recent_chain_bytes,
+                summary_bytes,
                 pathlib.Path(self._executor_shutdown_tempfile.name),
             )
-            vdf_tasks.append(vdf_task)
 
-        for vdf_task in vdf_tasks:
-            validated = await vdf_task
-            if not validated:
+            segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
+                constants, rng, wp_segment_bytes, summary_bytes
+            )
+
+            if not segments_validated:
                 return False, uint32(0), [], []
 
-        valid_recent_blocks, sub_block_bytes = await recent_blocks_validation_task
+            vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
+            for chunk in vdf_chunks:
+                byte_chunks = []
+                for vdf_proof, classgroup, vdf_info in chunk:
+                    byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
+
+                vdf_task = asyncio.get_running_loop().run_in_executor(
+                    self._executor,
+                    _validate_vdf_batch,
+                    constants,
+                    byte_chunks,
+                    pathlib.Path(self._executor_shutdown_tempfile.name),
+                )
+                vdf_tasks.append(vdf_task)
+
+            for vdf_task in vdf_tasks:
+                validated = await vdf_task
+                if not validated:
+                    return False, uint32(0), [], []
+
+            valid_recent_blocks, sub_block_bytes = await recent_blocks_validation_task
+        finally:
+            if recent_blocks_validation_task is not None:
+                recent_blocks_validation_task.cancel()
+            for vdf_task in vdf_tasks:
+                vdf_task.cancel()
 
         if not valid_recent_blocks:
             log.error("failed validating weight proof recent blocks")
