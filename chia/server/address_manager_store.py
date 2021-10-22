@@ -1,7 +1,5 @@
-import logging
-from typing import Dict, List, Tuple
-
 import aiosqlite
+import logging
 
 from chia.server.address_manager import (
     BUCKET_SIZE,
@@ -10,8 +8,36 @@ from chia.server.address_manager import (
     AddressManager,
     ExtendedPeerInfo,
 )
+from chia.util.ints import uint64
+from chia.util.streamable import streamable, Streamable
+from chia.util.write_file import write_file
+from dataclasses import dataclass
+from pathlib import Path
+from timeit import default_timer as timer
+from typing import Any, Dict, List, Optional, Tuple
 
 log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+@streamable
+class PeerDataSerialization(Streamable):
+    metadata: List[Tuple[str, str]]
+    nodes: List[Tuple[uint64, str]]
+    new_table: List[Tuple[uint64, uint64]]
+
+
+def makePeerDataSerialization(
+    metadata: List[Tuple[str, Any]], nodes: List[Tuple[int, ExtendedPeerInfo]], new_table: List[Tuple[int, int]]
+) -> PeerDataSerialization:
+    """
+    Create a PeerDataSerialization, adapting the provided collections
+    """
+    return PeerDataSerialization(
+        metadata,
+        [(uint64(node_id), peer_info.to_string()) for node_id, peer_info in nodes],
+        [(uint64(node_id), uint64(bucket_id)) for node_id, bucket_id in new_table],
+    )
 
 
 class AddressManagerStore:
@@ -32,9 +58,10 @@ class AddressManagerStore:
     """
 
     db: aiosqlite.Connection
+    peers_file_path: Path
 
     @classmethod
-    async def create(cls, connection) -> "AddressManagerStore":
+    async def create(cls, peers_file_path: Path, connection) -> "AddressManagerStore":
         self = cls()
         self.db = connection
         await self.db.commit()
@@ -46,6 +73,9 @@ class AddressManagerStore:
 
         await self.db.execute("CREATE TABLE IF NOT EXISTS peer_new_table(node_id int,bucket int)")
         await self.db.commit()
+
+        self.peers_file_path = peers_file_path
+
         return self
 
     async def clear(self) -> None:
@@ -150,11 +180,38 @@ class AddressManagerStore:
         await self.set_nodes(nodes)
         await self.set_new_table(new_table_entries)
 
+        try:
+            start_time = timer()
+            self.write_peers(metadata, nodes, new_table_entries)
+            log.debug(f"Serializing peer data took {timer() - start_time} seconds")
+        except Exception:
+            log.exception("Failed to write peer data")
+
     async def deserialize(self) -> AddressManager:
         address_manager = AddressManager()
+        metadata: Dict[str, str] = {}
+        nodes: List[Tuple[int, ExtendedPeerInfo]] = []
+        new_table_entries: List[Tuple[int, int]] = []
         metadata = await self.get_metadata()
         nodes = await self.get_nodes()
         new_table_entries = await self.get_new_table()
+        data: Optional[PeerDataSerialization] = None
+        start_time = timer()
+        try:
+            with open(self.peers_file_path, "rb") as f:
+                data = PeerDataSerialization.from_bytes(f.read())
+        except FileNotFoundError:
+            pass  # Not an error if the file doesn't exist yet
+        except Exception:
+            log.exception(f"Unable to deserialize peers from {self.peers_file_path}")
+
+        if data is not None:
+            metadata2 = {key: value for key, value in data.metadata}
+            nodes2 = [(node_id, ExtendedPeerInfo.from_string(info_str)) for node_id, info_str in data.nodes]
+            new_table_entries2 = [(node_id, bucket) for node_id, bucket in data.new_table]
+            _ = (metadata2, nodes2, new_table_entries2)
+            log.debug(f"Deserializing peer data took {timer() - start_time} seconds")
+
         address_manager.clear()
 
         address_manager.key = int(metadata["key"])
@@ -201,3 +258,12 @@ class AddressManagerStore:
                 address_manager.delete_new_entry_(node_id)
         address_manager.load_used_table_positions()
         return address_manager
+
+    def write_peers(
+        self,
+        metadata: List[Tuple[str, Any]],
+        nodes: List[Tuple[int, ExtendedPeerInfo]],
+        new_table: List[Tuple[int, int]],
+    ) -> None:
+        serialized: PeerDataSerialization = makePeerDataSerialization(metadata, nodes, new_table)
+        write_file(self.peers_file_path, bytes(serialized), file_mode=0o644)

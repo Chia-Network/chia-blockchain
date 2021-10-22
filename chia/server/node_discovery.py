@@ -59,6 +59,9 @@ class FullNodeDiscovery:
                 raise ValueError(f"Invalid path for peer table db: {peer_db_path}. Make the path end with .sqlite")
             peer_db_path = peer_db_path[:-7] + "_" + selected_network + ".sqlite"
         self.peer_db_path = path_from_root(root_path, peer_db_path)
+        self.peers_file_path = FullNodeDiscovery.resolve_peers_file_path(
+            root_path, selected_network, Path(peer_db_path)
+        )
         self.dns_servers = dns_servers
         if introducer_info is not None:
             self.introducer_info: Optional[PeerInfo] = PeerInfo(
@@ -89,12 +92,24 @@ class FullNodeDiscovery:
         if default_port is None and selected_network in NETWORK_ID_DEFAULT_PORTS:
             self.default_port = NETWORK_ID_DEFAULT_PORTS[selected_network]
 
+    @staticmethod
+    def resolve_peers_file_path(root_path: Path, selected_network: str, peer_file_path: Path) -> Path:
+        # Transitioning from a peer sqlite DB to a serialization of streamable peer data
+        if peer_file_path.suffix == ".sqlite":
+            peer_file_path = peer_file_path.with_suffix(".dat")
+
+        # Use different peers for testnets
+        if selected_network != "mainnet":
+            peer_file_path.with_name(peer_file_path.stem + "_" + selected_network + ".dat")
+
+        return path_from_root(root_path, peer_file_path)
+
     async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
         self.connection = await aiosqlite.connect(self.peer_db_path)
         await self.connection.execute("pragma journal_mode=wal")
         await self.connection.execute("pragma synchronous=OFF")
-        self.address_manager_store = await AddressManagerStore.create(self.connection)
+        self.address_manager_store = await AddressManagerStore.create(self.peers_file_path, self.connection)
         if not await self.address_manager_store.is_empty():
             self.address_manager = await self.address_manager_store.deserialize()
         else:
