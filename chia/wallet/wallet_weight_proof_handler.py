@@ -99,17 +99,15 @@ class WalletWeightProofHandler:
         )
 
         vdf_tasks = []
-        recent_blocks_validation_task = None
+        recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
+            self._executor,
+            _validate_recent_blocks_and_get_records,
+            constants,
+            wp_recent_chain_bytes,
+            summary_bytes,
+            pathlib.Path(self._executor_shutdown_tempfile.name),
+        )
         try:
-            recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
-                self._executor,
-                _validate_recent_blocks_and_get_records,
-                constants,
-                wp_recent_chain_bytes,
-                summary_bytes,
-                pathlib.Path(self._executor_shutdown_tempfile.name),
-            )
-
             segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
                 constants, rng, wp_segment_bytes, summary_bytes
             )
@@ -139,8 +137,7 @@ class WalletWeightProofHandler:
 
             valid_recent_blocks, sub_block_bytes = await recent_blocks_validation_task
         finally:
-            if recent_blocks_validation_task is not None:
-                recent_blocks_validation_task.cancel()
+            recent_blocks_validation_task.cancel()
             for vdf_task in vdf_tasks:
                 vdf_task.cancel()
 
