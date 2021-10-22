@@ -20,7 +20,7 @@ from chia.daemon.keychain_proxy import (
     KeyringIsEmpty,
 )
 from chia.protocols import wallet_protocol
-from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight, RequestBlocks
+from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
@@ -45,7 +45,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_spend import CoinSpend
-from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
@@ -71,7 +70,7 @@ from chia.util.profiler import profile_task
 
 
 class PeerRequestCache:
-    blocks: Dict[uint32, FullBlock]
+    blocks: Dict[uint32, HeaderBlock]
     request_blocks: Dict[bytes32, Any]
     ses_requests: Dict[bytes32, Any]
     states_validated: Dict[bytes32, CoinState]
@@ -585,7 +584,13 @@ class WalletNode:
                     return
 
                 # don't sync if full node is not synced it self
-                if not response.header_block.is_transaction_block:
+                if (
+                    not response.header_block.is_transaction_block
+                    and self.wallet_state_manager.blockchain.peak is not None
+                    and peak_block.prev_header_hash == self.wallet_state_manager.blockchain.peak.header_hash
+                ):
+                    last_tx_block = await self.wallet_state_manager.blockchain.get_latest_tx_block()
+                elif not response.header_block.is_transaction_block:
                     last_tx_block = await self.fetch_last_tx_from_peer(response.header_block.height, peer)
                 else:
                     last_tx_block = response.header_block
@@ -917,7 +922,6 @@ class WalletNode:
     ):
         assert self.wallet_state_manager is not None
         # If new weight proof is higher than the old one, rollback to the fork point and than apply new coin_states
-        synced_summaries = self.wallet_state_manager.blockchain.synced_summaries
         fork_height = 0
         if (
             weight_proof.recent_chain_data[-1].height - self.wallet_state_manager.blockchain.get_peak_height()
@@ -926,12 +930,13 @@ class WalletNode:
             fork_height = self.wallet_state_manager.weight_proof_handler.get_recent_chain_fork(weight_proof)
 
         if fork_height == 0:
-            summary_fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point(
-                old_summaries=synced_summaries, received_summaries=summaries
+            wp_fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point(
+                old_wp=self.wallet_state_manager.blockchain.synced_weight_proof, new_wp=weight_proof
             )
             # Extra conservative
-            fork_height = max(0, summary_fork_point - 1000)
+            fork_height = max(0, wp_fork_point - 1000)
 
+        self.log.info(f"Rollback for {fork_height}")
         await self.wallet_state_manager.reorg_rollback(fork_height)
 
         start_time: float = time.time()
@@ -967,12 +972,19 @@ class WalletNode:
         for coin_idx, coin_state in enumerate(coin_states):
             self.log.info(f"Validating {coin_idx} of {total}")
             if coin_state.get_hash() in peer_request_cache.states_validated:
+                all_validated_states.append(coin_state)
                 continue
 
             spent_height = coin_state.spent_height
             confirmed_height = coin_state.created_height
+
             current = await self.wallet_state_manager.coin_store.get_coin_record(coin_state.coin.name())
             # if remote state is same as current local state we skip validation
+
+            # CoinRecord unspent = height 0, coin state = None. We adjust for comparison bellow
+            current_spent_height = None
+            if current is not None and current.spent_block_height != 0:
+                current_spent_height = current.spent_block_height
 
             # It's possible that new state has been added before we finished validating weight proof
             # We'll just ignore it here, backward sync will pick it up
@@ -983,15 +995,11 @@ class WalletNode:
                 continue
             elif (
                 current is not None
-                and current.spent_block_height == spent_height
+                and current_spent_height == spent_height
                 and current.confirmed_block_height == confirmed_height
             ):
+                all_validated_states.append(coin_state)
                 continue
-            elif current is not None:
-                if current.spent_block_height != spent_height:
-                    pass
-                elif current.confirmed_block_height != confirmed_height:
-                    pass
             else:
                 # Full info validation
                 if confirmed_height is None:
@@ -999,13 +1007,14 @@ class WalletNode:
                     peer.close(9999)
                     return []
 
+                self.log.info(f"Validating state: {coin_state}")
                 # request header block for created height
                 if confirmed_height in peer_request_cache.blocks:
-                    state_block: FullBlock = peer_request_cache.blocks[confirmed_height]
+                    state_block: HeaderBlock = peer_request_cache.blocks[confirmed_height]
                 else:
-                    request = RequestBlocks(confirmed_height, confirmed_height, True)
-                    res = await peer.request_blocks(request)
-                    state_block = res.blocks[0]
+                    request = RequestHeaderBlocks(confirmed_height, confirmed_height)
+                    res = await peer.request_header_blocks(request)
+                    state_block = res.header_blocks[0]
                     peer_request_cache.blocks[confirmed_height] = state_block
 
                 # get proof of inclusion
@@ -1028,17 +1037,44 @@ class WalletNode:
                 if not validated:
                     raise ValueError("Validation failed")
 
+                if spent_height is None and current is not None and current.spent_block_height != 0:
+                    # Peer is telling us that coin that was previously known to be spent is not spent anymore
+                    # Check old state
+                    if spent_height in peer_request_cache.blocks:
+                        spent_state_block: HeaderBlock = peer_request_cache.blocks[current.spent_block_height]
+                    else:
+                        request = RequestHeaderBlocks(current.spent_block_height, current.spent_block_height)
+                        res = await peer.request_header_blocks(request)
+                        spent_state_block = res.header_blocks[0]
+                        assert spent_state_block.height == current.spent_block_height
+                        peer_request_cache.blocks[current.spent_block_height] = spent_state_block
+                    assert spent_state_block.foliage_transaction_block is not None
+                    validate_removals_result: bool = await request_and_validate_removals(
+                        peer,
+                        current.spent_block_height,
+                        spent_state_block.header_hash,
+                        coin_state.coin.name(),
+                        spent_state_block.foliage_transaction_block.removals_root,
+                    )
+                    if validate_removals_result is False:
+                        peer.close(9999)
+                        raise ValueError("Validation failed")
+                    validated = await self.validate_state(weight_proof, spent_state_block, peer, peer_request_cache)
+                    if not validated:
+                        raise ValueError("Validation failed")
+
                 if spent_height is not None:
                     # request header block for created height
                     if spent_height in peer_request_cache.blocks:
-                        spent_state_block: FullBlock = peer_request_cache.blocks[spent_height]
+                        spent_state_block = peer_request_cache.blocks[spent_height]
                     else:
-                        request = RequestBlocks(spent_height, spent_height, True)
-                        res = await peer.request_blocks(request)
-                        spent_state_block = res.blocks[0]
+                        request = RequestHeaderBlocks(spent_height, spent_height)
+                        res = await peer.request_header_blocks(request)
+                        spent_state_block = res.header_blocks[0]
+                        assert spent_state_block.height == spent_height
                         peer_request_cache.blocks[spent_height] = spent_state_block
                     assert spent_state_block.foliage_transaction_block is not None
-                    validate_removals_result: bool = await request_and_validate_removals(
+                    validate_removals_result = await request_and_validate_removals(
                         peer,
                         spent_state_block.height,
                         spent_state_block.header_hash,
@@ -1056,7 +1092,7 @@ class WalletNode:
         return all_validated_states
 
     async def validate_state(
-        self, weight_proof: WeightProof, block: FullBlock, peer, peer_request_cache: PeerRequestCache
+        self, weight_proof: WeightProof, block: HeaderBlock, peer, peer_request_cache: PeerRequestCache
     ) -> bool:
         assert self.wallet_state_manager is not None
 
