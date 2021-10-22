@@ -173,17 +173,6 @@
        )
      )
 
-     ;; tweak all `CREATE_COIN` conditions, enforcing created coins to be cats
-     (defun morph_conditions (conditions cat_mod_struct)
-       (if conditions
-         (c
-           (morph_condition (f conditions) cat_mod_struct)
-           (morph_conditions (r conditions) cat_mod_struct)
-         )
-         ()
-       )
-     )
-
      ;; given a coin's parent, inner_puzzle and amount, and the cat_mod_struct, calculate the id of the coin
      (defun-inline coin_id_for_proof (coin cat_mod_struct)
        (sha256 (f coin) (cat_puzzle_hash cat_mod_struct (f (r coin))) (f (r (r coin))))
@@ -232,15 +221,6 @@
        )
      )
 
-     ;; this function takes a list of conditions and returns an integer indicating
-     ;; the value of all output coins created with CREATE_COIN
-     (defun output_totals (conditions)
-       (if conditions
-         (+ (output_value_for_condition (f conditions)) (output_totals (r conditions)))
-         0
-       )
-     )
-
      ;; add two conditions to the list of morphed conditions:
      ;; CREATE_COIN_ANNOUNCEMENT for my announcement
      ;; ASSERT_COIN_ANNOUNCEMENT for the next coin's announcement
@@ -261,18 +241,27 @@
       )
 
 
-      ;; Loop through the conditions and check if there are is a "magic" conditions with the opcode -113
-      ;; If there is, use the data from that condition as the tail reveal and solution
+      ;; This next section of code loops through all of the conditions to do three things:
+      ;;   1) Look for a "magic" value of -113 and, if one exists, take note of the tail reveal and solution
+      ;;   2) Morph any CREATE_COIN or CREATE_COIN_ANNOUNCEMENT conditions
+      ;;   3) Sum the total output amount of all of the CREATE_COINs that are output by the inner puzzle
+      ;;
+      ;; After everything return a struct in the format (morphed_conditions . (output_sum . tail_reveal_and_solution))
+      
       (defun-inline condition_opcode (condition) (f condition))
       (defun-inline condition_magic_value (condition) (f (r (r condition))))
       (defun-inline condition_tail_reveal (condition) (f (r (r (r condition)))))
       (defun-inline condition_tail_solution (condition) (f (r (r (r (r condition))))))
 
-      (defun cons_to_left (item cons_box)
+      (defun cons_to_first (item cons_box)
         (c (c item (f cons_box)) (r cons_box))
       )
 
-      (defun find_and_strip_tail_info (inner_conditions tail_reveal_and_solution)
+      (defun add_value_to_second (value struct)
+        (c (f struct) (c (+ value (f (r struct))) (r (r struct))))
+      )
+
+      (defun find_and_strip_tail_info (inner_conditions cat_mod_struct tail_reveal_and_solution)
         (if inner_conditions
             (if (and
                   (= (condition_opcode (f inner_conditions)) CREATE_COIN)
@@ -280,16 +269,20 @@
                 )
                 (find_and_strip_tail_info
                   (r inner_conditions)
+                  cat_mod_struct
                   (c (condition_tail_reveal (f inner_conditions)) (condition_tail_solution (f inner_conditions)))
                 )
-                (cons_to_left (f inner_conditions)
-                  (find_and_strip_tail_info
-                    (r inner_conditions)
-                    tail_reveal_and_solution
+                (cons_to_first (morph_condition (f inner_conditions) cat_mod_struct)
+                  (add_value_to_second (output_value_for_condition (f inner_conditions))
+                    (find_and_strip_tail_info
+                      (r inner_conditions)
+                      cat_mod_struct
+                      tail_reveal_and_solution
+                    )
                   )
                 )
             )
-            (c inner_conditions tail_reveal_and_solution)
+            (c () (c 0 tail_reveal_and_solution))
         )
       )
 
@@ -348,7 +341,7 @@
 
      (defun stager_two (
          Truths
-         (inner_conditions . tail_reveal_and_solution)
+         (inner_conditions . (output_sum . tail_reveal_and_solution))
          lineage_proof
          prev_coin_id
          this_coin_info
@@ -366,8 +359,8 @@
             (generate_final_output_conditions
               prev_subtotal
               ; the expression on the next line calculates `this_subtotal` by adding the delta to `prev_subtotal`
-              (+ prev_subtotal (- (input_amount_for_coin this_coin_info) (output_totals inner_conditions)) extra_delta)
-              (morph_conditions inner_conditions (cat_struct_truth Truths))
+              (+ prev_subtotal (- (input_amount_for_coin this_coin_info) output_sum) extra_delta)
+              inner_conditions
               prev_coin_id
               (my_id_cat_truth Truths)
               next_coin_id
@@ -399,7 +392,7 @@
           my_id
           this_coin_info
         )
-        (find_and_strip_tail_info inner_conditions ())
+        (find_and_strip_tail_info inner_conditions cat_mod_struct ())
         lineage_proof
         prev_coin_id
         this_coin_info
