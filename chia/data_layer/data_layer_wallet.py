@@ -3,9 +3,9 @@ import os
 import json
 import time
 from dataclasses import dataclass
-from typing import Any, Optional, Tuple, Set, List
+from typing import Any, Optional, Tuple, Set, List, Dict
 
-from blspy import G2Element
+from blspy import G2Element, AugSchemeMPL
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.wallet.db_wallet.db_wallet_puzzles import (
@@ -38,7 +38,7 @@ class DataLayerInfo(Streamable):
     origin_coin: Optional[Coin]  # Coin ID of this coin is our Singleton ID
     root_hash: bytes32
     parent_info: List[Tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
-    # current_inner: Optional[Program]  # represents a Program as bytes
+    current_inner_inner: Optional[Program]  # represents a Program as bytes
 
 
 class DataLayerWallet:
@@ -97,7 +97,7 @@ class DataLayerWallet:
             if spend.coin.name() == launcher_coin_id:
                 launcher_spend = spend
         assert launcher_spend is not None
-        self.dl_info = DataLayerInfo(spend.coin, Program.to(0).get_tree_hash(), [])
+        self.dl_info = DataLayerInfo(spend.coin, Program.to(0).get_tree_hash(), [], None)
         info_as_string = json.dumps(self.did_info.to_json_dict())
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, info_as_string, create_puzzle_hashes=False)
         self.wallet_state_manager.set_new_peak_callback(self.wallet_id, self.new_peak)
@@ -199,7 +199,7 @@ class DataLayerWallet:
     async def update_state_transition(
         self,
         root_hash: bytes,
-    ):
+    ) -> SpendBundle:
         new_inner_inner_puzhash = await self.standard_wallet.get_new_puzzle()
         new_db_layer_puzzle = create_host_layer_puzzle(new_inner_inner_puzhash, root_hash)
         coins = await self.select_coins(1)
@@ -209,41 +209,55 @@ class DataLayerWallet:
         inner_inner_sol = self.standard_wallet.make_solution(primaries=primaries)
         db_layer_sol = Program.to([0, inner_inner_sol])
         parent_info = await self.get_parent_for_coin(my_coin)
-        full_sol = Program.to()
-        return None
+        assert parent_info is not None
+        current_full_puz = create_host_fullpuz(
+            self.dl_info.current_inner_inner,
+            self.dl_info.root_hash,
+            self.dl_info.origin_coin.name(),
+        )
+        full_sol = Program.to(
+            [
+                [
+                    parent_info.parent_name,
+                    parent_info.inner_puzzle_hash,
+                    parent_info.amount,
+                ],
+                my_coin.amount,
+                db_layer_sol,
+            ]
+        )
+        coin_spend = CoinSpend(my_coin, current_full_puz, full_sol)
+        sigs = await self.standard_wallet.sign([coin_spend])
+        spend_bundle = SpendBundle([coin_spend], sigs)
+        return spend_bundle
 
-    async def get_current_state(self) -> DataLayerInfo:
-        # history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
-        # all_spends: List[CoinSpend] = [cs for _, cs in history]
-        #
-        # # We must have at least the launcher spend
-        # assert len(all_spends) >= 1
-        #
-        # launcher_coin: Coin = all_spends[0].coin
-        # delayed_seconds, delayed_puzhash = get_delayed_puz_info_from_launcher_spend(all_spends[0])
-        # tip_singleton_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(all_spends[-1])
-        # launcher_id: bytes32 = launcher_coin.name()
-        # p2_singleton_puzzle_hash = launcher_id_to_p2_puzzle_hash(launcher_id, delayed_seconds, delayed_puzhash)
-        # assert tip_singleton_coin is not None
-        #
-        # curr_spend_i = len(all_spends) - 1
-        # pool_state: Optional[PoolState] = None
-        # last_singleton_spend_height = uint32(0)
-        # while pool_state is None:
-        #     full_spend: CoinSpend = all_spends[curr_spend_i]
-        #     pool_state = solution_to_pool_state(full_spend)
-        #     last_singleton_spend_height = uint32(history[curr_spend_i][0])
-        #     curr_spend_i -= 1
-        #
-        # assert pool_state is not None
-        # current_inner = pool_state_to_inner_puzzle(
-        #     pool_state,
-        #     launcher_coin.name(),
-        #     self.wallet_state_manager.constants.GENESIS_CHALLENGE,
-        #     delayed_seconds,
-        #     delayed_puzhash,
-        # )
-        return DataLayerInfo(origin_coin=None, root_hash=b"")
+    async def create_report_spend(self) -> SpendBundle:
+        coins = await self.select_coins(1)
+        assert coins is not None and coins != set()
+        my_coin = coins.pop()
+        # (my_puzhash . my_amount)
+        db_layer_sol = Program.to([1, (my_coin.puzzle_hash, my_coin.amount)])
+        parent_info = await self.get_parent_for_coin(my_coin)
+        assert parent_info is not None
+        current_full_puz = create_host_fullpuz(
+            self.dl_info.current_inner_inner,
+            self.dl_info.root_hash,
+            self.dl_info.origin_coin.name(),
+        )
+        full_sol = Program.to(
+            [
+                [
+                    parent_info.parent_name,
+                    parent_info.inner_puzzle_hash,
+                    parent_info.amount,
+                ],
+                my_coin.amount,
+                db_layer_sol,
+            ]
+        )
+        coin_spend = CoinSpend(my_coin, current_full_puz, full_sol)
+        spend_bundle = SpendBundle([coin_spend], AugSchemeMPL.aggregate([]))
+        return spend_bundle
 
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Optional[Set[Coin]]:
         """Returns a set of coins that can be used for generating a new transaction."""
