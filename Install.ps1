@@ -6,7 +6,7 @@ if ([Environment]::Is64BitOperatingSystem -eq $false)
     Exit 1
 }
 
-if ((Get-Item "$env:windir\System32\msvcp140.dll").Exists -eq $false)
+if (-not (Get-Item -ErrorAction SilentlyContinue "$env:windir\System32\msvcp140.dll").Exists)
 {
     Write-Output "Unable to find Visual C++ Runtime DLLs"
     Write-Output ""
