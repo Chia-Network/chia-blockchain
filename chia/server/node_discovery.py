@@ -7,7 +7,6 @@ from random import Random
 from secrets import randbits
 from typing import Dict, Optional, List, Set
 
-import aiosqlite
 
 import chia.server.ws_connection as ws
 import dns.asyncresolver
@@ -20,7 +19,7 @@ from chia.server.server import ChiaServer
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
-from chia.util.path import mkdir, path_from_root
+from chia.util.path import path_from_root
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
@@ -104,17 +103,8 @@ class FullNodeDiscovery:
 
         return path_from_root(root_path, peer_file_path)
 
-    async def initialize_address_manager(self) -> None:
-        mkdir(self.peer_db_path.parent)
-        self.connection = await aiosqlite.connect(self.peer_db_path)
-        await self.connection.execute("pragma journal_mode=wal")
-        await self.connection.execute("pragma synchronous=OFF")
-        self.address_manager_store = await AddressManagerStore.create(self.peers_file_path, self.connection)
-        if not await self.address_manager_store.is_empty():
-            self.address_manager = await self.address_manager_store.deserialize()
-        else:
-            await self.address_manager_store.clear()
-            self.address_manager = AddressManager()
+    def initialize_address_manager(self) -> None:
+        self.address_manager = AddressManagerStore.create_address_manager(self.peers_file_path)
         self.server.set_received_message_callback(self.update_peer_timestamp_on_message)
 
     async def start_tasks(self) -> None:
@@ -132,7 +122,6 @@ class FullNodeDiscovery:
             self.cancel_task_safe(t)
         if len(self.pending_tasks) > 0:
             await asyncio.wait(self.pending_tasks)
-        await self.connection.close()
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:
@@ -448,7 +437,7 @@ class FullNodeDiscovery:
             serialize_interval = random.randint(15 * 60, 30 * 60)
             await asyncio.sleep(serialize_interval)
             async with self.address_manager.lock:
-                await self.address_manager_store.serialize(self.address_manager)
+                AddressManagerStore.serialize(self.address_manager, self.peers_file_path)
 
     async def _periodically_cleanup(self) -> None:
         while not self.is_closed:
@@ -547,7 +536,7 @@ class FullNodePeers(FullNodeDiscovery):
         self.key = randbits(256)
 
     async def start(self):
-        await self.initialize_address_manager()
+        self.initialize_address_manager()
         self.self_advertise_task = asyncio.create_task(self._periodically_self_advertise_and_clean_data())
         self.address_relay_task = asyncio.create_task(self._address_relay())
         await self.start_tasks()
@@ -718,7 +707,7 @@ class WalletPeers(FullNodeDiscovery):
 
     async def start(self) -> None:
         self.initial_wait = 60
-        await self.initialize_address_manager()
+        self.initialize_address_manager()
         await self.start_tasks()
 
     async def ensure_is_closed(self) -> None:
