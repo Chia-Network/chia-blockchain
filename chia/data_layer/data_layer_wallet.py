@@ -5,12 +5,12 @@ import time
 from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Set, List, Dict
 
-from blspy import G2Element, AugSchemeMPL
+from blspy import G2Element, AugSchemeMPL, G1Element, PrivateKey
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER
+from chia.consensus.block_record import BlockRecord
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_host_fullpuz,
-    create_offer_fullpuz,
     SINGLETON_LAUNCHER,
     create_host_layer_puzzle,
     create_singleton_fullpuz,
@@ -23,6 +23,8 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.derive_keys import find_owner_sk
+from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.lineage_proof import LineageProof
@@ -75,7 +77,7 @@ class DataLayerWallet:
         block_spends: List[CoinSpend],
         block_height: uint32,
         in_transaction: bool,
-        name: str = None,
+        name: Optional[str] = None,
     ):
         """
         This creates a new PoolWallet with only one spend: the launcher spend. The DB MUST be committed after calling
@@ -89,7 +91,7 @@ class DataLayerWallet:
         )
         self.wallet_id = self.wallet_info.id
         self.standard_wallet = wallet
-        self.target_state = None
+        # self.target_state = None
         self.log = logging.getLogger(name if name else __name__)
 
         launcher_spend: Optional[CoinSpend] = None
@@ -97,9 +99,11 @@ class DataLayerWallet:
             if spend.coin.name() == launcher_coin_id:
                 launcher_spend = spend
         assert launcher_spend is not None
-        self.dl_info = DataLayerInfo(spend.coin, Program.to(0).get_tree_hash(), [], None)
-        info_as_string = json.dumps(self.did_info.to_json_dict())
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, info_as_string, create_puzzle_hashes=False)
+        self.dl_info = DataLayerInfo(launcher_spend.coin, Program.to(0).get_tree_hash(), [], None)
+        info_as_string = json.dumps(self.dl_info.to_json_dict())
+        await self.wallet_state_manager.add_new_wallet(
+            self, self.wallet_info.id, info_as_string, create_puzzle_hashes=False
+        )
         self.wallet_state_manager.set_new_peak_callback(self.wallet_id, self.new_peak)
         return self
 
@@ -110,7 +114,9 @@ class DataLayerWallet:
     ) -> Tuple[TransactionRecord, bytes32]:
         amount = 1
 
-        unspent_records = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.standard_wallet.wallet_id)
+        unspent_records = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
+            self.standard_wallet.wallet_id
+        )
         balance = await self.standard_wallet.get_confirmed_balance(unspent_records)
         if balance < DataLayerWallet.MINIMUM_INITIAL_BALANCE:
             raise ValueError("Not enough balance in main wallet .")
@@ -118,7 +124,7 @@ class DataLayerWallet:
             raise ValueError(f"Not enough balance in main wallet to create a managed plotting pool with fee {fee}.")
 
         spend_bundle, singleton_puzzle_hash, launcher_coin_id = await self.generate_launcher_spend(
-            amount, root_hash
+            uint64(amount), root_hash
         )
 
         if spend_bundle is None:
@@ -214,7 +220,7 @@ class DataLayerWallet:
     ) -> SpendBundle:
         new_inner_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         new_db_layer_puzzle = create_host_layer_puzzle(new_inner_inner_puzzle, root_hash)
-        coins = await self.select_coins(1)
+        coins = await self.select_coins(uint64(1))
         assert coins is not None and coins != set()
         my_coin = coins.pop()
         primaries = [({"puzzlehash": new_db_layer_puzzle.get_tree_hash(), "amount": my_coin.amount})]
@@ -222,6 +228,7 @@ class DataLayerWallet:
         db_layer_sol = Program.to([0, inner_inner_sol])
         parent_info = await self.get_parent_for_coin(my_coin)
         assert parent_info is not None
+        assert self.dl_info.origin_coin
         current_full_puz = create_host_fullpuz(
             self.dl_info.current_inner_inner,
             self.dl_info.root_hash,
@@ -240,30 +247,29 @@ class DataLayerWallet:
         )
         future_parent = LineageProof(
             my_coin.name(),
-            create_host_layer_puzzle(
-                self.dl_info.current_inner_inner,
-                self.dl_info.root_hash
-            ).get_tree_hash(),
+            create_host_layer_puzzle(self.dl_info.current_inner_inner, self.dl_info.root_hash).get_tree_hash(),
             my_coin.amount,
         )
         await self.add_parent(my_coin.name(), future_parent, False)
-        coin_spend = CoinSpend(my_coin, current_full_puz, full_sol)
-        sigs = await self.standard_wallet.sign([coin_spend])
-        spend_bundle = SpendBundle([coin_spend], sigs)
-        new_info = DataLayerInfo(self.dl_info.origin_coin, root_hash, self.did_info.parent_info, new_inner_inner_puzzle)
-        await self.save_info(new_info)
+        coin_spend = CoinSpend(
+            my_coin, SerializedProgram.from_program(current_full_puz), SerializedProgram.from_program(full_sol)
+        )
+        spend_bundle = await self.sign(coin_spend)
+        new_info = DataLayerInfo(self.dl_info.origin_coin, root_hash, self.dl_info.parent_info, new_inner_inner_puzzle)
+        await self.save_info(new_info, False)  # todo in_transaction false ?
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
 
         return spend_bundle
 
     async def create_report_spend(self) -> SpendBundle:
-        coins = await self.select_coins(1)
+        coins = await self.select_coins(uint64(1))
         assert coins is not None and coins != set()
         my_coin = coins.pop()
         # (my_puzhash . my_amount)
         db_layer_sol = Program.to([1, (my_coin.puzzle_hash, my_coin.amount)])
         parent_info = await self.get_parent_for_coin(my_coin)
         assert parent_info is not None
+        assert self.dl_info.origin_coin
         current_full_puz = create_host_fullpuz(
             self.dl_info.current_inner_inner,
             self.dl_info.root_hash,
@@ -280,17 +286,19 @@ class DataLayerWallet:
                 db_layer_sol,
             ]
         )
-        coin_spend = CoinSpend(my_coin, current_full_puz, full_sol)
+        coin_spend = CoinSpend(
+            my_coin, SerializedProgram.from_program(current_full_puz), SerializedProgram.from_program(full_sol)
+        )
         spend_bundle = SpendBundle([coin_spend], AugSchemeMPL.aggregate([]))
 
         return spend_bundle
 
-    async def select_coins(self, amount, exclude: List[Coin] = None) -> Optional[Set[Coin]]:
+    async def select_coins(self, amount: uint64, exclude: List[Coin] = []) -> Optional[Set[Coin]]:
         """Returns a set of coins that can be used for generating a new transaction."""
         if exclude is None:
             exclude = []
 
-        spendable_amount = await self.get_spendable_balance()
+        spendable_amount = self.get_spendable_balance()
         if amount > spendable_amount:
             self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
             return None
@@ -300,7 +308,7 @@ class DataLayerWallet:
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.wallet_info.id)
         )
         sum_value = 0
-        used_coins: Set = set()
+        used_coins: Set[Coin] = set()
 
         # Use older coins first
         unspent.sort(key=lambda r: r.confirmed_block_height)
@@ -331,44 +339,63 @@ class DataLayerWallet:
         return used_coins
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
-        inner_inner_puz = await self.standard_wallet.puzzle_for_pk(pubkey)
-        innerpuz = create_host_layer_puzzle(
-            inner_inner_puz, self.dl_info.current_root
-        )
-        if self.did_info.origin_coin is not None:
-            return create_singleton_fullpuz(self.did_info.origin_coin.name(), innerpuz)
-        else:
-            return create_singleton_fullpuz(0x00, innerpuz)
+        inner_inner_puz = self.standard_wallet.puzzle_for_pk(pubkey)
+        innerpuz = create_host_layer_puzzle(inner_inner_puz, self.dl_info.root_hash)
+        if self.dl_info.origin_coin is not None:
+            return create_singleton_fullpuz(self.dl_info.origin_coin.name(), innerpuz)
+
+        return create_singleton_fullpuz(0x00, innerpuz)
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
             bytes((await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey)
         )
 
-    async def get_parent_for_coin(self, coin) -> Optional[LineageProof]:
+    async def get_parent_for_coin(self, coin: Coin) -> Optional[LineageProof]:
         parent_info = None
-        for name, ccparent in self.did_info.parent_info:
+        for name, ccparent in self.dl_info.parent_info:
             if name == coin.parent_coin_info:
                 parent_info = ccparent
 
         return parent_info
 
-    async def add_parent(self, name: bytes32, parent: Optional[LineageProof], in_transaction: bool):
+    async def add_parent(self, name: bytes32, parent: Optional[LineageProof], in_transaction: bool) -> None:
         self.log.info(f"Adding parent {name}: {parent}")
-        current_list = self.did_info.parent_info.copy()
+        current_list = self.dl_info.parent_info.copy()
         current_list.append((name, parent))
         dl_info: DataLayerInfo = DataLayerInfo(
-            self.did_info.origin_coin,
-            self.did_info.backup_ids,
+            self.dl_info.origin_coin,
+            self.dl_info.root_hash,
             current_list,
-            self.did_info.current_inner,
+            self.dl_info.current_inner_inner,
         )
         await self.save_info(dl_info, in_transaction)
+        return
 
-    async def save_info(self, dl_info: DataLayerInfo, in_transaction: bool):
+    async def save_info(self, dl_info: DataLayerInfo, in_transaction: bool) -> None:
         self.dl_info = dl_info
         current_info = self.wallet_info
         data_str = json.dumps(dl_info.to_json_dict())
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
+        return
+
+    def get_spendable_balance(self) -> uint64:
+        pass
+
+    async def new_peak(self, peak: BlockRecord) -> None:
+        pass
+
+    async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
+        async def pk_to_sk(pk: G1Element) -> PrivateKey:
+            owner_sk: Optional[PrivateKey] = await find_owner_sk([self.wallet_state_manager.private_key], pk)
+            assert owner_sk is not None
+            return owner_sk
+
+        return await sign_coin_spends(
+            [coin_spend],
+            pk_to_sk,
+            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+        )
