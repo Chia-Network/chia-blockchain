@@ -5,11 +5,9 @@ from typing import Any, Callable, Dict, List, Optional
 import aiosqlite
 
 from chia.consensus.constants import ConsensusConstants
-from chia.data_layer.data_layer_types import Side
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.data_store import DataStore
 from chia.server.server import ChiaServer
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
 from chia.util.path import mkdir, path_from_root
@@ -95,20 +93,16 @@ class DataLayer:
     ) -> bool:
         for change in changelist:
             if change["action"] == "insert":
-                key = bytes32(change["key"])
-                value = bytes32(change["value"])
-                reference_node_hash = None
-                if "reference_node_hash" in change:
-                    reference_node_hash = Program.from_bytes(change["reference_node_hash"])
-                side = None
-                if side in change:
-                    side = Side(change["side"])
+                key = change["key"]
+                value = change["value"]
+                reference_node_hash = change.get("reference_node_hash")
+                side = change.get("side")
                 if reference_node_hash or side:
                     await self.data_store.insert(key, value, tree_id, reference_node_hash, side)
                 await self.data_store.autoinsert(key, value, tree_id)
             else:
                 assert change["action"] == "delete"
-                key = bytes32(change["key"])
+                key = change["key"]
                 await self.data_store.delete(key, tree_id)
 
         # state = await self.data_store.get_table_state(table)
