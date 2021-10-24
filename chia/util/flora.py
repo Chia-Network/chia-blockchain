@@ -58,7 +58,7 @@ class FloraIOWrapper(io.TextIOWrapper):
                     new
                 )
 
-                lines.append(s)
+            lines.append(s)
 
         self.buffer.writelines(
             lines
