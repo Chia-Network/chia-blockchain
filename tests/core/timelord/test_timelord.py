@@ -146,10 +146,10 @@ class TestTimelord:
                 "SUB_EPOCH_BLOCKS": 1000,
             }
         )
-        bt = BlockTools(constants)
+        bt = BlockTools(constants, keychain=keychain)
         await bt.setup_keys()
         await bt.setup_plots()
-        blocks = bt.get_consecutive_blocks(200, keychain=keychain)
+        blocks = bt.get_consecutive_blocks(200)
         # NOTE: There seem to be tricky cases around infusing right from genesis: genesis challenge might not be saved
         # in last_state's challenge cache, making some infusions not work properly. For avoiding this issue,
         # it's recommended we start infusing after a relatively stable chain is established.
