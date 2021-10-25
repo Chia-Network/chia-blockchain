@@ -47,7 +47,7 @@ async def setup_timelord_2():
 class TestTimelord:
     @pytest.mark.asyncio
     async def test_have_signage_points_or_eos_from_genesis(self, setup_timelord_and_node_big_disc):
-        vdf_client, timelord, timelord_server, full_node, full_node_server = setup_timelord_and_node_big_disc
+        vdf_client, timelord, timelord_server, full_node, full_node_server, _ = setup_timelord_and_node_big_disc
         incoming_queue, _ = await add_dummy_connection(full_node_server, 12312)
         await time_out_assert(
             300,
@@ -59,9 +59,9 @@ class TestTimelord:
 
     @pytest.mark.asyncio
     async def test_have_signage_points_or_eos_from_blocks(self, setup_timelord_and_node_big_disc):
-        vdf_client, timelord, timelord_server, full_node, full_node_server = setup_timelord_and_node_big_disc
+        vdf_client, timelord, timelord_server, full_node, full_node_server, keychain = setup_timelord_and_node_big_disc
         constants = constants_for_dic({"DISCRIMINANT_SIZE_BITS": 512})
-        bt = BlockTools(constants)
+        bt = BlockTools(constants, keychain=keychain)
         await bt.setup_keys()
         await bt.setup_plots()
         blocks = bt.get_consecutive_blocks(20)
@@ -80,10 +80,10 @@ class TestTimelord:
 
     @pytest.mark.asyncio
     async def test_timelord_infuses_first_block(self, setup_timelord_and_node_big_disc):
-        vdf_client, timelord, timelord_server, full_node, full_node_server = setup_timelord_and_node_big_disc
+        vdf_client, timelord, timelord_server, full_node, full_node_server, keychain = setup_timelord_and_node_big_disc
         constants = constants_for_dic({"DISCRIMINANT_SIZE_BITS": 512})
                 
-        bt = BlockTools(constants)
+        bt = BlockTools(constants, keychain=keychain)
         await bt.setup_keys()
         await bt.setup_plots()
         blocks = bt.get_consecutive_blocks(1)
@@ -104,10 +104,10 @@ class TestTimelord:
 
     @pytest.mark.asyncio
     async def test_timelord_infuses_from_blocks(self, setup_timelord_and_node_big_disc):
-        vdf_client, timelord, timelord_server, full_node, full_node_server = setup_timelord_and_node_big_disc
+        vdf_client, timelord, timelord_server, full_node, full_node_server, keychain = setup_timelord_and_node_big_disc
         constants = constants_for_dic({"DISCRIMINANT_SIZE_BITS": 512})
                 
-        bt = BlockTools(constants)
+        bt = BlockTools(constants, keychain=keychain)
         await bt.setup_keys()
         await bt.setup_plots()
         blocks = bt.get_consecutive_blocks(4, skip_slots=3)
