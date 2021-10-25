@@ -139,4 +139,4 @@ def get_config_and_constants():
 
 
 if __name__ == "__main__":
-    cmd_run_json_block_file()
+    cmd_run_json_block_file()  # pylint: disable=no-value-for-parameter
