@@ -45,6 +45,7 @@ async def setup_timelord_2():
 
 
 class TestTimelord:
+    """
     @pytest.mark.asyncio
     async def test_have_signage_points_or_eos_from_genesis(self, setup_timelord_and_node_big_disc):
         vdf_client, timelord, timelord_server, full_node, full_node_server = setup_timelord_and_node_big_disc
@@ -131,6 +132,7 @@ class TestTimelord:
         )
         await full_node.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished_block), None)
         await time_out_assert(300, node_height_at_least, True, full_node, 3)
+    """
 
     @pytest.mark.asyncio
     async def test_timelord_infuses_long_chain(self, setup_timelord_2):
