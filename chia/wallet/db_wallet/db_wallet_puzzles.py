@@ -32,7 +32,7 @@ def create_singleton_fullpuz(singleton_id: bytes32, db_layer_puz: Program) -> Pr
     mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
     singleton_struct = Program.to((mod_hash, (singleton_id, SINGLETON_LAUNCHER.get_tree_hash())))
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, db_layer_puz)
-    
+
 
 def create_offer_fullpuz(
     leaf_reveal: bytes,

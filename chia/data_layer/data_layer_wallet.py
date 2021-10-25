@@ -21,7 +21,7 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.sign_coin_spends import sign_coin_spends
@@ -75,7 +75,7 @@ class DataLayerWallet:
         wallet: Wallet,
         launcher_coin_id: bytes32,
         block_spends: List[CoinSpend],
-        block_height: uint32,
+        # block_height: uint32,
         in_transaction: bool,
         name: Optional[str] = None,
     ):
@@ -298,7 +298,7 @@ class DataLayerWallet:
         if exclude is None:
             exclude = []
 
-        spendable_amount = self.get_spendable_balance()
+        spendable_amount = await self.standard_wallet.get_spendable_balance()
         if amount > spendable_amount:
             self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
             return None
@@ -380,9 +380,6 @@ class DataLayerWallet:
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
         return
-
-    def get_spendable_balance(self) -> uint64:
-        pass
 
     async def new_peak(self, peak: BlockRecord) -> None:
         pass
