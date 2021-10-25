@@ -58,11 +58,11 @@ export default function AppState(props: Props) {
           {startingService ? (
             <Trans>Starting service {ServiceHumanName[startingService]}</Trans>
           ) : isClientStateLoading || !attempt ? (
-            <Trans>Connecting do daemon</Trans>
+            <Trans>Connecting to daemon</Trans>
           ) : (
             <Flex flexDirection="column" gap={1}>
               <Typography variant="body1" align="center">
-                <Trans>Connecting do daemon</Trans>
+                <Trans>Connecting to daemon</Trans>
               </Typography>
               <Typography variant="body1" align="center" color="textSecondary">
                 <Trans>Attempt {attempt}</Trans>
