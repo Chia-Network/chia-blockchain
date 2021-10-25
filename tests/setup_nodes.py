@@ -566,5 +566,6 @@ async def setup_timelord_and_node(
             timelord_server,
             node,
             node.full_node.server,
+            keychain1,
         )
         await _teardown_nodes(node_iters)

@@ -136,7 +136,7 @@ class TestTimelord:
 
     @pytest.mark.asyncio
     async def test_timelord_infuses_long_chain(self, setup_timelord_2):
-        vdf_client, timelord, timelord_server, full_node, full_node_server = setup_timelord_2
+        vdf_client, timelord, timelord_server, full_node, full_node_server, keychain = setup_timelord_2
         constants = constants_for_dic(
             {
                 "DISCRIMINANT_SIZE_BITS": 16,
@@ -149,7 +149,7 @@ class TestTimelord:
         bt = BlockTools(constants)
         await bt.setup_keys()
         await bt.setup_plots()
-        blocks = bt.get_consecutive_blocks(200)
+        blocks = bt.get_consecutive_blocks(200, keychain=keychain)
         # NOTE: There seem to be tricky cases around infusing right from genesis: genesis challenge might not be saved
         # in last_state's challenge cache, making some infusions not work properly. For avoiding this issue,
         # it's recommended we start infusing after a relatively stable chain is established.
