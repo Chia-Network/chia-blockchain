@@ -16,6 +16,7 @@ export default function WalletCardSpendableBalance(props: Props) {
   const { 
     data: walletBalance, 
     isLoading: isLoadingWalletBalance,
+    error,
   } = useGetWalletBalanceQuery({
     walletId,
   });
@@ -37,6 +38,7 @@ export default function WalletCardSpendableBalance(props: Props) {
       title={<Trans>Spendable Balance</Trans>}
       tooltip={tooltip}
       value={humanValue}
+      error={error}
     />
   );
 }

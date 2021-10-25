@@ -1,5 +1,6 @@
 import React, { ReactNode, ReactElement } from 'react';
 import styled from 'styled-components';
+import { Trans } from '@lingui/macro';
 import { Flex, TooltipIcon } from '@chia/core';
 import {
   Box,
@@ -31,10 +32,11 @@ type Props = {
   description?: ReactNode;
   loading?: boolean;
   tooltip?: ReactElement<any>;
+  error?: Error;
 };
 
 export default function FarmCard(props: Props) {
-  const { title, value, description, valueColor, loading, tooltip } = props;
+  const { title, value, description, valueColor, loading, tooltip, error } = props;
 
   return (
     <StyledCard>
@@ -49,6 +51,14 @@ export default function FarmCard(props: Props) {
           <Box>
             <CircularProgress color="secondary" size={25} />
           </Box>
+        ) : error ? (
+          <Flex alignItems="center">
+            <StyledValue variant="h5" color="error">
+              <Trans>Error</Trans>
+            </StyledValue>
+            &nbsp;
+            <TooltipIcon>{error?.message}</TooltipIcon>
+          </Flex>
         ) : (
           <StyledValue variant="h5" color={valueColor}>
             {value}
@@ -70,4 +80,5 @@ FarmCard.defaultProps = {
   description: undefined,
   loading: false,
   value: undefined,
+  error: undefined,
 };

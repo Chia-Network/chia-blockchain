@@ -1,6 +1,7 @@
 import Client from '../Client';
 import Service from './Service';
 import type { Options } from './Service';
+import type Message from '../Message';
 import ServiceName from '../constants/ServiceName';
 
 export default class FullNode extends Service {
@@ -66,5 +67,13 @@ export default class FullNode extends Service {
     processData?: (data: any) => any,
   ) {
     return this.onCommand('get_connections', callback, processData);
+  }
+
+  onNewBlock(callback: (data: any, message: Message) => void) {
+    return this.onStateChanged('new_block', callback);
+  }
+
+  onNewPeak(callback: (data: any, message: Message) => void) {
+    return this.onStateChanged('new_peak', callback);
   }
 }

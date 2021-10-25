@@ -270,4 +270,12 @@ export default class Wallet extends Service {
   ) {
     return this.onCommand('get_connections', callback, processData);
   }
+
+  onTransactionUpdate(callback: (data: any, message: Message) => void) {
+    return this.onStateChanged('tx_update', callback);
+  }
+
+  onPendingTransaction(callback: (data: any, message: Message) => void) {
+    return this.onStateChanged('pending_transaction', callback);
+  }
 }

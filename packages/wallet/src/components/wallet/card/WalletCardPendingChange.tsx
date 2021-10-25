@@ -16,6 +16,7 @@ export default function WalletCardPendingChange(props: Props) {
   const { 
     data: walletBalance, 
     isLoading: isLoadingWalletBalance,
+    error,
   } = useGetWalletBalanceQuery({
     walletId,
   });
@@ -37,6 +38,7 @@ export default function WalletCardPendingChange(props: Props) {
       title={<Trans>Pending Change</Trans>}
       tooltip={tooltip}
       value={humanValue}
+      error={error}
     />
   );
 }

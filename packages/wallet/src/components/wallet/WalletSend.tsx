@@ -111,9 +111,8 @@ export default function WalletSend(props: SendCardProps) {
       address,
       amount: Number.parseFloat(chia_to_mojo(amount)),
       fee: Number.parseFloat(chia_to_mojo(fee)),
+      waitForConfirmation: true,
     }).unwrap();
-
-    console.log('response', response);
 
     const result = getTransactionResult(response.transaction);
     if (result.success) {

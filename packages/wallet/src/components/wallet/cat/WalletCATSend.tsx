@@ -129,6 +129,7 @@ export default function WalletCATSend(props: Props) {
       address,
       amount: amountValue,
       fee: feeValue,
+      waitForConfirmation: true,
     };
 
     if (memos) {

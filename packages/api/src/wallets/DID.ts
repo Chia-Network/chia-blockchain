@@ -80,4 +80,8 @@ export default class DIDWallet extends Wallet {
       walletId,
     });
   }
+
+  onDIDCoinAdded(callback: (data: any, message: Message) => void) {
+    return this.onStateChanged('did_coin_added', callback);
+  }
 }

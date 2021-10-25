@@ -92,7 +92,6 @@ export default function WalletCATCreateSimple() {
                   title={token.name}
                   symbol={token.symbol}
                   disabled={isPresent}
-                  description={token.description}
                   loadingDescription={<Trans>Adding {token.symbol} token</Trans>}
                 />
               </Grid>

@@ -1,22 +1,21 @@
 import React from 'react';
 import { FormatLargeNumber } from '@chia/core';
-import { useGetSyncStatusQuery } from '@chia/api-react';
+import { useGetHeightInfoQuery } from '@chia/api-react';
 
 export default function WalletStatusHeight() {
-  const { data: walletState, isLoading } = useGetSyncStatusQuery();
-  if (isLoading || !walletState) {
+  const { data: height, isLoading } = useGetHeightInfoQuery();
+  if (isLoading) {
     return null;
   }
 
-  const currentHeight = walletState?.height;
-  if (currentHeight === undefined || currentHeight === null) {
+  if (height === undefined || height === null) {
     return null;
   }
 
   return (
     <>
       {'('}
-      <FormatLargeNumber value={currentHeight} />
+      <FormatLargeNumber value={height} />
       {')'}
     </>
   );

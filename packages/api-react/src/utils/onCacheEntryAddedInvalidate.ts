@@ -1,31 +1,43 @@
 type Invalidate = {
   command: string;
   endpoint: () => Object;
-  canInvalidate?: (data: any, args: any) => boolean;
+  skip?: (data: any, args: any) => boolean;
+} | {
+  command: string;
+  onUpdate: (draft, data) => void;
+  skip?: (data: any, args: any) => boolean;
 };
 
 export default function onCacheEntryAddedInvalidate(rtkQuery, invalidates: Invalidate[]) {
   return async (args, api) => {
-    const { cacheDataLoaded, cacheEntryRemoved, dispatch } = api;
+    const { cacheDataLoaded, cacheEntryRemoved, updateCachedData, dispatch } = api;
     const unsubscribes: Function[] = [];
     try {
       await cacheDataLoaded;
 
       await Promise.all(invalidates.map(async(invalidate) => {
-        const { command, endpoint, canInvalidate } = invalidate;
-
-        const currentEndpoint = endpoint();
+        const { command, endpoint, onUpdate, skip } = invalidate;
 
         const response = await rtkQuery({
           command: command,
           args: [(data) => {
-            if (canInvalidate && !canInvalidate(data, args)) {
+            if (skip && !skip(data, args)) {
               return;
             }
-            dispatch(currentEndpoint.initiate(args, { 
-              subscribe: false,
-              forceRefetch: true,
-            }));
+
+            if (onUpdate) {
+              updateCachedData((draft) => {
+                onUpdate(draft, data, args);
+              });
+            }
+
+            if (endpoint) {
+              const currentEndpoint = endpoint();
+              dispatch(currentEndpoint.initiate(args, { 
+                subscribe: false,
+                forceRefetch: true,
+              }));
+            }
           }],
         }, api, {});
 

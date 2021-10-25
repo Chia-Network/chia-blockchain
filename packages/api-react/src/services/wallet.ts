@@ -3,6 +3,7 @@ import { Wallet, CAT, WalletType } from '@chia/api';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import type Transaction from '../@types/Transaction';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
+import { rest } from 'lodash';
 
 const baseQuery = chiaLazyBaseQuery({
   service: Wallet,
@@ -98,6 +99,14 @@ export const walletApi = createApi({
         command: 'getTransaction',
         args: [transactionId],
       }),
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
+        command: 'onTransactionUpdate',
+        // endpoint: () => walletApi.endpoints.getTransaction,
+        onUpdate: (draft, data) => {
+          console.log('on transaction update');
+          console.log(draft, data);
+        },
+      }]),
     }),
 
     getPwStatus: build.query<any, { 
@@ -222,7 +231,101 @@ export const walletApi = createApi({
       amount: string;
       fee: string; 
       address: string;
+      waitForConfirmation?: boolean;
     }>({
+      async queryFn(args, queryApi, _extraOptions, fetchWithBQ) {
+        let subscribeResponse;
+
+        function unsubscribe() {
+          if (subscribeResponse) {
+            subscribeResponse.data();
+            subscribeResponse = undefined;
+          }
+        }
+
+        try {
+          const { walletId, amount, fee, address, waitForConfirmation } = args;
+          
+          return {
+            data: new Promise(async (resolve, reject) => {
+              const updatedTransactions: Transaction[] = [];
+              let transactionName: string;
+
+              function processUpdates() {
+                if (!transactionName) {
+                  return;
+                }
+
+                const transaction = updatedTransactions.find(
+                  (trx) => trx.name === transactionName && !!trx?.sentTo?.length,
+                );
+
+                if (transaction) {
+                  console.log('finded transaction with sentTo list', transaction);
+                  resolve({
+                    transaction,
+                    transactionId: transaction.name,
+                  });
+                } else {
+                  console.log('updated without correct transaction', updatedTransactions);
+                }
+              }
+
+              // bind all changes related to transactions
+              if (waitForConfirmation) {
+                subscribeResponse = await baseQuery({
+                  command: 'onTransactionUpdate',
+                  args: [(data: any) => {
+                    console.log('onTransactionUpdate', data);
+  
+                    const { additionalData: { transaction } } = data;
+  
+                    updatedTransactions.push(transaction);
+                    processUpdates();
+                  }],
+                }, queryApi, {});
+              }
+
+              // make transaction
+              const { data: sendTransactionData, error } = await fetchWithBQ({
+                command: 'sendTransaction',
+                args: [walletId, amount, fee, address],
+              });
+
+              console.log('sendTransaction result', sendTransactionData, error);
+    
+              if (error) {
+                reject(error);
+                return;
+              }
+
+              if (!waitForConfirmation) {
+                resolve(sendTransactionData);
+                return;
+              }
+
+              const { transaction } = sendTransactionData;
+              if (!transaction) {
+                reject(new Error('Transaction is not present in response'));
+              }
+
+
+              transactionName = transaction.name;
+              updatedTransactions.push(transaction);
+              processUpdates();
+            }),
+          };
+        } catch (error: any) {
+          return {
+            error,
+          };
+        } finally {
+          unsubscribe();
+        }
+      },
+      invalidatesTags: [{ type: 'Transactions', id: 'LIST' }],
+
+      /*
       query: ({ walletId, amount, fee, address }) => ({
         command: 'sendTransaction',
         args: [
@@ -233,6 +336,7 @@ export const walletApi = createApi({
         ],
       }),
       invalidatesTags: [{ type: 'Transactions', id: 'LIST' }],
+      */
     }),
 
     generateMnemonic: build.mutation<string[], undefined>({
@@ -471,10 +575,11 @@ export const walletApi = createApi({
       }),
     }),
 
-    getHeightInfo: build.query<any, undefined>({
+    getHeightInfo: build.query<number, undefined>({
       query: () => ({
         command: 'getHeightInfo',
       }),
+      transformResponse: (response: any) => response?.height,
     }),
 
     getNetworkInfo: build.query<any, undefined>({
@@ -632,7 +737,9 @@ export const walletApi = createApi({
       amount: string;
       fee: string;
       memos?: string[];
+      waitForConfirmation?: boolean;
     }>({
+      /*
       query: ({
         walletId,
         address,
@@ -644,6 +751,61 @@ export const walletApi = createApi({
         service: CAT,
         args: [walletId, address, amount, fee, memos],
       }),
+      */
+      async queryFn(args, queryApi, _extraOptions, fetchWithBQ) {
+        try {
+          const {
+            walletId,
+            address,
+            amount,
+            fee,
+            memos, 
+            waitForConfirmation,
+          } = args;
+          const { data, error } = await fetchWithBQ({
+            command: 'spend',
+            service: CAT,
+            args: [walletId, address, amount, fee, memos],
+          });
+
+          if (error) {
+            throw error;
+          }
+
+          if (!waitForConfirmation) {
+            return {
+              data,
+            };
+          }
+
+          console.log('data', data);
+
+          const { transaction, ...rest } = data;
+
+          return {
+            data: new Promise(async (resolve) => {
+              const response = await baseQuery({
+                command: 'onTransactionUpdate',
+                args: [(data: any) => {
+                  const { additionalData: { transaction: updatedTransaction } } = data;
+                  if (updatedTransaction.name === transaction.name && updatedTransaction.sentTo && updatedTransaction.sentTo.length) {
+                    response.data();
+
+                    resolve({
+                      transaction: updatedTransaction,
+                      ...rest,
+                    });
+                  }
+                }],
+              }, queryApi, {});
+            }),
+          };
+        } catch (error: any) {
+          return {
+            error,
+          };
+        }
+      },
       invalidatesTags: [{ type: 'Transactions', id: 'LIST' }],
     }),
 
