@@ -121,7 +121,8 @@ class CCWallet:
 
         if cc_coin is None:
             raise ValueError("Internal Error, unable to generate new coloured coin")
-        assert cc_coin is not None
+
+        cc_pid: bytes32 = cc_coin.parent_coin_info
 
         cc_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -133,7 +134,7 @@ class CCWallet:
             sent=uint32(10),
             spend_bundle=None,
             additions=[cc_coin],
-            removals=list(filter(lambda c: c.name() == cc_coin.parent_coin_info, spend_bundle.removals())),
+            removals=list(filter(lambda c: c.name() == cc_pid, spend_bundle.removals())),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,

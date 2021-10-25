@@ -91,7 +91,7 @@ def unsigned_spend_bundle_for_spendable_ccs(mod_code: Program, spendable_cc_list
         total = spend_info.extra_delta * -1
         if conditions:
             for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):
-                if _.vars[1] != b'\x8f': # -113 in bytes
+                if _.vars[1] != b"\x8f":  # -113 in bytes
                     total += Program.to(_.vars[1]).as_int()
         deltas.append(spend_info.coin.amount - total)
 
