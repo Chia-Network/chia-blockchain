@@ -49,6 +49,7 @@ fi
 
 # sets the version for chia-blockchain in package.json
 brew install jq
+cd ./packages/wallet
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
