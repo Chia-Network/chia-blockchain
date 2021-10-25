@@ -30,7 +30,7 @@ msgstr ""
 #~ msgid "+ Add New Plot NFT"
 #~ msgstr ""
 
-#: src/components/wallet/WalletHeader.tsx:60
+#: src/components/wallet/WalletHeader.tsx:61
 msgid "+ Add Token"
 msgstr ""
 
@@ -76,7 +76,7 @@ msgstr "Аб праграме Chia Blockchain"
 #~ msgid "Actions"
 #~ msgstr "Дзеянні"
 
-#: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:90
+#: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:97
 msgid "Add"
 msgstr "Дадаць"
 
@@ -85,7 +85,7 @@ msgstr "Дадаць"
 msgid "Add Backup ID"
 msgstr ""
 
-#: src/components/wallet/hero/WalletHeroAdd.tsx:100
+#: src/components/wallet/hero/WalletHeroAdd.tsx:99
 msgid "Add Custom Token"
 msgstr ""
 
@@ -98,9 +98,9 @@ msgstr ""
 #~ msgstr "Дадаць дзялянку ў чаргу"
 
 #: src/components/wallet/WalletsList.tsx:54
-#: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:55
-#: src/components/wallet/cat/WalletCATCreateSimple.tsx:62
-#: src/components/wallet/hero/WalletHeroAdd.tsx:65
+#: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:62
+#: src/components/wallet/cat/WalletCATCreateSimple.tsx:71
+#: src/components/wallet/hero/WalletHeroAdd.tsx:64
 #: src/components/wallet/hero/WalletHeroWallets.tsx:100
 msgid "Add Token"
 msgstr ""
@@ -134,7 +134,7 @@ msgstr ""
 #~ msgid "Add {currencyCode} from the Faucet"
 #~ msgstr ""
 
-#: src/components/wallet/cat/WalletCATCreateSimple.tsx:84
+#: src/components/wallet/cat/WalletCATCreateSimple.tsx:95
 msgid "Adding {0} token"
 msgstr ""
 
@@ -142,15 +142,15 @@ msgstr ""
 msgid "Address"
 msgstr "Адрас"
 
-#: src/components/wallet/WalletSend.tsx:158
-#: src/components/wallet/cat/WalletCATSend.tsx:182
+#: src/components/wallet/WalletSend.tsx:150
+#: src/components/wallet/cat/WalletCATSend.tsx:177
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:701
 msgid "Address / Puzzle hash"
 msgstr "Адрас / Хэш-галаваломка"
 
 #: src/components/wallet/WalletHistory.tsx:63
-#: src/components/wallet/WalletSend.tsx:168
-#: src/components/wallet/cat/WalletCATSend.tsx:193
+#: src/components/wallet/WalletSend.tsx:160
+#: src/components/wallet/cat/WalletCATSend.tsx:188
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
 msgid "Amount"
 msgstr "Сума"
@@ -172,7 +172,7 @@ msgstr ""
 #~ msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 #~ msgstr "Сапраўды выдаліць дзялянку? Пасля выдалення дзялянку будзе немагчыма аднавіць."
 
-#: src/components/wallet/WalletHeader.tsx:43
+#: src/components/wallet/WalletHeader.tsx:44
 msgid "Are you sure you want to delete unconfirmed transactions?"
 msgstr ""
 
@@ -181,8 +181,12 @@ msgstr ""
 #~ msgstr "Сапраўды адлучыцца?"
 
 #: src/electron/main.tsx:198
-msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "Сапраўды хочаце выйсці? Засяванне і фермерства, запушчаныя праз графічны інтэрфейс, будуць спынены."
+msgid "Are you sure you want to quit?"
+msgstr ""
+
+#: src/electron/main.tsx:198
+#~ msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+#~ msgstr "Сапраўды хочаце выйсці? Засяванне і фермерства, запушчаныя праз графічны інтэрфейс, будуць спынены."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -209,7 +213,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:34
-#: src/components/selectKey/SelectKeyItem.tsx:82
+#: src/components/selectKey/SelectKeyItem.tsx:83
 msgid "Back"
 msgstr "Назад"
 
@@ -306,7 +310,7 @@ msgstr ""
 #~ msgid "CCListItems.title"
 #~ msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:138
+#: src/components/selectKey/SelectKeyItem.tsx:136
 msgid "Can be backed up to mnemonic seed"
 msgstr "Рэзервовая копія можна быць зроблена ў мнеманічнае зерне"
 
@@ -320,7 +324,7 @@ msgstr "Скасаваць"
 #~ msgstr "Скасаваць і патраціць"
 
 #: src/components/wallet/WalletSend.tsx:99
-#: src/components/wallet/cat/WalletCATSend.tsx:103
+#: src/components/wallet/cat/WalletCATSend.tsx:100
 msgid "Cannot send chia to coloured address. Please enter a chia address."
 msgstr ""
 
@@ -363,7 +367,7 @@ msgstr ""
 msgid "Chia Blockchain Wiki"
 msgstr "Вікі блокчэйна Chia"
 
-#: src/components/wallet/standard/WalletStandard.tsx:21
+#: src/components/wallet/standard/WalletStandard.tsx:23
 msgid "Chia Wallet"
 msgstr "Кашалёк Chia"
 
@@ -431,7 +435,7 @@ msgstr "Пацвердзіць"
 #~ msgid "Confirm Disconnect"
 #~ msgstr "Пацвердзіць адлучэнне"
 
-#: src/components/wallet/WalletHeader.tsx:38
+#: src/components/wallet/WalletHeader.tsx:39
 msgid "Confirmation"
 msgstr ""
 
@@ -462,7 +466,12 @@ msgstr "Пацверджана на вышыні {0}"
 
 #: src/components/app/AppState.tsx:61
 #: src/components/app/AppState.tsx:65
-msgid "Connecting do daemon"
+#~ msgid "Connecting do daemon"
+#~ msgstr ""
+
+#: src/components/app/AppState.tsx:61
+#: src/components/app/AppState.tsx:65
+msgid "Connecting to daemon"
 msgstr ""
 
 #: src/components/app/AppRouter.tsx:40
@@ -478,13 +487,13 @@ msgstr ""
 #~ msgid "Connection Status:"
 #~ msgstr "Стан падлучэння:"
 
-#: src/components/fullNode/FullNodeConnections.tsx:75
-#~ msgid "Connection type"
-#~ msgstr "Тып падлучэння"
+#: src/components/wallet/WalletConnections.tsx:63
+msgid "Connection type"
+msgstr "Тып падлучэння"
 
-#: src/components/fullNode/FullNodeConnections.tsx:109
-#~ msgid "Connections"
-#~ msgstr "Падлучэнні"
+#: src/components/wallet/WalletConnections.tsx:79
+msgid "Connections"
+msgstr "Падлучэнні"
 
 #: src/electron/main.tsx:383
 msgid "Contribute on GitHub"
@@ -569,8 +578,8 @@ msgstr "Стварыць кашалёк карыстальніка з абмеж
 #~ msgid "Create Trade Offer"
 #~ msgstr "Стварыць гандлёвую аферту"
 
-#: src/components/wallet/WalletSend.tsx:141
-#: src/components/wallet/cat/WalletCATSend.tsx:164
+#: src/components/wallet/WalletSend.tsx:133
+#: src/components/wallet/cat/WalletCATSend.tsx:159
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:684
 msgid "Create Transaction"
 msgstr "Стварыць трансакцыю"
@@ -657,11 +666,11 @@ msgstr ""
 msgid "Custody Wallet"
 msgstr ""
 
-#: src/components/wallet/cat/WalletCATCreateSimple.tsx:92
+#: src/components/wallet/cat/WalletCATCreateSimple.tsx:103
 msgid "Custom"
 msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:153
+#: src/components/selectKey/SelectKeyItem.tsx:151
 msgid "DANGER: permanently delete private key"
 msgstr "НЕБЯСПЕЧНА: выдаліць закрыты ключ назаўсёды"
 
@@ -682,8 +691,8 @@ msgstr "Дата"
 #~ msgstr "Затрымка"
 
 #: src/components/selectKey/SelectKey.tsx:33
-#: src/components/selectKey/SelectKeyItem.tsx:81
-#: src/components/wallet/WalletHeader.tsx:39
+#: src/components/selectKey/SelectKeyItem.tsx:82
+#: src/components/wallet/WalletHeader.tsx:40
 #: src/components/wallet/did/WalletDID.tsx:449
 #: src/components/wallet/did/WalletDID.tsx:862
 #: src/components/wallet/did/WalletDIDCreate.tsx:194
@@ -696,7 +705,7 @@ msgstr "Выдаліць"
 #~ msgid "Delete Plot"
 #~ msgstr "Выдаліць дзялянку"
 
-#: src/components/wallet/WalletHeader.tsx:84
+#: src/components/wallet/WalletHeader.tsx:85
 msgid "Delete Unconfirmed Transactions"
 msgstr ""
 
@@ -709,7 +718,7 @@ msgstr "Выдаліць усе ключы"
 #~ msgid "Delete key"
 #~ msgstr "Delete key"
 
-#: src/components/selectKey/SelectKeyItem.tsx:80
+#: src/components/selectKey/SelectKeyItem.tsx:81
 msgid "Delete key {fingerprint}"
 msgstr ""
 
@@ -717,7 +726,7 @@ msgstr ""
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Выдаленне ўсіх ключоў незваротна выдаліць ключы з вашага камп'ютара — перад гэтым упэўніцеся, што маеце іх рэзервовыя копіі. Сапраўды працягнуць?"
 
-#: src/components/selectKey/SelectKeyItem.tsx:113
+#: src/components/selectKey/SelectKeyItem.tsx:114
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Выдаленне ключа незваротна выдаліць ключ з вашага камп'ютара — перад гэтым упэўніцеся, што маеце яго рэзервовую копію. Сапраўды працягнуць?"
 
@@ -798,12 +807,11 @@ msgstr "Рэдагаваць"
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "Каб аднавіць свой кашалёк Chia, увядзіце раней захаваную вамі мнеманічную фразу з 24 слоў у правільным парадку."
 
-#: src/components/wallet/cat/WalletCATSend.tsx:145
-#: src/hooks/useShowError.tsx:11
-#~ msgid "Error"
-#~ msgstr "Памылка"
+#: src/components/farm/card/FarmCard.tsx:57
+msgid "Error"
+msgstr "Памылка"
 
-#: src/components/wallet/cat/WalletCATSend.tsx:113
+#: src/components/wallet/cat/WalletCATSend.tsx:110
 msgid "Error the entered address appears to be for a different colour."
 msgstr ""
 
@@ -841,8 +849,8 @@ msgstr ""
 #~ msgid "Failed to open (invalid plots)"
 #~ msgstr "Не ўдалося адкрыць (дзялянкі з памылкамі)"
 
-#: src/components/wallet/WalletSend.tsx:187
-#: src/components/wallet/cat/WalletCATSend.tsx:226
+#: src/components/wallet/WalletSend.tsx:179
+#: src/components/wallet/cat/WalletCATSend.tsx:221
 msgid "Farm"
 msgstr "Ферма"
 
@@ -905,8 +913,8 @@ msgstr ""
 #~ msgstr "Стан фермерства"
 
 #: src/components/wallet/WalletHistory.tsx:67
-#: src/components/wallet/WalletSend.tsx:179
-#: src/components/wallet/cat/WalletCATSend.tsx:206
+#: src/components/wallet/WalletSend.tsx:171
+#: src/components/wallet/cat/WalletCATSend.tsx:201
 #: src/components/wallet/create/createRLAdmin.jsx:244
 #: src/components/wallet/create/createRLAdmin.jsx:272
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
@@ -1035,9 +1043,9 @@ msgstr "Гісторыя"
 #~ msgid "Host Name"
 #~ msgstr "Імя хоста"
 
-#: src/components/fullNode/FullNodeConnections.tsx:40
-#~ msgid "IP address"
-#~ msgstr "IP-адрас"
+#: src/components/wallet/WalletConnections.tsx:28
+msgid "IP address"
+msgstr "IP-адрас"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:75
 #~ msgid "IP address / host"
@@ -1166,6 +1174,10 @@ msgstr "Інтэрвал"
 #~ msgid "Leaving Pool"
 #~ msgstr ""
 
+#: src/components/wallet/WalletConnections.tsx:84
+msgid "List of connections is empty"
+msgstr ""
+
 #: src/components/pool/PoolOverview.tsx:176
 #~ msgid "List view"
 #~ msgstr ""
@@ -1254,13 +1266,13 @@ msgstr ""
 #~ msgid "Manage Your Farming Rewards Target Addresses"
 #~ msgstr "Кіраванне мэтавымі адрасамі для атрымання ўзнагарод за фермерства"
 
-#: src/components/wallet/cat/WalletCATSend.tsx:218
+#: src/components/wallet/cat/WalletCATSend.tsx:213
 msgid "Memo"
 msgstr ""
 
-#: src/components/fullNode/FullNodeConnections.tsx:68
-#~ msgid "MiB Up/Down"
-#~ msgstr "Увах./вых. МіБ"
+#: src/components/wallet/WalletConnections.tsx:56
+msgid "MiB Up/Down"
+msgstr "Увах./вых. МіБ"
 
 #: src/components/pool/PoolInfo.tsx:27
 #~ msgid "Minimum Difficulty"
@@ -1286,7 +1298,7 @@ msgstr ""
 msgid "My Pubkey"
 msgstr "Мой адкрыты ключ"
 
-#: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:65
+#: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:72
 msgid "Name"
 msgstr ""
 
@@ -1340,11 +1352,9 @@ msgstr "Папярэдніх трансакцый няма"
 #~ msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 #~ msgstr "Адсутнічаюць закрытыя ключы для аднаго або абодвух адрасоў. Бяспечна толькі ў выпадку адпраўкі ўзнагароды на іншы кашалёк."
 
-#: src/components/farm/FarmFullNodeConnections.tsx:32
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
-#: src/components/fullNode/FullNodeConnections.tsx:36
-#~ msgid "Node ID"
-#~ msgstr "Ідэнтыфікатар вузла"
+#: src/components/wallet/WalletConnections.tsx:24
+msgid "Node ID"
+msgstr "Ідэнтыфікатар вузла"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 #~ msgid "Node Id"
@@ -1415,8 +1425,8 @@ msgstr "ОК"
 #~ msgid "Offers Created"
 #~ msgstr "Аферта створана"
 
-#: src/components/wallet/WalletSend.tsx:143
-#: src/components/wallet/cat/WalletCATSend.tsx:166
+#: src/components/wallet/WalletSend.tsx:135
+#: src/components/wallet/cat/WalletCATSend.tsx:161
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
 msgstr "У сярэднім паміж кожным блокам трансакцый мінае адна хвіліна. Калі сетка не перагружана, чакаецца, што ваша трансакцыя будзе занесена ў блокчэйн менш чым за хвіліну."
 
@@ -1452,17 +1462,17 @@ msgstr "Выходныя"
 msgid "Pending"
 msgstr "Чаканыя"
 
-#: src/components/wallet/card/WalletCardPendingBalance.tsx:36
+#: src/components/wallet/card/WalletCardPendingBalance.tsx:37
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:573
 msgid "Pending Balance"
 msgstr "Чаканы баланс"
 
-#: src/components/wallet/card/WalletCardPendingChange.tsx:37
+#: src/components/wallet/card/WalletCardPendingChange.tsx:38
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:578
 msgid "Pending Change"
 msgstr "Чаканы размен"
 
-#: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:37
+#: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:38
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:568
 msgid "Pending Total Balance"
 msgstr "Чаканы агульны баланс"
@@ -1500,7 +1510,7 @@ msgstr ""
 msgid "Please enter a valid CAT name"
 msgstr ""
 
-#: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:35
+#: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:42
 msgid "Please enter a valid TAIL"
 msgstr ""
 
@@ -1514,7 +1524,7 @@ msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs
 msgstr ""
 
 #: src/components/wallet/WalletSend.tsx:89
-#: src/components/wallet/cat/WalletCATSend.tsx:93
+#: src/components/wallet/cat/WalletCATSend.tsx:90
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
 msgid "Please enter a valid numeric amount"
 msgstr "Укажыце дапушчальнае лічбавае значэнне"
@@ -1524,7 +1534,7 @@ msgid "Please enter a valid numeric amount."
 msgstr ""
 
 #: src/components/wallet/WalletSend.tsx:94
-#: src/components/wallet/cat/WalletCATSend.tsx:98
+#: src/components/wallet/cat/WalletCATSend.tsx:95
 #: src/components/wallet/create/createRLAdmin.jsx:150
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
 msgid "Please enter a valid numeric fee"
@@ -1542,7 +1552,7 @@ msgstr "Укажыце дапушчальнае лічбавае значэнн�
 msgid "Please enter a valid pubkey"
 msgstr "Укажыце сапраўдны адкрыты ключ"
 
-#: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:39
+#: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:46
 msgid "Please enter a valid token name"
 msgstr ""
 
@@ -1551,7 +1561,7 @@ msgid "Please enter valid wallet name"
 msgstr ""
 
 #: src/components/wallet/WalletSend.tsx:84
-#: src/components/wallet/cat/WalletCATSend.tsx:88
+#: src/components/wallet/cat/WalletCATSend.tsx:81
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:623
 msgid "Please finish syncing before making a transaction"
 msgstr "Завяршыце сінхранізацыю перад выкананнем трансакцыі"
@@ -1590,6 +1600,8 @@ msgstr ""
 msgid "Please wait for synchronization"
 msgstr ""
 
+#: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:38
+#: src/components/wallet/cat/WalletCATCreateSimple.tsx:38
 #: src/components/wallet/did/WalletDIDRecovery.tsx:63
 #: src/hooks/useJoinPool.tsx:27
 msgid "Please wait for wallet synchronization"
@@ -1774,12 +1786,9 @@ msgstr ""
 msgid "Pooling Wallet"
 msgstr ""
 
-#: src/components/farm/FarmFullNodeConnections.tsx:42
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:42
-#: src/components/fullNode/FullNodeAddConnection.tsx:80
-#: src/components/fullNode/FullNodeConnections.tsx:46
-#~ msgid "Port"
-#~ msgstr "Порт"
+#: src/components/wallet/WalletConnections.tsx:34
+msgid "Port"
+msgstr "Порт"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:88
 #: src/components/plotNFT/PlotNFTChangePool.tsx:74
@@ -1806,7 +1815,7 @@ msgstr ""
 #~ msgid "Previous Sub Block Hash"
 #~ msgstr "Previous Sub Block Hash"
 
-#: src/components/selectKey/SelectKeyItem.tsx:133
+#: src/components/selectKey/SelectKeyItem.tsx:131
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Закрыты ключ з адкрытым лічбавым адбіткам {fingerprint}"
 
@@ -1901,7 +1910,7 @@ msgstr "Наладжванне кашалька карыстальніка з а
 msgid "Receive Address"
 msgstr "Адрас атрымання"
 
-#: src/components/wallet/cat/WalletCATSend.tsx:107
+#: src/components/wallet/cat/WalletCATSend.tsx:104
 msgid "Recipient address is not a coloured wallet address. Please enter a coloured wallet address"
 msgstr ""
 
@@ -1999,7 +2008,7 @@ msgstr "Захаваць"
 #~ msgid "Second temporary folder location"
 #~ msgstr "Размяшчэнне другой часовай папкі"
 
-#: src/components/selectKey/SelectKeyItem.tsx:142
+#: src/components/selectKey/SelectKeyItem.tsx:140
 msgid "See private key"
 msgstr "Паглядзець закрыты ключ"
 
@@ -2082,8 +2091,8 @@ msgstr ""
 #~ msgid "Sell"
 #~ msgstr "Прадаць"
 
-#: src/components/wallet/WalletSend.tsx:197
-#: src/components/wallet/cat/WalletCATSend.tsx:236
+#: src/components/wallet/WalletSend.tsx:189
+#: src/components/wallet/cat/WalletCATSend.tsx:231
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 msgid "Send"
 msgstr "Адправіць"
@@ -2151,7 +2160,7 @@ msgstr "Даступная сума"
 msgid "Spendable Amount Per Interval"
 msgstr "Даступная сума на інтэрвал"
 
-#: src/components/wallet/card/WalletCardSpendableBalance.tsx:37
+#: src/components/wallet/card/WalletCardSpendableBalance.tsx:38
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:548
 msgid "Spendable Balance"
 msgstr "Даступны баланс"
@@ -2187,7 +2196,7 @@ msgstr ""
 msgid "Status"
 msgstr "Стан"
 
-#: src/components/wallet/WalletHeader.tsx:66
+#: src/components/wallet/WalletHeader.tsx:67
 msgid "Status:"
 msgstr "Стан:"
 
@@ -2224,8 +2233,8 @@ msgstr "Стан:"
 msgid "Submit"
 msgstr "Адправіць"
 
-#: src/components/wallet/WalletSend.tsx:128
-#: src/components/wallet/cat/WalletCATSend.tsx:148
+#: src/components/wallet/WalletSend.tsx:120
+#: src/components/wallet/cat/WalletCATSend.tsx:146
 msgid "Success"
 msgstr ""
 
@@ -2351,7 +2360,7 @@ msgstr ""
 #~ msgid "These plots are invalid, you might want to delete them."
 #~ msgstr "Гэтыя дзялянкі з памылкамі — іх можна выдаліць."
 
-#: src/components/wallet/WalletBadge.tsx:25
+#: src/components/wallet/WalletBadge.tsx:26
 msgid "This access token is whitelisted"
 msgstr ""
 
@@ -2456,21 +2465,21 @@ msgid "To"
 msgstr "Каму"
 
 #: src/components/wallet/cat/WalletCATCreateExisting.tsx:86
-#: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:74
+#: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:81
 #: src/components/wallet/cat/WalletCATTAILDialog.tsx:44
 #: src/components/wallet/cat/WalletCATTAILDialog.tsx:57
 msgid "Token and Asset Issuance Limitations"
 msgstr ""
 
-#: src/components/wallet/cat/WalletCATCreateSimple.tsx:33
+#: src/components/wallet/cat/WalletCATCreateSimple.tsx:42
 msgid "Token has empty name"
 msgstr ""
 
-#: src/components/wallet/cat/WalletCATCreateSimple.tsx:37
+#: src/components/wallet/cat/WalletCATCreateSimple.tsx:46
 msgid "Token has empty tail"
 msgstr ""
 
-#: src/components/wallet/card/WalletCardTotalBalance.tsx:45
+#: src/components/wallet/card/WalletCardTotalBalance.tsx:46
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:543
 msgid "Total Balance"
 msgstr "Агульны баланс"
@@ -2535,8 +2544,17 @@ msgstr "Агульны баланс"
 #~ msgid "Trading History"
 #~ msgstr "Гісторыя таргоў"
 
-#: src/components/wallet/WalletSend.tsx:129
-#: src/components/wallet/cat/WalletCATSend.tsx:149
+#: src/util/getTransactionResult.ts:15
+msgid "Transaction has not been sent to node yet"
+msgstr ""
+
+#: src/util/getTransactionResult.ts:33
+msgid "Transaction has sent to a full node and is pending inclusion into the mempool. {0}"
+msgstr ""
+
+#: src/components/wallet/WalletSend.tsx:121
+#: src/components/wallet/cat/WalletCATSend.tsx:147
+#: src/util/getTransactionResult.ts:24
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr ""
 
@@ -2704,15 +2722,15 @@ msgstr "Кашалькі"
 #~ msgid "Want to have a delay before the next plot starts?"
 #~ msgstr "Хочаце задаць затрымку перад пачаткам засявання наступнай дзялянкі?"
 
-#: src/components/selectKey/SelectKeyItem.tsx:106
+#: src/components/selectKey/SelectKeyItem.tsx:107
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
 msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:88
+#: src/components/selectKey/SelectKeyItem.tsx:89
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
 msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:97
+#: src/components/selectKey/SelectKeyItem.tsx:98
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr ""
 
