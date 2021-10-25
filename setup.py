@@ -42,6 +42,7 @@ dev_dependencies = [
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
     "types-setuptools",
+    "pre-commit",
 ]
 
 kwargs = dict(
