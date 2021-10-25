@@ -84,6 +84,12 @@ class GenesisById(LimitationsProgram):
         )
         assert tx_record.spend_bundle is not None
 
+        inner_solution = wallet.standard_wallet.add_condition_to_solution(
+            Program.to([51, 0, -113, genesis_coin_checker, []]),
+            wallet.standard_wallet.make_solution(
+                primaries=[{"puzzlehash": cc_inner.get_tree_hash(), "amount": amount}],
+            ),
+        )
         eve_spend = unsigned_spend_bundle_for_spendable_ccs(
             CC_MOD,
             [
@@ -91,9 +97,7 @@ class GenesisById(LimitationsProgram):
                     list(filter(lambda a: a.amount == amount, tx_record.additions))[0],
                     genesis_coin_checker.get_tree_hash(),
                     cc_inner,
-                    wallet.standard_wallet.make_solution(
-                        primaries=[{"puzzlehash": cc_inner.get_tree_hash(), "amount": amount}]
-                    ),
+                    inner_solution,
                     limitations_program_reveal=genesis_coin_checker,
                 )
             ],
