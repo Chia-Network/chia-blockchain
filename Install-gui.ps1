@@ -21,7 +21,7 @@ Set-Location chia-blockchain-gui
 
 $ErrorActionPreference = "SilentlyContinue"
 npm install --loglevel=error
-npm audit fix
+npm run audit:fix
 npm run build
 py ..\installhelper.py
 
