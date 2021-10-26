@@ -1,6 +1,6 @@
 import json
 import time
-from typing import Callable, Optional, List, Any, Dict
+from typing import Any, Callable, Dict, List, Optional
 
 import aiohttp
 from blspy import AugSchemeMPL, G2Element, PrivateKey
@@ -12,10 +12,10 @@ from chia.farmer.farmer import Farmer
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import PoolDifficulty
 from chia.protocols.pool_protocol import (
-    get_current_authentication_token,
     PoolErrorCode,
-    PostPartialRequest,
     PostPartialPayload,
+    PostPartialRequest,
+    get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
@@ -84,6 +84,7 @@ class FarmerAPI:
                 computed_quality_string,
                 new_proof_of_space.proof.size,
                 sp.difficulty,
+                float(new_proof_of_space.difficulty_coeff),
                 new_proof_of_space.sp_hash,
             )
 
@@ -140,6 +141,7 @@ class FarmerAPI:
                     computed_quality_string,
                     new_proof_of_space.proof.size,
                     pool_state_dict["current_difficulty"],
+                    1.5,  # FIXME handle staking in pool protocol
                     new_proof_of_space.sp_hash,
                 )
                 if required_iters >= calculate_sp_interval_iters(
@@ -409,7 +411,8 @@ class FarmerAPI:
     """
 
     @api_request
-    async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint):
+    @peer_required
+    async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint, peer: ws.WSChiaConnection):
         pool_difficulties: List[PoolDifficulty] = []
         for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
             if pool_dict["pool_config"].pool_url == "":
@@ -430,6 +433,7 @@ class FarmerAPI:
                     p2_singleton_puzzle_hash,
                 )
             )
+        rsp = await peer.request_stakings(farmer_protocol.RequestStakings(public_keys=self.farmer.get_public_keys()))
         message = harvester_protocol.NewSignagePointHarvester(
             new_signage_point.challenge_hash,
             new_signage_point.difficulty,
@@ -437,6 +441,7 @@ class FarmerAPI:
             new_signage_point.signage_point_index,
             new_signage_point.challenge_chain_sp,
             pool_difficulties,
+            rsp.stakings,
         )
 
         msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)
@@ -489,3 +494,7 @@ class FarmerAPI:
     @api_request
     async def respond_plots(self, _: harvester_protocol.RespondPlots):
         self.farmer.log.warning("Respond plots came too late")
+
+    @api_request
+    async def respond_stakings(self, response: farmer_protocol.FarmerStakings):
+        self.farmer.log.warning("Respond stakings came too late")

@@ -204,7 +204,14 @@ class WalletBlockchain(BlockchainInterface):
             )
 
             required_iters, val_error = validate_unfinished_header_block(
-                self.constants, self, unfinished_header_block, False, difficulty, sub_slot_iters, False, True
+                self.constants,
+                self,
+                unfinished_header_block,
+                False,
+                difficulty,
+                sub_slot_iters,
+                False,
+                True,
             )
             error = val_error if val_error is not None else None
         else:

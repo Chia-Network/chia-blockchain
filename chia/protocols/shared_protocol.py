@@ -5,7 +5,7 @@ from typing import List, Tuple
 from chia.util.ints import uint8, uint16
 from chia.util.streamable import Streamable, streamable
 
-protocol_version = "0.0.32"
+protocol_version = "0.0.33"
 
 """
 Handshake when establishing a connection between two servers.
@@ -16,7 +16,7 @@ Note: When changing this file, also change protocol_message_types.py
 # Capabilities can be added here when new features are added to the protocol
 # These are passed in as uint16 into the Handshake
 class Capability(IntEnum):
-    BASE = 1  # Base capability just means it supports the chia protocol at mainnet
+    BASE = 1  # Base capability just means it supports the silicoin protocol at mainnet
 
 
 @dataclass(frozen=True)

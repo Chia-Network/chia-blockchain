@@ -57,10 +57,6 @@ def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
         if lock.acquire_write_lock(timeout=timeout):
             yield  # <----
             lock.release_write_lock()
-            try:
-                os.remove(lock_path)
-            except Exception:
-                pass
             break
         else:
             print(f"Failed to acquire keyring writer lock after {timeout} seconds.", end="")
@@ -80,10 +76,6 @@ def acquire_reader_lock(lock_path: Path, timeout=5, max_iters=6):
         if lock.acquire_read_lock(timeout=timeout):
             yield  # <----
             lock.release_read_lock()
-            try:
-                os.remove(lock_path)
-            except Exception:
-                pass
             break
         else:
             print(f"Failed to acquire keyring reader lock after {timeout} seconds.", end="")
@@ -123,7 +115,7 @@ class FileKeyring(FileSystemEventHandler):
     The salt is updated each time the master passphrase is changed.
     """
 
-    keyring_path: Optional[Path] = None
+    keyring_path: Path
     keyring_lock_path: Path
     keyring_observer: Observer = None
     load_keyring_lock: threading.RLock  # Guards access to needs_load_keyring
@@ -142,7 +134,12 @@ class FileKeyring(FileSystemEventHandler):
 
     @staticmethod
     def lockfile_path_for_file_path(file_path: Path) -> Path:
-        return file_path.with_suffix(".lock")
+        """
+        Returns a path suitable for creating a lockfile derived from the input path.
+        Currently used to provide a lockfile path to be used by
+        fasteners.InterProcessReaderWriterLock when guarding access to keyring.yaml
+        """
+        return file_path.with_name(f".{file_path.name}.lock")
 
     def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH):
         """
@@ -173,16 +170,24 @@ class FileKeyring(FileSystemEventHandler):
 
         self.keyring_observer = Observer()
 
+    def cleanup_keyring_file_watcher(self):
+        if getattr(self, "keyring_observer"):
+            self.keyring_observer.unschedule_all()
+
     def on_modified(self, event):
         self.check_if_keyring_file_modified()
 
     def check_if_keyring_file_modified(self):
         if self.keyring_path.exists():
-            last_modified = os.stat(self.keyring_path).st_mtime
-            if not self.keyring_last_mod_time or self.keyring_last_mod_time < last_modified:
-                self.keyring_last_mod_time = last_modified
-                with self.load_keyring_lock:
-                    self.needs_load_keyring = True
+            try:
+                last_modified = os.stat(self.keyring_path).st_mtime
+                if not self.keyring_last_mod_time or self.keyring_last_mod_time < last_modified:
+                    self.keyring_last_mod_time = last_modified
+                    with self.load_keyring_lock:
+                        self.needs_load_keyring = True
+            except FileNotFoundError:
+                # Shouldn't happen, but if the file doesn't exist there's nothing to do...
+                pass
 
     @staticmethod
     def default_outer_payload() -> dict:
@@ -425,10 +430,13 @@ class FileKeyring(FileSystemEventHandler):
 
     def write_data_to_keyring(self, data):
         os.makedirs(os.path.dirname(self.keyring_path), 0o700, True)
-        temp_path = self.keyring_path.with_suffix("." + str(os.getpid()))
+        temp_path: Path = self.keyring_path.with_suffix("." + str(os.getpid()))
         with open(os.open(str(temp_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "w") as f:
             _ = yaml.safe_dump(data, f)
-        shutil.move(str(temp_path), self.keyring_path)
+        try:
+            os.replace(str(temp_path), self.keyring_path)
+        except PermissionError:
+            shutil.move(str(temp_path), str(self.keyring_path))
 
     def prepare_for_migration(self):
         if not self.payload_cache:

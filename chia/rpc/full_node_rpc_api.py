@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
+from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -13,15 +13,16 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64, uint128
+from chia.util.ints import uint32, uint64
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class FullNodeRpcApi:
     def __init__(self, service: FullNode):
         self.service = service
-        self.service_name = "silicoin_full_node"
+        self.service_name = "sit_full_node"
         self.cached_blockchain_state: Optional[Dict] = None
 
     def get_routes(self) -> Dict[str, Callable]:
@@ -53,6 +54,7 @@ class FullNodeRpcApi:
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
+            "/pk_to_ph": self.pk_to_ph,
         }
 
     async def _state_changed(self, change: str) -> List[WsRpcMessage]:
@@ -126,18 +128,6 @@ class FullNodeRpcApi:
         else:
             sync_progress_height = uint32(0)
 
-        if peak is not None and peak.height > 1:
-            newer_block_hex = peak.header_hash.hex()
-            # Average over the last day
-            header_hash = self.service.blockchain.height_to_hash(uint32(max(1, peak.height - 4608)))
-            assert header_hash is not None
-            older_block_hex = header_hash.hex()
-            space = await self.get_network_space(
-                {"newer_block_header_hash": newer_block_hex, "older_block_header_hash": older_block_hex}
-            )
-        else:
-            space = {"space": uint128(0)}
-
         if self.service.mempool_manager is not None:
             mempool_size = len(self.service.mempool_manager.mempool.spends)
         else:
@@ -148,7 +138,7 @@ class FullNodeRpcApi:
             is_connected = False
         synced = await self.service.synced() and is_connected
 
-        assert space is not None
+        space = await self.service.blockchain.get_peak_network_space(4608)
         response: Dict = {
             "blockchain_state": {
                 "peak": peak,
@@ -161,7 +151,7 @@ class FullNodeRpcApi:
                 },
                 "difficulty": difficulty,
                 "sub_slot_iters": sub_slot_iters,
-                "space": space["space"],
+                "space": space,
                 "mempool_size": mempool_size,
             },
         }
@@ -394,25 +384,8 @@ class FullNodeRpcApi:
         newer_block_bytes = hexstr_to_bytes(newer_block_hex)
         older_block_bytes = hexstr_to_bytes(older_block_hex)
 
-        newer_block = await self.service.block_store.get_block_record(newer_block_bytes)
-        if newer_block is None:
-            raise ValueError("Newer block not found")
-        older_block = await self.service.block_store.get_block_record(older_block_bytes)
-        if older_block is None:
-            raise ValueError("Newer block not found")
-        delta_weight = newer_block.weight - older_block.weight
-
-        delta_iters = newer_block.total_iters - older_block.total_iters
-        weight_div_iters = delta_weight / delta_iters
-        additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR
-        eligible_plots_filter_multiplier = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
-        network_space_bytes_estimate = (
-            UI_ACTUAL_SPACE_CONSTANT_FACTOR
-            * weight_div_iters
-            * additional_difficulty_constant
-            * eligible_plots_filter_multiplier
-        )
-        return {"space": uint128(int(network_space_bytes_estimate))}
+        space = await self.service.blockchain.get_network_space(newer_block_bytes, older_block_bytes)
+        return {"space": space}
 
     async def get_coin_records_by_puzzle_hash(self, request: Dict) -> Optional[Dict]:
         """
@@ -600,3 +573,12 @@ class FullNodeRpcApi:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 
         return {"mempool_item": item}
+
+    async def pk_to_ph(self, request: Dict) -> Optional[Dict]:
+        if "public_key" not in request:
+            raise ValueError("No public_key in request")
+        public_key: bytes32 = hexstr_to_bytes(request["public_key"])
+        selected = self.service.config["selected_network"]
+        prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
+
+        return {"ph": encode_puzzle_hash(create_puzzlehash_for_pk(public_key), prefix)}

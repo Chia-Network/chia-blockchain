@@ -164,4 +164,5 @@ def header_block_to_sub_block_record(
         finished_infused_challenge_slot_hashes,
         finished_reward_slot_hashes,
         ses,
+        block.reward_chain_block.proof_of_space.farmer_public_key,
     )

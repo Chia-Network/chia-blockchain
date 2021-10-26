@@ -1,6 +1,6 @@
 #
 # Install helper code to manage inserting the correct version for the GUI
-# Gets the version from the result of "chia version"
+# Gets the version from the result of "sit version"
 # Converts to proper symver format so NPM doesn't complain
 # Adds the version info to the package.json file
 #
@@ -51,7 +51,7 @@ def update_version():
         data = json.load(f)
 
     version: str = "0.0"
-    output = subprocess.run(["chia", "version"], capture_output=True)
+    output = subprocess.run(["sit", "version"], capture_output=True)
     if output.returncode == 0:
         version = str(output.stdout.strip(), "utf-8").splitlines()[-1]
 

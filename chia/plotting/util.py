@@ -1,5 +1,4 @@
 import logging
-
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
@@ -29,6 +28,7 @@ class PlotInfo:
     plot_public_key: G1Element
     file_size: int
     time_modified: float
+    farmer_public_key: G1Element
 
 
 @dataclass

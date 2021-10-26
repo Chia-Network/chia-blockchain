@@ -1,5 +1,7 @@
 from typing import Dict, List, Optional
 
+from blspy import G1Element
+
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -82,4 +84,7 @@ class BlockchainInterface:
         pass
 
     def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:
+        pass
+
+    async def get_farmer_difficulty_coeff(self, farmer_public_key: G1Element) -> float:
         pass

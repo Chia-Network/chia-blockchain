@@ -28,8 +28,6 @@ class BlockStore:
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.db_wrapper = db_wrapper
         self.db = db_wrapper.db
-        await self.db.execute("pragma journal_mode=wal")
-        await self.db.execute("pragma synchronous=2")
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, height bigint,"
             "  is_block tinyint, is_fully_compactified tinyint, block blob)"
@@ -39,7 +37,8 @@ class BlockStore:
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS block_records(header_hash "
             "text PRIMARY KEY, prev_hash text, height bigint,"
-            "block blob, sub_epoch_summary blob, is_peak tinyint, is_block tinyint)"
+            "block blob, sub_epoch_summary blob, is_peak tinyint, is_block tinyint,"
+            "farmer_public_key BLOB)"
         )
 
         # todo remove in v1.2
@@ -82,7 +81,7 @@ class BlockStore:
         await cursor_1.close()
 
         cursor_2 = await self.db.execute(
-            "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?,?, ?, ?)",
+            "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?,?, ?, ?, ?)",
             (
                 header_hash.hex(),
                 block.prev_header_hash.hex(),
@@ -93,6 +92,7 @@ class BlockStore:
                 else bytes(block_record.sub_epoch_summary_included),
                 False,
                 block.is_transaction_block(),
+                bytes(block_record.farmer_public_key),
             ),
         )
         await cursor_2.close()
@@ -345,15 +345,19 @@ class BlockStore:
             return None
         return bool(row[0])
 
-    async def get_first_not_compactified(self) -> Optional[int]:
+    async def get_random_not_compactified(self, number: int) -> List[int]:
         # Since orphan blocks do not get compactified, we need to check whether all blocks with a
         # certain height are not compact. And if we do have compact orphan blocks, then all that
         # happens is that the occasional chain block stays uncompact - not ideal, but harmless.
         cursor = await self.db.execute(
-            "SELECT height FROM full_blocks GROUP BY height HAVING sum(is_fully_compactified)=0 ORDER BY height LIMIT 1"
+            f"SELECT height FROM full_blocks GROUP BY height HAVING sum(is_fully_compactified)=0 "
+            f"ORDER BY RANDOM() LIMIT {number}"
         )
-        row = await cursor.fetchone()
+        rows = await cursor.fetchall()
         await cursor.close()
-        if row is None:
-            return None
-        return int(row[0])
+
+        heights = []
+        for row in rows:
+            heights.append(int(row[0]))
+
+        return heights

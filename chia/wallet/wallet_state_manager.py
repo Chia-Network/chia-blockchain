@@ -14,13 +14,14 @@ from cryptography.fernet import Fernet
 
 from chia import __version__
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
+from chia.consensus.coinbase import create_puzzlehash_for_pk, farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.weight_proof import WeightProofHandler
-from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_extra_data
+from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution
+from chia.server.server import ChiaServer
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -36,7 +37,8 @@ from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.derive_keys import master_sk_to_backup_sk, master_sk_to_wallet_sk
+from chia.wallet.derive_keys import master_sk_to_backup_sk, master_sk_to_farmer_sk, master_sk_to_wallet_sk
+from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
@@ -59,8 +61,6 @@ from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_sync_store import WalletSyncStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
-from chia.server.server import ChiaServer
-from chia.wallet.did_wallet.did_wallet import DIDWallet
 
 
 def get_balance_from_coin_records(coin_records: Set[WalletCoinRecord]) -> uint128:
@@ -137,6 +137,9 @@ class WalletStateManager:
         self.lock = asyncio.Lock()
         self.log.debug(f"Starting in db path: {db_path}")
         self.db_connection = await aiosqlite.connect(db_path)
+        await self.db_connection.execute("pragma journal_mode=wal")
+        await self.db_connection.execute("pragma synchronous=OFF")
+
         self.db_wrapper = DBWrapper(self.db_connection)
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
         self.tx_store = await WalletTransactionStore.create(self.db_wrapper)
@@ -256,9 +259,14 @@ class WalletStateManager:
     async def get_keys(self, puzzle_hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
         index_for_puzzlehash = await self.puzzle_store.index_for_puzzle_hash(puzzle_hash)
         if index_for_puzzlehash is None:
-            raise ValueError(f"No key for this puzzlehash {puzzle_hash})")
-        private = master_sk_to_wallet_sk(self.private_key, index_for_puzzlehash)
-        pubkey = private.get_g1()
+            # try farmer key
+            private = master_sk_to_farmer_sk(self.private_key)
+            pubkey = private.get_g1()
+            if create_puzzlehash_for_pk(pubkey) != puzzle_hash:
+                raise ValueError(f"No key for this puzzlehash {puzzle_hash})")
+        else:
+            private = master_sk_to_wallet_sk(self.private_key, index_for_puzzlehash)
+            pubkey = private.get_g1()
         return pubkey, private
 
     async def create_more_puzzle_hashes(self, from_zero: bool = False, in_transaction=False):
@@ -509,12 +517,15 @@ class WalletStateManager:
     async def get_confirmed_balance_for_wallet_already_locked(self, wallet_id: int) -> uint128:
         # This is a workaround to be able to call la locking operation when already locked
         # for example, in the create method of DID wallet
-        assert self.lock.locked() is False
+        if self.lock.locked() is False:
+            raise AssertionError("expected wallet_state_manager to be locked")
         unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
         return get_balance_from_coin_records(unspent_coin_records)
 
     async def get_confirmed_balance_for_wallet(
-        self, wallet_id: int, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
+        self,
+        wallet_id: int,
+        unspent_coin_records: Optional[Set[WalletCoinRecord]] = None,
     ) -> uint128:
         """
         Returns the confirmed balance, including coinbase rewards that are not spendable.
@@ -527,6 +538,9 @@ class WalletStateManager:
         return get_balance_from_coin_records(unspent_coin_records)
 
     async def get_confirmed_balance_for_wallet_with_lock(self, wallet_id: int) -> Set[WalletCoinRecord]:
+        if self.lock.locked() is True:
+            # raise AssertionError("expected wallet_state_manager to be unlocked")
+            pass
         async with self.lock:
             return await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
 
@@ -539,20 +553,28 @@ class WalletStateManager:
         """
         # This API should change so that get_balance_from_coin_records is called for Set[WalletCoinRecord]
         # and this method is called only for the unspent_coin_records==None case.
-        confirmed = await self.get_confirmed_balance_for_wallet(wallet_id, unspent_coin_records)
+        confirmed_amount = await self.get_confirmed_balance_for_wallet(wallet_id, unspent_coin_records)
+        return await self._get_unconfirmed_balance(wallet_id, confirmed_amount)
+
+    async def get_unconfirmed_balance_already_locked(self, wallet_id) -> uint128:
+        confirmed_amount = await self.get_confirmed_balance_for_wallet_already_locked(wallet_id)
+        return await self._get_unconfirmed_balance(wallet_id, confirmed_amount)
+
+    async def _get_unconfirmed_balance(self, wallet_id, confirmed: uint128) -> uint128:
         unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         removal_amount: int = 0
         addition_amount: int = 0
 
         for record in unconfirmed_tx:
             for removal in record.removals:
-                removal_amount += removal.amount
+                if await self.does_coin_belong_to_wallet(removal, wallet_id):
+                    removal_amount += removal.amount
             for addition in record.additions:
                 # This change or a self transaction
                 if await self.does_coin_belong_to_wallet(addition, wallet_id):
                     addition_amount += addition.amount
 
-        result = confirmed - removal_amount + addition_amount
+        result = (confirmed + addition_amount) - removal_amount
         return uint128(result)
 
     async def unconfirmed_additions_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
@@ -599,6 +621,7 @@ class WalletStateManager:
             for cs in additional_coin_spends:
                 if cs.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
                     already_have = False
+                    pool_state = None
                     for wallet_id, wallet in self.wallets.items():
                         if (
                             wallet.type() == WalletType.POOLING_WALLET
@@ -608,9 +631,12 @@ class WalletStateManager:
                             already_have = True
                     if not already_have:
                         try:
-                            solution_to_extra_data(cs)
+                            pool_state = solution_to_pool_state(cs)
                         except Exception as e:
                             self.log.debug(f"Not a pool wallet launcher {e}")
+                            continue
+                        if pool_state is None:
+                            self.log.debug("Not a pool wallet launcher")
                             continue
                         self.log.info("Found created launcher. Creating pool wallet")
                         pool_wallet = await PoolWallet.create(

@@ -3,30 +3,43 @@ min_mainnet_k_size: 32
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
-daemon_port: 56401
+daemon_port: 56402
+daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
 
 network_overrides: &network_overrides
   constants:
     mainnet:
-      NETWORK_TYPE: 0
-      GENESIS_CHALLENGE: a863ac9871ebeaf1fdc7ed6acd3d5c8c39441d53187a936868c87e1e233a3819
+      NETWORK_TYPE: 1
+      GENESIS_CHALLENGE: a5b7048faac9c23bdf2a393569f730497464a492536a16b733e677620e0ec794
+      DIFFICULTY_STARTING: 7
+      EPOCH_BLOCKS: 768
+      SUB_SLOT_ITERS_STARTING: 33554432
     testnet:
-      NETWORK_TYPE: 18
-      GENESIS_CHALLENGE: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      NETWORK_TYPE: 1
+      GENESIS_CHALLENGE: d39b779e0f6530095a981626f764846b7c40a32ff51975c4c49b18318b9de935
       SUB_SLOT_ITERS_STARTING: 33554432
       EPOCH_BLOCKS: 768
-      DIFFICULTY_STARTING: 7
+      DIFFICULTY_STARTING: 1
+    testnet3:
+      NETWORK_TYPE: 1
+      GENESIS_CHALLENGE: b6051e9c86f7c7945b88245a340c13ec1eade77d03005962f15dff0d3d25435d
+      SUB_SLOT_ITERS_STARTING: 33554432
+      EPOCH_BLOCKS: 768
+      DIFFICULTY_STARTING: 1
   config:
     mainnet:
       address_prefix: "sit"
       default_full_node_port: 11444
     testnet:
       address_prefix: "tsit"
-      default_full_node_port: 10444
+      default_full_node_port: 11444
+    testnet3:
+      address_prefix: "sit"
+      default_full_node_port: 11444
 
-selected_network: &selected_network "testnet"
+selected_network: &selected_network "mainnet"
 ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
 CHIA_ALERTS_PUBKEY: 89b7fd87cb56e926ecefb879a29aae308be01f31980569f6a75a69d2a9a69daefd71fb778d865f7c50d6c967e3025937
 
@@ -58,14 +71,14 @@ logging: &logging
 
 harvester:
   # The harvester server (if run) will run on this port
-  port: 10448
+  port: 11448
   farmer_peer:
     host: *self_hostname
-    port: 10447
+    port: 11447
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 10560
+  rpc_port: 11560
   num_threads: 30
   plots_refresh_parameter:
     interval_seconds: 120 # The interval in seconds to refresh the plot file manager
@@ -106,14 +119,14 @@ pool:
 
 farmer:
   # The farmer server (if run) will run on this port
-  port: 10447
+  port: 11447
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
     host: *self_hostname
-    port: 10444
+    port: 11444
   harvester_peer:
     host: *self_hostname
-    port: 10448
+    port: 11448
 
   pool_public_keys: []
 
@@ -122,7 +135,7 @@ farmer:
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 10559
+  rpc_port: 11559
 
   # To send a share to a pool, a proof of space must have required_iters less than this number
   pool_share_threshold: 1000
@@ -139,7 +152,8 @@ farmer:
 # Don't run this unless you want to run VDF clients on the local machine.
 timelord_launcher:
   # The server where the VDF clients will connect to.
-  port: 10000
+  host: *self_hostname
+  port: 11000
   # Number of VDF client processes to keep alive in the local machine.
   process_count: 3
   logging: *logging
@@ -147,7 +161,7 @@ timelord_launcher:
 
 timelord:
   # The timelord server (if run) will run on this port
-  port: 10446
+  port: 11446
   # Provides a list of VDF clients expected to connect to this timelord.
   # For each client, an IP is provided, together with the estimated iterations per second.
   vdf_clients:
@@ -159,13 +173,13 @@ timelord:
       - 150000
   full_node_peer:
       host: *self_hostname
-      port: 10444
+      port: 11444
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
   vdf_server:
     host: *self_hostname
-    port: 10000
+    port: 11000
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -194,7 +208,7 @@ timelord:
 
 full_node:
   # The full node server (if run) will run on this port
-  port: 10444
+  port: 11444
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v1_CHALLENGE.sqlite
@@ -204,7 +218,7 @@ full_node:
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 10555
+  rpc_port: 11555
 
   # Use UPnP to attempt to allow other full nodes to reach your node behind a gateway
   enable_upnp: True
@@ -217,6 +231,8 @@ full_node:
 
   # How often to initiate outbound connections to other full nodes.
   peer_connect_interval: 30
+  # How long to wait for a peer connection
+  peer_connect_timeout: 30
   # Accept peers until this number of connections
   target_peer_count: 80
   # Initiate outbound connections until this number is hit.
@@ -246,22 +262,26 @@ full_node:
   # analyze with chia/utils/profiler.py
   enable_profiler: False
 
+  # this is a debug and profiling facility that logs all SQLite commands to a
+  # separate log file (under logging/sql.log).
+  log_sqlite_cmds: False
+
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
   dns_servers:
-    - dns-introducer.silicoin.cc
+    - dns-introducer.sitnetwork.org
   farmer_peer:
       host: *self_hostname
-      port: 10447
+      port: 11447
   timelord_peer:
       host: *self_hostname
-      port: 10446
+      port: 11446
   introducer_peer:
-      host: introducer.silicoin.cc
+      host: introducer.sitnetwork.org
       port: 21233
   wallet_peer:
     host: *self_hostname
-    port: 10449
+    port: 11449
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -274,10 +294,10 @@ full_node:
 
 ui:
    # The ui node server (if run) will run on this port
-  port: 10222
+  port: 11222
 
   # Which port to use to communicate with the full node
-  rpc_port: 10555
+  rpc_port: 11555
 
   # This SSH key is for the ui SSH server
   ssh_filename: config/ssh_host_key
@@ -295,7 +315,7 @@ ui:
 
 introducer:
   host: *self_hostname
-  port: 10445
+  port: 11445
   max_peers_to_send: 20
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds
@@ -309,8 +329,8 @@ introducer:
     public_key:  "config/ssl/full_node/public_full_node.key"
 
 wallet:
-  port: 10449
-  rpc_port: 10256
+  port: 11449
+  rpc_port: 11256
 
   enable_profiler: False
 
@@ -324,7 +344,7 @@ wallet:
 
   full_node_peer:
     host: *self_hostname
-    port: 10444
+    port: 11444
 
   testing: False
   database_path: wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite
@@ -341,7 +361,7 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer.silicoin.cc
+    host: introducer.sitnetwork.org
     port: 21233
 
   ssl:

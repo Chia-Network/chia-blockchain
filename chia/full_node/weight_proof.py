@@ -27,12 +27,12 @@ from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import (
+    RecentChainData,
     SubEpochChallengeSegment,
     SubEpochData,
+    SubEpochSegments,
     SubSlotData,
     WeightProof,
-    SubEpochSegments,
-    RecentChainData,
 )
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
@@ -1274,6 +1274,7 @@ def _validate_pospace_recent_chain(
         q_str,
         block.reward_chain_block.proof_of_space.size,
         diff,
+        0.5,
         cc_sp_hash,
     )
     return required_iters
@@ -1321,6 +1322,7 @@ def __validate_pospace(
         q_str,
         sub_slot_data.proof_of_space.size,
         curr_diff,
+        0.5,
         cc_sp_hash,
     )
 

@@ -104,7 +104,7 @@ class TestPotIterations:
                 for k, count in farmer_ks.items():
                     for farmer_index in range(count):
                         quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
-                        required_iters = calculate_iterations_quality(2 ** 25, quality, k, difficulty, sp_hash)
+                        required_iters = calculate_iterations_quality(2 ** 25, quality, k, difficulty, 0, sp_hash)
                         if required_iters < sp_interval_iters:
                             wins[k] += 1
                             total_wins_in_slot += 1

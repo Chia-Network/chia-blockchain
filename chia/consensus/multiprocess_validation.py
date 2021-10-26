@@ -82,7 +82,6 @@ def batch_pre_validate_blocks(
                         min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
                         cost_per_byte=constants.COST_PER_BYTE,
                         safe_mode=True,
-                        rust_checker=block.height > constants.RUST_CONDITION_CHECKER,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
 
@@ -217,6 +216,7 @@ async def pre_validate_blocks_multiprocessing(
             q_str,
             block.reward_chain_block.proof_of_space.size,
             difficulty,
+            0.5,
             cc_sp_hash,
         )
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional, Tuple
 
-from blspy import G2Element
+from blspy import G1Element, G2Element
 
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
@@ -66,3 +66,15 @@ class SignedValues(Streamable):
     quality_string: bytes32
     foliage_block_data_signature: G2Element
     foliage_transaction_block_signature: G2Element
+
+
+@dataclass(frozen=True)
+@streamable
+class FarmerStakings(Streamable):
+    stakings: List[Tuple[G1Element, str]]
+
+
+@dataclass(frozen=True)
+@streamable
+class RequestStakings(Streamable):
+    public_keys: List[G1Element]

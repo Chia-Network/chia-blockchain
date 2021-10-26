@@ -29,7 +29,7 @@ def plot_refresh_callback(refresh_result: PlotRefreshResult):
 
 def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo):
     config = load_config(root_path, "config.yaml")
-    plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(100, 100, 1)
+    plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_sleep_milliseconds=0)
     plot_manager: PlotManager = PlotManager(
         root_path,
         match_str=grep_string,
@@ -184,5 +184,5 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.warning(
             f"There are {len(plot_manager.no_key_filenames)} plots with a farmer or pool public key that "
             f"is not on this machine. The farmer private key must be in the keychain in order to "
-            f"farm them, use 'silicoin keys' to transfer keys. The pool public keys must be in the config.yaml"
+            f"farm them, use 'sit keys' to transfer keys. The pool public keys must be in the config.yaml"
         )

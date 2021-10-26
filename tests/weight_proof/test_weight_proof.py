@@ -18,10 +18,10 @@ from chia.server.start_full_node import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.block_cache import BlockCache
-from tests.block_tools import test_constants
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
+from tests.block_tools import test_constants
 from tests.setup_nodes import bt
 
 try:
@@ -117,6 +117,7 @@ async def load_blocks_dont_validate(
             quality_string,
             block.reward_chain_block.proof_of_space.size,
             difficulty,
+            0,
             cc_sp,
         )
 

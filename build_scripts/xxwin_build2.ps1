@@ -22,19 +22,20 @@ If ($LastExitCode -gt 0){
 }
 
 Write-Output "   ---"
-Write-Output "Increase the stack for chia command for (chia plots create) chiapos limitations"
+Write-Output "Increase the stack for silicoin command for (silicoin plots create) chiapos limitations"
 # editbin.exe needs to be in the path
 editbin.exe /STACK:8000000 daemon\chia.exe
 Write-Output "   ---"
 
+$appName = "SIT"
 $packageVersion = $version
-$packageName = "Silicoin-$packageVersion"
+$packageName = "$appName-$packageVersion"
 
 Write-Output "packageName is $packageName"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Silicoin --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
+electron-packager . $appName --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
 Write-Output "   ---"
 
 Write-Output "   ---"
@@ -46,8 +47,8 @@ node winstaller.js
 #Write-Output "   ---"
 #Write-Output "Add timestamp and verify signature"
 #Write-Output "   ---"
-#signtool.exe timestamp /v /t http://timestamp.comodoca.com/ .\release-builds\windows-installer\SilicoinSetup-$packageVersion.exe
-#signtool.exe verify /v /pa .\release-builds\windows-installer\SilicoinSetup-$packageVersion.exe
+#signtool.exe timestamp /v /t http://timestamp.comodoca.com/ .\release-builds\windows-installer\$appNameSetup-$packageVersion.exe
+#signtool.exe verify /v /pa .\release-builds\windows-installer\$appNameSetup-$packageVersion.exe
  
 
 git status

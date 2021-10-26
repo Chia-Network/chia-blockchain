@@ -5,6 +5,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
+from chia.consensus.coinbase import create_puzzlehash_for_pk
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.constants import ConsensusConstants
 from chia.plotting.manager import PlotManager
@@ -17,6 +18,7 @@ from chia.plotting.util import (
     PlotRefreshResult,
 )
 from chia.util.streamable import dataclass_from_dict
+from chia.util.bech32m import encode_puzzle_hash
 
 log = logging.getLogger(__name__)
 
@@ -31,10 +33,12 @@ class Harvester:
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
     event_loop: asyncio.events.AbstractEventLoop
+    config: Dict
 
     def __init__(self, root_path: Path, config: Dict, constants: ConsensusConstants):
         self.log = log
         self.root_path = root_path
+        self.config = config
         # TODO, remove checks below later after some versions / time
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter()
         if "plot_loading_frequency_seconds" in config:
@@ -93,6 +97,7 @@ class Harvester:
 
     def get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:
         self.log.debug(f"get_plots prover items: {self.plot_manager.plot_count()}")
+        address_prefix = self.config["network_overrides"]["config"][self.config["selected_network"]]["address_prefix"]
         response_plots: List[Dict] = []
         with self.plot_manager:
             for path, plot_info in self.plot_manager.plots.items():
@@ -108,6 +113,8 @@ class Harvester:
                         "plot_public_key": plot_info.plot_public_key,
                         "file_size": plot_info.file_size,
                         "time_modified": plot_info.time_modified,
+                        "farmer_public_key": plot_info.farmer_public_key,
+                        "farmer_puzzle_hash": encode_puzzle_hash(create_puzzlehash_for_pk(plot_info.farmer_public_key), address_prefix),
                     }
                 )
             self.log.debug(

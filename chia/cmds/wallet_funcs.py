@@ -3,14 +3,15 @@ import sys
 import time
 from datetime import datetime
 from decimal import Decimal
-from typing import Callable, List, Optional, Tuple, Dict
+from typing import Callable, Dict, List, Optional, Tuple
 
 import aiohttp
 
 from chia.cmds.units import units
+from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.start_wallet import SERVICE_NAME
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -27,7 +28,7 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name) -> None:
         to_address = encode_puzzle_hash(tx.to_puzzle_hash, name)
         print(f"Transaction {tx.name}")
         print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
-        print(f"Amount: {chia_amount} {name}")
+        print(f"Amount {'sent' if tx.sent else 'received'}: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
         print("")
@@ -99,11 +100,11 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         tx = await wallet_client.get_transaction(wallet_id, tx_id)
         if len(tx.sent_to) > 0:
             print(f"Transaction submitted to nodes: {tx.sent_to}")
-            print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
+            print(f"Do sit wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
             return None
 
     print("Transaction not yet submitted to nodes")
-    print(f"Do 'silicoin wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status")
+    print(f"Do 'sit wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status")
 
 
 async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -154,13 +155,59 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
 
 
+async def send_from(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["id"]
+    address = decode_puzzle_hash(args["address"])
+    source = decode_puzzle_hash(args["source"])
+    rpc_port = args["rpc_port"]
+
+    coin_records = None
+    try:
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+        self_hostname = config["self_hostname"]
+        if rpc_port is None:
+            rpc_port = config["full_node"]["rpc_port"]
+        client = await FullNodeRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
+        coin_records = await client.get_coin_records_by_puzzle_hash(source, False)
+    except Exception as e:
+        if isinstance(e, aiohttp.ClientConnectorError):
+            print(f"Connection error. Check if full node is running at {rpc_port}")
+        else:
+            print(f"Exception from 'full node' {e}")
+
+    client.close()
+    await client.await_closed()
+
+    coins = [cr.coin for cr in coin_records]
+    amount = sum(coin.amount for coin in coins)
+    additions = [
+        {
+            "puzzle_hash": address,
+            "amount": amount,
+        }
+    ]
+    res = await wallet_client.send_transaction_multi(wallet_id, additions, coins)
+    tx_id = res.name
+    start = time.time()
+    while time.time() - start < 10:
+        await asyncio.sleep(0.1)
+        tx = await wallet_client.get_transaction(wallet_id, tx_id)
+        if len(tx.sent_to) > 0:
+            print(f"Transaction submitted to nodes: {tx.sent_to}")
+            print(f"Do sit wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
+            return None
+
+    print("Transaction not yet submitted to nodes")
+    print(f"Do 'sit wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status")
+
+
 async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:
     if fingerprint is not None:
         fingerprints = [fingerprint]
     else:
         fingerprints = await wallet_client.get_public_keys()
     if len(fingerprints) == 0:
-        print("No keys loaded. Run 'silicoin keys generate' or import a key")
+        print("No keys loaded. Run 'sit keys generate' or import a key")
         return None
     if len(fingerprints) == 1:
         fingerprint = fingerprints[0]
@@ -248,7 +295,7 @@ async def execute_with_wallet(
         if isinstance(e, aiohttp.ClientConnectorError):
             print(
                 f"Connection error. Check if the wallet is running at {wallet_rpc_port}. "
-                "You can run the wallet via:\n\tchia start wallet"
+                "You can run the wallet via:\n\tsit start wallet"
             )
         else:
             print(f"Exception from 'wallet' {e}")

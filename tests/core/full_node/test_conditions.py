@@ -76,7 +76,7 @@ async def check_spend_bundle_validity(
     try:
         connection, blockchain = await create_ram_blockchain(constants)
         for block in blocks:
-            received_block_result, err, fork_height = await blockchain.receive_block(block)
+            received_block_result, err, fork_height, coin_changes = await blockchain.receive_block(block)
             assert err is None
 
         additional_blocks = bt.get_consecutive_blocks(
@@ -87,7 +87,7 @@ async def check_spend_bundle_validity(
         )
         newest_block = additional_blocks[-1]
 
-        received_block_result, err, fork_height = await blockchain.receive_block(newest_block)
+        received_block_result, err, fork_height, coin_changes = await blockchain.receive_block(newest_block)
 
         if fork_height:
             coins_added = await blockchain.coin_store.get_coins_added_at_height(uint32(fork_height + 1))

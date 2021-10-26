@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
@@ -86,7 +86,13 @@ class WalletTool:
 
         for con_list in condition_dic.values():
             for cvp in con_list:
-                ret.append([cvp.opcode.value] + cvp.vars)
+                if cvp.opcode == ConditionOpcode.CREATE_COIN and len(cvp.vars) > 2:
+                    formatted: List[Any] = []
+                    formatted.extend(cvp.vars)
+                    formatted[2] = cvp.vars[2:]
+                    ret.append([cvp.opcode.value] + formatted)
+                else:
+                    ret.append([cvp.opcode.value] + cvp.vars)
         return solution_for_conditions(Program.to(ret))
 
     def generate_unsigned_transaction(

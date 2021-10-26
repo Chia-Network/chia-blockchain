@@ -11,7 +11,7 @@ async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
 
     daemon = await connect_to_daemon_and_validate(root_path)
     if daemon is None:
-        print("Couldn't connect to chia daemon")
+        print("Couldn't connect to sit daemon")
         return 1
 
     if stop_daemon:
@@ -38,7 +38,7 @@ async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
 
 @click.command("stop", short_help="Stop services")
 @click.option("-d", "--daemon", is_flag=True, type=bool, help="Stop daemon")
-@click.argument("group", type=click.Choice(all_groups()), nargs=-1, required=True)
+@click.argument("group", type=click.Choice(list(all_groups())), nargs=-1, required=True)
 @click.pass_context
 def stop_cmd(ctx: click.Context, daemon: bool, group: str) -> None:
     import asyncio

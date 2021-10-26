@@ -131,7 +131,6 @@ def create_foliage(
                 constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=constants.COST_PER_BYTE,
                 safe_mode=True,
-                rust_checker=height > constants.RUST_CONDITION_CHECKER,
             )
             cost = calculate_cost_of_program(block_generator.program, result, constants.COST_PER_BYTE)
 

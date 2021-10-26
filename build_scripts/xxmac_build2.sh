@@ -6,11 +6,6 @@ if [[ x$1 == x ]]; then
 fi
 
 cd chia-blockchain-gui
-rm -rf Silicoin-darwin-x64
-
-CHIA_INSTALLER_VERSION=$1
-
-
 # echo "Installing npm and electron packagers ========================================================================"
 # npm install electron-installer-dmg -g
 # npm install electron-packager -g
@@ -28,10 +23,18 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 
+APP_VERSION=$1
+APP_BUNDLEID="net.silicoin.blockchain"
+APP_NAME="SIT"
+APP_DIR=$APP_NAME-darwin-x64
+DMG_NAME="$APP_NAME-$APP_VERSION"
+
+
+rm -rf $APP_DIR
 echo "Package ========================================================================"
-electron-packager . Silicoin --asar.unpack="**/daemon/**" --platform=darwin \
---icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.silicoin.blockchain \
---appVersion=$CHIA_INSTALLER_VERSION
+electron-packager . $APP_NAME --asar.unpack="**/daemon/**" --platform=darwin \
+--icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=$APP_BUNDLEID \
+--appVersion=$APP_VERSION
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-packager failed!"
@@ -52,14 +55,10 @@ fi
 
 
 echo "Create DMG ========================================================================"
-cd Silicoin-darwin-x64 || exit
-
-DMG_NAME="Silicoin-$CHIA_INSTALLER_VERSION.dmg"
-
+cd $APP_DIR || exit
 mkdir final_installer
 
-electron-installer-dmg Silicoin.app Silicoin-$CHIA_INSTALLER_VERSION \
---overwrite --out final_installer
+electron-installer-dmg $APP_NAME.app $DMG_NAME --overwrite --out final_installer
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-dmg failed!"
@@ -69,7 +68,7 @@ fi
 
 # echo "Notarization ========================================================================"
 # cd final_installer || exit
-# notarize-cli --file=$DMG_NAME --bundle-id net.silicoin.blockchain --username "williejonagvio38@gmail.com" --password "mrdo-yfcr-intb-eyxr"
+# notarize-cli --file=$DMG_NAME.dmg --bundle-id net.silicoin.blockchain --username "williejonagvio38@gmail.com" --password "mrdo-yfcr-intb-eyxr"
 # echo "Notarization step complete"
 
 cd ../

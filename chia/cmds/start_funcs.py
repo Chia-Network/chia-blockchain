@@ -53,7 +53,7 @@ async def async_start(root_path: Path, group: str, restart: bool) -> None:
         return None
 
     if daemon is None:
-        print("Failed to create the chia daemon")
+        print("Failed to create the sit daemon")
         return None
 
     for service in services_for_groups(group):

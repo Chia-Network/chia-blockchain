@@ -1,6 +1,8 @@
 import logging
 from typing import Dict, List, Optional
 
+from blspy import G1Element
+
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -92,3 +94,6 @@ class BlockCache(BlockchainInterface):
         if segments is None:
             return None
         return segments.challenge_segments
+
+    async def get_farmer_difficulty_coeff(self, _farmer_public_key: G1Element) -> float:
+        return 0.5

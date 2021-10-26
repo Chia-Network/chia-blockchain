@@ -499,6 +499,7 @@ def validate_unfinished_header_block(
         q_str,
         header_block.reward_chain_block.proof_of_space.size,
         expected_difficulty,
+        0.5,
         cc_sp_hash,
     )
 

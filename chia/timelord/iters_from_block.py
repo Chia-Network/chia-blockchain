@@ -30,6 +30,7 @@ def iters_from_block(
         quality_string,
         reward_chain_block.proof_of_space.size,
         difficulty,
+        0.5,
         cc_sp,
     )
     return (

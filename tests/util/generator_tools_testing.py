@@ -9,7 +9,7 @@ from chia.util.generator_tools import additions_for_npc
 
 
 def run_and_get_removals_and_additions(
-    block: FullBlock, max_cost: int, cost_per_byte: int, rust_checker: bool, safe_mode=False
+    block: FullBlock, max_cost: int, cost_per_byte: int, safe_mode=False
 ) -> Tuple[List[bytes32], List[Coin]]:
     removals: List[bytes32] = []
     additions: List[Coin] = []
@@ -24,7 +24,6 @@ def run_and_get_removals_and_additions(
             max_cost,
             cost_per_byte=cost_per_byte,
             safe_mode=safe_mode,
-            rust_checker=rust_checker,
         )
         # build removals list
         for npc in npc_result.npc_list:

@@ -15,9 +15,9 @@ def show_plots(root_path: Path):
     print("Directories where plots are being searched for:")
     print("Note that subdirectories must be added manually")
     print(
-        "Add with 'silicoin plots add -d [dir]' and remove with"
-        + " 'silicoin plots remove -d [dir]'"
-        + " Scan and check plots with 'silicoin plots check'"
+        "Add with 'sit plots add -d [dir]' and remove with"
+        + " 'sit plots remove -d [dir]'"
+        + " Scan and check plots with 'sit plots check'"
     )
     print()
     for str_path in get_plot_directories(root_path):
@@ -32,7 +32,7 @@ def plots_cmd(ctx: click.Context):
 
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
-        raise RuntimeError("Please initialize (or migrate) your config directory with 'silicoin init'")
+        raise RuntimeError("Please initialize (or migrate) your config directory with 'sit init'")
     initialize_logging("", {"log_stdout": True}, root_path)
 
 

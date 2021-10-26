@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
+from blspy import G1Element
+
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -53,6 +55,9 @@ class BlockRecord(Streamable):
 
     # Sub-epoch (present iff this is the first SB after sub-epoch)
     sub_epoch_summary_included: Optional[SubEpochSummary]
+
+    # the mining farmer's public key
+    farmer_public_key: G1Element
 
     @property
     def is_transaction_block(self) -> bool:

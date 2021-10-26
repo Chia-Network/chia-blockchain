@@ -1,19 +1,19 @@
-from typing import KeysView, Generator
+from typing import Generator, KeysView
 
 SERVICES_FOR_GROUP = {
-    "all": "silicoin_harvester silicoin_timelord_launcher silicoin_timelord silicoin_farmer silicoin_full_node silicoin_wallet".split(),
-    "node": "silicoin_full_node".split(),
-    "harvester": "silicoin_harvester".split(),
-    "farmer": "silicoin_harvester silicoin_farmer silicoin_full_node silicoin_wallet".split(),
-    "farmer-no-wallet": "silicoin_harvester silicoin_farmer silicoin_full_node".split(),
-    "farmer-only": "silicoin_farmer".split(),
-    "timelord": "silicoin_timelord_launcher silicoin_timelord silicoin_full_node".split(),
-    "timelord-only": "silicoin_timelord".split(),
-    "timelord-launcher-only": "silicoin_timelord_launcher".split(),
-    "wallet": "silicoin_wallet silicoin_full_node".split(),
-    "wallet-only": "silicoin_wallet".split(),
-    "introducer": "silicoin_introducer".split(),
-    "simulator": "silicoin_full_node_simulator".split(),
+    "all": "sit_harvester sit_timelord_launcher sit_timelord sit_farmer sit_full_node sit_wallet".split(),
+    "node": "sit_full_node".split(),
+    "harvester": "sit_harvester".split(),
+    "farmer": "sit_harvester sit_farmer sit_full_node sit_wallet".split(),
+    "farmer-no-wallet": "sit_harvester sit_farmer sit_full_node".split(),
+    "farmer-only": "sit_farmer".split(),
+    "timelord": "sit_timelord_launcher sit_timelord sit_full_node".split(),
+    "timelord-only": "sit_timelord".split(),
+    "timelord-launcher-only": "sit_timelord_launcher".split(),
+    "wallet": "sit_wallet sit_full_node".split(),
+    "wallet-only": "sit_wallet".split(),
+    "introducer": "sit_introducer".split(),
+    "simulator": "sit_full_node_simulator".split(),
 }
 
 

@@ -435,7 +435,7 @@ class TradeManager:
                         return (
                             False,
                             None,
-                            "Unable to generate zero value coin. Confirm that you have chia available",
+                            "Unable to generate zero value coin. Confirm that you have sit available",
                         )
                     zero_spend_list.append(zero_spend_bundle)
 

@@ -87,7 +87,7 @@ def get_transactions_cmd(
     sys.stdout.close()
 
 
-@wallet_cmd.command("send", short_help="Send silicoin to another wallet")
+@wallet_cmd.command("send", short_help="Send sit to another wallet")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -97,7 +97,7 @@ def get_transactions_cmd(
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-a", "--amount", help="How much silicoin to send, in XCH", type=str, required=True)
+@click.option("-a", "--amount", help="How much sit to send, in XCH", type=str, required=True)
 @click.option(
     "-m",
     "--fee",
@@ -120,6 +120,45 @@ def send_cmd(
     from .wallet_funcs import execute_with_wallet, send
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, send))
+
+
+@wallet_cmd.command("send_from", short_help="Transfer all sit away from a specific puzzle hash")
+@click.option(
+    "-p",
+    "--rpc-port",
+    help=(
+        "Set the port where the Full Node is hosting the RPC interface. "
+        "See the rpc_port under full_node in config.yaml"
+    ),
+    type=int,
+    default=None,
+    show_default=True,
+)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
+@click.option("-s", "--source", help="Address to send the XCH from", type=str, required=True)
+@click.option("-t", "--address", help="Address to send the XCH", type=str, required=True)
+def send_from_cmd(
+    rpc_port: Optional[int],
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    source: str,
+    address: str,
+) -> None:
+    import asyncio
+
+    from .wallet_funcs import execute_with_wallet, send_from
+
+    extra_params = {"id": id, "source": source, "address": address, "rpc_port": rpc_port}
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, send_from))
 
 
 @wallet_cmd.command("show", short_help="Show wallet information")
@@ -215,7 +254,7 @@ async def do_recover_pool_nft(contract_hash: str, launcher_hash: str, fingerprin
 )
 @click.option(
     "--launcher-hash",
-    help="Set the launcher hash, you should get it from chia wallet",
+    help="Set the launcher hash, you should get it from silicoin wallet",
     type=str,
     default=None,
 )

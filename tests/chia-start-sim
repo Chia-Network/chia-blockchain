@@ -22,7 +22,7 @@ _term() {
   _kill_servers
 }
 
-echo "Starting local blockchain simulation. Runs a local introducer and chia system."
+echo "Starting local blockchain simulation. Runs a local introducer and silicoin system."
 echo "Note that this simulation will not work if connected to external nodes."
 
 # Starts a harvester, farmer, timelord, introducer, and 3 full nodes, locally.

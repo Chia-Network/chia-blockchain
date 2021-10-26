@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 from typing import Callable, List, Tuple
 
-from blspy import AugSchemeMPL, G2Element, G1Element
+from blspy import AugSchemeMPL, G1Element, G2Element
 
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.harvester.harvester import Harvester
@@ -67,9 +67,13 @@ class HarvesterAPI:
         start = time.time()
         assert len(new_challenge.challenge_hash) == 32
 
+        stakings = {bytes(k): float(v) for k, v in new_challenge.stakings}
+
         loop = asyncio.get_running_loop()
 
-        def blocking_lookup(filename: Path, plot_info: PlotInfo) -> List[Tuple[bytes32, ProofOfSpace]]:
+        def blocking_lookup(
+            filename: Path, plot_info: PlotInfo, difficulty_coeff: float
+        ) -> List[Tuple[bytes32, ProofOfSpace]]:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
             # so it should be run in a thread pool.
             try:
@@ -109,6 +113,7 @@ class HarvesterAPI:
                             quality_str,
                             plot_info.prover.get_size(),
                             difficulty,
+                            difficulty_coeff,
                             new_challenge.sp_hash,
                         )
                         sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
@@ -134,10 +139,6 @@ class HarvesterAPI:
                                 local_master_sk,
                             ) = parse_plot_info(plot_info.prover.get_memo())
                             local_sk = master_sk_to_local_sk(local_master_sk)
-                            include_taproot = plot_info.pool_contract_puzzle_hash is not None
-                            plot_public_key = ProofOfSpace.generate_plot_public_key(
-                                local_sk.get_g1(), farmer_public_key, include_taproot
-                            )
                             responses.append(
                                 (
                                     quality_str,
@@ -145,9 +146,10 @@ class HarvesterAPI:
                                         sp_challenge_hash,
                                         plot_info.pool_public_key,
                                         plot_info.pool_contract_puzzle_hash,
-                                        plot_public_key,
+                                        local_sk.get_g1(),
                                         uint8(plot_info.prover.get_size()),
                                         proof_xs,
+                                        farmer_public_key,
                                     ),
                                 )
                             )
@@ -163,8 +165,18 @@ class HarvesterAPI:
             all_responses: List[harvester_protocol.NewProofOfSpace] = []
             if self.harvester._is_shutdown:
                 return filename, []
+
+            if stakings:
+                try:
+                    difficulty_coeff = stakings[bytes(plot_info.farmer_public_key)]
+                except KeyError as e:
+                    self.harvester.log.error(f"Error get staking for public key {plot_info.farmer_public_key}, {e}")
+                    return filename, []
+            else:
+                difficulty_coeff = 1.0
+
             proofs_of_space_and_q: List[Tuple[bytes32, ProofOfSpace]] = await loop.run_in_executor(
-                self.harvester.executor, blocking_lookup, filename, plot_info
+                self.harvester.executor, blocking_lookup, filename, plot_info, difficulty_coeff
             )
             for quality_str, proof_of_space in proofs_of_space_and_q:
                 all_responses.append(
@@ -174,6 +186,7 @@ class HarvesterAPI:
                         quality_str.hex() + str(filename.resolve()),
                         proof_of_space,
                         new_challenge.signage_point_index,
+                        str(difficulty_coeff),
                     )
                 )
             return filename, all_responses
@@ -299,6 +312,7 @@ class HarvesterAPI:
                     plot["plot_public_key"],
                     plot["file_size"],
                     plot["time_modified"],
+                    plot["farmer_public_key"],
                 )
             )
 

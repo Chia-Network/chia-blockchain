@@ -4,13 +4,13 @@ export NODE_OPTIONS="--max-old-space-size=3000"
 
 
 if [ -z "$VIRTUAL_ENV" ]; then
-  echo "This requires the chia python virtual environment."
+  echo "This requires the silicoin python virtual environment."
   echo "Execute '. ./activate' before running."
 	exit 1
 fi
 
 if [ "$(id -u)" = 0 ]; then
-  echo "The Chia Blockchain GUI can not be installed or run by the root user."
+  echo "The Silicoin Blockchain GUI can not be installed or run by the root user."
 	exit 1
 fi
 
@@ -24,7 +24,17 @@ if [ "$(uname)" = "Linux" ]; then
 	if type apt-get; then
 		# Debian/Ubuntu
 		UBUNTU=true
-		sudo apt-get install -y npm nodejs libxss1
+		
+		# Check if we are running a Raspberry PI 4
+		if [ "$(uname -m)" = "aarch64" ] \
+		&& [ "$(uname -n)" = "raspberrypi" ]; then
+			# Check if NodeJS & NPM is installed
+			type npm >/dev/null 2>&1 || {
+					echo >&2 "Please install NODEJS&NPM manually"
+			}
+		else
+			sudo apt-get install -y npm nodejs libxss1
+		fi
 	elif type yum &&  [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ]; then
 		# AMZN 2
 		echo "Installing on Amazon Linux 2."
@@ -101,6 +111,6 @@ else
 fi
 
 echo ""
-echo "Chia blockchain install-gui.sh completed."
+echo "Silicoin blockchain install-gui.sh completed."
 echo ""
 echo "Type 'cd chia-blockchain-gui' and then 'npm run electron &' to start the GUI."
