@@ -88,7 +88,7 @@ async def two_nodes():
 
 
 def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
-    spend_bundle_name = bytes([idx] * 32)
+    spend_bundle_name = bytes32([idx] * 32)
     return MempoolItem(
         SpendBundle([], G2Element()),
         uint64(0),

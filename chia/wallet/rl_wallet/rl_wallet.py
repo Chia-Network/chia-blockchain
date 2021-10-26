@@ -235,8 +235,8 @@ class RLWallet:
 
         assert self.rl_info.user_pubkey is not None
         origin = Coin(
-            hexstr_to_bytes(origin_parent_id),
-            hexstr_to_bytes(origin_puzzle_hash),
+            bytes32.from_hexstr(origin_parent_id),
+            bytes32.from_hexstr(origin_puzzle_hash),
             origin_amount,
         )
         rl_puzzle = rl_puzzle_for_pk(

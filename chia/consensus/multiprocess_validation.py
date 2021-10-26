@@ -49,9 +49,10 @@ def batch_pre_validate_blocks(
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
 ) -> List[bytes]:
-    blocks = {}
+    blocks: Dict[bytes32, BlockRecord] = {}
     for k, v in blocks_pickled.items():
-        blocks[k] = BlockRecord.from_bytes(v)
+        # TODO: if we can pickle the bytes32 then we can skip this here
+        blocks[bytes32(k)] = BlockRecord.from_bytes(v)
     results: List[PreValidationResult] = []
     constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
     if full_blocks_pickled is not None and header_blocks_pickled is not None:

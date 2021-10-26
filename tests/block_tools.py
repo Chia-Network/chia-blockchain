@@ -1582,7 +1582,7 @@ def create_test_foliage(
 
     random.seed(seed)
     # Use the extension data to create different blocks based on header hash
-    extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")
+    extension_data = bytes32(random.randint(0, 100000000).to_bytes(32, "big"))
     if prev_block is None:
         height: uint32 = uint32(0)
     else:

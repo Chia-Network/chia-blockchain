@@ -303,8 +303,8 @@ class TestCoinStoreWithBlocks:
     async def test_get_puzzle_hash(self, cache_size: uint32):
         async with DBConnection() as db_wrapper:
             num_blocks = 20
-            farmer_ph = 32 * b"0"
-            pool_ph = 32 * b"1"
+            farmer_ph = bytes32(32 * b"0")
+            pool_ph = bytes32(32 * b"1")
             blocks = bt.get_consecutive_blocks(
                 num_blocks,
                 farmer_reward_puzzle_hash=farmer_ph,

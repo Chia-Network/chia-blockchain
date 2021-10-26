@@ -112,7 +112,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),
+            name=bytes32(token_bytes()),
         )
         regular_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -129,7 +129,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=bytes32(token_bytes()),
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(did_record)
@@ -323,7 +323,8 @@ class DIDWallet:
             f = open(filename, "r")
             details = f.readline().split(":")
             f.close()
-            origin = Coin(bytes.fromhex(details[0]), bytes.fromhex(details[1]), uint64(int(details[2])))
+            # TODO: remove ignores https://github.com/python/typeshed/pull/6201
+            origin = Coin(bytes32.fromhex(details[0]), bytes32.fromhex(details[1]), uint64(int(details[2])))  # type: ignore[arg-type]
             backup_ids = []
             for d in details[3].split(","):
                 backup_ids.append(bytes.fromhex(d))
@@ -574,7 +575,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=bytes32(token_bytes()),
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -640,7 +641,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=bytes32(token_bytes()),
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -708,7 +709,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),
+            name=bytes32(token_bytes()),
         )
         await self.standard_wallet.push_transaction(did_record)
         if filename is not None:
@@ -848,7 +849,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=bytes32(token_bytes()),
         )
         await self.standard_wallet.push_transaction(did_record)
         new_did_info = DIDInfo(

@@ -212,11 +212,13 @@ async def create_plots(
 
         if args.plotid is not None:
             log.info(f"Debug plot ID: {args.plotid}")
-            plot_id = bytes32(bytes.fromhex(args.plotid))
+            # TODO: remove ignore https://github.com/python/typeshed/pull/6201
+            plot_id = bytes32.fromhex(args.plotid)  # type: ignore[assignment]
 
         if args.memo is not None:
             log.info(f"Debug memo: {args.memo}")
-            plot_memo = bytes.fromhex(args.memo)
+            # TODO: remove ignores https://github.com/python/typeshed/pull/6201
+            plot_memo = bytes32.fromhex(args.memo)  # type: ignore[assignment]
 
         # Uncomment next two lines if memo is needed for dev debug
         plot_memo_str: str = plot_memo.hex()

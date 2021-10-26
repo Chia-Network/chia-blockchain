@@ -149,7 +149,8 @@ class WalletPuzzleStore:
         if row is not None and row[0] is not None:
             return DerivationRecord(
                 uint32(row[0]),
-                bytes32.fromhex(row[2]),
+                # TODO: remove ignore https://github.com/python/typeshed/pull/6201
+                bytes32.fromhex(row[2]),  # type: ignore[arg-type]
                 G1Element.from_bytes(bytes.fromhex(row[1])),
                 WalletType(row[3]),
                 uint32(row[4]),

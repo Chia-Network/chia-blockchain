@@ -24,7 +24,7 @@ def event_loop():
 
 
 def make_child_solution(coin_spend: CoinSpend, new_coin: Optional[Coin] = None) -> CoinSpend:
-    new_puzzle_hash: bytes32 = token_bytes(32)
+    new_puzzle_hash = bytes32(token_bytes(32))
     solution = "()"
     puzzle = f"(q . ((51 0x{new_puzzle_hash.hex()} 1)))"
     puzzle_prog = Program.to(binutils.assemble(puzzle))

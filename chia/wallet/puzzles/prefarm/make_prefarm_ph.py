@@ -3,6 +3,7 @@ from clvm_tools import binutils
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.condition_tools import parse_sexp_to_conditions
@@ -46,7 +47,7 @@ def make_puzzle(amount: int) -> int:
             assert len(cvp.vars) == 2
             total_chia += int_from_bytes(cvp.vars[1])
             print(
-                f"{ConditionOpcode(cvp.opcode).name}: {encode_puzzle_hash(cvp.vars[0], prefix)},"
+                f"{ConditionOpcode(cvp.opcode).name}: {encode_puzzle_hash(bytes32(cvp.vars[0]), prefix)},"
                 f" amount: {int_from_bytes(cvp.vars[1])}"
             )
     return total_chia

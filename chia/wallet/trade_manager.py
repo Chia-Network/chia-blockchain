@@ -178,7 +178,7 @@ class TradeManager:
         all: List[TradeRecord] = await self.trade_store.get_all_trades()
         return all
 
-    async def get_trade_by_id(self, trade_id: bytes) -> Optional[TradeRecord]:
+    async def get_trade_by_id(self, trade_id: bytes32) -> Optional[TradeRecord]:
         record = await self.trade_store.get_trade_record(trade_id)
         return record
 

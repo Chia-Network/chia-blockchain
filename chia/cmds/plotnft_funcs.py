@@ -156,7 +156,8 @@ async def pprint_pool_wallet_state(
         print(f"Relative lock height: {pool_wallet_info.current.relative_lock_height} blocks")
         payout_instructions: str = pool_state_dict[pool_wallet_info.launcher_id]["pool_config"]["payout_instructions"]
         try:
-            payout_address = encode_puzzle_hash(bytes32.fromhex(payout_instructions), address_prefix)
+            # TODO: remove ignore https://github.com/python/typeshed/pull/6201
+            payout_address = encode_puzzle_hash(bytes32.fromhex(payout_instructions), address_prefix)  # type: ignore[arg-type]
             print(f"Payout instructions (pool will pay to this address): {payout_address}")
         except Exception:
             print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
@@ -196,7 +197,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         await farmer_client.await_closed()
         return
     pool_state_dict: Dict[bytes32, Dict] = {
-        hexstr_to_bytes(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
+        bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
         for pool_state_item in pool_state_list
     }
     if wallet_id_passed_in is not None:
@@ -237,7 +238,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 
 
 async def get_login_link(launcher_id_str: str) -> None:
-    launcher_id: bytes32 = hexstr_to_bytes(launcher_id_str)
+    launcher_id = bytes32.from_hexstr(launcher_id_str)
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     self_hostname = config["self_hostname"]
     farmer_rpc_port = config["farmer"]["rpc_port"]

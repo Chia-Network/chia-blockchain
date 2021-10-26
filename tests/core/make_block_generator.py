@@ -5,6 +5,7 @@ import blspy
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.generator_types import BlockGenerator
@@ -21,8 +22,8 @@ def int_to_public_key(index: int) -> blspy.G1Element:
     return private_key_from_int.get_g1()
 
 
-def puzzle_hash_for_index(index: int, puzzle_hash_db: dict) -> bytes:
-    public_key = bytes(int_to_public_key(index))
+def puzzle_hash_for_index(index: int, puzzle_hash_db: dict) -> bytes32:
+    public_key = bytes32(int_to_public_key(index))
     puzzle = puzzle_for_pk(public_key)
     puzzle_hash = puzzle.get_tree_hash()
     puzzle_hash_db[puzzle_hash] = puzzle
@@ -34,7 +35,7 @@ def make_fake_coin(index: int, puzzle_hash_db: dict) -> Coin:
     Make a fake coin with parent id equal to the index (ie. a genesis block coin)
 
     """
-    parent = index.to_bytes(32, "big")
+    parent = bytes32(index.to_bytes(32, "big"))
     puzzle_hash = puzzle_hash_for_index(index, puzzle_hash_db)
     amount = 100000
     return Coin(parent, puzzle_hash, uint64(amount))

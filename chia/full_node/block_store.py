@@ -218,7 +218,8 @@ class BlockStore:
         await cursor.close()
         all_blocks: Dict[bytes32, FullBlock] = {}
         for row in rows:
-            header_hash = bytes.fromhex(row[0])
+            # TODO: remove ignore and hint https://github.com/python/typeshed/pull/6201
+            header_hash: bytes32 = bytes32.fromhex(row[0])  # type: ignore[assignment]
             full_block: FullBlock = FullBlock.from_bytes(row[1])
             all_blocks[header_hash] = full_block
             self.block_cache.put(header_hash, full_block)
@@ -257,7 +258,8 @@ class BlockStore:
         await cursor.close()
         ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
-            header_hash = bytes.fromhex(row[0])
+            # TODO: remove ignore and hint https://github.com/python/typeshed/pull/6201
+            header_hash: bytes32 = bytes32.fromhex(row[0])  # type: ignore[assignment]
             ret[header_hash] = BlockRecord.from_bytes(row[1])
 
         return ret
@@ -282,9 +284,11 @@ class BlockStore:
         await cursor.close()
         ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
-            header_hash = bytes.fromhex(row[0])
+            # TODO: remove ignore and hint https://github.com/python/typeshed/pull/6201
+            header_hash: bytes32 = bytes32.fromhex(row[0])  # type: ignore[assignment]
             ret[header_hash] = BlockRecord.from_bytes(row[1])
-        return ret, bytes.fromhex(peak_row[0])
+        # TODO: remove ignore and hint https://github.com/python/typeshed/pull/6201
+        return ret, bytes32.fromhex(peak_row[0])  # type: ignore[return-value]
 
     async def get_peak_height_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:
         """
@@ -298,7 +302,8 @@ class BlockStore:
         if row is None:
             return {}, {}
 
-        peak: bytes32 = bytes.fromhex(row[0])
+        # TODO: remove ignore and hint https://github.com/python/typeshed/pull/6201
+        peak: bytes32 = bytes32.fromhex(row[0])  # type: ignore[assignment]
         cursor = await self.db.execute("SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records")
         rows = await cursor.fetchall()
         await cursor.close()
@@ -307,10 +312,12 @@ class BlockStore:
         hash_to_summary: Dict[bytes32, SubEpochSummary] = {}
 
         for row in rows:
-            hash_to_prev_hash[bytes.fromhex(row[0])] = bytes.fromhex(row[1])
-            hash_to_height[bytes.fromhex(row[0])] = row[2]
+            # TODO: remove ignores and hint https://github.com/python/typeshed/pull/6201
+            header_hash: bytes32 = bytes32.fromhex(row[0])  # type: ignore[assignment]
+            hash_to_prev_hash[header_hash] = bytes32.fromhex(row[1])  # type: ignore[assignment]
+            hash_to_height[header_hash] = row[2]
             if row[3] is not None:
-                hash_to_summary[bytes.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])
+                hash_to_summary[header_hash] = SubEpochSummary.from_bytes(row[3])
 
         height_to_hash: Dict[uint32, bytes32] = {}
         sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
