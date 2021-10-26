@@ -71,7 +71,7 @@ from chia.util.profiler import profile_task
 
 class PeerRequestCache:
     blocks: Dict[uint32, HeaderBlock]
-    request_blocks: Dict[bytes32, Any]
+    block_requests: Dict[bytes32, Any]
     ses_requests: Dict[bytes32, Any]
     states_validated: Dict[bytes32, CoinState]
 
@@ -615,7 +615,7 @@ class WalletNode:
                     peer.peer_node_id not in self.synced_peers or far_behind
                 ) and peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                     syncing = False
-                    if peak.height - self.wallet_state_manager.blockchain.get_peak_height() > 1:
+                    if far_behind:
                         syncing = True
                         self.wallet_state_manager.set_sync_mode(True)
                     try:
@@ -1138,7 +1138,7 @@ class WalletNode:
             blocks = []
             blocks_dict = {}
 
-            for i in range(start, end + 1, 32):
+            for i in range(start - (start % 32), end + 1, 32):
                 request_start = min(uint32(i), end)
                 request_end = min(uint32(i + 31), end)
                 request_h_response = RequestHeaderBlocks(request_start, request_end)
@@ -1148,7 +1148,7 @@ class WalletNode:
                     res_h_blocks = await peer.request_header_blocks(request_h_response)
                     peer_request_cache.block_requests[request_h_response.get_hash()] = res_h_blocks
                 self.log.info(f"Fetching blocks: {request_start} - {request_end}")
-                blocks.extend(res_h_blocks.header_blocks)
+                blocks.extend([bl for bl in res_h_blocks.header_blocks if bl.height >= start])
                 for bl in res_h_blocks.header_blocks:
                     blocks_dict[block.header_hash] = bl
 
