@@ -102,8 +102,10 @@ rate_limits_other = {
     ProtocolMessageTypes.respond_to_ph_update: RLSettings(1000, 100 * 1024 * 1024),
     ProtocolMessageTypes.register_interest_in_coin: RLSettings(1000, 100 * 1024 * 1024),
     ProtocolMessageTypes.respond_to_coin_update: RLSettings(1000, 100 * 1024 * 1024),
-    ProtocolMessageTypes.request_ses_hashes: RLSettings(100, 10 * 1024 * 1024),
-    ProtocolMessageTypes.respond_ses_hashes: RLSettings(100, 10 * 1024 * 1024),
+    ProtocolMessageTypes.request_ses_hashes: RLSettings(1000, 1 * 1024 * 1024),
+    ProtocolMessageTypes.respond_ses_hashes: RLSettings(1000, 1 * 1024 * 1024),
+    ProtocolMessageTypes.request_children: RLSettings(1000, 1024 * 1024),
+    ProtocolMessageTypes.respond_children: RLSettings(1000, 1 * 1024 * 1024),
 }
 
 

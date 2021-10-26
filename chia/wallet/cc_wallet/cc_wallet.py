@@ -230,8 +230,6 @@ class CCWallet:
 
         result = confirmed - removal_amount + addition_amount
 
-        self.log.info(f"Unconfirmed balance for cc wallet {self.id()} is {result}")
-        self.log.info(f"unconfirmed_tx balance for cc wallet {unconfirmed_tx}")
         return uint128(result)
 
     async def get_max_send_amount(self, records=None):
