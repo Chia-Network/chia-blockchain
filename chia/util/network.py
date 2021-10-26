@@ -1,6 +1,6 @@
 import socket
 from ipaddress import ip_address, IPv4Network, IPv6Network
-from typing import Iterable, Union, Any, Optional
+from typing import Iterable, List, Tuple, Union, Any, Optional
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
@@ -61,7 +61,9 @@ def get_host_addr(host: Union[PeerInfo, str], prefer_ipv6: Optional[bool]) -> st
         hoststr = host
         if PeerInfo(hoststr, uint16(0)).is_valid(True):
             return hoststr
-    addrset = socket.getaddrinfo(hoststr, None)
+    addrset: List[
+        Tuple[socket.AddressFamily, socket.SocketKind, int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
+    ] = socket.getaddrinfo(hoststr, None)
     # Addrset is never empty, an exception is thrown or data is returned.
     for t in addrset:
         if prefer_ipv6 and t[0] == socket.AF_INET6:
