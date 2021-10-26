@@ -1,5 +1,6 @@
 import logging
 import time
+from dataclasses import replace
 from typing import Any, Dict, List, Optional, Set
 
 from blspy import G1Element
@@ -363,8 +364,11 @@ class Wallet:
         for coin in coins:
             self.log.info(f"coin from coins: {coin.name()} {coin}")
             puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
+            solution: Program = Program.to(0)
+
             # Only one coin creates outputs
             if primary_announcement_hash is None and origin_id in (None, coin.name()):
+                origin_id = coin.name()
                 if primaries is None:
                     if amount > 0:
                         primaries = [{"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos}]
@@ -387,10 +391,6 @@ class Wallet:
                     puzzle_announcements_to_assert=puzzle_announcements_bytes,
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
-            else:
-                if primary_announcement_hash is None:
-                    raise ValueError("origin_id is not the set of selected coins")
-                solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash}, primaries=[])
 
             spends.append(
                 CoinSpend(
@@ -398,7 +398,15 @@ class Wallet:
                 )
             )
 
-        self.log.debug(f"Spends is {spends}")
+        if primary_announcement_hash is None:
+            raise ValueError("origin_id is not in the set of selected coins")
+
+        for index, spend in enumerate(spends):
+            if spend.coin.name() != origin_id:
+                solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})
+                spends[index] = replace(spend, solution=solution)
+
+        self.log.info(f"Spends is {spends}")
         return spends
 
     async def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
