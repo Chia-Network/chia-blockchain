@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Trans, t } from '@lingui/macro';
 import {
   AdvancedOptions,
@@ -26,6 +26,8 @@ import config from '../../../config/config';
 import useWallet from '../../../hooks/useWallet';
 import useWalletState from '../../../hooks/useWalletState';
 import SyncingStatus from '../../../constants/SyncingStatus';
+import useCurrencyCode from '../../../hooks/useCurrencyCode';
+import toBech32m from '../../../util/toBech32m';
 
 type Props = {
   walletId: number;
@@ -44,6 +46,20 @@ export default function WalletCATSend(props: Props) {
   const [farmBlock] = useFarmBlockMutation();
   const [spendCAT, { isLoading: isSpendCatLoading }] = useSpendCATMutation();
   const { state } = useWalletState();
+  const currencyCode = useCurrencyCode();
+
+  const retireAddress = useMemo(() => {
+    if (!currencyCode) {
+      return undefined;
+    }
+    return toBech32m(
+      '0000000000000000000000000000000000000000000000000000000000000000', 
+      currencyCode
+    );
+  }, [currencyCode]);
+
+  console.log('retireAddress', retireAddress);
+  
 
   const methods = useForm<SendTransactionData>({
     shouldUnregister: false,
@@ -96,8 +112,8 @@ export default function WalletCATSend(props: Props) {
     }
 
     let address = data.address;
-    if (address === 'retire') {
-      address = '0000000000000000000000000000000000000000000000000000000000000000';
+    if (address === 'retire' && retireAddress) {
+      address = retireAddress;
     }
 
     if (address.includes('colour')) {
