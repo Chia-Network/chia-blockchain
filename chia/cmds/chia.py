@@ -56,6 +56,7 @@ def cli(
     passphrase_file: Optional[TextIOWrapper] = None,
 ) -> None:
     from pathlib import Path
+    from chia.cmds.passphrase_funcs import cache_passphrase, read_passphrase_from_file
 
     ctx.ensure_object(dict)
     ctx.obj["root_path"] = Path(root_path)
@@ -66,8 +67,6 @@ def cli(
         set_keys_root_path(Path(keys_root_path))
 
     if passphrase_file is not None:
-        from .passphrase_funcs import cache_passphrase, read_passphrase_from_file
-
         try:
             cache_passphrase(read_passphrase_from_file(passphrase_file))
         except Exception as e:
