@@ -236,7 +236,10 @@ class WalletNode:
         self.peer_task = asyncio.create_task(self._periodically_check_full_node())
         self.sync_event = asyncio.Event()
         self.sync_task = asyncio.create_task(self.sync_job())
-        self.logged_in_fingerprint = fingerprint
+        if fingerprint is None:
+            self.logged_in_fingerprint = private_key.get_g1().get_fingerprint()
+        else:
+            self.logged_in_fingerprint = fingerprint
         self.logged_in = True
         return True
 
