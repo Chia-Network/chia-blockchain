@@ -33,7 +33,7 @@ We have some great improvements in this release: We launched our migration of ke
 - Updated the coin_store benchmark to enable synchronous mode when talking to the DB, since that's the default now, and improves the output a bit.
 - Updated the old comment on chia/util/streamable.py with newer developer documentation.
 - Minor GUI changes based on community feedback.
-- Thanks @jack60612 for your help in improving our GUI code, including upgrading to electron 13, migration to electron remote, updating the latest dependencies, and more.  
+- Thanks @jack60612 for your help in improving our GUI code, including upgrading to electron 13, migration to electron remote, updating the latest dependencies, and more.
 
 ### Fixed
 
