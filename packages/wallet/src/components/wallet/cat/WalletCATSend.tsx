@@ -96,6 +96,10 @@ export default function WalletCATSend(props: Props) {
     }
 
     let address = data.address;
+    if (address === 'retire') {
+      address = '0000000000000000000000000000000000000000000000000000000000000000';
+    }
+
     if (address.includes('colour')) {
       throw new Error(t`Cannot send chia to coloured address. Please enter a chia address.`);
     }
