@@ -621,4 +621,3 @@ class TestSimpleSyncProtocol:
 
         check_messages_for_hint(all_messages)
         check_messages_for_hint(all_messages_1)
-
