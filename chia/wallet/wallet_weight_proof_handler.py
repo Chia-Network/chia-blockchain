@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import pathlib
 import random
+import tempfile
 from concurrent.futures.process import ProcessPoolExecutor
-from typing import List, Tuple, Any, Optional
+from typing import IO, List, Tuple, Any, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
@@ -26,6 +28,10 @@ from chia.util.ints import uint32
 log = logging.getLogger(__name__)
 
 
+def _create_shutdown_file() -> IO:
+    return tempfile.NamedTemporaryFile(prefix="chia_executor_shutdown_trigger")
+
+
 class WalletWeightProofHandler:
 
     LAMBDA_L = 100
@@ -41,18 +47,22 @@ class WalletWeightProofHandler:
         self._constants = constants
         self._blockchain = blockchain
         self._num_processes = 4
+        self._executor_shutdown_tempfile: IO = _create_shutdown_file()
         self._executor: ProcessPoolExecutor = ProcessPoolExecutor(self._num_processes)
         self._weight_proof_tasks: List[asyncio.Task] = []
 
     def cancel_weight_proof_tasks(self):
         log.warning("CANCELLING WEIGHT PROOF TASKS")
+        old_shutdown_tempfile = self._executor_shutdown_tempfile
         old_executor = self._executor
+        self._executor_shutdown_tempfile = _create_shutdown_file()
         self._executor = ProcessPoolExecutor(self._num_processes)
-        old_executor.shutdown(wait=False)
         for task in self._weight_proof_tasks:
             if not task.done():
                 task.cancel()
         self._weight_proof_tasks = []
+        old_executor.shutdown(wait=False)
+        old_shutdown_tempfile.close()
 
     async def validate_weight_proof(
         self, weight_proof: WeightProof
@@ -88,35 +98,50 @@ class WalletWeightProofHandler:
             self._constants, summaries, weight_proof
         )
 
-        recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
-            self._executor, _validate_recent_blocks_and_get_records, constants, wp_recent_chain_bytes, summary_bytes
-        )
-
-        segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
-            constants, rng, wp_segment_bytes, summary_bytes
-        )
-
-        if not segments_validated:
-            return False, uint32(0), [], []
-
-        vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
-        vdf_tasks = []
-        for chunk in vdf_chunks:
-            byte_chunks = []
-            for vdf_proof, classgroup, vdf_info in chunk:
-                byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
-
-            vdf_task = asyncio.get_running_loop().run_in_executor(
-                self._executor, _validate_vdf_batch, constants, byte_chunks
+        vdf_tasks: List[asyncio.Future] = []
+        # TODO: remove hint overrides after https://github.com/python/typeshed/pull/6187
+        recent_blocks_validation_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
+            self._executor,
+            _validate_recent_blocks_and_get_records,
+            constants,
+            wp_recent_chain_bytes,
+            summary_bytes,
+            pathlib.Path(self._executor_shutdown_tempfile.name),
+        )  # type: ignore[assignment]
+        try:
+            segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
+                constants, rng, wp_segment_bytes, summary_bytes
             )
-            vdf_tasks.append(vdf_task)
 
-        for vdf_task in vdf_tasks:
-            validated = await vdf_task
-            if not validated:
+            if not segments_validated:
                 return False, uint32(0), [], []
 
-        valid_recent_blocks, sub_block_bytes = await recent_blocks_validation_task
+            vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
+            for chunk in vdf_chunks:
+                byte_chunks = []
+                for vdf_proof, classgroup, vdf_info in chunk:
+                    byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
+
+                # TODO: remove hint overrides after https://github.com/python/typeshed/pull/6187
+                vdf_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
+                    self._executor,
+                    _validate_vdf_batch,
+                    constants,
+                    byte_chunks,
+                    pathlib.Path(self._executor_shutdown_tempfile.name),
+                )  # type: ignore[assignment]
+                vdf_tasks.append(vdf_task)
+
+            for vdf_task in vdf_tasks:
+                validated = await vdf_task
+                if not validated:
+                    return False, uint32(0), [], []
+
+            valid_recent_blocks, sub_block_bytes = await recent_blocks_validation_task
+        finally:
+            recent_blocks_validation_task.cancel()
+            for vdf_task in vdf_tasks:
+                vdf_task.cancel()
 
         if not valid_recent_blocks:
             log.error("failed validating weight proof recent blocks")
