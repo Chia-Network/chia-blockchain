@@ -367,29 +367,28 @@ class WalletNode:
         start_time = time.time()
         current_height = self.wallet_state_manager.blockchain.get_peak_height()
         request_height = uint32(max(0, current_height - 1000))
-        all_checked = False
-        all_puzzle_set = set()
 
-        while True:
-            if all_checked:
-                break
+        already_checked = set()
+        continue_while = True
+        while continue_while:
             all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
             to_check = []
             for ph in all_puzzle_hashes:
-                if ph in all_puzzle_set:
+                if ph in already_checked:
                     continue
                 else:
                     to_check.append(ph)
-                    all_puzzle_set.add(ph)
+                    already_checked.add(ph)
 
             await self.subscribe_to_phs(to_check, full_node, request_height)
+
             # Check if new puzzle hashed have been created
             check_again = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+            continue_while = False
             for ph in check_again:
-                if ph not in all_puzzle_set:
-                    all_checked = False
-                    continue
-            all_checked = True
+                if ph not in already_checked:
+                    continue_while = True
+                    break
 
         all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(request_height)
         all_coin_names = [coin_record.name() for coin_record in all_coins]
@@ -630,8 +629,8 @@ class WalletNode:
                             return
                         if far_behind:
                             self.wallet_state_manager.set_sync_mode(True)
-                        await self.untrusted_sync_to_peer(peer, peak, weight_proof, summaries)
                         assert weight_proof is not None
+                        await self.untrusted_sync_to_peer(peer, peak, weight_proof, summaries)
                         if (
                             self.wallet_state_manager.blockchain.synced_weight_proof is None
                             or weight_proof.recent_chain_data[-1].weight
@@ -882,11 +881,14 @@ class WalletNode:
         return valid, weight_proof, summaries, block_records
 
     async def untrusted_subscribe_to_puzzle_hashes(
-        self, peer: WSChiaConnection, save_state: bool, peer_request_cache: PeerRequestCache, weight_proof: WeightProof
+        self,
+        peer: WSChiaConnection,
+        save_state: bool,
+        peer_request_cache: Optional[PeerRequestCache],
+        weight_proof: Optional[WeightProof],
     ):
+        assert self.wallet_state_manager is not None
         already_checked = set()
-        all_checked = False
-
         continue_while = True
         while continue_while:
             all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
@@ -907,7 +909,7 @@ class WalletNode:
                 validated_state = await self.validate_received_state_from_peer(
                     all_state.coin_states, peer, weight_proof, peer_request_cache
                 )
-                await self.wallet_state_manager.new_coin_state(validated_state, peer)
+                await self.wallet_state_manager.new_coin_state(validated_state, peer, weight_proof)
 
             # Check if new puzzle hashed have been created
             check_again = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
@@ -958,7 +960,7 @@ class WalletNode:
             all_coins_state.coin_states, peer, weight_proof, peer_request_cache
         )
         # Apply validated state
-        await self.wallet_state_manager.new_coin_state(validated_state, peer)
+        await self.wallet_state_manager.new_coin_state(validated_state, peer, weight_proof)
         end_time = time.time()
         duration = end_time - start_time
         self.log.info(f"Sync duration was: {duration}")
@@ -1199,10 +1201,21 @@ class WalletNode:
         )
         if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
             raise ValueError(f"Was not able to obtain solution {solution_response}")
+        assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
+        assert solution_response.response.coin_name == coin.name()
+
         return CoinSpend(coin, solution_response.response.puzzle, solution_response.response.solution)
 
-    async def fetch_children(self, peer, coin_name) -> List[CoinState]:
+    async def fetch_children(self, peer, coin_name, weight_proof: Optional[WeightProof]) -> List[CoinState]:
         response = await peer.request_children(wallet_protocol.RequestChildren(coin_name))
         if response is None or not isinstance(response, wallet_protocol.RespondChildren):
             raise ValueError(f"Was not able to obtain children {response}")
+        if not self.is_trusted(peer):
+            request_cache = PeerRequestCache()
+            assert weight_proof is not None
+            validated_states = await self.validate_received_state_from_peer(
+                response.coin_states, peer, weight_proof, request_cache
+            )
+            return validated_states
+
         return response.coin_states
