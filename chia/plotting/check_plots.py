@@ -105,10 +105,10 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
             pr = plot_info.prover
             log.info(f"Testing plot {plot_path} k={pr.get_size()}")
             if plot_info.pool_public_key is not None:
-                log.info(f"\t{'Pool public key:':<26} {plot_info.pool_public_key}")
+                log.info(f"\t{'Pool public key:':<23} {plot_info.pool_public_key}")
             if plot_info.pool_contract_puzzle_hash is not None:
                 pca: str = encode_puzzle_hash(plot_info.pool_contract_puzzle_hash, address_prefix)
-                log.info(f"\t{'Pool NFT contract address:':<26} {pca}")
+                log.info(f"\t{'Pool contract address:':<23} {pca}")
 
             # Look up local_sk from plot to save locked memory
             (
@@ -117,8 +117,8 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                 local_master_sk,
             ) = parse_plot_info(pr.get_memo())
             local_sk = master_sk_to_local_sk(local_master_sk)
-            log.info(f"\t{'Farmer public key:' :<26} {farmer_public_key}")
-            log.info(f"\t{'Local sk:' :<26} {local_sk}")
+            log.info(f"\t{'Farmer public key:' :<23} {farmer_public_key}")
+            log.info(f"\t{'Local sk:' :<23} {local_sk}")
             total_proofs = 0
             caught_exception: bool = False
             for i in range(num_start, num_end):
