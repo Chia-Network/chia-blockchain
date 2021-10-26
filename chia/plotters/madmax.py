@@ -27,11 +27,13 @@ def get_madmax_package_path() -> Path:
     return Path(os.path.dirname(sys.executable)) / "madmax"
 
 
-def get_madmax_executable_path(plotters_root_path: Path) -> Path:
+def get_madmax_executable_path_for_ksize(plotters_root_path: Path, ksize: int = 32) -> Path:
     madmax_dir: Path = get_madmax_package_path()
     madmax_exec: str = "chia_plot"
+    if ksize > 32:
+        madmax_exec += "_k34"  # Use the chia_plot_k34 executable for k-sizes > 32
     if sys.platform in ["win32", "cygwin"]:
-        madmax_exec = "chia_plot.exe"
+        madmax_exec += + ".exe"
     if not madmax_dir.exists():
         madmax_dir = get_madmax_install_path(plotters_root_path) / "build"
     return madmax_dir / madmax_exec
@@ -42,10 +44,10 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
     installed: bool = False
     supported: bool = is_madmax_supported()
 
-    if get_madmax_executable_path(plotters_root_path).exists():
+    if get_madmax_executable_path_for_ksize(plotters_root_path).exists():
         try:
             proc = run_command(
-                [os.fspath(get_madmax_executable_path(plotters_root_path)), "--version"],
+                [os.fspath(get_madmax_executable_path_for_ksize(plotters_root_path)), "--version"],
                 "Failed to call madmax with --version option",
                 capture_output=True,
                 text=True,
@@ -169,7 +171,7 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
         # "Cannot open at least 296 files, please raise maximum open file limit in OS."
         resource.setrlimit(resource.RLIMIT_NOFILE, (512, 512))
 
-    if not os.path.exists(get_madmax_executable_path(plotters_root_path)):
+    if not os.path.exists(get_madmax_executable_path_for_ksize(plotters_root_path, args.size)):
         print("Installing madmax plotter.")
         try:
             install_madmax(plotters_root_path)
@@ -188,7 +190,7 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
         )
     )
     call_args = []
-    call_args.append(os.fspath(get_madmax_executable_path(plotters_root_path)))
+    call_args.append(os.fspath(get_madmax_executable_path_for_ksize(plotters_root_path, args.size)))
     call_args.append("-f")
     call_args.append(bytes(plot_keys.farmer_public_key).hex())
     if plot_keys.pool_public_key is not None:
