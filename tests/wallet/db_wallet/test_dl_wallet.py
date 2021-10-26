@@ -46,7 +46,7 @@ class TestDLWallet:
             yield _
 
     @pytest.mark.asyncio
-    async def test_creation(self, three_wallet_nodes):
+    async def test_update_coin(self, three_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -94,3 +94,17 @@ class TestDLWallet:
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
+
+        assert dl_wallet_0.dl_info.root_hash == current_root
+
+        nodes.append(Program.to("beep").get_tree_hash())
+        new_merkle_tree = MerkleTree(nodes)
+        await dl_wallet_0.create_update_state_spend(new_merkle_tree.calculate_root())
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
+        await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
+
+        assert dl_wallet_0.dl_info.root_hash == new_merkle_tree.calculate_root()

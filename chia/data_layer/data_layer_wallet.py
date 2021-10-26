@@ -270,7 +270,24 @@ class DataLayerWallet:
         new_info = DataLayerInfo(self.dl_info.origin_coin, root_hash, self.dl_info.parent_info, new_inner_inner_puzzle)
         await self.save_info(new_info, False)  # todo in_transaction false ?
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
-
+        dl_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=new_db_layer_puzzle.get_tree_hash(),
+            amount=uint64(my_coin.amount),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(10),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.INCOMING_TX.value),
+            name=token_bytes(),
+        )
+        await self.standard_wallet.push_transaction(dl_record)
         return spend_bundle
 
     async def create_report_spend(self) -> SpendBundle:
@@ -426,14 +443,15 @@ class DataLayerWallet:
         return spendable_am
 
     async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
-        async def pk_to_sk(pk: G1Element) -> PrivateKey:
-            owner_sk: Optional[PrivateKey] = await find_owner_sk([self.wallet_state_manager.private_key], pk)
-            assert owner_sk is not None
-            return owner_sk
+        # async def pk_to_sk(pk: G1Element) -> PrivateKey:
+        #     owner_sk: Optional[PrivateKey] = await find_owner_sk([self.wallet_state_manager.private_key], pk)
+        #     assert owner_sk is not None
+        #     return owner_sk
 
+        breakpoint()
         return await sign_coin_spends(
             [coin_spend],
-            pk_to_sk,
+            self.standard_wallet.secret_key_store.secret_key_for_public_key,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
