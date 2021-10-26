@@ -92,19 +92,23 @@ export const walletApi = createApi({
       }]),
     }),
 
-    getTransaction: build.query<any, { 
+    getTransaction: build.query<Transaction, { 
       transactionId: string;
     }>({
       query: ({ transactionId }) => ({
         command: 'getTransaction',
         args: [transactionId],
       }),
+      transformResponse: (response: any) => {
+        console.log('TODO transformResponse getTransaction return transaction object', response);
+        return response.transaction;
+      },
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onTransactionUpdate',
-        // endpoint: () => walletApi.endpoints.getTransaction,
         onUpdate: (draft, data) => {
-          console.log('on transaction update');
-          console.log(draft, data);
+          const { additionalData: { transaction } } = data;
+
+          Object.assign(draft, transaction);
         },
       }]),
     }),
@@ -234,7 +238,9 @@ export const walletApi = createApi({
       waitForConfirmation?: boolean;
     }>({
       async queryFn(args, queryApi, _extraOptions, fetchWithBQ) {
-        let subscribeResponse;
+        let subscribeResponse: {
+          data: Function;
+        } | undefined;
 
         function unsubscribe() {
           if (subscribeResponse) {
@@ -261,13 +267,10 @@ export const walletApi = createApi({
                 );
 
                 if (transaction) {
-                  console.log('finded transaction with sentTo list', transaction);
                   resolve({
                     transaction,
                     transactionId: transaction.name,
                   });
-                } else {
-                  console.log('updated without correct transaction', updatedTransactions);
                 }
               }
 
@@ -276,8 +279,6 @@ export const walletApi = createApi({
                 subscribeResponse = await baseQuery({
                   command: 'onTransactionUpdate',
                   args: [(data: any) => {
-                    console.log('onTransactionUpdate', data);
-  
                     const { additionalData: { transaction } } = data;
   
                     updatedTransactions.push(transaction);
@@ -292,8 +293,6 @@ export const walletApi = createApi({
                 args: [walletId, amount, fee, address],
               });
 
-              console.log('sendTransaction result', sendTransactionData, error);
-    
               if (error) {
                 reject(error);
                 return;
@@ -309,7 +308,6 @@ export const walletApi = createApi({
                 reject(new Error('Transaction is not present in response'));
               }
 
-
               transactionName = transaction.name;
               updatedTransactions.push(transaction);
               processUpdates();
@@ -324,19 +322,6 @@ export const walletApi = createApi({
         }
       },
       invalidatesTags: [{ type: 'Transactions', id: 'LIST' }],
-
-      /*
-      query: ({ walletId, amount, fee, address }) => ({
-        command: 'sendTransaction',
-        args: [
-          walletId,
-          amount,
-          fee,
-          address,
-        ],
-      }),
-      invalidatesTags: [{ type: 'Transactions', id: 'LIST' }],
-      */
     }),
 
     generateMnemonic: build.mutation<string[], undefined>({
@@ -580,6 +565,10 @@ export const walletApi = createApi({
         command: 'getHeightInfo',
       }),
       transformResponse: (response: any) => response?.height,
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
+        command: 'onSyncChanged',
+        endpoint: () => walletApi.endpoints.getSyncStatus,
+      }]),
     }),
 
     getNetworkInfo: build.query<any, undefined>({
@@ -739,20 +728,18 @@ export const walletApi = createApi({
       memos?: string[];
       waitForConfirmation?: boolean;
     }>({
-      /*
-      query: ({
-        walletId,
-        address,
-        amount,
-        fee,
-        memos,
-      }) => ({
-        command: 'spend',
-        service: CAT,
-        args: [walletId, address, amount, fee, memos],
-      }),
-      */
       async queryFn(args, queryApi, _extraOptions, fetchWithBQ) {
+        let subscribeResponse: {
+          data: Function;
+        } | undefined;
+
+        function unsubscribe() {
+          if (subscribeResponse) {
+            subscribeResponse.data();
+            subscribeResponse = undefined;
+          }
+        }
+
         try {
           const {
             walletId,
@@ -762,48 +749,75 @@ export const walletApi = createApi({
             memos, 
             waitForConfirmation,
           } = args;
-          const { data, error } = await fetchWithBQ({
-            command: 'spend',
-            service: CAT,
-            args: [walletId, address, amount, fee, memos],
-          });
-
-          if (error) {
-            throw error;
-          }
-
-          if (!waitForConfirmation) {
-            return {
-              data,
-            };
-          }
-
-          console.log('data', data);
-
-          const { transaction, ...rest } = data;
-
+          
           return {
-            data: new Promise(async (resolve) => {
-              const response = await baseQuery({
-                command: 'onTransactionUpdate',
-                args: [(data: any) => {
-                  const { additionalData: { transaction: updatedTransaction } } = data;
-                  if (updatedTransaction.name === transaction.name && updatedTransaction.sentTo && updatedTransaction.sentTo.length) {
-                    response.data();
+            data: new Promise(async (resolve, reject) => {
+              const updatedTransactions: Transaction[] = [];
+              let transactionName: string;
 
-                    resolve({
-                      transaction: updatedTransaction,
-                      ...rest,
-                    });
-                  }
-                }],
-              }, queryApi, {});
+              function processUpdates() {
+                if (!transactionName) {
+                  return;
+                }
+
+                const transaction = updatedTransactions.find(
+                  (trx) => trx.name === transactionName && !!trx?.sentTo?.length,
+                );
+
+                if (transaction) {
+                  resolve({
+                    transaction,
+                    transactionId: transaction.name,
+                  });
+                }
+              }
+
+              // bind all changes related to transactions
+              if (waitForConfirmation) {
+                subscribeResponse = await baseQuery({
+                  command: 'onTransactionUpdate',
+                  args: [(data: any) => {
+                    const { additionalData: { transaction } } = data;
+  
+                    updatedTransactions.push(transaction);
+                    processUpdates();
+                  }],
+                }, queryApi, {});
+              }
+
+              // make transaction
+              const { data: sendTransactionData, error } = await fetchWithBQ({
+                command: 'spend',
+                service: CAT,
+                args: [walletId, address, amount, fee, memos],
+              });
+
+              if (error) {
+                reject(error);
+                return;
+              }
+
+              if (!waitForConfirmation) {
+                resolve(sendTransactionData);
+                return;
+              }
+
+              const { transaction } = sendTransactionData;
+              if (!transaction) {
+                reject(new Error('Transaction is not present in response'));
+              }
+
+              transactionName = transaction.name;
+              updatedTransactions.push(transaction);
+              processUpdates();
             }),
           };
         } catch (error: any) {
           return {
             error,
           };
+        } finally {
+          unsubscribe();
         }
       },
       invalidatesTags: [{ type: 'Transactions', id: 'LIST' }],
