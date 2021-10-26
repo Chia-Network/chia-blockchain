@@ -125,9 +125,10 @@ class TestCCLifecycle:
                 [
                     Program.to(
                         [
-                            [51, acs.get_tree_hash(), starting_coin.amount - 3],
+                            [51, acs.get_tree_hash(), starting_coin.amount - 3, [b"memo"]],
                             [51, acs.get_tree_hash(), 1],
                             [51, acs.get_tree_hash(), 2],
+                            [51, 0, -113, genesis_checker, checker_solution],
                         ]
                     )
                 ],
@@ -150,7 +151,15 @@ class TestCCLifecycle:
                 genesis_checker,
                 coins,
                 [NO_LINEAGE_PROOF] * 2,
-                [Program.to([[51, acs.get_tree_hash(), coins[0].amount + coins[1].amount]]), Program.to([])],
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), coins[0].amount + coins[1].amount],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    ),
+                    Program.to([[51, 0, -113, genesis_checker, checker_solution]]),
+                ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 2,
                 cost_str="Two CATs",
@@ -168,7 +177,16 @@ class TestCCLifecycle:
                 genesis_checker,
                 coins,
                 [NO_LINEAGE_PROOF] * 3,
-                [Program.to([[51, acs.get_tree_hash(), total_amount]]), Program.to([]), Program.to([])],
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), total_amount],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    ),
+                    Program.to([[51, 0, -113, genesis_checker, checker_solution]]),
+                    Program.to([[51, 0, -113, genesis_checker, checker_solution]]),
+                ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 3,
                 cost_str="Three CATs",
@@ -198,7 +216,14 @@ class TestCCLifecycle:
                 genesis_checker,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
-                [Program.to([[51, acs.get_tree_hash(), total_amount - 1]])],
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), total_amount - 1],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    )
+                ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[-1],
                 limitations_solutions=[checker_solution],
@@ -228,7 +253,14 @@ class TestCCLifecycle:
                 genesis_checker,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
-                [Program.to([[51, acs.get_tree_hash(), total_amount]])],  # We subtracted 1 last time so it's normal now
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), total_amount],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    )
+                ],  # We subtracted 1 last time so it's normal now
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[1],
                 additional_spends=[acs_bundle],
@@ -250,6 +282,7 @@ class TestCCLifecycle:
 
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
             genesis_checker: Program = GenesisById.construct([Program.to(starting_coin.name())])
+            checker_solution: Program = GenesisById.solve([], {})
             cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
 
@@ -267,9 +300,16 @@ class TestCCLifecycle:
                 genesis_checker,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
-                [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), starting_coin.amount],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    )
+                ],
                 (MempoolInclusionStatus.SUCCESS, None),
-                limitations_solutions=[GenesisById.solve([], {})],
+                limitations_solutions=[checker_solution],
                 cost_str="Genesis by ID",
             )
 
@@ -287,6 +327,7 @@ class TestCCLifecycle:
 
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
             genesis_checker: Program = GenesisByPuzhash.construct([Program.to(starting_coin.puzzle_hash)])
+            checker_solution: Program = GenesisByPuzhash.solve([], starting_coin.to_json_dict())
             cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
 
@@ -304,9 +345,16 @@ class TestCCLifecycle:
                 genesis_checker,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
-                [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), starting_coin.amount],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    )
+                ],
                 (MempoolInclusionStatus.SUCCESS, None),
-                limitations_solutions=[GenesisByPuzhash.solve([], starting_coin.to_json_dict())],
+                limitations_solutions=[checker_solution],
                 cost_str="Genesis by Puzhash",
             )
 
@@ -320,6 +368,7 @@ class TestCCLifecycle:
         try:
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
             genesis_checker: Program = EverythingWithSig.construct([Program.to(sk.get_g1())])
+            checker_solution: Program = EverythingWithSig.solve([], {})
             cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
             await sim.farm_block(cc_ph)
@@ -337,9 +386,16 @@ class TestCCLifecycle:
                 genesis_checker,
                 [starting_coin],
                 [NO_LINEAGE_PROOF],
-                [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), starting_coin.amount],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    )
+                ],
                 (MempoolInclusionStatus.SUCCESS, None),
-                limitations_solutions=[EverythingWithSig.solve([], {})],
+                limitations_solutions=[checker_solution],
                 signatures=[signature],
                 cost_str="Signature Issuance",
             )
@@ -356,10 +412,17 @@ class TestCCLifecycle:
                 genesis_checker,
                 [coin],
                 [NO_LINEAGE_PROOF],
-                [Program.to([[51, acs.get_tree_hash(), coin.amount - 1]])],
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), coin.amount - 1],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    )
+                ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[-1],
-                limitations_solutions=[EverythingWithSig.solve([], {})],
+                limitations_solutions=[checker_solution],
                 signatures=[signature],
                 cost_str="Signature Melt",
             )
@@ -392,10 +455,17 @@ class TestCCLifecycle:
                 genesis_checker,
                 [coin],
                 [NO_LINEAGE_PROOF],
-                [Program.to([[51, acs.get_tree_hash(), coin.amount + 1]])],
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), coin.amount + 1],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    )
+                ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[1],
-                limitations_solutions=[EverythingWithSig.solve([], {})],
+                limitations_solutions=[checker_solution],
                 signatures=[signature],
                 additional_spends=[acs_bundle],
                 cost_str="Signature Mint",
@@ -430,6 +500,16 @@ class TestCCLifecycle:
             # We're signing a different genesis checker to use here
             name_as_program = Program.to(starting_coin.name())
             new_genesis_checker: Program = GenesisById.construct([name_as_program])
+            checker_solution: Program = DelegatedLimitations.solve(
+                [name_as_program],
+                {
+                    "signed_program": {
+                        "identifier": "genesis_by_id",
+                        "args": [str(name_as_program)],
+                    },
+                    "program_arguments": {},
+                },
+            )
             signature: G2Element = AugSchemeMPL.sign(sk, new_genesis_checker.get_tree_hash())
 
             await self.do_spend(
@@ -438,21 +518,17 @@ class TestCCLifecycle:
                 genesis_checker,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
-                [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
-                (MempoolInclusionStatus.SUCCESS, None),
-                signatures=[signature],
-                limitations_solutions=[
-                    DelegatedLimitations.solve(
-                        [name_as_program],
-                        {
-                            "signed_program": {
-                                "identifier": "genesis_by_id",
-                                "args": [str(name_as_program)],
-                            },
-                            "program_arguments": {},
-                        },
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), starting_coin.amount],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
                     )
                 ],
+                (MempoolInclusionStatus.SUCCESS, None),
+                signatures=[signature],
+                limitations_solutions=[checker_solution],
                 cost_str="Delegated Genesis",
             )
 
