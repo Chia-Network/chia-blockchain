@@ -891,7 +891,7 @@ class WalletRpcApi:
         trade_id = hexstr_to_bytes(request["trade_id"])
         trade: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
         if trade is None:
-            raise ValueError(f"No trade with trade id: {trade_id}")
+            raise ValueError(f"No trade with trade id: {trade_id.hex()}")
 
         result = trade_record_to_dict(trade)
         return {"trade": result}
