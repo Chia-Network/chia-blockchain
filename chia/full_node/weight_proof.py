@@ -2,6 +2,7 @@ import asyncio
 import dataclasses
 import logging
 import math
+import pathlib
 import random
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Tuple
@@ -1189,7 +1190,10 @@ def sub_slot_data_vdf_input(
 
 
 def validate_recent_blocks(
-    constants: ConsensusConstants, recent_chain: RecentChainData, summaries: List[SubEpochSummary]
+    constants: ConsensusConstants,
+    recent_chain: RecentChainData,
+    summaries: List[SubEpochSummary],
+    shutdown_file_path: Optional[pathlib.Path] = None,
 ) -> Tuple[bool, List[bytes]]:
     sub_blocks = BlockCache({})
     first_ses_idx = _get_ses_idx(recent_chain.recent_chain_data)
@@ -1269,6 +1273,10 @@ def validate_recent_blocks(
             ses_blocks += 1
         prev_block_record = block_record
 
+        if shutdown_file_path is not None and not shutdown_file_path.is_file():
+            log.info(f"cancelling block {block.header_hash} validation, shutdown requested")
+            return False, []
+
     return True, [bytes(sub) for sub in sub_blocks._block_records.values()]
 
 
@@ -1280,11 +1288,14 @@ def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, sum
 
 
 def _validate_recent_blocks_and_get_records(
-    constants_dict: Dict, recent_chain_bytes: bytes, summaries_bytes: List[bytes]
+    constants_dict: Dict,
+    recent_chain_bytes: bytes,
+    summaries_bytes: List[bytes],
+    shutdown_file_path: Optional[pathlib.Path] = None,
 ) -> Tuple[bool, List[bytes]]:
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
-    return validate_recent_blocks(constants, recent_chain, summaries)
+    return validate_recent_blocks(constants, recent_chain, summaries, shutdown_file_path)
 
 
 def _validate_pospace_recent_chain(
@@ -1629,7 +1640,9 @@ def validate_total_iters(
     return total_iters == sub_slot_data.total_iters
 
 
-def _validate_vdf_batch(constants_dict, vdf_list: List[Tuple[bytes, bytes, bytes]]):
+def _validate_vdf_batch(
+    constants_dict, vdf_list: List[Tuple[bytes, bytes, bytes]], shutdown_file_path: Optional[pathlib.Path] = None
+):
     constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
 
     for vdf_proof_bytes, class_group_bytes, info in vdf_list:
@@ -1637,6 +1650,10 @@ def _validate_vdf_batch(constants_dict, vdf_list: List[Tuple[bytes, bytes, bytes
         class_group = ClassgroupElement.from_bytes(class_group_bytes)
         vdf_info = VDFInfo.from_bytes(info)
         if not vdf.is_valid(constants, class_group, vdf_info):
+            return False
+
+        if shutdown_file_path is not None and not shutdown_file_path.is_file():
+            log.info("cancelling VDF validation, shutdown requested")
             return False
 
     return True
