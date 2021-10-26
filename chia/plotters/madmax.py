@@ -33,7 +33,7 @@ def get_madmax_executable_path_for_ksize(plotters_root_path: Path, ksize: int = 
     if ksize > 32:
         madmax_exec += "_k34"  # Use the chia_plot_k34 executable for k-sizes > 32
     if sys.platform in ["win32", "cygwin"]:
-        madmax_exec += + ".exe"
+        madmax_exec += ".exe"
     if not madmax_dir.exists():
         madmax_dir = get_madmax_install_path(plotters_root_path) / "build"
     return madmax_dir / madmax_exec
