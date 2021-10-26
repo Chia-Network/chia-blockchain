@@ -1,36 +1,111 @@
 # This workflow will install dependencies, create coverage tests and run Pytest Coverage Commentator
 # For more information see: https://github.com/coroo/pytest-coverage-commentator
 name: pytest-coverage-commentator
+
 on:
+  push:
+    branches:
+      - main
+    tags:
+        - '**'
+# TODO: Disable on most pull requests, enable only on merge to main?
+# TODO: Use `--cov-append` in each test job to distribute coverage workload
   pull_request:
     branches:
-      - '*'
+      - '**'
+
 jobs:
   build:
+    name: Ubuntu pytest coverage
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        python-version: [3.9]
+        os: [ubuntu-latest]
+
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.8
+    - name: Cancel previous runs on the same branch
+      if: ${{ github.ref != 'refs/heads/main' }}
+      uses: styfle/cancel-workflow-action@0.9.1
+      with:
+        access_token: ${{ github.token }}
+
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Setup Python environment
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
-    - name: Install dependencies
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache npm
+      uses: actions/cache@v2.1.6
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Get pip cache dir
+      id: pip-cache
       run: |
-        python -m pip install --upgrade pip
-        pip install flake8 pytest pytest-cov
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        echo "::set-output name=dir::$(pip cache dir)"
+
+    - name: Cache pip
+      uses: actions/cache@v2.1.6
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Checkout test blocks and plots
+      uses: actions/checkout@v2
+      with:
+        repository: 'Chia-Network/test-cache'
+        path: '.chia'
+        ref: '0.27.0'
+        fetch-depth: 1
+
+    - name: Link home directory
+      run: |
+        cd $HOME
+        ln -s $GITHUB_WORKSPACE/.chia
+        echo "$HOME/.chia"
+        ls -al $HOME/.chia
+
+    - name: Install ubuntu dependencies
+      run: |
+        sudo apt-get install software-properties-common
+        sudo add-apt-repository ppa:deadsnakes/ppa
+        sudo apt-get update
+        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
+
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
       run: |
         sh install.sh
+
+    - name: Install timelord
+      run: |
+        . ./activate
+        sh install-timelord.sh
+        ./vdf_bench square_asm 400000
+
     - name: Install developer requirements
       run: |
         . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
+        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor flake8 pytest-cov
+
     - name: Build coverage file
       run: |
-        pytest --cache-clear --cov=chia tests/ > pytest-coverage.txt
+        . ./activate
+        ./venv/bin/py.test --cache-clear --cov=chia tests/ > pytest-coverage.txt
+
     - name: Display Python Test Code coverage
       uses: coroo/pytest-coverage-commentator@v1.0.2
