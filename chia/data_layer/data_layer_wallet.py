@@ -21,7 +21,8 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint32, uint64
+from secrets import token_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.sign_coin_spends import sign_coin_spends
@@ -70,70 +71,82 @@ class DataLayerWallet:
         return tree_id
 
     @staticmethod
-    async def create(
+    async def create_new_dl_wallet(
         wallet_state_manager: Any,
         wallet: Wallet,
-        launcher_coin_id: bytes32,
-        block_spends: List[CoinSpend],
-        # block_height: uint32,
-        in_transaction: bool,
-        name: Optional[str] = None,
-    ):
-        """
-        This creates a new PoolWallet with only one spend: the launcher spend. The DB MUST be committed after calling
-        this method.
-        """
-        self = DataLayerWallet()
-        self.wallet_state_manager = wallet_state_manager
-
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "DataLayer wallet", WalletType.DATA_LAYER.value, "", in_transaction=in_transaction
-        )
-        self.wallet_id = self.wallet_info.id
-        self.standard_wallet = wallet
-        # self.target_state = None
-        self.log = logging.getLogger(name if name else __name__)
-
-        launcher_spend: Optional[CoinSpend] = None
-        for spend in block_spends:
-            if spend.coin.name() == launcher_coin_id:
-                launcher_spend = spend
-        assert launcher_spend is not None
-        self.dl_info = DataLayerInfo(launcher_spend.coin, Program.to(0).get_tree_hash(), [], None)
-        info_as_string = json.dumps(self.dl_info.to_json_dict())
-        await self.wallet_state_manager.add_new_wallet(
-            self, self.wallet_info.id, info_as_string, create_puzzle_hashes=False
-        )
-        self.wallet_state_manager.set_new_peak_callback(self.wallet_id, self.new_peak)
-        return self
-
-    async def create_new_data_layer_wallet_transaction(
-        self,
+        amount: uint64,
         root_hash: bytes32,
         fee: uint64 = uint64(0),
-    ) -> Tuple[TransactionRecord, bytes32]:
-        amount = 1
+        name: str = None,
+    ):
+        """
+        This must be called under the wallet state manager lock
+        """
 
-        unspent_records = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
-            self.standard_wallet.wallet_id
+        self = DataLayerWallet()
+        self.base_puzzle_program = None
+        self.base_inner_puzzle_hash = None
+        self.standard_wallet = wallet
+        self.log = logging.getLogger(name if name else __name__)
+        std_wallet_id = self.standard_wallet.wallet_id
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet_already_locked(std_wallet_id)
+        if amount > bal:
+            raise ValueError("Not enough balance")
+        if amount & 1 == 0:
+            raise ValueError("DID amount must be odd number")
+        self.wallet_state_manager = wallet_state_manager
+        if root_hash is None:
+            root_hash = Program.to(0).get_tree_hash()
+        self.dl_info = DataLayerInfo(None, root_hash, [], None)
+        info_as_string = json.dumps(self.dl_info.to_json_dict())
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            "DataLayer Wallet", WalletType.DATA_LAYER.value, info_as_string
         )
-        balance = await self.standard_wallet.get_confirmed_balance(unspent_records)
-        if balance < DataLayerWallet.MINIMUM_INITIAL_BALANCE:
-            raise ValueError("Not enough balance in main wallet .")
-        if balance < fee:
-            raise ValueError(f"Not enough balance in main wallet to create a managed plotting pool with fee {fee}.")
+        if self.wallet_info is None:
+            raise ValueError("Internal Error")
+        self.wallet_id = self.wallet_info.id
+        std_wallet_id = self.standard_wallet.wallet_id
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet_already_locked(std_wallet_id)
+        if amount > bal:
+            raise ValueError("Not enough balance")
 
-        spend_bundle, singleton_puzzle_hash, launcher_coin_id = await self.generate_launcher_spend(
-            uint64(amount), root_hash
-        )
+        try:
+            spend_bundle, dl_puzzle_hash, launcher_coin, inner_inner_puz = await self.generate_launcher_spend(uint64(amount), root_hash)
+        except Exception:
+            await wallet_state_manager.user_store.delete_wallet(self.id(), False)
+            raise
 
         if spend_bundle is None:
-            raise ValueError("failed to generate ID for wallet")
+            await wallet_state_manager.user_store.delete_wallet(self.id(), False)
+            raise ValueError("Failed to create spend.")
 
-        standard_wallet_record = TransactionRecord(
+        dl_info = DataLayerInfo(launcher_coin, root_hash, self.dl_info.parent_info, inner_inner_puz)
+        await self.save_info(dl_info, True)
+        assert self.dl_info.origin_coin is not None
+        assert self.dl_info.current_inner_inner is not None
+        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+
+        dl_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=singleton_puzzle_hash,
+            to_puzzle_hash=dl_puzzle_hash,
+            amount=uint64(amount),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(10),
+            spend_bundle=None,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.INCOMING_TX.value),
+            name=token_bytes(),
+        )
+        regular_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=dl_puzzle_hash,
             amount=uint64(amount),
             fee_amount=uint64(0),
             confirmed=False,
@@ -145,13 +158,12 @@ class DataLayerWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=spend_bundle.name(),
+            name=token_bytes(),
         )
-        await self.standard_wallet.push_transaction(standard_wallet_record)
-        # p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(
-        #     launcher_coin_id, p2_singleton_delay_time, p2_singleton_delayed_ph
-        # )
-        return standard_wallet_record, launcher_coin_id
+        await self.standard_wallet.push_transaction(regular_record)
+        await self.standard_wallet.push_transaction(dl_record)
+
+        return self
 
     async def generate_launcher_spend(
         self,
@@ -212,7 +224,7 @@ class DataLayerWallet:
         )
         launcher_sb: SpendBundle = SpendBundle([launcher_cs], G2Element())
         full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
-        return full_spend, puzzle_hash, launcher_coin.name()
+        return full_spend, puzzle_hash, launcher_coin, inner_puzzle
 
     async def create_update_state_spend(
         self,
@@ -289,6 +301,12 @@ class DataLayerWallet:
         coin_spend = CoinSpend(
             my_coin, SerializedProgram.from_program(current_full_puz), SerializedProgram.from_program(full_sol)
         )
+        future_parent = LineageProof(
+            my_coin.name(),
+            create_host_layer_puzzle(self.dl_info.current_inner_inner, self.dl_info.root_hash).get_tree_hash(),
+            my_coin.amount,
+        )
+        await self.add_parent(my_coin.name(), future_parent, False)
         spend_bundle = SpendBundle([coin_spend], AugSchemeMPL.aggregate([]))
 
         return spend_bundle
@@ -298,7 +316,7 @@ class DataLayerWallet:
         if exclude is None:
             exclude = []
 
-        spendable_amount = await self.standard_wallet.get_spendable_balance()
+        spendable_amount = await self.get_spendable_balance()
         if amount > spendable_amount:
             self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
             return None
@@ -383,6 +401,29 @@ class DataLayerWallet:
 
     async def new_peak(self, peak: BlockRecord) -> None:
         pass
+
+    async def get_confirmed_balance(self, record_list=None) -> uint64:
+        if record_list is None:
+            record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
+
+        amount: uint64 = uint64(0)
+        for record in record_list:
+            parent = await self.get_parent_for_coin(record.coin)
+            if parent is not None:
+                amount = uint64(amount + record.coin.amount)
+
+        self.log.info(f"Confirmed balance for dl wallet is {amount}")
+        return uint64(amount)
+
+    async def get_unconfirmed_balance(self, record_list=None) -> uint64:
+        confirmed = await self.get_confirmed_balance(record_list)
+        return await self.wallet_state_manager._get_unconfirmed_balance(self.id(), confirmed)
+
+    async def get_spendable_balance(self, unspent_records=None) -> uint64:
+        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+            self.wallet_info.id, unspent_records
+        )
+        return spendable_am
 
     async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
         async def pk_to_sk(pk: G1Element) -> PrivateKey:

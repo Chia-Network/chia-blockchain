@@ -4,12 +4,13 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
-from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.types.blockchain_format.program import Program
 from blspy import AugSchemeMPL
 from chia.types.spend_bundle import SpendBundle
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from tests.time_out_assert import time_out_assert
+from chia.wallet.util.merkle_tree import MerkleTree
 
 
 @pytest.fixture(scope="module")
@@ -45,7 +46,7 @@ class TestDLWallet:
             yield _
 
     @pytest.mark.asyncio
-    async def test_creation_from_backup_file(self, three_wallet_nodes):
+    async def test_creation(self, three_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -77,3 +78,19 @@ class TestDLWallet:
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+
+        nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
+        current_tree = MerkleTree(nodes)
+        current_root = current_tree.calculate_root()
+
+        # Wallet1 sets up DIDWallet1 without any backup set
+        async with wallet_node_0.wallet_state_manager.lock:
+            dl_wallet_0: DataLayerWallet = await DataLayerWallet.create_new_dl_wallet(
+                wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
+            )
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
+        await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
