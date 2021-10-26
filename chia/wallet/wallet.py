@@ -388,7 +388,8 @@ class Wallet:
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
-                assert primary_announcement_hash is not None
+                if primary_announcement_hash is None:
+                    raise ValueError("origin_id is not the set of selected coins")
                 solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash}, primaries=[])
 
             spends.append(
