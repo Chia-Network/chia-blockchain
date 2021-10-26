@@ -383,7 +383,7 @@ class Wallet:
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
-                solution: Program = self.make_solution(
+                solution = self.make_solution(
                     primaries=primaries,
                     fee=fee,
                     coin_announcements={message},
