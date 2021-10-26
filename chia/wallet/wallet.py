@@ -467,6 +467,7 @@ class Wallet:
     async def push_transaction(self, tx: TransactionRecord) -> None:
         """Use this API to send transactions."""
         await self.wallet_state_manager.add_pending_transaction(tx)
+        await self.wallet_state_manager.wallet_node.update_ui()
 
     # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
     async def create_spend_bundle_relative_chia(self, chia_amount: int, exclude: List[Coin]) -> SpendBundle:
