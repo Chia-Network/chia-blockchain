@@ -50,6 +50,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk,
     find_authentication_sk,
     find_owner_sk,
+    master_sk_to_wallet_sk_unhardened,
 )
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD
 
@@ -512,12 +513,15 @@ class Farmer:
                 if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
                     break
                 for sk, _ in all_sks:
-                    ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1())
-
-                    if ph == self.farmer_target:
-                        stop_searching_for_farmer = True
-                    if ph == self.pool_target:
-                        stop_searching_for_pool = True
+                    phs = [
+                        create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()),
+                        create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(i)).get_g1()),
+                    ]
+                    for ph in phs:
+                        if ph == self.farmer_target:
+                            stop_searching_for_farmer = True
+                        if ph == self.pool_target:
+                            stop_searching_for_pool = True
             return {
                 "farmer_target": self.farmer_target_encoded,
                 "pool_target": self.pool_target_encoded,
