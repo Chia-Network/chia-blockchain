@@ -45,6 +45,7 @@ from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.merkle_set import MerkleSet
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER_HASH
 
 
 class FullNodeAPI:
@@ -1343,6 +1344,10 @@ class FullNodeAPI:
         hint_coin_ids = []
         # Add peer to the "Subscribed" dictionary
         for puzzle_hash in request.puzzle_hashes:
+            if puzzle_hash == SINGLETON_LAUNCHER_HASH or puzzle_hash == 32 * b"\0":
+                self.log.info("Ignoring subscribe to launcher address or burn address...")
+                continue
+
             ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash)
             hint_coin_ids.extend(ph_hint_coins)
             if puzzle_hash not in self.full_node.ph_subscriptions:

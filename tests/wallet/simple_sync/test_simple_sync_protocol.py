@@ -7,6 +7,7 @@ from clvm.casts import int_to_bytes
 from colorlog import logging
 
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.protocols import wallet_protocol, full_node_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -621,3 +622,83 @@ class TestSimpleSyncProtocol:
 
         check_messages_for_hint(all_messages)
         check_messages_for_hint(all_messages_1)
+
+    @pytest.mark.asyncio
+    async def test_subscribe_ignored_ph(self, wallet_node_simulator):
+        num_blocks = 4
+        full_nodes, wallets = wallet_node_simulator
+        full_node_api = full_nodes[0]
+
+        wallet_node, server_2 = wallets[0]
+        fn_server = full_node_api.full_node.server
+
+        wsm: WalletStateManager = wallet_node.wallet_state_manager
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        incoming_queue, peer_id = await add_dummy_connection(fn_server, 12312, NodeType.WALLET)
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+        ph = wt.get_new_puzzlehash()
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        await asyncio.sleep(6)
+        coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hashes(False, [ph])
+        coin_spent = coins[0].coin
+        zero_puzzle_hash = 32 * b"\0"
+        amount = 1
+        amount_bin = int_to_bytes(1)
+        fake_wallet_peer = fn_server.all_connections[peer_id]
+
+        async def subscribe_to_ph(puzzle_hash):
+            msg = wallet_protocol.RegisterForPhUpdates([puzzle_hash], 0)
+            msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
+
+            assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+            data_response: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response.data)
+            assert len(data_response.coin_states) == 0
+
+        await subscribe_to_ph(zero_puzzle_hash)
+        await subscribe_to_ph(SINGLETON_LAUNCHER_HASH)
+
+        condition_dict = {
+            ConditionOpcode.CREATE_COIN: [
+                ConditionWithArgs(ConditionOpcode.CREATE_COIN, [zero_puzzle_hash, amount_bin, zero_puzzle_hash]),
+                ConditionWithArgs(
+                    ConditionOpcode.CREATE_COIN, [SINGLETON_LAUNCHER_HASH, amount_bin, SINGLETON_LAUNCHER_HASH]
+                ),
+            ]
+        }
+        tx: SpendBundle = wt.generate_signed_transaction(
+            10,
+            wt.get_new_puzzlehash(),
+            coin_spent,
+            condition_dic=condition_dict,
+        )
+        await full_node_api.respond_transaction(RespondTransaction(tx), fake_wallet_peer)
+
+        await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name())
+
+        # Create more blocks than recent "short_sync_blocks_behind_threshold" so that node enters batch
+        for i in range(0, 4):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hashes(
+            False, [zero_puzzle_hash, SINGLETON_LAUNCHER_HASH]
+        )
+        assert len(coins) == 2
+
+        all_messages = await self.get_all_messages_in_queue(incoming_queue)
+
+        def check_messages_for_hint(messages):
+            notified_state = None
+
+            for message in messages:
+                if message.type == ProtocolMessageTypes.coin_state_update.value:
+                    data_response: CoinStateUpdate = CoinStateUpdate.from_bytes(message.data)
+                    notified_state = data_response
+                    break
+
+            assert notified_state is None
+
+        check_messages_for_hint(all_messages)
