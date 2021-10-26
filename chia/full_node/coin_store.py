@@ -341,7 +341,7 @@ class CoinStore:
         Returns the list of coin records that have been modified
         """
         # Update memory cache
-        delete_queue: bytes32 = []
+        delete_queue: List[bytes32] = []
         for coin_name, coin_record in list(self.coin_record_cache.cache.items()):
             if int(coin_record.spent_block_index) > block_index:
                 new_record = CoinRecord(
