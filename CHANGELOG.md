@@ -35,6 +35,7 @@ We have some great improvements in this release: We launched our migration of ke
 - Minor GUI changes based on community feedback.
 - Thanks @jack60612 for your help in improving our GUI code, including upgrading to electron 14, migration to electron remote, updating the latest dependencies, and more.
 
+
 ### Fixed
 
 - Corrected a super-linter name typo to GitHub
