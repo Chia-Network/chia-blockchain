@@ -615,7 +615,7 @@ class WalletNode:
                     peer.peer_node_id not in self.synced_peers or far_behind
                 ) and peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                     syncing = False
-                    if far_behind:
+                    if peak.height - self.wallet_state_manager.blockchain.get_peak_height() > 3:
                         syncing = True
                         self.wallet_state_manager.set_sync_mode(True)
                     try:
