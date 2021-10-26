@@ -1,13 +1,14 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Button, ConfirmDialog, Flex, Logo, Loading, useOpenDialog } from '@chia/core';
+import { Button, ConfirmDialog, Flex, Logo, Loading, useOpenDialog, TooltipIcon } from '@chia/core';
 import {
   Card,
   Typography,
   Container,
   List,
 } from '@material-ui/core';
+import { Alert, AlertTitle } from '@material-ui/lab';
 import {
   useGetPublicKeysQuery,
   useDeleteAllKeysMutation,
@@ -23,9 +24,9 @@ const StyledContainer = styled(Container)`
 export default function SelectKey() {
   const openDialog = useOpenDialog();
   const [deleteAllKeys] = useDeleteAllKeysMutation();
-  const { data: publicKeyFingerprints, isLoading } = useGetPublicKeysQuery();
+  const { data: publicKeyFingerprints, isLoading, error, refetch } = useGetPublicKeysQuery();
   const hasFingerprints = !!publicKeyFingerprints?.length;
-
+  
   async function handleDeleteAllKeys() {
     await openDialog(
       <ConfirmDialog
@@ -52,6 +53,21 @@ export default function SelectKey() {
             <Loading center>
               <Trans>Loading list of the keys</Trans>
             </Loading>
+          ) : error ? (
+            <Alert 
+              severity="error"
+              action={
+                <Button onClick={refetch} color="inherit" size="small">
+                  <Trans>Try Again</Trans>
+                </Button>
+              }
+            >
+              <Trans>Unable to load the list of the keys</Trans>
+              &nbsp;
+              <TooltipIcon>
+                {error.message}
+              </TooltipIcon>
+            </Alert>
           ) : hasFingerprints ? (
             <Typography variant="h5" component="h1">
               <Trans>Select Key</Trans>
