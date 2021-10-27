@@ -23,7 +23,7 @@ def int_to_public_key(index: int) -> blspy.G1Element:
 
 
 def puzzle_hash_for_index(index: int, puzzle_hash_db: dict) -> bytes32:
-    public_key = bytes32(int_to_public_key(index))
+    public_key = int_to_public_key(index)
     puzzle = puzzle_for_pk(public_key)
     puzzle_hash = puzzle.get_tree_hash()
     puzzle_hash_db[puzzle_hash] = puzzle
