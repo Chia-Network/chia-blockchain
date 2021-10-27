@@ -44,7 +44,9 @@ def make_sized_bytes(size: int):
     @classmethod  # type: ignore
     def from_hexstr(cls: Any, input_str: str) -> Any:
         if input_str.startswith("0x") or input_str.startswith("0X"):
+            # pylint: disable=no-member
             return cls.fromhex(input_str[2:])
+        # pylint: disable=no-member
         return cls.fromhex(input_str)
 
     def __bytes__(self: Any) -> bytes:
