@@ -1,11 +1,8 @@
 name: MacOS installer on Catalina and Python 3.8
 
 on:
-  push:
-    branches:
-      - protocol_and_cats_rebased
-    tags:
-        - '**'
+  tags:
+      - '**'
   pull_request:
     branches:
       - '**'
