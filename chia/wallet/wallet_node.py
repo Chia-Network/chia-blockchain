@@ -11,6 +11,7 @@ from blspy import PrivateKey, AugSchemeMPL
 from packaging.version import Version
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import (
     KeychainProxyConnectionFailure,
@@ -692,11 +693,18 @@ class WalletNode:
             fork_height = top.height - 1
 
         blocks.reverse()
-        validate_blocks = await self.wallet_state_manager.blockchain.validate_blocks(blocks)
-        assert validate_blocks
+        # Roll back coins and transactions
         await self.wallet_state_manager.reorg_rollback(fork_height)
+        peak = await self.wallet_state_manager.blockchain.get_peak_block()
+        assert peak is not None and header_block.weight > peak.weight
+        for block in blocks:
+            # Set blockchain to the latest peak
+            res, err = await self.wallet_state_manager.blockchain.receive_block(block)
+            if res == ReceiveBlockResult.INVALID_BLOCK:
+                raise err
+
+        # Add new coins and transactions
         await self.complete_blocks(blocks, peer)
-        await self.wallet_state_manager.blockchain.new_blocks(blocks)
         await self.wallet_state_manager.create_more_puzzle_hashes()
 
     async def complete_blocks(self, header_blocks: List[HeaderBlock], peer: WSChiaConnection):

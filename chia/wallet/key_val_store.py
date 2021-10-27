@@ -60,24 +60,7 @@ class KeyValStore:
             await cursor.close()
             await self.db_connection.commit()
 
-    async def set_str(self, key: str, val: str):
-        """
-        Adds str to key val store
-        """
-        async with self.db_wrapper.lock:
-            cursor = await self.db_connection.execute(
-                "INSERT OR REPLACE INTO key_val_store VALUES(?, ?)",
-                (key, val),
-            )
-            await cursor.close()
-            await self.db_connection.commit()
-
-    async def get_str(self, key: str) -> Any:
-        """
-        Return stored string
-        """
-
-        cursor = await self.db_connection.execute("SELECT * from key_val_store WHERE key=?", (key,))
-        row = await cursor.fetchone()
+    async def remove_object(self, key: str):
+        cursor = await self.db_connection.execute("DELETE FROM key_val_store where key=?", (key,))
         await cursor.close()
         await self.db_connection.commit()
