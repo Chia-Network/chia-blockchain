@@ -10,7 +10,9 @@ from chia.data_layer.data_store import DataStore
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
+from chia.util.ints import uint64
 from chia.util.path import mkdir, path_from_root
+from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 class DataLayer:
@@ -22,17 +24,16 @@ class DataLayer:
     server: Any
     log: logging.Logger
     wallet: DataLayerWallet
-    # _shut_down: bool
-    # root_path: Path
+    wallet_state_manager: Optional[WalletStateManager]
     state_changed_callback: Optional[Callable[..., object]]
     initialized: bool
-    # _ui_tasks: Set[asyncio.Task]
 
     def __init__(
         self,
         # TODO: Is this at least `Dict[str, Any]`?
         config: Dict[Any, Any],
         root_path: Path,
+        wallet_state_manager: Optional[WalletStateManager],
         consensus_constants: ConsensusConstants,
         name: Optional[str] = None,
     ):
@@ -45,7 +46,7 @@ class DataLayer:
         self.wallet = DataLayerWallet()
         self.config = config
         self.server = None
-        # self.constants = consensus_constants
+        self.wallet_state_manager = wallet_state_manager
         self.state_changed_callback = None
         self.log = logging.getLogger(name if name is None else __name__)
 
@@ -78,13 +79,24 @@ class DataLayer:
     async def _await_closed(self) -> None:
         await self.connection.close()
 
+    async def init_exsiting_data_wallet(self) -> None:
+        # todo implement
+        pass
+
     async def create_store(self) -> bytes32:
-        # todo  create singelton with wavaluellet and get id
-        store_id = await self.wallet.create_data_store()
-        res = await self.data_store.create_tree(store_id)
-        if res is False:
-            self.log.error("Failed to create tree")
-        return store_id
+        wallet_state_manager = self.wallet_state_manager
+        main_wallet = wallet_state_manager.main_wallet
+        amount = uint64(1)  # todo what should amount be ?
+        root_hash = b""  # todo what is the root value on a newly empty created tree?
+        async with self.wallet_state_manager.lock:
+            res = await self.wallet.create_new_dl_wallet(self.wallet_state_manager, main_wallet, amount, root_hash)
+            if res is False:
+                self.log.error("Failed to create tree")
+        self.wallet = res
+        tree_id = res.dl_info.origin_coin.name()
+        res = await self.data_store.create_tree(tree_id)
+        assert res
+        return tree_id
 
     async def insert(
         self,
@@ -105,8 +117,10 @@ class DataLayer:
                 key = change["key"]
                 await self.data_store.delete(key, tree_id)
 
-        # state = await self.data_store.get_table_state(table)
-        # await self.data_layer_wallet.uptate_table_state(table, state, std_hash(action_list))
+        root = await self.data_store.get_tree_root(tree_id)
+        assert root.node_hash
+        res = await self.wallet.create_update_state_spend(root.node_hash)
+        assert res
         # todo need to mark data as pending and change once tx is confirmed
         return True
 
@@ -122,11 +136,8 @@ class DataLayer:
             self.log.error("Failed to create tree")
         return res
 
-    # def _state_changed(self, change: str):
-    #     if self.state_changed_callback is not None:
-    #         self.state_changed_callback(change)
-
-    # async def _refresh_ui_connections(self, sleep_before: float = 0):
-    #     if sleep_before > 0:
-    #         await asyncio.sleep(sleep_before)
-    #     self._state_changed("peer_changed_peak")
+    async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> bytes32:
+        res = await self.data_store.get_ancestors(store_id, node_hash)
+        if res is None:
+            self.log.error("Failed to create tree")
+        return res

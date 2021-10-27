@@ -46,6 +46,7 @@ class DataLayerRpcApi:
             "/create_kv_store": self.create_kv_store,
             "/update_kv_store": self.update_kv_store,
             "/get_value": self.get_value,
+            "/get_pairs": self.get_pairs,
         }
 
     async def create_kv_store(self, request: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -63,13 +64,18 @@ class DataLayerRpcApi:
         value = await self.service.get_pairs(store_id)
         return {"data": value.hex()}
 
+    async def get_ancestors(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        key = hexstr_to_bytes(request["key"])
+        value = await self.service.get_ancestors(key, store_id)
+        return {"data": value.hex()}
+
     async def update_kv_store(self, request: Dict[str, Any]):
         """
-        rows_to_add a list of clvmobjects as bytes to add to talbe
+        rows_to_add a list of clvm objects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove
         """
         changelist = [process_change(change) for change in request["changelist"]]
-
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         # todo input checks
         await self.service.insert(store_id, changelist)
