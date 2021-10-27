@@ -38,7 +38,7 @@ def static_check_sent_message_response() -> None:
     # Reply and non-reply sets should not overlap: This check should be static
     overlap = set(NO_REPLY_EXPECTED).intersection(set(VALID_REPLY_MESSAGE_MAP.keys()))
     if len(overlap) != 0:
-        raise AssertionError("Overlapping NO_REPLY_EXPECTED and VALID_REPLY_MESSAGE_MAP values: {}")
+        raise AssertionError(f'Overlapping NO_REPLY_EXPECTED and VALID_REPLY_MESSAGE_MAP values: {overlap}')
 
 
 def message_requires_reply(sent: ProtocolMessageTypes) -> bool:
