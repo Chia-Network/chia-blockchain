@@ -16,8 +16,16 @@ ENERGY = {
     "symbol": "ENG",
 }
 
+MARMOTCOIN = {
+    "asset_id": "42dc1c8c740edef7da4e686da1e8975a7d706342ac56fbfbdc981b0baf384db4",
+    "name": "Marmotcoin",
+    "symbol": "MRT",
+}
+
+
 DEFAULT_CATS = {
     ASTEROID["asset_id"]: ASTEROID,
     WATER["asset_id"]: WATER,
     ENERGY["asset_id"]: ENERGY,
+    MARMOTCOIN["asset_id"]: MARMOTCOIN
 }
