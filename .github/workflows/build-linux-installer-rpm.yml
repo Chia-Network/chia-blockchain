@@ -77,7 +77,9 @@ jobs:
       run: |
         mkdir "$GITHUB_WORKSPACE/madmax"
         wget -O "$GITHUB_WORKSPACE/madmax/chia_plot" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot-${{ steps.latest-madmax.outputs.result }}-x86-64
+        wget -O "$GITHUB_WORKSPACE/madmax/chia_plot_k34" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}-x86-64
         chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
+        chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
 
       # Get the most recent release from bladebit
     - uses: actions/github-script@v4
