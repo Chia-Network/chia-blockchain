@@ -66,7 +66,7 @@ def cli(
         set_keys_root_path(Path(keys_root_path))
 
     if passphrase_file is not None:
-        from .passphrase_funcs import cache_passphrase, read_passphrase_from_file
+        from chia.cmds.passphrase_funcs import cache_passphrase, read_passphrase_from_file
 
         try:
             cache_passphrase(read_passphrase_from_file(passphrase_file))
