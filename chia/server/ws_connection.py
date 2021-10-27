@@ -64,6 +64,7 @@ class WSChiaConnection:
         self.peer_port = connection_port
         self.peer_server_port: Optional[uint16] = None
         self.peer_node_id = peer_id
+
         self.log = log
 
         # connection properties
@@ -138,7 +139,6 @@ class WSChiaConnection:
 
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
-            self.version = inbound_handshake.software_version
 
             self.version = inbound_handshake.software_version
 
