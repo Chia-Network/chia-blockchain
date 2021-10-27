@@ -2,8 +2,6 @@ name: MacOS M1 installer on Python 3.9
 
 on:
   push:
-    branches:
-      - protocol_and_cats_rebased
     tags:
       - '**'
   pull_request:
