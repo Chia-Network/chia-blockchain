@@ -62,7 +62,7 @@ def get_host_addr(host: Union[PeerInfo, str], prefer_ipv6: Optional[bool]) -> st
         if PeerInfo(hoststr, uint16(0)).is_valid(True):
             return hoststr
     addrset: List[
-        Tuple[socket.AddressFamily, socket.SocketKind, int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
+        Tuple["socket.AddressFamily", "socket.SocketKind", int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
     ] = socket.getaddrinfo(hoststr, None)
     # Addrset is never empty, an exception is thrown or data is returned.
     for t in addrset:
