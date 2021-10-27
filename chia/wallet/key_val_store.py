@@ -60,7 +60,7 @@ class KeyValStore:
             await cursor.close()
             await self.db_connection.commit()
 
-    async def remove_object(self, key: str, obj: Streamable):
+    async def remove_object(self, key: str):
         cursor = await self.db_connection.execute("DELETE FROM key_val_store where key=?", (key,))
         await cursor.close()
         await self.db_connection.commit()

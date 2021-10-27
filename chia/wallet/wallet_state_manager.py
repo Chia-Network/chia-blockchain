@@ -43,7 +43,6 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action import WalletAction
 from chia.wallet.wallet_action_store import WalletActionStore
-from chia.wallet.wallet_block_store import WalletBlockStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -106,7 +105,6 @@ class WalletStateManager:
     new_wallet: bool
     user_settings: UserSettings
     blockchain: WalletBlockchain
-    block_store: WalletBlockStore
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
     interested_store: WalletInterestedStore

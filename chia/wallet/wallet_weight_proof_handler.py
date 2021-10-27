@@ -139,7 +139,7 @@ class WalletWeightProofHandler:
                     if not validated:
                         return False, uint32(0), [], []
 
-            valid_recent_blocks, sub_block_bytes = await recent_blocks_validation_task
+            valid_recent_blocks, records_bytes = await recent_blocks_validation_task
         finally:
             recent_blocks_validation_task.cancel()
             for vdf_task in vdf_tasks:
@@ -150,10 +150,10 @@ class WalletWeightProofHandler:
             # Verify the data
             return False, uint32(0), [], []
 
-        sub_blocks = [BlockRecord.from_bytes(b) for b in sub_block_bytes]
+        records = [BlockRecord.from_bytes(b) for b in records_bytes]
 
         # TODO fix find fork point
-        return True, uint32(0), summaries, sub_blocks
+        return True, uint32(0), summaries, records
 
     def get_recent_chain_fork(self, new_wp: WeightProof) -> uint32:
         for nblock in reversed(new_wp.recent_chain_data):

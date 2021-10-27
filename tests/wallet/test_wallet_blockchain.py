@@ -1,10 +1,16 @@
 import asyncio
+import dataclasses
 from pathlib import Path
 from secrets import token_bytes
+from typing import Optional, List
+
 import aiosqlite
 import pytest
 
+from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain import ReceiveBlockResult
 from chia.protocols import full_node_protocol
+from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import WeightProof
@@ -85,17 +91,32 @@ class TestWalletBlockchain:
             for block in default_1000_blocks:
                 header_block = get_block_header(block, [], [])
                 header_blocks.append(header_block)
-            assert await chain.validate_blocks(header_blocks[506:])
 
-            assert await chain.validate_blocks(header_blocks[105:])
+            res, err = await chain.receive_block(header_blocks[50])
+            print(res, err)
+            assert res == ReceiveBlockResult.DISCONNECTED_BLOCK
 
-            assert not (await chain.validate_blocks(header_blocks[507:]))
+            res, err = await chain.receive_block(header_blocks[400])
+            print(res, err)
+            assert res == ReceiveBlockResult.ALREADY_HAVE_BLOCK
+
+            res, err = await chain.receive_block(header_blocks[507])
+            print(res, err)
+            assert res == ReceiveBlockResult.DISCONNECTED_BLOCK
+
+            res, err = await chain.receive_block(
+                dataclasses.replace(header_blocks[506], challenge_chain_ip_proof=VDFProof(2, b"123", True))
+            )
+            assert res == ReceiveBlockResult.INVALID_BLOCK
 
             assert chain.get_peak_height() == 505
-            await chain.new_blocks(header_blocks[506])
 
-            assert chain.get_peak_height() == 506
+            for block in header_blocks[506:]:
+                res, err = await chain.receive_block(block)
+                assert res == ReceiveBlockResult.NEW_PEAK
+                assert chain.get_peak_height() == block.height
 
+            assert chain.get_peak_height() == 999
         finally:
             await db_connection.close()
             db_filename.unlink()
