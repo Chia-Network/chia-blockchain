@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 from blspy import G1Element
 from clvm.casts import int_from_bytes
 
+from chia.consensus import hardfork
 from chia.consensus.block_body_validation import validate_block_body
 from chia.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -974,20 +975,33 @@ class Blockchain(BlockchainInterface):
         network_space = await self.get_peak_network_space(block_range)
         staking = await self.get_peak_farmer_staking(farmer_public_key)
         minimal_staking = network_space / (block_range * 100)
+
+        coeff = 0
+        space = 0
         if staking < minimal_staking:
-            return 20.0
+            coeff = 20.0
         else:
             if blocks == 0:
-                return 1.0
+                coeff = 1.0
             else:
                 # multiple 1000 to keep same scale as sit
-                space = uint128(int(network_space * blocks / block_range)) * 1000
+                space = uint128(int(network_space * blocks / block_range))
+
+                if self.get_peak_height() < hardfork.HARDFORK_FIX_SPACE_UNIT_STEP1:
+                    space *= 1000
+                elif self.get_peak_height() < hardfork.HARDFORK_FIX_SPACE_UNIT_STEP2:
+                    space *= 100
+                elif self.get_peak_height() < hardfork.HARDFORK_FIX_SPACE_UNIT_STEP3:
+                    space *= 10
+
                 if space == 0:
-                    return 1.0
+                    coeff = 1.0
                 elif staking >= space:
-                    return 0.5 + 1 / (staking / space + 1)
+                    coeff = 0.5 + 1 / (staking / space + 1)
                 else:
-                    return 0.05 + 1 / (staking / space + 0.05)
+                    coeff = 0.05 + 1 / (staking / space + 0.05)
+
+        return coeff
 
     async def get_peak_farmer_staking(self, farmer_public_key: G1Element) -> uint64:
         curr: BlockRecord = self.get_peak()
