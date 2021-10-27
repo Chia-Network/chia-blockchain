@@ -186,14 +186,15 @@ class ChiaServer:
         to allow room for other peers.
         """
         while True:
-            await asyncio.sleep(600)
+            # Modification for crawler.
+            await asyncio.sleep(2)
             to_remove: List[WSChiaConnection] = []
             for connection in self.all_connections.values():
                 if self._local_type == NodeType.FULL_NODE and connection.connection_type == NodeType.FULL_NODE:
-                    if time.time() - connection.last_message_time > 1800:
+                    if time.time() - connection.creation_time > 5:
                         to_remove.append(connection)
             for connection in to_remove:
-                self.log.debug(f"Garbage collecting connection {connection.peer_host} due to inactivity")
+                self.log.info(f"Garbage collecting connection {connection.peer_host}, max time reached.")
                 await connection.close()
 
             # Also garbage collect banned_peers dict
@@ -241,6 +242,8 @@ class ChiaServer:
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
+        # Crawler.
+        return
         if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:
             self.log.warning(f"Peer {request.remote} is banned, refusing connection")
             return None
