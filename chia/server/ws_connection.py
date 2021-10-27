@@ -187,7 +187,7 @@ class WSChiaConnection:
 
     async def close(self, ban_time: int = 0, ws_close_code: WSCloseCode = WSCloseCode.OK, error: Optional[Err] = None):
         """
-        Closes the connection, and finally calls the close_callback on the server, so the connections gets removed
+        Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
         from the global list.
         """
 
