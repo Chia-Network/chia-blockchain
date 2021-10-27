@@ -157,7 +157,10 @@ async def pprint_pool_wallet_state(
         payout_instructions: str = pool_state_dict[pool_wallet_info.launcher_id]["pool_config"]["payout_instructions"]
         try:
             # TODO: remove ignore https://github.com/python/typeshed/pull/6201
-            payout_address = encode_puzzle_hash(bytes32.fromhex(payout_instructions), address_prefix)  # type: ignore[arg-type]
+            payout_address = encode_puzzle_hash(
+                bytes32.fromhex(payout_instructions),
+                address_prefix,
+            )  # type: ignore[arg-type]
             print(f"Payout instructions (pool will pay to this address): {payout_address}")
         except Exception:
             print(f"Payout instructions (pool will pay you with this): {payout_instructions}")

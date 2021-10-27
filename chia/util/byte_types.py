@@ -41,6 +41,12 @@ def make_sized_bytes(size: int):
         assert f.read() == b""
         return result
 
+    @classmethod  # type: ignore
+    def from_hexstr(cls: Any, input_str: str) -> Any:
+        if input_str.startswith("0x") or input_str.startswith("0X"):
+            return cls.fromhex(input_str[2:])
+        return cls.fromhex(input_str)
+
     def __bytes__(self: Any) -> bytes:
         f = io.BytesIO()
         self.stream(f)
@@ -57,6 +63,7 @@ def make_sized_bytes(size: int):
         parse=parse,
         stream=stream,
         from_bytes=from_bytes,
+        from_hexstr=from_hexstr,
         __bytes__=__bytes__,
         __str__=__str__,
         __repr__=__repr__,

@@ -324,7 +324,11 @@ class DIDWallet:
             details = f.readline().split(":")
             f.close()
             # TODO: remove ignores https://github.com/python/typeshed/pull/6201
-            origin = Coin(bytes32.fromhex(details[0]), bytes32.fromhex(details[1]), uint64(int(details[2])))  # type: ignore[arg-type]
+            origin = Coin(
+                bytes32.fromhex(details[0]),
+                bytes32.fromhex(details[1]),
+                uint64(int(details[2])),
+            )  # type: ignore[arg-type]
             backup_ids = []
             for d in details[3].split(","):
                 backup_ids.append(bytes.fromhex(d))

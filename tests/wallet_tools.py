@@ -139,7 +139,9 @@ class WalletTool:
             if n == 0:
                 message_list = [c.name() for c in coins]
                 for outputs in condition_dic[ConditionOpcode.CREATE_COIN]:
-                    message_list.append(Coin(coin.name(), bytes32(outputs.vars[0]), int_from_bytes(outputs.vars[1])).name())
+                    message_list.append(
+                        Coin(coin.name(), bytes32(outputs.vars[0]), int_from_bytes(outputs.vars[1])).name()
+                    )
                 message = std_hash(b"".join(message_list))
                 condition_dic[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT].append(
                     ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [message])
