@@ -58,9 +58,6 @@ export default function WalletCATSend(props: Props) {
     );
   }, [currencyCode]);
 
-  console.log('retireAddress', retireAddress);
-  
-
   const methods = useForm<SendTransactionData>({
     shouldUnregister: false,
     defaultValues: {

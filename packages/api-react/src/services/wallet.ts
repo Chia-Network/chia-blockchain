@@ -253,7 +253,7 @@ export const walletApi = createApi({
           const { walletId, amount, fee, address, waitForConfirmation } = args;
           
           return {
-            data: new Promise(async (resolve, reject) => {
+            data: await new Promise(async (resolve, reject) => {
               const updatedTransactions: Transaction[] = [];
               let transactionName: string;
 
@@ -276,6 +276,7 @@ export const walletApi = createApi({
 
               // bind all changes related to transactions
               if (waitForConfirmation) {
+                // subscribing to tx_updates
                 subscribeResponse = await baseQuery({
                   command: 'onTransactionUpdate',
                   args: [(data: any) => {
@@ -288,7 +289,7 @@ export const walletApi = createApi({
               }
 
               // make transaction
-              const { data: sendTransactionData, error } = await fetchWithBQ({
+              const { data: sendTransactionData, error, ...rest } = await fetchWithBQ({
                 command: 'sendTransaction',
                 args: [walletId, amount, fee, address],
               });
@@ -306,6 +307,7 @@ export const walletApi = createApi({
               const { transaction } = sendTransactionData;
               if (!transaction) {
                 reject(new Error('Transaction is not present in response'));
+                return;
               }
 
               transactionName = transaction.name;
@@ -735,6 +737,112 @@ export const walletApi = createApi({
 
         function unsubscribe() {
           if (subscribeResponse) {
+            console.log('Unsubscribing from tx_updates');
+            subscribeResponse.data();
+            subscribeResponse = undefined;
+          }
+        }
+
+        try {
+          const { 
+            walletId,
+            address,
+            amount,
+            fee,
+            memos, 
+            waitForConfirmation,
+           } = args;
+          
+          return {
+            data: await new Promise(async (resolve, reject) => {
+              const updatedTransactions: Transaction[] = [];
+              let transactionName: string;
+
+              function processUpdates() {
+                if (!transactionName) {
+                  console.log(`Transaction name is not defined`, updatedTransactions);
+                  return;
+                }
+
+                const transaction = updatedTransactions.find(
+                  (trx) => trx.name === transactionName && !!trx?.sentTo?.length,
+                );
+
+                if (transaction) {
+                  console.log('we found transaction with all data hurai');
+                  resolve({
+                    transaction,
+                    transactionId: transaction.name,
+                  });
+                } else {
+                  console.log('we do not have transaction in the list with data', updatedTransactions);
+                }
+              }
+
+              // bind all changes related to transactions
+              if (waitForConfirmation) {
+                // subscribing to tx_updates
+                subscribeResponse = await baseQuery({
+                  command: 'onTransactionUpdate',
+                  args: [(data: any) => {
+                    const { additionalData: { transaction } } = data;
+
+                    console.log('update received');
+  
+                    updatedTransactions.push(transaction);
+                    processUpdates();
+                  }],
+                }, queryApi, {});
+              }
+
+              // make transaction
+              console.log('sending transaction');
+              const { data: sendTransactionData, error, ...rest } = await fetchWithBQ({
+                command: 'spend',
+                service: CAT,
+                args: [walletId, address, amount, fee, memos],
+              });
+
+              console.log('response', sendTransactionData, error, rest);
+
+              if (error) {
+                reject(error);
+                return;
+              }
+
+              if (!waitForConfirmation) {
+                resolve(sendTransactionData);
+                return;
+              }
+
+              const { transaction } = sendTransactionData;
+              if (!transaction) {
+                reject(new Error('Transaction is not present in response'));
+              }
+
+              transactionName = transaction.name;
+              updatedTransactions.push(transaction);
+              processUpdates();
+            }),
+          };
+        } catch (error: any) {
+          console.log('something went wrong', error);
+          return {
+            error,
+          };
+        } finally {
+          console.log('unsubscribing')
+          unsubscribe();
+        }
+
+
+        /*
+        let subscribeResponse: {
+          data: Function;
+        } | undefined;
+
+        function unsubscribe() {
+          if (subscribeResponse) {
             subscribeResponse.data();
             subscribeResponse = undefined;
           }
@@ -819,6 +927,7 @@ export const walletApi = createApi({
         } finally {
           unsubscribe();
         }
+        */
       },
       invalidatesTags: [{ type: 'Transactions', id: 'LIST' }],
     }),
