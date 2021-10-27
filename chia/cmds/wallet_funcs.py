@@ -139,7 +139,10 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
 
     print(f"Wallet height: {await wallet_client.get_height_info()}")
-    print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
+    if await wallet_client.get_sync_status():
+        print("Sync status: Syncing...")
+    else:
+        print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
     print(f"Balances, fingerprint: {fingerprint}")
     for summary in summaries_response:
         wallet_id = summary["id"]

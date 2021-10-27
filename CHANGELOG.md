@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.2.10 Chia blockchain 2021-10-25
+
+We have some great improvements in this release: We launched our migration of keys to a common encrypted keyring.yaml file, and we secure this with an optional passphrase in both GUI and CLI. We've added a passphrase hint in case you forget your passphrase. More info on our [wiki](https://github.com/Chia-Network/chia-blockchain/wiki/Passphrase-Protected-Chia-Keys-and-Key-Storage-Migration). We also launched a new Chialisp compiler in clvm_tools_rs which substantially improves compile time for Chialisp developers. We also addressed a widely reported issue in which a system failure, such as a power outage, would require some farmers to sync their full node from zero. This release also includes several other improvements and fixes.
+
+### Added
+
+- Added support for keyring migration from keychain, and the addition of passphrase support. Learn more at our [wiki](https://github.com/Chia-Network/chia-blockchain/wiki/Passphrase-Protected-Chia-Keys-and-Key-Storage-Migration).
+- Enabled experimental use of a new Chialisp compiler in clvm_tools_rs in chia-blockchain, which is off by default, and substantially improves compile time.
+- Added Windows PowerShell scripts to support installation from source.
+- Added a test to check that we don't reorg subslots unless there is a new peak.
+- Added harvester info to farmer logging.
+- Add 'points found 24h' to CLI reporting.
+- Added an alternative to pkm_pairs_for_conditions_dict() which is a bit more straightforward and returns the public keys and messages in the forms we need them to validate them.
+- Added ability to see unopenable plots at the end of plots check.
+- Added Program.at utility function.
+
+### Changed
+
+- Truncate points_[found,acknowledged]_24h to 24 hours at each signage point.
+- Improved reliability of test_farmer_harvester_rpc.py, by increasing the interval between harvester checks, which should avoid spamming logs with excessive plot refreshing and cache updates.
+- Thanks @cross for change that allows using IPv6 address in config.yaml for remote harvesters and other chia services.
+- Change to stop creating unused indexes in block_records and full_blocks tables.
+- Removed unnecessary index in CoinStore & add additional benchmarks.
+- Changed db_sync setting to default to FULL. In a prior release, this setting caused some users to have to resync their full node from zero if the node went offline, such as in a power outage. Users can change this to OFF in config.yaml.
+- Updated the coin_store benchmark to enable synchronous mode when talking to the DB, since that's the default now, and improves the output a bit.
+- Updated the old comment on chia/util/streamable.py with newer developer documentation.
+- Minor GUI changes based on community feedback.
+- Thanks @jack60612 for your help in improving our GUI code, including upgrading to electron 13, migration to electron remote, updating the latest dependencies, and more.
+
+### Fixed
+
+- Corrected a super-linter name typo to GitHub
+- Thanks @sharjeelaziz for correcting our typo in your name. Our apologies for the error!
+- In macOS builds, changed the export value of NOTARIZE to fix some build failures.
+- Fix log output for duplicated plots.
+- Removed a flaky mtime check for plots that resolved an issue where file_path.stat() shows multiple copies of plots and slows performance of the farmer. Thanks @timporter for the assist on this one.
+- Thanks @jcteng for fixing a bug on the Chia DID wallet that showed 'mojo:'' instead of 'mojo'.
+
 ## 1.2.9 Chia blockchain 2021-10-01
 
 ### Changed

@@ -133,10 +133,9 @@ class FullNode:
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
 
-        if db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path):
-            await self.connection.execute("pragma synchronous=NORMAL")
-        else:
-            await self.connection.execute("pragma synchronous=OFF")
+        await self.connection.execute(
+            "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path))
+        )
 
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")

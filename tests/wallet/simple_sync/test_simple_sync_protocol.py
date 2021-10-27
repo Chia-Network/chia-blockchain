@@ -51,6 +51,11 @@ class TestSimpleSyncProtocol:
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
+    @pytest.fixture(scope="function")
+    async def wallet_two_node_simulator(self):
+        async for _ in setup_simulators_and_wallets(2, 1, {}):
+            yield _
+
     async def get_all_messages_in_queue(self, queue):
         all_messages = []
         await asyncio.sleep(2)
@@ -532,3 +537,87 @@ class TestSimpleSyncProtocol:
         )
         assert len(coin_records) == 1
         assert data_response.coin_states[0] == coin_records[0].coin_state
+
+    @pytest.mark.asyncio
+    async def test_subscribe_for_hint_long_sync(self, wallet_two_node_simulator):
+        num_blocks = 4
+        full_nodes, wallets = wallet_two_node_simulator
+        full_node_api = full_nodes[0]
+        full_node_api_1 = full_nodes[1]
+
+        wallet_node, server_2 = wallets[0]
+        fn_server = full_node_api.full_node.server
+        fn_server_1 = full_node_api_1.full_node.server
+
+        wsm: WalletStateManager = wallet_node.wallet_state_manager
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        incoming_queue, peer_id = await add_dummy_connection(fn_server, 12312, NodeType.WALLET)
+        incoming_queue_1, peer_id_1 = await add_dummy_connection(fn_server_1, 12313, NodeType.WALLET)
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+        ph = wt.get_new_puzzlehash()
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        await asyncio.sleep(6)
+        coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hashes(False, [ph])
+        coin_spent = coins[0].coin
+        hint_puzzle_hash = 32 * b"\2"
+        amount = 1
+        amount_bin = int_to_bytes(1)
+        hint = 32 * b"\5"
+
+        fake_wallet_peer = fn_server.all_connections[peer_id]
+        fake_wallet_peer_1 = fn_server_1.all_connections[peer_id_1]
+        msg = wallet_protocol.RegisterForPhUpdates([hint], 0)
+        msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
+        msg_response_1 = await full_node_api_1.register_interest_in_puzzle_hash(msg, fake_wallet_peer_1)
+
+        assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+        data_response: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response.data)
+        assert len(data_response.coin_states) == 0
+
+        condition_dict = {
+            ConditionOpcode.CREATE_COIN: [
+                ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint])
+            ]
+        }
+        tx: SpendBundle = wt.generate_signed_transaction(
+            10,
+            wt.get_new_puzzlehash(),
+            coin_spent,
+            condition_dic=condition_dict,
+        )
+        await full_node_api.respond_transaction(RespondTransaction(tx), fake_wallet_peer)
+
+        await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name())
+
+        # Create more blocks than recent "short_sync_blocks_behind_threshold" so that node enters batch
+        for i in range(0, 100):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        node1_height = full_node_api_1.full_node.blockchain.get_peak_height()
+        assert node1_height is None
+
+        await fn_server_1.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        node0_height = full_node_api.full_node.blockchain.get_peak_height()
+        await time_out_assert(15, full_node_api_1.full_node.blockchain.get_peak_height, node0_height)
+
+        all_messages = await self.get_all_messages_in_queue(incoming_queue)
+        all_messages_1 = await self.get_all_messages_in_queue(incoming_queue_1)
+
+        def check_messages_for_hint(messages):
+            notified_state = None
+
+            for message in messages:
+                if message.type == ProtocolMessageTypes.coin_state_update.value:
+                    data_response: CoinStateUpdate = CoinStateUpdate.from_bytes(message.data)
+                    notified_state = data_response
+                    break
+
+            assert notified_state is not None
+            assert notified_state.items[0].coin == Coin(coin_spent.name(), hint_puzzle_hash, amount)
+
+        check_messages_for_hint(all_messages)
+        check_messages_for_hint(all_messages_1)

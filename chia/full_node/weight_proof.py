@@ -1494,7 +1494,7 @@ def _get_curr_diff_ssi(constants: ConsensusConstants, idx, summaries):
     return curr_difficulty, curr_ssi
 
 
-def vars_to_bytes(constants, summaries, weight_proof):
+def vars_to_bytes(constants: ConsensusConstants, summaries: List[SubEpochSummary], weight_proof: WeightProof):
     constants_dict = recurse_jsonify(dataclasses.asdict(constants))
     wp_recent_chain_bytes = bytes(RecentChainData(weight_proof.recent_chain_data))
     wp_segment_bytes = bytes(SubEpochSegments(weight_proof.sub_epoch_segments))

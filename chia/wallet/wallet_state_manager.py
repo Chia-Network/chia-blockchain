@@ -144,10 +144,9 @@ class WalletStateManager:
         self.db_connection = await aiosqlite.connect(db_path)
         await self.db_connection.execute("pragma journal_mode=wal")
 
-        if db_synchronous_on(self.config.get("db_sync", "auto"), db_path):
-            await self.db_connection.execute("pragma synchronous=NORMAL")
-        else:
-            await self.db_connection.execute("pragma synchronous=OFF")
+        await self.db_connection.execute(
+            "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), db_path))
+        )
 
         self.db_wrapper = DBWrapper(self.db_connection)
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
@@ -444,10 +443,12 @@ class WalletStateManager:
         self.pending_tx_callback()
 
     async def synced(self):
-        latest = await self.blockchain.get_latest_tx_block()
+        latest = await self.blockchain.get_peak_block()
         if latest is None:
             return False
-        if latest.foliage_transaction_block.timestamp > int(time.time()) - 4 * 60:
+
+        latest_timestamp = self.blockchain.get_latest_timestamp()
+        if latest_timestamp > int(time.time()) - 4 * 60:
             return True
         return False
 
