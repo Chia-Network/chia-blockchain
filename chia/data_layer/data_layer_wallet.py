@@ -264,7 +264,7 @@ class DataLayerWallet:
         )
         # fake_for_signature = CoinSpend(my_coin, self.dl_info.current_inner_inner, inner_inner_sol)  # I am about to do something nasty
         # fake_sb = await self.standard_wallet.sign_transaction([fake_for_signature])
-        breakpoint()
+        # breakpoint()
         spend_bundle = await self.sign(coin_spend)
         new_info = DataLayerInfo(self.dl_info.origin_coin, root_hash, self.dl_info.parent_info, new_inner_inner_puzzle)
         await self.save_info(new_info, False)  # todo in_transaction false ?
