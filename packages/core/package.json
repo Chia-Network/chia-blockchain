@@ -19,7 +19,7 @@
   "dependencies": {
     "@babel/runtime": "^7.15.4",
     "@lingui/macro": "^3.12.1",
-    "@chia/icons": "../icons",
+    "@chia/icons": "^1.0.0",
     "@rehooks/local-storage": "^2.4.3",
     "bytes-iec": "^3.1.1",
     "cookie": "^0.4.1",

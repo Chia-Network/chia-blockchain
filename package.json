@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "clean": "lerna clean",
-    "bootstrap": "lerna bootstrap",
+    "bootstrap": "lerna bootstrap --nohoist packages/wallet",
     "version:major": "lerna version major",
     "version:minor": "lerna version minor",
     "version:patch": "lerna version patch",

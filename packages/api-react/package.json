@@ -23,13 +23,13 @@
     "regenerator-runtime": "^0.13.9"
   },
   "peerDependencies": {
-    "@chia/api": "../api",
+    "@chia/api": "^1.0.0",
     "@reduxjs/toolkit": "^1.6.2",
     "react-redux": "^7.2.5"
   },
   "devDependencies": {
     "@babel/core": "7.15.8",
-    "@chia/api": "../api",
+    "@chia/api": "^1.0.0",
     "@babel/plugin-proposal-class-properties": "^7.14.5",
     "@babel/plugin-proposal-export-default-from": "^7.14.5",
     "@babel/plugin-transform-runtime": "^7.15.8",
