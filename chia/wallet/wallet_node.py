@@ -705,7 +705,7 @@ class WalletNode:
                             or weight_proof.recent_chain_data[-1].weight
                             > self.wallet_state_manager.blockchain.synced_weight_proof.recent_chain_data[-1].weight
                         ):
-                            await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof)
+                            await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
 
                         self.synced_peers.add(peer.peer_node_id)
 
@@ -1007,7 +1007,7 @@ class WalletNode:
                 old_wp=self.wallet_state_manager.blockchain.synced_weight_proof, new_wp=weight_proof
             )
             # Extra conservative
-            fork_height = max(0, wp_fork_point - 1000)
+            fork_height = max(0, wp_fork_point - 10)
         self.log.info(f"Starting untrusted sync to: {peer.get_peer_info()}, syncing: {syncing}, fork at: {fork_height}")
         if syncing:
             self.log.info(f"Rollback for {fork_height}")
@@ -1060,11 +1060,26 @@ class WalletNode:
         all_validated_states = []
         total = len(coin_states)
         for coin_idx, coin_state in enumerate(coin_states):
-            self.log.info(f"Validating {coin_idx} of {total}")
             if coin_state.get_hash() in peer_request_cache.states_validated:
                 all_validated_states.append(coin_state)
                 continue
-
+            looked_up_coin: Optional[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_coin_record(
+                coin_state.coin.name()
+            )
+            if (
+                looked_up_coin is not None
+                and coin_state.created_height is not None
+                and looked_up_coin.confirmed_block_height == coin_state.created_height
+            ):
+                if looked_up_coin.spent:
+                    if looked_up_coin.spent_block_height == coin_state.spent_height:
+                        # Both are spent and created at same height, no need to validate
+                        continue
+                else:
+                    if coin_state.spent_height is None:
+                        # Both are not spent, no need to validate
+                        continue
+            self.log.info(f"Validating {coin_idx} of {total}")
             spent_height = coin_state.spent_height
             confirmed_height = coin_state.created_height
 

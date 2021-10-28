@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
@@ -55,7 +55,7 @@ class WalletBlockchain(BlockchainInterface):
             await self.new_weight_proof(self.synced_weight_proof)
         return self
 
-    async def new_weight_proof(self, weight_proof: WeightProof) -> None:
+    async def new_weight_proof(self, weight_proof: WeightProof, records: Optional[List[BlockRecord]] = None) -> None:
         peak: Optional[HeaderBlock] = await self.get_peak_block()
 
         if peak is not None and weight_proof.recent_chain_data[-1].weight <= peak.weight:
@@ -66,8 +66,9 @@ class WalletBlockchain(BlockchainInterface):
 
         latest_timestamp = self._latest_timestamp
 
-        success, _, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
-        assert success
+        if records is None:
+            success, _, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
+            assert success
 
         for record in records:
             self._height_to_hash[record.height] = record.header_hash
