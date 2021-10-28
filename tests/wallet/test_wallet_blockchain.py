@@ -71,15 +71,15 @@ class TestWalletBlockchain:
             assert chain.get_peak_height() == 0
             assert chain.get_latest_timestamp() == 0
 
-            await chain.new_weight_proof(weight_proof, wallet_node.wallet_state_manager.weight_proof_handler)
+            await chain.new_weight_proof(weight_proof)
             assert (await chain.get_peak_block()) is not None
             assert chain.get_peak_height() == 499
             assert chain.get_latest_timestamp() > 0
 
-            await chain.new_weight_proof(weight_proof_short, wallet_node.wallet_state_manager.weight_proof_handler)
+            await chain.new_weight_proof(weight_proof_short)
             assert chain.get_peak_height() == 499
 
-            await chain.new_weight_proof(weight_proof_long, wallet_node.wallet_state_manager.weight_proof_handler)
+            await chain.new_weight_proof(weight_proof_long)
             assert chain.get_peak_height() == 505
 
             header_blocks = []
