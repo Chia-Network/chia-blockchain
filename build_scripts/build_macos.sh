@@ -39,8 +39,8 @@ cd .. || exit
 cd chia-blockchain-gui || exit
 
 echo "npm build"
-lerna exec npm install
-lerna run build --scope @chia/wallet
+npm install
+npm run build
 
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
