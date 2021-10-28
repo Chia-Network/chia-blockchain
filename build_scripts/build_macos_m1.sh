@@ -19,6 +19,7 @@ npm install electron-installer-dmg -g
 npm install electron-packager -g
 npm install electron/electron-osx-sign -g
 npm install notarize-cli -g
+npm install lerna -g
 
 echo "Create dist/"
 sudo rm -rf dist
@@ -35,14 +36,14 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "pyinstaller failed!"
 	exit $LAST_EXIT_CODE
 fi
-cp -r dist/daemon ../chia-blockchain-gui
+cp -r dist/daemon ../chia-blockchain-gui/packages/wallet
 cd .. || exit
 cd chia-blockchain-gui || exit
 
 echo "npm build"
 npm install
-npm run audit:fix
 npm run build
+
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "npm run build failed!"
@@ -80,8 +81,8 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-mv Chia-darwin-arm64 ../build_scripts/dist/
-cd ../build_scripts || exit
+mv Chia-darwin-arm64 ../../../build_scripts/dist/
+cd ../../../build_scripts || exit
 
 DMG_NAME="Chia-$CHIA_INSTALLER_VERSION-arm64.dmg"
 echo "Create $DMG_NAME"
