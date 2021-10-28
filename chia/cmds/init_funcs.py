@@ -23,7 +23,6 @@ from chia.util.config import (
     save_config,
     unflatten_properties,
 )
-from chia.util.ints import uint32
 from chia.util.keychain import Keychain
 from chia.util.path import mkdir
 from chia.util.ssl_check import (
@@ -36,8 +35,6 @@ from chia.util.ssl_check import (
 )
 from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
-    master_sk_to_wallet_sk,
-    master_sk_to_wallet_sk_unhardened,
     master_sk_to_wallet_sk_intermediate,
     master_sk_to_wallet_sk_unhardened_intermediate,
     _derive_path,

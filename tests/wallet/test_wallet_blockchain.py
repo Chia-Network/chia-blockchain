@@ -1,24 +1,19 @@
 import asyncio
 import dataclasses
 from pathlib import Path
-from secrets import token_bytes
-from typing import Optional, List
 
 import aiosqlite
 import pytest
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.protocols import full_node_protocol
 from chia.types.blockchain_format.vdf import VDFProof
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import WeightProof
 from chia.util.db_wrapper import DBWrapper
 from chia.util.generator_tools import get_block_header
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
-from tests.setup_nodes import bt, test_constants, setup_node_and_wallet
+from tests.setup_nodes import test_constants, setup_node_and_wallet
 
 
 @pytest.fixture(scope="session")
@@ -60,8 +55,6 @@ class TestWalletBlockchain:
         weight_proof_short: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_2.data).wp
         weight_proof_long: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_3.data).wp
 
-        wallet = wallet_node.wallet_state_manager.main_wallet
-
         db_filename = Path("wallet_store_test.db")
 
         if db_filename.exists():
@@ -70,7 +63,9 @@ class TestWalletBlockchain:
         db_connection = await aiosqlite.connect(db_filename)
         db_wrapper = DBWrapper(db_connection)
         store = await KeyValStore.create(db_wrapper)
-        chain = await WalletBlockchain.create(store, constants=test_constants)
+        chain = await WalletBlockchain.create(
+            store, test_constants, wallet_node.wallet_state_manager.weight_proof_handler
+        )
         try:
             assert (await chain.get_peak_block()) is None
             assert chain.get_peak_height() == 0

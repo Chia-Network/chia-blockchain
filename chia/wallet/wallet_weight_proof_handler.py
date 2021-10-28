@@ -4,9 +4,10 @@ import pathlib
 import random
 import tempfile
 from concurrent.futures.process import ProcessPoolExecutor
-from typing import IO, List, Tuple, Any, Optional
+from typing import IO, List, Tuple, Optional
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.weight_proof import (
     _validate_sub_epoch_summaries,
@@ -37,15 +38,12 @@ class WalletWeightProofHandler:
     LAMBDA_L = 100
     C = 0.5
     MAX_SAMPLES = 20
-    _blockchain: Any
 
     def __init__(
         self,
         constants: ConsensusConstants,
-        blockchain: Any,
     ):
         self._constants = constants
-        self._blockchain = blockchain
         self._num_processes = 4
         self._executor_shutdown_tempfile: IO = _create_shutdown_file()
         self._executor: ProcessPoolExecutor = ProcessPoolExecutor(self._num_processes)
@@ -156,9 +154,9 @@ class WalletWeightProofHandler:
         # TODO fix find fork point
         return True, uint32(0), summaries, records
 
-    def get_recent_chain_fork(self, new_wp: WeightProof) -> uint32:
+    def get_recent_chain_fork(self, new_wp: WeightProof, blockchain: BlockchainInterface) -> uint32:
         for nblock in reversed(new_wp.recent_chain_data):
-            if self._blockchain.contains_block(nblock.prev_header_hash):
+            if blockchain.contains_block(nblock.prev_header_hash):
                 return uint32(nblock.height - 1)
 
         return uint32(0)

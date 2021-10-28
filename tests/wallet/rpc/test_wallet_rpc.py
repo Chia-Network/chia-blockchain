@@ -37,8 +37,12 @@ class TestWalletRpc:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_wallet_rpc(self, two_wallet_nodes):
+    async def test_wallet_rpc(self, two_wallet_nodes, trusted):
         test_rpc_port = uint16(21529)
         test_rpc_port_2 = uint16(21536)
         test_rpc_port_node = uint16(21530)
@@ -55,6 +59,13 @@ class TestWalletRpc:
 
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -274,7 +285,7 @@ class TestWalletRpc:
 
             bal_0 = await client.get_wallet_balance(cat_0_id)
             assert bal_0["confirmed_wallet_balance"] == 0
-            assert bal_0["pending_coin_removal_count"] == 2
+            assert bal_0["pending_coin_removal_count"] == 1
             col = await client.get_cat_colour(cat_0_id)
             assert col == colour
             assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"
@@ -419,7 +430,6 @@ class TestWalletRpc:
             # Delete all keys
             await client.delete_all_keys()
             assert len(await client.get_public_keys()) == 0
-
         finally:
             # Checks that the RPC manages to stop the node
             client.close()

@@ -156,11 +156,11 @@ class WalletStateManager:
         self.trade_manager = await TradeManager.create(self, self.db_wrapper)
         self.user_settings = await UserSettings.create(self.basic_store)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
-        self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants)
 
         self.wallet_node = wallet_node
         self.sync_mode = False
-        self.weight_proof_handler = WalletWeightProofHandler(self.constants, self.blockchain)
+        self.weight_proof_handler = WalletWeightProofHandler(self.constants)
+        self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants, self.weight_proof_handler)
 
         self.state_changed_callback = None
         self.pending_tx_callback = None
@@ -444,8 +444,12 @@ class WalletStateManager:
         latest = await self.blockchain.get_peak_block()
         if latest is None:
             return False
-        if latest.foliage_transaction_block.timestamp > int(time.time()) - 4 * 60:
+
+        latest_timestamp = self.blockchain.get_latest_timestamp()
+
+        if latest_timestamp > int(time.time()) - 4 * 60:
             return True
+        self.log.warning(f"LATEST TIMESTAMP {latest_timestamp}")
         return False
 
     def set_sync_mode(self, mode: bool):
