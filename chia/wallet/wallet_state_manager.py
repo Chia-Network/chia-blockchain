@@ -449,7 +449,6 @@ class WalletStateManager:
 
         if latest_timestamp > int(time.time()) - 4 * 60:
             return True
-        self.log.warning(f"LATEST TIMESTAMP {latest_timestamp}")
         return False
 
     def set_sync_mode(self, mode: bool):

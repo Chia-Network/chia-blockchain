@@ -27,5 +27,5 @@ DEFAULT_CATS = {
     ASTEROID["asset_id"]: ASTEROID,
     WATER["asset_id"]: WATER,
     ENERGY["asset_id"]: ENERGY,
-    MARMOTCOIN["asset_id"]: MARMOTCOIN
+    MARMOTCOIN["asset_id"]: MARMOTCOIN,
 }

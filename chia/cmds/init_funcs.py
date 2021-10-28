@@ -104,8 +104,6 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
                     create_puzzlehash_for_pk(_derive_path_unhardened(intermediates[bytes(sk)][1], [i]).get_g1()), prefix
                 )
             )
-            print("All_targets[-1]", all_targets[-1])
-            print("All_targets[-2]", all_targets[-2])
 
             if all_targets[-1] == config["farmer"].get("xch_target_address"):
                 stop_searching_for_farmer = True
