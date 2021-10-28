@@ -36,7 +36,6 @@ from chia.wallet.cc_wallet.cc_utils import (
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.genesis_by_coin_id_with_0 import (
     create_genesis_or_zero_coin_checker,
-    genesis_coin_id_for_genesis_coin_checker,
     lineage_proof_for_genesis,
 )
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
