@@ -30,6 +30,17 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name) -> None:
         print(f"Amount {'sent' if tx.sent else 'received'}: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
+        memos_dict = tx.get_memos()
+        if len(memos_dict) > 0:
+            print("Memos:")
+            for coin_id, memos in memos_dict.items():
+                print(coin_id)
+                for memo in memos:
+                    try:
+                        decoded = memo.decode("utf-8")
+                        print(f"   - {decoded}")
+                    except Exception:
+                        print(f"   - {memo.hex()}")
         print("")
 
 
@@ -76,11 +87,17 @@ def check_unusual_transaction(amount: Decimal, fee: Decimal):
 
 
 async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+
     wallet_id = args["id"]
     amount = Decimal(args["amount"])
     fee = Decimal(args["fee"])
     address = args["address"]
     override = args["override"]
+    memo = args["memo"]
+    if memo is None:
+        memos = None
+    else:
+        memos = [memo]
 
     if not override and check_unusual_transaction(amount, fee):
         print(
@@ -88,10 +105,29 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             f"Pass in --override if you are sure you mean to do this."
         )
         return
-    print("Submitting transaction...")
-    final_amount = uint64(int(amount * units["chia"]))
+
+    summaries_response = await wallet_client.get_wallets()
+    final_amount: Optional[uint64] = None
     final_fee = uint64(int(fee * units["chia"]))
-    res = await wallet_client.send_transaction(wallet_id, final_amount, address, final_fee)
+    for summary in summaries_response:
+        if int(wallet_id) == int(summary["id"]):
+            typ: WalletType = WalletType(int(summary["type"]))
+            if typ == WalletType.STANDARD_WALLET:
+                final_amount = uint64(int(amount * units["chia"]))
+                print("Submitting transaction...")
+                res = await wallet_client.send_transaction(wallet_id, final_amount, address, final_fee, memos)
+                break
+            elif typ == WalletType.COLOURED_COIN:
+                final_amount = uint64(int(amount * units["colouredcoin"]))
+                print("Submitting transaction...")
+                res = await wallet_client.cat_spend(wallet_id, final_amount, address, final_fee, memos)
+                break
+            else:
+                print("Only standard wallet and CAT wallets are supported")
+                return
+    if final_amount is None:
+        print(f"Wallet id: {wallet_id} not found.")
+        return
     tx_id = res.name
     start = time.time()
     while time.time() - start < 10:
