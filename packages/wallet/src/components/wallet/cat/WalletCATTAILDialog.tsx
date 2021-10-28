@@ -41,7 +41,7 @@ export default function WalletCATTAILDialog(props: Props) {
       open={open}
     >
       <DialogTitle id="alert-dialog-title">
-        <Trans>Token and Asset Issuance Limitations</Trans>
+        <Trans>Asset Id</Trans>
       </DialogTitle>
 
       <DialogContent dividers>
@@ -54,7 +54,7 @@ export default function WalletCATTAILDialog(props: Props) {
             <Box display="flex">
               <Box flexGrow={1}>
                 <TextField
-                  label={<Trans>Token and Asset Issuance Limitations</Trans>}
+                  label={<Trans>Asset Id</Trans>}
                   value={wallet.meta?.tail}
                   variant="filled"
                   InputProps={{

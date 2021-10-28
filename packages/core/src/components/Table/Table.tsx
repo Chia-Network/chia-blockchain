@@ -1,4 +1,4 @@
-import React, { ReactNode, useMemo, useState, SyntheticEvent } from 'react';
+import React, { ReactNode, useMemo, useState, SyntheticEvent, Fragment } from 'react';
 import styled from 'styled-components';
 import { get } from 'lodash';
 import {
@@ -11,6 +11,7 @@ import {
   Paper,
   Tooltip,
   TablePagination,
+  Collapse,
 } from '@material-ui/core';
 
 const StyledTableHead = styled(TableHead)`
@@ -20,10 +21,15 @@ const StyledTableHead = styled(TableHead)`
 `;
 
 export const StyledTableRow = styled(TableRow)`
-  &:nth-of-type(even) {
+  &:nth-of-type(3n) {
     background-color: ${({ theme }) =>
       theme.palette.type === 'dark' ? '#515151' : '#FAFAFA'};
   }
+`;
+
+const StyledExpandedTableRow = styled(TableRow)`
+  background-color: ${({ theme }) =>
+    theme.palette.type === 'dark' ? '#1E1E1E' : '#FAFAFA'};
 `;
 
 const StyledTableCell = styled(({ width, minWidth, maxWidth, ...rest }) => (
@@ -39,6 +45,14 @@ const StyledTableCellContent = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+`;
+
+const StyledExpandedTableCell = styled(TableCell)`
+  border: 0;
+`;
+
+const StyledExpandedTableCellContent = styled.div`
+  padding: 1rem 0;
 `;
 
 export type Col = {
@@ -71,6 +85,9 @@ type Props = {
   onRowClick?: (e: SyntheticEvent, row: Row) => void;
   rowHover?: boolean;
   uniqueField?: string;
+  metadata?: any;
+  expandedField?: (row: Row) => ReactNode;
+  expandedCellShift?: number;
 };
 
 export default function Table(props: Props) {
@@ -86,11 +103,25 @@ export default function Table(props: Props) {
     onRowClick,
     rowHover,
     uniqueField,
+    metadata,
+    expandedField,
+    expandedCellShift,
   } = props;
+  const [expanded, setExpanded] = useState<{
+    [key: string]: boolean;
+  }>({});
   const [page, setPage] = useState<number>(0);
   const [rowsPerPage, setRowsPerPage] = useState<number>(
     defaultRowsPerPage ?? 10,
   );
+
+  function handleToggleExpand(rowId: string) {
+    console.log(expanded[rowId], rowId);
+    setExpanded({
+      ...expanded,
+      [rowId]: !expanded[rowId],
+    });
+  }
 
   function handleChangePage(
     event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null,
@@ -163,52 +194,78 @@ export default function Table(props: Props) {
         )}
         <TableBody>
           {children}
-          {currentRows.map((row) => (
-            <StyledTableRow
-              key={row.$uniqueId}
-              onClick={(e) => handleRowClick(e, row)}
-              hover={rowHover}
-            >
-              {currentCols.map((col) => {
-                const { field, tooltip } = col;
-                const value =
-                  typeof field === 'function'
-                    ? field(row)
-                    : // @ts-ignore
-                      get(row, field);
+          {currentRows.map((row) => {
+            const id = row.$uniqueId.toString();
+            const isExpanded = !!expanded[id];
+            const expandableCells = [];
 
-                let tooltipValue;
-                if (tooltip) {
-                  if (tooltip === true) {
-                    tooltipValue = value;
-                  } else {
-                    tooltipValue =
-                      typeof tooltip === 'function'
-                        ? tooltip(row)
+            for (let i = 0; i < expandedCellShift; i += 1) {
+              expandableCells.push((
+                <StyledExpandedTableCell key={i} style={{ paddingBottom: 0, paddingTop: 0 }}>
+                </StyledExpandedTableCell>
+              ));
+            }
+
+            return (
+              <Fragment key={id}>
+                <StyledTableRow
+                  
+                  onClick={(e) => handleRowClick(e, row)}
+                  hover={rowHover}
+                >
+                  {currentCols.map((col) => {
+                    const { field, tooltip } = col;
+
+                    const value =
+                      typeof field === 'function'
+                        ? field(row, metadata, isExpanded, () => handleToggleExpand(id))
                         : // @ts-ignore
-                          get(row, tooltip);
-                  }
-                }
+                          get(row, field);
 
-                return (
-                  <StyledTableCell
-                    minWidth={col.minWidth}
-                    maxWidth={col.maxWidth}
-                    width={col.width}
-                    key={col.key}
-                  >
-                    {tooltipValue ? (
-                      <Tooltip title={tooltipValue}>
-                        <StyledTableCellContent>{value}</StyledTableCellContent>
-                      </Tooltip>
-                    ) : (
-                      <StyledTableCellContent>{value}</StyledTableCellContent>
-                    )}
-                  </StyledTableCell>
-                );
-              })}
-            </StyledTableRow>
-          ))}
+                    let tooltipValue;
+                    if (tooltip) {
+                      if (tooltip === true) {
+                        tooltipValue = value;
+                      } else {
+                        tooltipValue =
+                          typeof tooltip === 'function'
+                            ? tooltip(row)
+                            : // @ts-ignore
+                              get(row, tooltip);
+                      }
+                    }
+
+                    return (
+                      <StyledTableCell
+                        minWidth={col.minWidth}
+                        maxWidth={col.maxWidth}
+                        width={col.width}
+                        key={col.key}
+                      >
+                        {tooltipValue ? (
+                          <Tooltip title={tooltipValue}>
+                            <StyledTableCellContent>{value}</StyledTableCellContent>
+                          </Tooltip>
+                        ) : (
+                          <StyledTableCellContent>{value}</StyledTableCellContent>
+                        )}
+                      </StyledTableCell>
+                    );
+                  })}
+                </StyledTableRow>
+                <StyledExpandedTableRow>
+                  {expandableCells}
+                  <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={cols.length - expandedCellShift}>
+                    <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                      <StyledExpandedTableCellContent>
+                        {expandedField && expandedField(row)}
+                      </StyledExpandedTableCellContent>
+                    </Collapse>
+                  </TableCell>
+                </StyledExpandedTableRow>
+              </Fragment>
+            );
+          })}
         </TableBody>
       </TableBase>
       {pages && (
@@ -235,4 +292,7 @@ Table.defaultProps = {
   children: undefined,
   rowHover: false,
   uniqueField: undefined,
+  metadata: undefined,
+  expandable: false,
+  expandedCellShift: 0,
 };

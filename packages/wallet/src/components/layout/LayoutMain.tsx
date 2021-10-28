@@ -16,6 +16,10 @@ const StyledInnerContainer = styled(Flex)`
   flex-grow: 1;
 `;
 
+const StyledBody = styled(Flex)`
+  min-width: 0;
+`;
+
 type Props = {
   children?: ReactElement<any>;
   title?: ReactNode;
@@ -34,7 +38,7 @@ export default function LayoutMain(props: Props) {
       <StyledInnerContainer flexDirection="column">
         {bodyHeader}
         <StyledContainer maxWidth="lg">
-          <Flex flexDirection="column" gap={2} flexGrow="1">
+          <StyledBody flexDirection="column" gap={2} flexGrow="1">
             {loading ? (
               <Flex
                 flexDirection="column"
@@ -47,7 +51,7 @@ export default function LayoutMain(props: Props) {
             ) : (
               children
             )}
-          </Flex>
+          </StyledBody>
         </StyledContainer>
       </StyledInnerContainer>
     </>

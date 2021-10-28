@@ -23,7 +23,7 @@ export default function WalletBadge(props: Props) {
     const token = catList.find((token) => token.assetId === wallet.meta?.tail);
     if (token) {
       return (
-        <Tooltip title={<Trans>This access token is whitelisted</Trans>}>
+        <Tooltip title={<Trans>This access token is verified</Trans>}>
           <StyledSmallBadge {...rest} />
         </Tooltip>
       );
