@@ -138,7 +138,7 @@ class WalletBlockchain(BlockchainInterface):
     async def _rollback_to_height(self, height: int):
         if self._peak is None:
             return
-        for h in range(max(0, height), self._peak.height + 1):
+        for h in range(max(0, height + 1), self._peak.height + 1):
             del self._height_to_hash[uint32(h)]
 
         await self._basic_store.remove_object("PEAK_BLOCK")
