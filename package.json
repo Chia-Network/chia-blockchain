@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "clean": "lerna clean",
-    "bootstrap": "lerna bootstrap --hoist",
+    "bootstrap": "lerna bootstrap",
     "version:major": "lerna version major",
     "version:minor": "lerna version minor",
     "version:patch": "lerna version patch",
