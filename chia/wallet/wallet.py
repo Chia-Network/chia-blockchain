@@ -177,7 +177,9 @@ class Wallet:
 
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
-        return puzzle_for_pk(bytes(dr.pubkey))
+        puzzle = puzzle_for_pk(bytes(dr.pubkey))
+        await self.hack_populate_secret_key_for_puzzle_hash(puzzle.get_tree_hash())
+        return puzzle
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
         if new:
@@ -191,7 +193,9 @@ class Wallet:
             return record.puzzle_hash
 
     async def get_new_puzzlehash(self, in_transaction: bool = False) -> bytes32:
-        return (await self.wallet_state_manager.get_unused_derivation_record(self.id(), in_transaction)).puzzle_hash
+        puzhash = (await self.wallet_state_manager.get_unused_derivation_record(self.id(), in_transaction)).puzzle_hash
+        await self.hack_populate_secret_key_for_puzzle_hash(puzhash)
+        return puzhash
 
     def make_solution(
         self,
