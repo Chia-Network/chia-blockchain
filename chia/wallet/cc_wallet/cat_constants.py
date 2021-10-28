@@ -22,10 +22,16 @@ MARMOTCOIN = {
     "symbol": "MRT",
 }
 
+HISPANIC_TOOLKIT = {
+    "asset_id": "a8b30b328a778f663ed46676cd52c4b2dde3801b0c2e39f1d64122c9de7723ec",
+    "name": "Hispanic Toolkit",
+    "symbol": "HTK",
+}
 
 DEFAULT_CATS = {
     ASTEROID["asset_id"]: ASTEROID,
     WATER["asset_id"]: WATER,
     ENERGY["asset_id"]: ENERGY,
     MARMOTCOIN["asset_id"]: MARMOTCOIN,
+    HISPANIC_TOOLKIT["asset_id"]: HISPANIC_TOOLKIT,
 }
