@@ -8,7 +8,6 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.config import load_config, save_config
 import logging
-from pathlib import Path
 
 import pytest
 
@@ -416,11 +415,6 @@ class TestWalletRpc:
             assert len(wallets) == 1
             balance = await client.get_wallet_balance(wallets[0]["id"])
             assert balance["unconfirmed_wallet_balance"] == 0
-
-            test_wallet_backup_path = Path("test_wallet_backup_file")
-            await client.create_backup(test_wallet_backup_path)
-            assert test_wallet_backup_path.exists()
-            test_wallet_backup_path.unlink()
 
             try:
                 await client.send_transaction(wallets[0]["id"], 100, addr)
