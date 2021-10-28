@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.2.11 Chia blockchain 2021-10-27 (unreleased)
+
+This maintenance release squashes bugs reported by our Chia community. Thanks to all who flagged these issues.
+
+### Changed
+
+- Improved the wallet GUI's startup loading time by  loading the default private key's fingerprint.
+- Upgraded from clvm_rs 0.1.14 to 0.1.15.
+
+### Fixed
+
+- Fixed a packaging failure when passphrase is being used. Thanks @ForkFarmer for reporting this defect.
+- Fixed launcher name definition, which resolved an issue for some users in which wallet-node couldn't sync.
+- Fixed a bug in the GUI that prevented some users from switching their plotNFT.
+
 ## 1.2.10 Chia blockchain 2021-10-25
 
 We have some great improvements in this release: We launched our migration of keys to a common encrypted keyring.yaml file, and we secure this with an optional passphrase in both GUI and CLI. We've added a passphrase hint in case you forget your passphrase. More info on our [wiki](https://github.com/Chia-Network/chia-blockchain/wiki/Passphrase-Protected-Chia-Keys-and-Key-Storage-Migration). We also launched a new Chialisp compiler in clvm_tools_rs which substantially improves compile time for Chialisp developers. We also addressed a widely reported issue in which a system failure, such as a power outage, would require some farmers to sync their full node from zero. This release also includes several other improvements and fixes.
@@ -33,7 +48,7 @@ We have some great improvements in this release: We launched our migration of ke
 - Updated the coin_store benchmark to enable synchronous mode when talking to the DB, since that's the default now, and improves the output a bit.
 - Updated the old comment on chia/util/streamable.py with newer developer documentation.
 - Minor GUI changes based on community feedback.
-- Thanks @jack60612 for your help in improving our GUI code, including upgrading to electron 13, migration to electron remote, updating the latest dependencies, and more.  
+- Thanks @jack60612 for your help in improving our GUI code, including upgrading to electron 13, migration to electron remote, updating the latest dependencies, and more.
 
 ### Fixed
 
