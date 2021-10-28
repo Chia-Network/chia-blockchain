@@ -320,8 +320,6 @@ class PlotManager:
             filename_str = str(file_path)
             if self.match_str is not None and self.match_str not in filename_str:
                 return None
-            if not file_path.exists():
-                return None
             if (
                 file_path in self.failed_to_open_filenames
                 and (time.time() - self.failed_to_open_filenames[file_path])
@@ -340,6 +338,9 @@ class PlotManager:
                     log.debug(f"Skip duplicated plot {str(file_path)}")
                     return None
             try:
+                if not file_path.exists():
+                    return None
+
                 prover = DiskProver(str(file_path))
 
                 log.debug(f"process_file {str(file_path)}")
