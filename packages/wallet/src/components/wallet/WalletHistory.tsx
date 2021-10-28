@@ -19,6 +19,7 @@ const StyledTableCellSmall = styled(TableCell)`
   border-bottom: 0;
   padding-left: 0;
   padding-right: 0 !important;
+  vertical-align: top;
 `;
 
 const StyledTableCellSmallRight = styled(StyledTableCellSmall)`
@@ -51,7 +52,7 @@ const getCols = (type: WalletType) => [
     width: '100%',
     field: (row: Row) => {
       const { confirmed: isConfirmed, memos  } = row;
-      const hasMemos = memos && memos.length;
+      const hasMemos = !!memos && !!Object.values(memos).length;
 
       return (
         <Flex flexDirection="column" gap={1}>
@@ -155,33 +156,6 @@ export default function WalletHistory(props: Props) {
     unit,
   }), [unit]);
 
-/*
-  const transactions = [{
-    toAddress: 'asdfsdfsdfsdfsdfsdfdsfsdasdfsdfsdfsdfsdfsdfdsfsd',
-    fee: '10',
-    amount: '123231000000000',
-    confirmed: false,
-    createdAtTime: Date.now() / 1000,
-  }, {
-    toAddress: 'asdfsdfsdfsdfsdfsdfdsfsdasdfsdfsdfsdfsdfsdfdsfsd',
-    fee: '10',
-    amount: '123231000000000',
-    confirmed: true,
-    createdAtTime: Date.now() / 1000,
-    type: TransactionType.OUTGOING,
-  }, {
-    toAddress: 'asdfsdfsdfsdfsdfsdfdsfsdasdfsdfsdfsdfsdfsdfdsfsd',
-    fee: '10',
-    amount: '123231000000000',
-    confirmed: false,
-    createdAtTime: Date.now() / 1000,
-    type: TransactionType.OUTGOING,
-    memos: ['Test', 'Memo 2'],
-  }]
-  */
-  
-  console.log('transactions', transactions);
-
   const cols = useMemo(() => {
     if (!wallet) {
       return [];
@@ -206,11 +180,27 @@ export default function WalletHistory(props: Props) {
           expandedCellShift={1}
           expandedField={(row) => {
             const { confirmedAtHeight, memos } = row;
+            const memoValues = Object.values(memos);
+            const memoValuesDecoded = memoValues.map((memoHex) => {
+              try {
+                const buf = new Buffer(memoHex, 'hex');
+                const decodedValue = buf.toString('utf8');
 
-            const memosDescription = memos && memos.length 
+                const bufCheck = Buffer.from(decodedValue, 'utf8');
+                if (bufCheck.toString('hex') !== memoHex) {
+                  throw new Error('Memo is not valid utf8 string');
+                }
+
+                return decodedValue;
+              } catch(error: any) {
+                return memoHex;
+              }
+            });
+            
+            const memosDescription = memoValuesDecoded && memoValuesDecoded.length 
               ? (
                 <Flex flexDirection="column">
-                  {memos.map((memo, index) => (
+                  {memoValuesDecoded.map((memo, index) => (
                     <Typography variant="inherit" key={index}>
                       {memo ?? ''}
                     </Typography>
