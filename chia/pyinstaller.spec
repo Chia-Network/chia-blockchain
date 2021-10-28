@@ -73,6 +73,9 @@ hiddenimports.extend(keyring_imports)
 binaries = [
     (
         f"{ROOT}/madmax/chia_plot",
+        "madmax"
+    ),
+    (
         f"{ROOT}/madmax/chia_plot_k34",
         "madmax"
     )
