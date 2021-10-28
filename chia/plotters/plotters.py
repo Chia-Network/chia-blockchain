@@ -367,3 +367,4 @@ def get_available_plotters(root_path) -> Dict[str, Any]:
         plotters["madmax"] = madmax
 
     return plotters
+
