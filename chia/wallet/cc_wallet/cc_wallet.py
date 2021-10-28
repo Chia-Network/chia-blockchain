@@ -615,8 +615,6 @@ class CCWallet:
         if self.cc_info.my_genesis_checker is None:
             raise ValueError("My genesis checker is None")
 
-        genesis_id = genesis_coin_id_for_genesis_coin_checker(self.cc_info.my_genesis_checker)
-
         spendable_cc_list = []
         innersol_list = []
         sigs: List[G2Element] = []
@@ -634,7 +632,7 @@ class CCWallet:
             innersol_list.append(innersol)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
-            spendable_cc_list.append(SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof))
+            spendable_cc_list.append(SpendableCC(coin, inner_puzzle, lineage_proof))
             sigs = sigs + await self.get_sigs(coin_inner_puzzle, innersol, coin.name())
 
         spend_bundle = spend_bundle_for_spendable_ccs(

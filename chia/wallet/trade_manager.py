@@ -454,7 +454,6 @@ class TradeManager:
             my_output_coin = my_cc_spends.pop()
             spendable_cc_list = []
             innersol_list = []
-            genesis_id = genesis_coin_id_for_genesis_coin_checker(Program.from_bytes(bytes.fromhex(colour)))
             # Make the rest of the coins assert the output coin is consumed
             for coloured_coin in my_cc_spends:
                 inner_solution = self.wallet_state_manager.main_wallet.make_solution(consumed=[my_output_coin.name()])
@@ -466,7 +465,7 @@ class TradeManager:
                 aggsig = AugSchemeMPL.aggregate(sigs)
 
                 lineage_proof = await wallets[colour].get_lineage_proof_for_coin(coloured_coin)
-                spendable_cc_list.append(SpendableCC(coloured_coin, genesis_id, inner_puzzle, lineage_proof))
+                spendable_cc_list.append(SpendableCC(coloured_coin, inner_puzzle, lineage_proof))
                 innersol_list.append(inner_solution)
 
             # Create SpendableCC for each of the coloured coins received
@@ -480,7 +479,7 @@ class TradeManager:
                     mod_hash, genesis_coin_checker, inner_puzzle = r
                     inner_solution = solution.first()
                     lineage_proof = solution.rest().rest().first()
-                    spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))
+                    spendable_cc_list.append(SpendableCC(cc_coinsol.coin, inner_puzzle, lineage_proof))
                     innersol_list.append(inner_solution)
 
             # Finish the output coin SpendableCC with new information
@@ -493,7 +492,7 @@ class TradeManager:
             assert inner_puzzle is not None
 
             lineage_proof = await wallets[colour].get_lineage_proof_for_coin(my_output_coin)
-            spendable_cc_list.append(SpendableCC(my_output_coin, genesis_id, inner_puzzle, lineage_proof))
+            spendable_cc_list.append(SpendableCC(my_output_coin, inner_puzzle, lineage_proof))
             innersol_list.append(inner_solution)
 
             sigs = await wallets[colour].get_sigs(inner_puzzle, inner_solution, my_output_coin.name())

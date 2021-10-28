@@ -30,7 +30,6 @@ ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 @dataclasses.dataclass
 class SpendableCC:
     coin: Coin
-    genesis_coin_id: bytes32
     inner_puzzle: Program
     lineage_proof: Program
 
@@ -244,9 +243,7 @@ def spendable_cc_list_from_coin_spend(coin_spend: CoinSpend, hash_to_puzzle_f) -
 
         mod_hash, genesis_coin_checker, inner_puzzle = r
 
-        genesis_coin_id = genesis_coin_id_for_genesis_coin_checker(genesis_coin_checker)
-
-        cc_spend_info = SpendableCC(new_coin, genesis_coin_id, inner_puzzle, lineage_proof)
+        cc_spend_info = SpendableCC(new_coin, inner_puzzle, lineage_proof)
         spendable_cc_list.append(cc_spend_info)
 
     return spendable_cc_list
