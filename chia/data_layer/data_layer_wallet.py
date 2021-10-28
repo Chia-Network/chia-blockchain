@@ -162,7 +162,7 @@ class DataLayerWallet:
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(dl_record)
-
+        await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         return self
 
     async def generate_launcher_spend(
@@ -193,18 +193,13 @@ class DataLayerWallet:
         announcement_message = Program.to([puzzle_hash, amount, initial_root]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
         eve_coin = Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), amount)
-        future_parent = LineageProof(
-            eve_coin.parent_coin_info,
-            create_host_layer_puzzle(inner_puzzle, initial_root).get_tree_hash(),
-            eve_coin.amount,
-        )
         eve_parent = LineageProof(
             launcher_coin.parent_coin_info,
             launcher_coin.puzzle_hash,
             launcher_coin.amount,
         )
-        await self.add_parent(eve_coin.parent_coin_info, eve_parent, False)
-        await self.add_parent(eve_coin.name(), future_parent, False)
+        await self.add_parent(eve_coin.name(), eve_parent, False)
+        #breakpoint()
         create_launcher_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
@@ -240,6 +235,7 @@ class DataLayerWallet:
         db_layer_sol = Program.to([0, inner_inner_sol])
         parent_info = await self.get_parent_for_coin(my_coin)
         assert parent_info is not None
+        # breakpoint()
         assert self.dl_info.origin_coin
         current_full_puz = create_host_fullpuz(
             self.dl_info.current_inner_inner,
@@ -266,6 +262,9 @@ class DataLayerWallet:
         coin_spend = CoinSpend(
             my_coin, SerializedProgram.from_program(current_full_puz), SerializedProgram.from_program(full_sol)
         )
+        # fake_for_signature = CoinSpend(my_coin, self.dl_info.current_inner_inner, inner_inner_sol)  # I am about to do something nasty
+        # fake_sb = await self.standard_wallet.sign_transaction([fake_for_signature])
+        breakpoint()
         spend_bundle = await self.sign(coin_spend)
         new_info = DataLayerInfo(self.dl_info.origin_coin, root_hash, self.dl_info.parent_info, new_inner_inner_puzzle)
         await self.save_info(new_info, False)  # todo in_transaction false ?
@@ -448,7 +447,6 @@ class DataLayerWallet:
         #     assert owner_sk is not None
         #     return owner_sk
 
-        breakpoint()
         return await sign_coin_spends(
             [coin_spend],
             self.standard_wallet.secret_key_store.secret_key_for_public_key,
