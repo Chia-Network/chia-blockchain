@@ -118,6 +118,10 @@ if THIS_IS_WINDOWS:
             "madmax"
         ),
         (
+            f"{ROOT}\\madmax\\chia_plot_k34.exe",
+            "madmax"
+        ),
+        (
             f"{ROOT}\\bladebit\\bladebit.exe",
             "bladebit"
         ),
