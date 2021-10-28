@@ -20,6 +20,8 @@ from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
+from chia.plotters.plotters import get_available_plotters
+from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.chia_logging import initialize_logging
@@ -55,7 +57,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-service_plotter = "chia plots create"
+service_plotter = "chia_plotter"
 
 
 async def fetch(url: str):
@@ -328,6 +330,8 @@ class WebSocketServer:
             response = await self.register_service(websocket, cast(Dict[str, Any], data))
         elif command == "get_status":
             response = self.get_status()
+        elif command == "get_plotters":
+            response = await self.get_plotters()
         else:
             self.log.error(f"UK>> {message}")
             response = {"success": False, "error": f"unknown_command {command}"}
@@ -565,6 +569,11 @@ class WebSocketServer:
         response = {"success": True, "genesis_initialized": True}
         return response
 
+    async def get_plotters(self) -> Dict[str, Any]:
+        plotters: Dict[str, Any] = get_available_plotters(self.root_path)
+        response: Dict[str, Any] = {"success": True, "plotters": plotters}
+        return response
+
     async def _keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):
         """
         Attempt to communicate with the GUI to inform it of any keyring status changes
@@ -652,8 +661,16 @@ class WebSocketServer:
         asyncio.create_task(self._state_changed(service, message))
 
     async def _watch_file_changes(self, config, fp: TextIO, loop: asyncio.AbstractEventLoop):
-        id = config["id"]
-        final_words = ["Renamed final file"]
+        id: str = config["id"]
+        plotter: str = config["plotter"]
+        final_words: List[str] = []
+
+        if plotter == "chiapos":
+            final_words = ["Renamed final file"]
+        elif plotter == "bladebit":
+            final_words = ["Finished plotting in"]
+        elif plotter == "madmax":
+            final_words = ["Renamed final plot"]
 
         while True:
             new_data = await loop.run_in_executor(io_pool_exc, fp.readline)
@@ -678,38 +695,18 @@ class WebSocketServer:
         with open(file_path, "r") as fp:
             await self._watch_file_changes(config, fp, loop)
 
-    def _build_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
-        service_name = request["service"]
-
-        k = request["k"]
-        n = 1 if ignoreCount else request["n"]
-        t = request["t"]
-        t2 = request["t2"]
-        d = request["d"]
-        b = request["b"]
-        u = request["u"]
-        r = request["r"]
-        f = request.get("f")
-        p = request.get("p")
-        c = request.get("c")
-        a = request.get("a")
-        e = request["e"]
-        x = request["x"]
-        override_k = request["overrideK"]
+    def _common_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+        n = 1 if ignoreCount else request["n"]  # Plot count
+        d = request["d"]  # Final directory
+        r = request["r"]  # Threads
+        f = request.get("f")  # Farmer pubkey
+        p = request.get("p")  # Pool pubkey
+        c = request.get("c")  # Pool contract address
 
         command_args: List[str] = []
-        command_args += service_name.split(" ")
-        command_args.append(f"-k{k}")
         command_args.append(f"-n{n}")
-        command_args.append(f"-t{t}")
-        command_args.append(f"-2{t2}")
         command_args.append(f"-d{d}")
-        command_args.append(f"-b{b}")
-        command_args.append(f"-u{u}")
         command_args.append(f"-r{r}")
-
-        if a is not None:
-            command_args.append(f"-a{a}")
 
         if f is not None:
             command_args.append(f"-f{f}")
@@ -720,6 +717,29 @@ class WebSocketServer:
         if c is not None:
             command_args.append(f"-c{c}")
 
+        return command_args
+
+    def _chiapos_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+        k = request["k"]  # Plot size
+        t = request["t"]  # Temp directory
+        t2 = request["t2"]  # Temp2 directory
+        b = request["b"]  # Buffer size
+        u = request["u"]  # Buckets
+        a = request.get("a")  # Fingerprint
+        e = request["e"]  # Disable bitfield
+        x = request["x"]  # Exclude final directory
+        override_k = request["overrideK"]  # Force plot sizes < k32
+
+        command_args: List[str] = []
+        command_args.append(f"-k{k}")
+        command_args.append(f"-t{t}")
+        command_args.append(f"-2{t2}")
+        command_args.append(f"-b{b}")
+        command_args.append(f"-u{u}")
+
+        if a is not None:
+            command_args.append(f"-a{a}")
+
         if e is True:
             command_args.append("-e")
 
@@ -729,7 +749,60 @@ class WebSocketServer:
         if override_k is True:
             command_args.append("--override-k")
 
-        self.log.debug(f"command_args are {command_args}")
+        return command_args
+
+    def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+        w = request.get("w", False)  # Warm start
+        m = request.get("m", False)  # Disable NUMA
+
+        command_args: List[str] = []
+
+        if w is True:
+            command_args.append("-w")
+
+        if m is True:
+            command_args.append("-m")
+
+        return command_args
+
+    def _madmax_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> List[str]:
+        k = request["k"]  # Plot size
+        t = request["t"]  # Temp directory
+        t2 = request["t2"]  # Temp2 directory
+        u = request["u"]  # Buckets
+        v = request["v"]  # Buckets for phase 3 & 4
+        K = request.get("K", 1)  # Thread multiplier for phase 2
+        G = request.get("G", False)  # Alternate tmpdir/tmp2dir
+
+        command_args: List[str] = []
+        command_args.append(f"-k{k}")
+        command_args.append(f"-u{u}")
+        command_args.append(f"-v{v}")
+        command_args.append(f"-K{K}")
+
+        # Handle madmax's tmptoggle option ourselves when managing GUI plotting
+        if G is True and t != t2 and index % 2:
+            # Swap tmp and tmp2
+            command_args.append(f"-t{t2}")
+            command_args.append(f"-2{t}")
+        else:
+            command_args.append(f"-t{t}")
+            command_args.append(f"-2{t2}")
+
+        return command_args
+
+    def _build_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> List[str]:
+        plotter: str = request.get("plotter", "chiapos")
+        command_args: List[str] = ["chia", "plotters", plotter]
+
+        command_args.extend(self._common_plotting_command_args(request, ignoreCount))
+
+        if plotter == "chiapos":
+            command_args.extend(self._chiapos_plotting_command_args(request, ignoreCount))
+        elif plotter == "madmax":
+            command_args.extend(self._madmax_plotting_command_args(request, ignoreCount, index))
+        elif plotter == "bladebit":
+            command_args.extend(self._bladebit_plotting_command_args(request, ignoreCount))
 
         return command_args
 
@@ -757,10 +830,27 @@ class WebSocketServer:
         if next_plot_id is not None:
             loop.create_task(self._start_plotting(next_plot_id, loop, queue))
 
+    def _post_process_plotting_job(self, job: Dict[str, Any]):
+        id: str = job["id"]
+        final_dir: str = job.get("final_dir", "")
+        exclude_final_dir: bool = job.get("exclude_final_dir", False)
+
+        log.info(f"Post-processing plotter job with ID {id}")  # lgtm [py/clear-text-logging-sensitive-data]
+
+        if exclude_final_dir is False and len(final_dir) > 0:
+            resolved_final_dir: str = str(Path(final_dir).resolve())
+            config = load_config(self.root_path, "config.yaml")
+            plot_directories_list: str = config["harvester"]["plot_directories"]
+
+            if resolved_final_dir not in plot_directories_list:
+                # Adds the directory to the plot directories if it is not present
+                log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
+                add_plot_directory(self.root_path, resolved_final_dir)
+
     async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default"):
         current_process = None
         try:
-            log.info(f"Starting plotting with ID {id}")
+            log.info(f"Starting plotting with ID {id}")  # lgtm [py/clear-text-logging-sensitive-data]
             config = self._get_plots_queue_item(id)
 
             if config is None:
@@ -802,8 +892,12 @@ class WebSocketServer:
 
             await self._track_plotting_progress(config, loop)
 
+            self.log.debug("finished tracking plotting progress. setting state to FINISHED")
+
             config["state"] = PlotState.FINISHED
             self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
+
+            self._post_process_plotting_job(config)
 
         except (subprocess.SubprocessError, IOError):
             log.exception(f"problem starting {service_name}")  # lgtm [py/clear-text-logging-sensitive-data]
@@ -822,10 +916,13 @@ class WebSocketServer:
     async def start_plotting(self, request: Dict[str, Any]):
         service_name = request["service"]
 
-        delay = request.get("delay", 0)
+        plotter = request.get("plotter", "chiapos")
+        delay = int(request.get("delay", 0))
         parallel = request.get("parallel", False)
         size = request.get("k")
-        count = request.get("n", 1)
+        final_dir = request.get("d")
+        exclude_final_dir = request.get("x", False)
+        count = int(request.get("n", 1))
         queue = request.get("queue", "default")
 
         if ("p" in request) and ("c" in request):
@@ -841,11 +938,12 @@ class WebSocketServer:
             id = str(uuid.uuid4())
             ids.append(id)
             config = {
-                "id": id,
+                "id": id,  # lgtm [py/clear-text-logging-sensitive-data]
                 "size": size,
                 "queue": queue,
+                "plotter": plotter,
                 "service_name": service_name,
-                "command_args": self._build_plotting_command_args(request, True),
+                "command_args": self._build_plotting_command_args(request, True, k),
                 "parallel": parallel,
                 "delay": delay * k if parallel is True else delay,
                 "state": PlotState.SUBMITTED,
@@ -853,6 +951,8 @@ class WebSocketServer:
                 "error": None,
                 "log": None,
                 "process": None,
+                "final_dir": final_dir,
+                "exclude_final_dir": exclude_final_dir,
             }
 
             self.plots_queue.append(config)
