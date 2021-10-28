@@ -19,7 +19,7 @@
   "dependencies": {
     "@babel/runtime": "^7.15.4",
     "@lingui/macro": "^3.12.1",
-    "@chia/icons": "^1.0.0",
+    "@chia/icons": "../icons",
     "@rehooks/local-storage": "^2.4.3",
     "bytes-iec": "^3.1.1",
     "cookie": "^0.4.1",
@@ -40,7 +40,7 @@
     "use-dark-mode": "^2.3.1"
   },
   "peerDependencies": {
-    "@chia/api-react": "^1.0.0",
+    "@chia/api-react": "../api-react",
     "@lingui/core": "^3.12.1",
     "@lingui/react": "^3.12.1",
     "@material-ui/core": "^4.12.3",
