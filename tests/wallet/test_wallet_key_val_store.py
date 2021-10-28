@@ -49,6 +49,7 @@ class TestWalletKeyValStore:
                 assert (await store.get_object(block.header_hash.hex(), FullBlock)) == block
 
             # Wrong type
+            await store.set_object("a", block_2)
             with pytest.raises(Exception):
                 await store.get_object("a", HeaderBlock)
 
