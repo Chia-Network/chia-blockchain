@@ -1,14 +1,13 @@
-import asyncio
 import logging
-import pathlib
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, Tuple
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
+from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import find_fork_point_in_chain
-from chia.consensus.full_block_to_block_record import block_to_block_record, header_block_to_sub_block_record
+from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import WeightProof
@@ -17,10 +16,13 @@ from chia.util.ints import uint32, uint64
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 
+log = logging.getLogger(__name__)
 
-class WalletBlockchain:
+
+class WalletBlockchain(BlockchainInterface):
     constants: ConsensusConstants
     _basic_store: KeyValStore
+    _weight_proof_handler: WalletWeightProofHandler
 
     synced_weight_proof: Optional[WeightProof]
 
@@ -30,7 +32,9 @@ class WalletBlockchain:
     _latest_timestamp: uint64
 
     @staticmethod
-    async def create(_basic_store: KeyValStore, constants: ConsensusConstants):
+    async def create(
+        _basic_store: KeyValStore, constants: ConsensusConstants, weight_proof_handler: WalletWeightProofHandler
+    ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
         validated. Uses the genesis block given in override_constants, or as a fallback,
@@ -40,6 +44,7 @@ class WalletBlockchain:
         self._basic_store = _basic_store
 
         self.constants = constants
+        self._weight_proof_handler = weight_proof_handler
         self.synced_weight_proof = await self._basic_store.get_object("SYNCED_WEIGHT_PROOF", WeightProof)
         self._peak = None
         self._peak = await self.get_peak_block()
@@ -50,7 +55,7 @@ class WalletBlockchain:
             await self.new_weight_proof(self.synced_weight_proof)
         return self
 
-    async def new_weight_proof(self, weight_proof: WeightProof, weight_proof_handler: WalletWeightProofHandler) -> None:
+    async def new_weight_proof(self, weight_proof: WeightProof) -> None:
         peak: Optional[HeaderBlock] = await self.get_peak_block()
 
         if peak is not None and weight_proof.recent_chain_data[-1].weight <= peak.weight:
@@ -61,14 +66,16 @@ class WalletBlockchain:
 
         latest_timestamp = self._latest_timestamp
 
-        success, _, _, records = await weight_proof_handler.validate_weight_proof(weight_proof, True)
+        success, _, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
         assert success
 
         for record in records:
             self._height_to_hash[record.height] = record.header_hash
             self.add_block_record(record)
-            if record.is_transaction_block and record.timestamp > latest_timestamp:
-                latest_timestamp = record.timestamp
+            if record.is_transaction_block:
+                assert record.timestamp is not None
+                if record.timestamp > latest_timestamp:
+                    latest_timestamp = record.timestamp
 
         await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
 
@@ -118,27 +125,22 @@ class WalletBlockchain:
             latest_timestamp = self._latest_timestamp
             while curr_record.height > fork_height:
                 self._height_to_hash[curr_record.height] = curr_record
-                if curr_record.is_transaction_block and curr_record.timestamp > latest_timestamp:
+                if curr_record.timestamp is not None and curr_record.timestamp > latest_timestamp:
                     latest_timestamp = curr_record.timestamp
                 if curr_record.height == 0:
                     break
-                curr_record: BlockRecord = self.block_record(curr_record.prev_hash)
-            await self.set_peak_block(block_record, latest_timestamp)
+                curr_record = self.block_record(curr_record.prev_hash)
+            await self.set_peak_block(block, latest_timestamp)
             return ReceiveBlockResult.NEW_PEAK, None
         return ReceiveBlockResult.ADDED_AS_ORPHAN, None
 
     async def _rollback_to_height(self, height: int):
-        """
-        Rolls back chain, but need to call `new_blocks` after rolling back, to set the new peak.
-        """
         if self._peak is None:
             return
         for h in range(max(0, height), self._peak.height + 1):
             del self._height_to_hash[uint32(h)]
 
         await self._basic_store.remove_object("PEAK_BLOCK")
-        self._peak = None
-        self._latest_timestamp = uint64(0)
 
     def get_peak_height(self) -> uint32:
         if self._peak is None:
@@ -150,7 +152,7 @@ class WalletBlockchain:
         self._peak = block
         if timestamp is not None:
             self._latest_timestamp = timestamp
-        elif block.is_transaction_block:
+        elif block.foliage_transaction_block is not None:
             self._latest_timestamp = block.foliage_transaction_block.timestamp
 
     async def get_peak_block(self) -> Optional[HeaderBlock]:

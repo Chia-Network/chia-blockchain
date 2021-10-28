@@ -292,9 +292,11 @@ class TradeManager:
                         for add in additions:
                             if add not in removals and add.amount == 0:
                                 zero_val_coin = add
-                        new_spend_bundle = await wallet.create_spend_bundle_relative_amount(amount, zero_val_coin)
+                        new_spend_bundle = await wallet.create_spend_bundle_relative_amount(  # type: ignore
+                            amount, zero_val_coin
+                        )
                     else:
-                        new_spend_bundle = await wallet.create_spend_bundle_relative_amount(amount)
+                        new_spend_bundle = await wallet.create_spend_bundle_relative_amount(amount)  # type: ignore
                 elif isinstance(wallet, Wallet):
                     if spend_bundle is None:
                         to_exclude = []

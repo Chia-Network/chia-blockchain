@@ -2,7 +2,6 @@ from typing import Any
 
 import aiosqlite
 
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 from chia.util.streamable import Streamable
 

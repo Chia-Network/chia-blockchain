@@ -1,6 +1,5 @@
 import asyncio
 from pathlib import Path
-from secrets import token_bytes
 import aiosqlite
 import pytest
 

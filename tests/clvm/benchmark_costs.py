@@ -1,5 +1,3 @@
-from blspy import G2Element
-
 from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.spend_bundle import SpendBundle
 from chia.types.generator_types import BlockGenerator
