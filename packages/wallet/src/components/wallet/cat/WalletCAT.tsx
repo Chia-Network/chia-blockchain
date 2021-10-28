@@ -100,7 +100,7 @@ export default function WalletCAT(props: Props) {
                 <FingerprintIcon />
               </ListItemIcon>
               <Typography variant="inherit" noWrap>
-                <Trans>Show Token and Asset Issuance Limitations</Trans>
+                <Trans>Show Asset Id</Trans>
               </Typography>
             </MenuItem>
           </>
