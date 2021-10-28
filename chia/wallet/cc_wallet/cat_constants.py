@@ -11,7 +11,7 @@ WATER = {
 }
 
 ENERGY = {
-    "asset_id": "b00565f79240d1716e8a6b02694dee5e5b657e6415145049d0b75e8668cc8b8e",
+    "asset_id": "67e294b2cf6be4c6e3485008c67c5ed44101408c108f55d6f62628ab5ee390a7",
     "name": "Energy",
     "symbol": "ENG",
 }
