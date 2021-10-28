@@ -172,7 +172,6 @@ class BlockTools:
 
             if event == PlotRefreshEvents.batch_processed:
                 self.total_result.loaded += update_result.loaded
-                self.total_result.removed += update_result.removed
                 self.total_result.processed += update_result.processed
                 self.total_result.duration += update_result.duration
                 assert update_result.remaining == len(self.expected_plots) - self.total_result.processed
@@ -180,7 +179,6 @@ class BlockTools:
 
             if event == PlotRefreshEvents.done:
                 assert self.total_result.loaded == update_result.loaded
-                assert self.total_result.removed == update_result.removed
                 assert self.total_result.processed == update_result.processed
                 assert self.total_result.duration == update_result.duration
                 assert update_result.remaining == 0

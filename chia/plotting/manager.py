@@ -231,6 +231,33 @@ class PlotManager:
 
             self._refresh_callback(PlotRefreshEvents.started, PlotRefreshResult(remaining=total_size))
 
+            # First drop all plots we have in plot_filename_paths but not longer in the filesystem or set in config
+            def plot_removed(test_path: Path):
+                return not test_path.exists() or test_path.parent not in plot_directories
+
+            filenames_to_remove: List[str] = []
+            for plot_filename, paths_entry in self.plot_filename_paths.items():
+                loaded_path, duplicated_paths = paths_entry
+                loaded_plot = Path(loaded_path) / Path(plot_filename)
+                if plot_removed(loaded_plot):
+                    filenames_to_remove.append(plot_filename)
+                    if loaded_plot in self.plots:
+                        del self.plots[loaded_plot]
+                    total_result.removed += 1
+                    # No need to check the duplicates here since we drop the whole entry
+                    continue
+
+                paths_to_remove: List[str] = []
+                for path in duplicated_paths:
+                    if plot_removed(Path(path) / Path(plot_filename)):
+                        paths_to_remove.append(path)
+                        total_result.removed += 1
+                for path in paths_to_remove:
+                    duplicated_paths.remove(path)
+
+            for filename in filenames_to_remove:
+                del self.plot_filename_paths[filename]
+
             def batches() -> Iterator[Tuple[int, List[Path]]]:
                 if total_size > 0:
                     for batch_start in range(0, total_size, self.refresh_parameter.batch_size):
@@ -247,7 +274,6 @@ class PlotManager:
                 # Set the remaining files since `refresh_batch()` doesn't know them but we want to report it
                 batch_result.remaining = remaining
                 total_result.loaded += batch_result.loaded
-                total_result.removed += batch_result.removed
                 total_result.processed += batch_result.processed
                 total_result.duration += batch_result.duration
 
@@ -413,35 +439,6 @@ class PlotManager:
             return new_plot_info
 
         with self, ThreadPoolExecutor() as executor:
-
-            # First drop all plots we have in plot_filename_paths but not longer in the filesystem or set in config
-            def plot_removed(test_path: Path):
-                return not test_path.exists() or test_path.parent not in plot_directories
-
-            with self.plot_filename_paths_lock:
-                filenames_to_remove: List[str] = []
-                for plot_filename, paths_entry in self.plot_filename_paths.items():
-                    loaded_path, duplicated_paths = paths_entry
-                    loaded_plot = Path(loaded_path) / Path(plot_filename)
-                    if plot_removed(loaded_plot):
-                        filenames_to_remove.append(plot_filename)
-                        if loaded_plot in self.plots:
-                            del self.plots[loaded_plot]
-                        result.removed += 1
-                        # No need to check the duplicates here since we drop the whole entry
-                        continue
-
-                    paths_to_remove: List[str] = []
-                    for path in duplicated_paths:
-                        if plot_removed(Path(path) / Path(plot_filename)):
-                            paths_to_remove.append(path)
-                            result.removed += 1
-                    for path in paths_to_remove:
-                        duplicated_paths.remove(path)
-
-                for filename in filenames_to_remove:
-                    del self.plot_filename_paths[filename]
-
             plots_refreshed: Dict[Path, PlotInfo] = {}
             for new_plot in executor.map(process_file, plot_paths):
                 if new_plot is not None:
