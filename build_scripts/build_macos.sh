@@ -19,6 +19,7 @@ npm install electron-installer-dmg -g
 npm install electron-packager -g
 npm install electron/electron-osx-sign -g
 npm install notarize-cli -g
+npm install lerna -g
 
 echo "Create dist/"
 sudo rm -rf dist
@@ -38,9 +39,9 @@ cd .. || exit
 cd chia-blockchain-gui || exit
 
 echo "npm build"
-npm install
-# npm run audit:fix
-npm run build
+lerna exec npm install
+lerna run build --scope @chia/wallet
+
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "npm run build failed!"
