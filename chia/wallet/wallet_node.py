@@ -602,6 +602,9 @@ class WalletNode:
         assert self.wallet_state_manager is not None
         assert self.server is not None
         async with self.new_peak_lock:
+            if self.wallet_state_manager is None:
+                # When logging out of wallet
+                return
             if self.is_trusted(peer):
                 async with self.wallet_state_manager.lock:
                     request = wallet_protocol.RequestBlockHeader(peak.height)
@@ -660,14 +663,18 @@ class WalletNode:
                     await peer.close()
                     return
 
-                far_behind: bool = peak.height - self.wallet_state_manager.blockchain.get_peak_height() > 200
-                if not far_behind and current_peak is not None:
+                long_sync_threshold = 100
+                far_behind: bool = (
+                    peak.height - self.wallet_state_manager.blockchain.get_peak_height() > long_sync_threshold
+                )
+                fork_point = -1
+                if current_peak is not None:
                     # Force a long sync if it's a very deep reorg
                     try:
                         fork_point = find_fork_point_in_chain(
                             self.wallet_state_manager.blockchain, peak_block, current_peak
                         )
-                        if peak.height - fork_point > 200:
+                        if peak.height - fork_point > long_sync_threshold:
                             far_behind = True
                     except KeyError:
                         # If we don't have the blocks to find fork point, it's a deep reorg
@@ -679,7 +686,7 @@ class WalletNode:
                     peer.peer_node_id not in self.synced_peers or far_behind
                 ) and peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                     syncing = False
-                    if peak.height - self.wallet_state_manager.blockchain.get_peak_height() > 3:
+                    if far_behind or len(self.synced_peers) == 0:
                         syncing = True
                         self.wallet_state_manager.set_sync_mode(True)
                     try:
@@ -695,7 +702,7 @@ class WalletNode:
                             await peer.close()
                             return
                         assert weight_proof is not None
-                        await self.untrusted_sync_to_peer(peer, weight_proof)
+                        await self.untrusted_sync_to_peer(peer, weight_proof, syncing, fork_point)
                         if (
                             self.wallet_state_manager.blockchain.synced_weight_proof is None
                             or weight_proof.recent_chain_data[-1].weight
@@ -927,7 +934,7 @@ class WalletNode:
         assert self.wallet_state_manager.weight_proof_handler is not None
 
         weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
-        weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(weight_request, timeout=360)
+        weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(weight_request, timeout=60)
 
         if weight_proof_response is None:
             return False, None, [], []
@@ -996,27 +1003,21 @@ class WalletNode:
                     continue_while = True
                     break
 
-    async def untrusted_sync_to_peer(self, peer: WSChiaConnection, weight_proof: WeightProof):
+    async def untrusted_sync_to_peer(
+        self, peer: WSChiaConnection, weight_proof: WeightProof, syncing: bool, fork_height: int
+    ):
         assert self.wallet_state_manager is not None
         # If new weight proof is higher than the old one, rollback to the fork point and than apply new coin_states
-        fork_height = 0
-        if (
-            weight_proof.recent_chain_data[-1].height - self.wallet_state_manager.blockchain.get_peak_height()
-            < self.constants.WEIGHT_PROOF_RECENT_BLOCKS
-        ):
-            fork_height = self.wallet_state_manager.weight_proof_handler.get_recent_chain_fork(
-                weight_proof, self.wallet_state_manager.blockchain
-            )
-
-        if fork_height == 0:
+        if fork_height == -1:
             wp_fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point(
                 old_wp=self.wallet_state_manager.blockchain.synced_weight_proof, new_wp=weight_proof
             )
             # Extra conservative
             fork_height = max(0, wp_fork_point - 1000)
-
-        self.log.info(f"Rollback for {fork_height}")
-        await self.wallet_state_manager.reorg_rollback(fork_height)
+        self.log.info(f"Starting untrusted sync to: {peer.get_peer_info()}, syncing: {syncing}, fork at: {fork_height}")
+        if syncing:
+            self.log.info(f"Rollback for {fork_height}")
+            await self.wallet_state_manager.reorg_rollback(fork_height)
 
         start_time: float = time.time()
         peer_request_cache: PeerRequestCache = PeerRequestCache()
@@ -1033,8 +1034,23 @@ class WalletNode:
         msg1 = wallet_protocol.RegisterForCoinUpdates(all_coin_names, uint32(0))
         all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg1)
         assert all_coins_state is not None
+
+        if syncing:
+            # If syncing, completely change over to this peer's information
+            coin_state_before_fork: List[CoinState] = all_coins_state.coin_states
+        else:
+            # Otherwise, we only want to apply changes before the fork point, since we are synced to a different peer
+            coin_state_before_fork = []
+            for coin_state_entry in all_coins_state.coin_states:
+                if coin_state_entry.spent_height is not None:
+                    if coin_state_entry.spent_height <= fork_height:
+                        coin_state_before_fork.append(coin_state_entry)
+                elif coin_state_entry.created_height is not None:
+                    if coin_state_entry.created_height <= fork_height:
+                        coin_state_before_fork.append(coin_state_entry)
+
         validated_state = await self.validate_received_state_from_peer(
-            all_coins_state.coin_states, peer, weight_proof, peer_request_cache
+            coin_state_before_fork, peer, weight_proof, peer_request_cache
         )
         # Apply validated state
         await self.wallet_state_manager.new_coin_state(validated_state, peer, weight_proof=weight_proof)
