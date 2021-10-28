@@ -28,7 +28,6 @@ const StyledTableCellSmallRight = styled(StyledTableCellSmall)`
 
 const getCols = (type: WalletType) => [
   {
-    width: '55px',
     field: (row: Row) => {
       const isOutgoing = [
         TransactionType.OUTGOING,
@@ -128,7 +127,6 @@ const getCols = (type: WalletType) => [
     title: <Trans>Fee</Trans>,
   },
   {
-    width: '65px',
     field: (row: Row, _metadata, isExpanded, toggleExpand) => (
       <IconButton
         aria-label="expand row"
