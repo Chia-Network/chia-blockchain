@@ -670,7 +670,7 @@ class WebSocketServer:
         elif plotter == "bladebit":
             final_words = ["Finished plotting in"]
         elif plotter == "madmax":
-            final_words = ["Renamed final plot"]
+            final_words = ["Renamed final plot", "Total plot creation time was"]
 
         while True:
             new_data = await loop.run_in_executor(io_pool_exc, fp.readline)
