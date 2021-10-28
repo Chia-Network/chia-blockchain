@@ -39,6 +39,8 @@ cd .. || exit
 cd chia-blockchain-gui || exit
 
 echo "npm build"
+rm packages/**/package-lock.json
+rm package-lock.json
 lerna exec npm install
 lerna run build --scope @chia/wallet
 
