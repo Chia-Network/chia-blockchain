@@ -79,8 +79,8 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-mv Chia-darwin-x64 ../build_scripts/dist/
-cd ../build_scripts || exit
+mv Chia-darwin-x64 ../../../build_scripts/dist/
+cd ../../../build_scripts || exit
 
 DMG_NAME="Chia-$CHIA_INSTALLER_VERSION.dmg"
 echo "Create $DMG_NAME"
