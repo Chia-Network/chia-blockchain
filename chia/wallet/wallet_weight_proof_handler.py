@@ -51,14 +51,12 @@ class WalletWeightProofHandler:
     def cancel_weight_proof_tasks(self):
         log.warning("CANCELLING WEIGHT PROOF TASKS")
         old_shutdown_tempfile = self._executor_shutdown_tempfile
-        old_executor = self._executor
         self._executor_shutdown_tempfile = _create_shutdown_file()
-        self._executor = ProcessPoolExecutor(self._num_processes)
         for task in self._weight_proof_tasks:
             if not task.done():
                 task.cancel()
         self._weight_proof_tasks = []
-        old_executor.shutdown(wait=False)
+        self._executor.shutdown(wait=True)
         old_shutdown_tempfile.close()
 
     async def validate_weight_proof(
