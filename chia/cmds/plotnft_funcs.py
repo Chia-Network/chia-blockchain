@@ -53,6 +53,8 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
     state = args["state"]
     prompt = not args.get("yes", False)
 
+    target_puzzle_hash: Optional[bytes32]
+
     # Could use initial_pool_state_from_dict to simplify
     if state == "SELF_POOLING":
         pool_url: Optional[str] = None
@@ -67,7 +69,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
             return
         json_dict = await create_pool_args(pool_url)
         relative_lock_height = json_dict["relative_lock_height"]
-        target_puzzle_hash = hexstr_to_bytes(json_dict["target_puzzle_hash"])
+        target_puzzle_hash = bytes32.from_hexstr(json_dict["target_puzzle_hash"])
     else:
         raise ValueError("Plot NFT must be created in SELF_POOLING or FARMING_TO_POOL state.")
 
@@ -158,9 +160,9 @@ async def pprint_pool_wallet_state(
         try:
             # TODO: remove ignore https://github.com/python/typeshed/pull/6201
             payout_address = encode_puzzle_hash(
-                bytes32.fromhex(payout_instructions),
+                bytes32.fromhex(payout_instructions),  # type: ignore[arg-type]
                 address_prefix,
-            )  # type: ignore[arg-type]
+            )
             print(f"Payout instructions (pool will pay to this address): {payout_address}")
         except Exception:
             print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
