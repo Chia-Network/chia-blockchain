@@ -129,6 +129,7 @@ class TestWalletRpc:
         client_2 = await WalletRpcClient.create(self_hostname, test_rpc_port_2, bt.root_path, config)
         client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
         try:
+            await time_out_assert(5, client.get_synced)
             addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")
             tx_amount = 15600000
             try:
