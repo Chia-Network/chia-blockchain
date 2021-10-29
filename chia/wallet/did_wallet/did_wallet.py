@@ -111,6 +111,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
             name=token_bytes(),
+            memos=[],
         )
         regular_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -128,6 +129,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=token_bytes(),
+            memos=list(spend_bundle.get_memos().items()),
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(did_record)
@@ -505,6 +507,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=token_bytes(),
+            memos=list(spend_bundle.get_memos().items()),
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -573,6 +576,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=token_bytes(),
+            memos=list(spend_bundle.get_memos().items()),
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -639,6 +643,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=token_bytes(),
+            memos=list(spend_bundle.get_memos().items()),
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -707,6 +712,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
             name=token_bytes(),
+            memos=list(spend_bundle.get_memos().items()),
         )
         await self.standard_wallet.push_transaction(did_record)
         if filename is not None:
@@ -847,6 +853,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=token_bytes(),
+            memos=list(spend_bundle.get_memos().items()),
         )
         await self.standard_wallet.push_transaction(did_record)
         new_did_info = DIDInfo(

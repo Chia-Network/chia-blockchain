@@ -167,7 +167,7 @@ class WalletBlockchain(BlockchainInterface):
             self._latest_timestamp = timestamp
         elif block.foliage_transaction_block is not None:
             self._latest_timestamp = block.foliage_transaction_block.timestamp
-        log.warning(f"Peak set to : {self._peak.height} timestamp: {self._latest_timestamp}")
+        log.info(f"Peak set to : {self._peak.height} timestamp: {self._latest_timestamp}")
 
     async def get_peak_block(self) -> Optional[HeaderBlock]:
         if self._peak is not None:

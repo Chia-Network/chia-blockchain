@@ -319,6 +319,7 @@ class RLWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
+            memos=list(spend_bundle.get_memos().items()),
         )
 
         asyncio.create_task(self.push_transaction(tx_record))
@@ -544,6 +545,7 @@ class RLWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
+            memos=list(spend_bundle.get_memos().items()),
         )
 
     async def rl_sign_transaction(self, spends: List[CoinSpend]) -> SpendBundle:
@@ -620,6 +622,7 @@ class RLWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
+            memos=list(spend_bundle.get_memos().items()),
         )
 
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2

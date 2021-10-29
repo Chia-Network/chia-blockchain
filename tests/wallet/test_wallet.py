@@ -605,6 +605,7 @@ class TestWalletSimulator:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=name,
+            memos=list(stolen_sb.get_memos().items()),
         )
         await wallet.push_transaction(stolen_tx)
 
@@ -616,8 +617,7 @@ class TestWalletSimulator:
 
         # Funds have not decreased because stolen_tx was rejected
         outstanding_coinbase_rewards = 2000000000000
-        await time_out_assert(5, wallet.get_confirmed_balance, funds + outstanding_coinbase_rewards)
-        await time_out_assert(5, wallet.get_confirmed_balance, funds + outstanding_coinbase_rewards)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds + outstanding_coinbase_rewards)
 
     @pytest.mark.parametrize(
         "trusted",

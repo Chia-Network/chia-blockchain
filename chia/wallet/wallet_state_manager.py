@@ -724,6 +724,7 @@ class WalletStateManager:
                             trade_id=None,
                             type=uint32(TransactionType.INCOMING_TX.value),
                             name=token_bytes(),
+                            memos=[],
                         )
                         await self.tx_store.add_transaction_record(tx_record, False)
 
@@ -782,6 +783,7 @@ class WalletStateManager:
                                 trade_id=None,
                                 type=uint32(TransactionType.OUTGOING_TX.value),
                                 name=token_bytes(),
+                                memos=[],
                             )
 
                             await self.tx_store.add_transaction_record(tx_record, False)
@@ -902,6 +904,7 @@ class WalletStateManager:
                 trade_id=None,
                 type=uint32(tx_type),
                 name=coin.name(),
+                memos=[],
             )
             await self.tx_store.add_transaction_record(tx_record, True)
         else:
@@ -934,6 +937,7 @@ class WalletStateManager:
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_TX.value),
                     name=coin.name(),
+                    memos=[],
                 )
                 if coin.amount > 0:
                     await self.tx_store.add_transaction_record(tx_record, True)

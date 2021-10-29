@@ -467,6 +467,7 @@ class Wallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
+            memos=list(spend_bundle.get_memos().items()),
         )
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
