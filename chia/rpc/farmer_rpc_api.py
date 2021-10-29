@@ -87,7 +87,7 @@ class FarmerRpcApi:
                             "challenge_chain_sp": sp.challenge_chain_sp,
                             "reward_chain_sp": sp.reward_chain_sp,
                             "difficulty": sp.difficulty,
-                            "sub_slot_iter_s": sp.sub_slot_iters,
+                            "sub_slot_iters": sp.sub_slot_iters,
                             "signage_point_index": sp.signage_point_index,
                         },
                         "proofs": pospaces,
