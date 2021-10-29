@@ -1113,7 +1113,7 @@ class WalletNode:
                 if confirmed_height is None:
                     # We shouldn't receive state for non-existing coin unless we specifically ask for it
                     peer.close(9999)
-                    return []
+                    raise ValueError("Should not receive state for non-existing coin")
 
                 self.log.info(f"Validating state: {coin_state}")
                 # request header block for created height
@@ -1137,7 +1137,7 @@ class WalletNode:
 
                 if validate_additions_result is False:
                     peer.close(9999)
-                    return []
+                    raise ValueError(f"Addition did not validate: {state_block}, {coin_state}")
 
                 # get blocks on top of this block
 
@@ -1191,7 +1191,7 @@ class WalletNode:
                     )
                     if validate_removals_result is False:
                         peer.close(9999)
-                        return []
+                        raise ValueError(f"Removals did not validate {spent_state_block}, {coin_state}")
                     validated = await self.validate_state(weight_proof, spent_state_block, peer, peer_request_cache)
                     if not validated:
                         raise ValueError("Validation failed")
