@@ -197,11 +197,6 @@ class WalletStateManager:
             if wallet is not None:
                 self.wallets[wallet_info.id] = wallet
 
-        async with self.puzzle_store.lock:
-            index = await self.puzzle_store.get_last_derivation_path()
-            if index is None or index < self.config["initial_num_public_keys"] - 1:
-                await self.create_more_puzzle_hashes(from_zero=True)
-
         return self
 
     def get_derivation_index(self, pubkey: G1Element, max_depth: int = 1000) -> int:

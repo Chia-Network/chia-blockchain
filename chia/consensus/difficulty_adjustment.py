@@ -360,6 +360,8 @@ def get_next_sub_slot_iters_and_difficulty(
 ) -> Tuple[uint64, uint64]:
     """
     Retrieves the current sub_slot iters and difficulty of the next block after prev_b.
+    WARNING: The BlockchainInterface MUST have access to block records up to an epoch in the past when the prev_b is
+    the last one in the epoch.
 
     Args:
         constants: consensus constants being used for this chain
