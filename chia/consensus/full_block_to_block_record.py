@@ -22,6 +22,7 @@ def block_to_block_record(
     required_iters: uint64,
     full_block: Optional[Union[FullBlock, HeaderBlock]],
     header_block: Optional[HeaderBlock],
+    sub_slot_iters: Optional[uint64] = None,
 ) -> BlockRecord:
 
     if full_block is None:
@@ -32,9 +33,10 @@ def block_to_block_record(
     prev_b = blocks.try_block_record(block.prev_header_hash)
     if block.height > 0:
         assert prev_b is not None
-    sub_slot_iters, _ = get_next_sub_slot_iters_and_difficulty(
-        constants, len(block.finished_sub_slots) > 0, prev_b, blocks
-    )
+    if sub_slot_iters is None:
+        sub_slot_iters, _ = get_next_sub_slot_iters_and_difficulty(
+            constants, len(block.finished_sub_slots) > 0, prev_b, blocks
+        )
     overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
     deficit = calculate_deficit(
         constants,

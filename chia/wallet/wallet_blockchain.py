@@ -93,8 +93,19 @@ class WalletBlockchain(BlockchainInterface):
     async def receive_block(self, block: HeaderBlock) -> Tuple[ReceiveBlockResult, Optional[Err]]:
         if self.contains_block(block.header_hash):
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None
+
+        if (
+            len(block.finished_sub_slots) > 0
+            and block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None
+        ):
+            assert block.finished_sub_slots[0].challenge_chain.new_difficulty is not None  # They both change together
+            sub_slot_iters: uint64 = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
+            difficulty: uint64 = block.finished_sub_slots[0].challenge_chain.new_difficulty
+        else:
+            sub_slot_iters = self._sub_slot_iters
+            difficulty = self._difficulty
         required_iters, error = validate_finished_header_block(
-            self.constants, self, block, False, self._difficulty, self._sub_slot_iters, False
+            self.constants, self, block, False, difficulty, sub_slot_iters, False
         )
         if error is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error.code
@@ -102,11 +113,7 @@ class WalletBlockchain(BlockchainInterface):
             return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_POSPACE
 
         block_record: BlockRecord = block_to_block_record(
-            self.constants,
-            self,
-            required_iters,
-            None,
-            block,
+            self.constants, self, required_iters, None, block, sub_slot_iters
         )
         self.add_block_record(block_record)
         if self._peak is None:
@@ -204,4 +211,3 @@ class WalletBlockchain(BlockchainInterface):
 
         for header_hash in to_remove:
             del self._block_records[header_hash]
-        log.warning(f"Number of block records {len(self._block_records)}")
