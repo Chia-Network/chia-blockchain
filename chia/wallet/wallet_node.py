@@ -201,8 +201,6 @@ class WalletNode:
             self,
         )
 
-        self.wsm_close_task = None
-
         assert self.wallet_state_manager is not None
 
         self.config["starting_height"] = 0
@@ -221,12 +219,19 @@ class WalletNode:
         self.logged_in_fingerprint = private_key.get_g1().get_fingerprint()
         self.logged_in = True
         self.wallet_state_manager.set_sync_mode(False)
+
+        async with self.wallet_state_manager.puzzle_store.lock:
+            index = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
+            if index is None or index < self.config["initial_num_public_keys"] - 1:
+                await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
+                self.wsm_close_task = None
         return True
 
-    async def new_puzzle_hash_created(self, puzzle_hashes):
+    async def new_puzzle_hash_created(self, puzzle_hashes: List[bytes32]):
         if len(puzzle_hashes) == 0:
             return
-        full_nodes: Dict[bytes32, WSChiaConnection] = self.server.connection_by_type[NodeType.FULL_NODE]
+        assert self.server is not None
+        full_nodes: Dict[bytes32, WSChiaConnection] = self.server.connection_by_type.get(NodeType.FULL_NODE, {})
         for node_id, node in full_nodes.copy().items():
             await self.subscribe_to_phs(puzzle_hashes, node)
 
@@ -423,16 +428,17 @@ class WalletNode:
             self.wallet_state_manager.state_changed("coin_added", wallet_id)
         self.synced_peers.add(full_node.peer_node_id)
 
-    async def subscribe_to_phs(self, puzzle_hashes, peer, height=uint32(0)):
+    async def subscribe_to_phs(self, puzzle_hashes: List[bytes32], peer: WSChiaConnection, height=uint32(0)):
         """
         Tell full nodes that we are interested in puzzle hashes, and for trusted connections, add the new coin state
         for the puzzle hashes.
         """
 
         msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, height)
-        all_state: Union[Optional, RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
+        all_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
         # State for untrusted sync is processed only in wp sync | or short  sync backwards
         if all_state is not None and self.is_trusted(peer):
+            assert self.wallet_state_manager is not None
             await self.wallet_state_manager.new_coin_state(all_state.coin_states, peer)
 
     async def subscribe_to_coin_updates(self, coin_names, peer, height=uint32(0)):
@@ -614,11 +620,12 @@ class WalletNode:
                         assert last_tx.foliage_transaction_block is not None
                         latest_timestamp = last_tx.foliage_transaction_block.timestamp
 
+                    if peer.peer_node_id not in self.synced_peers:
+                        await self.trusted_sync(peer)
+
                     await self.wallet_state_manager.blockchain.set_peak_block(
                         header_response.header_block, latest_timestamp
                     )
-                    if peer.peer_node_id not in self.synced_peers:
-                        await self.trusted_sync(peer)
 
                     self.wallet_state_manager.state_changed("new_block")
                     self.wallet_state_manager.set_sync_mode(False)
@@ -955,7 +962,7 @@ class WalletNode:
                 self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point, summaries, block_records
 
         end_validation = time.time()
-        self.log.warning(f"It took {end_validation - start_validation} time to validate the weight proof")
+        self.log.info(f"It took {end_validation - start_validation} time to validate the weight proof")
         return valid, weight_proof, summaries, block_records
 
     async def untrusted_subscribe_to_puzzle_hashes(
