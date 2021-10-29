@@ -14,6 +14,7 @@ import TransactionType from '../../constants/TransactionType';
 import WalletType from '../../constants/WalletType';
 import useWallet from '../../hooks/useWallet';
 import useWalletTransactions from '../../hooks/useWalletTransactions';
+import useCurrencyCode from '../../hooks/useCurrencyCode';
 
 const StyledTableCellSmall = styled(TableCell)`
   border-bottom: 0;
@@ -122,7 +123,7 @@ const getCols = (type: WalletType) => [
       <>
         <strong>{mojo_to_chia_string(row.feeAmount)}</strong>
         &nbsp;
-        {metadata.unit}
+        {metadata.feeUnit}
       </>
     ),
     title: <Trans>Fee</Trans>,
@@ -149,12 +150,14 @@ export default function WalletHistory(props: Props) {
 
   const { wallet, loading: isWalletLoading, unit } = useWallet(walletId);
   const { transactions, isLoading: isWalletTransactionsLoading } = useWalletTransactions(walletId);
+  const feeUnit = useCurrencyCode();
 
   const isLoading = isWalletTransactionsLoading || isWalletLoading;
 
   const metadata = useMemo(() => ({
     unit,
-  }), [unit]);
+    feeUnit,
+  }), [unit, feeUnit]);
 
   const cols = useMemo(() => {
     if (!wallet) {
