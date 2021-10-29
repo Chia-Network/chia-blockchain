@@ -6,7 +6,7 @@ import time
 import ipaddress
 import aiosqlite
 from typing import List, Dict
-from chia.crawler.peer_record import PeerRecord, PeerReliability
+from chia.seeder.peer_record import PeerRecord, PeerReliability
 
 log = logging.getLogger(__name__)
 

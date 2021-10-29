@@ -186,7 +186,7 @@ class ChiaServer:
         to allow room for other peers.
         """
         while True:
-            # Modification for crawler.
+            # Modification for the Chia Seeder.
             await asyncio.sleep(2)
             to_remove: List[WSChiaConnection] = []
             for connection in self.all_connections.values():
@@ -242,7 +242,7 @@ class ChiaServer:
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
-        # Crawler.
+        # Chia Seeder.
         return
         if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:
             self.log.warning(f"Peer {request.remote} is banned, refusing connection")

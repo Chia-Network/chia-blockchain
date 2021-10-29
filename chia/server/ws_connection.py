@@ -105,7 +105,7 @@ class WSChiaConnection:
         self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
         self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
 
-        # Used by crawler/dns introducer
+        # Used by the Chia Seeder.
         self.version = None
 
     async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
@@ -482,7 +482,7 @@ class WSChiaConnection:
             await asyncio.sleep(3)
         return None
 
-    # Used by crawler/dns introducer
+    # Used by the Chia Seeder.
     def get_version(self):
         return self.version
 

@@ -9,8 +9,8 @@ from typing import Any, Callable, Dict, Optional
 import aiosqlite
 import chia.server.ws_connection as ws
 from chia.consensus.constants import ConsensusConstants
-from chia.crawler.crawl_store import CrawlStore
-from chia.crawler.peer_record import PeerRecord, PeerReliability
+from chia.seeder.crawl_store import CrawlStore
+from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.full_node.coin_store import CoinStore
 from chia.protocols import full_node_protocol
 from chia.server.server import ChiaServer
