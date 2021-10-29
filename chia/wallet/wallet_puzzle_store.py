@@ -135,13 +135,13 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_derivation_record_for_puzzle_hash(self, puzzle_hash: str) -> Optional[DerivationRecord]:
+    async def get_derivation_record_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[DerivationRecord]:
         """
         Returns the derivation record by index and wallet id.
         """
         cursor = await self.db_connection.execute(
             "SELECT * FROM derivation_paths WHERE puzzle_hash=?;",
-            (puzzle_hash,),
+            (puzzle_hash.hex(),),
         )
         row = await cursor.fetchone()
         await cursor.close()

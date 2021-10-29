@@ -975,7 +975,7 @@ class WalletNode:
         for coin in additions:
             puzzle_store = self.wallet_state_manager.puzzle_store
             record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
-                coin.puzzle_hash.hex()
+                coin.puzzle_hash
             )
             if record_info is not None and record_info.wallet_type == WalletType.COLOURED_COIN:
                 # TODO why ?
