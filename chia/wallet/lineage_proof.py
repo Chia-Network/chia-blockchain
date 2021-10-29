@@ -12,3 +12,6 @@ class LineageProof(Streamable):
     parent_name: bytes32
     inner_puzzle_hash: Optional[bytes32]
     amount: uint64
+
+    def as_list(self):
+        return [self.parent_name, self.inner_puzzle_hash, self.amount]

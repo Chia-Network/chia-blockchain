@@ -105,6 +105,6 @@ class TestDLWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
-        await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
 
         assert dl_wallet_0.dl_info.root_hash == new_merkle_tree.calculate_root()
+        

@@ -162,7 +162,7 @@ class DataLayerWallet:
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(dl_record)
-        await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
+
         return self
 
     async def generate_launcher_spend(
@@ -193,13 +193,18 @@ class DataLayerWallet:
         announcement_message = Program.to([puzzle_hash, amount, initial_root]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
         eve_coin = Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), amount)
+        future_parent = LineageProof(
+            eve_coin.parent_coin_info,
+            create_host_layer_puzzle(inner_puzzle, initial_root).get_tree_hash(),
+            eve_coin.amount,
+        )
         eve_parent = LineageProof(
             launcher_coin.parent_coin_info,
             launcher_coin.puzzle_hash,
             launcher_coin.amount,
         )
-        await self.add_parent(eve_coin.name(), eve_parent, False)
-        #breakpoint()
+        await self.add_parent(eve_coin.parent_coin_info, eve_parent, False)
+        await self.add_parent(eve_coin.name(), future_parent, False)
         create_launcher_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
@@ -235,7 +240,7 @@ class DataLayerWallet:
         db_layer_sol = Program.to([0, inner_inner_sol])
         parent_info = await self.get_parent_for_coin(my_coin)
         assert parent_info is not None
-        # breakpoint()
+
         assert self.dl_info.origin_coin
         current_full_puz = create_host_fullpuz(
             self.dl_info.current_inner_inner,
@@ -244,11 +249,7 @@ class DataLayerWallet:
         )
         full_sol = Program.to(
             [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
+                parent_info,
                 my_coin.amount,
                 db_layer_sol,
             ]
@@ -264,7 +265,7 @@ class DataLayerWallet:
         )
         # fake_for_signature = CoinSpend(my_coin, self.dl_info.current_inner_inner, inner_inner_sol)  # I am about to do something nasty
         # fake_sb = await self.standard_wallet.sign_transaction([fake_for_signature])
-        # breakpoint()
+
         spend_bundle = await self.sign(coin_spend)
         new_info = DataLayerInfo(self.dl_info.origin_coin, root_hash, self.dl_info.parent_info, new_inner_inner_puzzle)
         await self.save_info(new_info, False)  # todo in_transaction false ?
@@ -297,7 +298,7 @@ class DataLayerWallet:
         db_layer_sol = Program.to([1, (my_coin.puzzle_hash, my_coin.amount)])
         parent_info = await self.get_parent_for_coin(my_coin)
         assert parent_info is not None
-        assert self.dl_info.origin_coin
+        assert self.dl_info.origin_coin is not None
         current_full_puz = create_host_fullpuz(
             self.dl_info.current_inner_inner,
             self.dl_info.root_hash,
@@ -305,11 +306,7 @@ class DataLayerWallet:
         )
         full_sol = Program.to(
             [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
+                parent_info,
                 my_coin.amount,
                 db_layer_sol,
             ]
@@ -390,8 +387,11 @@ class DataLayerWallet:
         for name, ccparent in self.dl_info.parent_info:
             if name == coin.parent_coin_info:
                 parent_info = ccparent
-
-        return parent_info
+        if parent_info.parent_name == self.dl_info.origin_coin.parent_coin_info:
+            ret = [parent_info.parent_name, parent_info.amount]
+        else:
+            ret = parent_info.as_list()
+        return ret
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof], in_transaction: bool) -> None:
         self.log.info(f"Adding parent {name}: {parent}")
