@@ -93,7 +93,7 @@ class WalletBlockchain(BlockchainInterface):
     async def receive_block(self, block: HeaderBlock) -> Tuple[ReceiveBlockResult, Optional[Err]]:
         if self.contains_block(block.header_hash):
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None
-        if not self.contains_block(block.prev_header_hash):
+        if not self.contains_block(block.prev_header_hash) and block.height > 0:
             return ReceiveBlockResult.DISCONNECTED_BLOCK, None
         if (
             len(block.finished_sub_slots) > 0
@@ -167,6 +167,7 @@ class WalletBlockchain(BlockchainInterface):
             self._latest_timestamp = timestamp
         elif block.foliage_transaction_block is not None:
             self._latest_timestamp = block.foliage_transaction_block.timestamp
+        log.warning(f"Peak set to : {self._peak.height} timestamp: {self._latest_timestamp}")
 
     async def get_peak_block(self) -> Optional[HeaderBlock]:
         if self._peak is not None:
