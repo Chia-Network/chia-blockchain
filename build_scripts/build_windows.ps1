@@ -86,7 +86,7 @@ pyinstaller --log-level INFO $SPEC_FILE
 Write-Output "   ---"
 Write-Output "Copy chia executables to chia-blockchain-gui\"
 Write-Output "   ---"
-Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\" -Recurse
+Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\packages\wallet" -Recurse
 Set-Location -Path "..\chia-blockchain-gui" -PassThru
 
 git status
@@ -111,6 +111,8 @@ npm run build
 If ($LastExitCode -gt 0){
     Throw "npm run build failed!"
 }
+
+Set-Location -Path "packages\wallet" -PassThru
 
 Write-Output "   ---"
 Write-Output "Increase the stack for chia command for (chia plots create) chiapos limitations"
