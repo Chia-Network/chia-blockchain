@@ -81,8 +81,10 @@ Write-Output "   ---"
 Write-Output "Prepare Electron packager"
 Write-Output "   ---"
 $Env:NODE_OPTIONS = "--max-old-space-size=3000"
-npm install --save-dev electron-winstaller
+npm install -g electron-winstaller
 npm install -g electron-packager
+npm install -g lerna
+
 npm install
 npm run audit:fix
 
@@ -118,7 +120,7 @@ Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
+electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion --executable-name=chia-blockchain
 Write-Output "   ---"
 
 Write-Output "   ---"
