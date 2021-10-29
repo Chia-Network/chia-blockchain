@@ -5,6 +5,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
 from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 from chia.types.blockchain_format.program import Program
 from blspy import AugSchemeMPL
 from chia.types.spend_bundle import SpendBundle
@@ -105,6 +106,9 @@ class TestDLWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
+        # await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
 
         assert dl_wallet_0.dl_info.root_hash == new_merkle_tree.calculate_root()
-        
+        coins = await dl_wallet_0.select_coins(1)
+        coin = coins.pop()
+        assert coin.puzzle_hash == create_host_fullpuz(dl_wallet_0.dl_info.inner_inner_puz, new_merkle_tree.calculate_root(), dl_wallet_0.dl_info.origin_coin.name())
