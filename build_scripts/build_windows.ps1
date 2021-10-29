@@ -99,8 +99,8 @@ npm install -g electron-winstaller
 npm install -g electron-packager
 npm install -g lerna
 
+lerna clean -y
 npm install
-npm run audit:fix
 
 git status
 
