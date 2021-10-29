@@ -420,7 +420,7 @@ if (!handleSquirrelEvent()) {
         label: i18n._(/* i18n */ { id: 'Chia' }),
         submenu: [
           {
-            label: i18n._(/* i18n */ { id: 'About Chia Blockchain' }),
+            label: i18n._(/* i18n */ { id: 'About Chia Wallet' }),
             click: () => {
               openAbout();
             },
@@ -507,7 +507,7 @@ if (!handleSquirrelEvent()) {
           type: 'separator',
         },
         {
-          label: i18n._(/* i18n */ { id: 'About Chia Blockchain' }),
+          label: i18n._(/* i18n */ { id: 'About Chia Wallet' }),
           click() {
             openAbout();
           },
