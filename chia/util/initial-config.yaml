@@ -398,7 +398,7 @@ introducer:
   host: *self_hostname
   port: 8445
   max_peers_to_send: 20
-  # The introducer will only return peers who it has seen in the last
+  # The introducer will only return peers it has seen in the last
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
   logging: *logging
