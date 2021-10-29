@@ -166,6 +166,7 @@ class WalletTransactionStore:
             trade_id=None,
             type=current.type,
             name=current.name,
+            memos=current.memos,
         )
         await self.add_transaction_record(tx, True)
 
@@ -216,6 +217,7 @@ class WalletTransactionStore:
             trade_id=None,
             type=current.type,
             name=current.name,
+            memos=current.memos,
         )
 
         await self.add_transaction_record(tx, False)
@@ -241,6 +243,7 @@ class WalletTransactionStore:
             trade_id=None,
             type=record.type,
             name=record.name,
+            memos=record.memos,
         )
         await self.add_transaction_record(tx, True)
 

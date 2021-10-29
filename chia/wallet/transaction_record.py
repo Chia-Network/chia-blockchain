@@ -37,6 +37,7 @@ class TransactionRecord(Streamable):
     trade_id: Optional[bytes32]
     type: uint32  # TransactionType
     name: bytes32
+    memos: List[Tuple[bytes32, List[bytes]]]
 
     def is_in_mempool(self) -> bool:
         # If one of the nodes we sent it to responded with success, we set it to success
@@ -62,18 +63,26 @@ class TransactionRecord(Streamable):
         return None
 
     def get_memos(self) -> Dict[bytes32, List[bytes]]:
-        if self.spend_bundle is None:
-            return {}
-        return self.spend_bundle.get_memos()
+        return {coin_id: ms for coin_id, ms in self.memos}
 
     @classmethod
-    def from_json_dict_convenience(cls, modified_tx: Dict):
+    def from_json_dict_convenience(cls, modified_tx_input: Dict):
+        modified_tx = modified_tx_input.copy()
         if "to_address" in modified_tx:
             modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
         if "to_address" in modified_tx:
             del modified_tx["to_address"]
+        # Converts memos from a flat dict into a nested list
+        memos_dict = {}
+        memos_list: List = []
         if "memos" in modified_tx:
-            del modified_tx["memos"]
+            for coin_id, memo in modified_tx["memos"].items():
+                if coin_id not in memos_dict:
+                    memos_dict[coin_id] = []
+                memos_dict[coin_id].append(memo)
+        for coin_id, memos in memos_dict.items():
+            memos_list.append((coin_id, memos))
+        modified_tx["memos"] = memos_list
         return cls.from_json_dict(modified_tx)
 
     def to_json_dict_convenience(self, config: Dict) -> Dict:

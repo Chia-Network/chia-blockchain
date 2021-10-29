@@ -140,6 +140,7 @@ class CCWallet:
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
             name=token_bytes(),
+            memos=[],
         )
         chia_tx = replace(chia_tx, spend_bundle=spend_bundle)
         await self.standard_wallet.push_transaction(chia_tx)
@@ -699,6 +700,7 @@ class CCWallet:
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=spend_bundle.name(),
+                memos=list(spend_bundle.get_memos().items()),
             )
         ]
 
@@ -720,6 +722,7 @@ class CCWallet:
                     trade_id=chia_tx.trade_id,
                     type=chia_tx.type,
                     name=chia_tx.name,
+                    memos=[],
                 )
             )
 

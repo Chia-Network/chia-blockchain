@@ -585,6 +585,7 @@ class TradeManager:
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.OUTGOING_TRADE.value),
                     name=chia_spend_bundle.name(),
+                    memos=list(chia_spend_bundle.get_memos().items()),
                 )
             else:
                 tx_record = TransactionRecord(
@@ -603,6 +604,7 @@ class TradeManager:
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.INCOMING_TRADE.value),
                     name=chia_spend_bundle.name(),
+                    memos=list(chia_spend_bundle.get_memos().items()),
                 )
             my_tx_records.append(tx_record)
 
@@ -625,6 +627,7 @@ class TradeManager:
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.OUTGOING_TRADE.value),
                     name=spend_bundle.name(),
+                    memos=list(spend_bundle.get_memos().items()),
                 )
             else:
                 tx_record = TransactionRecord(
@@ -643,6 +646,7 @@ class TradeManager:
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.INCOMING_TRADE.value),
                     name=token_bytes(),
+                    memos=list(spend_bundle.get_memos().items()),
                 )
             my_tx_records.append(tx_record)
 
@@ -662,6 +666,7 @@ class TradeManager:
             trade_id=std_hash(spend_bundle.name() + bytes(now)),
             type=uint32(TransactionType.OUTGOING_TRADE.value),
             name=spend_bundle.name(),
+            memos=list(spend_bundle.get_memos().items()),
         )
 
         now = uint64(int(time.time()))

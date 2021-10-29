@@ -458,6 +458,7 @@ class PoolWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
+            memos=list(spend_bundle.get_memos().items()),
         )
         await standard_wallet.push_transaction(standard_wallet_record)
         p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(
@@ -572,6 +573,7 @@ class PoolWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=signed_spend_bundle.name(),
+            memos=list(signed_spend_bundle.get_memos().items()),
         )
         return tx_record
 
@@ -809,6 +811,7 @@ class PoolWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
+            memos=list(spend_bundle.get_memos().items()),
         )
         await self.wallet_state_manager.add_pending_transaction(absorb_transaction)
         return absorb_transaction
