@@ -221,6 +221,9 @@ export const walletApi = createApi({
       }, {
         command: 'onCoinRemoved',
         endpoint: () => walletApi.endpoints.getWalletBalance,
+      }, {
+        command: 'onPendingTransaction',
+        endpoint: () => walletApi.endpoints.getWalletBalance,
       }]),
     }),
 
@@ -516,6 +519,9 @@ export const walletApi = createApi({
       }, {
         command: 'onCoinRemoved',
         endpoint: () => walletApi.endpoints.getTransactions,
+      }, {
+        command: 'onPendingTransaction',
+        endpoint: () => walletApi.endpoints.getTransactions,
       }]),
     }),
 
@@ -569,7 +575,10 @@ export const walletApi = createApi({
       transformResponse: (response: any) => response?.height,
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onSyncChanged',
-        endpoint: () => walletApi.endpoints.getSyncStatus,
+        endpoint: () => walletApi.endpoints.getHeightInfo,
+      }, {
+        command: 'onNewBlock',
+        endpoint: () => walletApi.endpoints.getHeightInfo,
       }]),
     }),
 

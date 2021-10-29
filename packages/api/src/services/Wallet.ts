@@ -236,6 +236,10 @@ export default class Wallet extends Service {
     return this.onStateChanged('new_block', callback);
   }
 
+  onNewPeak(callback: (data: any, message: Message) => void) {
+    return this.onStateChanged('new_peak', callback);
+  }
+
   onCoinAdded(callback: (
     data: {
       additionalData: Object;
