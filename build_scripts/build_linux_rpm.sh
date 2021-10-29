@@ -64,7 +64,7 @@ jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json 
 
 electron-packager . chia-blockchain --asar.unpack="**/daemon/**" --platform=linux \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
---appVersion=$CHIA_INSTALLER_VERSION
+--appVersion=$CHIA_INSTALLER_VERSION --executable-name=chia-blockchain
 LAST_EXIT_CODE=$?
 
 # reset the package.json to the original
@@ -95,7 +95,7 @@ if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
 
   electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
   --arch "$REDHAT_PLATFORM" --options.version $CHIA_INSTALLER_VERSION \
-  --license ../LICENSE
+  --license ../LICENSE --options.bin chia-blockchain
   LAST_EXIT_CODE=$?
   if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	  echo >&2 "electron-installer-redhat failed!"
