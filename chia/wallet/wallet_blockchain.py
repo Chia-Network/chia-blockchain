@@ -93,7 +93,8 @@ class WalletBlockchain(BlockchainInterface):
     async def receive_block(self, block: HeaderBlock) -> Tuple[ReceiveBlockResult, Optional[Err]]:
         if self.contains_block(block.header_hash):
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None
-
+        if not self.contains_block(block.prev_header_hash):
+            return ReceiveBlockResult.DISCONNECTED_BLOCK, None
         if (
             len(block.finished_sub_slots) > 0
             and block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None
