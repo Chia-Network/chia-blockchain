@@ -81,7 +81,7 @@ echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
 rm -rf final_installer
 mkdir final_installer
 electron-installer-debian --src dist/$DIR_NAME/ --dest final_installer/ \
---arch "$PLATFORM" --options.version $CHIA_INSTALLER_VERSION --options.bin chia-blockchain
+--arch "$PLATFORM" --options.version $CHIA_INSTALLER_VERSION --options.bin chia-blockchain --options.name chia-blockchain
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-debian failed!"
