@@ -41,7 +41,7 @@ class Timelord:
         self.root_path = root_path
         self.constants = constants
         self._shut_down = False
-        self.free_clients: List[Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = []
+        self.free_clients: List[Tuple[str, asyncio.StreamReader, asyncio.StreamWriter, int]] = []
         self.potential_free_clients: List = []
         self.ip_whitelist = self.config["vdf_clients"]["ip"]
         self.server: Optional[ChiaServer] = None
@@ -91,6 +91,7 @@ class Timelord:
         self.sanitizer_mode = self.config["sanitizer_mode"]
         self.pending_bluebox_info: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
+        self.process_id: int = 0
 
     async def _start(self):
         self.lock: asyncio.Lock = asyncio.Lock()
@@ -124,8 +125,9 @@ class Timelord:
             client_ip = writer.get_extra_info("peername")[0]
             log.debug(f"New timelord connection from client: {client_ip}.")
             if client_ip in self.ip_whitelist:
-                self.free_clients.append((client_ip, reader, writer))
-                log.debug(f"Added new VDF client {client_ip}.")
+                self.process_id += 1
+                self.free_clients.append((client_ip, reader, writer, self.process_id))
+                log.debug(f"Added new VDF client {client_ip}. Process ID: {self.process_id}")
                 for ip, end_time in list(self.potential_free_clients):
                     if ip == client_ip:
                         self.potential_free_clients.remove((ip, end_time))
@@ -320,7 +322,7 @@ class Timelord:
             async with self.lock:
                 if len(self.free_clients) == 0:
                     break
-                ip, reader, writer = self.free_clients[0]
+                ip, reader, writer, proc_id = self.free_clients[0]
                 for chain_type in self.unspawned_chains:
                     challenge = self.last_state.get_challenge(chain_type)
                     initial_form = self.last_state.get_initial_form(chain_type)
@@ -335,11 +337,11 @@ class Timelord:
                 self.unspawned_chains = self.unspawned_chains[1:]
                 self.chain_start_time[picked_chain] = time.time()
 
-            log.debug(f"Mapping free vdf_client with chain: {picked_chain}.")
+            log.debug(f"Mapping vdf_client with ID {proc_id} with chain: {picked_chain}.")
             self.process_communication_tasks.append(
                 asyncio.create_task(
                     self._do_process_communication(
-                        picked_chain, challenge, initial_form, ip, reader, writer, proof_label=self.num_resets
+                        picked_chain, challenge, initial_form, ip, reader, writer, proc_id, proof_label=self.num_resets
                     )
                 )
             )
@@ -833,6 +835,7 @@ class Timelord:
         ip: str,
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
+        proc_id: int,
         # Data specific only when running in bluebox mode.
         bluebox_iteration: Optional[uint64] = None,
         header_hash: Optional[bytes32] = None,
@@ -883,7 +886,7 @@ class Timelord:
             if ok.decode() != "OK":
                 return None
 
-            log.debug("Got handshake with VDF client.")
+            log.debug(f"Got handshake with VDF client. Process ID: {proc_id}")
             if not self.sanitizer_mode:
                 async with self.lock:
                     self.allows_iters.append(chain)
@@ -919,7 +922,7 @@ class Timelord:
                 except Exception:
                     pass
                 if msg == "STOP":
-                    log.debug(f"Stopped client running on ip {ip}.")
+                    log.debug(f"Stopped client running on ip {ip}. Process ID: {proc_id}")
                     async with self.lock:
                         writer.write(b"ACK")
                         await writer.drain()
@@ -1011,7 +1014,7 @@ class Timelord:
                         if info is None:
                             # Nothing found with target_field_vdf, just pick the first VDFInfo.
                             info = self.pending_bluebox_info[0]
-                        ip, reader, writer = self.free_clients[0]
+                        ip, reader, writer, proc_id = self.free_clients[0]
                         self.process_communication_tasks.append(
                             asyncio.create_task(
                                 self._do_process_communication(
@@ -1021,6 +1024,7 @@ class Timelord:
                                     ip,
                                     reader,
                                     writer,
+                                    proc_id,
                                     info[1].new_proof_of_time.number_of_iterations,
                                     info[1].header_hash,
                                     info[1].height,
