@@ -1,8 +1,13 @@
 name: Windows Installer on Windows 10 and Python 3.9
 
 on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - protocol_and_cats_rebased
     tags:
-        - '**'
+      - '**'
   pull_request:
     branches:
       - '**'
