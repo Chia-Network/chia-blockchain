@@ -670,7 +670,14 @@ class WebSocketServer:
         elif plotter == "bladebit":
             final_words = ["Finished plotting in"]
         elif plotter == "madmax":
-            final_words = ["Renamed final plot"]
+            temp_dir = config["temp_dir"]
+            final_dir = config["final_dir"]
+            if temp_dir == final_dir:
+                final_words = ["Total plot creation time was"]
+            else:
+                # "Renamed final plot" if moving to a final dir on the same volume
+                # "Copy to <path> finished, took..." if copying to another volume
+                final_words = ["Renamed final plot", "finished, took"]
 
         while True:
             new_data = await loop.run_in_executor(io_pool_exc, fp.readline)
@@ -920,6 +927,7 @@ class WebSocketServer:
         delay = int(request.get("delay", 0))
         parallel = request.get("parallel", False)
         size = request.get("k")
+        temp_dir = request.get("t")
         final_dir = request.get("d")
         exclude_final_dir = request.get("x", False)
         count = int(request.get("n", 1))
@@ -951,6 +959,7 @@ class WebSocketServer:
                 "error": None,
                 "log": None,
                 "process": None,
+                "temp_dir": temp_dir,
                 "final_dir": final_dir,
                 "exclude_final_dir": exclude_final_dir,
             }
