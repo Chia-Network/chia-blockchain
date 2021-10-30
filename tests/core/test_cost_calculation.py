@@ -63,7 +63,7 @@ class TestCostCalculation:
         )
         coinbase = None
         for coin in blocks[2].get_included_reward_coins():
-            if coin.puzzle_hash == ph:
+            if coin.puzzle_hash == ph and coin.amount == 250000000000:
                 coinbase = coin
                 break
         assert coinbase is not None
@@ -76,17 +76,24 @@ class TestCostCalculation:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
 
         npc_result: NPCResult = get_name_puzzle_conditions(
-            program, test_constants.MAX_BLOCK_COST_CLVM, cost_per_byte=test_constants.COST_PER_BYTE, safe_mode=False
+            program,
+            test_constants.MAX_BLOCK_COST_CLVM,
+            cost_per_byte=test_constants.COST_PER_BYTE,
+            safe_mode=False,
         )
 
         cost = calculate_cost_of_program(program.program, npc_result, test_constants.COST_PER_BYTE)
 
         assert npc_result.error is None
+        assert len(bytes(program.program)) == 433
+
         coin_name = npc_result.npc_list[0].coin_name
         error, puzzle, solution = get_puzzle_and_solution_for_coin(
             program, coin_name, test_constants.MAX_BLOCK_COST_CLVM
         )
         assert error is None
+
+        assert npc_result.clvm_cost == 404560
 
         # Create condition + agg_sig_condition + length + cpu_cost
         assert (
@@ -94,7 +101,7 @@ class TestCostCalculation:
             == ConditionCost.CREATE_COIN.value
             + ConditionCost.AGG_SIG.value
             + len(bytes(program.program)) * test_constants.COST_PER_BYTE
-            + npc_result.clvm_cost
+            + 404560  # clvm_cost
         )
 
     @pytest.mark.asyncio
@@ -133,11 +140,17 @@ class TestCostCalculation:
         )
         generator = BlockGenerator(program, [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, test_constants.MAX_BLOCK_COST_CLVM, cost_per_byte=test_constants.COST_PER_BYTE, safe_mode=True
+            generator,
+            test_constants.MAX_BLOCK_COST_CLVM,
+            cost_per_byte=test_constants.COST_PER_BYTE,
+            safe_mode=True,
         )
         assert npc_result.error is not None
-        npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, test_constants.MAX_BLOCK_COST_CLVM, cost_per_byte=test_constants.COST_PER_BYTE, safe_mode=False
+        npc_result = get_name_puzzle_conditions(
+            generator,
+            test_constants.MAX_BLOCK_COST_CLVM,
+            cost_per_byte=test_constants.COST_PER_BYTE,
+            safe_mode=False,
         )
         assert npc_result.error is None
 
@@ -158,11 +171,17 @@ class TestCostCalculation:
         program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
         generator = BlockGenerator(program, [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, test_constants.MAX_BLOCK_COST_CLVM, cost_per_byte=test_constants.COST_PER_BYTE, safe_mode=True
+            generator,
+            test_constants.MAX_BLOCK_COST_CLVM,
+            cost_per_byte=test_constants.COST_PER_BYTE,
+            safe_mode=True,
         )
         assert npc_result.error is not None
-        npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, test_constants.MAX_BLOCK_COST_CLVM, cost_per_byte=test_constants.COST_PER_BYTE, safe_mode=False
+        npc_result = get_name_puzzle_conditions(
+            generator,
+            test_constants.MAX_BLOCK_COST_CLVM,
+            cost_per_byte=test_constants.COST_PER_BYTE,
+            safe_mode=False,
         )
         assert npc_result.error is None
 
@@ -175,7 +194,10 @@ class TestCostCalculation:
         start_time = time.time()
         generator = BlockGenerator(program, [])
         npc_result = get_name_puzzle_conditions(
-            generator, test_constants.MAX_BLOCK_COST_CLVM, cost_per_byte=test_constants.COST_PER_BYTE, safe_mode=False
+            generator,
+            test_constants.MAX_BLOCK_COST_CLVM,
+            cost_per_byte=test_constants.COST_PER_BYTE,
+            safe_mode=False,
         )
         end_time = time.time()
         duration = end_time - start_time
@@ -208,7 +230,7 @@ class TestCostCalculation:
 
         # raise the max cost to make sure this passes
         # ensure we pass if the program does not exceeds the cost
-        npc_result: NPCResult = get_name_puzzle_conditions(generator, 20000000, cost_per_byte=0, safe_mode=False)
+        npc_result = get_name_puzzle_conditions(generator, 20000000, cost_per_byte=0, safe_mode=False)
 
         assert npc_result.error is None
         assert npc_result.clvm_cost > 10000000

@@ -28,8 +28,6 @@ class BlockStore:
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.db_wrapper = db_wrapper
         self.db = db_wrapper.db
-        await self.db.execute("pragma journal_mode=wal")
-        await self.db.execute("pragma synchronous=2")
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, height bigint,"
             "  is_block tinyint, is_fully_compactified tinyint, block blob)"
@@ -52,14 +50,19 @@ class BlockStore:
 
         # Height index so we can look up in order of height for sync purposes
         await self.db.execute("CREATE INDEX IF NOT EXISTS full_block_height on full_blocks(height)")
-        await self.db.execute("CREATE INDEX IF NOT EXISTS is_block on full_blocks(is_block)")
+        # this index is not used by any queries, don't create it for new
+        # installs, and remove it from existing installs in the future
+        # await self.db.execute("DROP INDEX IF EXISTS is_block on full_blocks(is_block)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS is_fully_compactified on full_blocks(is_fully_compactified)")
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
-        await self.db.execute("CREATE INDEX IF NOT EXISTS is_block on block_records(is_block)")
+
+        # this index is not used by any queries, don't create it for new
+        # installs, and remove it from existing installs in the future
+        # await self.db.execute("DROP INDEX IF EXISTS is_block on block_records(is_block)")
 
         await self.db.commit()
         self.block_cache = LRUCache(1000)
@@ -345,15 +348,19 @@ class BlockStore:
             return None
         return bool(row[0])
 
-    async def get_first_not_compactified(self) -> Optional[int]:
+    async def get_random_not_compactified(self, number: int) -> List[int]:
         # Since orphan blocks do not get compactified, we need to check whether all blocks with a
         # certain height are not compact. And if we do have compact orphan blocks, then all that
         # happens is that the occasional chain block stays uncompact - not ideal, but harmless.
         cursor = await self.db.execute(
-            "SELECT height FROM full_blocks GROUP BY height HAVING sum(is_fully_compactified)=0 ORDER BY height LIMIT 1"
+            f"SELECT height FROM full_blocks GROUP BY height HAVING sum(is_fully_compactified)=0 "
+            f"ORDER BY RANDOM() LIMIT {number}"
         )
-        row = await cursor.fetchone()
+        rows = await cursor.fetchall()
         await cursor.close()
-        if row is None:
-            return None
-        return int(row[0])
+
+        heights = []
+        for row in rows:
+            heights.append(int(row[0]))
+
+        return heights

@@ -20,7 +20,6 @@ from tests.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
-from tests.core.fixtures import empty_blockchain
 
 
 class TestRpc:
@@ -116,6 +115,12 @@ class TestRpc:
             pid = list(blocks[-1].get_included_reward_coins())[0].parent_coin_info
             pid_2 = list(blocks[-1].get_included_reward_coins())[1].parent_coin_info
             coins = await client.get_coin_records_by_parent_ids([pid, pid_2])
+            print(coins)
+            assert len(coins) == 2
+
+            name = list(blocks[-1].get_included_reward_coins())[0].name()
+            name_2 = list(blocks[-1].get_included_reward_coins())[1].name()
+            coins = await client.get_coin_records_by_names([name, name_2])
             print(coins)
             assert len(coins) == 2
 

@@ -1,11 +1,10 @@
 import asyncio
 import logging
+from time import time
 
 from typing import Dict, List, Optional, Tuple, Callable
 
 import pytest
-from clvm import SExp
-from clvm.EvalError import EvalError
 
 import chia.server.ws_connection as ws
 
@@ -15,31 +14,36 @@ from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
+from chia.types.mempool_item import MempoolItem
 from chia.util.clvm import int_to_bytes
-from chia.util.condition_tools import conditions_for_solution
-from chia.util.errors import Err, ValidationError
+from chia.util.condition_tools import conditions_for_solution, pkm_pairs
+from chia.util.errors import Err
 from chia.util.ints import uint64
 from chia.util.hash import std_hash
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.api_decorators import api_request, peer_required, bytes_required
-from chia.full_node.mempool_check_conditions import parse_condition_args
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.types.name_puzzle_condition import NPC
+from chia.full_node.pending_tx_cache import PendingTxCache
+from blspy import G2Element
 
+from chia.util.recursive_replace import recursive_replace
 from tests.connection_utils import connect_and_get_peer
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import bt, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import Program, INFINITE_COST
-from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.program import SerializedProgram
 from clvm_tools import binutils
 from chia.types.generator_types import BlockGenerator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from clvm.casts import int_from_bytes
+from blspy import G1Element
 
 BURN_PUZZLE_HASH = b"0" * 32
 BURN_PUZZLE_HASH_2 = b"1" * 32
@@ -81,6 +85,79 @@ async def two_nodes():
 
     async for _ in async_gen:
         yield _
+
+
+def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
+    spend_bundle_name = bytes([idx] * 32)
+    return MempoolItem(
+        SpendBundle([], G2Element()),
+        uint64(0),
+        NPCResult(None, [], cost),
+        cost,
+        spend_bundle_name,
+        [],
+        [],
+        SerializedProgram(),
+    )
+
+
+class TestPendingTxCache:
+    def test_recall(self):
+        c = PendingTxCache(100)
+        item = make_item(1)
+        c.add(item)
+        tx = c.drain()
+        assert tx == {item.spend_bundle_name: item}
+
+    def test_fifo_limit(self):
+        c = PendingTxCache(200)
+        # each item has cost 80
+        items = [make_item(i) for i in range(1, 4)]
+        for i in items:
+            c.add(i)
+        # the max cost is 200, only two transactions will fit
+        # we evict items FIFO, so the to most recently added will be left
+        tx = c.drain()
+        assert tx == {items[-2].spend_bundle_name: items[-2], items[-1].spend_bundle_name: items[-1]}
+
+    def test_drain(self):
+        c = PendingTxCache(100)
+        item = make_item(1)
+        c.add(item)
+        tx = c.drain()
+        assert tx == {item.spend_bundle_name: item}
+
+        # drain will clear the cache, so a second call will be empty
+        tx = c.drain()
+        assert tx == {}
+
+    def test_cost(self):
+        c = PendingTxCache(200)
+        assert c.cost() == 0
+        item1 = make_item(1)
+        c.add(item1)
+        # each item has cost 80
+        assert c.cost() == 80
+
+        item2 = make_item(2)
+        c.add(item2)
+        assert c.cost() == 160
+
+        # the first item is evicted, so the cost stays the same
+        item3 = make_item(3)
+        c.add(item3)
+        assert c.cost() == 160
+
+        tx = c.drain()
+        assert tx == {item2.spend_bundle_name: item2, item3.spend_bundle_name: item3}
+
+        assert c.cost() == 0
+        item4 = make_item(4)
+        c.add(item4)
+        assert c.cost() == 80
+
+        tx = c.drain()
+        assert tx == {item4.spend_bundle_name: item4}
 
 
 class TestMempool:
@@ -447,7 +524,7 @@ class TestMempoolManager:
         assert sb1 is None
         # the transaction may become valid later
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_correct_block_index(self, two_nodes):
@@ -510,7 +587,7 @@ class TestMempoolManager:
         assert sb1 is None
         # the transaction may become valid later
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_correct_block_age(self, two_nodes):
@@ -611,7 +688,7 @@ class TestMempoolManager:
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_assert_time_exceeds(self, two_nodes):
@@ -643,6 +720,21 @@ class TestMempoolManager:
         assert err == Err.ASSERT_SECONDS_ABSOLUTE_FAILED
 
     @pytest.mark.asyncio
+    async def test_assert_height_pending(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        print(full_node_1.full_node.blockchain.get_peak())
+        current_height = full_node_1.full_node.blockchain.get_peak().height
+
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(current_height + 4)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.PENDING
+        assert err == Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
+
+    @pytest.mark.asyncio
     async def test_assert_time_negative(self, two_nodes):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -667,7 +759,7 @@ class TestMempoolManager:
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_assert_time_garbage(self, two_nodes):
@@ -739,7 +831,7 @@ class TestMempoolManager:
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_assert_time_relative_negative(self, two_nodes):
@@ -756,6 +848,7 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
         assert err is None
 
+    # ensure one spend can assert a coin announcement from another spend
     @pytest.mark.asyncio
     async def test_correct_coin_announcement_consumed(self, two_nodes):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
@@ -778,6 +871,8 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
         assert err is None
 
+    # ensure one spend can assert a coin announcement from another spend, even
+    # though the conditions have garbage (ignored) at the end
     @pytest.mark.asyncio
     async def test_coin_announcement_garbage(self, two_nodes):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
@@ -821,7 +916,7 @@ class TestMempoolManager:
 
         assert full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name()) is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_coin_announcement_missing_arg2(self, two_nodes):
@@ -843,7 +938,7 @@ class TestMempoolManager:
 
         assert full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name()) is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_coin_announcement_too_big(self, two_nodes):
@@ -878,6 +973,8 @@ class TestMempoolManager:
         except AssertionError:
             pass
 
+    # ensure an assert coin announcement is rejected if it doesn't match the
+    # create announcement
     @pytest.mark.asyncio
     async def test_invalid_coin_announcement_rejected(self, two_nodes):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -888,7 +985,7 @@ class TestMempoolManager:
             cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
 
             dic = {cvp.opcode: [cvp]}
-            # Wrong message
+            # mismatching message
             cvp2 = ConditionWithArgs(
                 ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
                 [b"wrong test"],
@@ -918,10 +1015,7 @@ class TestMempoolManager:
 
             dic = {cvp.opcode: [cvp]}
 
-            cvp2 = ConditionWithArgs(
-                ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
-                [b"test"],
-            )
+            cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [b"test"])
             dic2 = {cvp.opcode: [cvp2]}
             spend_bundle1 = generate_test_spend_bundle(coin_1, dic)
             # coin 2 is making the announcement, right message wrong coin
@@ -1011,7 +1105,7 @@ class TestMempoolManager:
 
         assert mempool_bundle is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_puzzle_announcement_missing_arg2(self, two_nodes):
@@ -1039,7 +1133,7 @@ class TestMempoolManager:
 
         assert mempool_bundle is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_invalid_puzzle_announcement_rejected(self, two_nodes):
@@ -1133,7 +1227,7 @@ class TestMempoolManager:
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, fee=10)
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition_negative_fee(self, two_nodes):
@@ -1372,7 +1466,7 @@ class TestMempoolManager:
 
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_invalid_my_parent(self, two_nodes):
@@ -1437,7 +1531,7 @@ class TestMempoolManager:
 
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_invalid_my_puzhash(self, two_nodes):
@@ -1501,7 +1595,7 @@ class TestMempoolManager:
 
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_invalid_my_amount(self, two_nodes):
@@ -1548,391 +1642,6 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
         assert err == Err.ASSERT_MY_AMOUNT_FAILED
 
-    @pytest.mark.asyncio
-    async def test_unknown_condition(self, two_nodes):
-
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
-        cvp = ConditionWithArgs(ConditionOpcode.UNKNOWN, [])
-        dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
-
-        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-
-        assert sb1 is None
-        assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.INVALID_CONDITION
-
-
-class TestConditionParser:
-    @pytest.mark.parametrize("safe_mode", [True, False])
-    def test_parse_condition_agg_sig(self, safe_mode: bool):
-
-        valid_pubkey = b"b" * 48
-        short_pubkey = b"b" * 47
-        long_pubkey = b"b" * 49
-
-        valid_message = b"a" * 1024
-        long_message = b"a" * 1025
-        empty_message = b""
-
-        for condition_code in [ConditionOpcode.AGG_SIG_UNSAFE, ConditionOpcode.AGG_SIG_ME]:
-            cost, args = parse_condition_args(SExp.to([valid_pubkey, valid_message]), condition_code, safe_mode)
-            assert cost == ConditionCost.AGG_SIG.value
-            assert args == [valid_pubkey, valid_message]
-
-            with pytest.raises(ValidationError):
-                cost, args = parse_condition_args(SExp.to([valid_pubkey, long_message]), condition_code, safe_mode)
-
-            # empty messages are allowed
-            cost, args = parse_condition_args(SExp.to([valid_pubkey, empty_message]), condition_code, safe_mode)
-            assert cost == ConditionCost.AGG_SIG.value
-            assert args == [valid_pubkey, empty_message]
-
-            with pytest.raises(ValidationError):
-                cost, args = parse_condition_args(SExp.to([short_pubkey, valid_message]), condition_code, safe_mode)
-
-            with pytest.raises(ValidationError):
-                cost, args = parse_condition_args(SExp.to([long_pubkey, valid_message]), condition_code, safe_mode)
-
-            # missing message argument
-            with pytest.raises(EvalError):
-                cost, args = parse_condition_args(SExp.to([valid_pubkey]), condition_code, safe_mode)
-
-            # missing all arguments
-            with pytest.raises(EvalError):
-                cost, args = parse_condition_args(SExp.to([]), condition_code, safe_mode)
-
-            # garbage at the end of the arguments list is allowed but stripped
-            cost, args = parse_condition_args(
-                SExp.to([valid_pubkey, valid_message, b"garbage"]), condition_code, safe_mode
-            )
-            assert cost == ConditionCost.AGG_SIG.value
-            assert args == [valid_pubkey, valid_message]
-
-    @pytest.mark.parametrize("safe_mode", [True, False])
-    def test_parse_condition_create_coin(self, safe_mode: bool):
-
-        valid_hash = b"b" * 32
-        short_hash = b"b" * 31
-        long_hash = b"b" * 33
-
-        valid_amount = int_to_bytes(1000000000)
-        # this is greater than max coin amount
-        large_amount = int_to_bytes(2 ** 64)
-        leading_zeros_amount = bytes([0] * 100) + int_to_bytes(1000000000)
-        negative_amount = int_to_bytes(-1000)
-        # this ist still -1, but just with a lot of (redundant) 0xff bytes
-        # prepended
-        large_negative_amount = bytes([0xFF] * 100) + int_to_bytes(-1)
-
-        cost, args = parse_condition_args(SExp.to([valid_hash, valid_amount]), ConditionOpcode.CREATE_COIN, safe_mode)
-        assert cost == ConditionCost.CREATE_COIN.value
-        assert args == [valid_hash, valid_amount]
-
-        if safe_mode:
-            # we don't allow over-long encoding in safe-mode
-            with pytest.raises(ValidationError):
-                parse_condition_args(
-                    SExp.to([valid_hash, leading_zeros_amount]), ConditionOpcode.CREATE_COIN, safe_mode
-                )
-        else:
-            cost, args = parse_condition_args(
-                SExp.to([valid_hash, leading_zeros_amount]), ConditionOpcode.CREATE_COIN, safe_mode
-            )
-            assert cost == ConditionCost.CREATE_COIN.value
-            # the amount will have its leading zeros stripped
-            assert args == [valid_hash, valid_amount]
-
-        with pytest.raises(ValidationError):
-            cost, args = parse_condition_args(
-                SExp.to([valid_hash, large_amount]), ConditionOpcode.CREATE_COIN, safe_mode
-            )
-
-        with pytest.raises(ValidationError):
-            cost, args = parse_condition_args(
-                SExp.to([short_hash, valid_amount]), ConditionOpcode.CREATE_COIN, safe_mode
-            )
-
-        with pytest.raises(ValidationError):
-            cost, args = parse_condition_args(
-                SExp.to([long_hash, valid_amount]), ConditionOpcode.CREATE_COIN, safe_mode
-            )
-
-        with pytest.raises(ValidationError):
-            cost, args = parse_condition_args(
-                SExp.to([valid_hash, negative_amount]), ConditionOpcode.CREATE_COIN, safe_mode
-            )
-
-        with pytest.raises(ValidationError):
-            cost, args = parse_condition_args(
-                SExp.to([valid_hash, large_negative_amount]), ConditionOpcode.CREATE_COIN, safe_mode
-            )
-
-        # missing amount
-        with pytest.raises(EvalError):
-            cost, args = parse_condition_args(SExp.to([valid_hash]), ConditionOpcode.CREATE_COIN, safe_mode)
-
-        # missing everything
-        with pytest.raises(EvalError):
-            cost, args = parse_condition_args(SExp.to([]), ConditionOpcode.CREATE_COIN, safe_mode)
-
-        # garbage at the end of the arguments list is allowed but stripped
-        cost, args = parse_condition_args(
-            SExp.to([valid_hash, valid_amount, b"garbage"]), ConditionOpcode.CREATE_COIN, safe_mode
-        )
-        assert cost == ConditionCost.CREATE_COIN.value
-        assert args == [valid_hash, valid_amount]
-
-    @pytest.mark.parametrize("safe_mode", [True, False])
-    def test_parse_condition_seconds(self, safe_mode: bool):
-
-        valid_timestamp = int_to_bytes(100)
-        leading_zeros_timestamp = bytes([0] * 100) + int_to_bytes(100)
-        negative_timestamp = int_to_bytes(-100)
-        large_negative_timestamp = bytes([0xFF] * 100) + int_to_bytes(-1)
-
-        for condition_code in [ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, ConditionOpcode.ASSERT_SECONDS_RELATIVE]:
-            cost, args = parse_condition_args(SExp.to([valid_timestamp]), condition_code, safe_mode)
-            assert cost == 0
-            assert args == [valid_timestamp]
-
-            if safe_mode:
-                # we don't allow over-long encodings in strict mode
-                with pytest.raises(ValidationError):
-                    parse_condition_args(SExp.to([leading_zeros_timestamp]), condition_code, safe_mode)
-            else:
-                cost, args = parse_condition_args(SExp.to([leading_zeros_timestamp]), condition_code, safe_mode)
-                assert cost == 0
-                assert args == [valid_timestamp]
-
-            # a condition with a negative timestamp is always true
-            cost, args = parse_condition_args(SExp.to([negative_timestamp]), condition_code, safe_mode)
-            assert cost == 0
-            assert args is None
-
-            cost, args = parse_condition_args(SExp.to([large_negative_timestamp]), condition_code, safe_mode)
-            assert cost == 0
-            assert args is None
-
-            # garbage at the end of the arguments list is allowed but stripped
-            cost, args = parse_condition_args(SExp.to([valid_timestamp, b"garbage"]), condition_code, safe_mode)
-            assert cost == 0
-            assert args == [valid_timestamp]
-
-            # missing argument
-            with pytest.raises(EvalError):
-                cost, args = parse_condition_args(SExp.to([]), condition_code, safe_mode)
-
-    @pytest.mark.parametrize("safe_mode", [True, False])
-    def test_parse_condition_height(self, safe_mode: bool):
-
-        valid_height = int_to_bytes(100)
-        leading_zeros_height = bytes([0] * 100) + int_to_bytes(100)
-        negative_height = int_to_bytes(-100)
-        large_negative_height = bytes([0xFF] * 100) + int_to_bytes(-1)
-
-        for condition_code in [ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, ConditionOpcode.ASSERT_HEIGHT_RELATIVE]:
-            cost, args = parse_condition_args(SExp.to([valid_height]), condition_code, safe_mode)
-            assert cost == 0
-            assert args == [valid_height]
-
-            if safe_mode:
-                with pytest.raises(ValidationError):
-                    parse_condition_args(SExp.to([leading_zeros_height]), condition_code, safe_mode)
-            else:
-                cost, args = parse_condition_args(SExp.to([leading_zeros_height]), condition_code, safe_mode)
-                assert cost == 0
-                assert args == [valid_height]
-
-            # a condition with a negative height is always true
-            cost, args = parse_condition_args(SExp.to([negative_height]), condition_code, safe_mode)
-            assert cost == 0
-            assert args is None
-
-            cost, args = parse_condition_args(SExp.to([large_negative_height]), condition_code, safe_mode)
-            assert cost == 0
-            assert args is None
-
-            # garbage at the end of the arguments list is allowed but stripped
-            cost, args = parse_condition_args(SExp.to([valid_height, b"garbage"]), condition_code, safe_mode)
-            assert cost == 0
-            assert args == [valid_height]
-
-            # missing argument
-            with pytest.raises(EvalError):
-                cost, args = parse_condition_args(SExp.to([]), condition_code, safe_mode)
-
-    @pytest.mark.parametrize("safe_mode", [True, False])
-    def test_parse_condition_coin_id(self, safe_mode: bool):
-
-        valid_coin_id = b"a" * 32
-        short_coin_id = b"a" * 31
-        long_coin_id = b"a" * 33
-
-        for condition_code in [ConditionOpcode.ASSERT_MY_COIN_ID, ConditionOpcode.ASSERT_MY_PARENT_ID]:
-            cost, args = parse_condition_args(SExp.to([valid_coin_id]), condition_code, safe_mode)
-            assert cost == 0
-            assert args == [valid_coin_id]
-
-            with pytest.raises(ValidationError):
-                cost, args = parse_condition_args(SExp.to([short_coin_id]), condition_code, safe_mode)
-
-            with pytest.raises(ValidationError):
-                cost, args = parse_condition_args(SExp.to([long_coin_id]), condition_code, safe_mode)
-
-            # garbage at the end of the arguments list is allowed but stripped
-            cost, args = parse_condition_args(SExp.to([valid_coin_id, b"garbage"]), condition_code, safe_mode)
-            assert cost == 0
-            assert args == [valid_coin_id]
-
-            with pytest.raises(EvalError):
-                cost, args = parse_condition_args(SExp.to([]), condition_code, safe_mode)
-
-    @pytest.mark.parametrize("safe_mode", [True, False])
-    def test_parse_condition_fee(self, safe_mode: bool):
-
-        valid_fee = int_to_bytes(100)
-        leading_zeros_fee = bytes([0] * 100) + int_to_bytes(100)
-        negative_fee = int_to_bytes(-100)
-        large_negative_fee = bytes([0xFF] * 100) + int_to_bytes(-1)
-        large_fee = int_to_bytes(2 ** 64)
-
-        cost, args = parse_condition_args(SExp.to([valid_fee]), ConditionOpcode.RESERVE_FEE, safe_mode)
-        assert cost == 0
-        assert args == [valid_fee]
-
-        if safe_mode:
-            with pytest.raises(ValidationError):
-                parse_condition_args(SExp.to([leading_zeros_fee]), ConditionOpcode.RESERVE_FEE, safe_mode)
-        else:
-            cost, args = parse_condition_args(SExp.to([leading_zeros_fee]), ConditionOpcode.RESERVE_FEE, safe_mode)
-            assert cost == 0
-            assert args == [valid_fee]
-
-        with pytest.raises(ValidationError):
-            cost, args = parse_condition_args(SExp.to([negative_fee]), ConditionOpcode.RESERVE_FEE, safe_mode)
-
-        with pytest.raises(ValidationError):
-            cost, args = parse_condition_args(SExp.to([large_fee]), ConditionOpcode.RESERVE_FEE, safe_mode)
-
-        with pytest.raises(ValidationError):
-            cost, args = parse_condition_args(SExp.to([large_negative_fee]), ConditionOpcode.RESERVE_FEE, safe_mode)
-
-        # garbage at the end of the arguments list is allowed but stripped
-        cost, args = parse_condition_args(SExp.to([valid_fee, b"garbage"]), ConditionOpcode.RESERVE_FEE, safe_mode)
-        assert cost == 0
-        assert args == [valid_fee]
-
-        # missing argument
-        with pytest.raises(EvalError):
-            cost, args = parse_condition_args(SExp.to([]), ConditionOpcode.RESERVE_FEE, safe_mode)
-
-    @pytest.mark.parametrize("safe_mode", [True, False])
-    def test_parse_condition_create_announcement(self, safe_mode: bool):
-
-        valid_msg = b"a" * 1024
-        long_msg = b"a" * 1025
-        empty_msg = b""
-
-        for condition_code in [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]:
-            cost, args = parse_condition_args(SExp.to([valid_msg]), condition_code, safe_mode)
-            assert cost == 0
-            assert args == [valid_msg]
-
-            cost, args = parse_condition_args(SExp.to([empty_msg]), condition_code, safe_mode)
-            assert cost == 0
-            assert args == [empty_msg]
-
-            with pytest.raises(ValidationError):
-                cost, args = parse_condition_args(SExp.to([long_msg]), condition_code, safe_mode)
-
-            # missing argument
-            with pytest.raises(EvalError):
-                cost, args = parse_condition_args(SExp.to([]), condition_code, safe_mode)
-
-    @pytest.mark.parametrize("safe_mode", [True, False])
-    def test_parse_condition_assert_announcement(self, safe_mode: bool):
-
-        valid_hash = b"b" * 32
-        short_hash = b"b" * 31
-        long_hash = b"b" * 33
-
-        for condition_code in [
-            ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
-            ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT,
-            ConditionOpcode.ASSERT_MY_PUZZLEHASH,
-        ]:
-            cost, args = parse_condition_args(SExp.to([valid_hash]), condition_code, safe_mode)
-            assert cost == 0
-            assert args == [valid_hash]
-
-            with pytest.raises(ValidationError):
-                cost, args = parse_condition_args(SExp.to([short_hash]), condition_code, safe_mode)
-
-            with pytest.raises(ValidationError):
-                cost, args = parse_condition_args(SExp.to([long_hash]), condition_code, safe_mode)
-
-            # missing argument
-            with pytest.raises(EvalError):
-                cost, args = parse_condition_args(SExp.to([]), condition_code, safe_mode)
-
-    @pytest.mark.parametrize("safe_mode", [True, False])
-    def test_parse_condition_my_amount(self, safe_mode: bool):
-
-        valid_amount = int_to_bytes(100)
-        leading_zeros_amount = bytes([0] * 100) + int_to_bytes(100)
-        negative_amount = int_to_bytes(-100)
-        large_negative_amount = bytes([0xFF] * 100) + int_to_bytes(-1)
-        large_amount = int_to_bytes(2 ** 64)
-
-        cost, args = parse_condition_args(SExp.to([valid_amount]), ConditionOpcode.ASSERT_MY_AMOUNT, safe_mode)
-        assert cost == 0
-        assert args == [valid_amount]
-
-        if safe_mode:
-            with pytest.raises(ValidationError):
-                parse_condition_args(SExp.to([leading_zeros_amount]), ConditionOpcode.ASSERT_MY_AMOUNT, safe_mode)
-        else:
-            cost, args = parse_condition_args(
-                SExp.to([leading_zeros_amount]), ConditionOpcode.ASSERT_MY_AMOUNT, safe_mode
-            )
-            assert cost == 0
-            assert args == [valid_amount]
-
-        with pytest.raises(ValidationError):
-            cost, args = parse_condition_args(SExp.to([negative_amount]), ConditionOpcode.ASSERT_MY_AMOUNT, safe_mode)
-
-        with pytest.raises(ValidationError):
-            cost, args = parse_condition_args(SExp.to([large_amount]), ConditionOpcode.ASSERT_MY_AMOUNT, safe_mode)
-
-        with pytest.raises(ValidationError):
-            cost, args = parse_condition_args(
-                SExp.to([large_negative_amount]), ConditionOpcode.ASSERT_MY_AMOUNT, safe_mode
-            )
-
-        # garbage at the end of the arguments list is allowed but stripped
-        cost, args = parse_condition_args(
-            SExp.to([valid_amount, b"garbage"]), ConditionOpcode.ASSERT_MY_AMOUNT, safe_mode
-        )
-        assert cost == 0
-        assert args == [valid_amount]
-
-        # missing argument
-        with pytest.raises(EvalError):
-            cost, args = parse_condition_args(SExp.to([]), ConditionOpcode.ASSERT_MY_AMOUNT, safe_mode)
-
-    def test_parse_unknown_condition(self):
-
-        for opcode in [129, 0, 1, 1000, 74]:
-            with pytest.raises(ValidationError):
-                cost, args = parse_condition_args(SExp.to([b"test"]), opcode, False)
-
-            with pytest.raises(ValidationError):
-                cost, args = parse_condition_args(SExp.to([b"foo", b"bar"]), opcode, False)
-
-            with pytest.raises(ValidationError):
-                cost, args = parse_condition_args(SExp.to([]), opcode, False)
-
 
 # the following tests generate generator programs and run them through get_name_puzzle_conditions()
 
@@ -1941,7 +1650,11 @@ MAX_BLOCK_COST_CLVM = 11000000000
 
 
 def generator_condition_tester(
-    conditions: str, safe_mode: bool = False, quote: bool = True, max_cost: int = MAX_BLOCK_COST_CLVM
+    conditions: str,
+    *,
+    safe_mode: bool = False,
+    quote: bool = True,
+    max_cost: int = MAX_BLOCK_COST_CLVM,
 ) -> NPCResult:
     prg = f"(q ((0x0101010101010101010101010101010101010101010101010101010101010101 {'(q ' if quote else ''} {conditions} {')' if quote else ''} 123 (() (q . ())))))"  # noqa
     print(f"program: {prg}")
@@ -1955,39 +1668,86 @@ def generator_condition_tester(
 
 
 class TestGeneratorConditions:
-    def test_duplicate_height_time_conditions(self):
-        # ASSERT_SECONDS_RELATIVE
-        # ASSERT_SECONDS_ABSOLUTE
-        # ASSERT_HEIGHT_RELATIVE
-        # ASSERT_HEIGHT_ABSOLUTE
-        for cond in [80, 81, 82, 83]:
-            # even though the generator outputs multiple conditions, we only
-            # need to return the highest one (i.e. most strict)
-            npc_result = generator_condition_tester(" ".join([f"({cond} {i})" for i in range(50, 101)]))
-            assert npc_result.error is None
-            assert len(npc_result.npc_list) == 1
-            opcode = ConditionOpcode(bytes([cond]))
-            max_arg = 0
-            assert npc_result.npc_list[0].conditions[0][0] == opcode
-            for c in npc_result.npc_list[0].conditions[0][1]:
-                assert c.opcode == opcode
-                max_arg = max(max_arg, int_from_bytes(c.vars[0]))
-            assert max_arg == 100
+    def test_invalid_condition_args_terminator(self):
 
-    def test_just_announcement(self):
-        # CREATE_COIN_ANNOUNCEMENT
-        # CREATE_PUZZLE_ANNOUNCEMENT
-        for cond in [60, 62]:
-            message = "a" * 1024
-            # announcements are validated on the Rust side and never returned
-            # back. They are either satisified or cause an immediate failure
-            npc_result = generator_condition_tester(f'({cond} "{message}") ' * 50)
-            assert npc_result.error is None
-            assert len(npc_result.npc_list) == 1
-            # create-announcements and assert-announcements are dropped once
-            # validated
+        # note how the condition argument list isn't correctly terminated with a
+        # NIL atom. This is allowed, and all arguments beyond the ones we look
+        # at are ignored, including the termination of the list
+        npc_result = generator_condition_tester("(80 50 . 1)")
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        opcode = ConditionOpcode(bytes([80]))
+        assert len(npc_result.npc_list[0].conditions) == 1
+        assert npc_result.npc_list[0].conditions[0][0] == opcode
+        assert len(npc_result.npc_list[0].conditions[0][1]) == 1
+        c = npc_result.npc_list[0].conditions[0][1][0]
+        assert c == ConditionWithArgs(opcode=ConditionOpcode.ASSERT_SECONDS_RELATIVE, vars=[bytes([50])])
 
-    #            assert npc_result.npc_list[0].conditions == []
+    def test_invalid_condition_list_terminator(self):
+
+        # note how the list of conditions isn't correctly terminated with a
+        # NIL atom. This is a failure
+        npc_result = generator_condition_tester("(80 50) . 3")
+        assert npc_result.error in [Err.INVALID_CONDITION.value, Err.GENERATOR_RUNTIME_ERROR.value]
+
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+        ],
+    )
+    def test_duplicate_height_time_conditions(self, opcode):
+        # even though the generator outputs multiple conditions, we only
+        # need to return the highest one (i.e. most strict)
+        npc_result = generator_condition_tester(" ".join([f"({opcode.value[0]} {i})" for i in range(50, 101)]))
+        print(npc_result)
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        max_arg = 0
+        assert npc_result.npc_list[0].conditions[0][0] == opcode
+        for c in npc_result.npc_list[0].conditions[0][1]:
+            assert c.opcode == opcode
+            max_arg = max(max_arg, int_from_bytes(c.vars[0]))
+        assert max_arg == 100
+
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
+            ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT,
+        ],
+    )
+    def test_just_announcement(self, opcode):
+        message = "a" * 1024
+        # announcements are validated on the Rust side and never returned
+        # back. They are either satisified or cause an immediate failure
+        npc_result = generator_condition_tester(f'({opcode.value[0]} "{message}") ' * 50)
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        # create-announcements and assert-announcements are dropped once
+        # validated
+        assert npc_result.npc_list[0].conditions == []
+
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
+            ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT,
+        ],
+    )
+    def test_assert_announcement_fail(self, opcode):
+        message = "a" * 1024
+        # announcements are validated on the Rust side and never returned
+        # back. They ar either satisified or cause an immediate failure
+        # in this test we just assert announcements, we never make them, so
+        # these should fail
+        npc_result = generator_condition_tester(f'({opcode.value[0]} "{message}") ')
+        print(npc_result)
+        assert npc_result.error == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED.value
+        assert npc_result.npc_list == []
 
     def test_multiple_reserve_fee(self):
         # RESERVE_FEE
@@ -2006,16 +1766,17 @@ class TestGeneratorConditions:
             reserve_fee += int_from_bytes(c.vars[0])
 
         assert reserve_fee == 300
+        assert len(npc_result.npc_list[0].conditions[0][1]) == 1
 
-    #    def test_duplicate_outputs(self):
-    # CREATE_COIN
-    # creating multiple coins with the same properties (same parent, same
-    # target puzzle hash and same amount) is not allowed. That's a consensus
-    # failure.
-    #        puzzle_hash = "abababababababababababababababab"
-    #        npc_result = generator_condition_tester(f'(51 "{puzzle_hash}" 10) ' * 2)
-    #        assert npc_result.error == Err.DUPLICATE_OUTPUT.value
-    #        assert len(npc_result.npc_list) == 0
+    def test_duplicate_outputs(self):
+        # CREATE_COIN
+        # creating multiple coins with the same properties (same parent, same
+        # target puzzle hash and same amount) is not allowed. That's a consensus
+        # failure.
+        puzzle_hash = "abababababababababababababababab"
+        npc_result = generator_condition_tester(f'(51 "{puzzle_hash}" 10) ' * 2)
+        assert npc_result.error == Err.DUPLICATE_OUTPUT.value
+        assert npc_result.npc_list == []
 
     def test_create_coin_cost(self):
         # CREATE_COIN
@@ -2075,7 +1836,7 @@ class TestGeneratorConditions:
             assert c.conditions == [
                 (
                     opcode.value,
-                    [ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([10])])],
+                    [ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([10]), b""])],
                 )
             ]
 
@@ -2089,11 +1850,11 @@ class TestGeneratorConditions:
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode.CREATE_COIN
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash_1.encode("ascii"), bytes([5])])
+            ConditionWithArgs(opcode, [puzzle_hash_1.encode("ascii"), bytes([5]), b""])
             in npc_result.npc_list[0].conditions[0][1]
         )
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash_2.encode("ascii"), bytes([5])])
+            ConditionWithArgs(opcode, [puzzle_hash_2.encode("ascii"), bytes([5]), b""])
             in npc_result.npc_list[0].conditions[0][1]
         )
 
@@ -2106,24 +1867,438 @@ class TestGeneratorConditions:
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode.CREATE_COIN
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([5])])
+            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([5]), b""])
             in npc_result.npc_list[0].conditions[0][1]
         )
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([4])])
+            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([4]), b""])
             in npc_result.npc_list[0].conditions[0][1]
         )
 
-    def test_unknown_condition(self):
-        for sm in [True, False]:
-            for c in ['(1 100 "foo" "bar")', "(100)", "(1 1) (2 2) (3 3)", '("foobar")']:
-                npc_result = generator_condition_tester(c, sm)
-                print(npc_result)
-                if sm:
-                    assert npc_result.error == Err.INVALID_CONDITION.value
-                    assert npc_result.npc_list == []
-                else:
-                    assert npc_result.error is None
+    def test_create_coin_with_hint(self):
+        # CREATE_COIN
+        puzzle_hash_1 = "abababababababababababababababab"
+        hint = "12341234123412341234213421341234"
+        npc_result = generator_condition_tester(f'(51 "{puzzle_hash_1}" 5 ("{hint}"))')
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        opcode = ConditionOpcode.CREATE_COIN
+        assert npc_result.npc_list[0].conditions[0][1][0] == ConditionWithArgs(
+            opcode, [puzzle_hash_1.encode("ascii"), bytes([5]), hint.encode("ascii")]
+        )
+
+    @pytest.mark.parametrize(
+        "safe_mode",
+        [True, False],
+    )
+    def test_unknown_condition(self, safe_mode):
+        for c in ['(1 100 "foo" "bar")', "(100)", "(1 1) (2 2) (3 3)", '("foobar")']:
+            npc_result = generator_condition_tester(c, safe_mode=safe_mode)
+            print(npc_result)
+            if safe_mode:
+                assert npc_result.error == Err.INVALID_CONDITION.value
+                assert npc_result.npc_list == []
+            else:
+                assert npc_result.error is None
+                assert npc_result.npc_list[0].conditions == []
 
 
-#                    assert npc_result.npc_list[0].conditions == []
+# the tests below are malicious generator programs
+
+# this program:
+# (mod (A B)
+#  (defun large_string (V N)
+#    (if N (large_string (concat V V) (- N 1)) V)
+#  )
+#  (defun iter (V N)
+#    (if N (c V (iter V (- N 1))) ())
+#  )
+#  (iter (c (q . 83) (c (concat (large_string 0x00 A) (q . 100)) ())) B)
+# )
+# with A=28 and B specified as {num}
+
+SINGLE_ARG_INT_COND = "(a (q 2 4 (c 2 (c (c (q . {opcode}) (c (concat (a 6 (c 2 (c (q . {filler}) (c 5 ())))) (q . {val})) ())) (c 11 ())))) (c (q (a (i 11 (q 4 5 (a 4 (c 2 (c 5 (c (- 11 (q . 1)) ()))))) ()) 1) 2 (i 11 (q 2 6 (c 2 (c (concat 5 5) (c (- 11 (q . 1)) ())))) (q . 5)) 1) (q 28 {num})))"  # noqa
+
+# this program:
+# (mod (A B)
+#  (defun large_string (V N)
+#    (if N (large_string (concat V V) (- N 1)) V)
+#  )
+#  (defun iter (V N)
+#    (if N (c (c (q . 83) (c V ())) (iter (substr V 1) (- N 1))) ())
+#  )
+#  (iter (concat (large_string 0x00 A) (q . 100)) B)
+# )
+# truncates the first byte of the large string being passed down for each
+# iteration, in an attempt to defeat any caching of integers by node ID.
+# substr is cheap, and no memory is copied, so we can perform a lot of these
+SINGLE_ARG_INT_SUBSTR_COND = "(a (q 2 4 (c 2 (c (concat (a 6 (c 2 (c (q . {filler}) (c 5 ())))) (q . {val})) (c 11 ())))) (c (q (a (i 11 (q 4 (c (q . {opcode}) (c 5 ())) (a 4 (c 2 (c (substr 5 (q . 1)) (c (- 11 (q . 1)) ()))))) ()) 1) 2 (i 11 (q 2 6 (c 2 (c (concat 5 5) (c (- 11 (q . 1)) ())))) (q . 5)) 1) (q 28 {num})))"  # noqa
+
+# this program:
+# (mod (A B)
+#  (defun large_string (V N)
+#    (if N (large_string (concat V V) (- N 1)) V)
+#  )
+#  (defun iter (V N)
+#    (if N (c (c (q . 83) (c V ())) (iter (substr V 0 (- (strlen V) 1)) (- N 1))) ())
+#  )
+#  (iter (concat (large_string 0x00 A) (q . 0xffffffff)) B)
+# )
+SINGLE_ARG_INT_SUBSTR_TAIL_COND = "(a (q 2 4 (c 2 (c (concat (a 6 (c 2 (c (q . {filler}) (c 5 ())))) (q . {val})) (c 11 ())))) (c (q (a (i 11 (q 4 (c (q . {opcode}) (c 5 ())) (a 4 (c 2 (c (substr 5 () (- (strlen 5) (q . 1))) (c (- 11 (q . 1)) ()))))) ()) 1) 2 (i 11 (q 2 6 (c 2 (c (concat 5 5) (c (- 11 (q . 1)) ())))) (q . 5)) 1) (q 25 {num})))"  # noqa
+
+# (mod (A B)
+#  (defun large_string (V N)
+#    (if N (large_string (concat V V) (- N 1)) V)
+#  )
+#  (defun iter (V N)
+#    (if N (c (c (q . 83) (c (concat V N) ())) (iter V (- N 1))) ())
+#  )
+#  (iter (large_string 0x00 A) B)
+# )
+SINGLE_ARG_INT_LADDER_COND = "(a (q 2 4 (c 2 (c (a 6 (c 2 (c (q . {filler}) (c 5 ())))) (c 11 ())))) (c (q (a (i 11 (q 4 (c (q . {opcode}) (c (concat 5 11) ())) (a 4 (c 2 (c 5 (c (- 11 (q . 1)) ()))))) ()) 1) 2 (i 11 (q 2 6 (c 2 (c (concat 5 5) (c (- 11 (q . 1)) ())))) (q . 5)) 1) (q 24 {num})))"  # noqa
+
+# this program:
+# (mod (A B)
+#  (defun large_message (N)
+#    (lsh (q . "a") N)
+#  )
+#  (defun iter (V N)
+#    (if N (c V (iter V (- N 1))) ())
+#  )
+#  (iter (c (q . 60) (c (large_message A) ())) B)
+# )
+# with B set to {num}
+
+CREATE_ANNOUNCE_COND = "(a (q 2 4 (c 2 (c (c (q . {opcode}) (c (a 6 (c 2 (c 5 ()))) ())) (c 11 ())))) (c (q (a (i 11 (q 4 5 (a 4 (c 2 (c 5 (c (- 11 (q . 1)) ()))))) ()) 1) 23 (q . 97) 5) (q 8184 {num})))"  # noqa
+
+# this program:
+# (mod (A)
+#  (defun iter (V N)
+#    (if N (c V (iter V (- N 1))) ())
+#  )
+#  (iter (q 51 "abababababababababababababababab" 1) A)
+# )
+CREATE_COIN = '(a (q 2 2 (c 2 (c (q 51 "abababababababababababababababab" 1) (c 5 ())))) (c (q 2 (i 11 (q 4 5 (a 2 (c 2 (c 5 (c (- 11 (q . 1)) ()))))) ()) 1) (q {num})))'  # noqa
+
+# this program:
+# (mod (A)
+#   (defun append (L B)
+#     (if L
+#       (c (f L) (append (r L) B))
+#       (c B ())
+#     )
+#   )
+#   (defun iter (V N)
+#     (if N (c (append V N) (iter V (- N 1))) ())
+#   )
+#   (iter (q 51 "abababababababababababababababab") A)
+# )
+# creates {num} CREATE_COIN conditions, each with a different amount
+CREATE_UNIQUE_COINS = '(a (q 2 6 (c 2 (c (q 51 "abababababababababababababababab") (c 5 ())))) (c (q (a (i 5 (q 4 9 (a 4 (c 2 (c 13 (c 11 ()))))) (q 4 11 ())) 1) 2 (i 11 (q 4 (a 4 (c 2 (c 5 (c 11 ())))) (a 6 (c 2 (c 5 (c (- 11 (q . 1)) ()))))) ()) 1) (q {num})))'  # noqa
+
+
+class TestMaliciousGenerators:
+
+    # TODO: create a lot of announcements. The messages can be made different by
+    # using substr on a large buffer
+
+    # for all the height/time locks, we should only return the most strict
+    # condition, not all of them
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+        ],
+    )
+    def test_duplicate_large_integer_ladder(self, opcode):
+        condition = SINGLE_ARG_INT_LADDER_COND.format(opcode=opcode.value[0], num=28, filler="0x00")
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        assert npc_result.npc_list[0].conditions == [
+            (
+                opcode,
+                [ConditionWithArgs(opcode, [int_to_bytes(28)])],
+            )
+        ]
+        assert run_time < 1.5
+        print(f"run time:{run_time}")
+
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+        ],
+    )
+    def test_duplicate_large_integer(self, opcode):
+        condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        assert npc_result.npc_list[0].conditions == [
+            (
+                opcode,
+                [ConditionWithArgs(opcode, [bytes([100])])],
+            )
+        ]
+        assert run_time < 2.5
+        print(f"run time:{run_time}")
+
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+        ],
+    )
+    def test_duplicate_large_integer_substr(self, opcode):
+        condition = SINGLE_ARG_INT_SUBSTR_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        assert npc_result.npc_list[0].conditions == [
+            (
+                opcode,
+                [ConditionWithArgs(opcode, [bytes([100])])],
+            )
+        ]
+        assert run_time < 3
+        print(f"run time:{run_time}")
+
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+        ],
+    )
+    def test_duplicate_large_integer_substr_tail(self, opcode):
+        condition = SINGLE_ARG_INT_SUBSTR_TAIL_COND.format(
+            opcode=opcode.value[0], num=280, val="0xffffffff", filler="0x00"
+        )
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+
+        print(npc_result.npc_list[0].conditions[0][1])
+        assert ConditionWithArgs(opcode, [int_to_bytes(0xFFFFFFFF)]) in npc_result.npc_list[0].conditions[0][1]
+        assert run_time < 1
+        print(f"run time:{run_time}")
+
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+        ],
+    )
+    def test_duplicate_large_integer_negative(self, opcode):
+        condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0xff")
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        assert npc_result.npc_list[0].conditions == []
+        assert run_time < 2
+        print(f"run time:{run_time}")
+
+    def test_duplicate_reserve_fee(self):
+        opcode = ConditionOpcode.RESERVE_FEE
+        condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        assert npc_result.npc_list[0].conditions == [
+            (
+                opcode.value,
+                [ConditionWithArgs(opcode, [int_to_bytes(100 * 280000)])],
+            )
+        ]
+        assert run_time < 2
+        print(f"run time:{run_time}")
+
+    def test_duplicate_reserve_fee_negative(self):
+        opcode = ConditionOpcode.RESERVE_FEE
+        condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=200000, val=100, filler="0xff")
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        # RESERVE_FEE conditions fail unconditionally if they have a negative
+        # amount
+        assert npc_result.error == Err.RESERVE_FEE_CONDITION_FAILED.value
+        assert len(npc_result.npc_list) == 0
+        assert run_time < 1.5
+        print(f"run time:{run_time}")
+
+    @pytest.mark.parametrize(
+        "opcode", [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]
+    )
+    def test_duplicate_coin_announces(self, opcode):
+        condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        # coin announcements are not propagated to python, but validated in rust
+        assert len(npc_result.npc_list[0].conditions) == 0
+        # TODO: optimize clvm to make this run in < 1 second
+        assert run_time < 21
+        print(f"run time:{run_time}")
+
+    def test_create_coin_duplicates(self):
+        # CREATE_COIN
+        # this program will emit 6000 identical CREATE_COIN conditions. However,
+        # we'll just end up looking at two of them, and fail at the first
+        # duplicate
+        condition = CREATE_COIN.format(num=600000)
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error == Err.DUPLICATE_OUTPUT.value
+        assert len(npc_result.npc_list) == 0
+        assert run_time < 2
+        print(f"run time:{run_time}")
+
+    def test_many_create_coin(self):
+        # CREATE_COIN
+        # this program will emit many CREATE_COIN conditions, all with different
+        # amounts.
+        # the number 6095 was chosen carefully to not exceed the maximum cost
+        condition = CREATE_UNIQUE_COINS.format(num=6094)
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        assert len(npc_result.npc_list[0].conditions) == 1
+        assert npc_result.npc_list[0].conditions[0][0] == ConditionOpcode.CREATE_COIN.value
+        assert len(npc_result.npc_list[0].conditions[0][1]) == 6094
+        assert run_time < 1
+        print(f"run time:{run_time}")
+
+    @pytest.mark.asyncio
+    async def test_invalid_coin_spend_coin(self, two_nodes):
+        reward_ph = WALLET_A.get_new_puzzlehash()
+        blocks = bt.get_consecutive_blocks(
+            5,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
+        )
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        for block in blocks:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await time_out_assert(60, node_height_at_least, True, full_node_2, blocks[-1].height)
+
+        spend_bundle = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0])
+        coin_spend_0 = recursive_replace(spend_bundle.coin_spends[0], "coin.puzzle_hash", bytes32([1] * 32))
+        new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0] + spend_bundle.coin_spends[1:])
+        assert spend_bundle is not None
+        res = await full_node_1.full_node.respond_transaction(new_bundle, new_bundle.name())
+        assert res == (MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE)
+
+
+class TestPkmPairs:
+
+    h1 = b"a" * 32
+    h2 = b"b" * 32
+    h3 = b"c" * 32
+    h4 = b"d" * 32
+
+    pk1 = G1Element.generator()
+    pk2 = G1Element.generator()
+
+    CCA = ConditionOpcode.CREATE_COIN_ANNOUNCEMENT
+    CC = ConditionOpcode.CREATE_COIN
+    ASM = ConditionOpcode.AGG_SIG_ME
+    ASU = ConditionOpcode.AGG_SIG_UNSAFE
+
+    def test_empty_list(self):
+        npc_list = []
+        pks, msgs = pkm_pairs(npc_list, b"foobar")
+        assert pks == []
+        assert msgs == []
+
+    def test_no_agg_sigs(self):
+        npc_list = [
+            NPC(self.h1, self.h2, [(self.CCA, [ConditionWithArgs(self.CCA, [b"msg"])])]),
+            NPC(self.h3, self.h4, [(self.CC, [ConditionWithArgs(self.CCA, [self.h1, bytes([1])])])]),
+        ]
+        pks, msgs = pkm_pairs(npc_list, b"foobar")
+        assert pks == []
+        assert msgs == []
+
+    def test_agg_sig_me(self):
+        npc_list = [
+            NPC(
+                self.h1,
+                self.h2,
+                [
+                    (
+                        self.ASM,
+                        [
+                            ConditionWithArgs(self.ASM, [bytes(self.pk1), b"msg1"]),
+                            ConditionWithArgs(self.ASM, [bytes(self.pk2), b"msg2"]),
+                        ],
+                    )
+                ],
+            )
+        ]
+        pks, msgs = pkm_pairs(npc_list, b"foobar")
+        assert pks == [self.pk1, self.pk2]
+        assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2" + self.h1 + b"foobar"]
+
+    def test_agg_sig_unsafe(self):
+        npc_list = [
+            NPC(
+                self.h1,
+                self.h2,
+                [
+                    (
+                        self.ASU,
+                        [
+                            ConditionWithArgs(self.ASU, [bytes(self.pk1), b"msg1"]),
+                            ConditionWithArgs(self.ASU, [bytes(self.pk2), b"msg2"]),
+                        ],
+                    )
+                ],
+            )
+        ]
+        pks, msgs = pkm_pairs(npc_list, b"foobar")
+        assert pks == [self.pk1, self.pk2]
+        assert msgs == [b"msg1", b"msg2"]
+
+    def test_agg_sig_mixed(self):
+        npc_list = [
+            NPC(self.h1, self.h2, [(self.ASM, [ConditionWithArgs(self.ASM, [bytes(self.pk1), b"msg1"])])]),
+            NPC(self.h1, self.h2, [(self.ASU, [ConditionWithArgs(self.ASU, [bytes(self.pk2), b"msg2"])])]),
+        ]
+        pks, msgs = pkm_pairs(npc_list, b"foobar")
+        assert pks == [self.pk1, self.pk2]
+        assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2"]

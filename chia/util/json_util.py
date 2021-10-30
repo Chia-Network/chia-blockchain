@@ -9,7 +9,7 @@ from chia.wallet.util.wallet_types import WalletType
 
 class EnhancedJSONEncoder(json.JSONEncoder):
     """
-    Encodes bytes as hex strings and converts all dataclasses to json.
+    Encodes bytes as hex strings with 0x, and converts all dataclasses to json.
     """
 
     def default(self, o: Any):
@@ -18,9 +18,9 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         elif isinstance(o, WalletType):
             return o.name
         elif hasattr(type(o), "__bytes__"):
-            return bytes(o).hex()
+            return f"0x{bytes(o).hex()}"
         elif isinstance(o, bytes):
-            return o.hex()
+            return f"0x{o.hex()}"
         return super().default(o)
 
 

@@ -74,7 +74,10 @@ class CCWallet:
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
-
+        std_wallet_id = self.standard_wallet.wallet_id
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id, None)
+        if amount > bal:
+            raise ValueError("Not enough balance")
         self.wallet_state_manager = wallet_state_manager
 
         self.cc_info = CCInfo(None, [])
@@ -90,6 +93,9 @@ class CCWallet:
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
+        if spend_bundle is None:
+            await wallet_state_manager.user_store.delete_wallet(self.id())
+            raise ValueError("Failed to create spend.")
 
         await self.wallet_state_manager.add_new_wallet(self, self.id())
 
@@ -221,7 +227,7 @@ class CCWallet:
         removal_amount = 0
 
         for record in unconfirmed_tx:
-            if record.type is TransactionType.INCOMING_TX:
+            if TransactionType(record.type) is TransactionType.INCOMING_TX:
                 addition_amount += record.amount
             else:
                 removal_amount += record.amount
@@ -559,7 +565,7 @@ class CCWallet:
 
     async def inner_puzzle_for_cc_puzhash(self, cc_hash: bytes32) -> Program:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            cc_hash.hex()
+            cc_hash
         )
         inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(bytes(record.pubkey))
         return inner_puzzle

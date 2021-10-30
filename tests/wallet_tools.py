@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
@@ -13,7 +13,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from chia.util.clvm import int_from_bytes, int_to_bytes
-from chia.util.condition_tools import conditions_by_opcode, conditions_for_solution, pkm_pairs_for_conditions_dict
+from chia.util.condition_tools import conditions_by_opcode, conditions_for_solution
 from chia.util.ints import uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -86,7 +86,13 @@ class WalletTool:
 
         for con_list in condition_dic.values():
             for cvp in con_list:
-                ret.append([cvp.opcode.value] + cvp.vars)
+                if cvp.opcode == ConditionOpcode.CREATE_COIN and len(cvp.vars) > 2:
+                    formatted: List[Any] = []
+                    formatted.extend(cvp.vars)
+                    formatted[2] = cvp.vars[2:]
+                    ret.append([cvp.opcode.value] + formatted)
+                else:
+                    ret.append([cvp.opcode.value] + cvp.vars)
         return solution_for_conditions(Program.to(ret))
 
     def generate_unsigned_transaction(
@@ -162,11 +168,16 @@ class WalletTool:
                 raise ValueError(err)
             conditions_dict = conditions_by_opcode(con)
 
-            for _, msg in pkm_pairs_for_conditions_dict(
-                conditions_dict, bytes(coin_spend.coin.name()), self.constants.AGG_SIG_ME_ADDITIONAL_DATA
-            ):
+            for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_UNSAFE, []):
+                msg = cwa.vars[1]
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 signatures.append(signature)
+
+            for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
+                msg = cwa.vars[1] + bytes(coin_spend.coin.name()) + self.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
+                signatures.append(signature)
+
         aggsig = AugSchemeMPL.aggregate(signatures)
         spend_bundle = SpendBundle(coin_spends, aggsig)
         return spend_bundle

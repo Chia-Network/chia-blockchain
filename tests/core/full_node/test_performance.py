@@ -18,12 +18,10 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.clvm import int_to_bytes
 from chia.util.ints import uint64
 from tests.wallet_tools import WalletTool
-from tests.core.fixtures import empty_blockchain  # noqa: F401
 
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.test_coin_store import get_future_reward_coins
 from tests.core.node_height import node_height_at_least
-from tests.core.fixtures import empty_blockchain  # noqa: F401
 from tests.setup_nodes import bt, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 
@@ -143,7 +141,6 @@ class TestPerformance:
         start = time.time()
         num_tx: int = 0
         for spend_bundle, spend_bundle_id in zip(spend_bundles, spend_bundle_ids):
-            log.warning(f"Num Tx: {num_tx}")
             num_tx += 1
             respond_transaction = fnp.RespondTransaction(spend_bundle)
 
@@ -154,6 +151,7 @@ class TestPerformance:
 
             if req is None:
                 break
+        log.warning(f"Num Tx: {num_tx}")
         log.warning(f"Time for mempool: {time.time() - start}")
         pr.create_stats()
         pr.dump_stats("./mempool-benchmark.pstats")

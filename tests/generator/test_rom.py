@@ -103,7 +103,7 @@ class TestROM:
         npc_result = get_name_puzzle_conditions(gen, max_cost=MAX_COST, cost_per_byte=COST_PER_BYTE, safe_mode=False)
         assert npc_result.error is None
         assert npc_result.clvm_cost == EXPECTED_COST
-        cond_1 = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bytes([0] * 31 + [1]), int_to_bytes(500)])
+        cond_1 = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bytes([0] * 31 + [1]), int_to_bytes(500), b""])
         CONDITIONS = [
             (ConditionOpcode.CREATE_COIN, [cond_1]),
         ]

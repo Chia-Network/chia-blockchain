@@ -20,7 +20,7 @@
     ; p1 is pool_reward_amount - the value of the coin reward - this is passed in so that this puzzle will still work after halvenings
     ; p2 is pool_reward_height - the block height that the reward was generated at. This is used to calculate the coin ID.
   ; if spend_type is 1
-    ; p1 is key_value_list - signed extra data that the wallet may want to publicly announce for syncing purposes
+    ; p1 is extra_data key_value_list - signed extra data that the wallet may want to publicly announce for syncing purposes
     ; p2 is destination_puzhash - the location that the escape spend wants to create itself to
 
   (include condition_codes.clvm)

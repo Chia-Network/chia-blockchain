@@ -35,8 +35,6 @@ class WalletPuzzleStore:
 
         self.db_wrapper = db_wrapper
         self.db_connection = self.db_wrapper.db
-        await self.db_connection.execute("pragma journal_mode=wal")
-        await self.db_connection.execute("pragma synchronous=2")
         await self.db_connection.execute(
             (
                 "CREATE TABLE IF NOT EXISTS derivation_paths("
@@ -137,13 +135,13 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_derivation_record_for_puzzle_hash(self, puzzle_hash: str) -> Optional[DerivationRecord]:
+    async def get_derivation_record_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[DerivationRecord]:
         """
         Returns the derivation record by index and wallet id.
         """
         cursor = await self.db_connection.execute(
             "SELECT * FROM derivation_paths WHERE puzzle_hash=?;",
-            (puzzle_hash,),
+            (puzzle_hash.hex(),),
         )
         row = await cursor.fetchone()
         await cursor.close()

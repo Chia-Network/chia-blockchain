@@ -33,7 +33,7 @@ from chia.pools.pool_puzzles import (
     launcher_id_to_p2_puzzle_hash,
     is_pool_singleton_inner_puzzle,
     get_pubkey_from_member_inner_puzzle,
-    solution_to_extra_data,
+    solution_to_pool_state,
     uncurry_pool_waitingroom_inner_puzzle,
     get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle,
 )
@@ -163,10 +163,11 @@ class TestPoolPuzzles(TestCase):
             spend_bundle,
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )
         # Test that we can retrieve the extra data
         assert get_delayed_puz_info_from_launcher_spend(launcher_coinsol) == (DELAY_TIME, DELAY_PH)
-        assert solution_to_extra_data(launcher_coinsol) == pool_state
+        assert solution_to_pool_state(launcher_coinsol) == pool_state
 
         # TEST TRAVEL AFTER LAUNCH
         # fork the state
@@ -185,6 +186,7 @@ class TestPoolPuzzles(TestCase):
             SpendBundle([post_launch_coinsol], G2Element()),
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )
 
         # HONEST ABSORB
@@ -220,6 +222,7 @@ class TestPoolPuzzles(TestCase):
             SpendBundle(coin_sols, G2Element()),
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )
 
         # ABSORB A NON EXISTENT REWARD (Negative test)
@@ -251,6 +254,7 @@ class TestPoolPuzzles(TestCase):
                 SpendBundle([singleton_coinsol], G2Element()),
                 time,
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                DEFAULT_CONSTANTS.COST_PER_BYTE,
             )
         except BadSpendBundleError as e:
             assert str(e) == "condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
@@ -280,6 +284,7 @@ class TestPoolPuzzles(TestCase):
                 SpendBundle([singleton_coinsol, bad_coinsol], G2Element()),
                 time,
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                DEFAULT_CONSTANTS.COST_PER_BYTE,
             )
         except BadSpendBundleError as e:
             assert str(e) == "condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
@@ -298,7 +303,7 @@ class TestPoolPuzzles(TestCase):
             DELAY_PH,
         )
         # Test that we can retrieve the extra data
-        assert solution_to_extra_data(travel_coinsol) == target_pool_state
+        assert solution_to_pool_state(travel_coinsol) == target_pool_state
         # sign the serialized state
         data = Program.to(bytes(target_pool_state)).get_tree_hash()
         sig: G2Element = AugSchemeMPL.sign(
@@ -310,6 +315,7 @@ class TestPoolPuzzles(TestCase):
             SpendBundle([travel_coinsol], sig),
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )
 
         # ESCAPE TOO FAST (Negative test)
@@ -336,6 +342,7 @@ class TestPoolPuzzles(TestCase):
                 SpendBundle([return_coinsol], sig),
                 time,
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                DEFAULT_CONSTANTS.COST_PER_BYTE,
             )
         except BadSpendBundleError as e:
             assert str(e) == "condition validation failure Err.ASSERT_HEIGHT_RELATIVE_FAILED"
@@ -359,6 +366,7 @@ class TestPoolPuzzles(TestCase):
             SpendBundle(coin_sols, G2Element()),
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )
 
         # LEAVE THE WAITING ROOM
@@ -382,7 +390,7 @@ class TestPoolPuzzles(TestCase):
             DELAY_PH,
         )
         # Test that we can retrieve the extra data
-        assert solution_to_extra_data(return_coinsol) == pool_state
+        assert solution_to_pool_state(return_coinsol) == pool_state
         # sign the serialized target state
         data = Program.to([pooling_innerpuz.get_tree_hash(), START_AMOUNT, bytes(pool_state)]).get_tree_hash()
         sig: G2Element = AugSchemeMPL.sign(
@@ -394,6 +402,7 @@ class TestPoolPuzzles(TestCase):
             SpendBundle([return_coinsol], sig),
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )
 
         # ABSORB ONCE MORE FOR GOOD MEASURE
@@ -414,4 +423,5 @@ class TestPoolPuzzles(TestCase):
             SpendBundle(coin_sols, G2Element()),
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )

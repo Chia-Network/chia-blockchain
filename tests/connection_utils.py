@@ -28,7 +28,9 @@ async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaSer
     return await server.start_client(PeerInfo(self_hostname, uint16(reconnect_to._port)), None)
 
 
-async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asyncio.Queue, bytes32]:
+async def add_dummy_connection(
+    server: ChiaServer, dummy_port: int, type: NodeType = NodeType.FULL_NODE
+) -> Tuple[asyncio.Queue, bytes32]:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
     incoming_queue: asyncio.Queue = asyncio.Queue()
@@ -46,7 +48,7 @@ async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asy
     url = f"wss://{self_hostname}:{server._port}/ws"
     ws = await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context)
     wsc = WSChiaConnection(
-        NodeType.FULL_NODE,
+        type,
         ws,
         server._port,
         log,

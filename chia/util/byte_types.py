@@ -5,7 +5,6 @@ from typing import Any, BinaryIO
 def hexstr_to_bytes(input_str: str) -> bytes:
     """
     Converts a hex string into bytes, removing the 0x if it's present.
-    # TODO Consider dropping this a few major versions after this PR and just always require non prefixed hex strings.
     """
     if input_str.startswith("0x") or input_str.startswith("0X"):
         return bytes.fromhex(input_str[2:])
