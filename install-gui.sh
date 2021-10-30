@@ -103,7 +103,8 @@ if [ ! "$CI" ]; then
 	fi
 
 	npm install
-	npm run audit:fix || true
+	# Audit fix doesn't currently play nice with lerna
+	#npm run audit:fix || true
 	npm run build
 	python ../installhelper.py
 else
