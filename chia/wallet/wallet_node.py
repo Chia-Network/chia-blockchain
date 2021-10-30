@@ -709,7 +709,11 @@ class WalletNode:
                             await peer.close()
                             return
                         assert weight_proof is not None
-                        await self.untrusted_sync_to_peer(peer, weight_proof, syncing, fork_point)
+                        if syncing:
+                            async with self.wallet_state_manager.lock:
+                                await self.untrusted_sync_to_peer(peer, weight_proof, syncing, fork_point)
+                        else:
+                            await self.untrusted_sync_to_peer(peer, weight_proof, syncing, fork_point)
                         if (
                             self.wallet_state_manager.blockchain.synced_weight_proof is None
                             or weight_proof.recent_chain_data[-1].weight
