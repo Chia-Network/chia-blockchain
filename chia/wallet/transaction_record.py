@@ -73,7 +73,7 @@ class TransactionRecord(Streamable):
         if "to_address" in modified_tx:
             del modified_tx["to_address"]
         # Converts memos from a flat dict into a nested list
-        memos_dict = {}
+        memos_dict: Dict[str, List[str]] = {}
         memos_list: List = []
         if "memos" in modified_tx:
             for coin_id, memo in modified_tx["memos"].items():

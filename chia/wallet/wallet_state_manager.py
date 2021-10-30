@@ -629,14 +629,17 @@ class WalletStateManager:
         trade_adds: List[CoinState] = []
 
         if fork_height is not None and current_height is not None and fork_height != current_height - 1:
+            # This only applies to trusted mode
             await self.reorg_rollback(fork_height)
 
-        for coin_state in coin_states:
+        for coin_state_idx, coin_state in enumerate(coin_states):
             info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin_state.coin.puzzle_hash)
             interested_wallet_id = await self.interested_store.get_interested_puzzle_hash_wallet_id(
                 puzzle_hash=coin_state.coin.puzzle_hash
             )
-            self.log.info(f"coin state received: {coin_state.coin.name()}")
+            self.log.info(
+                f"new_coin_state received ({coin_state_idx + 1} / {len(coin_states)}): {coin_state.coin.name()}"
+            )
 
             wallet_id = None
             wallet_type = None
@@ -663,7 +666,7 @@ class WalletStateManager:
             if coin_state.created_height is None:
                 # TODO implements this coin got reorged
                 pass
-            if coin_state.created_height is not None and coin_state.spent_height is None:
+            elif coin_state.created_height is not None and coin_state.spent_height is None:
                 added_coin_record = await self.coin_added(
                     coin_state.coin, coin_state.created_height, all_outgoing, wallet_id, wallet_type, trade_additions
                 )
@@ -672,7 +675,7 @@ class WalletStateManager:
                 derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin_state.coin.puzzle_hash)
                 if derivation_index is not None:
                     await self.puzzle_store.set_used_up_to(derivation_index, True)
-            if coin_state.created_height is not None and coin_state.spent_height is not None:
+            elif coin_state.created_height is not None and coin_state.spent_height is not None:
                 if info is None:
                     continue
                 record = await self.coin_store.get_coin_record(coin_state.coin.name())
@@ -804,6 +807,8 @@ class WalletStateManager:
                             self.log.info(f"Setting tx_id: {unconfirmed_record.name} to confirmed")
                             await self.tx_store.set_confirmed(unconfirmed_record.name, coin_state.spent_height)
                 removed.append(coin_state)
+            else:
+                raise RuntimeError("All cases already handled")  # Logic error, all cases handled
 
         for coin_state_added in trade_adds:
             await self.trade_manager.coins_of_interest_farmed(coin_state_added)
