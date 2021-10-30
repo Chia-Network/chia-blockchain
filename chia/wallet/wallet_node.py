@@ -21,6 +21,7 @@ from chia.daemon.keychain_proxy import (
     KeychainProxy,
     KeyringIsEmpty,
 )
+from chia.full_node.weight_proof import chunks
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -417,7 +418,9 @@ class WalletNode:
 
         # TODO: loop here in order to support singletons for pooling
         all_coin_names.extend(await self.wallet_state_manager.interested_store.get_interested_coin_ids())
-        await self.subscribe_to_coin_updates(all_coin_names, full_node, request_height)
+        one_k_chunks = chunks(all_coin_names, 1000)
+        for chunk in one_k_chunks:
+            await self.subscribe_to_coin_updates(chunk, full_node, request_height)
         self.wallet_state_manager.set_sync_mode(False)
         end_time = time.time()
         duration = end_time - start_time
@@ -1033,18 +1036,23 @@ class WalletNode:
         removed_dict, added_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
         all_coin_names.extend(removed_dict.keys())
         all_coin_names.extend(added_dict.keys())
-        msg1 = wallet_protocol.RegisterForCoinUpdates(all_coin_names, uint32(0))
-        all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg1)
-        assert all_coins_state is not None
+
+        one_k_chunks = chunks(all_coin_names, 1000)
+        all_coins_state: List[CoinState] = []
+        for chunk in one_k_chunks:
+            msg1 = wallet_protocol.RegisterForCoinUpdates(chunk, uint32(0))
+            new_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg1)
+            assert new_state is not None
+            all_coins_state.extend(new_state.coin_states)
 
         if syncing:
             # If syncing, completely change over to this peer's information
-            coin_state_before_fork: List[CoinState] = all_coins_state.coin_states
+            coin_state_before_fork: List[CoinState] = all_coins_state
         else:
             # Otherwise, we only want to apply changes before the fork point, since we are synced to another peer
             # We are just validating that there is no missing information
             coin_state_before_fork = []
-            for coin_state_entry in all_coins_state.coin_states:
+            for coin_state_entry in all_coins_state:
                 if coin_state_entry.spent_height is not None:
                     if coin_state_entry.spent_height <= fork_height:
                         coin_state_before_fork.append(coin_state_entry)
@@ -1259,7 +1267,6 @@ class WalletNode:
                     return False
 
             blocks = []
-            blocks_dict = {}
 
             for i in range(start - (start % 32), end + 1, 32):
                 request_start = min(uint32(i), end)
@@ -1272,8 +1279,6 @@ class WalletNode:
                     peer_request_cache.block_requests[request_h_response.get_hash()] = res_h_blocks
                 self.log.info(f"Fetching blocks: {request_start} - {request_end}")
                 blocks.extend([bl for bl in res_h_blocks.header_blocks if bl.height >= start])
-                for bl in res_h_blocks.header_blocks:
-                    blocks_dict[block.header_hash] = bl
 
             if compare_to_recent and weight_proof.recent_chain_data[0].header_hash != blocks[-1].header_hash:
                 self.log.error("Failed validation 3")
@@ -1289,7 +1294,6 @@ class WalletNode:
                     return False
 
             for idx, en_block in enumerate(reversed_blocks):
-                en_block.reward_chain_block.get_hash()
                 if idx == len(reversed_blocks) - 1:
                     next_block_rc_hash = block.reward_chain_block.get_hash()
                     prev_hash = block.header_hash
