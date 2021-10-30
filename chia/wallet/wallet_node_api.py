@@ -85,7 +85,7 @@ class WalletNodeAPI:
         elif status == MempoolInclusionStatus.PENDING:
             self.wallet_node.log.info(f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
         else:
-            if not self.wallet_node.is_trusted(peer) and ack.error == str(Err.NO_TRANSACTIONS_WHILE_SYNCING):
+            if not self.wallet_node.is_trusted(peer) and ack.error == Err.NO_TRANSACTIONS_WHILE_SYNCING.name:
                 self.wallet_node.log.info(f"Peer {peer.get_peer_info()} is not synced, closing connection")
                 await peer.close()
                 return

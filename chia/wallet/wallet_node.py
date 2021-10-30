@@ -724,6 +724,7 @@ class WalletNode:
                         tb = traceback.format_exc()
                         self.log.error(f"Error syncing to {peer.get_peer_info()} {tb}")
                         await peer.close()
+                        return
                     if syncing:
                         self.wallet_state_manager.set_sync_mode(False)
 
@@ -992,7 +993,7 @@ class WalletNode:
                 assert weight_proof is not None
                 assert peer_request_cache is not None
                 validated_state = await self.validate_received_state_from_peer(
-                    all_state.coin_states, peer, weight_proof, peer_request_cache
+                    all_state.coin_states, peer, weight_proof, peer_request_cache, False
                 )
                 await self.wallet_state_manager.new_coin_state(validated_state, peer, weight_proof=weight_proof)
 
@@ -1040,7 +1041,7 @@ class WalletNode:
             # If syncing, completely change over to this peer's information
             coin_state_before_fork: List[CoinState] = all_coins_state.coin_states
         else:
-            # Otherwise, we only want to apply changes before the fork point, since we are synced to a different peer
+            # Otherwise, we only want to apply changes before the fork point, since we are synced to another peer
             # We are just validating that there is no missing information
             coin_state_before_fork = []
             for coin_state_entry in all_coins_state.coin_states:
@@ -1052,7 +1053,7 @@ class WalletNode:
                         coin_state_before_fork.append(coin_state_entry)
 
         validated_state = await self.validate_received_state_from_peer(
-            coin_state_before_fork, peer, weight_proof, peer_request_cache
+            coin_state_before_fork, peer, weight_proof, peer_request_cache, False
         )
         # Apply validated state
         await self.wallet_state_manager.new_coin_state(validated_state, peer, weight_proof=weight_proof)
@@ -1061,15 +1062,21 @@ class WalletNode:
         self.log.info(f"Sync duration was: {duration}")
 
     async def validate_received_state_from_peer(
-        self, coin_states: List[CoinState], peer, weight_proof: WeightProof, peer_request_cache: PeerRequestCache
+        self,
+        coin_states: List[CoinState],
+        peer,
+        weight_proof: WeightProof,
+        peer_request_cache: PeerRequestCache,
+        return_old_state: bool,
     ) -> List[CoinState]:
+        """
+        Returns all state that is valid and included in the blockchain proved by the weight proof. If return_old_states
+        is False, only new states that are not in the coin_store are returned.
+        """
         assert self.wallet_state_manager is not None
         all_validated_states = []
         total = len(coin_states)
         for coin_idx, coin_state in enumerate(coin_states):
-            if coin_state.get_hash() in peer_request_cache.states_validated:
-                all_validated_states.append(coin_state)
-                continue
             looked_up_coin: Optional[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_coin_record(
                 coin_state.coin.name()
             )
@@ -1081,12 +1088,19 @@ class WalletNode:
                 if looked_up_coin.spent:
                     if looked_up_coin.spent_block_height == coin_state.spent_height:
                         # Both are spent and created at same height, no need to validate
+                        if return_old_state:
+                            all_validated_states.append(coin_state)
                         continue
                 else:
                     if coin_state.spent_height is None:
                         # Both are not spent, no need to validate
+                        if return_old_state:
+                            all_validated_states.append(coin_state)
                         continue
-            self.log.info(f"Validating {coin_idx} of {total}")
+            if coin_state.get_hash() in peer_request_cache.states_validated:
+                all_validated_states.append(coin_state)
+                continue
+            self.log.info(f"Validating {coin_idx + 1} of {total}")
             spent_height = coin_state.spent_height
             confirmed_height = coin_state.created_height
 
@@ -1119,7 +1133,7 @@ class WalletNode:
                     peer.close(9999)
                     raise ValueError("Should not receive state for non-existing coin")
 
-                self.log.info(f"Validating state: {coin_state}")
+                self.log.debug(f"Validating state: {coin_state}")
                 # request header block for created height
                 if confirmed_height in peer_request_cache.blocks:
                     state_block: HeaderBlock = peer_request_cache.blocks[confirmed_height]
@@ -1212,6 +1226,7 @@ class WalletNode:
             # this was already validated as part of the wp validation
             index = block.height - weight_proof.recent_chain_data[0].height
             if weight_proof.recent_chain_data[index].header_hash != block.header_hash:
+                self.log.error("Failed validation 1")
                 return False
             return True
         else:
@@ -1240,6 +1255,7 @@ class WalletNode:
                         inserted = weight_proof.sub_epochs[idx + 2]
                         break
                 if current_ses is None:
+                    self.log.error("Failed validation 2")
                     return False
 
             blocks = []
@@ -1259,7 +1275,8 @@ class WalletNode:
                 for bl in res_h_blocks.header_blocks:
                     blocks_dict[block.header_hash] = bl
 
-            if compare_to_recent and weight_proof.recent_chain_data[0] != blocks[-1]:
+            if compare_to_recent and weight_proof.recent_chain_data[0].header_hash != blocks[-1].header_hash:
+                self.log.error("Failed validation 3")
                 return False
 
             reversed_blocks = blocks.copy()
@@ -1268,6 +1285,7 @@ class WalletNode:
             if not compare_to_recent:
                 last = reversed_blocks[0].finished_sub_slots[-1].reward_chain.get_hash()
                 if inserted is None or last != inserted.reward_chain_hash:
+                    self.log.error("Failed validation 4")
                     return False
 
             for idx, en_block in enumerate(reversed_blocks):
@@ -1280,6 +1298,7 @@ class WalletNode:
                     prev_hash = reversed_blocks[idx + 1].header_hash
 
                 if not en_block.prev_header_hash == prev_hash:
+                    self.log.error("Failed validation 5")
                     return False
 
                 if len(en_block.finished_sub_slots) > 0:
@@ -1289,11 +1308,14 @@ class WalletNode:
                     for slot_idx, slot in enumerate(reversed_slots[:-1]):
                         hash_val = reversed_slots[slot_idx + 1].reward_chain.get_hash()
                         if not hash_val == slot.reward_chain.end_of_slot_vdf.challenge:
+                            self.log.error("Failed validation 6")
                             return False
                     if not next_block_rc_hash == reversed_slots[-1].reward_chain.end_of_slot_vdf.challenge:
+                        self.log.error("Failed validation 7")
                         return False
                 else:
                     if not next_block_rc_hash == en_block.reward_chain_block.reward_chain_ip_vdf.challenge:
+                        self.log.error("Failed validation 8")
                         return False
 
                 if idx > len(reversed_blocks) - 50:
@@ -1302,6 +1324,7 @@ class WalletNode:
                         en_block.foliage.foliage_block_data.get_hash(),
                         en_block.foliage.foliage_block_data_signature,
                     ):
+                        self.log.error("Failed validation 9")
                         return False
             return True
 
@@ -1330,7 +1353,7 @@ class WalletNode:
             request_cache = PeerRequestCache()
             assert weight_proof is not None
             validated_states = await self.validate_received_state_from_peer(
-                response.coin_states, peer, weight_proof, request_cache
+                response.coin_states, peer, weight_proof, request_cache, True
             )
             return validated_states
 

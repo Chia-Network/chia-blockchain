@@ -149,7 +149,11 @@ class WalletWeightProofHandler:
         return True, uint32(0), summaries, records
 
     def get_fork_point(self, old_wp: Optional[WeightProof], new_wp: WeightProof) -> uint32:
-        # iterate through sub epoch summaries to find fork point
+        """
+        iterate through sub epoch summaries to find fork point. This method is conservative, it does not return the
+        actual fork point, it can return a height that is before the actual fork point.
+        """
+
         if old_wp is None:
             return uint32(0)
 
@@ -168,5 +172,25 @@ class WalletWeightProofHandler:
             else:
                 break
 
-        fork_point = uint32((self._constants.SUB_EPOCH_BLOCKS * count) - overflow)
-        return fork_point
+        # Try to find an exact fork point
+        if new_wp.recent_chain_data[0].height >= old_wp.recent_chain_data[0].height:
+            left_wp = old_wp
+            right_wp = new_wp
+        else:
+            left_wp = new_wp
+            right_wp = old_wp
+
+        r_index = 0
+        l_index = 0
+        while r_index < len(right_wp.recent_chain_data) and l_index < len(left_wp.recent_chain_data):
+            if right_wp.recent_chain_data[r_index].header_hash == left_wp.recent_chain_data[l_index].header_hash:
+                r_index += 1
+                continue
+            # Keep incrementing left pointer until we find a match
+            l_index += 1
+        if r_index != 0:
+            # We found a matching block, this is the last matching block
+            return right_wp.recent_chain_data[r_index - 1].height
+
+        # Just return the matching sub epoch height
+        return uint32((self._constants.SUB_EPOCH_BLOCKS * count) - overflow)
