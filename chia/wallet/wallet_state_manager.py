@@ -18,7 +18,7 @@ from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.weight_proof import WeightProofHandler
-from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_extra_data
+from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution
 from chia.types.blockchain_format.coin import Coin
@@ -33,6 +33,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.db_synchronous import db_synchronous_on
 from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.derivation_record import DerivationRecord
@@ -61,6 +62,13 @@ from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
 from chia.server.server import ChiaServer
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+
+
+def get_balance_from_coin_records(coin_records: Set[WalletCoinRecord]) -> uint128:
+    amount: uint128 = uint128(0)
+    for record in coin_records:
+        amount = uint128(amount + record.coin.amount)
+    return uint128(amount)
 
 
 class WalletStateManager:
@@ -130,6 +138,12 @@ class WalletStateManager:
         self.lock = asyncio.Lock()
         self.log.debug(f"Starting in db path: {db_path}")
         self.db_connection = await aiosqlite.connect(db_path)
+        await self.db_connection.execute("pragma journal_mode=wal")
+
+        await self.db_connection.execute(
+            "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), db_path))
+        )
+
         self.db_wrapper = DBWrapper(self.db_connection)
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
         self.tx_store = await WalletTransactionStore.create(self.db_wrapper)
@@ -499,21 +513,35 @@ class WalletStateManager:
 
         return False
 
+    async def get_confirmed_balance_for_wallet_already_locked(self, wallet_id: int) -> uint128:
+        # This is a workaround to be able to call la locking operation when already locked
+        # for example, in the create method of DID wallet
+        if self.lock.locked() is False:
+            raise AssertionError("expected wallet_state_manager to be locked")
+        unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
+        return get_balance_from_coin_records(unspent_coin_records)
+
     async def get_confirmed_balance_for_wallet(
-        self, wallet_id: int, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
+        self,
+        wallet_id: int,
+        unspent_coin_records: Optional[Set[WalletCoinRecord]] = None,
     ) -> uint128:
         """
         Returns the confirmed balance, including coinbase rewards that are not spendable.
         """
-        # lock only if unspent_coin_records is None
+        # lock only if unspent_coin_records is None.
+        # This API should change so that get_balance_from_coin_records is called for Set[WalletCoinRecord]
+        # and this method is called only for the unspent_coin_records==None case.
         if unspent_coin_records is None:
-            async with self.lock:
-                if unspent_coin_records is None:
-                    unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
-        amount: uint128 = uint128(0)
-        for record in unspent_coin_records:
-            amount = uint128(amount + record.coin.amount)
-        return uint128(amount)
+            unspent_coin_records = await self.get_confirmed_balance_for_wallet_with_lock(wallet_id)
+        return get_balance_from_coin_records(unspent_coin_records)
+
+    async def get_confirmed_balance_for_wallet_with_lock(self, wallet_id: int) -> Set[WalletCoinRecord]:
+        if self.lock.locked() is True:
+            # raise AssertionError("expected wallet_state_manager to be unlocked")
+            pass
+        async with self.lock:
+            return await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
 
     async def get_unconfirmed_balance(
         self, wallet_id, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
@@ -522,20 +550,30 @@ class WalletStateManager:
         Returns the balance, including coinbase rewards that are not spendable, and unconfirmed
         transactions.
         """
-        confirmed = await self.get_confirmed_balance_for_wallet(wallet_id, unspent_coin_records)
+        # This API should change so that get_balance_from_coin_records is called for Set[WalletCoinRecord]
+        # and this method is called only for the unspent_coin_records==None case.
+        confirmed_amount = await self.get_confirmed_balance_for_wallet(wallet_id, unspent_coin_records)
+        return await self._get_unconfirmed_balance(wallet_id, confirmed_amount)
+
+    async def get_unconfirmed_balance_already_locked(self, wallet_id) -> uint128:
+        confirmed_amount = await self.get_confirmed_balance_for_wallet_already_locked(wallet_id)
+        return await self._get_unconfirmed_balance(wallet_id, confirmed_amount)
+
+    async def _get_unconfirmed_balance(self, wallet_id, confirmed: uint128) -> uint128:
         unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         removal_amount: int = 0
         addition_amount: int = 0
 
         for record in unconfirmed_tx:
             for removal in record.removals:
-                removal_amount += removal.amount
+                if await self.does_coin_belong_to_wallet(removal, wallet_id):
+                    removal_amount += removal.amount
             for addition in record.additions:
                 # This change or a self transaction
                 if await self.does_coin_belong_to_wallet(addition, wallet_id):
                     addition_amount += addition.amount
 
-        result = confirmed - removal_amount + addition_amount
+        result = (confirmed + addition_amount) - removal_amount
         return uint128(result)
 
     async def unconfirmed_additions_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
@@ -582,6 +620,7 @@ class WalletStateManager:
             for cs in additional_coin_spends:
                 if cs.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
                     already_have = False
+                    pool_state = None
                     for wallet_id, wallet in self.wallets.items():
                         if (
                             wallet.type() == WalletType.POOLING_WALLET
@@ -591,9 +630,12 @@ class WalletStateManager:
                             already_have = True
                     if not already_have:
                         try:
-                            solution_to_extra_data(cs)
+                            pool_state = solution_to_pool_state(cs)
                         except Exception as e:
                             self.log.debug(f"Not a pool wallet launcher {e}")
+                            continue
+                        if pool_state is None:
+                            self.log.debug("Not a pool wallet launcher")
                             continue
                         self.log.info("Found created launcher. Creating pool wallet")
                         pool_wallet = await PoolWallet.create(
@@ -841,8 +883,6 @@ class WalletStateManager:
         """
         Called from wallet before new transaction is sent to the full_node
         """
-        if self.peak is None or int(time.time()) <= self.constants.INITIAL_FREEZE_END_TIMESTAMP:
-            raise ValueError("Initial Freeze Period")
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record, False)
         self.tx_pending_changed()

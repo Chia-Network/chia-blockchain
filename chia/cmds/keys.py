@@ -101,10 +101,18 @@ def generate_and_print_cmd():
     required=True,
 )
 @click.option("--hd_path", "-t", help="Enter the HD path in the form 'm/12381/8444/n/n'", type=str, required=True)
-def sign_cmd(message: str, fingerprint: int, hd_path: str):
+@click.option(
+    "--as-bytes",
+    "-b",
+    help="Sign the message as sequence of bytes rather than UTF-8 string",
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
+def sign_cmd(message: str, fingerprint: int, hd_path: str, as_bytes: bool):
     from .keys_funcs import sign
 
-    sign(message, fingerprint, hd_path)
+    sign(message, fingerprint, hd_path, as_bytes)
 
 
 @keys_cmd.command("verify", short_help="Verify a signature with a pk")

@@ -36,6 +36,8 @@ class FullNodeRpcApi:
             "/get_unfinished_block_headers": self.get_unfinished_block_headers,
             "/get_network_space": self.get_network_space,
             "/get_additions_and_removals": self.get_additions_and_removals,
+            # this function is just here for backwards-compatibility. It will probably
+            # be removed in the future
             "/get_initial_freeze_period": self.get_initial_freeze_period,
             "/get_network_info": self.get_network_info,
             "/get_recent_signage_point_or_eos": self.get_recent_signage_point_or_eos,
@@ -43,6 +45,7 @@ class FullNodeRpcApi:
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
             "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,
             "/get_coin_record_by_name": self.get_coin_record_by_name,
+            "/get_coin_records_by_names": self.get_coin_records_by_names,
             "/get_coin_records_by_parent_ids": self.get_coin_records_by_parent_ids,
             "/push_tx": self.push_tx,
             "/get_puzzle_and_solution": self.get_puzzle_and_solution,
@@ -68,9 +71,11 @@ class FullNodeRpcApi:
             return payloads
         return []
 
+    # this function is just here for backwards-compatibility. It will probably
+    # be removed in the future
     async def get_initial_freeze_period(self, _: Dict):
-        freeze_period = self.service.constants.INITIAL_FREEZE_END_TIMESTAMP
-        return {"INITIAL_FREEZE_END_TIMESTAMP": freeze_period}
+        # Mon May 03 2021 17:00:00 GMT+0000
+        return {"INITIAL_FREEZE_END_TIMESTAMP": 1620061200}
 
     async def get_blockchain_state(self, _request: Dict):
         """
@@ -464,6 +469,28 @@ class FullNodeRpcApi:
 
         return {"coin_record": coin_record}
 
+    async def get_coin_records_by_names(self, request: Dict) -> Optional[Dict]:
+        """
+        Retrieves the coins for given coin IDs, by default returns unspent coins.
+        """
+        if "names" not in request:
+            raise ValueError("Names not in request")
+        kwargs: Dict[str, Any] = {
+            "include_spent_coins": False,
+            "names": [hexstr_to_bytes(name) for name in request["names"]],
+        }
+        if "start_height" in request:
+            kwargs["start_height"] = uint32(request["start_height"])
+        if "end_height" in request:
+            kwargs["end_height"] = uint32(request["end_height"])
+
+        if "include_spent_coins" in request:
+            kwargs["include_spent_coins"] = request["include_spent_coins"]
+
+        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
+
+        return {"coin_records": coin_records}
+
     async def get_coin_records_by_parent_ids(self, request: Dict) -> Optional[Dict]:
         """
         Retrieves the coins for given parent coin IDs, by default returns unspent coins.
@@ -489,10 +516,6 @@ class FullNodeRpcApi:
     async def push_tx(self, request: Dict) -> Optional[Dict]:
         if "spend_bundle" not in request:
             raise ValueError("Spend bundle not in request")
-
-        # This is for backwards compatibility since CoinSolution has been renamed to CoinSpend
-        if "coin_solutions" in request["spend_bundle"]:
-            request["spend_bundle"]["coin_spends"] = request["spend_bundle"].pop("coin_solutions")
 
         spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
         spend_name = spend_bundle.name()

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -9,7 +10,7 @@ log = logging.getLogger(__name__)
 
 
 def show_plots(root_path: Path):
-    from chia.plotting.plot_tools import get_plot_directories
+    from chia.plotting.util import get_plot_directories
 
     print("Directories where plots are being searched for:")
     print("Note that subdirectories must be added manually")
@@ -81,6 +82,14 @@ def plots_cmd(ctx: click.Context):
 @click.option(
     "-x", "--exclude_final_dir", help="Skips adding [final dir] to harvester for farming", default=False, is_flag=True
 )
+@click.option(
+    "-D",
+    "--connect_to_daemon",
+    help="Connects to the daemon for keychain operations",
+    default=False,
+    is_flag=True,
+    hidden=True,  # -D is only set when launched by the daemon
+)
 @click.pass_context
 def create_cmd(
     ctx: click.Context,
@@ -101,8 +110,9 @@ def create_cmd(
     memo: str,
     nobitfield: bool,
     exclude_final_dir: bool,
+    connect_to_daemon: bool,
 ):
-    from chia.plotting.create_plots import create_plots
+    from chia.plotting.create_plots import create_plots, resolve_plot_keys
 
     class Params(object):
         def __init__(self):
@@ -112,10 +122,6 @@ def create_cmd(
             self.num_threads = num_threads
             self.buckets = buckets
             self.stripe_size = DEFAULT_STRIPE_SIZE
-            self.alt_fingerprint = alt_fingerprint
-            self.pool_contract_address = pool_contract_address
-            self.farmer_public_key = farmer_public_key
-            self.pool_public_key = pool_public_key
             self.tmp_dir = Path(tmp_dir)
             self.tmp2_dir = Path(tmp2_dir) if tmp2_dir else None
             self.final_dir = Path(final_dir)
@@ -132,7 +138,19 @@ def create_cmd(
         print("Error: The minimum k size allowed from the cli is k=25.")
         sys.exit(1)
 
-    create_plots(Params(), ctx.obj["root_path"])
+    plot_keys = asyncio.get_event_loop().run_until_complete(
+        resolve_plot_keys(
+            farmer_public_key,
+            alt_fingerprint,
+            pool_public_key,
+            pool_contract_address,
+            ctx.obj["root_path"],
+            log,
+            connect_to_daemon,
+        )
+    )
+
+    asyncio.get_event_loop().run_until_complete(create_plots(Params(), plot_keys, ctx.obj["root_path"]))
 
 
 @plots_cmd.command("check", short_help="Checks plots")
@@ -167,10 +185,9 @@ def check_cmd(
 )
 @click.pass_context
 def add_cmd(ctx: click.Context, final_dir: str):
-    from chia.plotting.plot_tools import add_plot_directory
+    from chia.plotting.util import add_plot_directory
 
-    add_plot_directory(Path(final_dir), ctx.obj["root_path"])
-    print(f'Added plot directory "{final_dir}".')
+    add_plot_directory(ctx.obj["root_path"], final_dir)
 
 
 @plots_cmd.command("remove", short_help="Removes a directory of plots from config.yaml")
@@ -184,10 +201,9 @@ def add_cmd(ctx: click.Context, final_dir: str):
 )
 @click.pass_context
 def remove_cmd(ctx: click.Context, final_dir: str):
-    from chia.plotting.plot_tools import remove_plot_directory
+    from chia.plotting.util import remove_plot_directory
 
-    remove_plot_directory(Path(final_dir), ctx.obj["root_path"])
-    print(f'Removed plot directory "{final_dir}".')
+    remove_plot_directory(ctx.obj["root_path"], final_dir)
 
 
 @plots_cmd.command("show", short_help="Shows the directory of current plots")

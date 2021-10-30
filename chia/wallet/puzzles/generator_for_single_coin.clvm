@@ -1,4 +1,4 @@
-(mod (block_program block_ref coinname)
+(mod (block_program (block_ref) coinname)
 
     (defconstant local_deserialize_mod
         ;; this monstrosity is the assembly output of `chialisp_deserialisation.clvm`

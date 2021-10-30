@@ -1,6 +1,6 @@
 import pathlib
 from multiprocessing import freeze_support
-from typing import Dict
+from typing import Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -25,7 +25,7 @@ def service_kwargs_for_wallet(
     root_path: pathlib.Path,
     config: Dict,
     consensus_constants: ConsensusConstants,
-    keychain: Keychain,
+    keychain: Optional[Keychain] = None,
 ) -> Dict:
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
@@ -39,9 +39,9 @@ def service_kwargs_for_wallet(
         config["short_sync_blocks_behind_threshold"] = 20
     node = WalletNode(
         config,
-        keychain,
         root_path,
         consensus_constants=updated_constants,
+        local_keychain=keychain,
     )
     peer_api = WalletNodeAPI(node)
     fnp = config.get("full_node_peer")
@@ -90,8 +90,7 @@ def main() -> None:
         config["selected_network"] = "testnet0"
     else:
         constants = DEFAULT_CONSTANTS
-    keychain = Keychain(testing=False)
-    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants, keychain)
+    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants)
     return run_service(**kwargs)
 
 

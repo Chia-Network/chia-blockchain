@@ -28,7 +28,7 @@ jobs:
     steps:
     - name: Cancel previous runs on the same branch
       if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.9.0
+      uses: styfle/cancel-workflow-action@0.9.1
       with:
         access_token: ${{ github.token }}
 
@@ -41,6 +41,13 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+
+    - name: Create keychain for CI use
+      run: |
+        security create-keychain -p foo chiachain
+        security default-keychain -s chiachain
+        security unlock-keychain -p foo chiachain
+        security set-keychain-settings -t 7200 -u chiachain
 
     - name: Get pip cache dir
       id: pip-cache
@@ -93,7 +100,7 @@ jobs:
     - name: Test wallet-rl_wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet/rl_wallet/test_rl_rpc.py tests/wallet/rl_wallet/test_rl_wallet.py -s -v --durations 0 
+        ./venv/bin/py.test tests/wallet/rl_wallet/test_rl_rpc.py tests/wallet/rl_wallet/test_rl_wallet.py -s -v --durations 0
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

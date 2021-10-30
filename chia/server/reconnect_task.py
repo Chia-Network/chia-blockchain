@@ -9,7 +9,11 @@ def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth:
     """
     Start a background task that checks connection and reconnects periodically to a peer.
     """
-    peer_info = PeerInfo(socket.gethostbyname(peer_info_arg.host), peer_info_arg.port)
+    # If peer_info_arg is already an address, use it, otherwise resolve it here.
+    if peer_info_arg.is_valid():
+        peer_info = peer_info_arg
+    else:
+        peer_info = PeerInfo(socket.gethostbyname(peer_info_arg.host), peer_info_arg.port)
 
     async def connection_check():
         while True:

@@ -92,6 +92,8 @@ class FullNodeDiscovery:
     async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
         self.connection = await aiosqlite.connect(self.peer_db_path)
+        await self.connection.execute("pragma journal_mode=wal")
+        await self.connection.execute("pragma synchronous=OFF")
         self.address_manager_store = await AddressManagerStore.create(self.connection)
         if not await self.address_manager_store.is_empty():
             self.address_manager = await self.address_manager_store.deserialize()
@@ -208,20 +210,20 @@ class FullNodeDiscovery:
             if self.resolver is None:
                 self.log.warn("Skipping DNS query: asyncresolver not initialized.")
                 return
-            peers: List[TimestampedPeerInfo] = []
-            result = await self.resolver.resolve(qname=dns_address, lifetime=30)
-            for ip in result:
-                peers.append(
-                    TimestampedPeerInfo(
-                        ip.to_text(),
-                        self.default_port,
-                        0,
+            for rdtype in ["A", "AAAA"]:
+                peers: List[TimestampedPeerInfo] = []
+                result = await self.resolver.resolve(qname=dns_address, rdtype=rdtype, lifetime=30)
+                for ip in result:
+                    peers.append(
+                        TimestampedPeerInfo(
+                            ip.to_text(),
+                            self.default_port,
+                            0,
+                        )
                     )
-                )
-            self.log.info(f"Received {len(peers)} peers from DNS seeder.")
-            if len(peers) == 0:
-                return
-            await self._respond_peers_common(full_node_protocol.RespondPeers(peers), None, False)
+                self.log.info(f"Received {len(peers)} peers from DNS seeder, using rdtype = {rdtype}.")
+                if len(peers) > 0:
+                    await self._respond_peers_common(full_node_protocol.RespondPeers(peers), None, False)
         except Exception as e:
             self.log.warn(f"querying DNS introducer failed: {e}")
 

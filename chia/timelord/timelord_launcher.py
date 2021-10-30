@@ -8,9 +8,11 @@ from typing import Dict, List
 
 import pkg_resources
 
+from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.ints import uint16
 from chia.util.setproctitle import setproctitle
 
 active_processes: List = []
@@ -49,7 +51,11 @@ async def spawn_process(host: str, port: int, counter: int):
         try:
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
-            resolved = socket.gethostbyname(host)
+            check_addr = PeerInfo(host, uint16(port))
+            if check_addr.is_valid():
+                resolved = host
+            else:
+                resolved = socket.gethostbyname(host)
             proc = await asyncio.create_subprocess_shell(
                 f"{basename} {resolved} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,
@@ -79,9 +85,10 @@ async def spawn_process(host: str, port: int, counter: int):
 
 async def spawn_all_processes(config: Dict, net_config: Dict):
     await asyncio.sleep(5)
+    hostname = net_config["self_hostname"] if "host" not in config else config["host"]
     port = config["port"]
     process_count = config["process_count"]
-    awaitables = [spawn_process(net_config["self_hostname"], port, i) for i in range(process_count)]
+    awaitables = [spawn_process(hostname, port, i) for i in range(process_count)]
     await asyncio.gather(*awaitables)
 
 

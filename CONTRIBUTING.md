@@ -61,6 +61,16 @@ The [Mypy library](https://mypy.readthedocs.io/en/stable/) is very useful for en
 
 If you want verbose logging for tests, edit the `tests/pytest.ini` file.
 
+## Pre-Commit
+
+We provide a [pre-commit configuration](https://github.com/Chia-Network/chia-blockchain/blob/main/.pre-commit-config.yaml) which triggers several useful
+hooks (including linters/formatter) before each commit you make if you installed and set up [pre-commit](https://pre-commit.com/). This will help
+to reduce the time you spend on failed CI jobs.
+
+To install pre-commit on your system see https://pre-commit.com/#installation. After installation, you can either use it manually
+with `pre-commit run` or let it trigger the hooks automatically before each commit by installing the
+provided configuration with `pre-commit install`.
+
 ## Configure VS code
 
 1. Install python extension
@@ -86,7 +96,7 @@ workflow.
 
 ## Testnets and review environments
 
-With the launch of `1.0.0` we will begin running an official `testnet`.  
+With the launch of `1.0.0` we will begin running an official `testnet`.
 Prior to the release of `1.1.0` there will be two running test nets. `testnet` and `transaction-beta-testnet`. The `transaction-beta-testnet` testnet will be a beta of the pending 1.1 release, which will enable transactions on the chia blockchain.
 Following the release of `1.1.0`, the official `testnet` will include all changes that have been accepted to the current release branch.
 

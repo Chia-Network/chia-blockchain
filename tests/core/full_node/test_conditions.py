@@ -3,6 +3,7 @@ These are quick-to-run test that check spends can be added to the blockchain whe
 or that they're failing for the right reason when they're invalid.
 """
 
+import atexit
 import logging
 import time
 
@@ -23,14 +24,22 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
-from tests.block_tools import BlockTools, test_constants
 from chia.util.errors import Err
 from chia.util.ints import uint32
+from tests.block_tools import create_block_tools, test_constants
+from tests.util.keyring import TempKeyring
 
 from .ram_db import create_ram_blockchain
 
 
-bt = BlockTools(constants=test_constants)
+def cleanup_keyring(keyring: TempKeyring):
+    keyring.cleanup()
+
+
+temp_keyring = TempKeyring()
+keychain = temp_keyring.get_keychain()
+atexit.register(cleanup_keyring, temp_keyring)  # Attempt to cleanup the temp keychain
+bt = create_block_tools(constants=test_constants, keychain=keychain)
 
 
 log = logging.getLogger(__name__)
@@ -67,7 +76,7 @@ async def check_spend_bundle_validity(
     try:
         connection, blockchain = await create_ram_blockchain(constants)
         for block in blocks:
-            received_block_result, err, fork_height = await blockchain.receive_block(block)
+            received_block_result, err, fork_height, coin_changes = await blockchain.receive_block(block)
             assert err is None
 
         additional_blocks = bt.get_consecutive_blocks(
@@ -78,7 +87,7 @@ async def check_spend_bundle_validity(
         )
         newest_block = additional_blocks[-1]
 
-        received_block_result, err, fork_height = await blockchain.receive_block(newest_block)
+        received_block_result, err, fork_height, coin_changes = await blockchain.receive_block(newest_block)
 
         if fork_height:
             coins_added = await blockchain.coin_store.get_coins_added_at_height(uint32(fork_height + 1))

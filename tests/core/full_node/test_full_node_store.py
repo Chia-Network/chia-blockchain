@@ -1,5 +1,6 @@
 # flake8: noqa: F811, F401
 import asyncio
+import atexit
 import logging
 from secrets import token_bytes
 from typing import List, Optional
@@ -16,14 +17,23 @@ from chia.protocols.timelord_protocol import NewInfusionPointVDF
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
-from tests.block_tools import get_signage_point, BlockTools
+from tests.block_tools import get_signage_point, create_block_tools
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
-from tests.core.fixtures import default_1000_blocks, create_blockchain  # noqa: F401
 from tests.setup_nodes import test_constants as test_constants_original
+from tests.util.blockchain import create_blockchain
+from tests.util.keyring import TempKeyring
 
+
+def cleanup_keyring(keyring: TempKeyring):
+    keyring.cleanup()
+
+
+temp_keyring = TempKeyring()
+keychain = temp_keyring.get_keychain()
+atexit.register(cleanup_keyring, temp_keyring)  # Attempt to cleanup the temp keychain
 test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2 ** 12})
-bt = BlockTools(test_constants)
+bt = create_block_tools(constants=test_constants, keychain=keychain)
 
 
 @pytest.fixture(scope="session")
@@ -223,7 +233,7 @@ class TestFullNodeStore:
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
         for block in blocks_reorg:
-            res, _, fork_height = await blockchain.receive_block(block)
+            res, _, fork_height, _ = await blockchain.receive_block(block)
 
             if res == ReceiveBlockResult.NEW_PEAK:
                 if fork_height is not None and fork_height != block.height - 1:
@@ -276,7 +286,7 @@ class TestFullNodeStore:
                 normalized_to_identity_cc_ip=normalized_to_identity,
                 normalized_to_identity_cc_sp=normalized_to_identity,
             )
-            res, _, fork_height = await blockchain.receive_block(blocks[-1])
+            res, _, fork_height, _ = await blockchain.receive_block(blocks[-1])
             if res == ReceiveBlockResult.NEW_PEAK:
                 if fork_height is not None and fork_height != blocks[-1].height - 1:
                     fork_block = blockchain.block_record(blockchain.height_to_hash(fork_height))
@@ -726,7 +736,7 @@ class TestFullNodeStore:
         for block in blocks:
             for sub_slot in block.finished_sub_slots:
                 assert store.new_finished_sub_slot(sub_slot, blockchain, peak, peak_full_block) is not None
-            res, err, _ = await blockchain.receive_block(block)
+            res, err, _, _ = await blockchain.receive_block(block)
             assert res == ReceiveBlockResult.NEW_PEAK
             peak = blockchain.get_peak()
             peak_full_block = await blockchain.get_full_peak()
