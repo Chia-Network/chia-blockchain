@@ -307,17 +307,16 @@ class WalletRpcApi:
                 await self._stop_wallet()
                 await self.service._start(fingerprint=fingerprint)
 
-            async with self.service.wallet_state_manager.lock:
-                wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
-                for w in wallets:
-                    wallet = self.service.wallet_state_manager.wallets[w.id]
-                    unspent = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(w.id)
-                    balance = await wallet.get_confirmed_balance(unspent)
-                    pending_balance = await wallet.get_unconfirmed_balance(unspent)
+            wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
+            for w in wallets:
+                wallet = self.service.wallet_state_manager.wallets[w.id]
+                unspent = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(w.id)
+                balance = await wallet.get_confirmed_balance(unspent)
+                pending_balance = await wallet.get_unconfirmed_balance(unspent)
 
-                    if (balance + pending_balance) > 0:
-                        walletBalance = True
-                        break
+                if (balance + pending_balance) > 0:
+                    walletBalance = True
+                    break
 
         return {
             "fingerprint": fingerprint,
@@ -382,6 +381,9 @@ class WalletRpcApi:
     async def create_new_wallet(self, request: Dict):
         assert self.service.wallet_state_manager is not None
         wallet_state_manager = self.service.wallet_state_manager
+
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
         main_wallet = wallet_state_manager.main_wallet
         fee = uint64(request.get("fee", 0))
 
@@ -557,17 +559,16 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        async with self.service.wallet_state_manager.lock:
-            unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
-            balance = await wallet.get_confirmed_balance(unspent_records)
-            pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
-            spendable_balance = await wallet.get_spendable_balance(unspent_records)
-            pending_change = await wallet.get_pending_change_balance()
-            max_send_amount = await wallet.get_max_send_amount(unspent_records)
+        unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
+        balance = await wallet.get_confirmed_balance(unspent_records)
+        pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
+        spendable_balance = await wallet.get_spendable_balance(unspent_records)
+        pending_change = await wallet.get_pending_change_balance()
+        max_send_amount = await wallet.get_max_send_amount(unspent_records)
 
-            unconfirmed_removals: Dict[
-                bytes32, Coin
-            ] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(wallet_id)
+        unconfirmed_removals: Dict[bytes32, Coin] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(
+            wallet_id
+        )
         wallet_balance = {
             "wallet_id": wallet_id,
             "confirmed_wallet_balance": balance,
@@ -702,6 +703,9 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         if wallet_id not in self.service.wallet_state_manager.wallets:
             raise ValueError(f"Wallet id {wallet_id} does not exist")
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
+
         async with self.service.wallet_state_manager.lock:
             async with self.service.wallet_state_manager.tx_store.db_wrapper.lock:
                 await self.service.wallet_state_manager.tx_store.db_wrapper.begin_transaction()
@@ -741,6 +745,9 @@ class WalletRpcApi:
 
     async def cc_spend(self, request):
         assert self.service.wallet_state_manager is not None
+
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
@@ -749,7 +756,6 @@ class WalletRpcApi:
         memos: List[bytes] = []
         if "memos" in request:
             memos = [mem.encode("utf-8") for mem in request["memos"]]
-
         if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
@@ -1135,6 +1141,10 @@ class WalletRpcApi:
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
         owner_pubkey = pool_wallet_info.current.owner_pubkey
         target_puzzlehash = None
+
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
+
         if "target_puzzlehash" in request:
             target_puzzlehash = bytes32(hexstr_to_bytes(request["target_puzzlehash"]))
         new_target_state: PoolState = create_pool_state(
@@ -1157,6 +1167,9 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
 
         async with self.service.wallet_state_manager.lock:
             total_fee, tx = await wallet.self_pool(fee)  # total_fee: uint64, tx: TransactionRecord
