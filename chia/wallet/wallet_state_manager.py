@@ -499,9 +499,7 @@ class WalletStateManager:
         """
         # lock only if unspent_coin_records is None
         if unspent_coin_records is None:
-            async with self.lock:
-                if unspent_coin_records is None:
-                    unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
+            unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
         amount: uint128 = uint128(0)
         for record in unspent_coin_records:
             amount = uint128(amount + record.coin.amount)
