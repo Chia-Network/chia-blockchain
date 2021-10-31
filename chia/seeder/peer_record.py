@@ -16,6 +16,14 @@ class PeerRecord(Streamable):
     try_count: uint32
     connected_timestamp: uint64
     added_timestamp: uint64
+    best_timestamp: uint64
+    version: str
+    handshake_time: uint64
+
+    def update_version(self, version, now):
+        if version != "undefined":
+            object.__setattr__(self, "version", version)
+        object.__setattr__(self, "handshake_time", uint64(now))
 
 
 class PeerStat:
@@ -30,8 +38,8 @@ class PeerStat:
 
     def update(self, is_reachable: bool, age: int, tau: int):
         f = math.exp(-age / tau)
-        self.reliability = self.reliability * f + (1.0 - f if is_reachable else 0)
-        self.count = self.count * f + 1
+        self.reliability = self.reliability * f + (1.0 - f if is_reachable else 0.0)
+        self.count = self.count * f + 1.0
         self.weight = self.weight * f + 1.0 - f
 
 
@@ -52,21 +60,23 @@ class PeerReliability:
         peer_id: str,
         ignore_till: int = 0,
         ban_till: int = 0,
-        stat_2h_weight: float = 0,
-        stat_2h_count: float = 0,
-        stat_2h_reliability: float = 0,
-        stat_8h_weight: float = 0,
-        stat_8h_count: float = 0,
-        stat_8h_reliability: float = 0,
-        stat_1d_weight: float = 0,
-        stat_1d_count: float = 0,
-        stat_1d_reliability: float = 0,
-        stat_1w_weight: float = 0,
-        stat_1w_count: float = 0,
-        stat_1w_reliability: float = 0,
-        stat_1m_weight: float = 0,
-        stat_1m_count: float = 0,
-        stat_1m_reliability: float = 0,
+        stat_2h_weight: float = 0.0,
+        stat_2h_count: float = 0.0,
+        stat_2h_reliability: float = 0.0,
+        stat_8h_weight: float = 0.0,
+        stat_8h_count: float = 0.0,
+        stat_8h_reliability: float = 0.0,
+        stat_1d_weight: float = 0.0,
+        stat_1d_count: float = 0.0,
+        stat_1d_reliability: float = 0.0,
+        stat_1w_weight: float = 0.0,
+        stat_1w_count: float = 0.0,
+        stat_1w_reliability: float = 0.0,
+        stat_1m_weight: float = 0.0,
+        stat_1m_count: float = 0.0,
+        stat_1m_reliability: float = 0.0,
+        tries: int = 0,
+        successes: int = 0,
     ):
         self.peer_id = peer_id
         self.ignore_till = ignore_till
@@ -76,8 +86,8 @@ class PeerReliability:
         self.stat_1d = PeerStat(stat_1d_weight, stat_1d_count, stat_1d_reliability)
         self.stat_1w = PeerStat(stat_1w_weight, stat_1w_count, stat_1w_reliability)
         self.stat_1m = PeerStat(stat_1m_weight, stat_1m_count, stat_1m_reliability)
-        self.tries = 0
-        self.successes = 0
+        self.tries = tries
+        self.successes = successes
 
     def is_reliable(self) -> bool:
         if self.tries > 0 and self.tries <= 3 and self.successes * 2 >= self.tries:
