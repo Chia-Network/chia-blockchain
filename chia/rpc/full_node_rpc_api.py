@@ -964,7 +964,7 @@ class FullNodeRpcApi:
 
         add_list: List[Coin] = list(spend_bundle.additions())
         rem_list: List[Coin] = list(spend_bundle.removals())
-        fee: uint64 = uint64(sum(a.amount for a in add_list) - sum(r.amount for r in rem_list))
+        fee: uint64 = uint64(sum(r.amount for r in rem_list) - sum(a.amount for a in add_list))
         pool_absorb_tx = {
             "additions": add_list,
             "removals": rem_list,
