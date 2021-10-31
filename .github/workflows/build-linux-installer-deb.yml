@@ -78,7 +78,7 @@ jobs:
         python3 -m venv ../venv
         . ../venv/bin/activate
         pip3 install setuptools_scm
-        echo "::set-output name=CHIA_INSTALLER_VERSION::$(python3 ./build_scripts/installer-version.py)"
+        echo "::set-output name=shitcoin_INSTALLER_VERSION::$(python3 ./build_scripts/installer-version.py)"
         deactivate
 
     - name: Test for secrets access
@@ -91,7 +91,7 @@ jobs:
       env:
         SECRET: "${{ secrets.INSTALLER_UPLOAD_SECRET }}"
 
-      # Get the most recent release from chia-plotter-madmax
+      # Get the most recent release from shitcoin-plotter-madmax
     - uses: actions/github-script@v4
       id: 'latest-madmax'
       with:
@@ -99,18 +99,18 @@ jobs:
         result-encoding: string
         script: |
           const releases = await github.repos.listReleases({
-            owner: 'Chia-Network',
-            repo: 'chia-plotter-madmax',
+            owner: 'shitcoin-Network',
+            repo: 'shitcoin-plotter-madmax',
           });
           return releases.data[0].tag_name;
 
     - name: Get latest madmax plotter
       run: |
         mkdir "$GITHUB_WORKSPACE/madmax"
-        wget -O "$GITHUB_WORKSPACE/madmax/chia_plot" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot-${{ steps.latest-madmax.outputs.result }}-x86-64
-        wget -O "$GITHUB_WORKSPACE/madmax/chia_plot_k34" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}-x86-64
-        chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
-        chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
+        wget -O "$GITHUB_WORKSPACE/madmax/shitcoin_plot" https://github.com/shitcoin-Network/shitcoin-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/shitcoin_plot-${{ steps.latest-madmax.outputs.result }}-x86-64
+        wget -O "$GITHUB_WORKSPACE/madmax/shitcoin_plot_k34" https://github.com/shitcoin-Network/shitcoin-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/shitcoin_plot_k34-${{ steps.latest-madmax.outputs.result }}-x86-64
+        chmod +x "$GITHUB_WORKSPACE/madmax/shitcoin_plot"
+        chmod +x "$GITHUB_WORKSPACE/madmax/shitcoin_plot_k34"
 
       # Get the most recent release from bladebit
     - uses: actions/github-script@v4
@@ -120,7 +120,7 @@ jobs:
         result-encoding: string
         script: |
           const releases = await github.repos.listReleases({
-            owner: 'Chia-Network',
+            owner: 'shitcoin-Network',
             repo: 'bladebit',
           });
           return releases.data[0].tag_name;
@@ -128,7 +128,7 @@ jobs:
     - name: Get latest bladebit plotter
       run: |
         mkdir "$GITHUB_WORKSPACE/bladebit"
-        wget -O /tmp/bladebit.tar.gz https://github.com/Chia-Network/bladebit/releases/download/${{ steps.latest-bladebit.outputs.result }}/bladebit-${{ steps.latest-bladebit.outputs.result }}-ubuntu-x86-64.tar.gz
+        wget -O /tmp/bladebit.tar.gz https://github.com/shitcoin-Network/bladebit/releases/download/${{ steps.latest-bladebit.outputs.result }}/bladebit-${{ steps.latest-bladebit.outputs.result }}-ubuntu-x86-64.tar.gz
         tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
         chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
@@ -152,7 +152,7 @@ jobs:
       run: |
         . ./activate
         ldd --version
-        cd ./chia-blockchain-gui
+        cd ./shitcoin-blockchain-gui
         git status
         cd ../build_scripts
         sh build_linux_deb.sh amd64
@@ -174,18 +174,18 @@ jobs:
     - name: Upload to s3
       if: steps.check_secrets.outputs.HAS_SECRET
       env:
-          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+          shitcoin_INSTALLER_VERSION: ${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}
       run: |
           ls ${{ github.workspace }}/build_scripts/final_installer/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb s3://download-chia-net/builds/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/shitcoin-blockchain_${shitcoin_INSTALLER_VERSION}_amd64.deb s3://download-shitcoin-net/builds/
 
     - name: Create Checksums
       if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
       env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+        shitcoin_INSTALLER_VERSION: ${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}
       run: |
          ls ${{ github.workspace }}/build_scripts/final_installer/
-         sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb > ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.sha256
+         sha256sum ${{ github.workspace }}/build_scripts/final_installer/shitcoin-blockchain_${shitcoin_INSTALLER_VERSION}_amd64.deb > ${{ github.workspace }}/build_scripts/final_installer/shitcoin-blockchain_${shitcoin_INSTALLER_VERSION}_amd64.deb.sha256
          ls ${{ github.workspace }}/build_scripts/final_installer/
 
     - name: Install py3createtorrent
@@ -195,28 +195,28 @@ jobs:
 
     - name: Create .deb torrent
       env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+        shitcoin_INSTALLER_VERSION: ${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}
       if: startsWith(github.ref, 'refs/tags/')
       run: |
-        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb -o ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.torrent --webseed https://download-chia-net.s3.us-west-2.amazonaws.com/install/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb
+        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/shitcoin-blockchain_${shitcoin_INSTALLER_VERSION}_amd64.deb -o ${{ github.workspace }}/build_scripts/final_installer/shitcoin-blockchain_${shitcoin_INSTALLER_VERSION}_amd64.deb.torrent --webseed https://download-shitcoin-net.s3.us-west-2.amazonaws.com/install/shitcoin-blockchain_${shitcoin_INSTALLER_VERSION}_amd64.deb
         ls
 
     - name: Upload Beta Installer
       if: steps.check_secrets.outputs.HAS_SECRET && github.ref == 'refs/heads/main'
       env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+        shitcoin_INSTALLER_VERSION: ${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}
       run: |
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb s3://download-chia-net/beta/chia-blockchain_amd64_latest_beta.deb
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.sha256 s3://download-chia-net/beta/chia-blockchain_amd64_latest_beta.deb.sha256
+        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/shitcoin-blockchain_${shitcoin_INSTALLER_VERSION}_amd64.deb s3://download-shitcoin-net/beta/shitcoin-blockchain_amd64_latest_beta.deb
+        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/shitcoin-blockchain_${shitcoin_INSTALLER_VERSION}_amd64.deb.sha256 s3://download-shitcoin-net/beta/shitcoin-blockchain_amd64_latest_beta.deb.sha256
 
     - name: Upload Release Files
       env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+        shitcoin_INSTALLER_VERSION: ${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}
       if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.ref, 'refs/tags/')
       run: |
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb s3://download-chia-net/install/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.sha256 s3://download-chia-net/install/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.torrent s3://download-chia-net/torrents/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/shitcoin-blockchain_${shitcoin_INSTALLER_VERSION}_amd64.deb s3://download-shitcoin-net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/shitcoin-blockchain_${shitcoin_INSTALLER_VERSION}_amd64.deb.sha256 s3://download-shitcoin-net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/shitcoin-blockchain_${shitcoin_INSTALLER_VERSION}_amd64.deb.torrent s3://download-shitcoin-net/torrents/
 
     - name: Get tag name
       if: startsWith(github.ref, 'refs/tags/')
@@ -228,4 +228,4 @@ jobs:
     - name: Mark installer complete
       if: startsWith(github.ref, 'refs/tags/')
       run: |
-        curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-linux-deb
+        curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"shitcoin_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-linux-deb

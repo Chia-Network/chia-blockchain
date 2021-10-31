@@ -5,23 +5,23 @@ from unittest import TestCase
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64, uint32
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+from shitcoin.types.blockchain_format.program import Program
+from shitcoin.types.blockchain_format.sized_bytes import bytes32
+from shitcoin.types.blockchain_format.coin import Coin
+from shitcoin.types.coin_spend import CoinSpend
+from shitcoin.types.spend_bundle import SpendBundle
+from shitcoin.util.ints import uint64, uint32
+from shitcoin.consensus.default_constants import DEFAULT_CONSTANTS
+from shitcoin.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
     calculate_synthetic_secret_key,
     DEFAULT_HIDDEN_PUZZLE_HASH,
 )
-from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions
-from chia.wallet.puzzles import singleton_top_layer
-from chia.pools.pool_wallet_info import PoolState
-from chia.pools.pool_puzzles import (
+from shitcoin.wallet.puzzles.p2_conditions import puzzle_for_conditions
+from shitcoin.wallet.puzzles import singleton_top_layer
+from shitcoin.pools.pool_wallet_info import PoolState
+from shitcoin.pools.pool_puzzles import (
     create_waiting_room_inner_puzzle,
     create_pooling_inner_puzzle,
     create_p2_singleton_puzzle,
@@ -47,9 +47,9 @@ from tests.clvm.coin_store import CoinStore, CoinTimestamp, BadSpendBundleError
 
 """
 This test suite aims to test:
-    - chia.pools.pool_puzzles.py
-    - chia.wallet.puzzles.pool_member_innerpuz.clvm
-    - chia.wallet.puzzles.pool_waiting_room_innerpuz.clvm
+    - shitcoin.pools.pool_puzzles.py
+    - shitcoin.wallet.puzzles.pool_member_innerpuz.clvm
+    - shitcoin.wallet.puzzles.pool_waiting_room_innerpuz.clvm
 """
 
 

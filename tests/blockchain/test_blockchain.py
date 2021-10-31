@@ -11,35 +11,35 @@ import pytest
 from blspy import AugSchemeMPL, G2Element
 from clvm.casts import int_to_bytes
 
-from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.consensus.blockchain import ReceiveBlockResult
-from chia.consensus.coinbase import create_farmer_coin
-from chia.consensus.pot_iterations import is_overflow_block
-from chia.full_node.bundle_tools import detect_potential_template_generator
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.foliage import TransactionsInfo
-from chia.types.blockchain_format.program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import InfusedChallengeChainSubSlot
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.spend_bundle import SpendBundle
-from chia.types.unfinished_block import UnfinishedBlock
+from shitcoin.consensus.block_rewards import calculate_base_farmer_reward
+from shitcoin.consensus.blockchain import ReceiveBlockResult
+from shitcoin.consensus.coinbase import create_farmer_coin
+from shitcoin.consensus.pot_iterations import is_overflow_block
+from shitcoin.full_node.bundle_tools import detect_potential_template_generator
+from shitcoin.types.blockchain_format.classgroup import ClassgroupElement
+from shitcoin.types.blockchain_format.coin import Coin
+from shitcoin.types.blockchain_format.foliage import TransactionsInfo
+from shitcoin.types.blockchain_format.program import SerializedProgram
+from shitcoin.types.blockchain_format.sized_bytes import bytes32
+from shitcoin.types.blockchain_format.slots import InfusedChallengeChainSubSlot
+from shitcoin.types.blockchain_format.vdf import VDFInfo, VDFProof
+from shitcoin.types.condition_opcodes import ConditionOpcode
+from shitcoin.types.condition_with_args import ConditionWithArgs
+from shitcoin.types.end_of_slot_bundle import EndOfSubSlotBundle
+from shitcoin.types.full_block import FullBlock
+from shitcoin.types.spend_bundle import SpendBundle
+from shitcoin.types.unfinished_block import UnfinishedBlock
 from tests.block_tools import create_block_tools_async, get_vdf_info_and_proof
-from chia.util.errors import Err
-from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint64, uint32
-from chia.util.merkle_set import MerkleSet
-from chia.util.recursive_replace import recursive_replace
+from shitcoin.util.errors import Err
+from shitcoin.util.hash import std_hash
+from shitcoin.util.ints import uint8, uint64, uint32
+from shitcoin.util.merkle_set import MerkleSet
+from shitcoin.util.recursive_replace import recursive_replace
 from tests.wallet_tools import WalletTool
 from tests.setup_nodes import bt, test_constants
 from tests.util.blockchain import create_blockchain
 from tests.util.keyring import TempKeyring
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+from shitcoin.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )

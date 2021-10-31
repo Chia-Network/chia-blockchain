@@ -1,8 +1,8 @@
-[submodule "chia-blockchain-gui"]
-	path = chia-blockchain-gui
-	url = https://github.com/Chia-Network/chia-blockchain-gui.git
+[submodule "shitcoin-blockchain-gui"]
+	path = shitcoin-blockchain-gui
+	url = https://github.com/shitcoin-Network/shitcoin-blockchain-gui.git
 	branch = pools
 [submodule "mozilla-ca"]
 	path = mozilla-ca
-	url = https://github.com/Chia-Network/mozilla-ca.git
+	url = https://github.com/shitcoin-Network/mozilla-ca.git
         branch = main

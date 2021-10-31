@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 if ([Environment]::Is64BitOperatingSystem -eq $false)
 {
-    Write-Output "Chia requires a 64-bit Windows installation"
+    Write-Output "shitcoin requires a 64-bit Windows installation"
     Exit 1
 }
 
@@ -44,17 +44,17 @@ Write-Output "Python version is:" $pythonVersion
 py -m venv venv
 
 venv\scripts\python -m pip install --upgrade pip setuptools wheel
-venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
-venv\scripts\pip install --editable . --extra-index-url https://pypi.chia.net/simple/
+venv\scripts\pip install --extra-index-url https://pypi.shitcoin.net/simple/ miniupnpc==2.2.2
+venv\scripts\pip install --editable . --extra-index-url https://pypi.shitcoin.net/simple/
 
 Write-Output ""
-Write-Output "Chia blockchain .\Install.ps1 complete."
+Write-Output "shitcoin blockchain .\Install.ps1 complete."
 Write-Output "For assistance join us on Keybase in the #support chat channel:"
-Write-Output "https://keybase.io/team/chia_network.public"
+Write-Output "https://keybase.io/team/shitcoin_network.public"
 Write-Output ""
-Write-Output "Try the Quick Start Guide to running chia-blockchain:"
-Write-Output "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"
+Write-Output "Try the Quick Start Guide to running shitcoin-blockchain:"
+Write-Output "https://github.com/shitcoin-Network/shitcoin-blockchain/wiki/Quick-Start-Guide"
 Write-Output ""
 Write-Output "To install the GUI type '.\Install-gui.ps1' after '.\venv\scripts\Activate.ps1'."
 Write-Output ""
-Write-Output "Type '.\venv\Scripts\Activate.ps1' and then 'chia init' to begin."
+Write-Output "Type '.\venv\Scripts\Activate.ps1' and then 'shitcoin init' to begin."

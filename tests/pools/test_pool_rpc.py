@@ -7,23 +7,23 @@ from typing import Optional, List, Dict
 import pytest
 from blspy import G1Element
 
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
-from chia.protocols import full_node_protocol
-from chia.protocols.full_node_protocol import RespondBlock
-from chia.rpc.rpc_server import start_rpc_server
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from chia.types.blockchain_format.sized_bytes import bytes32
+from shitcoin.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from shitcoin.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
+from shitcoin.protocols import full_node_protocol
+from shitcoin.protocols.full_node_protocol import RespondBlock
+from shitcoin.rpc.rpc_server import start_rpc_server
+from shitcoin.rpc.wallet_rpc_api import WalletRpcApi
+from shitcoin.rpc.wallet_rpc_client import WalletRpcClient
+from shitcoin.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from shitcoin.types.blockchain_format.sized_bytes import bytes32
 
-from chia.types.peer_info import PeerInfo
-from chia.util.bech32m import encode_puzzle_hash
+from shitcoin.types.peer_info import PeerInfo
+from shitcoin.util.bech32m import encode_puzzle_hash
 from tests.block_tools import get_plot_dir
-from chia.util.config import load_config
-from chia.util.ints import uint16, uint32
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.wallet_types import WalletType
+from shitcoin.util.config import load_config
+from shitcoin.util.ints import uint16, uint32
+from shitcoin.wallet.transaction_record import TransactionRecord
+from shitcoin.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
 from tests.time_out_assert import time_out_assert
 
@@ -651,11 +651,11 @@ class TestPoolWalletRpc:
                 if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                     assert False
 
-            async def have_chia():
+            async def have_shitcoin():
                 await self.farm_blocks(full_node_api, our_ph, 1)
                 return (await wallets[0].get_confirmed_balance()) > 0
 
-            await time_out_assert(timeout=WAIT_SECS, function=have_chia)
+            await time_out_assert(timeout=WAIT_SECS, function=have_shitcoin)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
                 our_ph, "", 0, "localhost:5000", "new", "SELF_POOLING"
@@ -761,11 +761,11 @@ class TestPoolWalletRpc:
                 if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                     assert False
 
-            async def have_chia():
+            async def have_shitcoin():
                 await self.farm_blocks(full_node_api, our_ph, 1)
                 return (await wallets[0].get_confirmed_balance()) > 0
 
-            await time_out_assert(timeout=WAIT_SECS, function=have_chia)
+            await time_out_assert(timeout=WAIT_SECS, function=have_shitcoin)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
                 pool_a_ph, "https://pool-a.org", 5, "localhost:5000", "new", "FARMING_TO_POOL"
@@ -848,11 +848,11 @@ class TestPoolWalletRpc:
                 if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                     assert False
 
-            async def have_chia():
+            async def have_shitcoin():
                 await self.farm_blocks(full_node_api, our_ph, 1)
                 return (await wallets[0].get_confirmed_balance()) > 0
 
-            await time_out_assert(timeout=WAIT_SECS, function=have_chia)
+            await time_out_assert(timeout=WAIT_SECS, function=have_shitcoin)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
                 pool_a_ph, "https://pool-a.org", 5, "localhost:5000", "new", "FARMING_TO_POOL"

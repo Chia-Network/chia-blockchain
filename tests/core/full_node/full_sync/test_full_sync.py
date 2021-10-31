@@ -6,13 +6,13 @@ from typing import List
 
 import pytest
 
-from chia.full_node.weight_proof import _validate_sub_epoch_summaries
-from chia.protocols import full_node_protocol
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
-from chia.types.peer_info import PeerInfo
-from chia.util.hash import std_hash
-from chia.util.ints import uint16
+from shitcoin.full_node.weight_proof import _validate_sub_epoch_summaries
+from shitcoin.protocols import full_node_protocol
+from shitcoin.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from shitcoin.types.full_block import FullBlock
+from shitcoin.types.peer_info import PeerInfo
+from shitcoin.util.hash import std_hash
+from shitcoin.util.ints import uint16
 from tests.core.node_height import node_height_exactly, node_height_between
 from tests.setup_nodes import bt, self_hostname, setup_n_nodes, setup_two_nodes, test_constants
 from tests.time_out_assert import time_out_assert

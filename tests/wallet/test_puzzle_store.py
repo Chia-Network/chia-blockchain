@@ -6,11 +6,11 @@ import aiosqlite
 import pytest
 from blspy import AugSchemeMPL
 
-from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint32
-from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
+from shitcoin.util.db_wrapper import DBWrapper
+from shitcoin.util.ints import uint32
+from shitcoin.wallet.derivation_record import DerivationRecord
+from shitcoin.wallet.util.wallet_types import WalletType
+from shitcoin.wallet.wallet_puzzle_store import WalletPuzzleStore
 
 
 @pytest.fixture(scope="module")

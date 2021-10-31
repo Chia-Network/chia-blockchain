@@ -9,37 +9,37 @@ from typing import Dict, Optional, List
 
 import pytest
 
-from chia.consensus.pot_iterations import is_overflow_block
-from chia.full_node.bundle_tools import detect_potential_template_generator
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.full_node.signage_point import SignagePoint
-from chia.protocols import full_node_protocol as fnp, full_node_protocol
-from chia.protocols import timelord_protocol
-from chia.protocols.full_node_protocol import RespondTransaction
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.address_manager import AddressManager
-from chia.server.outbound_message import Message
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.program import SerializedProgram
-from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.full_block import FullBlock
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
-from chia.types.spend_bundle import SpendBundle
-from chia.types.unfinished_block import UnfinishedBlock
+from shitcoin.consensus.pot_iterations import is_overflow_block
+from shitcoin.full_node.bundle_tools import detect_potential_template_generator
+from shitcoin.full_node.full_node_api import FullNodeAPI
+from shitcoin.full_node.signage_point import SignagePoint
+from shitcoin.protocols import full_node_protocol as fnp, full_node_protocol
+from shitcoin.protocols import timelord_protocol
+from shitcoin.protocols.full_node_protocol import RespondTransaction
+from shitcoin.protocols.protocol_message_types import ProtocolMessageTypes
+from shitcoin.server.address_manager import AddressManager
+from shitcoin.server.outbound_message import Message
+from shitcoin.simulator.simulator_protocol import FarmNewBlockProtocol
+from shitcoin.types.blockchain_format.classgroup import ClassgroupElement
+from shitcoin.types.blockchain_format.program import SerializedProgram
+from shitcoin.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
+from shitcoin.types.condition_opcodes import ConditionOpcode
+from shitcoin.types.condition_with_args import ConditionWithArgs
+from shitcoin.types.full_block import FullBlock
+from shitcoin.types.mempool_inclusion_status import MempoolInclusionStatus
+from shitcoin.types.peer_info import PeerInfo, TimestampedPeerInfo
+from shitcoin.types.spend_bundle import SpendBundle
+from shitcoin.types.unfinished_block import UnfinishedBlock
 from tests.block_tools import get_signage_point
-from chia.util.clvm import int_to_bytes
-from chia.util.errors import Err
-from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
-from chia.util.recursive_replace import recursive_replace
-from chia.util.vdf_prover import get_vdf_info_and_proof
+from shitcoin.util.clvm import int_to_bytes
+from shitcoin.util.errors import Err
+from shitcoin.util.hash import std_hash
+from shitcoin.util.ints import uint8, uint16, uint32, uint64
+from shitcoin.util.recursive_replace import recursive_replace
+from shitcoin.util.vdf_prover import get_vdf_info_and_proof
 from tests.wallet_tools import WalletTool
-from chia.wallet.cc_wallet.cc_wallet import CCWallet
-from chia.wallet.transaction_record import TransactionRecord
+from shitcoin.wallet.cc_wallet.cc_wallet import CCWallet
+from shitcoin.wallet.transaction_record import TransactionRecord
 
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.test_coin_store import get_future_reward_coins

@@ -6,22 +6,22 @@ from typing import Dict, List, Optional, Tuple
 import aiosqlite
 import pytest
 
-from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain import Blockchain
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
-from chia.server.start_full_node import SERVICE_NAME
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.util.block_cache import BlockCache
+from shitcoin.consensus.block_header_validation import validate_finished_header_block
+from shitcoin.consensus.block_record import BlockRecord
+from shitcoin.consensus.blockchain import Blockchain
+from shitcoin.consensus.default_constants import DEFAULT_CONSTANTS
+from shitcoin.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from shitcoin.consensus.full_block_to_block_record import block_to_block_record
+from shitcoin.full_node.block_store import BlockStore
+from shitcoin.full_node.coin_store import CoinStore
+from shitcoin.server.start_full_node import SERVICE_NAME
+from shitcoin.types.blockchain_format.sized_bytes import bytes32
+from shitcoin.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from shitcoin.util.block_cache import BlockCache
 from tests.block_tools import test_constants
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.generator_tools import get_block_header
+from shitcoin.util.config import load_config
+from shitcoin.util.default_root import DEFAULT_ROOT_PATH
+from shitcoin.util.generator_tools import get_block_header
 from tests.setup_nodes import bt
 
 try:
@@ -30,16 +30,16 @@ except ImportError:
     pass
 
 
-from chia.consensus.pot_iterations import calculate_iterations_quality
-from chia.full_node.weight_proof import (  # type: ignore
+from shitcoin.consensus.pot_iterations import calculate_iterations_quality
+from shitcoin.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
     _map_sub_epoch_summaries,
     _validate_sub_epoch_segments,
     _validate_summaries_weight,
 )
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
-from chia.util.ints import uint32, uint64
+from shitcoin.types.full_block import FullBlock
+from shitcoin.types.header_block import HeaderBlock
+from shitcoin.util.ints import uint32, uint64
 
 
 @pytest.fixture(scope="session")
