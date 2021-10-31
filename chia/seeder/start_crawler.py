@@ -1,7 +1,9 @@
+import asyncio
 import logging
 import pathlib
+import time
 from multiprocessing import freeze_support
-from typing import Dict
+from typing import Dict, List
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -9,13 +11,47 @@ from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
 from chia.server.start_service import run_service
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 # Patch some methods on the upstream server
+
+# Crawler specific overrides for the chia server
+async def incoming_connection(self, request):
+    return
+
+
+async def garbage_collect_connections_task(self) -> None:
+    """
+    Periodically checks for connections with no activity (have not sent us any data), and removes them,
+    to allow room for other peers.
+    """
+    while True:
+        # Modification for crawler.
+        await asyncio.sleep(2)
+        to_remove: List[WSChiaConnection] = []
+        for connection in self.all_connections.values():
+            if self._local_type == NodeType.FULL_NODE and connection.connection_type == NodeType.FULL_NODE:
+                if time.time() - connection.creation_time > 5:
+                    to_remove.append(connection)
+        for connection in to_remove:
+            self.log.info(f"Garbage collecting connection {connection.peer_host}, max time reached.")
+            await connection.close()
+
+        # Also garbage collect banned_peers dict
+        to_remove_ban = []
+        for peer_ip, ban_until_time in self.banned_peers.items():
+            if time.time() > ban_until_time:
+                to_remove_ban.append(peer_ip)
+        for peer_ip in to_remove_ban:
+            del self.banned_peers[peer_ip]
+
+
 ChiaServer.incoming_connection = chia.seeder.server.incoming_connection
 ChiaServer.garbage_collect_connections_task = chia.seeder.server.garbage_collect_connections_task
+
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
