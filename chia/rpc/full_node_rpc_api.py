@@ -928,6 +928,12 @@ class FullNodeRpcApi:
                 all_spends += absorb_spend
 
         spend_bundle: SpendBundle = SpendBundle(all_spends, G2Element())
+
+        # additional
+        if "additional_spend_bundle" in request:
+            additional_spend_bundle = SpendBundle.from_json_dict(request["additional_spend_bundle"])
+            spend_bundle = SpendBundle.aggregate([spend_bundle, additional_spend_bundle])
+
         add_list: List[Coin] = list(spend_bundle.additions())
         rem_list: List[Coin] = list(spend_bundle.removals())
         fee: uint64 = uint64(sum(a.amount for a in add_list) - sum(r.amount for r in rem_list))
