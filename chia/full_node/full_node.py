@@ -16,6 +16,7 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
+from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -24,7 +25,7 @@ from chia.full_node.block_store import BlockStore
 from chia.full_node.lock_queue import LockQueue, LockClient
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.full_node_store import FullNodeStore
+from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
@@ -312,7 +313,12 @@ class FullNode:
                         peak = self.blockchain.get_peak()
                         peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
                         assert peak is not None and peak_fb is not None and fork_height is not None
-                        await self.peak_post_processing(peak_fb, peak, fork_height, peer, coin_changes)
+                        mempool_new_peak_result, fns_peak_result = await self.peak_post_processing(
+                            peak_fb, peak, fork_height, peer
+                        )
+                        await self.peak_post_processing_2(
+                            peak_fb, peak, fork_height, peer, coin_changes, mempool_new_peak_result, fns_peak_result
+                        )
                         self.log.info(f"Added blocks {height}-{end_height}")
         except Exception:
             self.sync_store.batch_syncing.remove(peer.peer_node_id)
@@ -1091,7 +1097,6 @@ class FullNode:
         record: BlockRecord,
         fork_height: uint32,
         peer: Optional[ws.WSChiaConnection],
-        coin_changes: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
     ):
         """
         Must be called under self.blockchain.lock. This updates the internal state of the full node with the
@@ -1126,7 +1131,7 @@ class FullNode:
             # This is a reorg
             fork_block = self.blockchain.block_record(self.blockchain.height_to_hash(fork_height))
 
-        added_eos, new_sps, new_ips = self.full_node_store.new_peak(
+        fns_peak_result: FullNodeStorePeakResult = self.full_node_store.new_peak(
             record,
             block,
             sub_slots[0],
@@ -1134,6 +1139,19 @@ class FullNode:
             fork_block,
             self.blockchain,
         )
+
+        if fns_peak_result.new_signage_points is not None and peer is not None:
+            for index, sp in fns_peak_result.new_signage_points:
+                assert (
+                    sp.cc_vdf is not None
+                    and sp.cc_proof is not None
+                    and sp.rc_vdf is not None
+                    and sp.rc_proof is not None
+                )
+                await self.signage_point_post_processing(
+                    RespondSignagePoint(index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer, sub_slots[1]
+                )
+
         if sub_slots[1] is None:
             assert record.ip_sub_slot_total_iters(self.constants) == 0
         # Ensure the signage point is also in the store, for consistency
@@ -1153,8 +1171,33 @@ class FullNode:
 
         # Update the mempool (returns successful pending transactions added to the mempool)
         async with self._mempool_lock_high_priority:
-            new_peak_result = await self.mempool_manager.new_peak(self.blockchain.get_peak())
-        for bundle, result, spend_name in new_peak_result:
+            mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
+                self.blockchain.get_peak()
+            )
+
+        # Check if we detected a spent transaction, to load up our generator cache
+        if block.transactions_generator is not None and self.full_node_store.previous_generator is None:
+            generator_arg = detect_potential_template_generator(block.height, block.transactions_generator)
+            if generator_arg:
+                self.log.info(f"Saving previous generator for height {block.height}")
+                self.full_node_store.previous_generator = generator_arg
+        return mempool_new_peak_result, fns_peak_result
+
+    async def peak_post_processing_2(
+        self,
+        block: FullBlock,
+        record: BlockRecord,
+        fork_height: uint32,
+        peer: Optional[ws.WSChiaConnection],
+        coin_changes: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
+        mempool_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]],
+        fns_peak_result: FullNodeStorePeakResult,
+    ):
+        """
+        Does NOT need to be called under the blockchain lock. Handle other parts of post processing like communicating
+        with peers
+        """
+        for bundle, result, spend_name in mempool_peak_result:
             self.log.debug(f"Added transaction to mempool: {spend_name}")
             mempool_item = self.mempool_manager.get_mempool_item(spend_name)
             assert mempool_item is not None
@@ -1170,27 +1213,15 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
         # If there were pending end of slots that happen after this peak, broadcast them if they are added
-        if added_eos is not None:
+        if fns_peak_result.added_eos is not None:
             broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
-                added_eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
-                added_eos.challenge_chain.get_hash(),
+                fns_peak_result.added_eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+                fns_peak_result.added_eos.challenge_chain.get_hash(),
                 uint8(0),
-                added_eos.reward_chain.end_of_slot_vdf.challenge,
+                fns_peak_result.added_eos.reward_chain.end_of_slot_vdf.challenge,
             )
             msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
-
-        if new_sps is not None and peer is not None:
-            for index, sp in new_sps:
-                assert (
-                    sp.cc_vdf is not None
-                    and sp.cc_proof is not None
-                    and sp.rc_vdf is not None
-                    and sp.rc_proof is not None
-                )
-                await self.signage_point_post_processing(
-                    RespondSignagePoint(index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer, sub_slots[1]
-                )
 
         # TODO: maybe add and broadcast new IPs as well
 
@@ -1230,14 +1261,6 @@ class FullNode:
         )
         await self.update_wallets(record.height, fork_height, record.header_hash, coin_changes)
         await self.server.send_to_all([msg], NodeType.WALLET)
-
-        # Check if we detected a spent transaction, to load up our generator cache
-        if block.transactions_generator is not None and self.full_node_store.previous_generator is None:
-            generator_arg = detect_potential_template_generator(block.height, block.transactions_generator)
-            if generator_arg:
-                self.log.info(f"Saving previous generator for height {block.height}")
-                self.full_node_store.previous_generator = generator_arg
-
         self._state_changed("new_peak")
 
     async def respond_block(
@@ -1307,6 +1330,7 @@ class FullNode:
                 # This recursion ends here, we cannot recurse again because transactions_generator is not None
                 return await self.respond_block(block_response, peer)
         coin_changes: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]] = ([], {})
+        mempool_new_peak_result, fns_peak_result = None, None
         async with self.blockchain.lock:
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
@@ -1344,7 +1368,6 @@ class FullNode:
                     and fork_height < self.full_node_store.previous_generator.block_height
                 ):
                     self.full_node_store.previous_generator = None
-            validation_time = time.time() - validation_start
 
             if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
                 return None
@@ -1361,7 +1384,9 @@ class FullNode:
                 new_peak: Optional[BlockRecord] = self.blockchain.get_peak()
                 assert new_peak is not None and fork_height is not None
 
-                await self.peak_post_processing(block, new_peak, fork_height, peer, coin_changes)
+                mempool_new_peak_result, fns_peak_result = await self.peak_post_processing(
+                    block, new_peak, fork_height, peer
+                )
 
             elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
                 self.log.info(
@@ -1370,6 +1395,17 @@ class FullNode:
             else:
                 # Should never reach here, all the cases are covered
                 raise RuntimeError(f"Invalid result from receive_block {added}")
+
+            validation_time = time.time() - validation_start
+
+        if mempool_new_peak_result is not None:
+            assert new_peak is not None
+            assert fork_height is not None
+            assert fns_peak_result is not None
+            await self.peak_post_processing_2(
+                block, new_peak, fork_height, peer, coin_changes, mempool_new_peak_result, fns_peak_result
+            )
+
         percent_full_str = (
             (
                 ", percent full: "
