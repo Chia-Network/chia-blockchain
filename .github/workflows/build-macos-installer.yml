@@ -87,7 +87,7 @@ jobs:
         p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}
         p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
 
-    # Get the most recent release from shitcoin-plotter-madmax
+    # Get the most recent release from chia-plotter-madmax
     - uses: actions/github-script@v4
       id: 'latest-madmax'
       with:
@@ -95,18 +95,18 @@ jobs:
         result-encoding: string
         script: |
           const releases = await github.repos.listReleases({
-            owner: 'shitcoin-Network',
-            repo: 'shitcoin-plotter-madmax',
+            owner: 'Chia-Network',
+            repo: 'chia-plotter-madmax',
           });
           return releases.data[0].tag_name;
 
     - name: Get latest madmax plotter
       run: |
         mkdir "$GITHUB_WORKSPACE/madmax"
-        wget -O "$GITHUB_WORKSPACE/madmax/shitcoin_plot" https://github.com/shitcoin-Network/shitcoin-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/shitcoin_plot-${{ steps.latest-madmax.outputs.result }}-macos-intel
-        wget -O "$GITHUB_WORKSPACE/madmax/shitcoin_plot_k34" https://github.com/shitcoin-Network/shitcoin-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/shitcoin_plot_k34-${{ steps.latest-madmax.outputs.result }}-macos-intel
-        chmod +x "$GITHUB_WORKSPACE/madmax/shitcoin_plot"
-        chmod +x "$GITHUB_WORKSPACE/madmax/shitcoin_plot_k34"
+        wget -O "$GITHUB_WORKSPACE/madmax/chia_plot" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot-${{ steps.latest-madmax.outputs.result }}-macos-intel
+        wget -O "$GITHUB_WORKSPACE/madmax/chia_plot_k34" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}-macos-intel
+        chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
+        chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
 
     - name: Run install script
       env:
@@ -127,7 +127,7 @@ jobs:
         APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
       run: |
         . ./activate
-        cd ./shitcoin-blockchain-gui
+        cd ./chia-blockchain-gui
         git status
         cd ../build_scripts
         sh build_macos.sh
@@ -135,5 +135,5 @@ jobs:
     - name: Upload MacOS artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: shitcoin-Installer-on-MacOS-10.15-dmg
+        name: Chia-Installer-on-MacOS-10.15-dmg
         path: ${{ github.workspace }}/build_scripts/final_installer/

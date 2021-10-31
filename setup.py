@@ -2,9 +2,9 @@ from setuptools import setup
 
 dependencies = [
     "blspy==1.0.6",  # Signature library
-    "shitcoinvdf==1.0.3",  # timelord and vdf verification
-    "shitcoinbip158==1.0",  # bip158-style wallet filters
-    "shitcoinpos==1.0.6",  # proof of space
+    "chiavdf==1.0.3",  # timelord and vdf verification
+    "chiabip158==1.0",  # bip158-style wallet filters
+    "chiapos==1.0.6",  # proof of space
     "clvm==0.9.7",
     "clvm_rs==0.1.15",
     "clvm_tools==0.4.3",
@@ -21,7 +21,7 @@ dependencies = [
     #  "keyrings.cryptfile==1.3.8",  # Secure storage for keys on Linux (Will be replaced)
     #  See https://github.com/frispete/keyrings.cryptfile/issues/15
     "PyYAML==5.4.1",  # Used for config file format
-    "setproctitle==1.2.2",  # Gives the shitcoin processes readable names
+    "setproctitle==1.2.2",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     "click==7.1.2",  # For the CLI
@@ -45,14 +45,14 @@ dev_dependencies = [
 ]
 
 kwargs = dict(
-    name="shitcoin-blockchain",
+    name="chia-blockchain",
     author="Mariano Sorgente",
-    author_email="mariano@shitcoin.net",
-    description="shitcoin blockchain full node, farmer, timelord, and wallet.",
-    url="https://shitcoin.net/",
+    author_email="mariano@chia.net",
+    description="Chia blockchain full node, farmer, timelord, and wallet.",
+    url="https://chia.net/",
     license="Apache License",
     python_requires=">=3.7, <4",
-    keywords="shitcoin blockchain node",
+    keywords="chia blockchain node",
     install_requires=dependencies,
     setup_requires=["setuptools_scm"],
     extras_require=dict(
@@ -62,55 +62,55 @@ kwargs = dict(
     ),
     packages=[
         "build_scripts",
-        "shitcoin",
-        "shitcoin.cmds",
-        "shitcoin.clvm",
-        "shitcoin.consensus",
-        "shitcoin.daemon",
-        "shitcoin.full_node",
-        "shitcoin.timelord",
-        "shitcoin.farmer",
-        "shitcoin.harvester",
-        "shitcoin.introducer",
-        "shitcoin.plotters",
-        "shitcoin.plotting",
-        "shitcoin.pools",
-        "shitcoin.protocols",
-        "shitcoin.rpc",
-        "shitcoin.server",
-        "shitcoin.simulator",
-        "shitcoin.types.blockchain_format",
-        "shitcoin.types",
-        "shitcoin.util",
-        "shitcoin.wallet",
-        "shitcoin.wallet.puzzles",
-        "shitcoin.wallet.rl_wallet",
-        "shitcoin.wallet.cc_wallet",
-        "shitcoin.wallet.did_wallet",
-        "shitcoin.wallet.settings",
-        "shitcoin.wallet.trading",
-        "shitcoin.wallet.util",
-        "shitcoin.ssl",
+        "chia",
+        "chia.cmds",
+        "chia.clvm",
+        "chia.consensus",
+        "chia.daemon",
+        "chia.full_node",
+        "chia.timelord",
+        "chia.farmer",
+        "chia.harvester",
+        "chia.introducer",
+        "chia.plotters",
+        "chia.plotting",
+        "chia.pools",
+        "chia.protocols",
+        "chia.rpc",
+        "chia.server",
+        "chia.simulator",
+        "chia.types.blockchain_format",
+        "chia.types",
+        "chia.util",
+        "chia.wallet",
+        "chia.wallet.puzzles",
+        "chia.wallet.rl_wallet",
+        "chia.wallet.cc_wallet",
+        "chia.wallet.did_wallet",
+        "chia.wallet.settings",
+        "chia.wallet.trading",
+        "chia.wallet.util",
+        "chia.ssl",
         "mozilla-ca",
     ],
     entry_points={
         "console_scripts": [
-            "shitcoin = shitcoin.cmds.shitcoin:main",
-            "shitcoin_wallet = shitcoin.server.start_wallet:main",
-            "shitcoin_full_node = shitcoin.server.start_full_node:main",
-            "shitcoin_harvester = shitcoin.server.start_harvester:main",
-            "shitcoin_farmer = shitcoin.server.start_farmer:main",
-            "shitcoin_introducer = shitcoin.server.start_introducer:main",
-            "shitcoin_timelord = shitcoin.server.start_timelord:main",
-            "shitcoin_timelord_launcher = shitcoin.timelord.timelord_launcher:main",
-            "shitcoin_full_node_simulator = shitcoin.simulator.start_simulator:main",
+            "chia = chia.cmds.chia:main",
+            "chia_wallet = chia.server.start_wallet:main",
+            "chia_full_node = chia.server.start_full_node:main",
+            "chia_harvester = chia.server.start_harvester:main",
+            "chia_farmer = chia.server.start_farmer:main",
+            "chia_introducer = chia.server.start_introducer:main",
+            "chia_timelord = chia.server.start_timelord:main",
+            "chia_timelord_launcher = chia.timelord.timelord_launcher:main",
+            "chia_full_node_simulator = chia.simulator.start_simulator:main",
         ]
     },
     package_data={
-        "shitcoin": ["pyinstaller.spec"],
+        "chia": ["pyinstaller.spec"],
         "": ["*.clvm", "*.clvm.hex", "*.clib", "*.clinc", "*.clsp", "py.typed"],
-        "shitcoin.util": ["initial-*.yaml", "english.txt"],
-        "shitcoin.ssl": ["shitcoin_ca.crt", "shitcoin_ca.key", "dst_root_ca.pem"],
+        "chia.util": ["initial-*.yaml", "english.txt"],
+        "chia.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
         "mozilla-ca": ["cacert.pem"],
     },
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},

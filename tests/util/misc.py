@@ -1,6 +1,6 @@
 import pytest
-from shitcoin.util.misc import format_bytes
-from shitcoin.util.misc import format_minutes
+from chia.util.misc import format_bytes
+from chia.util.misc import format_minutes
 
 
 class TestMisc:

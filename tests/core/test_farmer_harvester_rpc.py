@@ -7,25 +7,25 @@ import time
 
 import pytest
 from blspy import AugSchemeMPL
-from shitcoinpos import DiskPlotter
+from chiapos import DiskPlotter
 
-from shitcoin.consensus.coinbase import create_puzzlehash_for_pk
-from shitcoin.plotting.util import stream_plot_info_ph, stream_plot_info_pk, PlotRefreshResult, PlotRefreshEvents
-from shitcoin.plotting.manager import PlotManager
-from shitcoin.protocols import farmer_protocol
-from shitcoin.rpc.farmer_rpc_api import FarmerRpcApi
-from shitcoin.rpc.farmer_rpc_client import FarmerRpcClient
-from shitcoin.rpc.harvester_rpc_api import HarvesterRpcApi
-from shitcoin.rpc.harvester_rpc_client import HarvesterRpcClient
-from shitcoin.rpc.rpc_server import start_rpc_server
-from shitcoin.types.blockchain_format.sized_bytes import bytes32
-from shitcoin.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
+from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk, PlotRefreshResult, PlotRefreshEvents
+from chia.plotting.manager import PlotManager
+from chia.protocols import farmer_protocol
+from chia.rpc.farmer_rpc_api import FarmerRpcApi
+from chia.rpc.farmer_rpc_client import FarmerRpcClient
+from chia.rpc.harvester_rpc_api import HarvesterRpcApi
+from chia.rpc.harvester_rpc_client import HarvesterRpcClient
+from chia.rpc.rpc_server import start_rpc_server
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from tests.block_tools import get_plot_dir
-from shitcoin.util.byte_types import hexstr_to_bytes
-from shitcoin.util.config import load_config, save_config
-from shitcoin.util.hash import std_hash
-from shitcoin.util.ints import uint8, uint16, uint32, uint64
-from shitcoin.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_pooling_authentication_sk
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.config import load_config, save_config
+from chia.util.hash import std_hash
+from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_pooling_authentication_sk
 from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 

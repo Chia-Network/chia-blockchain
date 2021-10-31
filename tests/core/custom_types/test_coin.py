@@ -1,7 +1,7 @@
-from shitcoin.types.blockchain_format.coin import Coin
-from shitcoin.types.blockchain_format.sized_bytes import bytes32
-from shitcoin.util.ints import uint64
-from shitcoin.util.hash import std_hash
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
+from chia.util.hash import std_hash
 import io
 
 

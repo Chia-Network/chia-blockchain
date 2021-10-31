@@ -25,7 +25,7 @@ config/keys.yaml
 config/plots.yaml
 
 # Bundled code
-shitcoin-blockchain.tar.gz.tar.gz
+chia-blockchain.tar.gz.tar.gz
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -66,7 +66,7 @@ activate
 .idea
 
 # Packaging
-shitcoin-blockchain.tar.gz
+chia-blockchain.tar.gz
 
 # Timelord utilities
 vdf_bench
@@ -88,13 +88,13 @@ main.sym
 *.recompiled
 
 # Dev config react
-# shitcoin-blockchain-gui/src/dev_config.js
+# chia-blockchain-gui/src/dev_config.js
 # React built app
-shitcoin-blockchain-gui/.eslintcache
-shitcoin-blockchain-gui/build
+chia-blockchain-gui/.eslintcache
+chia-blockchain-gui/build
 build_scripts/dist
 build_scripts/*.Dmg
-shitcoin-blockchain-gui/src/locales/_build
+chia-blockchain-gui/src/locales/_build
 build_scripts\win_build
 build_scripts/win_build
 win_code_sign_cert.p12

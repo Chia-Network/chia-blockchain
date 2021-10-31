@@ -2,9 +2,9 @@ import asyncio
 
 import pytest
 
-from shitcoin.protocols.protocol_message_types import ProtocolMessageTypes
-from shitcoin.server.outbound_message import make_msg
-from shitcoin.server.rate_limits import RateLimiter, NON_TX_FREQ
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import make_msg
+from chia.server.rate_limits import RateLimiter, NON_TX_FREQ
 from tests.setup_nodes import test_constants
 
 

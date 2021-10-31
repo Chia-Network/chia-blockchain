@@ -245,9 +245,9 @@ ignored-classes=optparse.Values,thread._local,_thread._local
 # and thus existing member attributes cannot be deduced by static analysis. It
 # supports qualified module names, as well as Unix pattern matching.
 ignored-modules=blspy,
-                shitcoinbip158,
-                shitcoinpos,
-                shitcoinvdf,
+                chiabip158,
+                chiapos,
+                chiavdf,
                 cryptography,
                 aiohttp,
                 websockets,

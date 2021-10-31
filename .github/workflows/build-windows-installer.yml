@@ -82,7 +82,7 @@ jobs:
       uses: kitek/decode-base64-into-file-action@1.0
       with:
         encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
-        destination-file: .\shitcoin-blockchain-gui\win_code_sign_cert.p12
+        destination-file: .\chia-blockchain-gui\win_code_sign_cert.p12
 
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
     - name: Get version number
@@ -91,12 +91,12 @@ jobs:
         python -m venv ..\venv
         . ..\venv\Scripts\Activate.ps1
         pip3 install setuptools_scm
-        $env:shitcoin_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
-        echo "$env:shitcoin_INSTALLER_VERSION"
-        echo "::set-output name=shitcoin_INSTALLER_VERSION::$env:shitcoin_INSTALLER_VERSION"
+        $env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
+        echo "$env:CHIA_INSTALLER_VERSION"
+        echo "::set-output name=CHIA_INSTALLER_VERSION::$env:CHIA_INSTALLER_VERSION"
         deactivate
 
-      # Get the most recent release from shitcoin-plotter-madmax
+      # Get the most recent release from chia-plotter-madmax
     - uses: actions/github-script@v4
       id: 'latest-madmax'
       with:
@@ -104,16 +104,16 @@ jobs:
         result-encoding: string
         script: |
           const releases = await github.repos.listReleases({
-            owner: 'shitcoin-Network',
-            repo: 'shitcoin-plotter-madmax',
+            owner: 'Chia-Network',
+            repo: 'chia-plotter-madmax',
           });
           return releases.data[0].tag_name;
 
     - name: Get latest madmax plotter
       run: |
         mkdir "$env:GITHUB_WORKSPACE\madmax"
-        Invoke-WebRequest https://github.com/shitcoin-Network/shitcoin-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/shitcoin_plot-${{ steps.latest-madmax.outputs.result }}.exe -OutFile "$env:GITHUB_WORKSPACE\madmax\shitcoin_plot.exe"
-        Invoke-WebRequest https://github.com/shitcoin-Network/shitcoin-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/shitcoin_plot_k34-${{ steps.latest-madmax.outputs.result }}.exe -OutFile "$env:GITHUB_WORKSPACE\madmax\shitcoin_plot_k34.exe"
+        Invoke-WebRequest https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot-${{ steps.latest-madmax.outputs.result }}.exe -OutFile "$env:GITHUB_WORKSPACE\madmax\chia_plot.exe"
+        Invoke-WebRequest https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}.exe -OutFile "$env:GITHUB_WORKSPACE\madmax\chia_plot_k34.exe"
 
       # Get the most recent release from bladebit
     - uses: actions/github-script@v4
@@ -123,7 +123,7 @@ jobs:
         result-encoding: string
         script: |
           const releases = await github.repos.listReleases({
-            owner: 'shitcoin-Network',
+            owner: 'Chia-Network',
             repo: 'bladebit',
           });
           return releases.data[0].tag_name;
@@ -131,7 +131,7 @@ jobs:
     - name: Get latest bladebit plotter
       run: |
         mkdir "$env:GITHUB_WORKSPACE\bladebit"
-        Invoke-WebRequest https://github.com/shitcoin-Network/bladebit/releases/download/${{ steps.latest-bladebit.outputs.result }}/bladebit-${{ steps.latest-bladebit.outputs.result }}-windows-x86-64.zip -OutFile "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip"
+        Invoke-WebRequest https://github.com/Chia-Network/bladebit/releases/download/${{ steps.latest-bladebit.outputs.result }}/bladebit-${{ steps.latest-bladebit.outputs.result }}-windows-x86-64.zip -OutFile "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip"
         Expand-Archive -Path "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip" -DestinationPath "$env:GITHUB_WORKSPACE\bladebit\"
         rm "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip"
 
@@ -148,13 +148,13 @@ jobs:
       uses: actions/upload-artifact@v2.2.2
       with:
         name: Windows-Exe
-        path: ${{ github.workspace }}\shitcoin-blockchain-gui\shitcoin-win32-x64\
+        path: ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
 
     - name: Upload Installer to artifacts
       uses: actions/upload-artifact@v2.2.2
       with:
         name: Windows-Installers
-        path: ${{ github.workspace }}\shitcoin-blockchain-gui\release-builds\
+        path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\
 
 
     - name: Install AWS CLI
@@ -173,17 +173,17 @@ jobs:
     - name: Upload to s3
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
       env:
-        shitcoin_INSTALLER_VERSION: ${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
-        ls ${{ github.workspace }}\shitcoin-blockchain-gui\release-builds\windows-installer\
-        aws s3 cp ${{ github.workspace }}\shitcoin-blockchain-gui\release-builds\windows-installer\shitcoinSetup-${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}.exe s3://download-shitcoin-net/builds/
+        ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/builds/
 
     - name: Create Checksums
       env:
-        shitcoin_INSTALLER_VERSION: ${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
-         certutil.exe -hashfile ${{ github.workspace }}\shitcoin-blockchain-gui\release-builds\windows-installer\shitcoinSetup-${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}.exe SHA256 > ${{ github.workspace }}\shitcoin-blockchain-gui\release-builds\windows-installer\shitcoinSetup-${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}.exe.sha256
-         ls ${{ github.workspace }}\shitcoin-blockchain-gui\release-builds\windows-installer\
+         certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe SHA256 > ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.sha256
+         ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
 
     - name: Install py3createtorrent
       if: startsWith(github.ref, 'refs/tags/')
@@ -193,16 +193,16 @@ jobs:
     - name: Create torrent
       if: startsWith(github.ref, 'refs/tags/')
       run: |
-        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}\shitcoin-blockchain-gui\release-builds\windows-installer\shitcoinSetup-${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}.exe -o ${{ github.workspace }}\shitcoin-blockchain-gui\release-builds\windows-installer\shitcoinSetup-${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}.exe.torrent --webseed https://download-shitcoin-net.s3.us-west-2.amazonaws.com/install/shitcoinSetup-${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}.exe
+        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe -o ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.torrent --webseed https://download-chia-net.s3.us-west-2.amazonaws.com/install/ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
         ls
 
     - name: Upload Beta Installer
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
       env:
-        shitcoin_INSTALLER_VERSION: ${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
-        aws s3 cp ${{ github.workspace }}\shitcoin-blockchain-gui\release-builds\windows-installer\shitcoinSetup-${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}.exe s3://download-shitcoin-net/beta/shitcoinSetup-latest-beta.exe
-        aws s3 cp ${{ github.workspace }}\shitcoin-blockchain-gui\release-builds\windows-installer\shitcoinSetup-${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}.exe.sha256 s3://download-shitcoin-net/beta/shitcoinSetup-latest-beta.exe.sha256
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/beta/ChiaSetup-latest-beta.exe
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download-chia-net/beta/ChiaSetup-latest-beta.exe.sha256
 
     - name: Upload Release Files
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && startsWith(github.ref, 'refs/tags/')
@@ -210,9 +210,9 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
       run: |
-        aws s3 cp ${{ github.workspace }}\shitcoin-blockchain-gui\release-builds\windows-installer\shitcoinSetup-${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}.exe s3://download-shitcoin-net/install/
-        aws s3 cp ${{ github.workspace }}\shitcoin-blockchain-gui\release-builds\windows-installer\shitcoinSetup-${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}.exe.sha256 s3://download-shitcoin-net/install/
-        aws s3 cp ${{ github.workspace }}\shitcoin-blockchain-gui\release-builds\windows-installer\shitcoinSetup-${{ steps.version_number.outputs.shitcoin_INSTALLER_VERSION }}.exe.torrent s3://download-shitcoin-net/torrents/
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/install/
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download-chia-net/install/
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.torrent s3://download-chia-net/torrents/
 
     - name: Get tag name
       if: startsWith(github.ref, 'refs/tags/')
@@ -228,7 +228,7 @@ jobs:
             Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
         }
         $data = @{
-            shitcoin_ref='${{ steps.tag-name.outputs.TAG_NAME }}'
+            chia_ref='${{ steps.tag-name.outputs.TAG_NAME }}'
         }
         $json = $data | ConvertTo-Json
         $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers

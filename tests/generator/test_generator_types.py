@@ -1,10 +1,10 @@
 from typing import Dict
 from unittest import TestCase
 
-from shitcoin.types.blockchain_format.program import Program, SerializedProgram
-from shitcoin.types.generator_types import GeneratorBlockCacheInterface
-from shitcoin.full_node.generator import create_block_generator, create_generator_args
-from shitcoin.util.ints import uint32
+from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.generator_types import GeneratorBlockCacheInterface
+from chia.full_node.generator import create_block_generator, create_generator_args
+from chia.util.ints import uint32
 
 gen0 = SerializedProgram.from_bytes(
     bytes.fromhex(

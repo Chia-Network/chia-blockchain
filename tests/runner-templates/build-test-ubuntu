@@ -1,5 +1,5 @@
 #
-# THIS FILE IS GENERATED. SEE https://github.com/shitcoin-Network/shitcoin-blockchain/tree/main/tests#readme
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
 name: Ubuntu TEST_NAME Test
 
@@ -68,9 +68,9 @@ CHECKOUT_TEST_BLOCKS_AND_PLOTS
     - name: Link home directory
       run: |
         cd $HOME
-        ln -s $GITHUB_WORKSPACE/.shitcoin
-        echo "$HOME/.shitcoin"
-        ls -al $HOME/.shitcoin
+        ln -s $GITHUB_WORKSPACE/.chia
+        echo "$HOME/.chia"
+        ls -al $HOME/.chia
 
     - name: Install ubuntu dependencies
       run: |
@@ -99,5 +99,5 @@ INSTALL_TIMELORD
 
 CHECK_RESOURCE_USAGE
 #
-# THIS FILE IS GENERATED. SEE https://github.com/shitcoin-Network/shitcoin-blockchain/tree/main/tests#readme
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

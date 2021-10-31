@@ -1,6 +1,6 @@
 import pytest
 
-from shitcoin.wallet.shitcoinlisp import (
+from chia.wallet.chialisp import (
     apply,
     args,
     cons,
@@ -17,7 +17,7 @@ from shitcoin.wallet.shitcoinlisp import (
 )
 
 
-class Testshitcoinlisp:
+class TestChialisp:
     def test_sexp(self):
         assert sexp() == "()"
         assert sexp(1) == "(1)"

@@ -4,12 +4,12 @@ import asyncio
 import pytest
 from colorlog import logging
 
-from shitcoin.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from shitcoin.protocols import full_node_protocol
-from shitcoin.simulator.simulator_protocol import FarmNewBlockProtocol
-from shitcoin.types.peer_info import PeerInfo
-from shitcoin.util.ints import uint16, uint32
-from shitcoin.wallet.wallet_state_manager import WalletStateManager
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.protocols import full_node_protocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.peer_info import PeerInfo
+from chia.util.ints import uint16, uint32
+from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import disconnect_all_and_reconnect
 from tests.setup_nodes import bt, self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert

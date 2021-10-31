@@ -3,7 +3,7 @@ import unittest
 
 from blspy import G2Element
 
-from shitcoin.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle
 
 
 BLANK_SPEND_BUNDLE = SpendBundle(coin_spends=[], aggregated_signature=G2Element())

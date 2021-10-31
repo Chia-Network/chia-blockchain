@@ -1,5 +1,5 @@
 from pathlib import Path
-from shitcoin.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper
 import tempfile
 import aiosqlite
 

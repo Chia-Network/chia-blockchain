@@ -1,5 +1,5 @@
 #
-# THIS FILE IS GENERATED. SEE https://github.com/shitcoin-Network/shitcoin-blockchain/tree/main/tests#readme
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
 name: MacOS core-util Tests
 
@@ -44,10 +44,10 @@ jobs:
 
     - name: Create keychain for CI use
       run: |
-        security create-keychain -p foo shitcoinchain
-        security default-keychain -s shitcoinchain
-        security unlock-keychain -p foo shitcoinchain
-        security set-keychain-settings -t 7200 -u shitcoinchain
+        security create-keychain -p foo chiachain
+        security default-keychain -s chiachain
+        security unlock-keychain -p foo chiachain
+        security set-keychain-settings -t 7200 -u chiachain
 
     - name: Get pip cache dir
       id: pip-cache
@@ -66,17 +66,17 @@ jobs:
     - name: Checkout test blocks and plots
       uses: actions/checkout@v2
       with:
-        repository: 'shitcoin-Network/test-cache'
-        path: '.shitcoin'
+        repository: 'Chia-Network/test-cache'
+        path: '.chia'
         ref: '0.27.0'
         fetch-depth: 1
 
     - name: Link home directory
       run: |
         cd $HOME
-        ln -s $GITHUB_WORKSPACE/.shitcoin
-        echo "$HOME/.shitcoin"
-        ls -al $HOME/.shitcoin
+        ln -s $GITHUB_WORKSPACE/.chia
+        echo "$HOME/.chia"
+        ls -al $HOME/.chia
 
     - name: Run install script
       env:
@@ -103,5 +103,5 @@ jobs:
         ./venv/bin/py.test tests/core/util/test_file_keyring_synchronization.py tests/core/util/test_keychain.py tests/core/util/test_lru_cache.py tests/core/util/test_significant_bits.py tests/core/util/test_streamable.py tests/core/util/test_type_checking.py -s -v --durations 0
         ./venv/bin/py.test tests/core/util/test_cached_bls.py tests/core/util/test_config.py tests/core/util/test_keyring_wrapper.py -s -v --durations 0
 #
-# THIS FILE IS GENERATED. SEE https://github.com/shitcoin-Network/shitcoin-blockchain/tree/main/tests#readme
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

@@ -52,12 +52,12 @@ jobs:
 
     - name: Lint source with flake8
       run: |
-        flake8 shitcoin tests
+        flake8 chia tests
 
     - name: Lint source with mypy
       run: |
         mypy --exclude config.py tests
-        mypy shitcoin
+        mypy chia
 
     - name: Build source distribution
       run: |

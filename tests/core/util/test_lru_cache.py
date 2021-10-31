@@ -1,6 +1,6 @@
 import unittest
 
-from shitcoin.util.lru_cache import LRUCache
+from chia.util.lru_cache import LRUCache
 
 
 class TestLRUCache(unittest.TestCase):

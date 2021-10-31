@@ -2,16 +2,16 @@ from collections import defaultdict
 from dataclasses import dataclass, replace
 from typing import Dict, Iterator, Optional
 
-from shitcoin.util.condition_tools import created_outputs_for_conditions_dict
-from shitcoin.full_node.mempool_check_conditions import mempool_check_conditions_dict, get_name_puzzle_conditions
-from shitcoin.types.blockchain_format.coin import Coin
-from shitcoin.types.blockchain_format.sized_bytes import bytes32
-from shitcoin.types.coin_record import CoinRecord
-from shitcoin.types.spend_bundle import SpendBundle
-from shitcoin.util.ints import uint32, uint64
-from shitcoin.full_node.bundle_tools import simple_solution_generator
-from shitcoin.util.errors import Err
-from shitcoin.consensus.cost_calculator import NPCResult
+from chia.util.condition_tools import created_outputs_for_conditions_dict
+from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict, get_name_puzzle_conditions
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
+from chia.types.spend_bundle import SpendBundle
+from chia.util.ints import uint32, uint64
+from chia.full_node.bundle_tools import simple_solution_generator
+from chia.util.errors import Err
+from chia.consensus.cost_calculator import NPCResult
 
 
 MAX_COST = 11000000000
