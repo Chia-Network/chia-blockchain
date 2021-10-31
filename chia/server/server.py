@@ -193,7 +193,7 @@ class ChiaServer:
                     if time.time() - connection.last_message_time > 1800:
                         to_remove.append(connection)
             for connection in to_remove:
-                self.log.debug(f"Garbage collecting connection {connection.peer_host} due to inactivity.")
+                self.log.debug(f"Garbage collecting connection {connection.peer_host} due to inactivity")
                 await connection.close()
 
             # Also garbage collect banned_peers dict
