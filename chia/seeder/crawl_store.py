@@ -39,7 +39,10 @@ class CrawlStore:
                 " last_try_timestamp bigint,"
                 " try_count bigint,"
                 " connected_timestamp bigint,"
-                " added_timestamp bigint)"
+                " added_timestamp bigint,"
+                " best_timestamp bigint,"
+                " version text,"
+                " handshake_time text)"
             )
         )
         await self.crawl_db.execute(
@@ -51,7 +54,8 @@ class CrawlStore:
                 " stat_8h_w real, stat_8h_c real, stat_8h_r real,"
                 " stat_1d_w real, stat_1d_c real, stat_1d_r real,"
                 " stat_1w_w real, stat_1w_c real, stat_1w_r real,"
-                " stat_1m_w real, stat_1m_c real, stat_1m_r real, is_reliable int)"
+                " stat_1m_w real, stat_1m_c real, stat_1m_r real, is_reliable int,"
+                " tries int, successes int)"
             )
         )
 
@@ -92,7 +96,7 @@ class CrawlStore:
 
         added_timestamp = int(time.time())
         cursor = await self.crawl_db.execute(
-            "INSERT OR REPLACE INTO peer_records VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO peer_records VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 peer_record.peer_id,
                 peer_record.ip_address,
@@ -102,11 +106,15 @@ class CrawlStore:
                 peer_record.try_count,
                 peer_record.connected_timestamp,
                 added_timestamp,
+                peer_record.best_timestamp,
+                peer_record.version,
+                peer_record.handshake_time,
             ),
         )
         await cursor.close()
         cursor = await self.crawl_db.execute(
-            "INSERT OR REPLACE INTO peer_reliability VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO peer_reliability"
+            " VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 peer_reliability.peer_id,
                 peer_reliability.ignore_till,
@@ -127,6 +135,8 @@ class CrawlStore:
                 peer_reliability.stat_1m.count,
                 peer_reliability.stat_1m.reliability,
                 int(peer_reliability.is_reliable()),
+                peer_reliability.tries,
+                peer_reliability.successes,
             ),
         )
         await cursor.close()
@@ -156,6 +166,16 @@ class CrawlStore:
         if reliability is None:
             reliability = PeerReliability(peer.peer_id)
         reliability.update(True, now - age_timestamp)
+        await self.add_peer(replaced, reliability)
+
+    async def update_best_timestamp(self, host: str, timestamp):
+        if host not in self.host_to_records:
+            return
+        record = self.host_to_records[host]
+        replaced = dataclasses.replace(record, best_timestamp=timestamp)
+        if host not in self.host_to_reliability:
+            return
+        reliability = self.host_to_reliability[host]
         await self.add_peer(replaced, reliability)
 
     async def peer_connected_hostname(self, host: str, connected: bool = True):
@@ -278,6 +298,9 @@ class CrawlStore:
                 row[15],
                 row[16],
                 row[17],
+                row[18],
+                row[19],
+                row[20],
             )
             self.host_to_reliability[row[0]] = reliability
         cursor = await self.crawl_db.execute(
@@ -286,7 +309,7 @@ class CrawlStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
+            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10])
             self.host_to_records[row[0]] = peer
 
     # Crawler -> DNS.
@@ -308,3 +331,32 @@ class CrawlStore:
             )
             await cursor.close()
         await self.crawl_db.commit()
+
+    def load_host_to_version(self):
+        versions = {}
+        handshake = {}
+
+        for host, record in self.host_to_records.items():
+            if host not in self.host_to_records:
+                continue
+            record = self.host_to_records[host]
+            if record.version == "undefined":
+                continue
+            versions[host] = record.version
+            handshake[host] = record.handshake_time
+
+        return (versions, handshake)
+
+    def load_best_peer_reliability(self):
+        best_timestamp = {}
+        for host, record in self.host_to_records.items():
+            best_timestamp[host] = record.best_timestamp
+        return best_timestamp
+
+    async def update_version(self, host, version, now):
+        record = self.host_to_records.get(host, None)
+        reliability = self.host_to_reliability.get(host, None)
+        if record is None or reliability is None:
+            return
+        record.update_version(version, now)
+        await self.add_peer(record, reliability)
