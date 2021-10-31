@@ -8,9 +8,14 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.outbound_message import NodeType
+from chia.server.server import ChiaServer
 from chia.server.start_service import run_service
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
+
+# Patch some methods on the upstream server
+ChiaServer.incoming_connection = chia.seeder.server.incoming_connection
+ChiaServer.garbage_collect_connections_task = chia.seeder.server.garbage_collect_connections_task
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
