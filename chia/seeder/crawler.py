@@ -1,3 +1,4 @@
+import aiosqlite
 import asyncio
 import logging
 import random
@@ -6,13 +7,12 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
-import aiosqlite
 import chia.server.ws_connection as ws
 from chia.consensus.constants import ConsensusConstants
-from chia.seeder.crawl_store import CrawlStore
-from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.full_node.coin_store import CoinStore
 from chia.protocols import full_node_protocol
+from chia.seeder.crawl_store import CrawlStore
+from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.server import ChiaServer
 from chia.types.peer_info import PeerInfo
 from chia.util.path import mkdir, path_from_root
@@ -57,8 +57,12 @@ class Crawler:
         self.version_cache = []
         self.handshake_time = {}
         self.best_timestamp_per_peer = {}
-        db_path_replaced: str = "crawler.db"
-        self.db_path = path_from_root(root_path, db_path_replaced)
+        if "crawler_db_path" in config and config["crawler_db_path"] != "":
+            path = Path(config["crawler_db_path"])
+            self.db_path = path.resolve()
+        else:
+            db_path_replaced: str = "crawler.db"
+            self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
         self.bootstrap_peers = config["bootstrap_peers"]
         self.minimum_height = config["minimum_height"]
