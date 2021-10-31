@@ -1,6 +1,4 @@
 import asyncio
-import logging
-import time
 
 
 class FuncWrapper:
@@ -9,6 +7,15 @@ class FuncWrapper:
 
     def __lt__(self, other):
         return str(self.f) < str(other)
+
+    def __le__(self, other):
+        return str(self.f) <= str(other)
+
+    def __gt__(self, other):
+        return str(self.f) > str(other)
+
+    def __ge__(self, other):
+        return str(self.f) >= str(other)
 
 
 class LockQueue:
@@ -56,7 +63,6 @@ class LockClient:
 
         await self._queue.put(self._priority, callback)
 
-        t1 = time.time()
         while not called:
             await asyncio.sleep(0.001)
 
