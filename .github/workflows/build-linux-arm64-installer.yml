@@ -58,6 +58,47 @@ jobs:
       env:
         SECRET: "${{ secrets.INSTALLER_UPLOAD_SECRET }}"
 
+      # Get the most recent release from chia-plotter-madmax
+    - uses: actions/github-script@v4
+      id: 'latest-madmax'
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        result-encoding: string
+        script: |
+          const releases = await github.repos.listReleases({
+            owner: 'Chia-Network',
+            repo: 'chia-plotter-madmax',
+          });
+          return releases.data[0].tag_name;
+
+    - name: Get latest madmax plotter
+      run: |
+        mkdir "$GITHUB_WORKSPACE/madmax"
+        wget -O "$GITHUB_WORKSPACE/madmax/chia_plot" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot-${{ steps.latest-madmax.outputs.result }}-arm64
+        wget -O "$GITHUB_WORKSPACE/madmax/chia_plot_k34" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}-arm64
+        chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
+        chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
+
+      # Get the most recent release from bladebit
+    - uses: actions/github-script@v4
+      id: 'latest-bladebit'
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        result-encoding: string
+        script: |
+          const releases = await github.repos.listReleases({
+            owner: 'Chia-Network',
+            repo: 'bladebit',
+          });
+          return releases.data[0].tag_name;
+
+    - name: Get latest bladebit plotter
+      run: |
+        mkdir "$GITHUB_WORKSPACE/bladebit"
+        wget -O /tmp/bladebit.tar.gz https://github.com/Chia-Network/bladebit/releases/download/${{ steps.latest-bladebit.outputs.result }}/bladebit-${{ steps.latest-bladebit.outputs.result }}-ubuntu-arm64.tar.gz
+        tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
+        chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
+
     - name: Build ARM64 Installer
       run: |
         podman run --rm=true \
@@ -83,7 +124,7 @@ jobs:
             pip install --upgrade pip && \
             pip install wheel && \
             pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2 && \
-            pip install . --extra-index-url https://pypi.chia.net/simple/ && \
+            pip install -e . --extra-index-url https://pypi.chia.net/simple/ && \
             ldd --version && \
             cd build_scripts && \
             sh build_linux_deb.sh arm64 \

@@ -890,13 +890,18 @@ class WalletNode:
         assert self.wallet_state_manager is not None
         additional_coin_spends: List[CoinSpend] = []
         if len(removed_coins) > 0:
+            removed_coin_ids = set([coin.name() for coin in removed_coins])
             all_added_coins = await self.get_additions(peer, block, [], get_all_additions=True)
             assert all_added_coins is not None
             if all_added_coins is not None:
                 all_added_coin_parents = [c.parent_coin_info for c in all_added_coins]
                 for coin in all_added_coins:
                     # This searches specifically for a launcher being created, and adds the solution of the launcher
-                    if coin.puzzle_hash == SINGLETON_LAUNCHER_HASH and coin.name() in all_added_coin_parents:
+                    if (
+                        coin.puzzle_hash == SINGLETON_LAUNCHER_HASH  # Check that it's a launcher
+                        and coin.name() in all_added_coin_parents  # Check that it's ephemermal
+                        and coin.parent_coin_info in removed_coin_ids  # Check that an interesting coin created it
+                    ):
                         cs: CoinSpend = await self.fetch_puzzle_solution(peer, block.height, coin)
                         additional_coin_spends.append(cs)
                         # Apply this coin solution, which might add things to interested list
@@ -970,7 +975,7 @@ class WalletNode:
         for coin in additions:
             puzzle_store = self.wallet_state_manager.puzzle_store
             record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
-                coin.puzzle_hash.hex()
+                coin.puzzle_hash
             )
             if record_info is not None and record_info.wallet_type == WalletType.COLOURED_COIN:
                 # TODO why ?
