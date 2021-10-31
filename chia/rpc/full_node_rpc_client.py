@@ -41,6 +41,7 @@ class FullNodeRpcClient(RpcClient):
             response = await self.fetch("get_block_record_by_height", {"height": height})
         except Exception:
             return None
+        return block_record_from_json_dict()
         return BlockRecord.from_json_dict(response["block_record"])
 
     async def get_block_record(self, header_hash) -> Optional[BlockRecord]:

@@ -4,6 +4,8 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.rpc.type_conversions import block_record_to_json, coin_record_to_json, coin_spend_to_json
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -26,6 +28,8 @@ class FullNodeRpcApi:
 
     def get_routes(self) -> Dict[str, Callable]:
         return {
+            ## WARNING: When updating this, make sure to update the documentation on the chia-docs repository.
+
             # Blockchain
             "/get_blockchain_state": self.get_blockchain_state,
             "/get_block": self.get_block,
@@ -70,6 +74,7 @@ class FullNodeRpcApi:
             )
             return payloads
         return []
+
 
     # this function is just here for backwards-compatibility. It will probably
     # be removed in the future
@@ -151,7 +156,7 @@ class FullNodeRpcApi:
         assert space is not None
         response: Dict = {
             "blockchain_state": {
-                "peak": peak,
+                "peak": block_record_to_json(peak),
                 "genesis_challenge_initialized": self.service.initialized,
                 "sync": {
                     "sync_mode": sync_mode,
@@ -321,7 +326,7 @@ class FullNodeRpcApi:
             if record is None:
                 raise ValueError(f"Block {header_hash.hex()} does not exist")
 
-            records.append(record)
+            records.append(block_record_to_json(record))
         return {"block_records": records}
 
     async def get_block_record_by_height(self, request: Dict) -> Optional[Dict]:
@@ -341,7 +346,7 @@ class FullNodeRpcApi:
             record = await self.service.blockchain.block_store.get_block_record(header_hash)
         if record is None:
             raise ValueError(f"Block {header_hash} does not exist")
-        return {"block_record": record}
+        return {"block_record": block_record_to_json(record)}
 
     async def get_block_record(self, request: Dict):
         if "header_hash" not in request:
@@ -355,7 +360,7 @@ class FullNodeRpcApi:
         if record is None:
             raise ValueError(f"Block {header_hash.hex()} does not exist")
 
-        return {"block_record": record}
+        return {"block_record": block_record_to_json(record)}
 
     async def get_unfinished_block_headers(self, request: Dict) -> Optional[Dict]:
 
@@ -431,7 +436,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
 
-        return {"coin_records": coin_records}
+        return {"coin_records": [coin_record_to_json(cr) for cr in coin_records]}
 
     async def get_coin_records_by_puzzle_hashes(self, request: Dict) -> Optional[Dict]:
         """
@@ -453,7 +458,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
-        return {"coin_records": coin_records}
+        return {"coin_records": [coin_record_to_json(cr) for cr in coin_records]}
 
     async def get_coin_record_by_name(self, request: Dict) -> Optional[Dict]:
         """
@@ -467,7 +472,7 @@ class FullNodeRpcApi:
         if coin_record is None:
             raise ValueError(f"Coin record 0x{name.hex()} not found")
 
-        return {"coin_record": coin_record}
+        return {"coin_record": coin_record_to_json(coin_record)}
 
     async def get_coin_records_by_names(self, request: Dict) -> Optional[Dict]:
         """
@@ -489,7 +494,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
 
-        return {"coin_records": coin_records}
+        return {"coin_records": [coin_record_to_json(cr) for cr in coin_records]}
 
     async def get_coin_records_by_parent_ids(self, request: Dict) -> Optional[Dict]:
         """
@@ -511,7 +516,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_parent_ids(**kwargs)
 
-        return {"coin_records": coin_records}
+        return {"coin_records": [coin_record_to_json(cr) for cr in coin_records]}
 
     async def push_tx(self, request: Dict) -> Optional[Dict]:
         if "spend_bundle" not in request:
@@ -540,12 +545,18 @@ class FullNodeRpcApi:
 
     async def get_puzzle_and_solution(self, request: Dict) -> Optional[Dict]:
         coin_name: bytes32 = hexstr_to_bytes(request["coin_id"])
-        height = request["height"]
+        height: Optional[int] = request.get("height", None)
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
-        if coin_record is None or not coin_record.spent or coin_record.spent_block_index != height:
-            raise ValueError(f"Invalid height {height}. coin record {coin_record}")
+        if coin_record is None:
+            raise ValueError(f"Coin record with id {coin_name} not found.")
 
-        header_hash = self.service.blockchain.height_to_hash(height)
+        if not coin_record.spent:
+            raise ValueError(f"Coin record with id {coin_name} not spent.")
+
+        if height is not None and coin_record.spent_block_index != height:
+            raise ValueError(f"Invalid height {height}, coin was spent at {coin_record.spent_block_index}")
+
+        header_hash = self.service.blockchain.height_to_hash(coin_record.spent_block_index)
         block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
 
         if block is None or block.transactions_generator is None:
@@ -561,7 +572,9 @@ class FullNodeRpcApi:
 
         puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
         solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
-        return {"coin_solution": CoinSpend(coin_record.coin, puzzle_ser, solution_ser)}
+        cs: CoinSpend = CoinSpend(coin_record.coin, puzzle_ser, solution_ser)
+        return {"coin_solution": coin_spend_to_json(cs), "coin_spend": coin_spend_to_json(cs)}
+
 
     async def get_additions_and_removals(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:
@@ -578,7 +591,7 @@ class FullNodeRpcApi:
             additions: List[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block.height)
             removals: List[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(block.height)
 
-        return {"additions": additions, "removals": removals}
+        return {"additions": [coin_record_to_json(cr) for cr in additions], "removals": [coin_record_to_json(cr) for cr in removals]}
 
     async def get_all_mempool_tx_ids(self, request: Dict) -> Optional[Dict]:
         ids = list(self.service.mempool_manager.mempool.spends.keys())
