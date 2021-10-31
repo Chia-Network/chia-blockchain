@@ -21,6 +21,7 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
+from chia.full_node.lock_queue import LockQueue, LockClient
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_store import FullNodeStore
@@ -87,6 +88,9 @@ class FullNode:
     initialized: bool
     weight_proof_handler: Optional[WeightProofHandler]
     _ui_tasks: Set[asyncio.Task]
+    _mempool_lock_queue: LockQueue
+    _mempool_lock_high_priority: LockClient
+    _mempool_lock_low_priority: LockClient
 
     def __init__(
         self,
@@ -157,6 +161,9 @@ class FullNode:
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants, self.hint_store)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
+        self._mempool_lock_queue = LockQueue(asyncio.Lock())
+        self._mempool_lock_high_priority = LockClient(0, self._mempool_lock_queue)
+        self._mempool_lock_low_priority = LockClient(1, self._mempool_lock_queue)
         self.weight_proof_handler = None
         self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
@@ -174,7 +181,8 @@ class FullNode:
                 f" {self.blockchain.get_peak().height}, "
                 f"time taken: {int(time_taken)}s"
             )
-            pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_peak())
+            async with self._mempool_lock_high_priority:
+                pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_peak())
             assert len(pending_tx) == 0  # no pending transactions when starting up
 
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -1144,7 +1152,9 @@ class FullNode:
         )
 
         # Update the mempool (returns successful pending transactions added to the mempool)
-        for bundle, result, spend_name in await self.mempool_manager.new_peak(self.blockchain.get_peak()):
+        async with self._mempool_lock_high_priority:
+            new_peak_result = await self.mempool_manager.new_peak(self.blockchain.get_peak())
+        for bundle, result, spend_name in new_peak_result:
             self.log.debug(f"Added transaction to mempool: {spend_name}")
             mempool_item = self.mempool_manager.get_mempool_item(spend_name)
             assert mempool_item is not None
@@ -1770,7 +1780,7 @@ class FullNode:
             except Exception as e:
                 self.mempool_manager.remove_seen(spend_name)
                 raise e
-            async with self.mempool_manager.lock:
+            async with self._mempool_lock_low_priority:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
                     return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
