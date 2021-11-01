@@ -25,6 +25,7 @@ class LockQueue:
         self._task_queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
         self._stopped = False
         self._run_task = asyncio.create_task(self._run())
+        self._release_event = asyncio.Event()
 
     async def put(self, priority: int, callback):
         await self._task_queue.put((priority, FuncWrapper(callback)))
@@ -34,13 +35,15 @@ class LockQueue:
 
     def release(self):
         self._inner_lock.release()
+        self._release_event.set()
 
     async def _run(self):
         while not self._stopped:
             priority, callback = await self._task_queue.get()
+            self._release_event = asyncio.Event()
+            await self.acquire()
             await callback.f()
-            while self._inner_lock.locked():
-                await asyncio.sleep(0.001)
+            await self._release_event.wait()
 
     def close(self):
         self._stopped = True
@@ -61,20 +64,18 @@ class LockClient:
     async def __aenter__(
         self,
     ):
-        called: bool = False
+        called: asyncio.Event = asyncio.Event()
         if self._max_clients is not None and self._curr_clients >= self._max_clients:
             raise TooManyLockClients()
         self._curr_clients += 1
 
         async def callback():
-            await self._queue.acquire()
             nonlocal called
-            called = True
+            called.set()
 
         await self._queue.put(self._priority, callback)
 
-        while not called:
-            await asyncio.sleep(0.001)
+        await called.wait()
 
     async def __aexit__(self, exc_type, exc, tb):
         self._queue.release()
