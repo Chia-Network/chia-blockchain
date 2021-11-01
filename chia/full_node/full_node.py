@@ -1112,7 +1112,7 @@ class FullNode:
             f"🌱 Updated peak to height {record.height}, weight {record.weight}, "
             f"hh {record.header_hash}, "
             f"forked at {fork_height}, rh: {record.reward_infusion_new_challenge}, "
-            f"total iters: {record.total_iters}, 287"
+            f"total iters: {record.total_iters},"
             f"overflow: {record.overflow}, "
             f"deficit: {record.deficit}, "
             f"difficulty: {difficulty}, "
