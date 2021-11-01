@@ -78,7 +78,6 @@ class TestLockQueue:
 
         async def do_another(i: int):
             nonlocal another_client
-            t1 = time.time()
             async with another_client:
                 await kind_of_slow_func()
 

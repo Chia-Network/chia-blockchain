@@ -117,7 +117,7 @@ class FullNodeAPI:
             self.full_node.log.warning(f"new_peak Waiters: {waiter_count}")
 
         if waiter_count > 10:
-            return
+            return None
 
         async with self.full_node.new_peak_sem:
             return await self.full_node.new_peak(request, peer)
@@ -247,7 +247,7 @@ class FullNodeAPI:
             self.full_node.log.warning(f"respond_transaction Waiters: {waiters}")
         if len(waiters) > 100:
             self.log.debug(f"Ignoring transaction: {tx}, too many transactions")
-            return
+            return None
         await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
         return None
 

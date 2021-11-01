@@ -8,6 +8,7 @@ from ipaddress import IPv6Address, ip_address, ip_network, IPv4Network, IPv6Netw
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, List, Optional, Union, Set, Tuple
+from typing import Counter as typing_Counter
 
 from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, client_exceptions, web
 from aiohttp.web_app import Application
@@ -517,7 +518,7 @@ class ChiaServer:
             payload_inc, connection_inc = await self.incoming_messages.get()
             if payload_inc is None or connection_inc is None:
                 continue
-            message_types = Counter()
+            message_types: typing_Counter[str] = Counter()
 
             async def api_call(full_message: Message, connection: WSChiaConnection, task_id):
                 nonlocal message_types
@@ -530,7 +531,7 @@ class ChiaServer:
                         f"<- {ProtocolMessageTypes(full_message.type).name} from peer "
                         f"{connection.peer_node_id} {connection.peer_host}"
                     )
-                    message_type: str = ProtocolMessageTypes(full_message.type).name
+                    message_type = ProtocolMessageTypes(full_message.type).name
                     message_types[message_type] += 1
 
                     f = getattr(self.api, message_type, None)
