@@ -51,7 +51,7 @@ async def create_pool_args(pool_url: str) -> Dict:
     return json_dict
 
 
-async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int, fee: uint64) -> None:
     state = args["state"]
     prompt = not args.get("yes", False)
     fee = Decimal(args.get("fee", 0))
