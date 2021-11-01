@@ -53,7 +53,7 @@ class FullNodeRpcApi:
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
-            "/get_min_fee_rate_for_cost": self.get_min_fee_rate_for_cost
+            "/get_min_fee_rate_for_cost": self.get_min_fee_rate_for_cost,
         }
 
     async def _state_changed(self, change: str) -> List[WsRpcMessage]:
