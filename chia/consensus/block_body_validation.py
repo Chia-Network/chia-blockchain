@@ -65,7 +65,6 @@ async def validate_block_body(
         assert height == block.height
     prev_transaction_block_height: uint32 = uint32(0)
 
-
     # 1. For non transaction-blocs: foliage block, transaction filter, transactions info, and generator must
     # be empty. If it is a block but not a transaction block, there is no body to validate. Check that all fields are
     # None

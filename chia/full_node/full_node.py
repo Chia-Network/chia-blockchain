@@ -89,9 +89,10 @@ class FullNode:
     initialized: bool
     weight_proof_handler: Optional[WeightProofHandler]
     _ui_tasks: Set[asyncio.Task]
-    _mempool_lock_queue: LockQueue
-    _mempool_lock_high_priority: LockClient
-    _mempool_lock_low_priority: LockClient
+    _blockchain_lock_queue: LockQueue
+    _blockchain_lock_ultra_priority: LockClient
+    _blockchain_lock_high_priority: LockClient
+    _blockchain_lock_low_priority: LockClient
 
     def __init__(
         self,
@@ -162,9 +163,10 @@ class FullNode:
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants, self.hint_store)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
-        self._mempool_lock_queue = LockQueue(asyncio.Lock())
-        self._mempool_lock_high_priority = LockClient(0, self._mempool_lock_queue)
-        self._mempool_lock_low_priority = LockClient(1, self._mempool_lock_queue)
+        self._blockchain_lock_queue = LockQueue(self.blockchain.lock)
+        self._blockchain_lock_ultra_priority = LockClient(0, self._blockchain_lock_queue)
+        self._blockchain_lock_high_priority = LockClient(1, self._blockchain_lock_queue)
+        self._blockchain_lock_low_priority = LockClient(2, self._blockchain_lock_queue)
         self.weight_proof_handler = None
         self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
@@ -182,7 +184,7 @@ class FullNode:
                 f" {self.blockchain.get_peak().height}, "
                 f"time taken: {int(time_taken)}s"
             )
-            async with self._mempool_lock_high_priority:
+            async with self._blockchain_lock_high_priority:
                 pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_peak())
             assert len(pending_tx) == 0  # no pending transactions when starting up
 
@@ -303,7 +305,7 @@ class FullNode:
                 response = await peer.request_blocks(request)
                 if not response:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
-                async with self.blockchain.lock:
+                async with self._blockchain_lock_high_priority:
                     success, advanced_peak, fork_height, coin_changes = await self.receive_block_batch(
                         response.blocks, peer, None
                     )
@@ -763,7 +765,7 @@ class FullNode:
             self.sync_store.set_sync_mode(True)
             self._state_changed("sync_mode")
             # Ensures that the fork point does not change
-            async with self.blockchain.lock:
+            async with self._blockchain_lock_high_priority:
                 await self.blockchain.warmup(fork_point)
                 await self.sync_from_fork_point(fork_point, heaviest_peak_height, heaviest_peak_hash, summaries)
         except asyncio.CancelledError:
@@ -1009,7 +1011,7 @@ class FullNode:
             return None
 
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
-        async with self.blockchain.lock:
+        async with self._blockchain_lock_high_priority:
             await self.sync_store.clear_sync_info()
 
             peak_fb: FullBlock = await self.blockchain.get_full_peak()
@@ -1170,10 +1172,9 @@ class FullNode:
         )
 
         # Update the mempool (returns successful pending transactions added to the mempool)
-        async with self._mempool_lock_high_priority:
-            mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
-                self.blockchain.get_peak()
-            )
+        mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
+            self.blockchain.get_peak()
+        )
 
         # Check if we detected a spent transaction, to load up our generator cache
         if block.transactions_generator is not None and self.full_node_store.previous_generator is None:
@@ -1331,7 +1332,7 @@ class FullNode:
                 return await self.respond_block(block_response, peer)
         coin_changes: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]] = ([], {})
         mempool_new_peak_result, fns_peak_result = None, None
-        async with self.blockchain.lock:
+        async with self._blockchain_lock_high_priority:
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
                 return None
@@ -1499,7 +1500,7 @@ class FullNode:
             self.log.warning("Too many blocks added, not adding block")
             return None
 
-        async with self.blockchain.lock:
+        async with self._blockchain_lock_high_priority:
             # TODO: pre-validate VDFs outside of lock
             validation_start = time.time()
             validate_result = await self.blockchain.validate_unfinished_block(block)
@@ -1816,7 +1817,7 @@ class FullNode:
             except Exception as e:
                 self.mempool_manager.remove_seen(spend_name)
                 raise e
-            async with self._mempool_lock_low_priority:
+            async with self._blockchain_lock_low_priority:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
                     return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
