@@ -112,7 +112,7 @@ class FullNodeAPI:
         # this semaphore limits the number of tasks that can call new_peak() at
         # the same time, since it can be expensive
         self.full_node.log.warning(f"new_peak Waiters: {len(self.full_node.new_peak_sem._waiters)}")
-        if len(self.full_node.new_transaction_semaphore._waiters) > 10:
+        if len(self.full_node.new_peak._waiters) > 10:
             return
 
         async with self.full_node.new_peak_sem:
