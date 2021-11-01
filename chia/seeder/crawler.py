@@ -119,7 +119,6 @@ class Crawler:
             await self.crawl_store.load_reliable_peers_to_db()
             t_start = time.time()
             total_nodes = 0
-            total_records = self.crawl_store.get_total_records()
             self.seen_nodes = set()
             tried_nodes = set()
             for peer in self.bootstrap_peers:
