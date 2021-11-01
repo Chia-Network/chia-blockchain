@@ -1828,6 +1828,7 @@ class FullNode:
                     )
             except TooManyLockClients:
                 self.log.warning("Dropping TX due to node overload")
+                self.mempool_manager.remove_seen(spend_name)
                 return MempoolInclusionStatus.FAILED, Err.NODE_OVERLOADED
 
             if status == MempoolInclusionStatus.SUCCESS:
