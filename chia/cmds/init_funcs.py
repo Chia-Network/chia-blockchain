@@ -271,8 +271,10 @@ def init(create_certs: Optional[Path], root_path: Path, fix_ssl_permissions: boo
         else:
             print(f"** {root_path} does not exist. Executing core init **")
             # sanity check here to prevent infinite recursion
-            if chia_init(root_path, fix_ssl_permissions=fix_ssl_permissions, testnet=testnet) \
-               == 0 and root_path.exists():
+            if (
+                chia_init(root_path, fix_ssl_permissions=fix_ssl_permissions, testnet=testnet) == 0
+                and root_path.exists()
+            ):
                 return init(create_certs, root_path, fix_ssl_permissions)
 
             print(f"** {root_path} was not created. Exiting **")
@@ -340,8 +342,9 @@ def chia_full_version_str() -> str:
     return f"{major}.{minor}.{patch}{dev}"
 
 
-def chia_init(root_path: Path, *, should_check_keys: bool = True, fix_ssl_permissions: bool = False,
-              testnet: bool = False):
+def chia_init(
+    root_path: Path, *, should_check_keys: bool = True, fix_ssl_permissions: bool = False, testnet: bool = False
+):
     """
     Standard first run initialization or migration steps. Handles config creation,
     generation of SSL certs, and setting target addresses (via check_keys).
