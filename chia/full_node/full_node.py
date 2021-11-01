@@ -182,7 +182,7 @@ class FullNode:
         else:
             self.log.info(
                 f"Blockchain initialized to peak {self.blockchain.get_peak().header_hash} height"
-                f" {self.blockchain.get_peak().height}, c"
+                f" {self.blockchain.get_peak().height}, "
                 f"time taken: {int(time_taken)}s"
             )
             async with self._blockchain_lock_high_priority:
@@ -1112,7 +1112,7 @@ class FullNode:
             f"🌱 Updated peak to height {record.height}, weight {record.weight}, "
             f"hh {record.header_hash}, "
             f"forked at {fork_height}, rh: {record.reward_infusion_new_challenge}, "
-            f"total iters: {record.total_iters},"
+            f"total iters: {record.total_iters}, "
             f"overflow: {record.overflow}, "
             f"deficit: {record.deficit}, "
             f"difficulty: {difficulty}, "
