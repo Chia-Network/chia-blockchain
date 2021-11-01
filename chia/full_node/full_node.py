@@ -135,6 +135,7 @@ class FullNode:
         self.timelord_lock = asyncio.Lock()
         self.compact_vdf_sem = asyncio.Semaphore(4)
         self.new_peak_sem = asyncio.Semaphore(8)
+        self.new_transaction_semaphore = asyncio.Semaphore(50)
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
@@ -1812,22 +1813,22 @@ class FullNode:
             error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
             self.mempool_manager.remove_seen(spend_name)
         else:
-            async with self._blockchain_lock_low_priority:
-                try:
-                    try:
-                        cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name)
-                    except Exception as e:
-                        self.mempool_manager.remove_seen(spend_name)
-                        raise e
+            try:
+                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name)
+            except Exception as e:
+                self.mempool_manager.remove_seen(spend_name)
+                raise e
+            try:
+                async with self._blockchain_lock_low_priority:
                     if self.mempool_manager.get_spendbundle(spend_name) is not None:
                         self.mempool_manager.remove_seen(spend_name)
                         return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
                     cost, status, error = await self.mempool_manager.add_spendbundle(
                         transaction, cost_result, spend_name
                     )
-                except TooManyLockClients:
-                    self.log.warning("Dropping TX due to node overload")
-                    return MempoolInclusionStatus.FAILED, Err.NODE_OVERLOADED
+            except TooManyLockClients:
+                self.log.warning("Dropping TX due to node overload")
+                return MempoolInclusionStatus.FAILED, Err.NODE_OVERLOADED
 
             if status == MempoolInclusionStatus.SUCCESS:
                 self.log.debug(

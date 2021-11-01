@@ -233,6 +233,10 @@ class FullNodeAPI:
             self.full_node.full_node_store.pending_tx_request.pop(spend_name)
         if spend_name in self.full_node.full_node_store.peers_with_tx:
             self.full_node.full_node_store.peers_with_tx.pop(spend_name)
+
+        if len(self.full_node.new_transaction_semaphore._waiters) > 20:
+            self.log.debug(f"Ignoring transaction: {tx}, too many transactions")
+            return
         await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
         return None
 
