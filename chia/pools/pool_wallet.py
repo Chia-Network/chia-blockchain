@@ -656,7 +656,7 @@ class PoolWallet:
         full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
         return full_spend, puzzle_hash, launcher_coin.name()
 
-    async def join_pool(self, target_state: PoolState):
+    async def join_pool(self, target_state: PoolState, fee: uint64):
 
         if target_state.state != FARMING_TO_POOL:
             raise ValueError(f"join_pool must be called with target_state={FARMING_TO_POOL} (FARMING_TO_POOL)")
@@ -693,7 +693,7 @@ class PoolWallet:
 
         return tx_record
 
-    async def self_pool(self):
+    async def self_pool(self, fee: uint64):
         if await self.have_unconfirmed_transaction():
             raise ValueError(
                 "Cannot claim due to unconfirmed transaction. If this is stuck, delete the unconfirmed transaction."
