@@ -52,7 +52,7 @@ class TooManyLockClients(Exception):
 
 
 class LockClient:
-    def __init__(self, priority: int, queue: LockQueue, max_clients: Optional[int]=None):
+    def __init__(self, priority: int, queue: LockQueue, max_clients: Optional[int] = None):
         self._priority = priority
         self._queue = queue
         self._max_clients = max_clients

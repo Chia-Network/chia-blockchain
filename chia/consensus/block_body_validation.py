@@ -475,5 +475,4 @@ async def validate_block_body(
     ):
         return Err.BAD_AGGREGATE_SIGNATURE, None
     log.warning(f"block_body_validation timings 10: {time.time() - start}")
-    start = time.time()
     return None, npc_result
