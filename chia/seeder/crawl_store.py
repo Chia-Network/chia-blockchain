@@ -54,7 +54,7 @@ class CrawlStore:
                 " stat_8h_w real, stat_8h_c real, stat_8h_r real,"
                 " stat_1d_w real, stat_1d_c real, stat_1d_r real,"
                 " stat_1w_w real, stat_1w_c real, stat_1w_r real,"
-                " stat_1m_w real, stat_1m_c real, stat_1m_r real, is_reliable int,"
+                " stat_1m_w real, stat_1m_c real, stat_1m_r real,"
                 " tries int, successes int)"
             )
         )
