@@ -244,7 +244,7 @@ class FullNodeAPI:
 
         waiters = self.full_node.new_transaction_semaphore._waiters
         if len(waiters) > 0:
-            self.full_node.log.warning(f"respond_transaction Waiters: {waiters}")
+            self.full_node.log.warning(f"respond_transaction Waiters: {len(waiters)}")
         if len(waiters) > 200:
             self.log.debug(f"Ignoring transaction: {tx}, too many transactions")
             return
