@@ -36,7 +36,6 @@ class TestLockQueue:
         async def do_high():
             nonlocal high_priority_client
             for i in range(10):
-                await asyncio.sleep(0.5)
                 log.warning("Starting high")
                 t1 = time.time()
                 async with high_priority_client:
