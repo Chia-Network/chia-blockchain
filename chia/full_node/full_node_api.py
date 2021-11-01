@@ -116,7 +116,7 @@ class FullNodeAPI:
         if waiter_count > 0:
             self.full_node.log.warning(f"new_peak Waiters: {waiter_count}")
 
-        if waiter_count > 10:
+        if waiter_count > 100:
             return None
 
         async with self.full_node.new_peak_sem:
@@ -245,9 +245,9 @@ class FullNodeAPI:
         waiters = self.full_node.new_transaction_semaphore._waiters
         if len(waiters) > 0:
             self.full_node.log.warning(f"respond_transaction Waiters: {waiters}")
-        if len(waiters) > 100:
+        if len(waiters) > 200:
             self.log.debug(f"Ignoring transaction: {tx}, too many transactions")
-            return None
+            return
         await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
         return None
 

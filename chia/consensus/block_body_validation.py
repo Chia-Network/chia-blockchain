@@ -84,8 +84,7 @@ async def validate_block_body(
             return Err.NOT_BLOCK_BUT_HAS_DATA, None
 
         return None, None  # This means the block is valid
-    log.debug(f"block_body_validation timings 1: {time.time() - start}")
-    start = time.time()
+
     # All checks below this point correspond to transaction blocks
     # 2. For blocks, foliage block, transactions info must not be empty
     if block.foliage_transaction_block is None or block.transactions_info is None:
@@ -153,8 +152,7 @@ async def validate_block_body(
 
     if len(block.transactions_info.reward_claims_incorporated) != len(expected_reward_coins):
         return Err.INVALID_REWARD_COINS, None
-    log.debug(f"block_body_validation timings 2: {time.time() - start}")
-    start = time.time()
+
     removals: List[bytes32] = []
     coinbase_additions: List[Coin] = list(expected_reward_coins)
     additions: List[Coin] = []
@@ -195,16 +193,13 @@ async def validate_block_body(
             return Err.TOO_MANY_GENERATOR_REFS, None
         if any([index >= height for index in block.transactions_generator_ref_list]):
             return Err.FUTURE_GENERATOR_REFS, None
-    log.debug(f"block_body_validation timings 3: {time.time() - start}")
-    start = time.time()
+
     if block.transactions_generator is not None:
         # Get List of names removed, puzzles hashes for removed coins and conditions created
 
         assert npc_result is not None
         cost = calculate_cost_of_program(block.transactions_generator, npc_result, constants.COST_PER_BYTE)
         npc_list = npc_result.npc_list
-        log.debug(f"block_body_validation timings 4: {time.time() - start}")
-        start = time.time()
 
         # 7. Check that cost <= MAX_BLOCK_COST_CLVM
         log.debug(
@@ -251,8 +246,7 @@ async def validate_block_body(
     )
     if root_error:
         return root_error, None
-    log.debug(f"block_body_validation timings 5: {time.time() - start}")
-    start = time.time()
+
     # 12. The additions and removals must result in the correct filter
     byte_array_tx: List[bytes32] = []
 
@@ -294,8 +288,7 @@ async def validate_block_body(
     # timestamp of the block in which it was confirmed
     additions_since_fork: Dict[bytes32, Tuple[Coin, uint32, uint64]] = {}  # This includes coinbase additions
     removals_since_fork: Set[bytes32] = set()
-    log.debug(f"block_body_validation timings 6: {time.time() - start}")
-    start = time.time()
+
     # For height 0, there are no additions and removals before this block, so we can skip
     if height > 0:
         # First, get all the blocks in the fork > fork_h, < block.height
@@ -351,8 +344,7 @@ async def validate_block_body(
                 break
             curr = reorg_blocks[curr.height - 1]
             assert curr is not None
-    log.debug(f"block_body_validation timings 7: {time.time() - start}")
-    start = time.time()
+
     removal_coin_records: Dict[bytes32, CoinRecord] = {}
     for rem in removals:
         if rem in additions_dic:
@@ -398,8 +390,7 @@ async def validate_block_body(
             if rem in removals_since_fork:
                 # This coin was spent in the fork
                 return Err.DOUBLE_SPEND_IN_FORK, None
-    log.debug(f"block_body_validation timings 8: {time.time() - start}")
-    start = time.time()
+
     removed = 0
     for unspent in removal_coin_records.values():
         removed += unspent.coin.amount
@@ -457,8 +448,6 @@ async def validate_block_body(
 
     # create hash_key list for aggsig check
     pairs_pks, pairs_msgs = pkm_pairs(npc_list, constants.AGG_SIG_ME_ADDITIONAL_DATA)
-    log.debug(f"block_body_validation timings 9: {time.time() - start}")
-    start = time.time()
     # 22. Verify aggregated signature
     # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster
     if not block.transactions_info.aggregated_signature:
@@ -474,5 +463,4 @@ async def validate_block_body(
         pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, force_cache
     ):
         return Err.BAD_AGGREGATE_SIGNATURE, None
-    log.debug(f"block_body_validation timings 10: {time.time() - start}")
     return None, npc_result
