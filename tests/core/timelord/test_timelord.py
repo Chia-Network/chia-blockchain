@@ -82,7 +82,6 @@ class TestTimelord:
     async def test_timelord_infuses_first_block(self, setup_timelord_and_node_big_disc):
         vdf_client, timelord, timelord_server, full_node, full_node_server, keychain = setup_timelord_and_node_big_disc
         constants = constants_for_dic({"DISCRIMINANT_SIZE_BITS": 512})
-                
         bt = BlockTools(constants, keychain=keychain)
         await bt.setup_keys()
         await bt.setup_plots()
@@ -106,7 +105,6 @@ class TestTimelord:
     async def test_timelord_infuses_from_blocks(self, setup_timelord_and_node_big_disc):
         vdf_client, timelord, timelord_server, full_node, full_node_server, keychain = setup_timelord_and_node_big_disc
         constants = constants_for_dic({"DISCRIMINANT_SIZE_BITS": 512})
-                
         bt = BlockTools(constants, keychain=keychain)
         await bt.setup_keys()
         await bt.setup_plots()

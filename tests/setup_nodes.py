@@ -536,9 +536,7 @@ async def setup_full_system(
         await _teardown_nodes(node_iters)
 
 
-async def setup_timelord_and_node(
-    override_dict: Dict, b_tools=None, connect_to_daemon=False
-):
+async def setup_timelord_and_node(override_dict: Dict, b_tools=None, connect_to_daemon=False):
     consensus_constants = constants_for_dic(override_dict)
     with TempKeyring() as keychain1:
         if b_tools is None:
