@@ -100,7 +100,7 @@ network_overrides: &network_overrides
       address_prefix: "txch"
       default_full_node_port: 58444
 
-selected_network: &selected_network "mainnet"
+selected_network: &selected_network "testnet10"
 ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
 CHIA_ALERTS_PUBKEY: 89b7fd87cb56e926ecefb879a29aae308be01f31980569f6a75a69d2a9a69daefd71fb778d865f7c50d6c967e3025937
 
@@ -124,7 +124,7 @@ daemon_ssl:
 logging: &logging
   log_stdout: False  # If True, outputs to stdout instead of a file
   log_filename: "log/debug.log"
-  log_level: "WARNING"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
+  log_level: "INFO"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
   log_maxfilesrotation: 7 #  Max files in rotation. Default value 7 if the key is not set
   log_syslog: False  # If True, outputs to SysLog host and port specified
   log_syslog_host: "localhost"  # Send logging messages to a remote or local Unix syslog
@@ -342,7 +342,7 @@ full_node:
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
   dns_servers:
-    - "dns-introducer.chia.net"
+    - "dns-introducer-testnet10.chia.net"
   farmer_peer:
       host: *self_hostname
       port: 8447
@@ -350,7 +350,7 @@ full_node:
       host: *self_hostname
       port: 8446
   introducer_peer:
-      host: introducer.chia.net  # Chia AWS introducer IPv4/IPv6
+      host: introducer-testnet10.chia.net  # Chia AWS introducer IPv4/IPv6
       port: 8444
   wallet_peer:
     host: *self_hostname
@@ -418,7 +418,7 @@ wallet:
   initial_num_public_keys: 100
   initial_num_public_keys_new_wallet: 5
   dns_servers:
-    - "dns-introducer.chia.net"
+    - "dns-introducer-testnet10.chia.net"
   full_node_peer:
     host: *self_hostname
     port: 8444
@@ -438,7 +438,7 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
+    host: introducer-testnet10.chia.net # Chia AWS introducer IPv4/IPv6
     port: 8444
 
   ssl:
