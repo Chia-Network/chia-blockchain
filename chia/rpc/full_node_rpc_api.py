@@ -53,6 +53,7 @@ class FullNodeRpcApi:
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
+            "/get_min_fee_rate_for_cost": self.get_min_fee_rate_for_cost
         }
 
     async def _state_changed(self, change: str) -> List[WsRpcMessage]:
@@ -600,3 +601,12 @@ class FullNodeRpcApi:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 
         return {"mempool_item": item}
+
+    async def get_min_fee_rate_for_cost(self, request: Dict) -> Optional[Dict]:
+        if "cost" not in request:
+            raise ValueError("No cost in request")
+        cost: int = int(request["cost"])
+
+        fee_per_cost = self.service.mempool_manager.get_min_fee_rate(cost)
+
+        return {"min_fee_per_cost": fee_per_cost}

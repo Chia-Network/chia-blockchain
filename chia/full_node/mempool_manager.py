@@ -142,6 +142,9 @@ class MempoolManager:
             return True
         return False
 
+    def get_min_fee_rate(self, cost: int) -> float:
+        return self.mempool.get_min_fee_rate(cost)
+
     def add_and_maybe_pop_seen(self, spend_name: bytes32):
         self.seen_bundle_hashes[spend_name] = spend_name
         while len(self.seen_bundle_hashes) > self.seen_cache_size:
