@@ -119,11 +119,15 @@ dns:
   port: 8444
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
   other_peers_port: 8444
+  # Path to crawler DB. If empty, will use $CHIA_ROOT/crawler.db
+  crawler_db_path: ""
   # Peers used for the initial run.
   bootstrap_peers:
     - "node.chia.net"
   # Only consider nodes synced at least to this height.
   minimum_height: 240000
+  # How many of a particular version we need to see before reporting it in the logs
+  minimum_version_count: 100
   domain_name: "seeder.example.com."
   nameserver: "example.com."
   ttl: 300
@@ -315,16 +319,16 @@ full_node:
   # How long to wait for a peer connection
   peer_connect_timeout: 30
   # Accept peers until this number of connections
-  target_peer_count: 0
+  target_peer_count: 80
   # Initiate outbound connections until this number is hit.
-  target_outbound_peer_count: 0
+  target_outbound_peer_count: 8
   # IPv4/IPv6 network addresses and CIDR blocks allowed to connect even when target_peer_count has been hit.
   # exempt_peer_networks: ["192.168.0.3", "192.168.1.0/24", "fe80::/10", "2606:4700:4700::64/128"]
   exempt_peer_networks: []
   # Accept at most # of inbound connections for different node types.
-  max_inbound_wallet: 0
-  max_inbound_farmer: 0
-  max_inbound_timelord: 0
+  max_inbound_wallet: 20
+  max_inbound_farmer: 10
+  max_inbound_timelord: 5
   # Only connect to peers who we have heard about in the last recent_peer_threshold seconds
   recent_peer_threshold: 6000
 
