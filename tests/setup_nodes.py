@@ -303,12 +303,13 @@ async def setup_timelord(
     consensus_constants: ConsensusConstants,
     b_tools,
     vdf_server_port=None,
+    fast_algorithm=False,
 ):
     config = b_tools.config["timelord"]
     config["port"] = port
     config["full_node_peer"]["port"] = full_node_port
     config["sanitizer_mode"] = sanitizer
-    config["fast_algorithm"] = False
+    config["fast_algorithm"] = fast_algorithm
     if sanitizer:
         config["vdf_server"]["port"] = 7999
     if vdf_server_port is not None:
@@ -544,7 +545,7 @@ async def setup_timelord_and_node(
             b_tools = await create_block_tools_async(constants=test_constants, keychain=keychain1)
         node_iters = [
             setup_vdf_clients(8000),
-            setup_timelord(21236, 21237, False, consensus_constants, b_tools, 8000),
+            setup_timelord(21236, 21237, False, consensus_constants, b_tools, 8000, fast_algorithm=True),
             setup_full_node(
                 consensus_constants,
                 "blockchain_test.db",
