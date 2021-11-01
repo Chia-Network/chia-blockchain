@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import aiosqlite
 
@@ -12,7 +12,15 @@ from chia.data_layer.data_layer_errors import (
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
 )
-from chia.data_layer.data_layer_types import InternalNode, Node, NodeType, Root, Side, TerminalNode
+from chia.data_layer.data_layer_types import (
+    InternalNode,
+    Node,
+    NodeType,
+    Root,
+    ProofOfInclusionLayer,
+    Side,
+    TerminalNode,
+)
 from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -621,3 +629,23 @@ class DataStore:
             program: Program = Program.to(root_node)
 
         return program
+
+    async def get_proof_of_inclusion_layers(
+        self,
+        key: bytes,
+        tree_id: bytes32,
+        *,
+        lock: bool = True,
+    ) -> List[ProofOfInclusionLayer]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            key_node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
+            ancestors = await self.get_ancestors(node_hash=key_node.hash, tree_id=tree_id, lock=False)
+
+            layers: List[ProofOfInclusionLayer] = []
+            child: Union[TerminalNode, InternalNode] = key_node
+            for parent in ancestors:
+                layer = ProofOfInclusionLayer.from_internal_node(internal_node=parent, traversal_child_hash=child.hash)
+                layers.append(layer)
+                child = parent
+
+            return layers

@@ -58,6 +58,25 @@ class TerminalNode:
 
 
 @dataclass(frozen=True)
+class ProofOfInclusionLayer:
+    other_hash_side: Side
+    other_hash: bytes32
+    combined_hash: bytes32
+
+    @classmethod
+    def from_internal_node(
+        cls,
+        internal_node: "InternalNode",
+        traversal_child_hash: bytes32,
+    ) -> "ProofOfInclusionLayer":
+        return ProofOfInclusionLayer(
+            other_hash_side=internal_node.other_child_side(hash=traversal_child_hash),
+            other_hash=internal_node.other_child_hash(hash=traversal_child_hash),
+            combined_hash=internal_node.hash,
+        )
+
+
+@dataclass(frozen=True)
 class InternalNode:
     hash: bytes32
     # generation: int
@@ -81,6 +100,15 @@ class InternalNode:
             return self.right_hash
         elif self.right_hash == hash:
             return self.left_hash
+
+        # TODO: real exception considerations
+        raise Exception("provided hash not present")
+
+    def other_child_side(self, hash: bytes32) -> Side:
+        if self.left_hash == hash:
+            return Side.RIGHT
+        elif self.right_hash == hash:
+            return Side.LEFT
 
         # TODO: real exception considerations
         raise Exception("provided hash not present")
