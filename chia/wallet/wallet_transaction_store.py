@@ -372,7 +372,7 @@ class WalletTransactionStore:
         await cursor.close()
         return count
 
-    async def get_all_transactions_for_wallet(self, wallet_id: int, type: int = None) -> List[TransactionRecord]:
+    async def get_all_transactions_for_wallet(self, wallet_id: int, type: int = None, confirmed: int=0) -> List[TransactionRecord]:
         """
         Returns all stored transactions.
         """
@@ -382,10 +382,11 @@ class WalletTransactionStore:
             )
         else:
             cursor = await self.db_connection.execute(
-                "SELECT * from transaction_record where wallet_id=? and type=?",
+                "SELECT * from transaction_record where wallet_id=? and type=? and confirmed=?",
                 (
                     wallet_id,
                     type,
+                    confirmed
                 ),
             )
         rows = await cursor.fetchall()

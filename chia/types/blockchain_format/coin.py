@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any, List
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -29,6 +30,7 @@ class Coin(Streamable):
         # these hashes easily.
         return std_hash(self.parent_coin_info + self.puzzle_hash + int_to_bytes(self.amount))
 
+    @lru_cache
     def name(self) -> bytes32:
         return self.get_hash()
 

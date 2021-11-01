@@ -307,9 +307,11 @@ class WalletNode:
             return []
         messages: List[Tuple[Message, Set[bytes32]]] = []
 
-        records: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_not_sent()
+        records: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)
 
         for record in records:
+            if len(record.sent_to) > 0:
+                continue
             if record.spend_bundle is None:
                 continue
             msg = make_msg(
@@ -449,6 +451,7 @@ class WalletNode:
         Tell full nodes that we are interested in coin ids, and for trusted connections, add the new coin state
         for the coin changes.
         """
+        return
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, height)
         all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
         # State for untrusted sync is processed only in wp sync | or short  sync backwards
