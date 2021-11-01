@@ -62,6 +62,9 @@ class CCWallet:
     base_inner_puzzle_hash: Optional[bytes32]
     cost_of_single_tx: Optional[int]
 
+    def create_spend_bundle_relative_amount(self, amount, zero_val_coin=None):
+        raise RuntimeError("See pre-existing call in chia/wallet/trade_manager.py")
+
     @staticmethod
     async def create_new_cc(
         wallet_state_manager: Any,

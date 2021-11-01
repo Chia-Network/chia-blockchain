@@ -1199,6 +1199,7 @@ class WalletRpcApi:
     # Pool Wallet
     ##########################################################################################
     async def pw_join_pool(self, request):
+        fee = uint64(request["fee"])
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
@@ -1214,28 +1215,28 @@ class WalletRpcApi:
             uint32(request["relative_lock_height"]),
         )
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.join_pool(new_target_state)
+            tx: TransactionRecord = await wallet.join_pool(new_target_state, fee)
             return {"transaction": tx}
 
     async def pw_self_pool(self, request):
         # Leaving a pool requires two state transitions.
         # First we transition to PoolSingletonState.LEAVING_POOL
         # Then we transition to FARMING_TO_POOL or SELF_POOLING
+        fee = uint64(request["fee"])
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.self_pool()
+            tx: TransactionRecord = await wallet.self_pool(fee)
             return {"transaction": tx}
 
     async def pw_absorb_rewards(self, request):
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before collecting rewards")
-
+        fee = uint64(request["fee"])
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        fee = uint64(request["fee"])
 
         async with self.service.wallet_state_manager.lock:
             transaction: TransactionRecord = await wallet.claim_pool_rewards(fee)
