@@ -6,6 +6,7 @@ import click
 from chia.util.config import load_config, save_config, str2bool
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
+
 def configure(
     root_path: Path,
     set_farmer_peer: str,
