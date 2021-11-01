@@ -166,7 +166,7 @@ class FullNode:
         self._blockchain_lock_queue = LockQueue(self.blockchain.lock)
         self._blockchain_lock_ultra_priority = LockClient(0, self._blockchain_lock_queue)
         self._blockchain_lock_high_priority = LockClient(1, self._blockchain_lock_queue)
-        self._blockchain_lock_low_priority = LockClient(2, self._blockchain_lock_queue)
+        self._blockchain_lock_low_priority = LockClient(2, self._blockchain_lock_queue, 1000)
         self.weight_proof_handler = None
         self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 

@@ -4,8 +4,7 @@ import time
 
 import pytest
 
-from chia.full_node.lock_queue import LockQueue, LockClient
-
+from chia.full_node.lock_queue import LockQueue, LockClient, TooManyLockClients
 
 log = logging.getLogger(__name__)
 
@@ -73,5 +72,19 @@ class TestLockQueue:
             if l_finished and h.done():
                 break
             await asyncio.sleep(1)
-        queue.close()
         assert winner == "h"
+
+        # Test limit
+        another_client = LockClient(1, queue, 10)
+        async def do_another(i: int):
+            nonlocal another_client
+            t1 = time.time()
+            async with another_client:
+                await kind_of_slow_func()
+        tasks = [asyncio.create_task(do_another(i)) for i in range(20)]
+
+        with pytest.raises(TooManyLockClients):
+            for task in tasks:
+                await task
+
+        queue.close()

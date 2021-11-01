@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional
 
 
 class FuncWrapper:
@@ -46,15 +47,24 @@ class LockQueue:
         self._run_task.cancel()
 
 
+class TooManyLockClients(Exception):
+    pass
+
+
 class LockClient:
-    def __init__(self, priority: int, queue: LockQueue):
+    def __init__(self, priority: int, queue: LockQueue, max_clients: Optional[int]=None):
         self._priority = priority
         self._queue = queue
+        self._max_clients = max_clients
+        self._curr_clients = 0
 
     async def __aenter__(
         self,
     ):
         called: bool = False
+        if self._max_clients is not None and self._curr_clients >= self._max_clients:
+            raise TooManyLockClients()
+        self._curr_clients += 1
 
         async def callback():
             await self._queue.acquire()
@@ -68,3 +78,4 @@ class LockClient:
 
     async def __aexit__(self, exc_type, exc, tb):
         self._queue.release()
+        self._curr_clients -= 1
