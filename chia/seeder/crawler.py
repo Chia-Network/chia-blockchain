@@ -1,7 +1,6 @@
 import aiosqlite
 import asyncio
 import logging
-import random
 import time
 import traceback
 from pathlib import Path
