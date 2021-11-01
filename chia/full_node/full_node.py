@@ -22,7 +22,7 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
-from chia.full_node.lock_queue import LockQueue, LockClient
+from chia.full_node.lock_queue import LockQueue, LockClient, TooManyLockClients
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult
@@ -181,7 +181,7 @@ class FullNode:
         else:
             self.log.info(
                 f"Blockchain initialized to peak {self.blockchain.get_peak().header_hash} height"
-                f" {self.blockchain.get_peak().height}, "
+                f" {self.blockchain.get_peak().height}, c"
                 f"time taken: {int(time_taken)}s"
             )
             async with self._blockchain_lock_high_priority:
@@ -1817,11 +1817,15 @@ class FullNode:
             except Exception as e:
                 self.mempool_manager.remove_seen(spend_name)
                 raise e
-            async with self._blockchain_lock_low_priority:
-                if self.mempool_manager.get_spendbundle(spend_name) is not None:
-                    self.mempool_manager.remove_seen(spend_name)
-                    return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
-                cost, status, error = await self.mempool_manager.add_spendbundle(transaction, cost_result, spend_name)
+            try:
+                async with self._blockchain_lock_low_priority:
+                    if self.mempool_manager.get_spendbundle(spend_name) is not None:
+                        self.mempool_manager.remove_seen(spend_name)
+                        return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
+                    cost, status, error = await self.mempool_manager.add_spendbundle(transaction, cost_result, spend_name)
+            except TooManyLockClients:
+                return MempoolInclusionStatus.FAILED, Err.NODE_OVERLOADED
+
             if status == MempoolInclusionStatus.SUCCESS:
                 self.log.debug(
                     f"Added transaction to mempool: {spend_name} mempool size: "
