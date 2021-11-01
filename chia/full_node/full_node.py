@@ -135,7 +135,7 @@ class FullNode:
         self.timelord_lock = asyncio.Lock()
         self.compact_vdf_sem = asyncio.Semaphore(4)
         self.new_peak_sem = asyncio.Semaphore(8)
-        self.new_transaction_semaphore = asyncio.Semaphore(50)
+        self.new_transaction_semaphore = asyncio.Semaphore(20)
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
@@ -1112,7 +1112,7 @@ class FullNode:
             f"🌱 Updated peak to height {record.height}, weight {record.weight}, "
             f"hh {record.header_hash}, "
             f"forked at {fork_height}, rh: {record.reward_infusion_new_challenge}, "
-            f"total iters: {record.total_iters}, "
+            f"total iters: {record.total_iters}, 287"
             f"overflow: {record.overflow}, "
             f"deficit: {record.deficit}, "
             f"difficulty: {difficulty}, "

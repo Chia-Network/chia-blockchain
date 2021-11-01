@@ -111,6 +111,10 @@ class FullNodeAPI:
         """
         # this semaphore limits the number of tasks that can call new_peak() at
         # the same time, since it can be expensive
+        self.full_node.log.warning(f"new_peak Waiters: {len(self.full_node.new_peak_sem._waiters)}")
+        if len(self.full_node.new_transaction_sem._waiters) > 10:
+            return
+
         async with self.full_node.new_peak_sem:
             return await self.full_node.new_peak(request, peer)
 
@@ -234,7 +238,8 @@ class FullNodeAPI:
         if spend_name in self.full_node.full_node_store.peers_with_tx:
             self.full_node.full_node_store.peers_with_tx.pop(spend_name)
 
-        if len(self.full_node.new_transaction_semaphore._waiters) > 20:
+        self.full_node.log.warning(f"respone_transatcion Waiters: {self.full_node.new_transaction_semaphore._waiters}")
+        if len(self.full_node.new_transaction_semaphore._waiters) > 100:
             self.log.debug(f"Ignoring transaction: {tx}, too many transactions")
             return
         await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)

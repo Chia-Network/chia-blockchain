@@ -3,6 +3,7 @@ import logging
 import ssl
 import time
 import traceback
+from collections import Counter
 from ipaddress import IPv6Address, ip_address, ip_network, IPv4Network, IPv6Network
 from pathlib import Path
 from secrets import token_bytes
@@ -516,9 +517,12 @@ class ChiaServer:
             payload_inc, connection_inc = await self.incoming_messages.get()
             if payload_inc is None or connection_inc is None:
                 continue
+            message_types = Counter()
 
             async def api_call(full_message: Message, connection: WSChiaConnection, task_id):
+                nonlocal message_types
                 start_time = time.time()
+                message_type = ""
                 try:
                     if self.received_message_callback is not None:
                         await self.received_message_callback(connection)
@@ -527,8 +531,10 @@ class ChiaServer:
                         f"{connection.peer_node_id} {connection.peer_host}"
                     )
                     message_type: str = ProtocolMessageTypes(full_message.type).name
+                    message_types[message_type] += 1
 
                     f = getattr(self.api, message_type, None)
+                    self.log.debug(f"Message types: {sorted(message_types.items())}")
 
                     if f is None:
                         self.log.error(f"Non existing function: {message_type}")
@@ -586,6 +592,7 @@ class ChiaServer:
                     # TODO: actually throw one of the errors from errors.py and pass this to close
                     await connection.close(self.api_exception_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
                 finally:
+                    message_types[message_type] -= 1
                     if task_id in self.api_tasks:
                         self.api_tasks.pop(task_id)
                     if task_id in self.tasks_from_peer[connection.peer_node_id]:
