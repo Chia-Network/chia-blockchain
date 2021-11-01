@@ -472,10 +472,11 @@ class MempoolManager:
             return self.mempool.spends[bundle_hash]
         return None
 
-    async def new_peak(self, new_peak: Optional[BlockRecord]) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
+    async def new_peak(self, new_peak: Optional[BlockRecord], coin_changes: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         """
+
         if new_peak is None:
             return []
         if new_peak.is_transaction_block is False:
@@ -485,26 +486,36 @@ class MempoolManager:
         assert new_peak.timestamp is not None
 
         self.peak = new_peak
+        states, hint_state = coin_changes
+        coins_set = set()
+        for state in states:
+            coins_set.add(state.coin.name())
 
         old_pool = self.mempool
         async with self.lock:
             self.mempool = Mempool(self.mempool_max_total_cost)
 
             for item in old_pool.spends.values():
-                _, result, _ = await self.add_spendbundle(
-                    item.spend_bundle, item.npc_result, item.spend_bundle_name, False, item.program
-                )
-                # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
-                # successfully added to the new mempool. In this case, remove it from seen, so in the case of a reorg,
-                # it can be resubmitted
-                if result != MempoolInclusionStatus.SUCCESS:
-                    self.remove_seen(item.spend_bundle_name)
+                failed = False
+                for added_coin in item.additions:
+                    if added_coin.name() in coins_set:
+                        log.error(f"TX Included in previous block {added_coin.name()}")
+                        failed = True
+                        break
+                for removed_coin in item.removals:
+                    if removed_coin.name() in coins_set:
+                        log.error(f"TX Included in previous block {removed_coin.name()}")
+                        failed = True
+                        break
+                if failed is False:
+                    self.mempool.add_to_pool(item)
 
             potential_txs = self.potential_cache.drain()
             txs_added = []
             for item in potential_txs.values():
+                log.error(f"Potential tx cache")
                 cost, status, error = await self.add_spendbundle(
-                    item.spend_bundle, item.npc_result, item.spend_bundle_name, program=item.program
+                    item.spend_bundle, item.npc_result, item.spend_bundle_name, False, program=item.program
                 )
                 if status == MempoolInclusionStatus.SUCCESS:
                     txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))

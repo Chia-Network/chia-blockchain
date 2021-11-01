@@ -174,7 +174,7 @@ class FullNode:
                 f" {self.blockchain.get_peak().height}, "
                 f"time taken: {int(time_taken)}s"
             )
-            pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_peak())
+            pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_peak(), ([], {}))
             assert len(pending_tx) == 0  # no pending transactions when starting up
 
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -1144,7 +1144,8 @@ class FullNode:
         )
 
         # Update the mempool (returns successful pending transactions added to the mempool)
-        for bundle, result, spend_name in await self.mempool_manager.new_peak(self.blockchain.get_peak()):
+        new_peak_res = await self.mempool_manager.new_peak(self.blockchain.get_peak(), coin_changes)
+        for bundle, result, spend_name in new_peak_res:
             self.log.debug(f"Added transaction to mempool: {spend_name}")
             mempool_item = self.mempool_manager.get_mempool_item(spend_name)
             assert mempool_item is not None
