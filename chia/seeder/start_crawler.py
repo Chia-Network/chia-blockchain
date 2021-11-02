@@ -16,8 +16,8 @@ from chia.server.start_service import run_service
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
-# Patch some methods on the upstream server with 
-# crawler-specific overrides.
+# Patch some methods on the upstream server with crawler-specific overrides.
+
 
 async def incoming_connection(self, request):
     return
