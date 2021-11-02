@@ -141,6 +141,17 @@ class WalletTransactionStore:
             if not in_transaction:
                 self.db_wrapper.lock.release()
 
+    async def delete_transaction_record(self, tx_id: bytes32) -> None:
+        if tx_id in self.tx_record_cache:
+            tx_record = self.tx_record_cache.pop(tx_id)
+            if tx_record.wallet_id in self.unconfirmed_for_wallet:
+                tx_cache = self.unconfirmed_for_wallet[tx_record.wallet_id]
+                if tx_id in tx_cache:
+                    tx_cache.pop(tx_id)
+
+        c = await self.db_connection.execute("DELETE FROM transaction_record WHERE bundle_id=?", (tx_id,))
+        await c.close()
+
     async def set_confirmed(self, tx_id: bytes32, height: uint32):
         """
         Updates transaction to be confirmed.

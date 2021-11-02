@@ -350,6 +350,15 @@ class CCWallet:
                 coin_name, LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount)
             )
             await self.wallet_state_manager.action_store.action_done(action_id)
+        else:
+            # The parent is not a CAT which means we need to scrub all of its children from our DB
+            child_coin_records = await self.wallet_state_manager.coin_store.get_coin_records_by_parent_id(coin_name)
+            if len(child_coin_records) > 0:
+                for record in child_coin_records:
+                    await self.wallet_state_manager.coin_store.delete_coin_record(record.coin.name())
+                    await self.remove_lineage(record.coin.name())
+                    # We also need to make sure there's no record of the transaction
+                    await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
 
     async def get_new_inner_hash(self) -> bytes32:
         puzzle = await self.get_new_inner_puzzle()
@@ -736,6 +745,13 @@ class CCWallet:
         self.log.info(f"Adding parent {name}: {lineage}")
         current_list = self.cc_info.lineage_proofs.copy()
         current_list.append((name, lineage))
+        cc_info: CCInfo = CCInfo(self.cc_info.limitations_program_hash, self.cc_info.my_genesis_checker, current_list)
+        await self.save_info(cc_info, in_transaction)
+
+    async def remove_lineage(self, name: bytes32, in_transaction=False):
+        self.log.info(f"Removing parent {name} (probably had a non-CAT parent)")
+        current_list = self.cc_info.lineage_proofs.copy()
+        current_list = list(filter(lambda tup: tup[0] != name, current_list))
         cc_info: CCInfo = CCInfo(self.cc_info.limitations_program_hash, self.cc_info.my_genesis_checker, current_list)
         await self.save_info(cc_info, in_transaction)
 
