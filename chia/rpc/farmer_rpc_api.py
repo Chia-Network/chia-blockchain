@@ -77,7 +77,7 @@ class FarmerRpcApi:
 
     async def get_signage_points(self, _: Dict) -> Dict[str, Any]:
         result: List[Dict[str, Any]] = []
-        for sps in self.service.sps.values():
+        for _, sps in self.service.sps.items():
             for sp in sps:
                 pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
                 result.append(
