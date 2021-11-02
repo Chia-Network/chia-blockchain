@@ -15,6 +15,7 @@ from chia.plotting.util import (
     remove_plot,
     PlotsRefreshParameter,
     PlotRefreshResult,
+    PlotRefreshEvents,
 )
 from chia.util.streamable import dataclass_from_dict
 
@@ -76,9 +77,9 @@ class Harvester:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
 
-    def _plot_refresh_callback(self, update_result: PlotRefreshResult):
+    def _plot_refresh_callback(self, event: PlotRefreshEvents, update_result: PlotRefreshResult):
         self.log.info(
-            f"refresh_batch: loaded {update_result.loaded}, "
+            f"refresh_batch: event {event.name}, loaded {update_result.loaded}, "
             f"removed {update_result.removed}, processed {update_result.processed}, "
             f"remaining {update_result.remaining}, "
             f"duration: {update_result.duration:.2f} seconds"

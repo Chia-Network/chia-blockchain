@@ -961,7 +961,7 @@ class FullNode:
             for hint, list_of_records in hint_records.items():
                 if hint not in all_hint_changes:
                     all_hint_changes[hint] = {}
-                for record in list_of_records:
+                for record in list_of_records.values():
                     all_hint_changes[hint][record.name] = record
 
             if result == ReceiveBlockResult.NEW_PEAK:
