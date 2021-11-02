@@ -495,7 +495,7 @@ class ChiaServer:
                 f"Invalid connection type for connection {connection.peer_host},"
                 f" while closing. Handshake never finished."
             )
-        # self.cancel_tasks_from_peer(connection.peer_node_id)
+        self.cancel_tasks_from_peer(connection.peer_node_id)
         on_disconnect = getattr(self.node, "on_disconnect", None)
         if on_disconnect is not None:
             on_disconnect(connection)
@@ -556,7 +556,7 @@ class ChiaServer:
                         self.execute_tasks.add(task_id)
                         timeout = None
 
-                    if hasattr(f, "peer_required"):
+                        # if hasattr(f, "peer_required"):
                         coroutine = f(full_message.data, connection)
                     else:
                         coroutine = f(full_message.data)
