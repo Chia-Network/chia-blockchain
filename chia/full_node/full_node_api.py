@@ -371,7 +371,7 @@ class FullNodeAPI:
         return msg
 
     @api_request
-    async def reject_block(sef, request: full_node_protocol.RejectBlock):
+    async def reject_block(self, request: full_node_protocol.RejectBlock):
         self.log.debug(f"reject_block {request.height}")
 
     @api_request
