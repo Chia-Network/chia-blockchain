@@ -428,7 +428,7 @@ class MempoolManager:
         self.mempool.add_to_pool(new_item)
         now = time.time()
         log.log(
-            logging.WARNING if now - start_time > 1 else logging.DEBUG,
+            logging.INFO,
             f"add_spendbundle {spend_name} took {now - start_time:0.2f} seconds. "
             f"Cost: {cost} ({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
