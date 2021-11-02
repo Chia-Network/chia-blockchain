@@ -171,7 +171,7 @@ class FullNode:
         self._blockchain_lock_ultra_priority = LockClient(0, self._blockchain_lock_queue)
         self._blockchain_lock_high_priority = LockClient(1, self._blockchain_lock_queue)
         self._blockchain_lock_low_priority = LockClient(2, self._blockchain_lock_queue, 1000)
-        self.transaction_queue = asyncio.PriorityQueue(1000)
+        self.transaction_queue = asyncio.PriorityQueue(10000)
         self._transaction_queue_task = asyncio.create_task(self._handle_transactions())
         self.transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = []
 
