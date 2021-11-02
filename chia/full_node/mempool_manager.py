@@ -471,7 +471,9 @@ class MempoolManager:
             return self.mempool.spends[bundle_hash]
         return None
 
-    async def new_peak(self, new_peak: Optional[BlockRecord], coin_changes: List[CoinRecord]) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
+    async def new_peak(
+        self, new_peak: Optional[BlockRecord], coin_changes: List[CoinRecord]
+    ) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         """
@@ -503,6 +505,11 @@ class MempoolManager:
                         break
                 if not failed:
                     self.mempool.add_to_pool(item)
+                else:
+                    # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
+                    # successfully added to the new mempool. In this case, remove it from seen, so in the case of a
+                    # reorg, it can be resubmitted
+                    self.remove_seen(item.spend_bundle_name)
             else:
                 _, result, _ = await self.add_spendbundle(
                     item.spend_bundle, item.npc_result, item.spend_bundle_name, False, item.program

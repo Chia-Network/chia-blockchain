@@ -1,6 +1,5 @@
 import collections
 import logging
-import time
 from typing import Dict, List, Optional, Set, Tuple, Union, Callable
 
 from chiabip158 import PyBIP158
@@ -60,7 +59,6 @@ async def validate_block_body(
     the result of running the generator with the previous generators refs. It is only present for transaction
     blocks which have spent coins.
     """
-    start = time.time()
     if isinstance(block, FullBlock):
         assert height == block.height
     prev_transaction_block_height: uint32 = uint32(0)

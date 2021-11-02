@@ -1113,7 +1113,7 @@ class FullNode:
         record: BlockRecord,
         fork_height: uint32,
         peer: Optional[ws.WSChiaConnection],
-        coin_changes: List[CoinRecord]
+        coin_changes: List[CoinRecord],
     ):
         """
         Must be called under self.blockchain.lock. This updates the internal state of the full node with the
@@ -1857,7 +1857,8 @@ class FullNode:
             if status == MempoolInclusionStatus.SUCCESS:
                 self.log.info(
                     f"Added transaction to mempool: {spend_name} mempool size: "
-                    f"{self.mempool_manager.mempool.total_mempool_cost} normalized {self.mempool_manager.mempool.total_mempool_cost / 5000000}"
+                    f"{self.mempool_manager.mempool.total_mempool_cost} normalized "
+                    f"{self.mempool_manager.mempool.total_mempool_cost / 5000000}"
                 )
                 self.log.info(f"mempool dropped: {self.dropped_tx} success {self.not_dropped_tx}")
                 # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS

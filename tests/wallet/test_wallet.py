@@ -576,6 +576,7 @@ class TestWalletSimulator:
         tx = await wallet.generate_signed_transaction(1000, ph2, coins={coin})
         await wallet.push_transaction(tx)
         await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
+        await time_out_assert(5, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
         for i in range(0, 2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
