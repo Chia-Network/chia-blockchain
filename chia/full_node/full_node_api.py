@@ -243,7 +243,7 @@ class FullNodeAPI:
             self.full_node.full_node_store.peers_with_tx.pop(spend_name)
 
         waiters = self.full_node.new_transaction_semaphore._waiters
-        if len(waiters) > 0:
+        if len(waiters) > 0 and len(waiters) % 100 == 0:
             self.full_node.log.warning(f"respond_transaction Waiters: {len(waiters)}")
         if len(waiters) > 1000:
             self.log.info(f"Ignoring transaction: {tx}, too many transactions")
