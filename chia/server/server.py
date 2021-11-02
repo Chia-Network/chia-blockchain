@@ -535,7 +535,7 @@ class ChiaServer:
                     message_types[message_type] += 1
 
                     f = getattr(self.api, message_type, None)
-                    self.log.debug(f"Message types: {sorted(message_types.items())}")
+                    self.log.info(f"Message types: {sorted(message_types.items())}")
 
                     if f is None:
                         self.log.error(f"Non existing function: {message_type}")
