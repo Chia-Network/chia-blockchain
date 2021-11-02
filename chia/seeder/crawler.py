@@ -4,7 +4,7 @@ import logging
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import chia.server.ws_connection as ws
 from chia.consensus.constants import ConsensusConstants
@@ -51,11 +51,11 @@ class Crawler:
         self.log = log
         self.peer_count = 0
         self.with_peak = set()
-        self.peers_retrieved = []
-        self.host_to_version = {}
-        self.version_cache = []
-        self.handshake_time = {}
-        self.best_timestamp_per_peer = {}
+        self.peers_retrieved: List[Any] = []
+        self.host_to_version: Dict[str, str] = {}
+        self.version_cache: List[str] = []
+        self.handshake_time: Dict[str, int] = {}
+        self.best_timestamp_per_peer: Dict[str, int] = {}
         if "crawler_db_path" in config and config["crawler_db_path"] != "":
             path = Path(config["crawler_db_path"])
             self.db_path = path.resolve()
