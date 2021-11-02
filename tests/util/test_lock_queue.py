@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from asyncio import CancelledError
 
 import pytest
 
@@ -24,6 +25,11 @@ class TestLockQueue:
 
         low_priority_client = LockClient(1, queue)
         high_priority_client = LockClient(0, queue)
+
+        async def very_slow_func():
+            await asyncio.sleep(2)
+            raise CancelledError()
+
 
         async def slow_func():
             for i in range(100):
@@ -83,8 +89,20 @@ class TestLockQueue:
 
         tasks = [asyncio.create_task(do_another(i)) for i in range(20)]
 
-        with pytest.raises(TooManyLockClients):
-            for task in tasks:
+        failed = False
+        for task in tasks:
+            try:
                 await task
+            except TooManyLockClients:
+                failed = True
+        assert failed
 
+        assert low_priority_client._curr_clients == 0
+        assert high_priority_client._curr_clients == 0
+
+        with pytest.raises(CancelledError):
+            async with high_priority_client:
+                await very_slow_func()
+
+        assert high_priority_client._curr_clients == 0
         queue.close()
