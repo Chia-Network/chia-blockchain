@@ -1502,6 +1502,7 @@ class FullNode:
         timelords.
         """
         block = respond_unfinished_block.unfinished_block
+        receive_time = time.time()
 
         if block.prev_header_hash != self.constants.GENESIS_CHALLENGE and not self.blockchain.contains_block(
             block.prev_header_hash
@@ -1601,7 +1602,7 @@ class FullNode:
             self.log.info(
                 f"Added unfinished_block {block_hash}, not farmed by us,"
                 f" SP: {block.reward_chain_block.signage_point_index} farmer response time: "
-                f"{time.time() - self.signage_point_times[block.reward_chain_block.signage_point_index]:0.4f}, "
+                f"{receive_time - self.signage_point_times[block.reward_chain_block.signage_point_index]:0.4f}, "
                 f"Pool pk {encode_puzzle_hash(block.foliage.foliage_block_data.pool_target.puzzle_hash, 'xch')}, "
                 f"validation time: {validation_time:0.4f} seconds, "
                 f"cost: {block.transactions_info.cost if block.transactions_info else 'None'}"
