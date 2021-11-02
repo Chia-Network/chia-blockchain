@@ -84,6 +84,13 @@ class RpcServer:
             "/open_connection": self.open_connection,
             "/close_connection": self.close_connection,
             "/stop_node": self.stop_node,
+            "/get_routes": self._get_routes,
+        }
+
+    async def _get_routes(self, request: Dict) -> Dict:
+        return {
+            "success": "true",
+            "routes": list(self.get_routes().keys()),
         }
 
     async def get_connections(self, request: Dict) -> Dict:
