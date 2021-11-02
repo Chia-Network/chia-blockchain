@@ -146,9 +146,7 @@ class DNSServer:
             if ipv4_count > 0 and size <= ipv4_count:
                 peers = self.reliable_peers_v4
             elif ipv4_count > 0:
-                peers = [
-                    self.reliable_peers_v4[i % size] for i in range(self.pointer_v4, self.pointer_v4 + ipv4_count)
-                ]
+                peers = [self.reliable_peers_v4[i % size] for i in range(self.pointer_v4, self.pointer_v4 + ipv4_count)]
                 self.pointer_v4 = (self.pointer_v4 + ipv4_count) % size
             # Append IPv6.
             size = len(self.reliable_peers_v6)
@@ -212,7 +210,7 @@ class DNSServer:
                     if name == qn:
                         for rdata in rrs:
                             rqt = rdata.__class__.__name__
-                            if qt in ["*", rqt] or (qt == 'ANY' and (rqt == 'A' or rqt == 'AAAA')):
+                            if qt in ["*", rqt] or (qt == "ANY" and (rqt == "A" or rqt == "AAAA")):
                                 reply.add_answer(
                                     RR(rname=qname, rtype=getattr(QTYPE, rqt), rclass=1, ttl=TTL, rdata=rdata)
                                 )
