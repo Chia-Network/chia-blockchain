@@ -514,11 +514,11 @@ class ChiaServer:
 
     async def incoming_api_task(self) -> None:
         self.tasks = set()
+        message_types: typing_Counter[str] = Counter()
         while True:
             payload_inc, connection_inc = await self.incoming_messages.get()
             if payload_inc is None or connection_inc is None:
                 continue
-            message_types: typing_Counter[str] = Counter()
 
             async def api_call(full_message: Message, connection: WSChiaConnection, task_id):
                 nonlocal message_types
