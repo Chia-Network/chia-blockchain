@@ -1429,7 +1429,8 @@ class FullNode:
             else ""
         )
         self.log.log(
-            logging.WARNING if validation_time > 2 else logging.DEBUG,
+            # logging.WARNING if validation_time > 2 else logging.DEBUG,
+            logging.INFO,
             f"Block validation time: {validation_time:0.2f} seconds, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
             f"{percent_full_str}",

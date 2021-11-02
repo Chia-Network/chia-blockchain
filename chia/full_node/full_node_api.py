@@ -246,7 +246,7 @@ class FullNodeAPI:
         if len(waiters) > 0:
             self.full_node.log.warning(f"respond_transaction Waiters: {len(waiters)}")
         if len(waiters) > 200:
-            self.log.debug(f"Ignoring transaction: {tx}, too many transactions")
+            self.log.info(f"Ignoring transaction: {tx}, too many transactions")
             return
         await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
         return None
@@ -1317,7 +1317,7 @@ class FullNodeAPI:
 
         name = std_hash(request_bytes)
         if name in self.full_node.compact_vdf_requests:
-            self.log.debug(f"Ignoring NewCompactVDF: {request}, already requested")
+            self.log.info(f"Ignoring NewCompactVDF: {request}, already requested")
             return
         self.full_node.compact_vdf_requests.add(name)
 
