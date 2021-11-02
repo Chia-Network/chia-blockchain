@@ -30,7 +30,6 @@ class TestLockQueue:
             await asyncio.sleep(2)
             raise CancelledError()
 
-
         async def slow_func():
             for i in range(100):
                 await asyncio.sleep(0.01)

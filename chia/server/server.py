@@ -495,11 +495,10 @@ class ChiaServer:
                 f"Invalid connection type for connection {connection.peer_host},"
                 f" while closing. Handshake never finished."
             )
+        self.cancel_tasks_from_peer(connection.peer_node_id)
         on_disconnect = getattr(self.node, "on_disconnect", None)
         if on_disconnect is not None:
             on_disconnect(connection)
-
-        self.cancel_tasks_from_peer(connection.peer_node_id)
 
     def cancel_tasks_from_peer(self, peer_id: bytes32):
         if peer_id not in self.tasks_from_peer:
