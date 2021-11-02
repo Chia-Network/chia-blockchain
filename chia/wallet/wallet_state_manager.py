@@ -975,7 +975,7 @@ class WalletStateManager:
                     record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(removal.puzzle_hash)
                     if record is None:
                         continue
-                    unspent_coin_names.remove(removal)
+                    unspent_coin_names.remove(removal.name())
 
         my_puzzle_hashes = self.puzzle_store.all_puzzle_hashes
 
