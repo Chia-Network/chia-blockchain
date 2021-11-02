@@ -14,6 +14,7 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
+
 # TODO: dedupe wrt the eponymous function defined in chia/cmds/chia.py
 def monkey_patch_click() -> None:
     # this hacks around what seems to be an incompatibility between the python from `pyinstaller`
