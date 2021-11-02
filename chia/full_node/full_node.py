@@ -116,6 +116,8 @@ class FullNode:
         self.uncompact_task = None
         self.compact_vdf_requests: Set[bytes32] = set()
         self.log = logging.getLogger(name if name else __name__)
+        self.dropped_tx = 0
+        self.not_dropped_tx = 0
 
         self._ui_tasks = set()
 
@@ -1815,9 +1817,11 @@ class FullNode:
         if not test and not (await self.synced()):
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
 
+        self.log.info("respond_transaction 3")
         if self.mempool_manager.seen(spend_name):
             return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
+        self.log.info("respond_transaction 3.5")
         self.log.debug(f"Processing transaction: {spend_name}")
         # Ignore if syncing
         if self.sync_store.get_sync_mode():
@@ -1826,20 +1830,25 @@ class FullNode:
             self.mempool_manager.remove_seen(spend_name)
         else:
             async with self.new_transaction_semaphore:
+                self.log.info("respond_transaction 4")
                 try:
                     cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name)
                 except Exception as e:
                     self.mempool_manager.remove_seen(spend_name)
                     raise e
+            self.log.info("respond_transaction 5")
             try:
                 async with self._blockchain_lock_low_priority:
+                    self.log.info("respond_transaction 6")
                     if self.mempool_manager.get_spendbundle(spend_name) is not None:
                         self.mempool_manager.remove_seen(spend_name)
                         return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
                     cost, status, error = await self.mempool_manager.add_spendbundle(
                         transaction, cost_result, spend_name
                     )
+                    self.log.info("respond_transaction 7")
             except TooManyLockClients:
+                self.dropped_tx += 1
                 self.log.warning("Dropping TX due to node overload")
                 self.mempool_manager.remove_seen(spend_name)
                 return MempoolInclusionStatus.FAILED, Err.NODE_OVERLOADED
@@ -1849,6 +1858,7 @@ class FullNode:
                     f"Added transaction to mempool: {spend_name} mempool size: "
                     f"{self.mempool_manager.mempool.total_mempool_cost} normalized {self.mempool_manager.mempool.total_mempool_cost / 5000000}"
                 )
+                self.log.info(f"mempool dropped: {self.dropped_tx} success {self.not_dropped_tx}")
                 # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                 # vector.
                 mempool_item = self.mempool_manager.get_mempool_item(spend_name)
@@ -1866,6 +1876,7 @@ class FullNode:
                     await self.server.send_to_all([msg], NodeType.FULL_NODE)
                 else:
                     await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+                self.not_dropped_tx += 1
             else:
                 self.mempool_manager.remove_seen(spend_name)
                 self.log.debug(
