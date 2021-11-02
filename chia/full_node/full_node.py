@@ -172,7 +172,7 @@ class FullNode:
         self._blockchain_lock_low_priority = LockClient(2, self._blockchain_lock_queue, 1000)
         self.transaction_queue = asyncio.PriorityQueue(1000)
         self._transaction_queue_task = asyncio.create_task(self._handle_transactions())
-        self.transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Err]] = []
+        self.transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = []
 
         self.weight_proof_handler = None
         self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
@@ -220,28 +220,34 @@ class FullNode:
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.start())
 
+    async def _handle_one_transaction(self, entry: TransactionQueueEntry):
+        peer = entry.peer
+        try:
+            inc_status, err = await self.respond_transaction(entry.transaction, entry.spend_name, peer, entry.test)
+            self.transaction_responses.append((entry.spend_name, inc_status, err))
+            if len(self.transaction_responses) > 50:
+                self.transaction_responses = self.transaction_responses[1:]
+        except BaseException:
+            error_stack = traceback.format_exc()
+            self.log.error(f"Error in _handle_transctions, closing: {error_stack}")
+            if peer is not None:
+                await peer.close()
+
     async def _handle_transactions(self):
-        while True:
-            transaction_group: List[TransactionQueueEntry] = [(await self.transaction_queue.get())[1]]
-            while not self.transaction_queue.empty() and len(transaction_group) < 8:
-                item: TransactionQueueEntry = (await self.transaction_queue.get())[1]
-                transaction_group.append(item)
-            for entry in transaction_group:
-                peer = entry.peer
-                try:
-                    inc_status, err = await self.respond_transaction(
-                        entry.transaction, entry.spend_name, peer, entry.test
-                    )
-                    self.transaction_responses.append((entry.spend_name, inc_status, err))
-                    if len(self.transaction_responses) > 50:
-                        self.transaction_responses = self.transaction_responses[1:]
-                except asyncio.CancelledError:
-                    raise
-                except BaseException:
-                    error_stack = traceback.format_exc()
-                    self.log.error(f"Error in _handle_transctions, closing: {error_stack}")
-                    if peer is not None:
-                        await peer.close()
+        try:
+            while not self._shut_down:
+                tasks: List[asyncio.Task] = [
+                    (asyncio.create_task(self._handle_one_transaction((await self.transaction_queue.get())[1])))
+                ]
+                # Dispatches transactions a few at a time (so they can run concurrently), and then awaits them
+                while not self.transaction_queue.empty() and len(tasks) < 8:
+                    item: TransactionQueueEntry = (await self.transaction_queue.get())[1]
+                    tasks.append(asyncio.create_task(self._handle_one_transaction(item)))
+
+                for task in tasks:
+                    await task
+        except asyncio.CancelledError:
+            raise
 
     async def initialize_weight_proof(self):
         self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
