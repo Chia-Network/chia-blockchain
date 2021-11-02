@@ -49,8 +49,8 @@ async def garbage_collect_connections_task(self) -> None:
             del self.banned_peers[peer_ip]
 
 
-ChiaServer.incoming_connection = chia.seeder.server.incoming_connection
-ChiaServer.garbage_collect_connections_task = chia.seeder.server.garbage_collect_connections_task
+ChiaServer.incoming_connection = incoming_connection
+ChiaServer.garbage_collect_connections_task = garbage_collect_connections_task
 
 
 # See: https://bugs.python.org/issue29288
