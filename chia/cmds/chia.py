@@ -36,7 +36,7 @@ def monkey_patch_click() -> None:
 
     import click.core
 
-    click.core._verify_python3_env = lambda *args, **kwargs: 0  # type: ignore
+    click.core._verify_python3_env = lambda *args, **kwargs: 0
 
 
 @click.group(

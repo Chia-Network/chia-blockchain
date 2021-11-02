@@ -36,7 +36,7 @@ def get_legacy_keyring_instance() -> Optional[LegacyKeyring]:
         return WinKeyring()
     elif platform == "linux":
         keyring: CryptFileKeyring = CryptFileKeyring()
-        keyring.keyring_key = "your keyring password"  # type: ignore
+        keyring.keyring_key = "your keyring password"
         return keyring
     return None
 
@@ -132,7 +132,7 @@ class KeyringWrapper:
             raise Exception("KeyringWrapper has already been instantiated")
 
         if supports_keyring_passphrase():
-            keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
+            keyring = FileKeyring(keys_root_path=self.keys_root_path)
         else:
             legacy_keyring: Optional[LegacyKeyring] = get_legacy_keyring_instance()
             if legacy_keyring is None:
