@@ -730,9 +730,7 @@ class WalletStateManager:
                         )
                         await self.tx_store.add_transaction_record(tx_record, False)
 
-                    children: List[CoinState] = await self.wallet_node.fetch_children(
-                        peer, coin_state_name, weight_proof
-                    )
+                    children: List[CoinState] = []
                     additions = [state.coin for state in children]
                     if len(children) > 0:
                         cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
@@ -857,11 +855,14 @@ class WalletStateManager:
         wallet_id: uint32,
         wallet_type: WalletType,
         trade_additions,
+        coin_name=None
     ) -> Optional[WalletCoinRecord]:
         """
         Adding coin to DB, return wallet coin record if it get's added
         """
-        existing: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.name())
+        if coin_name is None:
+            coin_name = coin.name()
+        existing: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_name)
         if existing is not None:
             return None
 
@@ -907,7 +908,7 @@ class WalletStateManager:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(tx_type),
-                name=coin.name(),
+                name=coin_name,
                 memos=[],
             )
             await self.tx_store.add_transaction_record(tx_record, True)
@@ -915,7 +916,7 @@ class WalletStateManager:
             records: List[TransactionRecord] = []
             for record in all_outgoing_transaction_records:
                 for add_coin in record.additions:
-                    if add_coin.name() == coin.name():
+                    if add_coin.name() == coin_name:
                         records.append(record)
 
             if len(records) > 0:
@@ -940,7 +941,7 @@ class WalletStateManager:
                     sent_to=[],
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_TX.value),
-                    name=coin.name(),
+                    name=coin_name,
                     memos=[],
                 )
                 if coin.amount > 0:

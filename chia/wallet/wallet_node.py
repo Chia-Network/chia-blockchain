@@ -824,7 +824,7 @@ class WalletNode:
                         all_outgoing = all_outgoing_per_wallet[wallet_id]
                     else:
                         all_outgoing = await self.wallet_state_manager.tx_store.get_all_transactions_for_wallet(
-                            wallet_id, TransactionType.OUTGOING_TX
+                            wallet_id, TransactionType.OUTGOING_TX, confirmed=0
                         )
                         all_outgoing_per_wallet[wallet_id] = all_outgoing
                     await self.wallet_state_manager.coin_added(
