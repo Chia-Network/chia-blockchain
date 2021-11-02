@@ -146,7 +146,7 @@ class CrawlStore:
 
     async def peer_failed_to_connect(self, peer: PeerRecord):
         now = int(time.time())
-        age_timestamp = max(peer.last_try_timestamp, peer.connected_timestamp)
+        age_timestamp = int(max(peer.last_try_timestamp, peer.connected_timestamp))
         if age_timestamp == 0:
             age_timestamp = now - 1000
         replaced = dataclasses.replace(peer, try_count=peer.try_count + 1, last_try_timestamp=now)
@@ -158,7 +158,7 @@ class CrawlStore:
 
     async def peer_connected(self, peer: PeerRecord):
         now = int(time.time())
-        age_timestamp = max(peer.last_try_timestamp, peer.connected_timestamp)
+        age_timestamp = int(max(peer.last_try_timestamp, peer.connected_timestamp))
         if age_timestamp == 0:
             age_timestamp = now - 1000
         replaced = dataclasses.replace(peer, connected=True, connected_timestamp=now)
