@@ -7,12 +7,13 @@ from typing import Any, Callable, Dict, List, Optional
 
 import aiohttp
 
+from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
 from chia.server.server import ssl_context_for_server
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
-from chia.util.json_util import dict_to_json_str, obj_to_response
+from chia.util.json_util import dict_to_json_str
 from chia.util.ws_message import create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
@@ -75,27 +76,6 @@ class RpcServer:
         if self.websocket is None:
             return None
         asyncio.create_task(self._state_changed(*args))
-
-    def _wrap_http_handler(self, f) -> Callable:
-        async def inner(request) -> aiohttp.web.Response:
-            request_data = await request.json()
-            try:
-                res_object = await f(request_data)
-                if res_object is None:
-                    res_object = {}
-                if "success" not in res_object:
-                    res_object["success"] = True
-            except Exception as e:
-                tb = traceback.format_exc()
-                self.log.warning(f"Error while handling message: {tb}")
-                if len(e.args) > 0:
-                    res_object = {"success": False, "error": f"{e.args[0]}"}
-                else:
-                    res_object = {"success": False, "error": f"{e}"}
-
-            return obj_to_response(res_object)
-
-        return inner
 
     async def get_connections(self, request: Dict) -> Dict:
         request_node_type: Optional[NodeType] = None
@@ -307,21 +287,21 @@ async def start_rpc_server(
     rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
     http_routes: Dict[str, Callable] = rpc_api.get_routes()
 
-    routes = [aiohttp.web.post(route, rpc_server._wrap_http_handler(func)) for (route, func) in http_routes.items()]
+    routes = [aiohttp.web.post(route, wrap_http_handler(func)) for (route, func) in http_routes.items()]
     routes += [
         aiohttp.web.post(
             "/get_connections",
-            rpc_server._wrap_http_handler(rpc_server.get_connections),
+            wrap_http_handler(rpc_server.get_connections),
         ),
         aiohttp.web.post(
             "/open_connection",
-            rpc_server._wrap_http_handler(rpc_server.open_connection),
+            wrap_http_handler(rpc_server.open_connection),
         ),
         aiohttp.web.post(
             "/close_connection",
-            rpc_server._wrap_http_handler(rpc_server.close_connection),
+            wrap_http_handler(rpc_server.close_connection),
         ),
-        aiohttp.web.post("/stop_node", rpc_server._wrap_http_handler(rpc_server.stop_node)),
+        aiohttp.web.post("/stop_node", wrap_http_handler(rpc_server.stop_node)),
     ]
 
     app.add_routes(routes)
