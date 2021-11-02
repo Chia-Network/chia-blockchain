@@ -495,7 +495,7 @@ class ChiaServer:
                 f"Invalid connection type for connection {connection.peer_host},"
                 f" while closing. Handshake never finished."
             )
-        self.cancel_tasks_from_peer(connection.peer_node_id)
+        # self.cancel_tasks_from_peer(connection.peer_node_id)
         on_disconnect = getattr(self.node, "on_disconnect", None)
         if on_disconnect is not None:
             on_disconnect(connection)
@@ -582,6 +582,8 @@ class ChiaServer:
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
                         await connection.reply_to_request(response_message)
+                except TimeoutError:
+                    connection.log.error(f"Timeout error for: {message_type}")
                 except Exception as e:
                     if self.connection_close_task is None:
                         tb = traceback.format_exc()
