@@ -1759,11 +1759,12 @@ class FullNode:
                 next_difficulty = self.constants.DIFFICULTY_STARTING
 
             # Adds the sub slot and potentially get new infusions
+            peak_full_block = await self.blockchain.get_full_peak()
             new_infusions = self.full_node_store.new_finished_sub_slot(
                 request.end_of_slot_bundle,
                 self.blockchain,
                 peak,
-                await self.blockchain.get_full_peak(),
+                peak_full_block,
             )
             # It may be an empty list, even if it's not None. Not None means added successfully
             if new_infusions is not None:
@@ -1801,8 +1802,17 @@ class FullNode:
                 return None, True
             else:
                 self.log.info(
-                    f"End of slot not added CC challenge "
+                    f"No infusions. End of slot not added CC challenge "
                     f"{request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}"
+                )
+                # TODO: remove this debug stmt
+                self.log.info(
+                    f"""new_finished_sub_slot called with
+                    request.end_of_slot_bundle: {request.end_of_slot_bundle}
+                    self.blockchain,
+                    peak: {peak},
+                    peak FullBlock: {peak_full_block},
+                """
                 )
         return None, False
 
