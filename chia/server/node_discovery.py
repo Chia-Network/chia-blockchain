@@ -2,7 +2,6 @@ import asyncio
 import math
 import time
 import traceback
-from pathlib import Path
 from random import Random
 from secrets import randbits
 from typing import Dict, Optional, List, Set
@@ -15,11 +14,11 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
 from chia.server.address_manager_store import AddressManagerStore
 from chia.server.outbound_message import NodeType, make_msg
+from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
-from chia.util.path import path_from_root
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
@@ -37,9 +36,8 @@ class FullNodeDiscovery:
     def __init__(
         self,
         server: ChiaServer,
-        root_path: Path,
         target_outbound_count: int,
-        peer_db_path: str,
+        peer_store_resolver: PeerStoreResolver,
         introducer_info: Optional[Dict],
         dns_servers: List[str],
         peer_connect_interval: int,
@@ -51,16 +49,7 @@ class FullNodeDiscovery:
         self.message_queue: asyncio.Queue = asyncio.Queue()
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
-        # This is a double check to make sure testnet and mainnet peer databases never mix up.
-        # If the network is not 'mainnet', it names the peer db differently, including the selected_network.
-        if selected_network != "mainnet":
-            if not peer_db_path.endswith(".sqlite"):
-                raise ValueError(f"Invalid path for peer table db: {peer_db_path}. Make the path end with .sqlite")
-            peer_db_path = peer_db_path[:-7] + "_" + selected_network + ".sqlite"
-        self.peer_db_path = path_from_root(root_path, peer_db_path)
-        self.peers_file_path = FullNodeDiscovery.resolve_peers_file_path(
-            root_path, selected_network, Path(peer_db_path)
-        )
+        self.peers_file_path = peer_store_resolver.peers_file_path
         self.dns_servers = dns_servers
         if introducer_info is not None:
             self.introducer_info: Optional[PeerInfo] = PeerInfo(
@@ -71,7 +60,7 @@ class FullNodeDiscovery:
             self.introducer_info = None
         self.peer_connect_interval = peer_connect_interval
         self.log = log
-        self.relay_queue = None
+        self.relay_queue: Optional[asyncio.Queue] = None
         self.address_manager: Optional[AddressManager] = None
         self.connection_time_pretest: Dict = {}
         self.received_count_from_peers: Dict = {}
@@ -90,18 +79,6 @@ class FullNodeDiscovery:
         self.default_port: Optional[int] = default_port
         if default_port is None and selected_network in NETWORK_ID_DEFAULT_PORTS:
             self.default_port = NETWORK_ID_DEFAULT_PORTS[selected_network]
-
-    @staticmethod
-    def resolve_peers_file_path(root_path: Path, selected_network: str, peer_file_path: Path) -> Path:
-        # Transitioning from a peer sqlite DB to a serialization of streamable peer data
-        if peer_file_path.suffix == ".sqlite":
-            peer_file_path = peer_file_path.with_suffix(".dat")
-
-        # Use different peers for testnets
-        if selected_network != "mainnet":
-            peer_file_path.with_name(peer_file_path.stem + "_" + selected_network + ".dat")
-
-        return path_from_root(root_path, peer_file_path)
 
     def initialize_address_manager(self) -> None:
         self.address_manager = AddressManagerStore.create_address_manager(self.peers_file_path)
@@ -508,10 +485,9 @@ class FullNodePeers(FullNodeDiscovery):
     def __init__(
         self,
         server,
-        root_path,
         max_inbound_count,
         target_outbound_count,
-        peer_db_path,
+        peer_store_resolver: PeerStoreResolver,
         introducer_info,
         dns_servers,
         peer_connect_interval,
@@ -521,9 +497,8 @@ class FullNodePeers(FullNodeDiscovery):
     ):
         super().__init__(
             server,
-            root_path,
             target_outbound_count,
-            peer_db_path,
+            peer_store_resolver,
             introducer_info,
             dns_servers,
             peer_connect_interval,
@@ -532,7 +507,7 @@ class FullNodePeers(FullNodeDiscovery):
             log,
         )
         self.relay_queue = asyncio.Queue()
-        self.neighbour_known_peers = {}
+        self.neighbour_known_peers: Dict = {}
         self.key = randbits(256)
 
     async def start(self):
@@ -682,9 +657,8 @@ class WalletPeers(FullNodeDiscovery):
     def __init__(
         self,
         server,
-        root_path,
         target_outbound_count,
-        peer_db_path,
+        peer_store_resolver: PeerStoreResolver,
         introducer_info,
         dns_servers,
         peer_connect_interval,
@@ -694,9 +668,8 @@ class WalletPeers(FullNodeDiscovery):
     ) -> None:
         super().__init__(
             server,
-            root_path,
             target_outbound_count,
-            peer_db_path,
+            peer_store_resolver,
             introducer_info,
             dns_servers,
             peer_connect_interval,

@@ -22,6 +22,10 @@ log = logging.getLogger(__name__)
 @dataclass(frozen=True)
 @streamable
 class PeerDataSerialization(Streamable):
+    """
+    Serialization container for the peer data that was previously stored in sqlite.
+    """
+
     metadata: List[Tuple[str, str]]
     nodes: List[Tuple[uint64, str]]
     new_table: List[Tuple[uint64, uint64]]
@@ -60,13 +64,13 @@ class AddressManagerStore:
     @classmethod
     def create_address_manager(cls, peers_file_path: Path) -> AddressManager:
         """
-        Create an address manager from a peers file.
+        Create an address manager using deserialized data from a peers file.
         """
         address_manager: Optional[AddressManager] = None
         if peers_file_path.exists():
             try:
                 log.info(f"Loading peers from {peers_file_path}")
-                address_manager = cls.deserialize(peers_file_path)
+                address_manager = cls._deserialize(peers_file_path)
             except Exception:
                 log.exception(f"Unable to create address_manager from {peers_file_path}")
 
@@ -84,6 +88,7 @@ class AddressManagerStore:
         unique_ids: Dict[int, int] = {}
         count_ids: int = 0
 
+        log.info("Serializing peer data")
         metadata.append(("key", str(address_manager.key)))
 
         for node_id, info in address_manager.map_info.items():
@@ -120,7 +125,7 @@ class AddressManagerStore:
             log.exception(f"Failed to write peer data to {peers_file_path}")
 
     @classmethod
-    def deserialize(cls, peers_file_path: Path) -> AddressManager:
+    def _deserialize(cls, peers_file_path: Path) -> AddressManager:
         peer_data: Optional[PeerDataSerialization] = None
         address_manager = AddressManager()
         start_time = timer()

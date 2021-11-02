@@ -269,9 +269,9 @@ full_node:
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v1_CHALLENGE.sqlite
-  peer_db_path: db/peer_table_node.dat
+  peers_file_path: db/peers.dat
   simulator_database_path: sim_db/simulator_blockchain_v1_CHALLENGE.sqlite
-  simulator_peer_db_path: sim_db/peer_table_node.dat
+  simulator_peers_file_path: sim_db/peer_table_node.dat
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -408,7 +408,7 @@ wallet:
 
   testing: False
   database_path: wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite
-  wallet_peers_path: wallet/db/wallet_peers.dat
+  wallet_peers_file_path: wallet/db/wallet_peers.dat
 
   logging: *logging
   network_overrides: *network_overrides
