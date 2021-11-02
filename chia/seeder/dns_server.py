@@ -6,7 +6,7 @@ import random
 import signal
 import traceback
 from dnslib import A, AAAA, SOA, NS, MX, CNAME, RR, DNSRecord, QTYPE, DNSHeader
-from typing import List
+from typing import Any, List
 
 from chia.util.chia_logging import initialize_logging
 from chia.util.path import mkdir, path_from_root
@@ -28,7 +28,7 @@ ns = None
 IP = "127.0.0.1"
 TTL = None
 soa_record = None
-ns_records = []
+ns_records: List[Any] = []
 
 
 class EchoServerProtocol(asyncio.DatagramProtocol):
