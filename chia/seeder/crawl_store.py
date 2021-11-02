@@ -300,7 +300,6 @@ class CrawlStore:
                 row[17],
                 row[18],
                 row[19],
-                row[20],
             )
             self.host_to_reliability[row[0]] = reliability
         cursor = await self.crawl_db.execute(
