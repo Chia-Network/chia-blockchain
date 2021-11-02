@@ -175,7 +175,7 @@ class TestCCWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        await time_out_assert(15, wallet.get_confirmed_balance, funds * 2 - 101)
+        await time_out_assert(30, wallet.get_confirmed_balance, funds * 2 - 101)
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 40)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 40)
@@ -335,7 +335,9 @@ class TestCCWallet:
 
         id = cc_wallet_2.id()
         wsm = cc_wallet_2.wallet_state_manager
-        await time_out_assert(15, wsm.get_confirmed_balance_for_wallet, 70, id)
+        all_txs = await wsm.tx_store.get_all_transactions_for_wallet(id)
+        assert len(list(filter(lambda tx: tx.amount == 10, all_txs))) == 0
+        await time_out_assert(15, wsm.get_confirmed_balance_for_wallet, 60, id)
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 60)
         await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
 

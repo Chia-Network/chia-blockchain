@@ -114,6 +114,19 @@ class WalletCoinStore:
         )
         await cursor.close()
 
+    # Sometimes we realize that a coin is actually not interesting to us so we need to delete it
+    async def delete_coin_record(self, coin_name: bytes32) -> None:
+        if coin_name in self.coin_record_cache:
+            coin_record = self.coin_record_cache.pop(coin_name)
+            if coin_record.wallet_id in self.unspent_coin_wallet_cache:
+                coin_cache = self.unspent_coin_wallet_cache[coin_record.wallet_id]
+                if coin_name in coin_cache:
+                    coin_cache.pop(coin_record.coin.name())
+
+        c = await self.db_connection.execute("DELETE FROM coin_record WHERE coin_name=?", (coin_name.hex(),))
+        await c.close()
+
+
     # Update coin_record to be spent in DB
     async def set_spent(self, coin_name: bytes32, height: uint32) -> WalletCoinRecord:
         current: Optional[WalletCoinRecord] = await self.get_coin_record(coin_name)
@@ -218,6 +231,15 @@ class WalletCoinStore:
     async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[WalletCoinRecord]:
         """Returns a list of all coin records with the given puzzle hash"""
         cursor = await self.db_connection.execute("SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),))
+        rows = await cursor.fetchall()
+        await cursor.close()
+
+        return [self.coin_record_from_row(row) for row in rows]
+
+    # Checks DB and DiffStores for CoinRecords with parent_coin_info and returns them
+    async def get_coin_records_by_parent_id(self, parent_coin_info: bytes32) -> List[WalletCoinRecord]:
+        """Returns a list of all coin records with the given parent id"""
+        cursor = await self.db_connection.execute("SELECT * from coin_record WHERE coin_parent=?", (parent_coin_info.hex(),))
         rows = await cursor.fetchall()
         await cursor.close()
 
