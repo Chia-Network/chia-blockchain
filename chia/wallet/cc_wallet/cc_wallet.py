@@ -355,10 +355,11 @@ class CCWallet:
             child_coin_records = await self.wallet_state_manager.coin_store.get_coin_records_by_parent_id(coin_name)
             if len(child_coin_records) > 0:
                 for record in child_coin_records:
-                    await self.wallet_state_manager.coin_store.delete_coin_record(record.coin.name())
-                    await self.remove_lineage(record.coin.name())
-                    # We also need to make sure there's no record of the transaction
-                    await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
+                    if record.wallet_id == self.id():
+                        await self.wallet_state_manager.coin_store.delete_coin_record(record.coin.name())
+                        await self.remove_lineage(record.coin.name())
+                        # We also need to make sure there's no record of the transaction
+                        await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
 
     async def get_new_inner_hash(self) -> bytes32:
         puzzle = await self.get_new_inner_puzzle()
