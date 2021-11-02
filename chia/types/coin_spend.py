@@ -31,7 +31,7 @@ class CoinSpend(Streamable):
     def hints(self) -> List[bytes]:
         # import above was causing circular import issue
         from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-        from tests.block_tools import test_constants
+        from chia.consensus.default_constants import DEFAULT_CONSTANTS
         from chia.types.spend_bundle import SpendBundle
         from chia.full_node.bundle_tools import simple_solution_generator
 
@@ -39,7 +39,7 @@ class CoinSpend(Streamable):
         generator = simple_solution_generator(bundle)
 
         npc_result = get_name_puzzle_conditions(
-            generator, INFINITE_COST, cost_per_byte=test_constants.COST_PER_BYTE, safe_mode=False
+            generator, INFINITE_COST, cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE, safe_mode=False
         )
         h_list = []
         for npc in npc_result.npc_list:
