@@ -7,6 +7,7 @@ import yaml
 from blspy import PrivateKey
 
 from chia import __version__
+from chia.cmds.configure import configure
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.ssl.create_ssl import (
     ensure_ssl_dirs,
@@ -34,11 +35,11 @@ from chia.util.ssl_check import (
     fix_ssl,
 )
 from chia.wallet.derive_keys import (
+    _derive_path,
+    _derive_path_unhardened,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk_intermediate,
     master_sk_to_wallet_sk_unhardened_intermediate,
-    _derive_path,
-    _derive_path_unhardened,
 )
 
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
@@ -393,6 +394,22 @@ def chia_init(root_path: Path, *, should_check_keys: bool = False, fix_ssl_permi
         return -1
 
     create_default_chia_config(root_path)
+    #
+    # set some options for testnet10 in cats branch by default
+    #
+    configure(
+        root_path,
+        set_farmer_peer="",
+        set_node_introducer="",
+        set_fullnode_port="",
+        set_harvester_port="",
+        set_log_level="INFO",
+        enable_upnp="false",
+        set_outbound_peer_count="",
+        set_peer_count="",
+        testnet="true",
+        peer_connect_timeout="",
+    )
     create_all_ssl(root_path)
     if fix_ssl_permissions:
         fix_ssl(root_path)
