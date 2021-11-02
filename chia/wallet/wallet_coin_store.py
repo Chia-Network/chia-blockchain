@@ -126,7 +126,6 @@ class WalletCoinStore:
         c = await self.db_connection.execute("DELETE FROM coin_record WHERE coin_name=?", (coin_name.hex(),))
         await c.close()
 
-
     # Update coin_record to be spent in DB
     async def set_spent(self, coin_name: bytes32, height: uint32) -> WalletCoinRecord:
         current: Optional[WalletCoinRecord] = await self.get_coin_record(coin_name)
@@ -239,7 +238,9 @@ class WalletCoinStore:
     # Checks DB and DiffStores for CoinRecords with parent_coin_info and returns them
     async def get_coin_records_by_parent_id(self, parent_coin_info: bytes32) -> List[WalletCoinRecord]:
         """Returns a list of all coin records with the given parent id"""
-        cursor = await self.db_connection.execute("SELECT * from coin_record WHERE coin_parent=?", (parent_coin_info.hex(),))
+        cursor = await self.db_connection.execute(
+            "SELECT * from coin_record WHERE coin_parent=?", (parent_coin_info.hex(),)
+        )
         rows = await cursor.fetchall()
         await cursor.close()
 
