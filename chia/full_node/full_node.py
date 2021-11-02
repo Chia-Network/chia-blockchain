@@ -138,6 +138,7 @@ class FullNode:
         self.timelord_lock = asyncio.Lock()
         self.compact_vdf_sem = asyncio.Semaphore(4)
         self.new_peak_sem = asyncio.Semaphore(8)
+        self.respond_transaction_semaphore = asyncio.Semaphore(10)
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
@@ -232,20 +233,15 @@ class FullNode:
             self.log.error(f"Error in _handle_transctions, closing: {error_stack}")
             if peer is not None:
                 await peer.close()
+        finally:
+            self.respond_transaction_semaphore.release()
 
     async def _handle_transactions(self):
         try:
             while not self._shut_down:
-                tasks: List[asyncio.Task] = [
-                    (asyncio.create_task(self._handle_one_transaction((await self.transaction_queue.get())[1])))
-                ]
-                # Dispatches transactions a few at a time (so they can run concurrently), and then awaits them
-                while not self.transaction_queue.empty() and len(tasks) < 8:
-                    item: TransactionQueueEntry = (await self.transaction_queue.get())[1]
-                    tasks.append(asyncio.create_task(self._handle_one_transaction(item)))
-
-                for task in tasks:
-                    await task
+                await self.respond_transaction_semaphore.acquire()
+                item: TransactionQueueEntry = (await self.transaction_queue.get())[1]
+                asyncio.create_task(self._handle_one_transaction(item))
         except asyncio.CancelledError:
             raise
 
