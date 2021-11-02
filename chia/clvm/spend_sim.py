@@ -78,7 +78,7 @@ class SpendSim:
         await self.connection.close()
 
     async def new_peak(self):
-        await self.mempool_manager.new_peak(self.block_records[-1])
+        await self.mempool_manager.new_peak(self.block_records[-1], [])
 
     def new_coin_record(self, coin: Coin, coinbase=False) -> CoinRecord:
         return CoinRecord(

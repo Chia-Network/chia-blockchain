@@ -188,14 +188,14 @@ class FullNode:
                 f"time taken: {int(time_taken)}s"
             )
             async with self._blockchain_lock_high_priority:
-                pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_peak())
+                pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_peak(), [])
             assert len(pending_tx) == 0  # no pending transactions when starting up
 
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
         if peak is not None:
             full_peak = await self.blockchain.get_full_peak()
             mempool_new_peak_result, fns_peak_result = await self.peak_post_processing(
-                full_peak, peak, max(peak.height - 1, 0), None
+                full_peak, peak, max(peak.height - 1, 0), None, []
             )
             await self.peak_post_processing_2(
                 full_peak, peak, max(peak.height - 1, 0), None, ([], {}), mempool_new_peak_result, fns_peak_result
@@ -324,7 +324,7 @@ class FullNode:
                         peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
                         assert peak is not None and peak_fb is not None and fork_height is not None
                         mempool_new_peak_result, fns_peak_result = await self.peak_post_processing(
-                            peak_fb, peak, fork_height, peer
+                            peak_fb, peak, fork_height, peer, coin_changes[0]
                         )
                         await self.peak_post_processing_2(
                             peak_fb, peak, fork_height, peer, coin_changes, mempool_new_peak_result, fns_peak_result
@@ -1025,7 +1025,7 @@ class FullNode:
             peak_fb: FullBlock = await self.blockchain.get_full_peak()
             if peak is not None:
                 mempool_new_peak_result, fns_peak_result = await self.peak_post_processing(
-                    peak_fb, peak, max(peak.height - 1, 0), None
+                    peak_fb, peak, max(peak.height - 1, 0), None, []
                 )
 
                 await self.peak_post_processing_2(
@@ -1113,6 +1113,7 @@ class FullNode:
         record: BlockRecord,
         fork_height: uint32,
         peer: Optional[ws.WSChiaConnection],
+        coin_changes: List[CoinRecord]
     ):
         """
         Must be called under self.blockchain.lock. This updates the internal state of the full node with the
@@ -1187,7 +1188,7 @@ class FullNode:
 
         # Update the mempool (returns successful pending transactions added to the mempool)
         mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
-            self.blockchain.get_peak()
+            self.blockchain.get_peak(), coin_changes
         )
 
         # Check if we detected a spent transaction, to load up our generator cache
@@ -1400,7 +1401,7 @@ class FullNode:
                 assert new_peak is not None and fork_height is not None
 
                 mempool_new_peak_result, fns_peak_result = await self.peak_post_processing(
-                    block, new_peak, fork_height, peer
+                    block, new_peak, fork_height, peer, coin_changes[0]
                 )
 
             elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:

@@ -471,7 +471,7 @@ class MempoolManager:
             return self.mempool.spends[bundle_hash]
         return None
 
-    async def new_peak(self, new_peak: Optional[BlockRecord]) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
+    async def new_peak(self, new_peak: Optional[BlockRecord], coin_changes: List[CoinRecord]) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         """
@@ -483,20 +483,35 @@ class MempoolManager:
             return []
         assert new_peak.timestamp is not None
 
+        use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
+
+        if use_optimization:
+            changed_coins_set: Set[bytes32] = set()
+            for coin_record in coin_changes:
+                changed_coins_set.add(coin_record.coin.name())
 
         old_pool = self.mempool
         self.mempool = Mempool(self.mempool_max_total_cost)
 
         for item in old_pool.spends.values():
-            _, result, _ = await self.add_spendbundle(
-                item.spend_bundle, item.npc_result, item.spend_bundle_name, False, item.program
-            )
-            # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
-            # successfully added to the new mempool. In this case, remove it from seen, so in the case of a reorg,
-            # it can be resubmitted
-            if result != MempoolInclusionStatus.SUCCESS:
-                self.remove_seen(item.spend_bundle_name)
+            if use_optimization:
+                failed = False
+                for removed_coin in item.removals:
+                    if removed_coin.name() in changed_coins_set:
+                        failed = True
+                        break
+                if not failed:
+                    self.mempool.add_to_pool(item)
+            else:
+                _, result, _ = await self.add_spendbundle(
+                    item.spend_bundle, item.npc_result, item.spend_bundle_name, False, item.program
+                )
+                # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
+                # successfully added to the new mempool. In this case, remove it from seen, so in the case of a reorg,
+                # it can be resubmitted
+                if result != MempoolInclusionStatus.SUCCESS:
+                    self.remove_seen(item.spend_bundle_name)
 
         potential_txs = self.potential_cache.drain()
         txs_added = []
