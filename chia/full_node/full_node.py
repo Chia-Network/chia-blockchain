@@ -1845,7 +1845,7 @@ class FullNode:
                 return MempoolInclusionStatus.FAILED, Err.NODE_OVERLOADED
 
             if status == MempoolInclusionStatus.SUCCESS:
-                self.log.debug(
+                self.log.info(
                     f"Added transaction to mempool: {spend_name} mempool size: "
                     f"{self.mempool_manager.mempool.total_mempool_cost} normalized {self.mempool_manager.mempool.total_mempool_cost / 5000000}"
                 )

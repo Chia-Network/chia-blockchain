@@ -245,7 +245,7 @@ class FullNodeAPI:
         waiters = self.full_node.new_transaction_semaphore._waiters
         if len(waiters) > 0:
             self.full_node.log.warning(f"respond_transaction Waiters: {len(waiters)}")
-        if len(waiters) > 200:
+        if len(waiters) > 500:
             self.log.info(f"Ignoring transaction: {tx}, too many transactions")
             return
         await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
@@ -368,7 +368,7 @@ class FullNodeAPI:
         return msg
 
     @api_request
-    async def reject_block(self, request: full_node_protocol.RejectBlock):
+    async def reject_block(sef, request: full_node_protocol.RejectBlock):
         self.log.debug(f"reject_block {request.height}")
 
     @api_request
