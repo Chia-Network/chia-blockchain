@@ -404,7 +404,7 @@ class ChiaServer:
 
             assert ws._response.connection is not None and ws._response.connection.transport is not None
             transport = ws._response.connection.transport
-            cert_bytes = transport._ssl_protocol._extra["ssl_object"].getpeercert(True)  # type: ignore
+            cert_bytes = transport._ssl_protocol._extra["ssl_object"].getpeercert(True)
             der_cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
             peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
             if peer_id == self.node_id:
