@@ -246,7 +246,6 @@ class FullNodeAPI:
         if len(waiters) > 0 and len(waiters) % 100 == 0:
             self.full_node.log.warning(f"respond_transaction Waiters: {len(waiters)}")
         if len(waiters) > 1000:
-            self.log.info(f"Ignoring transaction: {tx}, too many transactions")
             self.full_node.dropped_tx += 1
             return None
         await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
