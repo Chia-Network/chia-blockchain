@@ -95,7 +95,7 @@ class Crawler:
                     got_peak = True
                     break
                 await asyncio.sleep(0.1)
-            if not got_peak and peer_info is not None:
+            if not got_peak and peer_info is not None and self.crawl_store is not None:
                 await self.crawl_store.peer_connected_hostname(peer_info.host, False)
             await peer.close()
 
