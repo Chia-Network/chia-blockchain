@@ -39,6 +39,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
+from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task, reply_type
 from chia.util.generator_tools import get_block_header
@@ -242,13 +243,13 @@ class FullNodeAPI:
         if spend_name in self.full_node.full_node_store.peers_with_tx:
             self.full_node.full_node_store.peers_with_tx.pop(spend_name)
 
-        waiters = self.full_node.new_transaction_semaphore._waiters
-        if len(waiters) > 0 and len(waiters) % 100 == 0:
-            self.full_node.log.warning(f"respond_transaction Waiters: {len(waiters)}")
-        if len(waiters) > 1000:
+        if self.full_node.transaction_queue.qsize() % 100 == 33:
+            self.full_node.log.warning(f"respond_transaction Waiters: {self.full_node.transaction_queue.qsize()}")
+
+        if self.full_node.transaction_queue.full():
             self.full_node.dropped_tx += 1
             return None
-        await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
+        await self.full_node.transaction_queue.put((1, TransactionQueueEntry(tx.transaction, spend_name, peer, test)))
         return None
 
     @api_request
@@ -1220,16 +1221,32 @@ class FullNodeAPI:
     @api_request
     async def send_transaction(self, request: wallet_protocol.SendTransaction) -> Optional[Message]:
         spend_name = request.transaction.name()
-        status, error = await self.full_node.respond_transaction(request.transaction, spend_name)
-        error_name = error.name if error is not None else None
-        if status == MempoolInclusionStatus.SUCCESS:
-            response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
+
+        await self.full_node.transaction_queue.put(
+            (0, TransactionQueueEntry(request.transaction, spend_name, None, False))
+        )
+        status, error = None, None
+        for i in range(3000):
+            await asyncio.sleep(0.01)
+            for potential_name, potential_status, potential_error in self.full_node.transaction_responses:
+                if spend_name == potential_name:
+                    status = potential_status
+                    error = potential_error
+                    break
+        if status is None:
+            response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.PENDING), None)
         else:
-            # If if failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
-            if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
-                response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS.value), None)
-            else:
+            error_name = error.name if error is not None else None
+            if status == MempoolInclusionStatus.SUCCESS:
                 response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
+            else:
+                # If if failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
+                if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
+                    response = wallet_protocol.TransactionAck(
+                        spend_name, uint8(MempoolInclusionStatus.SUCCESS.value), None
+                    )
+                else:
+                    response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
         msg = make_msg(ProtocolMessageTypes.transaction_ack, response)
         return msg
 

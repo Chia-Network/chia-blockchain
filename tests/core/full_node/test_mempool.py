@@ -232,8 +232,7 @@ class TestMempoolManager:
         spend_bundle = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0])
         assert spend_bundle is not None
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
-        res = await full_node_1.respond_transaction(tx, peer)
-        log.info(f"Res {res}")
+        await full_node_1.respond_transaction(tx, peer)
 
         await time_out_assert(
             10,

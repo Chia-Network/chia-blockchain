@@ -54,6 +54,7 @@ from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
+from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
@@ -137,7 +138,6 @@ class FullNode:
         self.timelord_lock = asyncio.Lock()
         self.compact_vdf_sem = asyncio.Semaphore(4)
         self.new_peak_sem = asyncio.Semaphore(8)
-        self.new_transaction_semaphore = asyncio.Semaphore(4)
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
@@ -170,6 +170,10 @@ class FullNode:
         self._blockchain_lock_ultra_priority = LockClient(0, self._blockchain_lock_queue)
         self._blockchain_lock_high_priority = LockClient(1, self._blockchain_lock_queue)
         self._blockchain_lock_low_priority = LockClient(2, self._blockchain_lock_queue, 1000)
+        self.transaction_queue = asyncio.PriorityQueue(1000)
+        self._transaction_queue_task = asyncio.create_task(self._handle_transactions())
+        self.transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Err]] = []
+
         self.weight_proof_handler = None
         self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
@@ -215,6 +219,27 @@ class FullNode:
         self.initialized = True
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.start())
+
+    async def _handle_transactions(self):
+        while True:
+            transaction_group: List[TransactionQueueEntry] = [(await self.transaction_queue.get())[1]]
+            while not self.transaction_queue.empty() and len(transaction_group) < 8:
+                item: TransactionQueueEntry = (await self.transaction_queue.get())[1]
+                transaction_group.append(item)
+            for entry in transaction_group:
+                peer = entry.peer
+                try:
+                    inc_status, err = await self.respond_transaction(
+                        entry.transaction, entry.spend_name, peer, entry.test
+                    )
+                    self.transaction_responses.append((entry.spend_name, inc_status, err))
+                    if len(self.transaction_responses) > 50:
+                        self.transaction_responses = self.transaction_responses[1:]
+                except BaseException:
+                    error_stack = traceback.format_exc()
+                    self.log.error(f"Error in _handle_transctions, closing: {error_stack}")
+                    if peer is not None:
+                        await peer.close()
 
     async def initialize_weight_proof(self):
         self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
@@ -644,6 +669,7 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.close())
         if self.uncompact_task is not None:
             self.uncompact_task.cancel()
+        self._transaction_queue_task.cancel()
 
     async def _await_closed(self):
         cancel_task_safe(self._sync_task, self.log)
@@ -1828,12 +1854,11 @@ class FullNode:
             error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
             self.mempool_manager.remove_seen(spend_name)
         else:
-            async with self.new_transaction_semaphore:
-                try:
-                    cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name)
-                except Exception as e:
-                    self.mempool_manager.remove_seen(spend_name)
-                    raise e
+            try:
+                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name)
+            except Exception as e:
+                self.mempool_manager.remove_seen(spend_name)
+                raise e
             try:
                 async with self._blockchain_lock_low_priority:
                     if self.mempool_manager.get_spendbundle(spend_name) is not None:
