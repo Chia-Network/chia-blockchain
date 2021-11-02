@@ -556,7 +556,7 @@ class ChiaServer:
                         self.execute_tasks.add(task_id)
                         timeout = None
 
-                        # if hasattr(f, "peer_required"):
+                    if hasattr(f, "peer_required"):
                         coroutine = f(full_message.data, connection)
                     else:
                         coroutine = f(full_message.data)
