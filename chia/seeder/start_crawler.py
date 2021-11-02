@@ -70,7 +70,6 @@ def service_kwargs_for_full_node(
     )
     api = CrawlerAPI(crawler)
 
-    upnp_list = []
     network_id = config["selected_network"]
     kwargs = dict(
         root_path=root_path,
@@ -79,7 +78,7 @@ def service_kwargs_for_full_node(
         node_type=NodeType.FULL_NODE,
         advertised_port=config["port"],
         service_name=SERVICE_NAME,
-        upnp_ports=upnp_list,
+        upnp_ports=[],
         server_listen_ports=[config["port"]],
         on_connect_callback=crawler.on_connect,
         network_id=network_id,
