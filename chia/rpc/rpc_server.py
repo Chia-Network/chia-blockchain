@@ -77,6 +77,15 @@ class RpcServer:
             return None
         asyncio.create_task(self._state_changed(*args))
 
+    def get_routes(self) -> Dict[str, Callable]:
+        return {
+            **self.rpc_api.get_routes(),
+            "/get_connections": self.get_connections,
+            "/open_connection": self.open_connection,
+            "/close_connection": self.close_connection,
+            "/stop_node": self.stop_node,
+        }
+
     async def get_connections(self, request: Dict) -> Dict:
         request_node_type: Optional[NodeType] = None
         if "node_type" in request:
@@ -285,26 +294,9 @@ async def start_rpc_server(
     app = aiohttp.web.Application()
     rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
     rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
-    http_routes: Dict[str, Callable] = rpc_api.get_routes()
-
-    routes = [aiohttp.web.post(route, wrap_http_handler(func)) for (route, func) in http_routes.items()]
-    routes += [
-        aiohttp.web.post(
-            "/get_connections",
-            wrap_http_handler(rpc_server.get_connections),
-        ),
-        aiohttp.web.post(
-            "/open_connection",
-            wrap_http_handler(rpc_server.open_connection),
-        ),
-        aiohttp.web.post(
-            "/close_connection",
-            wrap_http_handler(rpc_server.close_connection),
-        ),
-        aiohttp.web.post("/stop_node", wrap_http_handler(rpc_server.stop_node)),
-    ]
-
-    app.add_routes(routes)
+    app.add_routes(
+        [aiohttp.web.post(route, wrap_http_handler(func)) for (route, func) in rpc_server.get_routes().items()]
+    )
     if connect_to_daemon:
         daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
     runner = aiohttp.web.AppRunner(app, access_log=None)
