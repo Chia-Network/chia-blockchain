@@ -235,6 +235,8 @@ class FullNode:
                     self.transaction_responses.append((entry.spend_name, inc_status, err))
                     if len(self.transaction_responses) > 50:
                         self.transaction_responses = self.transaction_responses[1:]
+                except asyncio.CancelledError:
+                    raise
                 except BaseException:
                     error_stack = traceback.format_exc()
                     self.log.error(f"Error in _handle_transctions, closing: {error_stack}")
