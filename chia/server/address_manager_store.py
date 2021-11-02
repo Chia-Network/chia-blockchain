@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 @streamable
 class PeerDataSerialization(Streamable):
     """
-    Serialization container for the peer data that was previously stored in sqlite.
+    Serializable property bag for the peer data that was previously stored in sqlite.
     """
 
     metadata: List[Tuple[str, str]]
@@ -64,7 +64,7 @@ class AddressManagerStore:
     @classmethod
     def create_address_manager(cls, peers_file_path: Path) -> AddressManager:
         """
-        Create an address manager using deserialized data from a peers file.
+        Create an address manager using data deserialized from a peers file.
         """
         address_manager: Optional[AddressManager] = None
         if peers_file_path.exists():
@@ -82,6 +82,9 @@ class AddressManagerStore:
 
     @classmethod
     def serialize(cls, address_manager: AddressManager, peers_file_path: Path) -> None:
+        """
+        Serialize the address manager's peer data to a file.
+        """
         metadata: List[Tuple[str, str]] = []
         nodes: List[Tuple[int, ExtendedPeerInfo]] = []
         new_table_entries: List[Tuple[int, int]] = []
@@ -126,6 +129,9 @@ class AddressManagerStore:
 
     @classmethod
     def _deserialize(cls, peers_file_path: Path) -> AddressManager:
+        """
+        Create an address manager using data deserialized from a peers file.
+        """
         peer_data: Optional[PeerDataSerialization] = None
         address_manager = AddressManager()
         start_time = timer()
@@ -194,6 +200,9 @@ class AddressManagerStore:
 
     @classmethod
     def _read_peers(cls, peers_file_path: Path) -> PeerDataSerialization:
+        """
+        Read the peers file and return the data as a PeerDataSerialization object.
+        """
         with open(peers_file_path, "rb") as f:
             return PeerDataSerialization.from_bytes(f.read())
 
@@ -205,5 +214,8 @@ class AddressManagerStore:
         nodes: List[Tuple[int, ExtendedPeerInfo]],
         new_table: List[Tuple[int, int]],
     ) -> None:
+        """
+        Serializes the given peer data and writes it to the peers file.
+        """
         serialized: PeerDataSerialization = makePeerDataSerialization(metadata, nodes, new_table)
         write_file(peers_file_path, bytes(serialized), file_mode=0o644)
