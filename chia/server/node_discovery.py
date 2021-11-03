@@ -51,6 +51,7 @@ class FullNodeDiscovery:
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
         self.legacy_peer_db_path = peer_store_resolver.legacy_peer_db_path
+        self.legacy_peer_db_migrated = False
         self.peers_file_path = peer_store_resolver.peers_file_path
         self.dns_servers = dns_servers
         if introducer_info is not None:
@@ -83,7 +84,16 @@ class FullNodeDiscovery:
             self.default_port = NETWORK_ID_DEFAULT_PORTS[selected_network]
 
     async def migrate_address_manager_if_necessary(self) -> None:
-        if self.legacy_peer_db_path is None or not self.legacy_peer_db_path.exists() or self.peers_file_path.exists():
+        if (
+            self.legacy_peer_db_migrated
+            or self.peers_file_path.exists()
+            or self.legacy_peer_db_path is None
+            or not self.legacy_peer_db_path.exists()
+        ):
+            # No need for migration if:
+            #   - we've already migrated
+            #   - we have a peers file
+            #   - we don't have a legacy peer db
             return
         try:
             self.log.info(f"Migrating legacy peer database from {self.legacy_peer_db_path}")
@@ -93,6 +103,7 @@ class FullNodeDiscovery:
                 self.log.info(f"Writing migrated peer data to {self.peers_file_path}")
                 # Write the AddressManager data to the new peers file
                 await AddressManagerStore.serialize(address_manager, self.peers_file_path)
+                self.legacy_peer_db_migrated = True
         except Exception:
             self.log.exception("Error migrating legacy peer database")
 
