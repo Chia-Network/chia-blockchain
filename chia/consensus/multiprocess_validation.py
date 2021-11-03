@@ -330,30 +330,33 @@ def _run_generator_and_validate_sig(
     block_generator_bytes: bytes,
     additional_data: bytes,
 ) -> Tuple[bool, Optional[bytes]]:
-    constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
-    unfinished_block: UnfinishedBlock = UnfinishedBlock.from_bytes(unfinished_block_bytes)
-    assert unfinished_block.transactions_info is not None
-    block_generator: BlockGenerator = BlockGenerator.from_bytes(block_generator_bytes)
-    assert block_generator.program == unfinished_block.transactions_generator
-    npc_result = get_name_puzzle_conditions(
-        block_generator,
-        min(constants.MAX_BLOCK_COST_CLVM, unfinished_block.transactions_info.cost),
-        cost_per_byte=constants.COST_PER_BYTE,
-        safe_mode=False,
-    )
+    try:
+        constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
+        unfinished_block: UnfinishedBlock = UnfinishedBlock.from_bytes(unfinished_block_bytes)
+        assert unfinished_block.transactions_info is not None
+        block_generator: BlockGenerator = BlockGenerator.from_bytes(block_generator_bytes)
+        assert block_generator.program == unfinished_block.transactions_generator
+        npc_result = get_name_puzzle_conditions(
+            block_generator,
+            min(constants.MAX_BLOCK_COST_CLVM, unfinished_block.transactions_info.cost),
+            cost_per_byte=constants.COST_PER_BYTE,
+            safe_mode=False,
+        )
 
-    signature = unfinished_block.transactions_info.aggregated_signature
-    pks: List[G1Element] = []
-    msgs: List[bytes32] = []
-    pks, msgs = pkm_pairs(npc_result.npc_list, additional_data)
+        signature = unfinished_block.transactions_info.aggregated_signature
+        pks: List[G1Element] = []
+        msgs: List[bytes32] = []
+        pks, msgs = pkm_pairs(npc_result.npc_list, additional_data)
 
-    # Verify aggregated signature
-    cache: LRUCache = LRUCache(10000)
-    if not cached_bls.aggregate_verify(pks, msgs, signature, True, cache):
-        log.warning(f"Aggsig validation error {pks} {msgs} ")
+        # Verify aggregated signature
+        cache: LRUCache = LRUCache(10000)
+        if not cached_bls.aggregate_verify(pks, msgs, signature, True, cache):
+            log.warning(f"Aggsig validation error {pks} {msgs} ")
+            return False, None
+        new_cache_entries: Dict[bytes, bytes] = {}
+        for k, v in cache.cache.items():
+            new_cache_entries[k] = bytes(v)
+    except Exception as e:
+        print(e)
         return False, None
-    new_cache_entries: Dict[bytes, bytes] = {}
-    for k, v in cache.cache.items():
-        new_cache_entries[k] = bytes(v)
-
     return True, bytes(npc_result)

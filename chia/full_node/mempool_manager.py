@@ -41,25 +41,29 @@ log = logging.getLogger(__name__)
 def validate_clvm_and_signature(
     spend_bundle_bytes: bytes, max_cost: int, cost_per_byte: int, additional_data: bytes
 ) -> Tuple[bytes, Dict[bytes, bytes]]:
-    bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
-    program = simple_solution_generator(bundle)
-    # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-    result: NPCResult = get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True)
+    try:
+        bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
+        program = simple_solution_generator(bundle)
+        # npc contains names of the coins removed, puzzle_hashes and their spend conditions
+        result: NPCResult = get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True)
 
-    if result.error is not None:
-        raise ValidationError(Err(result.error))
+        if result.error is not None:
+            raise ValidationError(Err(result.error))
 
-    pks: List[G1Element] = []
-    msgs: List[bytes32] = []
-    pks, msgs = pkm_pairs(result.npc_list, additional_data)
+        pks: List[G1Element] = []
+        msgs: List[bytes32] = []
+        pks, msgs = pkm_pairs(result.npc_list, additional_data)
 
-    # Verify aggregated signature
-    cache: LRUCache = LRUCache(10000)
-    if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):
-        raise ValidationError(Err.BAD_AGGREGATE_SIGNATURE)
-    new_cache_entries: Dict[bytes, bytes] = {}
-    for k, v in cache.cache.items():
-        new_cache_entries[k] = bytes(v)
+        # Verify aggregated signature
+        cache: LRUCache = LRUCache(10000)
+        if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):
+            raise ValidationError(Err.BAD_AGGREGATE_SIGNATURE)
+        new_cache_entries: Dict[bytes, bytes] = {}
+        for k, v in cache.cache.items():
+            new_cache_entries[k] = bytes(v)
+    except Exception as e:
+        print(e)
+        return b"", {}
     return bytes(result), new_cache_entries
 
 
