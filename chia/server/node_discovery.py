@@ -13,7 +13,7 @@ from chia.protocols import full_node_protocol, introducer_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
 from chia.server.address_manager_store import AddressManagerStore
-from chia.server.address_manager_sqlite_store import AddressManagerSQLiteStore
+from chia.server.address_manager_sqlite_store import create_address_manager_from_db
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
@@ -98,7 +98,7 @@ class FullNodeDiscovery:
         try:
             self.log.info(f"Migrating legacy peer database from {self.legacy_peer_db_path}")
             # Attempt to create an AddressManager from the legacy peer database
-            address_manager: Optional[AddressManager] = await AddressManagerSQLiteStore.create(self.legacy_peer_db_path)
+            address_manager: Optional[AddressManager] = await create_address_manager_from_db(self.legacy_peer_db_path)
             if address_manager is not None:
                 self.log.info(f"Writing migrated peer data to {self.peers_file_path}")
                 # Write the AddressManager data to the new peers file
