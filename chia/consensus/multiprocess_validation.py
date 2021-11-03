@@ -5,6 +5,8 @@ from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable
 
+from blspy import G1Element, G2Element
+
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
@@ -21,10 +23,14 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
+from chia.types.unfinished_block import UnfinishedBlock
+from chia.util import cached_bls
 from chia.util.block_cache import BlockCache
-from chia.util.errors import Err
+from chia.util.condition_tools import pkm_pairs
+from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint64, uint32
+from chia.util.lru_cache import LRUCache
 from chia.util.streamable import Streamable, dataclass_from_dict, streamable
 
 log = logging.getLogger(__name__)
@@ -316,3 +322,45 @@ async def pre_validate_blocks_multiprocessing(
         for batch_result in (await asyncio.gather(*futures))
         for result in batch_result
     ]
+
+
+def _run_generator_async(
+    constants_dict: bytes,
+    unfinished_block_bytes: bytes,
+    block_generator_bytes: bytes,
+) -> Optional[bytes]:
+    constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
+    unfinished_block = UnfinishedBlock.from_bytes(unfinished_block_bytes)
+
+    block_generator: BlockGenerator = BlockGenerator.from_bytes(block_generator_bytes)
+    assert block_generator.program == unfinished_block.transactions_generator
+    try:
+        npc_result = get_name_puzzle_conditions(
+            block_generator,
+            min(constants.MAX_BLOCK_COST_CLVM, unfinished_block.transactions_info.cost),
+            cost_per_byte=constants.COST_PER_BYTE,
+            safe_mode=False,
+        )
+    except BaseException:
+        return None
+    return bytes(npc_result)
+
+
+def _async_validate_signature(
+    signature_bytes: bytes, npc_result_bytes: bytes, additional_data: bytes
+) -> Tuple[bool, Dict[bytes, bytes]]:
+    result: NPCResult = NPCResult.from_bytes(npc_result_bytes)
+    signature = G2Element.from_bytes(signature_bytes)
+    pks: List[G1Element] = []
+    msgs: List[bytes32] = []
+    pks, msgs = pkm_pairs(result.npc_list, additional_data)
+
+    # Verify aggregated signature
+    cache: LRUCache = LRUCache(10000)
+    if not cached_bls.aggregate_verify(pks, msgs, signature, True, cache):
+        log.warning(f"Aggsig validation error {pks} {msgs} ")
+        return False, {}
+    new_cache_entries: Dict[bytes, bytes] = {}
+    for k, v in cache.cache.items():
+        new_cache_entries[k] = bytes(v)
+    return True, new_cache_entries

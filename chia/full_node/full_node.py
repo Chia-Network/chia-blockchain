@@ -52,6 +52,7 @@ from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFP
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
+from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
@@ -1569,10 +1570,28 @@ class FullNode:
             self.log.warning("Too many blocks added, not adding block")
             return None
 
+        npc_result = None
+        if block.transactions_generator is not None:
+            assert block.transactions_info is not None
+            try:
+                block_generator: BlockGenerator = await self.blockchain.get_block_generator(block)
+            except ValueError:
+                return None
+            if block_generator is None:
+                return None
+            npc_result = await self.blockchain.run_generator_async(block, block_generator)
+            if npc_result is None:
+                return None
+            sig_validation = await self.blockchain.validate_signature_async(
+                block.transactions_info.aggregated_signature, npc_result
+            )
+            if not sig_validation:
+                return None
+
         async with self._blockchain_lock_high_priority:
             # TODO: pre-validate VDFs outside of lock
             validation_start = time.time()
-            validate_result = await self.blockchain.validate_unfinished_block(block)
+            validate_result = await self.blockchain.validate_unfinished_block(block, npc_result)
             if validate_result.error is not None:
                 if validate_result.error == Err.COIN_AMOUNT_NEGATIVE.value:
                     # TODO: remove in the future, hotfix for 1.1.5 peers to not disconnect older peers

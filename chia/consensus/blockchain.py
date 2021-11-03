@@ -6,6 +6,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple, Union
 
+from blspy import GTElement
 from clvm.casts import int_from_bytes
 
 from chia.consensus.block_body_validation import validate_block_body
@@ -17,7 +18,12 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
+from chia.consensus.multiprocess_validation import (
+    PreValidationResult,
+    pre_validate_blocks_multiprocessing,
+    _run_generator_async,
+    _async_validate_signature,
+)
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
@@ -35,6 +41,7 @@ from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
+from chia.util.cached_bls import LOCAL_CACHE
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64, uint128
@@ -561,7 +568,7 @@ class Blockchain(BlockchainInterface):
         return list(reversed(recent_rc))
 
     async def validate_unfinished_block(
-        self, block: UnfinishedBlock, skip_overflow_ss_validation=True
+        self, block: UnfinishedBlock, npc_result, skip_overflow_ss_validation=True
     ) -> PreValidationResult:
         if (
             not self.contains_block(block.prev_header_hash)
@@ -601,21 +608,6 @@ class Blockchain(BlockchainInterface):
             else self.block_record(block.prev_header_hash).height
         )
 
-        npc_result = None
-        if block.transactions_generator is not None:
-            assert block.transactions_info is not None
-            try:
-                block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
-            except ValueError:
-                return PreValidationResult(uint16(Err.GENERATOR_REF_HAS_NO_GENERATOR.value), None, None)
-            if block_generator is None:
-                return PreValidationResult(uint16(Err.GENERATOR_REF_HAS_NO_GENERATOR.value), None, None)
-            npc_result = get_name_puzzle_conditions(
-                block_generator,
-                min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
-                cost_per_byte=self.constants.COST_PER_BYTE,
-                safe_mode=False,
-            )
         error_code, cost_result = await validate_block_body(
             self.constants,
             self,
@@ -627,6 +619,7 @@ class Blockchain(BlockchainInterface):
             npc_result,
             None,
             self.get_block_generator,
+            False,
         )
 
         if error_code is not None:
@@ -653,6 +646,34 @@ class Blockchain(BlockchainInterface):
             batch_size,
             wp_summaries,
         )
+
+    async def run_generator_async(self, unfinished_block, generator) -> Optional[NPCResult]:
+        task = asyncio.get_running_loop().run_in_executor(
+            self.pool, _run_generator_async, self.constants_json, bytes(unfinished_block), bytes(generator)
+        )
+        npc_result_bytes = await task
+        if npc_result_bytes is None:
+            return None
+        npc_result = NPCResult.from_bytes(npc_result_bytes)
+        return npc_result
+
+    async def validate_signature_async(self, signature, npc_result) -> bool:
+        task = asyncio.get_running_loop().run_in_executor(
+            self.pool,
+            _async_validate_signature,
+            bytes(signature),
+            bytes(npc_result),
+            self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+        )
+        valid, new_cache_entries = await task
+        if not valid:
+            return False
+
+        # Cache
+        for cache_entry_key, cached_entry_value in new_cache_entries.items():
+            LOCAL_CACHE.put(cache_entry_key, GTElement.from_bytes(cached_entry_value))
+
+        return True
 
     def contains_block(self, header_hash: bytes32) -> bool:
         """
