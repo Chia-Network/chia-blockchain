@@ -1,12 +1,13 @@
-import aiosqlite
 import asyncio
 import ipaddress
 import logging
 import random
 import signal
 import traceback
-from dnslib import A, AAAA, SOA, NS, MX, CNAME, RR, DNSRecord, QTYPE, DNSHeader
 from typing import Any, List
+
+import aiosqlite
+from dnslib import A, AAAA, SOA, NS, MX, CNAME, RR, DNSRecord, QTYPE, DNSHeader
 
 from chia.util.chia_logging import initialize_logging
 from chia.util.path import mkdir, path_from_root

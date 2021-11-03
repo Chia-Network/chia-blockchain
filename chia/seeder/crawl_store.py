@@ -1,4 +1,3 @@
-import aiosqlite
 import asyncio
 import dataclasses
 import ipaddress
@@ -6,6 +5,8 @@ import logging
 import random
 import time
 from typing import List, Dict
+
+import aiosqlite
 
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 

@@ -60,7 +60,7 @@ SERVICE_NAME = "full_node"
 log = logging.getLogger(__name__)
 
 
-def service_kwargs_for_full_node(
+def service_kwargs_for_full_node_crawler(
     root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
 ) -> Dict:
     crawler = Crawler(
@@ -91,7 +91,7 @@ def main():
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "dns")
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
-    kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH, config, updated_constants)
+    kwargs = service_kwargs_for_full_node_crawler(DEFAULT_ROOT_PATH, config, updated_constants)
     return run_service(**kwargs)
 
 
