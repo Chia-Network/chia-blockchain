@@ -1,4 +1,5 @@
 import asyncio
+import asyncio.exceptions
 import dataclasses
 import logging
 import random
@@ -228,6 +229,9 @@ class FullNode:
             self.transaction_responses.append((entry.spend_name, inc_status, err))
             if len(self.transaction_responses) > 50:
                 self.transaction_responses = self.transaction_responses[1:]
+        except asyncio.exceptions.CancelledError:
+            error_stack = traceback.format_exc()
+            self.log.debug(f"Cancelling _handle_transactions, closing: {error_stack}")
         except Exception:
             error_stack = traceback.format_exc()
             self.log.error(f"Error in _handle_transctions, closing: {error_stack}")
