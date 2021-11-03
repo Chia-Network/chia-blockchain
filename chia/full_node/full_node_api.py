@@ -117,7 +117,7 @@ class FullNodeAPI:
         if waiter_count > 0:
             self.full_node.log.warning(f"new_peak Waiters: {waiter_count}")
 
-        if waiter_count > 100:
+        if waiter_count > 20:
             return None
 
         async with self.full_node.new_peak_sem:
