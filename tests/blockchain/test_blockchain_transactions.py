@@ -5,7 +5,7 @@ import pytest
 from clvm.casts import int_to_bytes
 
 from chia.consensus.blockchain import ReceiveBlockResult
-from chia.protocols import full_node_protocol
+from chia.protocols import full_node_protocol, wallet_protocol
 from chia.types.announcement import Announcement
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -63,8 +63,9 @@ class TestBlockchainTransactions:
         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
 
         assert spend_bundle is not None
-        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
-        await full_node_api_1.respond_transaction(tx, peer)
+        tx: wallet_protocol.SendTransaction = wallet_protocol.SendTransaction(spend_bundle)
+
+        await full_node_api_1.send_transaction(tx)
 
         sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is spend_bundle

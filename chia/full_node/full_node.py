@@ -228,7 +228,7 @@ class FullNode:
             self.transaction_responses.append((entry.spend_name, inc_status, err))
             if len(self.transaction_responses) > 50:
                 self.transaction_responses = self.transaction_responses[1:]
-        except BaseException:
+        except Exception:
             error_stack = traceback.format_exc()
             self.log.error(f"Error in _handle_transctions, closing: {error_stack}")
             if peer is not None:
@@ -1396,7 +1396,6 @@ class FullNode:
                 npc_results[block.height] = pre_validation_result.npc_result
             pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
             added: Optional[ReceiveBlockResult] = None
-            fork_height: Optional[uint32] = None
             try:
                 if pre_validation_results is None:
                     raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
@@ -1404,6 +1403,7 @@ class FullNode:
                     if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
                         added = ReceiveBlockResult.DISCONNECTED_BLOCK
                         error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
+                        fork_height: Optional[uint32] = None
                     else:
                         raise ValueError(
                             f"Failed to validate block {header_hash} height "

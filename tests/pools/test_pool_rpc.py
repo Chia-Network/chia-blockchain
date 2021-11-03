@@ -594,6 +594,7 @@ class TestPoolWalletRpc:
             assert status.target is None
             assert status_2.target is None
 
+            log.warning("JOINING POOL")
             join_pool_tx: TransactionRecord = await client.pw_join_pool(
                 wallet_id,
                 pool_ph,

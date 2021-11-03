@@ -56,7 +56,6 @@ def validate_clvm_and_signature(
     # Verify aggregated signature
     cache: LRUCache = LRUCache(10000)
     if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):
-        log.warning(f"Aggsig validation error {pks} {msgs} {bundle}")
         raise ValidationError(Err.BAD_AGGREGATE_SIGNATURE)
     new_cache_entries: Dict[bytes, bytes] = {}
     for k, v in cache.cache.items():
@@ -73,6 +72,7 @@ class MempoolManager:
         self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
 
         self.coin_store = coin_store
+        self.lock = asyncio.Lock()
 
         # The fee per cost must be above this amount to consider the fee "nonzero", and thus able to kick out other
         # transactions. This prevents spam. This is equivalent to 0.055 XCH per block, or about 0.00005 XCH for two

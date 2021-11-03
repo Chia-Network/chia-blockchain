@@ -10,7 +10,7 @@ import chia.server.ws_connection as ws
 
 from chia.full_node.mempool import Mempool
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import full_node_protocol
+from chia.protocols import full_node_protocol, wallet_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -333,8 +333,8 @@ class TestMempoolManager:
         assert err == Err.MEMPOOL_CONFLICT
 
     async def send_sb(self, node, peer, sb):
-        tx = full_node_protocol.RespondTransaction(sb)
-        await node.respond_transaction(tx, peer)
+        tx = wallet_protocol.SendTransaction(sb)
+        await node.send_transaction(tx)
 
     async def gen_and_send_sb(self, node, peer, *args, **kwargs):
         sb = generate_test_spend_bundle(*args, **kwargs)

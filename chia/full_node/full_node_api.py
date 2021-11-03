@@ -1230,13 +1230,15 @@ class FullNodeAPI:
             (0, TransactionQueueEntry(request.transaction, None, spend_name, None, False))
         )
         status, error = None, None
-        for i in range(3000):
-            await asyncio.sleep(0.01)
+        for i in range(300):
+            await asyncio.sleep(0.1)
             for potential_name, potential_status, potential_error in self.full_node.transaction_responses:
                 if spend_name == potential_name:
                     status = potential_status
                     error = potential_error
                     break
+            if status is not None:
+                break
         if status is None:
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.PENDING), None)
         else:
