@@ -367,9 +367,9 @@ class FullNode:
                             raise
                         finally:
                             self.log.info(f"Added blocks {height}-{end_height}")
-        except Exception:
+        except (asyncio.CancelledError, Exception) as e:
             self.sync_store.batch_syncing.remove(peer.peer_node_id)
-            raise
+            raise e
         self.sync_store.batch_syncing.remove(peer.peer_node_id)
         return True
 
@@ -418,7 +418,7 @@ class FullNode:
             if found_fork_point:
                 for response in reversed(responses):
                     await self.respond_block(response, peer)
-        except Exception as e:
+        except (asyncio.CancelledError, Exception) as e:
             self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
             raise e
 

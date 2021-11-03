@@ -1336,7 +1336,7 @@ class FullNodeAPI:
 
         name = std_hash(request_bytes)
         if name in self.full_node.compact_vdf_requests:
-            self.log.info(f"Ignoring NewCompactVDF: {request}, already requested")
+            self.log.debug(f"Ignoring NewCompactVDF: {request}, already requested")
             return
         self.full_node.compact_vdf_requests.add(name)
 
