@@ -34,7 +34,7 @@ class PeerDataSerialization(Streamable):
 
 async def makePeerDataSerialization(
     metadata: List[Tuple[str, Any]], nodes: List[Tuple[int, ExtendedPeerInfo]], new_table: List[Tuple[int, int]]
-) -> PeerDataSerialization:
+) -> bytes:
     """
     Create a PeerDataSerialization, adapting the provided collections
     """
@@ -53,7 +53,8 @@ async def makePeerDataSerialization(
         if index % 1000 == 0:
             await asyncio.sleep(0)
 
-    return PeerDataSerialization(metadata, transformed_nodes, transformed_new_table)
+    serialized_bytes: bytes = bytes(PeerDataSerialization(metadata, transformed_nodes, transformed_new_table))
+    return serialized_bytes
 
 
 class AddressManagerStore:
@@ -229,5 +230,5 @@ class AddressManagerStore:
         """
         Serializes the given peer data and writes it to the peers file.
         """
-        serialized: PeerDataSerialization = await makePeerDataSerialization(metadata, nodes, new_table)
-        write_file(peers_file_path, bytes(serialized), file_mode=0o644)
+        serialized_bytes: bytes = await makePeerDataSerialization(metadata, nodes, new_table)
+        write_file(peers_file_path, serialized_bytes, file_mode=0o644)
