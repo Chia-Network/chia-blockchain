@@ -27,7 +27,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util import cached_bls
 from chia.util.block_cache import BlockCache
 from chia.util.condition_tools import pkm_pairs
-from chia.util.errors import Err, ValidationError
+from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint64, uint32
 from chia.util.lru_cache import LRUCache
