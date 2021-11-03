@@ -231,10 +231,10 @@ class FullNode:
                 self.transaction_responses = self.transaction_responses[1:]
         except asyncio.exceptions.CancelledError:
             error_stack = traceback.format_exc()
-            self.log.debug(f"Cancelling _handle_transactions, closing: {error_stack}")
+            self.log.debug(f"Cancelling _handle_one_transaction, closing: {error_stack}")
         except Exception:
             error_stack = traceback.format_exc()
-            self.log.error(f"Error in _handle_transctions, closing: {error_stack}")
+            self.log.error(f"Error in _handle_one_transaction, closing: {error_stack}")
             if peer is not None:
                 await peer.close()
         finally:
