@@ -377,8 +377,8 @@ class TestMempoolManager:
         coins = iter(blocks[-2].get_included_reward_coins())
         coin3, coin4 = next(coins), next(coins)
 
-        sb1_1 = await self.gen_and_send_sb(full_node_1, coin1)
-        sb1_2 = await self.gen_and_send_sb(full_node_1, coin1, fee=uint64(1))
+        sb1_1 = await self.gen_and_send_sb(full_node_1, peer, coin1)
+        sb1_2 = await self.gen_and_send_sb(full_node_1, peer, coin1, fee=uint64(1))
 
         # Fee increase is insufficient, the old spendbundle must stay
         self.assert_sb_in_pool(full_node_1, sb1_1)
