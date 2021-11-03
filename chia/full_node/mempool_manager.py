@@ -198,16 +198,20 @@ class MempoolManager:
         log.info(f"Replacing conflicting tx in mempool. New tx fee: {fees}, old tx fees: {conflicting_fees}")
         return True
 
-    async def pre_validate_spendbundle(self, new_spend: SpendBundle, spend_name: bytes32) -> NPCResult:
+    async def pre_validate_spendbundle(
+        self, new_spend: SpendBundle, new_spend_bytes: Optional[bytes], spend_name: bytes32
+    ) -> NPCResult:
         """
         Errors are included within the cached_result.
         This runs in another process so we don't block the main thread
         """
         start_time = time.time()
+        if new_spend_bytes is None:
+            new_spend_bytes = bytes(new_spend)
         cached_result_bytes = await asyncio.get_running_loop().run_in_executor(
             self.pool,
             get_npc_multiprocess,
-            bytes(new_spend),
+            new_spend_bytes,
             int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM),
             self.constants.COST_PER_BYTE,
         )

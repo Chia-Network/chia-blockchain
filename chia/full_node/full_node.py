@@ -1860,6 +1860,7 @@ class FullNode:
         spend_name: bytes32,
         peer: Optional[ws.WSChiaConnection] = None,
         test: bool = False,
+        tx_bytes: Optional[bytes] = None,
     ) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
         if self.sync_store.get_sync_mode():
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
@@ -1877,7 +1878,7 @@ class FullNode:
             self.mempool_manager.remove_seen(spend_name)
         else:
             try:
-                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name)
+                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, tx_bytes, spend_name)
             except Exception as e:
                 self.mempool_manager.remove_seen(spend_name)
                 raise e

@@ -251,7 +251,9 @@ class FullNodeAPI:
             self.full_node.dropped_tx.add(spend_name)
             return None
         # Higher fee means priority is a smaller number, which means it will be handled earlier
-        await self.full_node.transaction_queue.put((0, TransactionQueueEntry(tx.transaction, spend_name, peer, test)))
+        await self.full_node.transaction_queue.put(
+            (0, TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test))
+        )
         return None
 
     @api_request
@@ -1225,7 +1227,7 @@ class FullNodeAPI:
         spend_name = request.transaction.name()
 
         await self.full_node.transaction_queue.put(
-            (0, TransactionQueueEntry(request.transaction, spend_name, None, False))
+            (0, TransactionQueueEntry(request.transaction, None, spend_name, None, False))
         )
         status, error = None, None
         for i in range(3000):
