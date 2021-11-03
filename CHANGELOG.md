@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+
+## UNRELEASED
+
+### Changed
+
+- PlotNFT transactions (e.g. `chia plotnft join`) now accept a fee parameter. Note: this fee is PER TRANSACTION; leaving a pool takes 2 transactions.
+
 ## 1.2.11 Chia blockchain 2021-10-27 (unreleased)
 
 This maintenance release squashes bugs reported by our Chia community. Thanks to all who flagged these issues.

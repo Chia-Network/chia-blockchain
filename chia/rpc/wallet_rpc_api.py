@@ -559,6 +559,9 @@ class WalletRpcApi:
                     "backup_dids": did_wallet.did_info.backup_ids,
                     "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
                 }
+            else:  # undefined did_type
+                pass
+
         elif request["wallet_type"] == "pool_wallet":
             if request["mode"] == "new":
                 owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(True)
@@ -597,15 +600,13 @@ class WalletRpcApi:
                     except Exception as e:
                         raise ValueError(str(e))
                     return {
+                        "total_fee": fee * 2,
                         "transaction": tr,
                         "launcher_id": launcher_id.hex(),
                         "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
                     }
             elif request["mode"] == "recovery":
                 raise ValueError("Need upgraded singleton for on-chain recovery")
-
-            else:  # undefined did_type
-                pass
 
         else:  # undefined wallet_type
             pass
@@ -1216,7 +1217,7 @@ class WalletRpcApi:
         )
         async with self.service.wallet_state_manager.lock:
             tx: TransactionRecord = await wallet.join_pool(new_target_state, fee)
-            return {"transaction": tx}
+            return {"total_fee": fee * 2, "transaction": tx}
 
     async def pw_self_pool(self, request):
         # Leaving a pool requires two state transitions.
@@ -1228,7 +1229,7 @@ class WalletRpcApi:
 
         async with self.service.wallet_state_manager.lock:
             tx: TransactionRecord = await wallet.self_pool(fee)
-            return {"transaction": tx}
+            return {"total_fee": fee * 2, "transaction": tx}
 
     async def pw_absorb_rewards(self, request):
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""

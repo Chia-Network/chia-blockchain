@@ -78,7 +78,7 @@ def create_cmd(
         print("  pool_url argument (-u) is required for pool starting state")
         return
     valid_initial_states = {"pool": "FARMING_TO_POOL", "local": "SELF_POOLING"}
-    extra_params = {"pool_url": pool_url, "state": valid_initial_states[state], fee: int, "yes": yes}
+    extra_params = {"pool_url": pool_url, "state": valid_initial_states[state], "fee": fee, "yes": yes}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create))
 
 
@@ -87,7 +87,13 @@ def create_cmd(
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=True)
-@click.option("--fee", help="Transaction Fee, in Mojos", type=int, callback=validate_fee, default=0)
+@click.option(
+    "--fee",
+    help="Fee Per Transaction, in Mojos. Fee is used TWICE: once to leave pool, once to join.",
+    type=int,
+    callback=validate_fee,
+    default=0,
+)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -100,7 +106,6 @@ def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int
     from .wallet_funcs import execute_with_wallet
     from .plotnft_funcs import join_pool
 
-    # if fee < 0 or fee > MAX_CMDLINE_FEE:
     extra_params = {"pool_url": pool_url, "id": id, "fee": fee, "yes": yes}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, join_pool))
 
@@ -109,7 +114,13 @@ def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int
 @click.option("-y", "--yes", help="No prompts", is_flag=True)
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-@click.option("--fee", help="Transaction Fee, in Mojos", type=int, callback=validate_fee, default=0)
+@click.option(
+    "--fee",
+    help="Transaction Fee, in Mojos. Fee is charged twice if already in a pool.",
+    type=int,
+    callback=validate_fee,
+    default=0,
+)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -122,7 +133,7 @@ def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee
     from .wallet_funcs import execute_with_wallet
     from .plotnft_funcs import self_pool
 
-    extra_params = {"id": id, fee: int, "yes": yes}
+    extra_params = {"id": id, "fee": fee, "yes": yes}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, self_pool))
 
 
@@ -161,5 +172,5 @@ def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int) -
     from .wallet_funcs import execute_with_wallet
     from .plotnft_funcs import claim_cmd
 
-    extra_params = {"id": id, fee: int}
+    extra_params = {"id": id, "fee": fee}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, claim_cmd))
