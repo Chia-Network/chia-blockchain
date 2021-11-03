@@ -14,6 +14,7 @@ from chia.util.path import mkdir, path_from_root
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
+SERVICE_NAME = "dns"
 log = logging.getLogger(__name__)
 
 # DNS snippet took from: https://gist.github.com/pklaus/b5a7876d4d2cf7271873
@@ -242,9 +243,8 @@ async def kill_processes():
 
 def main():
     root_path = DEFAULT_ROOT_PATH
-    service_name = "dns"
-    config = load_config(root_path, "config.yaml", service_name)
-    initialize_logging(service_name, config["logging"], root_path)
+    config = load_config(root_path, "config.yaml", SERVICE_NAME)
+    initialize_logging(SERVICE_NAME, config["logging"], root_path)
     global D
     global ns
     global TTL
