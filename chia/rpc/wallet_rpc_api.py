@@ -1197,15 +1197,11 @@ class WalletRpcApi:
     ##########################################################################################
     # Pool Wallet
     ##########################################################################################
-<<<<<<< HEAD
+
     async def pw_join_pool(self, request) -> Dict:
         if self.service.wallet_state_manager is None:
             return {"success": False, "error": "not_initialized"}
         fee = uint64(request.get("fee", 0))
-=======
-    async def pw_join_pool(self, request):
-        fee = uint64(request["fee"])
->>>>>>> 22556c916 (Add fees to plotnft commandline and RPCs)
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
