@@ -335,8 +335,12 @@ class TestCCWallet:
 
         id = cc_wallet_2.id()
         wsm = cc_wallet_2.wallet_state_manager
-        all_txs = await wsm.tx_store.get_all_transactions_for_wallet(id)
-        assert len(list(filter(lambda tx: tx.amount == 10, all_txs))) == 0
+
+        async def query_and_assert_transactions(wsm, id):
+            all_txs = await wsm.tx_store.get_all_transactions_for_wallet(id)
+            return len(list(filter(lambda tx: tx.amount == 10, all_txs)))
+
+        await time_out_assert(15, query_and_assert_transactions, 0, wsm, id)
         await time_out_assert(15, wsm.get_confirmed_balance_for_wallet, 60, id)
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 60)
         await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
