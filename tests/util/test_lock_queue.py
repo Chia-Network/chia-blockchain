@@ -78,30 +78,4 @@ class TestLockQueue:
             await asyncio.sleep(1)
         assert winner == "h"
 
-        # Test limit
-        another_client = LockClient(1, queue, 10)
-
-        async def do_another(i: int):
-            nonlocal another_client
-            async with another_client:
-                await kind_of_slow_func()
-
-        tasks = [asyncio.create_task(do_another(i)) for i in range(20)]
-
-        failed = False
-        for task in tasks:
-            try:
-                await task
-            except TooManyLockClients:
-                failed = True
-        assert failed
-
-        assert low_priority_client._curr_clients == 0
-        assert high_priority_client._curr_clients == 0
-
-        with pytest.raises(CancelledError):
-            async with high_priority_client:
-                await very_slow_func()
-
-        assert high_priority_client._curr_clients == 0
         queue.close()

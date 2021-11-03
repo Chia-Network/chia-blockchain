@@ -355,7 +355,7 @@ class TestMempoolManager:
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height
+        start_height = blocks[-1].height if len(blocks) > 0 else 0
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,

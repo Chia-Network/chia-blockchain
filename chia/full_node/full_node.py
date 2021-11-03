@@ -170,7 +170,7 @@ class FullNode:
         self._blockchain_lock_queue = LockQueue(self.blockchain.lock)
         self._blockchain_lock_ultra_priority = LockClient(0, self._blockchain_lock_queue)
         self._blockchain_lock_high_priority = LockClient(1, self._blockchain_lock_queue)
-        self._blockchain_lock_low_priority = LockClient(2, self._blockchain_lock_queue, 1000)
+        self._blockchain_lock_low_priority = LockClient(2, self._blockchain_lock_queue)
         self.transaction_queue = asyncio.PriorityQueue(10000)
         self._transaction_queue_task = asyncio.create_task(self._handle_transactions())
         self.transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = []
@@ -1885,19 +1885,11 @@ class FullNode:
             except Exception as e:
                 self.mempool_manager.remove_seen(spend_name)
                 raise e
-            try:
-                async with self._blockchain_lock_low_priority:
-                    if self.mempool_manager.get_spendbundle(spend_name) is not None:
-                        self.mempool_manager.remove_seen(spend_name)
-                        return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
-                    cost, status, error = await self.mempool_manager.add_spendbundle(
-                        transaction, cost_result, spend_name
-                    )
-            except TooManyLockClients:
-                self.dropped_tx.add(spend_name)
-                self.mempool_manager.remove_seen(spend_name)
-                return MempoolInclusionStatus.FAILED, Err.NODE_OVERLOADED
-
+            async with self._blockchain_lock_low_priority:
+                if self.mempool_manager.get_spendbundle(spend_name) is not None:
+                    self.mempool_manager.remove_seen(spend_name)
+                    return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
+                cost, status, error = await self.mempool_manager.add_spendbundle(transaction, cost_result, spend_name)
             if status == MempoolInclusionStatus.SUCCESS:
                 self.log.info(
                     f"Added transaction to mempool: {spend_name} mempool size: "

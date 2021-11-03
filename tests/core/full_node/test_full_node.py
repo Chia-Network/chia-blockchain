@@ -13,7 +13,7 @@ from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
-from chia.protocols import full_node_protocol as fnp, full_node_protocol
+from chia.protocols import full_node_protocol as fnp, full_node_protocol, wallet_protocol
 from chia.protocols import timelord_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -886,9 +886,9 @@ class TestFullNodeProtocol:
             spend_bundle = wallet_receiver.generate_signed_transaction(
                 uint64(500), receiver_puzzlehash, coin_record.coin, fee=fee
             )
-            respond_transaction = fnp.RespondTransaction(spend_bundle)
+            respond_transaction = wallet_protocol.SendTransaction(spend_bundle)
 
-            await full_node_1.respond_transaction(respond_transaction, peer)
+            await full_node_1.send_transaction(respond_transaction)
 
             request = fnp.RequestTransaction(spend_bundle.get_hash())
             req = await full_node_1.request_transaction(request)

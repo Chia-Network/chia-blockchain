@@ -55,19 +55,14 @@ class TooManyLockClients(Exception):
 
 
 class LockClient:
-    def __init__(self, priority: int, queue: LockQueue, max_clients: Optional[int] = None):
+    def __init__(self, priority: int, queue: LockQueue):
         self._priority = priority
         self._queue = queue
-        self._max_clients = max_clients
-        self._curr_clients = 0
 
     async def __aenter__(
         self,
     ):
         called: asyncio.Event = asyncio.Event()
-        if self._max_clients is not None and self._curr_clients >= self._max_clients:
-            raise TooManyLockClients()
-        self._curr_clients += 1
 
         async def callback():
             nonlocal called
@@ -79,4 +74,3 @@ class LockClient:
 
     async def __aexit__(self, exc_type, exc, tb):
         self._queue.release()
-        self._curr_clients -= 1

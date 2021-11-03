@@ -446,6 +446,7 @@ async def validate_block_body(
 
     # create hash_key list for aggsig check
     pairs_pks, pairs_msgs = pkm_pairs(npc_list, constants.AGG_SIG_ME_ADDITIONAL_DATA)
+
     # 22. Verify aggregated signature
     # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster
     if not block.transactions_info.aggregated_signature:
@@ -461,4 +462,5 @@ async def validate_block_body(
         pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, force_cache
     ):
         return Err.BAD_AGGREGATE_SIGNATURE, None
+
     return None, npc_result
