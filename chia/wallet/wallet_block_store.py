@@ -41,7 +41,8 @@ class WalletBlockStore:
             " timestamp int, block blob)"
         )
 
-        await self.db.execute("CREATE INDEX IF NOT EXISTS header_hash on header_blocks(header_hash)")
+        # Do not create named index on column header_hash, because it already is auto indexed as of Primary Key (Index Name sqlite_autoindex_header_blocks_1)
+        #await self.db.execute("CREATE INDEX IF NOT EXISTS header_hash on header_blocks(header_hash)")
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS timestamp on header_blocks(timestamp)")
 
@@ -61,7 +62,7 @@ class WalletBlockStore:
         # Height index so we can look up in order of height for sync purposes
         await self.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
 
-        # Do not create named index on header_hash, because it already is auto indexed as of Primary Key (Index Name sqlite_autoindex_block_records_1)
+        # Do not create named index on column header_hash, because it already is auto indexed as of Primary Key (Index Name sqlite_autoindex_block_records_1)
         #await self.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
         await self.db.commit()
