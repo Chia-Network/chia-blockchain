@@ -115,7 +115,7 @@ class FullNodeAPI:
         waiter_count = len(self.full_node.new_peak_sem._waiters)
 
         if waiter_count > 0:
-            self.full_node.log.warning(f"new_peak Waiters: {waiter_count}")
+            self.full_node.log.debug(f"new_peak Waiters: {waiter_count}")
 
         if waiter_count > 20:
             return None
@@ -245,7 +245,7 @@ class FullNodeAPI:
             self.full_node.full_node_store.peers_with_tx.pop(spend_name)
 
         if self.full_node.transaction_queue.qsize() % 100 == 33:
-            self.full_node.log.warning(f"respond_transaction Waiters: {self.full_node.transaction_queue.qsize()}")
+            self.full_node.log.debug(f"respond_transaction Waiters: {self.full_node.transaction_queue.qsize()}")
 
         if self.full_node.transaction_queue.full():
             self.full_node.dropped_tx.add(spend_name)

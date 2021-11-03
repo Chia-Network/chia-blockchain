@@ -443,16 +443,14 @@ class TestMempoolManager:
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
-        peer = await connect_and_get_peer(server_1, server_2)
 
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         coins = iter(blocks[-1].get_included_reward_coins())
-        coin1, coin2 = next(coins), next(coins)
+        coin1 = next(coins)
         coins = iter(blocks[-2].get_included_reward_coins())
-        coin3, coin4 = next(coins), next(coins)
 
         sb: SpendBundle = generate_test_spend_bundle(coin1)
         assert sb.aggregated_signature != G2Element.generator()

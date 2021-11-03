@@ -1573,7 +1573,7 @@ class FullNode:
         if block.transactions_generator is not None:
             assert block.transactions_info is not None
             try:
-                block_generator: BlockGenerator = await self.blockchain.get_block_generator(block)
+                block_generator: Optional[BlockGenerator] = await self.blockchain.get_block_generator(block)
             except ValueError:
                 return None
             if block_generator is None:
@@ -1914,13 +1914,12 @@ class FullNode:
                     return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
                 cost, status, error = await self.mempool_manager.add_spendbundle(transaction, cost_result, spend_name)
             if status == MempoolInclusionStatus.SUCCESS:
-                self.log.info(
+                self.log.debug(
                     f"Added transaction to mempool: {spend_name} mempool size: "
                     f"{self.mempool_manager.mempool.total_mempool_cost} normalized "
                     f"{self.mempool_manager.mempool.total_mempool_cost / 5000000}"
                 )
-                if self.not_dropped_tx % 100 == 0:
-                    self.log.info(f"mempool dropped: {len(self.dropped_tx)} success {self.not_dropped_tx}")
+
                 # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                 # vector.
                 mempool_item = self.mempool_manager.get_mempool_item(spend_name)

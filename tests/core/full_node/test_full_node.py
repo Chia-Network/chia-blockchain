@@ -762,13 +762,15 @@ class TestFullNodeProtocol:
                 uint32(0),
                 block.reward_chain_block.get_unfinished().get_hash(),
             )
-            asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+            task_1 = asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
             await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
+            task_1.cancel()
 
             await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
             # Ignores, already have
-            asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+            task_2 = asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
             await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
+            task_2.cancel()
 
         # Ignores low weight
         new_peak = fnp.NewPeak(
