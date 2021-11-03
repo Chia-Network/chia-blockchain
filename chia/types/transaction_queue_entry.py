@@ -9,6 +9,7 @@ from chia.types.spend_bundle import SpendBundle
 @dataclass(frozen=True)
 class TransactionQueueEntry:
     transaction: SpendBundle
+    transaction_bytes: Optional[bytes]
     spend_name: bytes32
     peer: Optional[WSChiaConnection]
     test: bool

@@ -840,7 +840,7 @@ class TestFullNodeProtocol:
             )
             assert spend_bundle is not None
             cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, spend_bundle.name()
+                spend_bundle, None, spend_bundle.name()
             )
             log.info(f"Cost result: {cost_result.clvm_cost}")
 

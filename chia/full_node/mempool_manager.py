@@ -63,7 +63,7 @@ class MempoolManager:
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 5)
         self.seen_cache_size = 10000
-        self.pool = ProcessPoolExecutor(max_workers=1)
+        self.pool = ProcessPoolExecutor(max_workers=2)
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
