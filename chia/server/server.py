@@ -186,7 +186,6 @@ class ChiaServer:
         to allow room for other peers.
         """
         is_crawler = getattr(self.node, "crawl", None)
-        
         while True:
             await asyncio.sleep(600 if is_crawler is None else 2)
             to_remove: List[WSChiaConnection] = []

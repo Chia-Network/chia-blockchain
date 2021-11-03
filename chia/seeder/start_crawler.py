@@ -8,7 +8,6 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.outbound_message import NodeType
-from chia.server.server import ChiaServer
 from chia.server.start_service import run_service
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
