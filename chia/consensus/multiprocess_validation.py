@@ -5,7 +5,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable
 
-from blspy import G1Element, G2Element
+from blspy import G1Element
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -324,43 +324,36 @@ async def pre_validate_blocks_multiprocessing(
     ]
 
 
-def _run_generator_async(
+def _run_generator_and_validate_sig(
     constants_dict: bytes,
     unfinished_block_bytes: bytes,
     block_generator_bytes: bytes,
-) -> Optional[bytes]:
+    additional_data: bytes,
+) -> Tuple[bool, Optional[bytes]]:
     constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
-    unfinished_block = UnfinishedBlock.from_bytes(unfinished_block_bytes)
-
+    unfinished_block: UnfinishedBlock = UnfinishedBlock.from_bytes(unfinished_block_bytes)
+    assert unfinished_block.transactions_info is not None
     block_generator: BlockGenerator = BlockGenerator.from_bytes(block_generator_bytes)
     assert block_generator.program == unfinished_block.transactions_generator
-    try:
-        npc_result = get_name_puzzle_conditions(
-            block_generator,
-            min(constants.MAX_BLOCK_COST_CLVM, unfinished_block.transactions_info.cost),
-            cost_per_byte=constants.COST_PER_BYTE,
-            safe_mode=False,
-        )
-    except BaseException:
-        return None
-    return bytes(npc_result)
+    npc_result = get_name_puzzle_conditions(
+        block_generator,
+        min(constants.MAX_BLOCK_COST_CLVM, unfinished_block.transactions_info.cost),
+        cost_per_byte=constants.COST_PER_BYTE,
+        safe_mode=False,
+    )
 
-
-def _async_validate_signature(
-    signature_bytes: bytes, npc_result_bytes: bytes, additional_data: bytes
-) -> Tuple[bool, Dict[bytes, bytes]]:
-    result: NPCResult = NPCResult.from_bytes(npc_result_bytes)
-    signature = G2Element.from_bytes(signature_bytes)
+    signature = unfinished_block.transactions_info.aggregated_signature
     pks: List[G1Element] = []
     msgs: List[bytes32] = []
-    pks, msgs = pkm_pairs(result.npc_list, additional_data)
+    pks, msgs = pkm_pairs(npc_result.npc_list, additional_data)
 
     # Verify aggregated signature
     cache: LRUCache = LRUCache(10000)
     if not cached_bls.aggregate_verify(pks, msgs, signature, True, cache):
         log.warning(f"Aggsig validation error {pks} {msgs} ")
-        return False, {}
+        return False, None
     new_cache_entries: Dict[bytes, bytes] = {}
     for k, v in cache.cache.items():
         new_cache_entries[k] = bytes(v)
-    return True, new_cache_entries
+
+    return True, bytes(npc_result)

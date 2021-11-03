@@ -449,14 +449,18 @@ class FullNodeAPI:
 
     @peer_required
     @api_request
+    @bytes_required
     async def respond_unfinished_block(
         self,
         respond_unfinished_block: full_node_protocol.RespondUnfinishedBlock,
         peer: ws.WSChiaConnection,
+        respond_unfinished_block_bytes: bytes = b"",
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        await self.full_node.respond_unfinished_block(respond_unfinished_block, peer)
+        await self.full_node.respond_unfinished_block(
+            respond_unfinished_block, peer, block_bytes=respond_unfinished_block_bytes
+        )
         return None
 
     @api_request

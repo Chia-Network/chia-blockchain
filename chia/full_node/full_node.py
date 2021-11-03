@@ -1513,6 +1513,7 @@ class FullNode:
         respond_unfinished_block: full_node_protocol.RespondUnfinishedBlock,
         peer: Optional[ws.WSChiaConnection],
         farmed_block: bool = False,
+        block_bytes: Optional[bytes] = None,
     ):
         """
         We have received an unfinished block, either created by us, or from another peer.
@@ -1578,13 +1579,10 @@ class FullNode:
                 return None
             if block_generator is None:
                 return None
-            npc_result = await self.blockchain.run_generator_async(block, block_generator)
-            if npc_result is None:
-                return None
-            sig_validation = await self.blockchain.validate_signature_async(
-                block.transactions_info.aggregated_signature, npc_result
-            )
-            if not sig_validation:
+            if block_bytes is None:
+                block_bytes = bytes(block)
+            valid, npc_result = await self.blockchain.run_generator_and_validate_sig(block_bytes, block_generator)
+            if valid is False or npc_result is None:
                 return None
 
         async with self._blockchain_lock_high_priority:

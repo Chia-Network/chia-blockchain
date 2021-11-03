@@ -6,7 +6,6 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple, Union
 
-from blspy import GTElement
 from clvm.casts import int_from_bytes
 
 from chia.consensus.block_body_validation import validate_block_body
@@ -21,8 +20,7 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import (
     PreValidationResult,
     pre_validate_blocks_multiprocessing,
-    _run_generator_async,
-    _async_validate_signature,
+    _run_generator_and_validate_sig,
 )
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -41,7 +39,6 @@ from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
-from chia.util.cached_bls import LOCAL_CACHE
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64, uint128
@@ -647,33 +644,22 @@ class Blockchain(BlockchainInterface):
             wp_summaries,
         )
 
-    async def run_generator_async(self, unfinished_block, generator) -> Optional[NPCResult]:
-        task = asyncio.get_running_loop().run_in_executor(
-            self.pool, _run_generator_async, self.constants_json, bytes(unfinished_block), bytes(generator)
-        )
-        npc_result_bytes = await task
-        if npc_result_bytes is None:
-            return None
-        npc_result = NPCResult.from_bytes(npc_result_bytes)
-        return npc_result
-
-    async def validate_signature_async(self, signature, npc_result) -> bool:
+    async def run_generator_and_validate_sig(
+        self, unfinished_block: bytes, generator
+    ) -> Tuple[bool, Optional[NPCResult]]:
         task = asyncio.get_running_loop().run_in_executor(
             self.pool,
-            _async_validate_signature,
-            bytes(signature),
-            bytes(npc_result),
+            _run_generator_and_validate_sig,
+            self.constants_json,
+            unfinished_block,
+            bytes(generator),
             self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
-        valid, new_cache_entries = await task
-        if not valid:
-            return False
-
-        # Cache
-        for cache_entry_key, cached_entry_value in new_cache_entries.items():
-            LOCAL_CACHE.put(cache_entry_key, GTElement.from_bytes(cached_entry_value))
-
-        return True
+        success, npc_result_bytes = await task
+        if success is False or npc_result_bytes is None:
+            return False, None
+        npc_result = NPCResult.from_bytes(npc_result_bytes)
+        return True, npc_result
 
     def contains_block(self, header_hash: bytes32) -> bool:
         """
