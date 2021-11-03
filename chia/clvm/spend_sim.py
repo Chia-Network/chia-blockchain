@@ -49,6 +49,7 @@ class SimBlockRecord:
         self.timestamp = timestamp
         self.is_transaction_block = True
         self.header_hash = std_hash(bytes(height))
+        self.prev_transaction_block_hash = std_hash(std_hash(height))
 
 
 class SpendSim:

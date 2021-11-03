@@ -167,8 +167,8 @@ class FullNodeAPI:
                 try:
                     while True:
                         # Limit to asking to a few peers, it's possible that this tx got included on chain already
-                        # Highly unlikely that the peers that advertised a tx don't respond to a request. Also, if we drop
-                        # some transactions, we don't want to refetch too many times
+                        # Highly unlikely that the peers that advertised a tx don't respond to a request. Also, if we
+                        # drop some transactions, we don't want to refetch too many times
                         if counter == 5:
                             break
                         if transaction_id not in full_node.full_node_store.peers_with_tx:

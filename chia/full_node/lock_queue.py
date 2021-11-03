@@ -1,5 +1,4 @@
 import asyncio
-from typing import Optional
 
 
 class FuncWrapper:
@@ -48,10 +47,6 @@ class LockQueue:
     def close(self):
         self._stopped = True
         self._run_task.cancel()
-
-
-class TooManyLockClients(Exception):
-    pass
 
 
 class LockClient:

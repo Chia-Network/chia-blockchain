@@ -13,7 +13,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
 from tests.wallet_tools import WalletTool
-from tests.core.full_node.test_full_node import connect_and_get_peer
 from tests.setup_nodes import bt, setup_two_nodes, test_constants
 from tests.util.generator_tools_testing import run_and_get_removals_and_additions
 
@@ -48,7 +47,6 @@ class TestBlockchainTransactions:
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        peer = await connect_and_get_peer(server_1, server_2)
         full_node_1 = full_node_api_1.full_node
 
         for block in blocks:
