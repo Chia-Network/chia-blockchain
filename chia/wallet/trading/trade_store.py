@@ -43,7 +43,8 @@ class TradeStore:
             "CREATE INDEX IF NOT EXISTS trade_confirmed_index on trade_records(confirmed_at_index)"
         )
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS trade_status on trade_records(status)")
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS trade_id on trade_records(trade_id)")
+        # Do not create named index on trade_id, because it already is auto indexed as of Primary Key (Index Name sqlite_autoindex_trade_records_1)
+        #await self.db_connection.execute("CREATE INDEX IF NOT EXISTS trade_id on trade_records(trade_id)")
 
         await self.db_connection.commit()
         return self
