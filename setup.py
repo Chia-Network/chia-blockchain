@@ -26,7 +26,7 @@ dependencies = [
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     "click==7.1.2",  # For the CLI
     # Query DNS seeds (unreleased commit)
-    "dnspython@git+https://github.com/rthalley/dnspython.git@eed2172c298be00ef19e31a1f782ffd37c843004",
+    "dnspythonchia==2.2.0",
     "packaging==21.0",
     "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
 ]
