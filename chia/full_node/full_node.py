@@ -1396,6 +1396,7 @@ class FullNode:
                 npc_results[block.height] = pre_validation_result.npc_result
             pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
             added: Optional[ReceiveBlockResult] = None
+            fork_height: Optional[uint32] = None
             try:
                 if pre_validation_results is None:
                     raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
@@ -1403,7 +1404,6 @@ class FullNode:
                     if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
                         added = ReceiveBlockResult.DISCONNECTED_BLOCK
                         error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
-                        fork_height: Optional[uint32] = None
                     else:
                         raise ValueError(
                             f"Failed to validate block {header_hash} height "
@@ -1454,8 +1454,9 @@ class FullNode:
                 # We need to make sure to always call this method even when we get a cancel exception, to make sure
                 # the node stays in sync
                 new_peak = self.blockchain.get_peak()
-                assert new_peak is not None and fork_height is not None
                 if added == ReceiveBlockResult.NEW_PEAK:
+                    assert new_peak is not None
+                    assert fork_height is not None
                     await self.peak_post_processing(block, new_peak, fork_height, peer, coin_changes[0])
                 raise
 
