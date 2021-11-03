@@ -5,7 +5,7 @@ import logging
 import time
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Set, Tuple
-from blspy import G1Element
+from blspy import G1Element, GTElement
 from chiabip158 import PyBIP158
 
 from chia.util import cached_bls
@@ -26,20 +26,42 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
+from chia.util.cached_bls import LOCAL_CACHE
 from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import pkm_pairs
-from chia.util.errors import Err
+from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64
+from chia.util.lru_cache import LRUCache
 from chia.util.streamable import recurse_jsonify
 
 log = logging.getLogger(__name__)
 
 
-def get_npc_multiprocess(spend_bundle_bytes: bytes, max_cost: int, cost_per_byte: int) -> bytes:
-    program = simple_solution_generator(SpendBundle.from_bytes(spend_bundle_bytes))
+def validate_clvm_and_signature(
+    spend_bundle_bytes: bytes, max_cost: int, cost_per_byte: int, additional_data: bytes
+) -> Tuple[bytes, Dict[bytes, bytes]]:
+    bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
+    program = simple_solution_generator(bundle)
     # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-    return bytes(get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True))
+    result: NPCResult = get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True)
+
+    if result.error is not None:
+        raise ValidationError(Err(result.error))
+
+    pks: List[G1Element] = []
+    msgs: List[bytes32] = []
+    pks, msgs = pkm_pairs(result.npc_list, additional_data)
+
+    # Verify aggregated signature
+    cache: LRUCache = LRUCache(10000)
+    if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):
+        log.warning(f"Aggsig validation error {pks} {msgs} {bundle}")
+        raise ValidationError(Err.BAD_AGGREGATE_SIGNATURE)
+    new_cache_entries: Dict[bytes, bytes] = {}
+    for k, v in cache.cache.items():
+        new_cache_entries[k] = bytes(v)
+    return bytes(result), new_cache_entries
 
 
 class MempoolManager:
@@ -208,13 +230,16 @@ class MempoolManager:
         start_time = time.time()
         if new_spend_bytes is None:
             new_spend_bytes = bytes(new_spend)
-        cached_result_bytes = await asyncio.get_running_loop().run_in_executor(
+        cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
             self.pool,
-            get_npc_multiprocess,
+            validate_clvm_and_signature,
             new_spend_bytes,
             int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM),
             self.constants.COST_PER_BYTE,
+            self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
+        for cache_entry_key, cached_entry_value in new_cache_entries.items():
+            LOCAL_CACHE.put(cache_entry_key, GTElement.from_bytes(cached_entry_value))
         ret = NPCResult.from_bytes(cached_result_bytes)
         end_time = time.time()
         log.log(
@@ -228,7 +253,6 @@ class MempoolManager:
         new_spend: SpendBundle,
         npc_result: NPCResult,
         spend_name: bytes32,
-        validate_signature=True,
         program: Optional[SerializedProgram] = None,
     ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
         """
@@ -240,6 +264,7 @@ class MempoolManager:
             return None, MempoolInclusionStatus.FAILED, Err.MEMPOOL_NOT_INITIALIZED
 
         npc_list = npc_result.npc_list
+        assert npc_result.error is None
         if program is None:
             program = simple_solution_generator(new_spend).program
         cost = calculate_cost_of_program(program, npc_result, self.constants.COST_PER_BYTE)
@@ -251,8 +276,6 @@ class MempoolManager:
             # execute the CLVM program.
             return None, MempoolInclusionStatus.FAILED, Err.BLOCK_COST_EXCEEDS_MAX
 
-        if npc_result.error is not None:
-            return None, MempoolInclusionStatus.FAILED, Err(npc_result.error)
         # build removal list
         removal_names: List[bytes32] = [npc.coin_name for npc in npc_list]
         if set(removal_names) != set([s.name() for s in new_spend.removals()]):
@@ -413,15 +436,6 @@ class MempoolManager:
         if error:
             return None, MempoolInclusionStatus.FAILED, error
 
-        if validate_signature:
-            pks: List[G1Element] = []
-            msgs: List[bytes32] = []
-            pks, msgs = pkm_pairs(npc_list, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
-
-            # Verify aggregated signature
-            if not cached_bls.aggregate_verify(pks, msgs, new_spend.aggregated_signature, True):
-                log.warning(f"Aggsig validation error {pks} {msgs} {new_spend}")
-                return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
         # Remove all conflicting Coins and SpendBundles
         if fail_reason:
             mempool_item: MempoolItem
@@ -516,7 +530,7 @@ class MempoolManager:
                     self.remove_seen(item.spend_bundle_name)
             else:
                 _, result, _ = await self.add_spendbundle(
-                    item.spend_bundle, item.npc_result, item.spend_bundle_name, False, item.program
+                    item.spend_bundle, item.npc_result, item.spend_bundle_name, item.program
                 )
                 # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
                 # successfully added to the new mempool. In this case, remove it from seen, so in the case of a reorg,

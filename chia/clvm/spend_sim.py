@@ -204,7 +204,7 @@ class SimClient:
 
     async def push_tx(self, spend_bundle: SpendBundle) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
         cost_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
-            spend_bundle, spend_bundle.name()
+            spend_bundle, None, spend_bundle.name()
         )
         cost, status, error = await self.service.mempool_manager.add_spendbundle(
             spend_bundle, cost_result, spend_bundle.name()

@@ -59,7 +59,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.db_wrapper import DBWrapper
-from chia.util.errors import ConsensusError, Err
+from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
@@ -138,7 +138,7 @@ class FullNode:
         self.timelord_lock = asyncio.Lock()
         self.compact_vdf_sem = asyncio.Semaphore(4)
         self.new_peak_sem = asyncio.Semaphore(4)
-        self.respond_transaction_semaphore = asyncio.Semaphore(10)
+        self.respond_transaction_semaphore = asyncio.Semaphore(100)
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
@@ -1879,6 +1879,9 @@ class FullNode:
         else:
             try:
                 cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, tx_bytes, spend_name)
+            except ValidationError as e:
+                self.mempool_manager.remove_seen(spend_name)
+                return MempoolInclusionStatus.FAILED, e.code
             except Exception as e:
                 self.mempool_manager.remove_seen(spend_name)
                 raise e
