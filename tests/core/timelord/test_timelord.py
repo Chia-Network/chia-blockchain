@@ -109,13 +109,12 @@ class TestTimelord:
         await bt.setup_keys()
         await bt.setup_plots()
         blocks = bt.get_consecutive_blocks(4, skip_slots=3)
-        for block in blocks[:3]:
+        blocks = bt.get_consecutive_blocks(5, force_overflow=True, block_list_input=blocks)
+        for block in blocks[:4]:
             await full_node.full_node.respond_block(fnp.RespondBlock(block))
         block = blocks[-1]
-        if is_overflow_block(constants, block.reward_chain_block.signage_point_index):
-            finished_ss = block.finished_sub_slots[:-1]
-        else:
-            finished_ss = block.finished_sub_slots
+        assert is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+        finished_ss = block.finished_sub_slots[:-1]
         unfinished_block = UnfinishedBlock(
             finished_ss,
             block.reward_chain_block.get_unfinished(),
