@@ -23,7 +23,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -51,7 +51,7 @@ async def create_pool_args(pool_url: str) -> Dict:
     return json_dict
 
 
-async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int, fee: uint64) -> None:
+async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     state = args["state"]
     prompt = not args.get("yes", False)
     fee = Decimal(args.get("fee", 0))

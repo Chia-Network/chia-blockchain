@@ -111,7 +111,13 @@ def create_cmd(
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=True)
-@click.option("--fee", help="Transaction Fee, in Mojos", type=int, callback=validate_fee, default=0)
+@click.option(
+    "--fee",
+    help="Fee Per Transaction, in Mojos. Fee is used TWICE: once to leave pool, once to join.",
+    type=int,
+    callback=validate_fee,
+    default=0,
+)
 @click.option(
     "-m",
     "--fee",
@@ -149,7 +155,13 @@ def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int
 @click.option("-y", "--yes", help="No prompts", is_flag=True)
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-@click.option("--fee", help="Transaction Fee, in Mojos", type=int, callback=validate_fee, default=0)
+@click.option(
+    "--fee",
+    help="Transaction Fee, in Mojos. Fee is charged twice if already in a pool.",
+    type=int,
+    callback=validate_fee,
+    default=0,
+)
 @click.option(
     "-m",
     "--fee",
