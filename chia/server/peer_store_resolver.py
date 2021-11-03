@@ -67,3 +67,15 @@ class PeerStoreResolver:
         Path to the peers data file, resolved using data from the config
         """
         return self._resolve_and_update_config()
+
+    @property
+    def legacy_peer_db_path(self) -> Optional[Path]:
+        """
+        Path to the legacy peer db file, resolved using data from the config. The legacy
+        peer db is only used for migration to the new format. We're only concerned about
+        migrating mainnet users, so we purposefully omit the testnet filename change.
+        """
+        peer_db_path: Optional[str] = self.config.get(self.legacy_peer_db_path_key)
+        if peer_db_path is not None:
+            return self.root_path / Path(peer_db_path)
+        return None

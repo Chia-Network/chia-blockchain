@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from chia.server.address_manager import (
@@ -31,17 +32,28 @@ class PeerDataSerialization(Streamable):
     new_table: List[Tuple[uint64, uint64]]
 
 
-def makePeerDataSerialization(
+async def makePeerDataSerialization(
     metadata: List[Tuple[str, Any]], nodes: List[Tuple[int, ExtendedPeerInfo]], new_table: List[Tuple[int, int]]
 ) -> PeerDataSerialization:
     """
     Create a PeerDataSerialization, adapting the provided collections
     """
-    return PeerDataSerialization(
-        metadata,
-        [(uint64(node_id), peer_info.to_string()) for node_id, peer_info in nodes],
-        [(uint64(node_id), uint64(bucket_id)) for node_id, bucket_id in new_table],
-    )
+    transformed_nodes: List[Tuple[uint64, str]] = []
+    transformed_new_table: List[Tuple[uint64, uint64]] = []
+
+    for index, [node_id, peer_info] in enumerate(nodes):
+        transformed_nodes.append((uint64(node_id), peer_info.to_string()))
+        # Come up to breathe for a moment
+        if index % 1000 == 0:
+            await asyncio.sleep(0)
+
+    for index, [node_id, bucket_id] in enumerate(new_table):
+        transformed_new_table.append((uint64(node_id), uint64(bucket_id)))
+        # Come up to breathe for a moment
+        if index % 1000 == 0:
+            await asyncio.sleep(0)
+
+    return PeerDataSerialization(metadata, transformed_nodes, transformed_new_table)
 
 
 class AddressManagerStore:
@@ -81,7 +93,7 @@ class AddressManagerStore:
         return address_manager
 
     @classmethod
-    def serialize(cls, address_manager: AddressManager, peers_file_path: Path) -> None:
+    async def serialize(cls, address_manager: AddressManager, peers_file_path: Path) -> None:
         """
         Serialize the address manager's peer data to a file.
         """
@@ -122,7 +134,7 @@ class AddressManagerStore:
             # Ensure the parent directory exists
             mkdir(peers_file_path.parent)
             start_time = timer()
-            cls._write_peers(peers_file_path, metadata, nodes, new_table_entries)
+            await cls._write_peers(peers_file_path, metadata, nodes, new_table_entries)
             log.debug(f"Serializing peer data took {timer() - start_time} seconds")
         except Exception:
             log.exception(f"Failed to write peer data to {peers_file_path}")
@@ -207,7 +219,7 @@ class AddressManagerStore:
             return PeerDataSerialization.from_bytes(f.read())
 
     @classmethod
-    def _write_peers(
+    async def _write_peers(
         cls,
         peers_file_path: Path,
         metadata: List[Tuple[str, Any]],
@@ -217,5 +229,5 @@ class AddressManagerStore:
         """
         Serializes the given peer data and writes it to the peers file.
         """
-        serialized: PeerDataSerialization = makePeerDataSerialization(metadata, nodes, new_table)
+        serialized: PeerDataSerialization = await makePeerDataSerialization(metadata, nodes, new_table)
         write_file(peers_file_path, bytes(serialized), file_mode=0o644)

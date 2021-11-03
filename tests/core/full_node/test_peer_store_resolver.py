@@ -148,3 +148,25 @@ class TestPeerStoreResolver:
         assert config["peers_file_path"] == "db/peers_testnet123.dat"
         # Expect: the config doesn't add a legacy peer_db_path value
         assert config.get("peer_db_path") is None
+
+    # use tmp_path pytest fixture to create a temporary directory
+    def test_resolve_default_legacy_db_path(self, tmp_path: Path):
+        """
+        When the config has a value for the peer_db_path key, the resolver should
+        use that value.
+        """
+
+        root_path: Path = tmp_path
+        config: Dict[str, str] = {"peer_db_path": "db/peer_table_node.sqlite"}
+        resolver: PeerStoreResolver = PeerStoreResolver(
+            root_path,
+            config,
+            selected_network="mainnet",
+            peers_file_path_key="peers_file_path",
+            legacy_peer_db_path_key="peer_db_path",
+            default_peers_file_path="db/peers.dat",
+        )
+        # Expect: peers.dat path has the same directory as the legacy db
+        assert resolver.legacy_peer_db_path == root_path / Path("db/peer_table_node.sqlite")
+        # Expect: the config is updated with the new value
+        assert config["peer_db_path"] == "db/peer_table_node.sqlite"
