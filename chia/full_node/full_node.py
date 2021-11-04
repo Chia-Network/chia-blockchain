@@ -1400,6 +1400,7 @@ class FullNode:
                 npc_results[block.height] = pre_validation_result.npc_result
             pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
             added: Optional[ReceiveBlockResult] = None
+            pre_validation_time = time.time() - validation_start
             try:
                 if pre_validation_results is None:
                     raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
@@ -1487,6 +1488,7 @@ class FullNode:
             # logging.WARNING if validation_time > 2 else logging.DEBUG,
             logging.INFO,
             f"Block validation time: {validation_time:0.2f} seconds, "
+            f"pre_validation time: {pre_validation_time:0.2f} seconds, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
             f"{percent_full_str}",
         )
@@ -1571,7 +1573,9 @@ class FullNode:
             return None
 
         npc_result: Optional[NPCResult] = None
+        pre_validation_time = None
         if block.transactions_generator is not None:
+            pre_validation_start = time.time()
             assert block.transactions_info is not None
             try:
                 block_generator: Optional[BlockGenerator] = await self.blockchain.get_block_generator(block)
@@ -1582,6 +1586,7 @@ class FullNode:
             if block_bytes is None:
                 block_bytes = bytes(block)
             npc_result = await self.blockchain.run_generator_and_validate_sig(block_bytes, block_generator)
+            pre_validation_time = time.time() - pre_validation_start
 
         async with self._blockchain_lock_high_priority:
             # TODO: pre-validate VDFs outside of lock
@@ -1615,11 +1620,14 @@ class FullNode:
         )
 
         self.full_node_store.add_unfinished_block(height, block, validate_result)
+        pre_validation_log = (
+            f"pre_validation time {pre_validation_time:0.4f}, " if pre_validation_time is not None else ""
+        )
         if farmed_block is True:
             self.log.info(
                 f"🍀 ️Farmed unfinished_block {block_hash}, SP: {block.reward_chain_block.signage_point_index}, "
-                f"validation time: {validation_time:0.4f} seconds, "
-                f"cost: {block.transactions_info.cost if block.transactions_info else 'None'}"
+                f"validation time: {validation_time:0.4f} seconds, {pre_validation_log}"
+                f"cost: {block.transactions_info.cost if block.transactions_info else 'None'} "
             )
         else:
             percent_full_str = (
