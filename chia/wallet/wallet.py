@@ -397,7 +397,7 @@ class Wallet:
         else:
             raise ValueError("origin_id is not in the set of selected coins")
 
-        # We have to post-process the non-origin coins now that we have the primary announcement_hash
+        # Process the non-origin coins now that we have the primary announcement hash
         for coin in coins:
             if coin.name() != origin_id:
                 puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
