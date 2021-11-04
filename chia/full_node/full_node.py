@@ -1607,15 +1607,12 @@ class FullNode:
 
             npc_result = await self.blockchain.run_generator(block_bytes, block_generator)
             pre_validation_time = time.time() - pre_validation_start
-            start_t = time.time()
+
             pairs_pks, pairs_msgs = pkm_pairs(npc_result.npc_list, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
-            self.log.warning(f"PKM_PAIRS: {time.time() - start_t}")
-            start_t = time.time()
             if not cached_bls.aggregate_verify(
                 pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, True
             ):
                 raise ConsensusError(Err.BAD_AGGREGATE_SIGNATURE)
-            self.log.warning(f"BLS: {time.time() - start_t}")
 
         async with self._blockchain_lock_high_priority:
             # TODO: pre-validate VDFs outside of lock
