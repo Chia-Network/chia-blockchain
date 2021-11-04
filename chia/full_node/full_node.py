@@ -67,6 +67,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
+from chia.util.worker_tasks import WorkerPool
 from datetime import datetime
 from chia.util.db_synchronous import db_synchronous_on
 
@@ -97,6 +98,7 @@ class FullNode:
     _blockchain_lock_ultra_priority: LockClient
     _blockchain_lock_high_priority: LockClient
     _blockchain_lock_low_priority: LockClient
+    _transaction_task_pool: WorkerPool
 
     def __init__(
         self,
@@ -136,6 +138,10 @@ class FullNode:
         self.peer_sub_counter: Dict[bytes32, int] = {}  # Peer ID: int (subscription count)
         mkdir(self.db_path.parent)
 
+        self._transaction_task_pool = WorkerPool(
+            worker_async_callable=self._transaction_worker, desired_worker_count=200
+        )
+
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
 
@@ -146,9 +152,6 @@ class FullNode:
         # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
         # multiple peers and re-validate.
         self.new_peak_sem = asyncio.Semaphore(2)
-
-        # These many respond_transaction tasks can be active at any point in time
-        self.respond_transaction_semaphore = asyncio.Semaphore(200)
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
@@ -187,7 +190,7 @@ class FullNode:
 
         # Transactions go into this queue from the server, and get sent to respond_transaction
         self.transaction_queue = asyncio.PriorityQueue(10000)
-        self._transaction_queue_task = asyncio.create_task(self._handle_transactions())
+        self._transaction_pool_task = asyncio.create_task(self._transaction_task_pool.run())
         self.transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = []
 
         self.weight_proof_handler = None
@@ -251,19 +254,11 @@ class FullNode:
             self.log.error(f"Error in _handle_one_transaction, closing: {error_stack}")
             if peer is not None:
                 await peer.close()
-        finally:
-            self.respond_transaction_semaphore.release()
 
-    async def _handle_transactions(self):
-        try:
-            while not self._shut_down:
-                # We use a semaphore to make sure we don't send more than 200 concurrent calls of respond_transaction.
-                # However doing them one at a time would be slow, because they get sent to other processes.
-                await self.respond_transaction_semaphore.acquire()
-                item: TransactionQueueEntry = (await self.transaction_queue.get())[1]
-                asyncio.create_task(self._handle_one_transaction(item))
-        except asyncio.CancelledError:
-            raise
+    async def _transaction_worker(self, worker_id: int) -> None:
+        while True:
+            item: TransactionQueueEntry = (await self.transaction_queue.get())[1]
+            await self._handle_one_transaction(item)
 
     async def initialize_weight_proof(self):
         self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
@@ -701,7 +696,8 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.close())
         if self.uncompact_task is not None:
             self.uncompact_task.cancel()
-        self._transaction_queue_task.cancel()
+        if self._transaction_pool_task is not None:
+            self._transaction_pool_task.cancel()
         self._blockchain_lock_queue.close()
 
     async def _await_closed(self):
@@ -711,6 +707,11 @@ class FullNode:
         await self.connection.close()
         if self._init_weight_proof is not None:
             await asyncio.wait([self._init_weight_proof])
+        if self._transaction_pool_task is not None:
+            try:
+                await self._transaction_pool_task
+            except asyncio.CancelledError:
+                pass
         await self._blockchain_lock_queue.await_closed()
 
     async def _sync(self):
