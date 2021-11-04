@@ -41,7 +41,7 @@ def get_pairings(cache: LRUCache, pks: List[G1Element], msgs: List[bytes], force
     return pairings
 
 
-LOCAL_CACHE: LRUCache = LRUCache(10000)
+LOCAL_CACHE: LRUCache = LRUCache(50000)
 
 
 def aggregate_verify(

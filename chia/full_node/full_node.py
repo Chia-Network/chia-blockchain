@@ -57,9 +57,11 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util import cached_bls
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.cached_bls import LOCAL_CACHE, bls_cache_to_dict
 from chia.util.check_fork_next_block import check_fork_next_block
+from chia.util.condition_tools import pkm_pairs
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -1587,11 +1589,19 @@ class FullNode:
             if block_bytes is None:
                 block_bytes = bytes(block)
 
-            start = time.time()
-            bls_cache = bls_cache_to_dict(LOCAL_CACHE)
-            self.log.warning(f"Size of cache: {len(bls_cache)} pickle time: {time.time() - start}")
-            npc_result = await self.blockchain.run_generator_and_validate_sig(block_bytes, block_generator, bls_cache)
+            npc_result = await self.blockchain.run_generator_and_validate_sig(block_bytes, block_generator)
             pre_validation_time = time.time() - pre_validation_start
+
+            start = time.time()
+            pairs_pks, pairs_msgs = pkm_pairs(npc_result.npc_list, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
+            self.log.warning(f"Time for pkm_pairs: {time.time() - start}")
+            start = time.time()
+            self.log.warning(f"Size of cache: {len(LOCAL_CACHE.cache)}")
+            if not cached_bls.aggregate_verify(
+                pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, True
+            ):
+                raise ConsensusError(Err.BAD_AGGREGATE_SIGNATURE)
+            self.log.warning(f"Time for BLS: {time.time() - start}")
 
         async with self._blockchain_lock_high_priority:
             # TODO: pre-validate VDFs outside of lock

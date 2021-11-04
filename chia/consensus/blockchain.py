@@ -645,16 +645,13 @@ class Blockchain(BlockchainInterface):
             wp_summaries,
         )
 
-    async def run_generator_and_validate_sig(
-        self, unfinished_block: bytes, generator: BlockGenerator, bls_cache: Dict[bytes, bytes]
-    ) -> NPCResult:
+    async def run_generator_and_validate_sig(self, unfinished_block: bytes, generator: BlockGenerator) -> NPCResult:
         task = asyncio.get_running_loop().run_in_executor(
             self.pool,
             _run_generator_and_validate_sig,
             self.constants_json,
             unfinished_block,
             bytes(generator),
-            bls_cache,
             self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
         error, npc_result_bytes = await task
