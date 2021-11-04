@@ -63,7 +63,7 @@ def patch_default_chiadns_config(root_path: Path, filename="config.yaml") -> Non
 
 @click.group(
     help=f"\n  Manage the Chia Seeder ({__version__})\n",
-    epilog="Try 'seeder start crawler' or 'seeder start dns'",
+    epilog="Try 'chia_seeder start crawler' or 'chia_seeder start dns'",
     context_settings=CONTEXT_SETTINGS,
 )
 @click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root", type=click.Path(), show_default=True)
@@ -78,7 +78,7 @@ def cli(
     ctx.obj["root_path"] = Path(root_path)
 
 
-@cli.command("version", short_help="Show Chia Seeder version")
+@cli.command("version", short_help="Show the Chia Seeder version")
 def version_cmd() -> None:
     print(__version__)
 
@@ -86,7 +86,7 @@ def version_cmd() -> None:
 @click.command("init", short_help="Create or migrate the Chia Seeder configuration")
 @click.pass_context
 def init_cmd(ctx: click.Context, **kwargs):
-    print("Calling Chia Seder Init...")
+    print("Calling Chia Seeder Init...")
     root_path = ctx.obj["root_path"]
     init(None, root_path, True)
     # Standard first run initialization or migration steps. Handles config patching with dns settings
