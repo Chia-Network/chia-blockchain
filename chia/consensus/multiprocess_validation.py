@@ -27,10 +27,9 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util import cached_bls
 from chia.util.block_cache import BlockCache
 from chia.util.condition_tools import pkm_pairs
-from chia.util.errors import Err
+from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint64, uint32
-from chia.util.lru_cache import LRUCache
 from chia.util.streamable import Streamable, dataclass_from_dict, streamable
 
 log = logging.getLogger(__name__)
@@ -329,19 +328,21 @@ def _run_generator_and_validate_sig(
     unfinished_block_bytes: bytes,
     block_generator_bytes: bytes,
     additional_data: bytes,
-) -> Tuple[bool, Optional[bytes]]:
+) -> Tuple[Optional[Err], Optional[bytes]]:
     try:
         constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
         unfinished_block: UnfinishedBlock = UnfinishedBlock.from_bytes(unfinished_block_bytes)
         assert unfinished_block.transactions_info is not None
         block_generator: BlockGenerator = BlockGenerator.from_bytes(block_generator_bytes)
         assert block_generator.program == unfinished_block.transactions_generator
-        npc_result = get_name_puzzle_conditions(
+        npc_result: NPCResult = get_name_puzzle_conditions(
             block_generator,
             min(constants.MAX_BLOCK_COST_CLVM, unfinished_block.transactions_info.cost),
             cost_per_byte=constants.COST_PER_BYTE,
             safe_mode=False,
         )
+        if npc_result.error is not None:
+            return Err(npc_result.error), None
 
         signature = unfinished_block.transactions_info.aggregated_signature
         pks: List[G1Element] = []
@@ -349,14 +350,12 @@ def _run_generator_and_validate_sig(
         pks, msgs = pkm_pairs(npc_result.npc_list, additional_data)
 
         # Verify aggregated signature
-        cache: LRUCache = LRUCache(10000)
-        if not cached_bls.aggregate_verify(pks, msgs, signature, True, cache):
+        if not cached_bls.aggregate_verify(pks, msgs, signature, True):
             log.warning(f"Aggsig validation error {pks} {msgs} ")
-            return False, None
-        new_cache_entries: Dict[bytes, bytes] = {}
-        for k, v in cache.cache.items():
-            new_cache_entries[k] = bytes(v)
-    except Exception as e:
-        print(e)
-        return False, None
-    return True, bytes(npc_result)
+            return Err.BAD_AGGREGATE_SIGNATURE, None
+    except ValidationError as e:
+        return e.code, None
+    except Exception:
+        return Err.UNKNOWN, None
+
+    return None, bytes(npc_result)

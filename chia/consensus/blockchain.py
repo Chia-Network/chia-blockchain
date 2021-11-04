@@ -39,7 +39,7 @@ from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
-from chia.util.errors import Err
+from chia.util.errors import Err, ConsensusError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.streamable import recurse_jsonify
@@ -644,9 +644,7 @@ class Blockchain(BlockchainInterface):
             wp_summaries,
         )
 
-    async def run_generator_and_validate_sig(
-        self, unfinished_block: bytes, generator
-    ) -> Tuple[bool, Optional[NPCResult]]:
+    async def run_generator_and_validate_sig(self, unfinished_block: bytes, generator) -> NPCResult:
         task = asyncio.get_running_loop().run_in_executor(
             self.pool,
             _run_generator_and_validate_sig,
@@ -655,11 +653,12 @@ class Blockchain(BlockchainInterface):
             bytes(generator),
             self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
-        success, npc_result_bytes = await task
-        if success is False or npc_result_bytes is None:
-            return False, None
-        npc_result = NPCResult.from_bytes(npc_result_bytes)
-        return True, npc_result
+        error, npc_result_bytes = await task
+        if error is not None:
+            raise ConsensusError(error)
+        if npc_result_bytes is None:
+            raise ConsensusError(Err.UNKNOWN)
+        return NPCResult.from_bytes(npc_result_bytes)
 
     def contains_block(self, header_hash: bytes32) -> bool:
         """

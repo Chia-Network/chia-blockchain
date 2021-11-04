@@ -1570,20 +1570,18 @@ class FullNode:
             self.log.warning("Too many blocks added, not adding block")
             return None
 
-        npc_result = None
+        npc_result: Optional[NPCResult] = None
         if block.transactions_generator is not None:
             assert block.transactions_info is not None
             try:
                 block_generator: Optional[BlockGenerator] = await self.blockchain.get_block_generator(block)
             except ValueError:
-                return None
+                raise ConsensusError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
             if block_generator is None:
-                return None
+                raise ConsensusError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
             if block_bytes is None:
                 block_bytes = bytes(block)
-            valid, npc_result = await self.blockchain.run_generator_and_validate_sig(block_bytes, block_generator)
-            if valid is False or npc_result is None:
-                return None
+            npc_result = await self.blockchain.run_generator_and_validate_sig(block_bytes, block_generator)
 
         async with self._blockchain_lock_high_priority:
             # TODO: pre-validate VDFs outside of lock
