@@ -37,7 +37,6 @@ class PreValidationResult(Streamable):
     error: Optional[uint16]
     required_iters: Optional[uint64]  # Iff error is None
     npc_result: Optional[NPCResult]  # Iff error is None and block is a transaction block
-    # signature: Optional[G2Element]  # Iff error is None and block is a transaction block
 
 
 def batch_pre_validate_blocks(
