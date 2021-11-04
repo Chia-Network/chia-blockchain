@@ -40,7 +40,7 @@ async def sign_coin_spends(
                 raise ValueError(e_msg)
             assert bytes(secret_key.get_g1()) == bytes(pk)
             signature = AugSchemeMPL.sign(secret_key, msg)
-            assert AugSchemeMPL.verify(pk, msg, signature)
+            assert AugSchemeMPL.verify(pk_list[-1], msg, signature)
             signatures.append(signature)
 
     # Aggregate signatures
