@@ -188,6 +188,7 @@ class TestRpc:
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, blocks[-1].height + 1)) == 2
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, 1)) == 0
 
+            assert (await client.get_min_fee_rate_for_cost(10000)) == 0
             assert len(await client.get_connections()) == 0
 
             await client.open_connection(self_hostname, server_2._port)
@@ -202,6 +203,7 @@ class TestRpc:
             assert len(await client.get_connections(NodeType.FARMER)) == 0
             await client.close_connection(connections[0]["node_id"])
             await time_out_assert(10, num_connections, 0)
+
         finally:
             # Checks that the RPC manages to stop the node
             client.close()

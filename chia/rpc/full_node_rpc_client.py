@@ -204,6 +204,10 @@ class FullNodeRpcClient(RpcClient):
         except Exception:
             return None
 
+    async def get_min_fee_rate_for_cost(self, cost: uint64) -> uint64:
+        response = await self.fetch("get_min_fee_rate_for_cost", {"cost": cost})
+        return uint64(response["min_fee_per_cost"])
+
     async def get_recent_signage_point_or_eos(
         self, sp_hash: Optional[bytes32], challenge_hash: Optional[bytes32]
     ) -> Optional[Any]:
