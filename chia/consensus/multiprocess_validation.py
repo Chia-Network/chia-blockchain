@@ -1,12 +1,9 @@
 import asyncio
 import logging
-import time
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable, OrderedDict
-
-from blspy import G1Element, GTElement, G2Element
+from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -25,13 +22,10 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util import cached_bls
 from chia.util.block_cache import BlockCache
-from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint64, uint32
-from chia.util.lru_cache import LRUCache
 from chia.util.streamable import Streamable, dataclass_from_dict, streamable
 
 log = logging.getLogger(__name__)
@@ -326,14 +320,12 @@ async def pre_validate_blocks_multiprocessing(
     ]
 
 
-def _run_generator_and_validate_sig(
+def _run_generator(
     constants_dict: bytes,
     unfinished_block_bytes: bytes,
     block_generator_bytes: bytes,
-    additional_data: bytes,
 ) -> Tuple[Optional[Err], Optional[bytes]]:
     try:
-        start_clvm = time.time()
         constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
         unfinished_block: UnfinishedBlock = UnfinishedBlock.from_bytes(unfinished_block_bytes)
         assert unfinished_block.transactions_info is not None
@@ -347,7 +339,6 @@ def _run_generator_and_validate_sig(
         )
         if npc_result.error is not None:
             return Err(npc_result.error), None
-        log.warning(f"Time taken for CLVM: {time.time() - start_clvm}")
     except ValidationError as e:
         return e.code, None
     except Exception:

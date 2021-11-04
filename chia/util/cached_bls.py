@@ -1,6 +1,6 @@
 import functools
 import logging
-from typing import List, Optional, Dict
+from typing import List, Optional
 
 from blspy import AugSchemeMPL, G1Element, G2Element, GTElement
 from chia.util.hash import std_hash
@@ -25,10 +25,8 @@ def get_pairings(cache: LRUCache, pks: List[G1Element], msgs: List[bytes], force
                 return []
         pairings.append(pairing)
 
-    cache_miss = 0
     for i, pairing in enumerate(pairings):
         if pairing is None:
-            cache_miss += 1
             aug_msg = bytes(pks[i]) + msgs[i]
             aug_hash: G2Element = AugSchemeMPL.g2_from_message(aug_msg)
             pairing = pks[i].pair(aug_hash)
@@ -36,8 +34,6 @@ def get_pairings(cache: LRUCache, pks: List[G1Element], msgs: List[bytes], force
             h = bytes(std_hash(aug_msg))
             cache.put(h, pairing)
             pairings[i] = pairing
-    if len(pairings) > 20:
-        log.warning(f"Cache use: {(len(pairings) - cache_miss)/ len(pairings)}")
     return pairings
 
 
@@ -53,10 +49,3 @@ def aggregate_verify(
 
     pairings_prod: GTElement = functools.reduce(GTElement.__mul__, pairings)
     return pairings_prod == sig.pair(G1Element.generator())
-
-
-def bls_cache_to_dict(cache: LRUCache) -> Dict[bytes, bytes]:
-    ret: Dict[bytes, bytes] = {}
-    for h, pairing in cache.cache.items():
-        ret[h] = bytes(pairing)
-    return ret
