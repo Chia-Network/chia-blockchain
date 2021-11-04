@@ -529,18 +529,13 @@ class MempoolManager:
                 # If use_optimization, we will automatically re-add all bundles where none of it's removals were
                 # spend (since we only advanced 1 transaction block). This is a nice benefit of the coin set model
                 # vs account model, all spends are guaranteed to succeed.
-                failed = False
-                for removed_coin in item.removals:
-                    if removed_coin.name() in changed_coins_set:
-                        failed = True
-                        break
-                if not failed:
-                    self.mempool.add_to_pool(item)
-                else:
+                if any(removed_coin.name() in changed_coins_set for removed_coin in item.removals):
                     # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
                     # successfully added to the new mempool. In this case, remove it from seen, so in the case of a
                     # reorg, it can be resubmitted
                     self.remove_seen(item.spend_bundle_name)
+                else:
+                    self.mempool.add_to_pool(item)
             else:
                 _, result, _ = await self.add_spendbundle(
                     item.spend_bundle, item.npc_result, item.spend_bundle_name, item.program
