@@ -44,9 +44,8 @@ class WalletBlockStore:
         # earlier versions of chia created this index despite no lookups needing
         # it. For now, just don't create it for new installs. In the future we
         # may remove the index from existing installations as well
-        # Do not create named index on column header_hash, because it already is auto indexed as of Primary Key (Index Name sqlite_autoindex_header_blocks_1)
-        #await self.db.execute("CREATE INDEX IF NOT EXISTS header_hash on header_blocks(header_hash)")
-
+        # await self.coin_record_db.execute("DROP INDEX IF EXISTS header_hash")
+        
         await self.db.execute("CREATE INDEX IF NOT EXISTS timestamp on header_blocks(timestamp)")
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS height on header_blocks(height)")
@@ -68,8 +67,8 @@ class WalletBlockStore:
         # earlier versions of chia created this index despite no lookups needing
         # it. For now, just don't create it for new installs. In the future we
         # may remove the index from existing installations as well
-        # Do not create named index on column header_hash, because it already is auto indexed as of Primary Key (Index Name sqlite_autoindex_block_records_1)
-        #await self.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
+        # await self.coin_record_db.execute("DROP INDEX IF EXISTS hh")
+        
         await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
         await self.db.commit()
         self.block_cache = LRUCache(1000)
