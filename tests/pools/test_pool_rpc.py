@@ -594,6 +594,7 @@ class TestPoolWalletRpc:
             assert status.target is None
             assert status_2.target is None
 
+            log.warning("JOINING POOL")
             join_pool_tx: TransactionRecord = await client.pw_join_pool(
                 wallet_id,
                 pool_ph,
@@ -611,6 +612,13 @@ class TestPoolWalletRpc:
 
             status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             status_2: PoolWalletInfo = (await client.pw_status(wallet_id_2))[0]
+
+            async def tx_is_in_mempool(wid, tx: TransactionRecord):
+                fetched: Optional[TransactionRecord] = await client.get_transaction(wid, tx.name)
+                return fetched is not None and fetched.is_in_mempool()
+
+            await time_out_assert(5, tx_is_in_mempool, True, wallet_id, join_pool_tx)
+            await time_out_assert(5, tx_is_in_mempool, True, wallet_id_2, join_pool_tx_2)
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
             assert status.target is not None
