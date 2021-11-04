@@ -40,7 +40,7 @@ log = logging.getLogger(__name__)
 
 def validate_clvm_and_signature(
     spend_bundle_bytes: bytes, max_cost: int, cost_per_byte: int, additional_data: bytes
-) -> Tuple[bytes, Dict[bytes, bytes]]:
+) -> Tuple[Optional[Err], bytes, Dict[bytes, bytes]]:
     try:
         bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
         program = simple_solution_generator(bundle)
@@ -48,7 +48,7 @@ def validate_clvm_and_signature(
         result: NPCResult = get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True)
 
         if result.error is not None:
-            raise ValidationError(Err(result.error))
+            return Err(result.error), b"", {}
 
         pks: List[G1Element] = []
         msgs: List[bytes32] = []
@@ -57,14 +57,16 @@ def validate_clvm_and_signature(
         # Verify aggregated signature
         cache: LRUCache = LRUCache(10000)
         if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):
-            raise ValidationError(Err.BAD_AGGREGATE_SIGNATURE)
+            return Err.BAD_AGGREGATE_SIGNATURE, b"", {}
         new_cache_entries: Dict[bytes, bytes] = {}
         for k, v in cache.cache.items():
             new_cache_entries[k] = bytes(v)
-    except Exception as e:
-        print(e)
-        return b"", {}
-    return bytes(result), new_cache_entries
+    except ValidationError as e:
+        return e.code, b"", {}
+    except Exception:
+        return Err.UNKNOWN, b"", {}
+
+    return None, bytes(result), new_cache_entries
 
 
 class MempoolManager:
@@ -234,7 +236,7 @@ class MempoolManager:
         start_time = time.time()
         if new_spend_bytes is None:
             new_spend_bytes = bytes(new_spend)
-        cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
+        err, cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
             self.pool,
             validate_clvm_and_signature,
             new_spend_bytes,
@@ -242,6 +244,8 @@ class MempoolManager:
             self.constants.COST_PER_BYTE,
             self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
+        if err is not None:
+            raise ValidationError(err)
         for cache_entry_key, cached_entry_value in new_cache_entries.items():
             LOCAL_CACHE.put(cache_entry_key, GTElement.from_bytes(cached_entry_value))
         ret = NPCResult.from_bytes(cached_result_bytes)

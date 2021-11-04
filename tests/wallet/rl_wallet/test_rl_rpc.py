@@ -57,7 +57,7 @@ class TestRLWallet:
             yield _
 
     @pytest.mark.asyncio
-    @pytest.mark.xfail
+    @pytest.mark.skip
     async def test_create_rl_coin(self, three_wallet_nodes):
         num_blocks = 4
         full_nodes, wallets = three_wallet_nodes
