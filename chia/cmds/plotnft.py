@@ -67,16 +67,6 @@ def get_login_link_cmd(launcher_id: str) -> None:
     callback=validate_fee,
 )
 @click.option(
-    "-m",
-    "--fee",
-    help="Set the fees per transaction, in XCH. Fee is used TWICE: once to create the singleton, once for init.",
-    type=str,
-    default="0",
-    show_default=True,
-    required=True,
-    callback=validate_fee,
-)
-@click.option(
     "-wp",
     "--wallet-rpc-port",
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
