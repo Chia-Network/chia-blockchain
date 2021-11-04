@@ -216,7 +216,7 @@ class TestBlockHeaderValidation:
         if unf.transactions_generator is not None:
             block_generator: BlockGenerator = await blockchain.get_block_generator(unf)
             block_bytes = bytes(unf)
-            valid, npc_result = await blockchain.run_generator_async(block_bytes, block_generator)
+            npc_result = await blockchain.run_generator(block_bytes, block_generator)
 
         validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
         err = validate_res.error
@@ -239,7 +239,7 @@ class TestBlockHeaderValidation:
         if unf.transactions_generator is not None:
             block_generator: BlockGenerator = await blockchain.get_block_generator(unf)
             block_bytes = bytes(unf)
-            valid, npc_result = await blockchain.run_generator_async(block_bytes, block_generator)
+            npc_result = await blockchain.run_generator(block_bytes, block_generator)
         validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
         assert validate_res.error is None
 
@@ -327,7 +327,7 @@ class TestBlockHeaderValidation:
                 if block.transactions_generator is not None:
                     block_generator: BlockGenerator = await blockchain.get_block_generator(unf)
                     block_bytes = bytes(unf)
-                    valid, npc_result = await blockchain.run_generator_async(block_bytes, block_generator)
+                    npc_result = await blockchain.run_generator(block_bytes, block_generator)
                 validate_res = await blockchain.validate_unfinished_block(
                     unf, npc_result, skip_overflow_ss_validation=True
                 )
