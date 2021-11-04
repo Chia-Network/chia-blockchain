@@ -444,10 +444,8 @@ class WalletRpcApi:
         wallet_state_manager = self.service.wallet_state_manager
         main_wallet = wallet_state_manager.main_wallet
         host = request["host"]
-        if "fee" in request:
-            fee: uint64 = request["fee"]
-        else:
-            fee = uint64(0)
+        fee = uint64(request.get("fee", 0))
+
         if request["wallet_type"] == "cc_wallet":
             if request["mode"] == "new":
                 async with self.service.wallet_state_manager.lock:
@@ -1199,8 +1197,10 @@ class WalletRpcApi:
     ##########################################################################################
     # Pool Wallet
     ##########################################################################################
-    async def pw_join_pool(self, request):
-        fee = uint64(request["fee"])
+    async def pw_join_pool(self, request) -> Dict:
+        if self.service.wallet_state_manager is None:
+            return {"success": False, "error": "not_initialized"}
+        fee = uint64(request.get("fee", 0))
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
@@ -1216,26 +1216,30 @@ class WalletRpcApi:
             uint32(request["relative_lock_height"]),
         )
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.join_pool(new_target_state, fee)
-            return {"total_fee": fee * 2, "transaction": tx}
+            total_fee, tx = await wallet.join_pool(new_target_state, fee)
+            return {"total_fee": total_fee, "transaction": tx}
 
-    async def pw_self_pool(self, request):
+    async def pw_self_pool(self, request) -> Dict:
+        if self.service.wallet_state_manager is None:
+            return {"success": False, "error": "not_initialized"}
         # Leaving a pool requires two state transitions.
         # First we transition to PoolSingletonState.LEAVING_POOL
         # Then we transition to FARMING_TO_POOL or SELF_POOLING
-        fee = uint64(request["fee"])
+        fee = uint64(request.get("fee", 0))
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.self_pool(fee)
-            return {"total_fee": fee * 2, "transaction": tx}
+            total_fee, tx = await wallet.self_pool(fee)  # total_fee: uint64, tx: TransactionRecord
+            return {"total_fee": total_fee, "transaction": tx}
 
-    async def pw_absorb_rewards(self, request):
+    async def pw_absorb_rewards(self, request) -> Dict:
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
+        if self.service.wallet_state_manager is None:
+            return {"success": False, "error": "not_initialized"}
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before collecting rewards")
-        fee = uint64(request["fee"])
+        fee = uint64(request.get("fee", 0))
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
@@ -1244,8 +1248,10 @@ class WalletRpcApi:
             state: PoolWalletInfo = await wallet.get_current_state()
         return {"state": state.to_json_dict(), "transaction": transaction}
 
-    async def pw_status(self, request):
+    async def pw_status(self, request) -> Dict:
         """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""
+        if self.service.wallet_state_manager is None:
+            return {"success": False, "error": "not_initialized"}
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if wallet.type() != WalletType.POOLING_WALLET.value:

@@ -264,7 +264,9 @@ class WalletRpcClient(RpcClient):
             "pool_url": pool_url,
             "fee": fee,
         }
-        return TransactionRecord.from_json_dict((await self.fetch("pw_join_pool", request))["transaction"])
+
+        join_reply = await self.fetch("pw_join_pool", request)
+        return TransactionRecord.from_json_dict(join_reply["transaction"])
 
     async def pw_absorb_rewards(self, wallet_id: str, fee: uint64 = uint64(0)) -> TransactionRecord:
         return TransactionRecord.from_json_dict(
