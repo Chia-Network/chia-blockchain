@@ -38,11 +38,6 @@ jobs:
     - name: Cleanup any leftovers that exist from previous runs
       run: bash build_scripts/clean-runner.sh || true
 
-    - name: Setup Python environment
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-
     - name: Cache npm
       uses: actions/cache@v2.1.6
       env:
@@ -137,17 +132,6 @@ jobs:
         BUILD_VDF_CLIENT: "N"
       run: |
         sh install.sh
-
-    - name: Setup Node 12.x
-      uses: actions/setup-node@v2.4.1
-      with:
-        node-version: '12.x'
-
-    - name: Install additional dependencies
-      run: |
-        add-apt-repository ppa:deadsnakes/ppa -y
-        apt-get update
-        apt-get -y install software-properties-common build-essential curl git dialog apt-utils zlib1g-dev fakeroot jq awscli
 
     - name: Build arm64 .deb package
       run: |
