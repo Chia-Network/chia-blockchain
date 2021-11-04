@@ -49,7 +49,7 @@ class WorkerPool:
             result = await worker
         except asyncio.CancelledError:
             pass
-        except Exception as e:
+        except Exception:
             error_trace = traceback.format_exc()
             log.debug(f"worker {worker_id} raised exception: {error_trace}")
         else:
