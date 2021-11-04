@@ -62,6 +62,7 @@ from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
 from datetime import datetime
+from chia.util.db_synchronous import db_synchronous_on
 
 
 class FullNode:
@@ -131,7 +132,11 @@ class FullNode:
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
-        await self.connection.execute("pragma synchronous=OFF")
+
+        await self.connection.execute(
+            "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path))
+        )
+
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
@@ -956,7 +961,7 @@ class FullNode:
             for hint, list_of_records in hint_records.items():
                 if hint not in all_hint_changes:
                     all_hint_changes[hint] = {}
-                for record in list_of_records:
+                for record in list_of_records.values():
                     all_hint_changes[hint][record.name] = record
 
             if result == ReceiveBlockResult.NEW_PEAK:

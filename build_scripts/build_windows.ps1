@@ -45,6 +45,20 @@ if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
 Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION"
 Write-Output "   ---"
 
+Write-Output "Checking if madmax exists"
+Write-Output "   ---"
+if (Test-Path -Path .\madmax\) {
+    Write-Output "   madmax exists, moving to expected directory"
+    mv .\madmax\ .\venv\lib\site-packages\
+}
+
+Write-Output "Checking if bladebit exists"
+Write-Output "   ---"
+if (Test-Path -Path .\bladebit\) {
+    Write-Output "   bladebit exists, moving to expected directory"
+    mv .\bladebit\ .\venv\lib\site-packages\
+}
+
 Write-Output "   ---"
 Write-Output "Build chia-blockchain wheels"
 Write-Output "   ---"

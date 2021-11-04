@@ -236,7 +236,10 @@ class WalletNode:
         self.peer_task = asyncio.create_task(self._periodically_check_full_node())
         self.sync_event = asyncio.Event()
         self.sync_task = asyncio.create_task(self.sync_job())
-        self.logged_in_fingerprint = fingerprint
+        if fingerprint is None:
+            self.logged_in_fingerprint = private_key.get_g1().get_fingerprint()
+        else:
+            self.logged_in_fingerprint = fingerprint
         self.logged_in = True
         return True
 
@@ -395,7 +398,12 @@ class WalletNode:
                 self.config["full_node_peer"]["port"],
             )
             peers = [c.get_peer_info() for c in self.server.get_full_node_connections()]
-            full_node_resolved = PeerInfo(socket.gethostbyname(full_node_peer.host), full_node_peer.port)
+            # If full_node_peer is already an address, use it, otherwise
+            # resolve it here.
+            if full_node_peer.is_valid():
+                full_node_resolved = full_node_peer
+            else:
+                full_node_resolved = PeerInfo(socket.gethostbyname(full_node_peer.host), full_node_peer.port)
             if full_node_peer in peers or full_node_resolved in peers:
                 self.log.info(f"Will not attempt to connect to other nodes, already connected to {full_node_peer}")
                 for connection in self.server.get_full_node_connections():
@@ -886,10 +894,14 @@ class WalletNode:
             all_added_coins = await self.get_additions(peer, block, [], get_all_additions=True)
             assert all_added_coins is not None
             if all_added_coins is not None:
-
+                all_added_coin_parents = [c.parent_coin_info for c in all_added_coins]
                 for coin in all_added_coins:
                     # This searches specifically for a launcher being created, and adds the solution of the launcher
-                    if coin.puzzle_hash == SINGLETON_LAUNCHER_HASH and coin.parent_coin_info in removed_coin_ids:
+                    if (
+                        coin.puzzle_hash == SINGLETON_LAUNCHER_HASH  # Check that it's a launcher
+                        and coin.name() in all_added_coin_parents  # Check that it's ephemermal
+                        and coin.parent_coin_info in removed_coin_ids  # Check that an interesting coin created it
+                    ):
                         cs: CoinSpend = await self.fetch_puzzle_solution(peer, block.height, coin)
                         additional_coin_spends.append(cs)
                         # Apply this coin solution, which might add things to interested list
@@ -963,7 +975,7 @@ class WalletNode:
         for coin in additions:
             puzzle_store = self.wallet_state_manager.puzzle_store
             record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
-                coin.puzzle_hash.hex()
+                coin.puzzle_hash
             )
             if record_info is not None and record_info.wallet_type == WalletType.COLOURED_COIN:
                 # TODO why ?

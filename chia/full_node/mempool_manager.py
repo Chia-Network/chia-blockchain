@@ -27,9 +27,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.clvm import int_from_bytes
-from chia.util.condition_tools import (
-    pkm_pairs_for_conditions_dict,
-)
+from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err
 from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64
@@ -380,8 +378,6 @@ class MempoolManager:
             return None, MempoolInclusionStatus.FAILED, tmp_error
 
         # Verify conditions, create hash_key list for aggsig check
-        pks: List[G1Element] = []
-        msgs: List[bytes32] = []
         error: Optional[Err] = None
         for npc in npc_list:
             coin_record: CoinRecord = removal_record_dict[npc.coin_name]
@@ -411,16 +407,14 @@ class MempoolManager:
                     return uint64(cost), MempoolInclusionStatus.PENDING, error
                 break
 
-            if validate_signature:
-                for pk, message in pkm_pairs_for_conditions_dict(
-                    npc.condition_dict, npc.coin_name, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
-                ):
-                    pks.append(pk)
-                    msgs.append(message)
         if error:
             return None, MempoolInclusionStatus.FAILED, error
 
         if validate_signature:
+            pks: List[G1Element] = []
+            msgs: List[bytes32] = []
+            pks, msgs = pkm_pairs(npc_list, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
+
             # Verify aggregated signature
             if not cached_bls.aggregate_verify(pks, msgs, new_spend.aggregated_signature, True):
                 log.warning(f"Aggsig validation error {pks} {msgs} {new_spend}")
