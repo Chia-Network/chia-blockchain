@@ -399,14 +399,16 @@ class Wallet:
 
         # Process the non-origin coins now that we have the primary announcement hash
         for coin in coins:
-            if coin.name() != origin_id:
-                puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-                solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})
-                spends.append(
-                    CoinSpend(
-                        coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
-                    )
+            if coin.name() == origin_id:
+                continue
+
+            puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
+            solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})
+            spends.append(
+                CoinSpend(
+                    coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
                 )
+            )
 
         self.log.info(f"Spends is {spends}")
         return spends
