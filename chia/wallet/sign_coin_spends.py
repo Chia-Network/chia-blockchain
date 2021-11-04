@@ -28,8 +28,11 @@ async def sign_coin_spends(
             raise ValueError(error_msg)
 
         # Create signature
-        for pk, msg in pkm_pairs_for_conditions_dict(conditions_dict, bytes(coin_spend.coin.name()), additional_data):
-            pk_list.append(blspy.G1Element.from_bytes(pk))
+        for pk_bytes, msg in pkm_pairs_for_conditions_dict(
+            conditions_dict, bytes(coin_spend.coin.name()), additional_data
+        ):
+            pk = blspy.G1Element.from_bytes(pk_bytes)
+            pk_list.append(pk)
             msg_list.append(msg)
             if inspect.iscoroutinefunction(secret_key_for_public_key_f):
                 secret_key = await secret_key_for_public_key_f(pk)
@@ -40,7 +43,7 @@ async def sign_coin_spends(
                 raise ValueError(e_msg)
             assert bytes(secret_key.get_g1()) == bytes(pk)
             signature = AugSchemeMPL.sign(secret_key, msg)
-            assert AugSchemeMPL.verify(pk_list[-1], msg, signature)
+            assert AugSchemeMPL.verify(pk, msg, signature)
             signatures.append(signature)
 
     # Aggregate signatures
