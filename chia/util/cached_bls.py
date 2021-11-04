@@ -1,12 +1,9 @@
 import functools
-import logging
 from typing import List, Optional
 
 from blspy import AugSchemeMPL, G1Element, G2Element, GTElement
 from chia.util.hash import std_hash
 from chia.util.lru_cache import LRUCache
-
-log = logging.getLogger(__name__)
 
 
 def get_pairings(cache: LRUCache, pks: List[G1Element], msgs: List[bytes], force_cache: bool) -> List[GTElement]:
