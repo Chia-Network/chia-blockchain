@@ -1,11 +1,12 @@
 import asyncio
 import logging
+import time
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable
+from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable, OrderedDict
 
-from blspy import G1Element
+from blspy import G1Element, GTElement
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -30,6 +31,7 @@ from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint64, uint32
+from chia.util.lru_cache import LRUCache
 from chia.util.streamable import Streamable, dataclass_from_dict, streamable
 
 log = logging.getLogger(__name__)
@@ -327,9 +329,11 @@ def _run_generator_and_validate_sig(
     constants_dict: bytes,
     unfinished_block_bytes: bytes,
     block_generator_bytes: bytes,
+    bls_cache: OrderedDict[bytes, bytes],
     additional_data: bytes,
 ) -> Tuple[Optional[Err], Optional[bytes]]:
     try:
+        start_clvm = time.time()
         constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
         unfinished_block: UnfinishedBlock = UnfinishedBlock.from_bytes(unfinished_block_bytes)
         assert unfinished_block.transactions_info is not None
@@ -343,16 +347,24 @@ def _run_generator_and_validate_sig(
         )
         if npc_result.error is not None:
             return Err(npc_result.error), None
+        log.warning(f"Time taken for CLVM: {time.time() - start_clvm}")
 
         signature = unfinished_block.transactions_info.aggregated_signature
         pks: List[G1Element] = []
         msgs: List[bytes32] = []
         pks, msgs = pkm_pairs(npc_result.npc_list, additional_data)
+        start = time.time()
+        cache: LRUCache = LRUCache(len(bls_cache))
+        for h, p_bytes in bls_cache.items():
+            cache.put(h, GTElement.from_bytes(p_bytes))
+        log.warning(f"Time taken for unpickling: {time.time() - start}")
 
         # Verify aggregated signature
-        if not cached_bls.aggregate_verify(pks, msgs, signature, True):
+        start_bls = time.time()
+        if not cached_bls.aggregate_verify(pks, msgs, signature, True, cache):
             log.warning(f"Aggsig validation error {pks} {msgs} ")
             return Err.BAD_AGGREGATE_SIGNATURE, None
+        log.warning(f"Time taken for BLS: {time.time() - start_bls}")
     except ValidationError as e:
         return e.code, None
     except Exception:

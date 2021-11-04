@@ -6,6 +6,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple, Union
 
+from blspy import GTElement
 from clvm.casts import int_from_bytes
 
 from chia.consensus.block_body_validation import validate_block_body
@@ -644,13 +645,16 @@ class Blockchain(BlockchainInterface):
             wp_summaries,
         )
 
-    async def run_generator_and_validate_sig(self, unfinished_block: bytes, generator) -> NPCResult:
+    async def run_generator_and_validate_sig(
+        self, unfinished_block: bytes, generator: BlockGenerator, bls_cache: Dict[bytes, bytes]
+    ) -> NPCResult:
         task = asyncio.get_running_loop().run_in_executor(
             self.pool,
             _run_generator_and_validate_sig,
             self.constants_json,
             unfinished_block,
             bytes(generator),
+            bls_cache,
             self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
         error, npc_result_bytes = await task

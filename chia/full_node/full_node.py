@@ -58,6 +58,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.cached_bls import LOCAL_CACHE, bls_cache_to_dict
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err, ValidationError
@@ -1585,7 +1586,11 @@ class FullNode:
                 raise ConsensusError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
             if block_bytes is None:
                 block_bytes = bytes(block)
-            npc_result = await self.blockchain.run_generator_and_validate_sig(block_bytes, block_generator)
+
+            start = time.time()
+            bls_cache = bls_cache_to_dict(LOCAL_CACHE)
+            self.log.warning(f"Size of cache: {len(bls_cache)} pickle time: {time.time() - start}")
+            npc_result = await self.blockchain.run_generator_and_validate_sig(block_bytes, block_generator, bls_cache)
             pre_validation_time = time.time() - pre_validation_start
 
         async with self._blockchain_lock_high_priority:
