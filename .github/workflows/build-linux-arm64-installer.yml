@@ -21,7 +21,7 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [3.8]
-        os: [arm-64-test]
+        os: [arm-test-2]
 
     steps:
     - name: Cancel previous runs on the same branch
