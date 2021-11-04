@@ -14,6 +14,7 @@ def validate_fee(ctx, param, value):
         raise click.BadParameter("Fee must be decimal dotted value in XCH (e.g. 0.00005)")
     if fee < 0 or fee > MAX_CMDLINE_FEE:
         raise click.BadParameter(f"Fee must be in the range 0 to {MAX_CMDLINE_FEE}")
+    return value
 
 
 MAX_CMDLINE_FEE = Decimal(0.5)
