@@ -2305,7 +2305,7 @@ class TestPkmPairs:
             )
         ]
         pks, msgs = pkm_pairs(npc_list, b"foobar")
-        assert pks == [self.pk1, self.pk2]
+        assert pks == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2" + self.h1 + b"foobar"]
 
     def test_agg_sig_unsafe(self):
@@ -2325,7 +2325,7 @@ class TestPkmPairs:
             )
         ]
         pks, msgs = pkm_pairs(npc_list, b"foobar")
-        assert pks == [self.pk1, self.pk2]
+        assert pks == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1", b"msg2"]
 
     def test_agg_sig_mixed(self):
@@ -2334,5 +2334,5 @@ class TestPkmPairs:
             NPC(self.h1, self.h2, [(self.ASU, [ConditionWithArgs(self.ASU, [bytes(self.pk2), b"msg2"])])]),
         ]
         pks, msgs = pkm_pairs(npc_list, b"foobar")
-        assert pks == [self.pk1, self.pk2]
+        assert pks == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2"]
