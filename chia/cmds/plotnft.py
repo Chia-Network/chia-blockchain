@@ -1,18 +1,17 @@
+from decimal import Decimal
 from typing import Optional
 
 import click
 
-from chia.util.ints import uint64
 
-
-MAX_CMDLINE_FEE = uint64(1000000000)
+MAX_CMDLINE_FEE = Decimal(0.5)
 
 
 def validate_fee(ctx, param, value):
     try:
-        fee = uint64(value)
+        fee = Decimal(value)
     except ValueError:
-        raise click.BadParameter("Fee must be integer")
+        raise click.BadParameter("Fee must be decimal dotted value in XCH (e.g. 0.00005)")
     if fee < 0 or fee > MAX_CMDLINE_FEE:
         raise click.BadParameter(f"Fee must be in the range 0 to {MAX_CMDLINE_FEE}")
 
@@ -58,6 +57,16 @@ def get_login_link_cmd(launcher_id: str) -> None:
 @click.option("-s", "--state", help="Initial state of Plot NFT: local or pool", type=str, required=True)
 @click.option("--fee", help="Transaction Fee, in Mojos", type=int, callback=validate_fee, default=0)
 @click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH. Fee is used TWICE: once to create the singleton, once for init.",
+    type=str,
+    default="0",
+    show_default=True,
+    required=True,
+    callback=validate_fee,
+)
+@click.option(
     "-wp",
     "--wallet-rpc-port",
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
@@ -88,11 +97,14 @@ def create_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=True)
 @click.option(
+    "-m",
     "--fee",
-    help="Fee Per Transaction, in Mojos. Fee is used TWICE: once to leave pool, once to join.",
-    type=int,
+    help="Set the fees per transaction, in XCH. Fee is used TWICE: once to leave pool, once to join.",
+    type=str,
+    default="0",
+    show_default=True,
+    required=True,
     callback=validate_fee,
-    default=0,
 )
 @click.option(
     "--fee",
@@ -122,11 +134,14 @@ def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option(
+    "-m",
     "--fee",
-    help="Transaction Fee, in Mojos. Fee is charged twice if already in a pool.",
-    type=int,
+    help="Set the fees per transaction, in XCH. Fee is charged TWICE.",
+    type=str,
+    default="0",
+    show_default=True,
+    required=True,
     callback=validate_fee,
-    default=0,
 )
 @click.option(
     "--fee",
@@ -173,7 +188,16 @@ def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
 @plotnft_cmd.command("claim", short_help="Claim rewards from a plot NFT")
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-@click.option("--fee", help="Transaction Fee, in Mojos", type=int, callback=validate_fee, default=0)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    required=True,
+    callback=validate_fee,
+)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
