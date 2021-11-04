@@ -47,8 +47,7 @@ class TradeStore:
         # earlier versions of chia created this index despite no lookups needing
         # it. For now, just don't create it for new installs. In the future we
         # may remove the index from existing installations as well
-        # Do not create named index on trade_id, because it already is auto indexed as of Primary Key (Index Name sqlite_autoindex_trade_records_1)
-        #await self.db_connection.execute("CREATE INDEX IF NOT EXISTS trade_id on trade_records(trade_id)")
+        # await self.coin_record_db.execute("DROP INDEX IF EXISTS trade_id")
 
         await self.db_connection.commit()
         return self
