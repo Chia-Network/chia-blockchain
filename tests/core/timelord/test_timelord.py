@@ -110,7 +110,7 @@ class TestTimelord:
         await bt.setup_plots()
         blocks = bt.get_consecutive_blocks(4, skip_slots=3)
         blocks = bt.get_consecutive_blocks(5, force_overflow=True, block_list_input=blocks)
-        for block in blocks[:4]:
+        for block in blocks[:-1]:
             await full_node.full_node.respond_block(fnp.RespondBlock(block))
         block = blocks[-1]
         assert is_overflow_block(constants, block.reward_chain_block.signage_point_index)
@@ -127,7 +127,7 @@ class TestTimelord:
             [],
         )
         await full_node.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished_block), None)
-        await time_out_assert(300, node_height_at_least, True, full_node, 3)
+        await time_out_assert(300, node_height_at_least, True, full_node, len(blocks) - 1)
 
     @pytest.mark.asyncio
     async def test_timelord_infuses_long_chain(self, setup_timelord_2):
