@@ -657,7 +657,6 @@ class PoolWallet:
         return full_spend, puzzle_hash, launcher_coin.name()
 
     async def join_pool(self, target_state: PoolState, fee: uint64) -> Tuple[uint64, TransactionRecord]:
-
         if target_state.state != FARMING_TO_POOL:
             raise ValueError(f"join_pool must be called with target_state={FARMING_TO_POOL} (FARMING_TO_POOL)")
         if self.target_state is not None:
