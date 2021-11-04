@@ -56,7 +56,6 @@ def get_login_link_cmd(launcher_id: str) -> None:
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=False)
 @click.option("-s", "--state", help="Initial state of Plot NFT: local or pool", type=str, required=True)
-@click.option("--fee", help="Transaction Fee, in Mojos", type=int, callback=validate_fee, default=0)
 @click.option(
     "-m",
     "--fee",
