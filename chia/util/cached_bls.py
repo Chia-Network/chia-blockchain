@@ -36,8 +36,8 @@ def get_pairings(cache: LRUCache, pks: List[G1Element], msgs: List[bytes], force
             h = bytes(std_hash(aug_msg))
             cache.put(h, pairing)
             pairings[i] = pairing
-
-    log.warning(f"Cache use: {(len(pairings) - cache_miss)/ len(pairings)}")
+    if len(pairings) > 20:
+        log.warning(f"Cache use: {(len(pairings) - cache_miss)/ len(pairings)}")
     return pairings
 
 
