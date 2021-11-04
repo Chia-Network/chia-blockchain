@@ -5,8 +5,6 @@ from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable
 
-from blspy import G1Element
-
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
@@ -24,9 +22,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util import cached_bls
 from chia.util.block_cache import BlockCache
-from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint64, uint32
@@ -323,11 +319,10 @@ async def pre_validate_blocks_multiprocessing(
     ]
 
 
-def _run_generator_and_validate_sig(
+def _run_generator(
     constants_dict: bytes,
     unfinished_block_bytes: bytes,
     block_generator_bytes: bytes,
-    additional_data: bytes,
 ) -> Tuple[Optional[Err], Optional[bytes]]:
     try:
         constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
@@ -343,16 +338,6 @@ def _run_generator_and_validate_sig(
         )
         if npc_result.error is not None:
             return Err(npc_result.error), None
-
-        signature = unfinished_block.transactions_info.aggregated_signature
-        pks: List[G1Element] = []
-        msgs: List[bytes32] = []
-        pks, msgs = pkm_pairs(npc_result.npc_list, additional_data)
-
-        # Verify aggregated signature
-        if not cached_bls.aggregate_verify(pks, msgs, signature, True):
-            log.warning(f"Aggsig validation error {pks} {msgs} ")
-            return Err.BAD_AGGREGATE_SIGNATURE, None
     except ValidationError as e:
         return e.code, None
     except Exception:

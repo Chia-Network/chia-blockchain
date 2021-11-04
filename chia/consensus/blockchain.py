@@ -20,7 +20,7 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import (
     PreValidationResult,
     pre_validate_blocks_multiprocessing,
-    _run_generator_and_validate_sig,
+    _run_generator,
 )
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -644,14 +644,13 @@ class Blockchain(BlockchainInterface):
             wp_summaries,
         )
 
-    async def run_generator_and_validate_sig(self, unfinished_block: bytes, generator) -> NPCResult:
+    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator) -> NPCResult:
         task = asyncio.get_running_loop().run_in_executor(
             self.pool,
-            _run_generator_and_validate_sig,
+            _run_generator,
             self.constants_json,
             unfinished_block,
             bytes(generator),
-            self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
         error, npc_result_bytes = await task
         if error is not None:
