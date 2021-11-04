@@ -1197,7 +1197,6 @@ class WalletRpcApi:
     ##########################################################################################
     # Pool Wallet
     ##########################################################################################
-
     async def pw_join_pool(self, request) -> Dict:
         if self.service.wallet_state_manager is None:
             return {"success": False, "error": "not_initialized"}
