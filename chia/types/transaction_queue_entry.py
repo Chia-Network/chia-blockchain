@@ -8,6 +8,10 @@ from chia.types.spend_bundle import SpendBundle
 
 @dataclass(frozen=True)
 class TransactionQueueEntry:
+    """
+    A transaction received from peer. This is put into a queue, and not yet in the mempool.
+    """
+
     transaction: SpendBundle
     transaction_bytes: Optional[bytes]
     spend_name: bytes32

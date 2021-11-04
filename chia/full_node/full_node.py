@@ -120,6 +120,8 @@ class FullNode:
         self.uncompact_task = None
         self.compact_vdf_requests: Set[bytes32] = set()
         self.log = logging.getLogger(name if name else __name__)
+
+        # Used for metrics
         self.dropped_tx: Set[bytes32] = set()
         self.not_dropped_tx = 0
 
@@ -140,7 +142,12 @@ class FullNode:
     async def _start(self):
         self.timelord_lock = asyncio.Lock()
         self.compact_vdf_sem = asyncio.Semaphore(4)
+
+        # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
+        # multiple peers and re-validate.
         self.new_peak_sem = asyncio.Semaphore(2)
+
+        # These many respond_transaction tasks can be active at any point in time
         self.respond_transaction_semaphore = asyncio.Semaphore(200)
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
@@ -170,10 +177,15 @@ class FullNode:
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants, self.hint_store)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
+
+        # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
+        # be validated first.
         self._blockchain_lock_queue = LockQueue(self.blockchain.lock)
         self._blockchain_lock_ultra_priority = LockClient(0, self._blockchain_lock_queue)
         self._blockchain_lock_high_priority = LockClient(1, self._blockchain_lock_queue)
         self._blockchain_lock_low_priority = LockClient(2, self._blockchain_lock_queue)
+
+        # Transactions go into this queue from the server, and get sent to respond_transaction
         self.transaction_queue = asyncio.PriorityQueue(10000)
         self._transaction_queue_task = asyncio.create_task(self._handle_transactions())
         self.transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = []
@@ -245,6 +257,8 @@ class FullNode:
     async def _handle_transactions(self):
         try:
             while not self._shut_down:
+                # We use a semaphore to make sure we don't send more than 200 concurrent calls of respond_transaction.
+                # However doing them one at a time would be slow, because they get sent to other processes.
                 await self.respond_transaction_semaphore.acquire()
                 item: TransactionQueueEntry = (await self.transaction_queue.get())[1]
                 asyncio.create_task(self._handle_one_transaction(item))
@@ -1489,8 +1503,7 @@ class FullNode:
             else ""
         )
         self.log.log(
-            # logging.WARNING if validation_time > 2 else logging.DEBUG,
-            logging.INFO,
+            logging.WARNING if validation_time > 2 else logging.DEBUG,
             f"Block validation time: {validation_time:0.2f} seconds, "
             f"pre_validation time: {pre_validation_time:0.2f} seconds, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
@@ -1576,6 +1589,8 @@ class FullNode:
             self.log.warning("Too many blocks added, not adding block")
             return None
 
+        # The clvm generator and aggregate signature are validated outside of the lock, to allow other blocks and
+        # transactions to get validated
         npc_result: Optional[NPCResult] = None
         pre_validation_time = None
         if block.transactions_generator is not None:

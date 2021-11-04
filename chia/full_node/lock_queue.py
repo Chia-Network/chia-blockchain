@@ -15,6 +15,22 @@ class PrioritizedCallable:
 
 
 class LockQueue:
+    """
+    The purpose of this class is to be able to control access to a lock, and give priority to certain clients
+    (LockClients). To use it, create a lock and clients:
+    ```
+    my_lock = LockQueue(asyncio.Lock())
+    client_a = LockClient(0, my_lock)
+    client_b = LockClient(1, my_lock)
+
+    async with client_a:
+       ...
+    ```
+
+    The clients can be used like normal async locks, but the higher priority (lower number) will always go first.
+    Must be created under an asyncio running loop, and close and await_closed should be called.
+    """
+
     def __init__(self, inner_lock: asyncio.Lock):
         self._inner_lock: asyncio.Lock = inner_lock
         self._task_queue: asyncio.PriorityQueue = asyncio.PriorityQueue()

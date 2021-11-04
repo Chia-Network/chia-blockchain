@@ -513,7 +513,7 @@ class ChiaServer:
 
     async def incoming_api_task(self) -> None:
         self.tasks = set()
-        message_types: typing_Counter[str] = Counter()
+        message_types: typing_Counter[str] = Counter()  # Used for debugging information.
         while True:
             payload_inc, connection_inc = await self.incoming_messages.get()
             if payload_inc is None or connection_inc is None:
@@ -535,7 +535,7 @@ class ChiaServer:
 
                     f = getattr(self.api, message_type, None)
                     if len(message_types) % 100 == 0:
-                        self.log.info(f"Message types: {[(m, n) for m, n in sorted(message_types.items()) if n != 0]}")
+                        self.log.debug(f"Message types: {[(m, n) for m, n in sorted(message_types.items()) if n != 0]}")
 
                     if f is None:
                         self.log.error(f"Non existing function: {message_type}")

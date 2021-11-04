@@ -41,6 +41,11 @@ log = logging.getLogger(__name__)
 def validate_clvm_and_signature(
     spend_bundle_bytes: bytes, max_cost: int, cost_per_byte: int, additional_data: bytes
 ) -> Tuple[Optional[Err], bytes, Dict[bytes, bytes]]:
+    """
+    Validates CLVM and aggregate signature for a spendbundle. This is meant to be called under a ProcessPoolExecutor
+    in order to validate the heavy parts of a transction in a different thread. Returns an optional error,
+    the NPCResult and a cache of the new pairings validated (if not error)
+    """
     try:
         bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
         program = simple_solution_generator(bundle)
@@ -250,10 +255,7 @@ class MempoolManager:
             LOCAL_CACHE.put(cache_entry_key, GTElement.from_bytes(cached_entry_value))
         ret = NPCResult.from_bytes(cached_result_bytes)
         end_time = time.time()
-        log.log(
-            logging.WARNING if end_time - start_time > 1 else logging.DEBUG,
-            f"pre_validate_spendbundle took {end_time - start_time:0.4f} seconds for {spend_name}",
-        )
+        log.debug(f"pre_validate_spendbundle took {end_time - start_time:0.4f} seconds for {spend_name}")
         return ret
 
     async def add_spendbundle(
@@ -524,6 +526,9 @@ class MempoolManager:
 
         for item in old_pool.spends.values():
             if use_optimization:
+                # If use_optimization, we will automatically re-add all bundles where none of it's removals were
+                # spend (since we only advanced 1 transaction block). This is a nice benefit of the coin set model
+                # vs account model, all spends are guaranteed to succeed.
                 failed = False
                 for removed_coin in item.removals:
                     if removed_coin.name() in changed_coins_set:

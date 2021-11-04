@@ -244,7 +244,7 @@ class FullNodeAPI:
         if spend_name in self.full_node.full_node_store.peers_with_tx:
             self.full_node.full_node_store.peers_with_tx.pop(spend_name)
 
-        if self.full_node.transaction_queue.qsize() % 100 == 33:
+        if self.full_node.transaction_queue.qsize() % 100 == 0 and not self.full_node.transaction_queue.empty():
             self.full_node.log.debug(f"respond_transaction Waiters: {self.full_node.transaction_queue.qsize()}")
 
         if self.full_node.transaction_queue.full():
@@ -1233,8 +1233,9 @@ class FullNodeAPI:
         await self.full_node.transaction_queue.put(
             (0, TransactionQueueEntry(request.transaction, None, spend_name, None, False))
         )
+        # Waits for the transaction to go into the mempool, times out after 45 seconds.
         status, error = None, None
-        for i in range(300):
+        for i in range(450):
             await asyncio.sleep(0.1)
             for potential_name, potential_status, potential_error in self.full_node.transaction_responses:
                 if spend_name == potential_name:

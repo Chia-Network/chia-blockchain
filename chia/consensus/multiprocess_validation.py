@@ -324,6 +324,10 @@ def _run_generator(
     unfinished_block_bytes: bytes,
     block_generator_bytes: bytes,
 ) -> Tuple[Optional[Err], Optional[bytes]]:
+    """
+    Runs the CLVM generator from bytes inputs. This is meant to be called under a ProcessPoolExecutor, in order to
+    validate the heavy parts of a block (clvm program) in a different process.
+    """
     try:
         constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
         unfinished_block: UnfinishedBlock = UnfinishedBlock.from_bytes(unfinished_block_bytes)

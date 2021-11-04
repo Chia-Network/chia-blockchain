@@ -34,6 +34,7 @@ def get_pairings(cache: LRUCache, pks: List[G1Element], msgs: List[bytes], force
     return pairings
 
 
+# Increasing this number will increase RAM usage, but decrease BLS validation time for blocks and unfinished blocks.
 LOCAL_CACHE: LRUCache = LRUCache(50000)
 
 
