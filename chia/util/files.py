@@ -16,6 +16,10 @@ def move_file(src: Path, dst: Path):
     Attempts to move the file at src to dst, falling back to a copy if the move fails.
     """
 
+    dir_perms: int = 0o700
+    # Create the parent directory if necessary
+    os.makedirs(dst.parent, mode=dir_perms, exist_ok=True)
+
     try:
         os.replace(os.fspath(src), os.fspath(dst))
     except PermissionError:
@@ -34,7 +38,7 @@ async def move_file_async(src: Path, dst: Path, *, reattempts: int = 6, reattemp
     Attempts to move the file at src to dst, falling back to a copy if the move fails.
     """
 
-    for remaining_attempts in range(reattempts, -1, -1):
+    for remaining_attempts in range(reattempts, 0, -1):
         try:
             move_file(src, dst)
         except Exception:
@@ -58,7 +62,7 @@ async def write_file_async(file_path: Path, data: Union[str, bytes], *, file_mod
 
     dir_perms: int = 0o700
     # Create the parent directory if necessary
-    os.makedirs(os.path.dirname(file_path), mode=dir_perms, exist_ok=True)
+    os.makedirs(file_path.parent, mode=dir_perms, exist_ok=True)
 
     mode: str = "w+" if type(data) == str else "w+b"
     temp_file_path: Path
