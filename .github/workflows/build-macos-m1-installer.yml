@@ -27,6 +27,8 @@ jobs:
         with:
           access_token: ${{ github.token }}
 
+      - uses: Chia-Network/actions/clean-workspace@main
+
       - name: Checkout Code
         uses: actions/checkout@v2
         with:
