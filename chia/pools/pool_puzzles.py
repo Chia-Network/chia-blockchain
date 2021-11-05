@@ -176,7 +176,7 @@ def create_travel_spend(
         destination_inner: Program = pool_state_to_inner_puzzle(
             target, launcher_coin.name(), genesis_challenge, delay_time, delay_ph
         )
-        log.warning(
+        log.debug(
             f"create_travel_spend: waitingroom: target PoolState bytes:\n{bytes(target).hex()}\n"
             f"{target}"
             f"hash:{Program.to(bytes(target)).get_tree_hash()}"
