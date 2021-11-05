@@ -50,6 +50,7 @@ async def validate_block_body(
     npc_result: Optional[NPCResult],
     fork_point_with_peak: Optional[uint32],
     get_block_generator: Callable,
+    validate_signature=True,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
     """
     This assumes the header block has been completely validated.
@@ -457,10 +458,11 @@ async def validate_block_body(
     # However, we force caching of pairings just for unfinished blocks
     # as the cache is likely to be useful when validating the corresponding
     # finished blocks later.
-    force_cache: bool = isinstance(block, UnfinishedBlock)
-    if not cached_bls.aggregate_verify(
-        pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, force_cache
-    ):
-        return Err.BAD_AGGREGATE_SIGNATURE, None
+    if validate_signature:
+        force_cache: bool = isinstance(block, UnfinishedBlock)
+        if not cached_bls.aggregate_verify(
+            pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, force_cache
+        ):
+            return Err.BAD_AGGREGATE_SIGNATURE, None
 
     return None, npc_result

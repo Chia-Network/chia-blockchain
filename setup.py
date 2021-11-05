@@ -1,6 +1,7 @@
 from setuptools import setup
 
 dependencies = [
+    "multidict==5.1.0",  # Avoid 5.2.0 due to Avast
     "blspy==1.0.6",  # Signature library
     "chiavdf==1.0.3",  # timelord and vdf verification
     "chiabip158==1.0",  # bip158-style wallet filters
@@ -25,7 +26,7 @@ dependencies = [
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     "click==7.1.2",  # For the CLI
-    "dnspython==2.1.0",  # Query DNS seeds
+    "dnspythonchia==2.2.0",  # Query DNS seeds
     "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
 ]
 
