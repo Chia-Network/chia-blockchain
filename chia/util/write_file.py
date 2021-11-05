@@ -11,27 +11,39 @@ from typing import Union
 log = logging.getLogger(__name__)
 
 
-async def move_file(src: Path, dst: Path, *, reattempts: int = 6, reattempt_delay: int = 0.5):
+def move_file(src: Path, dst: Path):
+    """
+    Attempts to move the file at src to dst, falling back to a copy if the move fails.
+    """
+
+    try:
+        os.replace(os.fspath(src), os.fspath(dst))
+    except PermissionError:
+        try:
+            shutil.move(os.fspath(src), os.fspath(dst))
+        except Exception:
+            log.exception(f"Failed to move {src} to {dst} using shutil.move")
+            raise
+    except Exception:
+        log.exception(f"Failed to move {src} to {dst} using os.replace")
+        raise
+
+
+async def move_file_async(src: Path, dst: Path, *, reattempts: int = 6, reattempt_delay: int = 0.5):
     """
     Attempts to move the file at src to dst, falling back to a copy if the move fails.
     """
 
     for remaining_attempts in range(reattempts, -1, -1):
         try:
-            os.replace(os.fspath(src), os.fspath(dst))
-        except PermissionError:
-            try:
-                shutil.move(os.fspath(src), os.fspath(dst))
-            except Exception:
-                log.exception(f"Failed to move {src} to {dst} using shutil.move")
+            move_file(src, dst)
         except Exception:
-            log.exception(f"Failed to move {src} to {dst} using os.replace")
-
-        if not dst.exists() and remaining_attempts > 0:
-            log.error(f"Failed to move {src} to {dst}, retrying in {reattempt_delay} seconds")
-            await asyncio.sleep(reattempt_delay)
+            if not dst.exists() and remaining_attempts > 0:
+                log.error(f"Failed to move {src} to {dst}, retrying in {reattempt_delay} seconds")
+                await asyncio.sleep(reattempt_delay)
         else:
-            break
+            if dst.exists():
+                break
 
     if not dst.exists():
         raise FileNotFoundError(f"Failed to move {src} to {dst}")
@@ -55,7 +67,7 @@ async def write_file_async(file_path: Path, data: Union[str, bytes], *, file_mod
         await f.write(data)
 
     try:
-        await move_file(temp_file_path, file_path)
+        await move_file_async(temp_file_path, file_path)
     except Exception:
         log.exception(f"Failed to move temp file {temp_file_path} to {file_path}")
     else:
@@ -67,4 +79,3 @@ async def write_file_async(file_path: Path, data: Union[str, bytes], *, file_mod
                 os.remove(temp_file_path)
         except Exception:
             log.exception(f"Failed to remove temp file {temp_file_path}")
-
