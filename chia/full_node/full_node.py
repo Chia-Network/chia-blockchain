@@ -247,8 +247,8 @@ class FullNode:
             if len(self.transaction_responses) > 50:
                 self.transaction_responses = self.transaction_responses[1:]
         except asyncio.CancelledError:
-            error_stack = traceback.format_exc()
-            self.log.debug(f"Cancelling _handle_one_transaction, closing: {error_stack}")
+            # https://docs.python.org/3.7/library/asyncio-exceptions.html#asyncio.CancelledError
+            raise
         except Exception:
             error_stack = traceback.format_exc()
             self.log.error(f"Error in _handle_one_transaction, closing: {error_stack}")
@@ -685,6 +685,8 @@ class FullNode:
         if self._init_weight_proof is not None:
             self._init_weight_proof.cancel()
 
+        cancel_task_safe(task=self._transaction_pool_task, log=self.log)
+
         # blockchain is created in _start and in certain cases it may not exist here during _close
         if hasattr(self, "blockchain"):
             self.blockchain.shut_down()
@@ -696,22 +698,20 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.close())
         if self.uncompact_task is not None:
             self.uncompact_task.cancel()
-        if self._transaction_pool_task is not None:
-            self._transaction_pool_task.cancel()
         self._blockchain_lock_queue.close()
 
     async def _await_closed(self):
         cancel_task_safe(self._sync_task, self.log)
-        for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
-            cancel_task_safe(task, self.log)
-        await self.connection.close()
-        if self._init_weight_proof is not None:
-            await asyncio.wait([self._init_weight_proof])
         if self._transaction_pool_task is not None:
             try:
                 await self._transaction_pool_task
             except asyncio.CancelledError:
                 pass
+        for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
+            cancel_task_safe(task, self.log)
+        await self.connection.close()
+        if self._init_weight_proof is not None:
+            await asyncio.wait([self._init_weight_proof])
         await self._blockchain_lock_queue.await_closed()
 
     async def _sync(self):
@@ -1936,9 +1936,9 @@ class FullNode:
             except ValidationError as e:
                 self.mempool_manager.remove_seen(spend_name)
                 return MempoolInclusionStatus.FAILED, e.code
-            except Exception as e:
+            except Exception:
                 self.mempool_manager.remove_seen(spend_name)
-                raise e
+                raise
             async with self._blockchain_lock_low_priority:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)

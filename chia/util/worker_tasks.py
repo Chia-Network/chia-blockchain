@@ -19,12 +19,11 @@ class WorkerPool:
     async def run(self) -> None:
         try:
             while True:
-                if len(self._workers) < self.desired_worker_count:
+                while len(self._workers) < self.desired_worker_count:
                     new_worker_id = next(self._worker_id_counter)
                     new_worker = asyncio.create_task(self.worker_async_callable(new_worker_id))
                     log.debug(f"adding worker {new_worker_id}")
                     self._workers[new_worker] = new_worker_id
-                    continue
 
                 log.debug(f"waiting with {len(self._workers)} workers: {list(self._workers.values())}")
                 done_workers, pending_workers = await asyncio.wait(
@@ -39,6 +38,9 @@ class WorkerPool:
                 try:
                     worker.cancel()
                     await self.handle_done_worker(worker=worker)
+                except asyncio.CancelledError:
+                    # https://docs.python.org/3.7/library/asyncio-exceptions.html#asyncio.CancelledError
+                    raise
                 except Exception:
                     error_trace = traceback.format_exc()
                     log.debug(f"exception while canceling worker: {error_trace}")
@@ -48,7 +50,8 @@ class WorkerPool:
         try:
             result = await worker
         except asyncio.CancelledError:
-            pass
+            # https://docs.python.org/3.7/library/asyncio-exceptions.html#asyncio.CancelledError
+            raise
         except Exception:
             error_trace = traceback.format_exc()
             log.debug(f"worker {worker_id} raised exception: {error_trace}")
