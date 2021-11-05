@@ -318,7 +318,6 @@
       (if tail_reveal_and_solution
           (assert (= (sha256tree1 (f tail_reveal_and_solution)) (cat_tail_program_hash_truth Truths))
             (merge_list
-              inner_conditions
               (a  (f tail_reveal_and_solution)
                   (list
                     Truths
@@ -329,6 +328,7 @@
                     (r tail_reveal_and_solution)
                   )
               )
+              inner_conditions
             )
           )
           (assert parent_is_cat (not extra_delta)
