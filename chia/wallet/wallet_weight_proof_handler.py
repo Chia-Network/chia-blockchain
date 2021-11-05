@@ -65,16 +65,18 @@ class WalletWeightProofHandler:
         old_shutdown_tempfile.close()
 
     async def validate_weight_proof(
-        self, weight_proof: WeightProof
+        self, weight_proof: WeightProof, skip_segment_validation=False
     ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
-        task: asyncio.Task = asyncio.create_task(self.validate_weight_proof_inner(weight_proof))
+        task: asyncio.Task = asyncio.create_task(
+            self._validate_weight_proof_inner(weight_proof, skip_segment_validation)
+        )
         self._weight_proof_tasks.append(task)
         valid, fork_point, summaries, block_records = await task
         self._weight_proof_tasks.remove(task)
         return valid, fork_point, summaries, block_records
 
-    async def validate_weight_proof_inner(
-        self, weight_proof: WeightProof
+    async def _validate_weight_proof_inner(
+        self, weight_proof: WeightProof, skip_segment_validation: bool
     ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
         assert len(weight_proof.sub_epochs) > 0
         if len(weight_proof.sub_epochs) == 0:
@@ -109,35 +111,36 @@ class WalletWeightProofHandler:
             pathlib.Path(self._executor_shutdown_tempfile.name),
         )  # type: ignore[assignment]
         try:
-            segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
-                constants, rng, wp_segment_bytes, summary_bytes
-            )
+            if not skip_segment_validation:
+                segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
+                    constants, rng, wp_segment_bytes, summary_bytes
+                )
 
-            if not segments_validated:
-                return False, uint32(0), [], []
-
-            vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
-            for chunk in vdf_chunks:
-                byte_chunks = []
-                for vdf_proof, classgroup, vdf_info in chunk:
-                    byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
-
-                # TODO: remove hint overrides after https://github.com/python/typeshed/pull/6187
-                vdf_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
-                    self._executor,
-                    _validate_vdf_batch,
-                    constants,
-                    byte_chunks,
-                    pathlib.Path(self._executor_shutdown_tempfile.name),
-                )  # type: ignore[assignment]
-                vdf_tasks.append(vdf_task)
-
-            for vdf_task in vdf_tasks:
-                validated = await vdf_task
-                if not validated:
+                if not segments_validated:
                     return False, uint32(0), [], []
 
-            valid_recent_blocks, sub_block_bytes = await recent_blocks_validation_task
+                vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
+                for chunk in vdf_chunks:
+                    byte_chunks = []
+                    for vdf_proof, classgroup, vdf_info in chunk:
+                        byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
+
+                    # TODO: remove hint overrides after https://github.com/python/typeshed/pull/6187
+                    vdf_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
+                        self._executor,
+                        _validate_vdf_batch,
+                        constants,
+                        byte_chunks,
+                        pathlib.Path(self._executor_shutdown_tempfile.name),
+                    )  # type: ignore[assignment]
+                    vdf_tasks.append(vdf_task)
+
+                for vdf_task in vdf_tasks:
+                    validated = await vdf_task
+                    if not validated:
+                        return False, uint32(0), [], []
+
+            valid_recent_blocks, records_bytes = await recent_blocks_validation_task
         finally:
             recent_blocks_validation_task.cancel()
             for vdf_task in vdf_tasks:

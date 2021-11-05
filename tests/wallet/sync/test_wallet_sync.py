@@ -74,9 +74,13 @@ class TestWalletSync:
             100, wallet_height_at_least, True, wallet_node, len(default_400_blocks) + num_blocks - 5 - 1
         )
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_almost_recent(self, wallet_node, default_1000_blocks):
-
+    async def test_almost_recent(self, wallet_node, default_1000_blocks, trusted):
+        # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
         for block in default_1000_blocks:
@@ -84,6 +88,11 @@ class TestWalletSync:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
+
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
 
         # Tests a reorg with the wallet
         num_blocks = 30
@@ -150,7 +159,7 @@ class TestWalletSync:
         for block in default_1000_blocks:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-        log.info(f"wallet node height is {wallet_node.wallet_state_manager.blockchain._peak_height}")
+        log.info(f"wallet node height is {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) - 1)
 
         await disconnect_all_and_reconnect(wallet_server, full_node_server)

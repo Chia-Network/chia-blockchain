@@ -443,7 +443,7 @@ class WalletStateManager:
         self.pending_tx_callback()
 
     async def synced(self):
-        latest = await self.blockchain.get_latest_tx_block()
+        latest = await self.blockchain.get_peak_block()
         if latest is None:
             return False
         if latest.foliage_transaction_block.timestamp > int(time.time()) - 4 * 60:
