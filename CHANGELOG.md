@@ -40,7 +40,7 @@ This release also includes several important performance improvements as a resul
 
 ### Known Issues
 
-- PlotNFT transactions (e.g. `chia plotnft join`) now accept a fee parameter, but is not yet operable.  
+- PlotNFT transactions (e.g. `chia plotnft join`) now accept a fee parameter, but is not yet operable.
 
 ## 1.2.10 Chia blockchain 2021-10-25
 
