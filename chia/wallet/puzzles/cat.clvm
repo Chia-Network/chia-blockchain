@@ -130,7 +130,7 @@
      (defun sha256tree1 (TREE)
            (if (l TREE)
                (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
-               (sha256 1 TREE)))
+               (sha256 ONE TREE)))
 
     ; take two lists and merge them into one
     (defun merge_list (list_a list_b)
@@ -407,7 +407,7 @@
 
     (stager
         ;; calculate cat_mod_struct, inner_puzzle_hash, coin_id
-        (list MOD_HASH (sha256 1 MOD_HASH) TAIL_PROGRAM_HASH)
+        (list MOD_HASH (sha256 ONE MOD_HASH) TAIL_PROGRAM_HASH)
         (a INNER_PUZZLE inner_puzzle_solution)
         lineage_proof
         (sha256tree1 INNER_PUZZLE)
