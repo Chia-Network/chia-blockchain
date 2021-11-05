@@ -167,7 +167,10 @@
                     (r (r condition)))
          )
          (if (= (f condition) CREATE_COIN_ANNOUNCEMENT)
-           (list CREATE_COIN_ANNOUNCEMENT (sha256 0xca (f (r condition))))
+           (list CREATE_COIN_ANNOUNCEMENT
+                (sha256 0xca (f (r condition)))
+                    (r (r condition))
+           )
            condition
          )
        )
