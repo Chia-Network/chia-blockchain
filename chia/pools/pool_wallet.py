@@ -67,6 +67,7 @@ class PoolWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     target_state: Optional[PoolState]
+    next_transaction_fee: uint64
     standard_wallet: Wallet
     wallet_id: int
     singleton_list: List[Coin]
@@ -295,6 +296,7 @@ class PoolWallet:
                 if latest_state is not None:
                     if self.target_state == latest_state:
                         self.target_state = None
+                        self.next_transaction_fee = uint64(0)
                     break
         await self.update_pool_config(False)
 
@@ -348,6 +350,7 @@ class PoolWallet:
         self.wallet_id = self.wallet_info.id
         self.standard_wallet = wallet
         self.target_state = None
+        self.next_transaction_fee = uint64(0)
         self.log = logging.getLogger(name if name else __name__)
 
         launcher_spend: Optional[CoinSpend] = None
@@ -441,7 +444,7 @@ class PoolWallet:
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=singleton_puzzle_hash,
             amount=uint64(amount),
-            fee_amount=uint64(0),
+            fee_amount=fee,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=spend_bundle,
@@ -472,7 +475,7 @@ class PoolWallet:
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
-    async def generate_travel_transaction(self) -> TransactionRecord:
+    async def generate_travel_transaction(self, fee: uint64) -> TransactionRecord:
         # target_state is contained within pool_wallet_state
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
 
@@ -555,7 +558,7 @@ class PoolWallet:
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=new_full_puzzle.get_tree_hash(),
             amount=uint64(1),
-            fee_amount=uint64(0),
+            fee_amount=fee,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=signed_spend_bundle,
@@ -624,7 +627,7 @@ class PoolWallet:
 
         puzzle_hash: bytes32 = full_pooling_puzzle.get_tree_hash()
         pool_state_bytes = Program.to([("p", bytes(initial_target_state)), ("t", delay_time), ("h", delay_ph)])
-        announcement_set: Set[Announcement] = set()
+        announcement_set: Set[bytes32] = set()
         announcement_message = Program.to([puzzle_hash, amount, pool_state_bytes]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
 
@@ -653,23 +656,28 @@ class PoolWallet:
         full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
         return full_spend, puzzle_hash, launcher_coin.name()
 
-    async def join_pool(self, target_state: PoolState):
-
+    async def join_pool(self, target_state: PoolState, fee: uint64) -> Tuple[uint64, TransactionRecord]:
         if target_state.state != FARMING_TO_POOL:
             raise ValueError(f"join_pool must be called with target_state={FARMING_TO_POOL} (FARMING_TO_POOL)")
         if self.target_state is not None:
             raise ValueError(f"Cannot join a pool while waiting for target state: {self.target_state}")
         if await self.have_unconfirmed_transaction():
             raise ValueError(
-                "Cannot claim due to unconfirmed transaction. If this is stuck, delete the unconfirmed transaction."
+                "Cannot join pool due to unconfirmed transaction. If this is stuck, delete the unconfirmed transaction."
             )
 
         current_state: PoolWalletInfo = await self.get_current_state()
 
+        total_fee = fee
         if current_state.current == target_state:
             self.target_state = None
-            self.log.info("Asked to change to current state. Target = {target_state}")
-            return
+            msg = f"Asked to change to current state. Target = {target_state}"
+            self.log.info(msg)
+            raise ValueError(msg)
+        elif current_state.current.state in [SELF_POOLING, LEAVING_POOL]:
+            total_fee = fee
+        elif current_state.current.state == FARMING_TO_POOL:
+            total_fee = uint64(fee * 2)
 
         if self.target_state is not None:
             raise ValueError(
@@ -685,15 +693,16 @@ class PoolWallet:
                 )
 
         self.target_state = target_state
-        tx_record: TransactionRecord = await self.generate_travel_transaction()
+        self.next_transaction_fee = fee
+        tx_record: TransactionRecord = await self.generate_travel_transaction(fee)
         await self.wallet_state_manager.add_pending_transaction(tx_record)
 
-        return tx_record
+        return total_fee, tx_record
 
-    async def self_pool(self):
+    async def self_pool(self, fee: uint64) -> Tuple[uint64, TransactionRecord]:
         if await self.have_unconfirmed_transaction():
             raise ValueError(
-                "Cannot claim due to unconfirmed transaction. If this is stuck, delete the unconfirmed transaction."
+                "Cannot self pool due to unconfirmed transaction. If this is stuck, delete the unconfirmed transaction."
             )
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
         if pool_wallet_info.current.state == SELF_POOLING:
@@ -707,8 +716,10 @@ class PoolWallet:
         owner_puzzlehash = await self.standard_wallet.get_new_puzzlehash()
         owner_pubkey = pool_wallet_info.current.owner_pubkey
         current_state: PoolWalletInfo = await self.get_current_state()
+        total_fee = uint64(fee * 2)
 
         if current_state.current.state == LEAVING_POOL:
+            total_fee = fee
             history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
             last_height: uint32 = history[-1][0]
             if self.wallet_state_manager.get_peak().height <= last_height + current_state.current.relative_lock_height:
@@ -718,9 +729,10 @@ class PoolWallet:
         self.target_state = create_pool_state(
             SELF_POOLING, owner_puzzlehash, owner_pubkey, pool_url=None, relative_lock_height=uint32(0)
         )
-        tx_record = await self.generate_travel_transaction()
+        self.next_transaction_fee = fee
+        tx_record = await self.generate_travel_transaction(fee)
         await self.wallet_state_manager.add_pending_transaction(tx_record)
-        return tx_record
+        return total_fee, tx_record
 
     async def claim_pool_rewards(self, fee: uint64) -> TransactionRecord:
         # Search for p2_puzzle_hash coins, and spend them with the singleton
@@ -783,7 +795,7 @@ class PoolWallet:
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=current_state.current.target_puzzle_hash,
             amount=uint64(total_amount),
-            fee_amount=uint64(0),
+            fee_amount=fee,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=spend_bundle,
@@ -846,7 +858,7 @@ class PoolWallet:
                     assert self.target_state.relative_lock_height >= self.MINIMUM_RELATIVE_LOCK_HEIGHT
                     assert self.target_state.pool_url is not None
 
-                tx_record = await self.generate_travel_transaction()
+                tx_record = await self.generate_travel_transaction(self.next_transaction_fee)
                 await self.wallet_state_manager.add_pending_transaction(tx_record)
 
     async def have_unconfirmed_transaction(self) -> bool:
