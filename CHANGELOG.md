@@ -6,27 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.2.11 Chia blockchain 2021-11-4
 
-## UNRELEASED
+Farmers rejoice: today's release integrates two plotters in broad use in the Chia community: Bladebit, created by @harold-b, and Madmax, created by @madMAx43v3r. Both of these plotters bring significant improvements in plotting time. More plotting info [here](https://github.com/Chia-Network/chia-blockchain/wiki/Alternative--Plotters).
+This release also includes several important performance improvements as a result of last weekends "Dust Storm", with two goals in mind: make sure everyone can farm at all times, and improve how many transactions per second each node can accept, especially for low-end hardware. Please know that these optimizations are only the first wave in a series of many over the next few releases to help address this going forward. While the changes we have implemented in this update may not necessarily solve for _every_ possible congestion scenario, they should go a long way towards helping low-end systems perform closer to expectations if this happens again.
+
+### Added
+
+- Performance improvements for nodes to support higher transaction volumes, especially for low powered devices like RaspBerry Pi. Full details at [#9050](https://github.com/Chia-Network/chia-blockchain/pull/9050).
+  - Improved multi-core usage through process pools.
+  - Prioritized block validation.
+  - Added transaction queues for more efficient handling of incoming transactions.
+  - Increased BLS pairing cache.
+- Integrated the Bladebit plotter to CLI and GUI. Thanks @harold-b for all your hard work on this, and welcome again to the Chia Network team!
+- Added the Madmax plotter to CLI and GUI. Thanks @madMAx43v3r for your support!
+- Added option to configure your node to testnet using to `chia init --testnet`.
 
 ### Changed
 
-- PlotNFT transactions (e.g. `chia plotnft join`) now accept a fee parameter. Note: this fee is PER TRANSACTION; leaving a pool takes 2 transactions.
-
-## 1.2.11 Chia blockchain 2021-10-27 (unreleased)
-
-This maintenance release squashes bugs reported by our Chia community. Thanks to all who flagged these issues.
-
-### Changed
-
-- Improved the wallet GUI's startup loading time by  loading the default private key's fingerprint.
+- Improved the wallet GUI's startup loading time by loading the default private key's fingerprint.
 - Upgraded from clvm_rs 0.1.14 to 0.1.15.
 
 ### Fixed
 
+- Minor verbiage and syntax changes in CLI and GUI.
+- Partial version to fix launcher name definition.
+- Fix harvester plot loading perfomance issues.
 - Fixed a packaging failure when passphrase is being used. Thanks @ForkFarmer for reporting this defect.
 - Fixed launcher name definition, which resolved an issue for some users in which wallet-node couldn't sync.
 - Fixed a bug in the GUI that prevented some users from switching their plotNFT.
+
+### Known Issues
+
+- PlotNFT transactions via CLI (e.g. `chia plotnft join`) now accept a fee parameter, but it is not yet operable.
 
 ## 1.2.10 Chia blockchain 2021-10-25
 
