@@ -257,12 +257,8 @@
       (defun-inline condition_tail_reveal (condition) (f (r (r (r condition)))))
       (defun-inline condition_tail_solution (condition) (f (r (r (r (r condition))))))
 
-      (defun cons_to_first (item cons_box)
-        (c (c item (f cons_box)) (r cons_box))
-      )
-
-      (defun add_value_to_second (value struct)
-        (c (f struct) (c (+ value (f (r struct))) (r (r struct))))
+      (defun cons_onto_first_and_add_to_second (morphed_condition output_value struct)
+        (c (c morphed_condition (f struct)) (c (+ output_value (f (r struct))) (r (r struct))))
       )
 
       (defun find_and_strip_tail_info (inner_conditions cat_mod_struct tail_reveal_and_solution)
@@ -276,13 +272,13 @@
                   cat_mod_struct
                   (c (condition_tail_reveal (f inner_conditions)) (condition_tail_solution (f inner_conditions)))
                 )
-                (cons_to_first (morph_condition (f inner_conditions) cat_mod_struct)
-                  (add_value_to_second (output_value_for_condition (f inner_conditions))
-                    (find_and_strip_tail_info
-                      (r inner_conditions)
-                      cat_mod_struct
-                      tail_reveal_and_solution
-                    )
+                (cons_onto_first_and_add_to_second
+                  (morph_condition (f inner_conditions) cat_mod_struct)
+                  (output_value_for_condition (f inner_conditions))
+                  (find_and_strip_tail_info
+                    (r inner_conditions)
+                    cat_mod_struct
+                    tail_reveal_and_solution
                   )
                 )
             )
