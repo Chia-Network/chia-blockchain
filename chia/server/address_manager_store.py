@@ -11,7 +11,7 @@ from chia.server.address_manager import (
 from chia.util.ints import uint64
 from chia.util.path import mkdir
 from chia.util.streamable import streamable, Streamable
-from chia.util.write_file import write_file
+from chia.util.write_file import write_file_async
 from dataclasses import dataclass
 from pathlib import Path
 from timeit import default_timer as timer
@@ -231,4 +231,4 @@ class AddressManagerStore:
         Serializes the given peer data and writes it to the peers file.
         """
         serialized_bytes: bytes = await makePeerDataSerialization(metadata, nodes, new_table)
-        write_file(peers_file_path, serialized_bytes, file_mode=0o644)
+        await write_file_async(peers_file_path, serialized_bytes, file_mode=0o644)
