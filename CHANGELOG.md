@@ -20,12 +20,10 @@ This release also includes several important performance improvements as a resul
   - Increased BLS pairing cache.
 - Integrated the Bladebit plotter to CLI and GUI. Thanks @harold-b for all your hard work on this, and welcome again to the Chia Network team!
 - Added the Madmax plotter to CLI and GUI. Thanks @madMAx43v3r for your support!
-- Added fee support in the GUI for creating and moving plotNFTs, which enables farmers to join and leave pools when there are a lot of transactions on the network.
 - Added option to configure your node to testnet using to `chia init --testnet`.
 
 ### Changed
 
-- Performance improvements for nodes to support higher transaction volumes, especially for low powered devices like RaspBerry Pi.
 - Improved the wallet GUI's startup loading time by loading the default private key's fingerprint.
 - Upgraded from clvm_rs 0.1.14 to 0.1.15.
 
@@ -40,7 +38,7 @@ This release also includes several important performance improvements as a resul
 
 ### Known Issues
 
-- PlotNFT transactions (e.g. `chia plotnft join`) now accept a fee parameter, but is not yet operable.
+- PlotNFT transactions via CLI (e.g. `chia plotnft join`) now accept a fee parameter, but it is not yet operable.
 
 ## 1.2.10 Chia blockchain 2021-10-25
 
