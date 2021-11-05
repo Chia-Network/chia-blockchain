@@ -3,7 +3,7 @@ import pytest
 import shutil
 import sys
 
-from chia.util.write_file import write_file_async
+from chia.util.files import write_file_async
 from multiprocessing import Process
 from pathlib import Path
 from time import sleep

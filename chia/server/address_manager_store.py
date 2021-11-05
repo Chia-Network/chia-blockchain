@@ -8,10 +8,10 @@ from chia.server.address_manager import (
     AddressManager,
     ExtendedPeerInfo,
 )
+from chia.util.files import write_file_async
 from chia.util.ints import uint64
 from chia.util.path import mkdir
 from chia.util.streamable import streamable, Streamable
-from chia.util.write_file import write_file_async
 from dataclasses import dataclass
 from pathlib import Path
 from timeit import default_timer as timer
