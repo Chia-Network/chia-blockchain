@@ -245,12 +245,13 @@
 
 
       ;; This next section of code loops through all of the conditions to do three things:
-      ;;   1) Look for a "magic" value of -113 and, if one exists, take note of the tail reveal and solution
+      ;;   1) Look for a "magic" value of -113 and, if one exists, filter it, and take note of the tail reveal and solution
       ;;   2) Morph any CREATE_COIN or CREATE_COIN_ANNOUNCEMENT conditions
       ;;   3) Sum the total output amount of all of the CREATE_COINs that are output by the inner puzzle
       ;;
       ;; After everything return a struct in the format (morphed_conditions . (output_sum . tail_reveal_and_solution))
-      
+      ;; If multiple magic conditions are specified, the later one will take precedence
+
       (defun-inline condition_opcode (condition) (f condition))
       (defun-inline condition_magic_value (condition) (f (r (r condition))))
       (defun-inline condition_tail_reveal (condition) (f (r (r (r condition)))))
@@ -268,7 +269,7 @@
         (if inner_conditions
             (if (and
                   (= (condition_opcode (f inner_conditions)) CREATE_COIN)
-                  (= (condition_magic_value (f inner_conditions)) -113)
+                  (= (condition_magic_value (f inner_conditions)) -113) ; aka the amount
                 )
                 (find_and_strip_tail_info
                   (r inner_conditions)
@@ -326,7 +327,7 @@
                   (list
                     Truths
                     parent_is_cat
-                    lineage_proof
+                    lineage_proof ; Lineage proof is only guaranteed to be true is parent_is_cat
                     extra_delta
                     inner_conditions
                     (r tail_reveal_and_solution)
