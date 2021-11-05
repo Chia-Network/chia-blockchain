@@ -323,7 +323,7 @@
                   (list
                     Truths
                     parent_is_cat
-                    lineage_proof ; Lineage proof is only guaranteed to be true is parent_is_cat
+                    lineage_proof ; Lineage proof is only guaranteed to be true if parent_is_cat
                     extra_delta
                     inner_conditions
                     (r tail_reveal_and_solution)
