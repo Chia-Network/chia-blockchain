@@ -87,8 +87,8 @@ def configure(
     domain_name: str,
     nameserver: str,
 ):
-    # Run the parent config, in case anythign there (testnet) needs to be run, THEN load the config for local changes
-    chia_configure.configure(root_path, None, None, None, None, None, None, None, None, testnet, None)
+    # Run the parent config, in case anything there (testnet) needs to be run, THEN load the config for local changes
+    chia_configure.configure(root_path, "", "", "", "", "", "", "", "", testnet, "")
 
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False
