@@ -19,7 +19,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -253,6 +253,29 @@ async def get_login_link(launcher_id_str: str) -> None:
             print("Was not able to get login link.")
         else:
             print(login_link)
+    except Exception as e:
+        if isinstance(e, aiohttp.ClientConnectorError):
+            print(
+                f"Connection error. Check if farmer is running at {farmer_rpc_port}."
+                f" You can run the farmer by:\n    chia start farmer-only"
+            )
+        else:
+            print(f"Exception from 'farmer' {e}")
+    finally:
+        farmer_client.close()
+        await farmer_client.await_closed()
+
+
+async def set_payout_instructions(launcher_id_str: str, payout_address: str) -> None:
+    launcher_id: bytes32 = hexstr_to_bytes(launcher_id_str)
+    payout_puzzle: str = decode_puzzle_hash(payout_address).hex()
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    self_hostname = config["self_hostname"]
+    farmer_rpc_port = config["farmer"]["rpc_port"]
+    farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
+    try:
+        await farmer_client.set_payout_instructions(launcher_id, payout_puzzle)
+        print(f"Set payout instructions to {payout_address}")
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
             print(

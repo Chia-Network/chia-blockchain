@@ -51,6 +51,19 @@ def get_login_link_cmd(launcher_id: str) -> None:
     asyncio.run(get_login_link(launcher_id))
 
 
+@plotnft_cmd.command(
+    "set_payout_instructions",
+    short_help="Modify payout instructions for a pool. To get the launcher id, use plotnft show.",
+)
+@click.option("-l", "--launcher_id", help="Launcher ID of the plotnft", type=str, required=True)
+@click.option("-a", "--address", help="Address to receive pool payouts", type=str, required=True)
+def set_payout_instructions_cmd(launcher_id: str, address: str) -> None:
+    import asyncio
+    from .plotnft_funcs import set_payout_instructions
+
+    asyncio.run(set_payout_instructions(launcher_id, address))
+
+
 @plotnft_cmd.command("create", short_help="Create a plot NFT")
 @click.option("-y", "--yes", help="No prompts", is_flag=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
