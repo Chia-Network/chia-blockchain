@@ -18,7 +18,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 
 @click.group(
-    help=f"\n  Manage chiadns ({__version__})\n",
+    help=f"\n  Manage Chia Seeder ({__version__})\n",
     epilog="Try 'chia_seeder start crawler' or 'chia_seeder start dns'",
     context_settings=CONTEXT_SETTINGS,
 )
@@ -94,7 +94,7 @@ def configure(
     change_made = False
     if testnet is not None:
         if testnet == "true" or testnet == "t":
-            print("Updating chiadns to testnet settings")
+            print("Updating Chia DNS to testnet settings")
             port = 58444
             network = "testnet7"
             bootstrap = ["testnet-node.chia.net"]
@@ -107,7 +107,7 @@ def configure(
             change_made = True
 
         elif testnet == "false" or testnet == "f":
-            print("Updating chiadns to mainnet settings")
+            print("Updating Chia DNS to mainnet settings")
             port = 8444
             network = "mainnet"
             bootstrap = ["node.chia.net"]
@@ -138,7 +138,7 @@ def configure(
         change_made = True
 
     if change_made:
-        print("Restart any running chiadns services for changes to take effect")
+        print("Restart any running Chia DNS services for changes to take effect")
         save_config(root_path, "config.yaml", config)
     return 0
 

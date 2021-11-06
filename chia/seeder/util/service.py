@@ -81,9 +81,9 @@ def kill_service(root_path: Path, service_name: str) -> bool:
 # determine if application is a script file or frozen exe
 if getattr(sys, "frozen", False):
     name_map = {
-        "chiadns": "chiadns",
-        "chiadns_crawler": "chiadns_crawler",
-        "chiadns_server": "chiadns_server",
+        "chia_seeder": "chia_seeder",
+        "chia_seeder_crawler": "chia_seeder_crawler",
+        "chia_seeder_server": "chia_seeder_server",
     }
 
     def executable_for_service(service_name: str) -> str:
