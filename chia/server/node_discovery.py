@@ -107,8 +107,8 @@ class FullNodeDiscovery:
         except Exception:
             self.log.exception("Error migrating legacy peer database")
 
-    def initialize_address_manager(self) -> None:
-        self.address_manager = AddressManagerStore.create_address_manager(self.peers_file_path)
+    async def initialize_address_manager(self) -> None:
+        self.address_manager = await AddressManagerStore.create_address_manager(self.peers_file_path)
         self.server.set_received_message_callback(self.update_peer_timestamp_on_message)
 
     async def start_tasks(self) -> None:
@@ -539,7 +539,7 @@ class FullNodePeers(FullNodeDiscovery):
 
     async def start(self):
         await self.migrate_address_manager_if_necessary()
-        self.initialize_address_manager()
+        await self.initialize_address_manager()
         self.self_advertise_task = asyncio.create_task(self._periodically_self_advertise_and_clean_data())
         self.address_relay_task = asyncio.create_task(self._address_relay())
         await self.start_tasks()
@@ -709,7 +709,7 @@ class WalletPeers(FullNodeDiscovery):
     async def start(self) -> None:
         self.initial_wait = 60
         await self.migrate_address_manager_if_necessary()
-        self.initialize_address_manager()
+        await self.initialize_address_manager()
         await self.start_tasks()
 
     async def ensure_is_closed(self) -> None:

@@ -1,3 +1,4 @@
+import aiofiles
 import asyncio
 import logging
 
@@ -75,7 +76,7 @@ class AddressManagerStore:
     """
 
     @classmethod
-    def create_address_manager(cls, peers_file_path: Path) -> AddressManager:
+    async def create_address_manager(cls, peers_file_path: Path) -> AddressManager:
         """
         Create an address manager using data deserialized from a peers file.
         """
@@ -83,7 +84,7 @@ class AddressManagerStore:
         if peers_file_path.exists():
             try:
                 log.info(f"Loading peers from {peers_file_path}")
-                address_manager = cls._deserialize(peers_file_path)
+                address_manager = await cls._deserialize(peers_file_path)
             except Exception:
                 log.exception(f"Unable to create address_manager from {peers_file_path}")
 
@@ -141,7 +142,7 @@ class AddressManagerStore:
             log.exception(f"Failed to write peer data to {peers_file_path}")
 
     @classmethod
-    def _deserialize(cls, peers_file_path: Path) -> AddressManager:
+    async def _deserialize(cls, peers_file_path: Path) -> AddressManager:
         """
         Create an address manager using data deserialized from a peers file.
         """
@@ -149,7 +150,7 @@ class AddressManagerStore:
         address_manager = AddressManager()
         start_time = timer()
         try:
-            peer_data = cls._read_peers(peers_file_path)
+            peer_data = await cls._read_peers(peers_file_path)
         except Exception:
             log.exception(f"Unable to deserialize peers from {peers_file_path}")
 
@@ -212,12 +213,12 @@ class AddressManagerStore:
         return address_manager
 
     @classmethod
-    def _read_peers(cls, peers_file_path: Path) -> PeerDataSerialization:
+    async def _read_peers(cls, peers_file_path: Path) -> PeerDataSerialization:
         """
         Read the peers file and return the data as a PeerDataSerialization object.
         """
-        with open(peers_file_path, "rb") as f:
-            return PeerDataSerialization.from_bytes(f.read())
+        async with aiofiles.open(peers_file_path, "rb") as f:
+            return PeerDataSerialization.from_bytes(await f.read())
 
     @classmethod
     async def _write_peers(

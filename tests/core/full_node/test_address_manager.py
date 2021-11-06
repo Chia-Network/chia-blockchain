@@ -551,7 +551,7 @@ class TestPeerManager:
         # Write out the serialized peer data
         await AddressManagerStore.serialize(addrman, peers_dat_filename)
         # Read in the serialized peer data
-        addrman2 = AddressManagerStore.create_address_manager(peers_dat_filename)
+        addrman2 = await AddressManagerStore.create_address_manager(peers_dat_filename)
 
         retrieved_peers = []
         for _ in range(50):

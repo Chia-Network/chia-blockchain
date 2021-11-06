@@ -47,6 +47,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.check_fork_next_block import check_fork_next_block
+from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint128
 from chia.util.keychain import Keychain
@@ -363,7 +364,7 @@ class WalletNode:
                 self.config,
                 selected_network=network_name,
                 peers_file_path_key="wallet_peers_file_path",
-                legacy_peer_db_path_key="wallet_peers_path",
+                legacy_peer_db_path_key=WALLET_PEERS_PATH_KEY_DEPRECATED,
                 default_peers_file_path="wallet/db/wallet_peers.dat",
             ),
             self.config["introducer_peer"],
