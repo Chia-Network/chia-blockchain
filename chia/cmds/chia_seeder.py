@@ -7,8 +7,6 @@ import pkg_resources
 
 from chia import __version__
 from chia.cmds.init_funcs import init
-from chia.cmds.start import start_cmd
-from chia.cmds.stop import stop_cmd
 from chia.daemon.server import launch_service
 from chia.util.config import load_config, save_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
