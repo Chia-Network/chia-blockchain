@@ -1,36 +1,49 @@
----
-name: Bug report
-about: Create a report to help us improve
-title: "[BUG]"
-labels: bug
-assignees: ''
-
----
-
-**Describe the bug**
-<!-- A clear and concise description of what the bug is. (If what you are experiencing is NOT a bug but instead a support issue, please open a Discussion instead!) -->
-
-**To Reproduce**
-
-Steps to reproduce the behavior:
-
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
-
-**Expected behavior**
-<!-- A clear and concise description of what you expected to happen. -->
-
-**Screenshots**
-<!-- If applicable, add screenshots to help explain your problem. -->
-
-**Desktop**
-<!-- Please complete the following information. -->
-
-- OS: <!-- e.g. Linux -->
-- OS Version/Flavor: <!-- e.g. CentOS 7.2 -->
-- CPU: <!-- e.g. Intel Xeon 8175M -->
-
-**Additional context**
-<!-- Add any other context about the problem here. -->
+name: Bug Report
+description: File a bug report
+title: "[Bug] "
+labels: ["bug"]
+assignees:
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please fill out a clear and concise description of what the bug is. (If what you are experiencing is NOT a bug but instead a support issue, please open a Discussion instead!)
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description:  A clear and concise description of what happened, how to reproduce it, and what you expected to happen.
+      value: "A bug happened!"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version of Chia are you running?
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: What platform are you using?
+      multiple: false
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Pi4
+  - type: dropdown
+    id: ui
+    attributes:
+      label: What ui mode are you using?
+      multiple: false
+      options:
+        - GUI
+        - CLI
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
