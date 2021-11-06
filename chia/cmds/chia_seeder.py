@@ -9,7 +9,7 @@ from chia import __version__
 from chia.cmds.init_funcs import init
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
-from chia.daemon.server import kill_service, launch_service
+from chia.daemon.server import launch_service
 from chia.util.config import load_config, save_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
@@ -48,6 +48,32 @@ def services_for_groups(groups) -> Generator[str, None, None]:
     for group in groups:
         for service in SERVICES_FOR_GROUP[group]:
             yield service
+
+
+def kill_service(root_path: Path, service_name: str) -> bool:
+    pid_name = service_name.replace(" ", "-").replace("/", "-")
+    pid_path = root_path / "run" / f"{pid_name}.pid"
+
+    try:
+        with open(pid_path) as f:
+            pid = int(f.read())
+
+        # @TODO SIGKILL seems necessary right now for the dns server, but not the crawler (fix that)
+        # @TODO Ensure processes stop before renaming the files and returning
+        os.kill(pid, signal.SIGKILL)
+        print("sent SIGKILL to process")
+    except Exception:
+        pass
+
+    try:
+        pid_path_killed = pid_path.with_suffix(".pid-killed")
+        if pid_path_killed.exists():
+            pid_path_killed.unlink()
+        os.rename(pid_path, pid_path_killed)
+    except Exception:
+        pass
+
+    return True
 
 
 def patch_default_chia_dns_config(root_path: Path, filename="config.yaml") -> None:
