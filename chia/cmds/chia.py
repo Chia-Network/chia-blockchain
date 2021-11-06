@@ -83,7 +83,7 @@ def cli(
                 raise KeyringCurrentPassphraseIsInvalid("Invalid passphrase")
         except KeyringCurrentPassphraseIsInvalid:
             if Path(passphrase_file.name).is_file():
-                print(f"Invalid passphrase found in \"{passphrase_file.name}\"")
+                print(f'Invalid passphrase found in "{passphrase_file.name}"')
             else:
                 print("Invalid passphrase")
             exit(1)
