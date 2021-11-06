@@ -17,9 +17,9 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 
 SERVICES_FOR_GROUP = {
-    "all": "chia_seeder_crawler chia_seeder_server".split(),
+    "all": "chia_seeder_crawler chia_seeder_dns".split(),
     "crawler": "chia_seeder_crawler".split(),
-    "dns": "chia_seeder_server".split(),
+    "dns": "chia_seeder_dns".split(),
 }
 
 
