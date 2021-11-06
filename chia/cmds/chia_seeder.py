@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import KeysView, Generator
 
 import click
 import pkg_resources
@@ -8,11 +9,18 @@ from chia import __version__
 from chia.cmds.init_funcs import init
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
-from chia.cmds.configure import configure_cmd
+from chia.daemon.server import kill_service, launch_service
 from chia.util.config import load_config, save_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+
+
+SERVICES_FOR_GROUP = {
+    "all": "chia_seeder_crawler chia_seeder_server".split(),
+    "crawler": "chia_seeder_crawler".split(),
+    "dns": "chia_seeder_server".split(),
+}
 
 
 # TODO: dedupe wrt the eponymous function defined in chia/cmds/chia.py
@@ -32,7 +40,17 @@ def monkey_patch_click() -> None:
     click.core._verify_python3_env = lambda *args, **kwargs: 0  # type: ignore
 
 
-def patch_default_chiadns_config(root_path: Path, filename="config.yaml") -> None:
+def all_groups() -> KeysView[str]:
+    return SERVICES_FOR_GROUP.keys()
+
+
+def services_for_groups(groups) -> Generator[str, None, None]:
+    for group in groups:
+        for service in SERVICES_FOR_GROUP[group]:
+            yield service
+
+
+def patch_default_chia_dns_config(root_path: Path, filename="config.yaml") -> None:
     """
     Checks if the dns: section exists in the config. If not, the default dns settings are appended to the file
     """
@@ -59,6 +77,70 @@ def patch_default_chiadns_config(root_path: Path, filename="config.yaml") -> Non
     config["full_node"]["peer_connect_timeout"] = 2
 
     save_config(root_path, "config.yaml", config)
+
+
+def configure(
+    root_path: Path,
+    testnet: str,
+    crawler_db_path: str,
+    minimum_version_count: int,
+    domain_name: str,
+    nameserver: str,
+):
+    # Run the parent config, in case anythign there (testnet) needs to be run, THEN load the config for local changes
+    chia_configure.configure(root_path, None, None, None, None, None, None, None, None, testnet, None)
+
+    config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    change_made = False
+    if testnet is not None:
+        if testnet == "true" or testnet == "t":
+            print("Updating Chia DNS to testnet settings")
+            port = 58444
+            network = "testnet7"
+            bootstrap = ["testnet-node.chia.net"]
+
+            config["dns"]["port"] = port
+            config["dns"]["other_peers_port"] = port
+            config["dns"]["selected_network"] = network
+            config["dns"]["bootstrap_peers"] = bootstrap
+
+            change_made = True
+
+        elif testnet == "false" or testnet == "f":
+            print("Updating Chia DNS to mainnet settings")
+            port = 8444
+            network = "mainnet"
+            bootstrap = ["node.chia.net"]
+
+            config["dns"]["port"] = port
+            config["dns"]["other_peers_port"] = port
+            config["dns"]["selected_network"] = network
+            config["dns"]["bootstrap_peers"] = bootstrap
+
+            change_made = True
+        else:
+            print("Please choose True or False")
+
+    if crawler_db_path is not None:
+        config["dns"]["crawler_db_path"] = crawler_db_path
+        change_made = True
+
+    if minimum_version_count is not None:
+        config["dns"]["minimum_version_count"] = minimum_version_count
+        change_made = True
+
+    if domain_name is not None:
+        config["dns"]["domain_name"] = domain_name
+        change_made = True
+
+    if nameserver is not None:
+        config["dns"]["nameserver"] = nameserver
+        change_made = True
+
+    if change_made:
+        print("Restart any running Chia DNS services for changes to take effect")
+        save_config(root_path, "config.yaml", config)
+    return 0
 
 
 @click.group(
@@ -98,8 +180,76 @@ def init_cmd(ctx: click.Context, **kwargs):
         # This really shouldn't happen, but if we dont have the base chia config, we can't continue
         print("Config does not exist. Can't continue!")
         return -1
-    patch_default_chiadns_config(root_path)
+    patch_default_chia_dns_config(root_path)
     return 0
+
+
+@click.command("start", short_help="Start service groups")
+@click.argument("group", type=click.Choice(all_groups()), nargs=-1, required=True)
+@click.pass_context
+def start_cmd(ctx: click.Context, group: str) -> None:
+    services = services_for_groups(group)
+
+    for service in services:
+        print(f"Starting {service}")
+        launch_service(ctx.obj["root_path"], service)
+
+
+@click.command("stop", short_help="Stop service groups")
+@click.argument("group", type=click.Choice(all_groups()), nargs=-1, required=True)
+@click.pass_context
+def stop_cmd(ctx: click.Context, group: str) -> None:
+    services = services_for_groups(group)
+
+    for service in services:
+        print(f"Stopping {service}")
+        kill_service(ctx.obj["root_path"], service)
+
+
+@click.command("configure", short_help="Modify configuration")
+@click.option(
+    "--testnet",
+    "-t",
+    help="configures for connection to testnet",
+    type=click.Choice(["true", "t", "false", "f"]),
+)
+@click.option(
+    "--crawler-db-path",
+    help="configures for path to the crawler database",
+    type=str,
+)
+@click.option(
+    "--minimum-version-count",
+    help="configures how many of a particular version must be seen to be reported in logs",
+    type=int,
+)
+@click.option(
+    "--domain-name",
+    help="configures the domain_name setting. Ex: `seeder.example.com.`",
+    type=str,
+)
+@click.option(
+    "--nameserver",
+    help="configures the nameserver setting. Ex: `example.com.`",
+    type=str,
+)
+@click.pass_context
+def configure_cmd(
+    ctx,
+    testnet,
+    crawler_db_path,
+    minimum_version_count,
+    domain_name,
+    nameserver,
+):
+    configure(
+        ctx.obj["root_path"],
+        testnet,
+        crawler_db_path,
+        minimum_version_count,
+        domain_name,
+        nameserver,
+    )
 
 
 cli.add_command(init_cmd)
