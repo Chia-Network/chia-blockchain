@@ -1,9 +1,9 @@
-import aiofiles
 import asyncio
 import logging
 import os
 import shutil
 
+from aiofiles import tempfile  # type: ignore
 from pathlib import Path
 from typing import Union
 
@@ -21,33 +21,36 @@ def move_file(src: Path, dst: Path):
     os.makedirs(dst.parent, mode=dir_perms, exist_ok=True)
 
     try:
+        # Attempt an atomic move first
         os.replace(os.fspath(src), os.fspath(dst))
-    except PermissionError:
+    except Exception as e:
+        log.debug(f"Failed to move {src} to {dst} using os.replace, reattempting with shutil.move: {e}")
         try:
+            # If that fails, use the more robust shutil.move(), though it may internally initiate a copy
             shutil.move(os.fspath(src), os.fspath(dst))
         except Exception:
             log.exception(f"Failed to move {src} to {dst} using shutil.move")
             raise
-    except Exception:
-        log.exception(f"Failed to move {src} to {dst} using os.replace")
-        raise
 
 
-async def move_file_async(src: Path, dst: Path, *, reattempts: int = 6, reattempt_delay: int = 0.5):
+async def move_file_async(src: Path, dst: Path, *, reattempts: int = 6, reattempt_delay: float = 0.5):
     """
-    Attempts to move the file at src to dst, falling back to a copy if the move fails.
+    Attempts to move the file at src to dst, making multiple attempts if the move fails.
     """
 
-    for remaining_attempts in range(reattempts, 0, -1):
+    remaining_attempts: int = reattempts
+    while True:
         try:
             move_file(src, dst)
         except Exception:
-            if not dst.exists() and remaining_attempts > 0:
-                log.error(f"Failed to move {src} to {dst}, retrying in {reattempt_delay} seconds")
+            if remaining_attempts > 0:
+                log.debug(f"Failed to move {src} to {dst}, retrying in {reattempt_delay} seconds")
+                remaining_attempts -= 1
                 await asyncio.sleep(reattempt_delay)
-        else:
-            if dst.exists():
+            else:
                 break
+        else:
+            break
 
     if not dst.exists():
         raise FileNotFoundError(f"Failed to move {src} to {dst}")
@@ -66,7 +69,7 @@ async def write_file_async(file_path: Path, data: Union[str, bytes], *, file_mod
 
     mode: str = "w+" if type(data) == str else "w+b"
     temp_file_path: Path
-    async with aiofiles.tempfile.NamedTemporaryFile(dir=file_path.parent, mode=mode, delete=False) as f:
+    async with tempfile.NamedTemporaryFile(dir=file_path.parent, mode=mode, delete=False) as f:
         temp_file_path = f.name
         await f.write(data)
 
