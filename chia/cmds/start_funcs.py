@@ -35,9 +35,8 @@ async def create_start_daemon_connection(root_path: Path) -> Optional[DaemonProx
     if connection:
         passphrase = None
         if await connection.is_keyring_locked():
-            if Keychain.has_cached_passphrase():
-                passphrase = Keychain.get_cached_master_passphrase()
-            else:
+            passphrase = Keychain.get_cached_master_passphrase()
+            if not Keychain.master_passphrase_is_valid(passphrase):
                 passphrase = get_current_passphrase()
 
         if passphrase:
