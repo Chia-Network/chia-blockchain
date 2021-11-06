@@ -118,7 +118,7 @@ def prompt_for_new_passphrase() -> Tuple[str, bool]:
 
 
 def read_passphrase_from_file(passphrase_file: TextIOWrapper) -> str:
-    passphrase = passphrase_file.read()
+    passphrase = passphrase_file.read().rstrip("\r\n")
     passphrase_file.close()
     return passphrase
 
