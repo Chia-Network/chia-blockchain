@@ -2,7 +2,7 @@ name: Bug Report
 description: File a bug report
 title: "[Bug] "
 labels: ["bug"]
-assignees:
+#assignees:
 body:
   - type: markdown
     attributes:
@@ -13,7 +13,6 @@ body:
     attributes:
       label: What happened?
       description:  A clear and concise description of what happened, how to reproduce it, and what you expected to happen.
-      value: "A bug happened!"
     validations:
       required: true
   - type: input
@@ -33,6 +32,8 @@ body:
         - macOS
         - Linux
         - Pi4
+    validations:
+      required: true
   - type: dropdown
     id: ui
     attributes:
@@ -41,6 +42,8 @@ body:
       options:
         - GUI
         - CLI
+    validations:
+      required: true
   - type: textarea
     id: logs
     attributes:
