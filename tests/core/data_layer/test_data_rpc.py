@@ -32,18 +32,20 @@ async def test_create_insert_get(chia_root: ChiaRoot, wallet_node):
     root = chia_root.path
     config = load_config(root, "config.yaml")
     config["data_layer"]["database_path"] = "data_layer_test.sqlite"
-
+    num_blocks = 5
     full_nodes, wallets = wallet_node
     full_node_api = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet, wallet_server = wallets[0]
+    server_1 = full_node_api.full_node.server
+    wallet_node, server_2 = wallets[0]
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    ph = await wallet.get_new_puzzlehash()
 
-    # wallet_0 = wallet.wallet_state_manager.main_wallet
-    # ph = await wallet_0.get_new_puzzlehash()
-    # await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    #
-    # for i in range(3):
-    #     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+    for i in range(0, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
+    print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
 
     data_layer = DataLayer(
         config["data_layer"],
@@ -62,6 +64,9 @@ async def test_create_insert_get(chia_root: ChiaRoot, wallet_node):
     changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
     res = await rpc_api.create_kv_store()
     store_id = bytes32(hexstr_to_bytes(res["id"]))
+    print(f"store id is {store_id}")
+    spendable = await wallet.get_spendable_balance()
+    print(f"spendable balance is {spendable}")
     await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
     res = await rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
     assert hexstr_to_bytes(res["data"]) == value
@@ -77,7 +82,21 @@ async def test_create_double_insert(chia_root: ChiaRoot, wallet_node):
     root = chia_root.path
     config = load_config(root, "config.yaml")
     config["data_layer"]["database_path"] = "data_layer_test.sqlite"
-    wallet = wallet_node[1][0][0]
+    num_blocks = 5
+    full_nodes, wallets = wallet_node
+    full_node_api = full_nodes[0]
+    server_1 = full_node_api.full_node.server
+    wallet_node, server_2 = wallets[0]
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    ph = await wallet.get_new_puzzlehash()
+
+    await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+    for i in range(0, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
+    print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
+
     data_layer = DataLayer(
         config["data_layer"],
         root_path=root,
@@ -118,7 +137,21 @@ async def test_get_pairs(chia_root: ChiaRoot, wallet_node):
     root = chia_root.path
     config = load_config(root, "config.yaml")
     config["data_layer"]["database_path"] = "data_layer_test.sqlite"
-    wallet = wallet_node[1][0][0]
+    num_blocks = 5
+    full_nodes, wallets = wallet_node
+    full_node_api = full_nodes[0]
+    server_1 = full_node_api.full_node.server
+    wallet_node, server_2 = wallets[0]
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    ph = await wallet.get_new_puzzlehash()
+
+    await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+    for i in range(0, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
+    print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
+
     data_layer = DataLayer(
         config["data_layer"],
         root_path=root,
@@ -155,11 +188,26 @@ async def test_get_pairs(chia_root: ChiaRoot, wallet_node):
 
 
 @pytest.mark.asyncio
-async def test_get_ancestors(chia_root: ChiaRoot, wallet_node):
+async def test_get_ancestors(chia_root: ChiaRoot, wallet_node: WalletNode):
     root = chia_root.path
     config = load_config(root, "config.yaml")
     config["data_layer"]["database_path"] = "data_layer_test.sqlite"
-    wallet = wallet_node[1][0][0]
+    num_blocks = 5
+    full_nodes, wallets = wallet_node
+    full_node_api = full_nodes[0]
+    server_1 = full_node_api.full_node.server
+    wallet_node, server_2 = wallets[0]
+    assert wallet_node.wallet_state_manager
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    ph = await wallet.get_new_puzzlehash()
+
+    await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+    for i in range(0, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
+    print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
+
     data_layer = DataLayer(
         config["data_layer"],
         root_path=root,
