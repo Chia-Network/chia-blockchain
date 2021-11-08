@@ -487,7 +487,7 @@ class CCWallet:
                         conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
                     ):
                         try:
-                            assert synthetic_pk == pk
+                            assert bytes(synthetic_pk) == pk
                             sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
                         except AssertionError:
                             raise ValueError("This spend bundle cannot be signed by the CAT wallet")

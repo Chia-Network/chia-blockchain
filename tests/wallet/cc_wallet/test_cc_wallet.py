@@ -170,7 +170,7 @@ class TestCCWallet:
                     15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
                 )
 
-        assert await cc_wallet.get_pending_change_balance() == 40
+        await time_out_assert(15, cc_wallet.get_pending_change_balance, 40)
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
