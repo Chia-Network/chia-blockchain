@@ -1,5 +1,7 @@
 import asyncio
+import contextlib
 import time
+import traceback
 from pathlib import Path
 from typing import Callable, List, Tuple
 
@@ -178,45 +180,63 @@ class HarvesterAPI:
                 )
             return filename, all_responses
 
-        awaitables = []
-        passed = 0
-        total = 0
-        with self.harvester.plot_manager:
-            for try_plot_filename, try_plot_info in self.harvester.plot_manager.plots.items():
-                try:
-                    if try_plot_filename.exists():
-                        # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
-                        # This is being executed at the beginning of the slot
-                        total += 1
-                        if ProofOfSpace.passes_plot_filter(
-                            self.harvester.constants,
-                            try_plot_info.prover.get_id(),
-                            new_challenge.challenge_hash,
-                            new_challenge.sp_hash,
-                        ):
-                            passed += 1
-                            awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
-                except Exception as e:
-                    self.harvester.log.error(f"Error plot file {try_plot_filename} may no longer exist {e}")
+        tasks: List[asyncio.Task] = []
+        try:
+            passed = 0
+            total = 0
+            with self.harvester.plot_manager:
+                for try_plot_filename, try_plot_info in self.harvester.plot_manager.plots.items():
+                    try:
+                        if try_plot_filename.exists():
+                            # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
+                            # This is being executed at the beginning of the slot
+                            total += 1
+                            if ProofOfSpace.passes_plot_filter(
+                                self.harvester.constants,
+                                try_plot_info.prover.get_id(),
+                                new_challenge.challenge_hash,
+                                new_challenge.sp_hash,
+                            ):
+                                passed += 1
+                                tasks.append(asyncio.create_task(lookup_challenge(try_plot_filename, try_plot_info)))
+                    except Exception as e:
+                        self.harvester.log.error(f"Error plot file {try_plot_filename} may no longer exist {e}")
 
-        # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
-        total_proofs_found = 0
-        for filename_sublist_awaitable in asyncio.as_completed(awaitables):
-            filename, sublist = await filename_sublist_awaitable
-            time_taken = time.time() - start
-            if time_taken > 5:
-                self.harvester.log.warning(
-                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 5 seconds "
-                    f"to minimize risk of losing rewards."
+            # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
+            total_proofs_found = 0
+            for filename_sublist_awaitable in asyncio.as_completed(tasks):
+                try:
+                    filename, sublist = await filename_sublist_awaitable
+                    time_taken = time.time() - start
+                    if time_taken > 5:
+                        self.harvester.log.warning(
+                            f"Looking up qualities on {filename} took: {time_taken}. This should be below 5 seconds "
+                            f"to minimize risk of losing rewards."
+                        )
+                    else:
+                        pass
+                        # If you want additional logs, uncomment the following line
+                        # self.harvester.log.debug(f"Looking up qualities on {filename} took: {time_taken}")
+                    for response in sublist:
+                        total_proofs_found += 1
+                        msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
+                        await peer.send_message(msg)
+                except asyncio.CancelledError:
+                    # https://docs.python.org/3.7/library/asyncio-exceptions.html#asyncio.CancelledError
+                    raise
+                except Exception:
+                    error_trace = traceback.format_exc()
+                    self.harvester.log.error(f"Error while looking up challenge: {error_trace}")
+        finally:
+            not_done_tasks = [task for task in tasks if not task.done()]
+            if len(not_done_tasks) > 0:
+                self.harvester.log.error(
+                    f"An error occurred leaving {len(not_done_tasks)} challenge lookups unprocessed.",
                 )
-            else:
-                pass
-                # If you want additional logs, uncomment the following line
-                # self.harvester.log.debug(f"Looking up qualities on {filename} took: {time_taken}")
-            for response in sublist:
-                total_proofs_found += 1
-                msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
-                await peer.send_message(msg)
+                for task in not_done_tasks:
+                    task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await asyncio.gather(*not_done_tasks, return_exceptions=True)
 
         now = uint64(int(time.time()))
         farming_info = FarmingInfo(
@@ -230,7 +250,7 @@ class HarvesterAPI:
         pass_msg = make_msg(ProtocolMessageTypes.farming_info, farming_info)
         await peer.send_message(pass_msg)
         self.harvester.log.info(
-            f"{len(awaitables)} plots were eligible for farming {new_challenge.challenge_hash.hex()[:10]}..."
+            f"{len(tasks)} plots were eligible for farming {new_challenge.challenge_hash.hex()[:10]}..."
             f" Found {total_proofs_found} proofs. Time: {time.time() - start:.5f} s. "
             f"Total {self.harvester.plot_manager.plot_count()} plots"
         )
