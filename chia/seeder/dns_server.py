@@ -14,10 +14,10 @@ from chia.util.path import mkdir, path_from_root
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
-SERVICE_NAME = "dns"
+SERVICE_NAME = "seeder"
 log = logging.getLogger(__name__)
 
-# DNS snippet took from: https://gist.github.com/pklaus/b5a7876d4d2cf7271873
+# DNS snippet taken from: https://gist.github.com/pklaus/b5a7876d4d2cf7271873
 
 
 class DomainName(str):

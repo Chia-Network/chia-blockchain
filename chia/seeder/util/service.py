@@ -59,7 +59,7 @@ def kill_service(root_path: Path, service_name: str) -> bool:
         with open(pid_path) as f:
             pid = int(f.read())
 
-        # @TODO SIGKILL seems necessary right now for the dns server, but not the crawler (fix that)
+        # @TODO SIGKILL seems necessary right now for the DNS server, but not the crawler (fix that)
         # @TODO Ensure processes stop before renaming the files and returning
         os.kill(pid, signal.SIGKILL)
         print("sent SIGKILL to process")

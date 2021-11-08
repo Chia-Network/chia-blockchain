@@ -47,7 +47,7 @@ def service_kwargs_for_full_node_crawler(
 
 
 def main():
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "dns")
+    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "seeder")
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     kwargs = service_kwargs_for_full_node_crawler(DEFAULT_ROOT_PATH, config, updated_constants)

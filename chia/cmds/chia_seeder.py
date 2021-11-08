@@ -19,7 +19,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 @click.group(
     help=f"\n  Manage Chia Seeder ({__version__})\n",
-    epilog="Try 'chia_seeder start crawler' or 'chia_seeder start dns'",
+    epilog="Try 'chia_seeder start crawler' or 'chia_seeder start server'",
     context_settings=CONTEXT_SETTINGS,
 )
 @click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root", type=click.Path(), show_default=True)
@@ -94,51 +94,51 @@ def configure(
     change_made = False
     if testnet is not None:
         if testnet == "true" or testnet == "t":
-            print("Updating Chia DNS to testnet settings")
+            print("Updating Chia Seeder to testnet settings")
             port = 58444
             network = "testnet7"
             bootstrap = ["testnet-node.chia.net"]
 
-            config["dns"]["port"] = port
-            config["dns"]["other_peers_port"] = port
-            config["dns"]["selected_network"] = network
-            config["dns"]["bootstrap_peers"] = bootstrap
+            config["seeder"]["port"] = port
+            config["seeder"]["other_peers_port"] = port
+            config["seeder"]["selected_network"] = network
+            config["seeder"]["bootstrap_peers"] = bootstrap
 
             change_made = True
 
         elif testnet == "false" or testnet == "f":
-            print("Updating Chia DNS to mainnet settings")
+            print("Updating Chia Seeder to mainnet settings")
             port = 8444
             network = "mainnet"
             bootstrap = ["node.chia.net"]
 
-            config["dns"]["port"] = port
-            config["dns"]["other_peers_port"] = port
-            config["dns"]["selected_network"] = network
-            config["dns"]["bootstrap_peers"] = bootstrap
+            config["seeder"]["port"] = port
+            config["seeder"]["other_peers_port"] = port
+            config["seeder"]["selected_network"] = network
+            config["seeder"]["bootstrap_peers"] = bootstrap
 
             change_made = True
         else:
             print("Please choose True or False")
 
     if crawler_db_path is not None:
-        config["dns"]["crawler_db_path"] = crawler_db_path
+        config["seeder"]["crawler_db_path"] = crawler_db_path
         change_made = True
 
     if minimum_version_count is not None:
-        config["dns"]["minimum_version_count"] = minimum_version_count
+        config["seeder"]["minimum_version_count"] = minimum_version_count
         change_made = True
 
     if domain_name is not None:
-        config["dns"]["domain_name"] = domain_name
+        config["seeder"]["domain_name"] = domain_name
         change_made = True
 
     if nameserver is not None:
-        config["dns"]["nameserver"] = nameserver
+        config["seeder"]["nameserver"] = nameserver
         change_made = True
 
     if change_made:
-        print("Restart any running Chia DNS services for changes to take effect")
+        print("Restart any running Chia Seeder services for changes to take effect")
         save_config(root_path, "config.yaml", config)
     return 0
 
