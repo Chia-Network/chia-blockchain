@@ -54,7 +54,6 @@ class CCWallet:
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
-    cc_coin_record: WalletCoinRecord
     cc_info: CCInfo
     standard_wallet: Wallet
     cost_of_single_tx: Optional[int]
@@ -363,77 +362,6 @@ class CCWallet:
     async def get_new_cc_puzzle_hash(self):
         return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
 
-    # Create a new coin of value 0 with a given colour
-    async def generate_zero_val_coin(self, send=True, exclude: List[Coin] = None) -> SpendBundle:
-        if self.cc_info.my_genesis_checker is None:
-            raise ValueError("My genesis checker is None")
-        if exclude is None:
-            exclude = []
-        coins = await self.standard_wallet.select_coins(0, exclude)
-
-        assert coins != set()
-
-        origin = coins.copy().pop()
-        origin_id = origin.name()
-
-        cc_inner = await self.get_new_inner_puzzle()
-        cc_puzzle_hash: Program = construct_cc_puzzle(CC_MOD, self.cc_info.my_genesis_checker, cc_inner).get_tree_hash()
-
-        tx: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
-            uint64(0), cc_puzzle_hash, uint64(0), origin_id, coins
-        )
-        assert tx.spend_bundle is not None
-        full_spend: SpendBundle = tx.spend_bundle
-        self.log.info(f"Generate zero val coin: cc_puzzle_hash is {cc_puzzle_hash}")
-
-        # generate eve coin so we can add future lineage_proofs even if we don't eve spend
-        eve_coin = Coin(origin_id, cc_puzzle_hash, uint64(0))
-
-        await self.add_lineage(
-            eve_coin.name(), LineageProof(eve_coin.parent_coin_info, cc_inner.get_tree_hash(), eve_coin.amount)
-        )
-        await self.add_lineage(eve_coin.parent_coin_info, LineageProof())
-
-        if send:
-            regular_record = TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=cc_puzzle_hash,
-                amount=uint64(0),
-                fee_amount=uint64(0),
-                confirmed=False,
-                sent=uint32(10),
-                spend_bundle=full_spend,
-                additions=full_spend.additions(),
-                removals=full_spend.removals(),
-                wallet_id=uint32(1),
-                sent_to=[],
-                trade_id=None,
-                type=uint32(TransactionType.INCOMING_TX.value),
-                name=token_bytes(),
-            )
-            cc_record = TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=cc_puzzle_hash,
-                amount=uint64(0),
-                fee_amount=uint64(0),
-                confirmed=False,
-                sent=uint32(0),
-                spend_bundle=full_spend,
-                additions=full_spend.additions(),
-                removals=full_spend.removals(),
-                wallet_id=self.id(),
-                sent_to=[],
-                trade_id=None,
-                type=uint32(TransactionType.INCOMING_TX.value),
-                name=full_spend.name(),
-            )
-            await self.wallet_state_manager.add_transaction(regular_record)
-            await self.wallet_state_manager.add_pending_transaction(cc_record)
-
-        return full_spend
-
     async def get_spendable_balance(self, records=None) -> uint64:
         coins = await self.get_cc_spendable_coins(records)
         amount = 0
@@ -569,7 +497,6 @@ class CCWallet:
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
         fee: uint64 = uint64(0),
-        origin_id: bytes32 = None,
         coins: Set[Coin] = None,
         ignore_max_send_amount: bool = False,
         memos: Optional[List[Optional[bytes]]] = None,
@@ -630,7 +557,7 @@ class CCWallet:
                 innersol,
                 limitations_solution=GenesisById.solve([], {}),  # Static TAIL
                 lineage_proof=lineage_proof,
-                reveal_limitations_program=(lineage_proof == LineageProof()),  # Static TAIL
+                reveal_limitations_program=lineage_proof.is_none(),  # Static TAIL
             )
             spendable_cc_list.append(new_spendable_cc)
 
@@ -657,6 +584,10 @@ class CCWallet:
         )
 
     async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof], in_transaction=False):
+        """
+        Lineage proofs are stored as a list of parent coins and the lineage proof you will need if they are the
+        parent of the coin you are trying to spend. 'If I'm your parent, here's the info you need to spend yourself'
+        """
         self.log.info(f"Adding parent {name}: {lineage}")
         current_list = self.cc_info.lineage_proofs.copy()
         current_list.append((name, lineage))

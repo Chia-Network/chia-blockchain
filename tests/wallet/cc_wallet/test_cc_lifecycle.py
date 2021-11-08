@@ -20,7 +20,6 @@ from chia.wallet.cc_wallet.cc_utils import (
     SpendableCC,
     construct_cc_puzzle,
     unsigned_spend_bundle_for_spendable_ccs,
-    get_lineage_proof_from_coin_and_puz,
 )
 from chia.wallet.puzzles.genesis_checkers import (
     GenesisById,
@@ -77,7 +76,7 @@ class TestCCLifecycle:
                     innersol,
                     limitations_solution=limitations_solution,
                     lineage_proof=proof,
-                    extra_delta=uint64(extra_delta),
+                    extra_delta=extra_delta,
                     reveal_limitations_program=True,
                 )
             )
@@ -172,7 +171,9 @@ class TestCCLifecycle:
 
             # Spend with a standard lineage proof (THIS CURRENTLY DOES NOT ACTUALLY TEST THIS)
             parent_coin: Coin = coins[0]  # The first one is the one we didn't light on fire
-            lineage_proof: LineageProof = get_lineage_proof_from_coin_and_puz(parent_coin, cc_puzzle)
+            _, curried_args = cc_puzzle.uncurry()
+            _, _, innerpuzzle = curried_args.as_iter()
+            lineage_proof = LineageProof(parent_coin.parent_coin_info, innerpuzzle.get_tree_hash(), parent_coin.amount)
             await self.do_spend(
                 sim,
                 sim_client,
