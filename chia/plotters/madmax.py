@@ -216,6 +216,8 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
     call_args.append(str(args.buckets3))
     if args.waitforcopy:
         call_args.append("-w")
+    if args.tmptoggle:
+        call_args.append("-G")
     call_args.append("-K")
     call_args.append(str(args.rmulti2))
     if args.size != 32:
