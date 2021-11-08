@@ -142,7 +142,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 type=str,
                 dest="tmpdir2",
                 help="Temporary directory 2.",
-                default=str(root_path) + "/",
+                default="",
             )
         if option is Options.FINAL_DIR:
             parser.add_argument(
