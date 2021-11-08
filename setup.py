@@ -43,6 +43,8 @@ dev_dependencies = [
     "black",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
+    "types-aiofiles",
+    "types-PyYAML",
     "types-setuptools",
 ]
 
