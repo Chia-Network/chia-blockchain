@@ -22,6 +22,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.weight_proof import WeightProof
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
@@ -614,6 +615,7 @@ class WalletStateManager:
         peer,
         fork_height: Optional[uint32] = None,
         current_height: Optional[uint32] = None,
+        weight_proof: Optional[WeightProof] = None,
     ) -> Tuple[List[WalletCoinRecord], List[CoinState]]:
         added: List[WalletCoinRecord] = []
         removed = []
@@ -729,13 +731,13 @@ class WalletStateManager:
                         )
                         await self.tx_store.add_transaction_record(tx_record, False)
 
-                    node = self.wallet_node.get_full_node_peer()
-                    assert node is not None
-                    children: List[CoinState] = await self.wallet_node.fetch_children(node, coin_state.coin.name())
+                    children: List[CoinState] = await self.wallet_node.fetch_children(
+                        peer, coin_state.coin.name(), weight_proof
+                    )
                     additions = [state.coin for state in children]
                     if len(children) > 0:
                         cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
-                            node, coin_state.spent_height, coin_state.coin
+                            peer, coin_state.spent_height, coin_state.coin
                         )
 
                         fee = cs.reserved_fee()
