@@ -170,9 +170,9 @@ class CCWallet:
 
         for id, wallet in wallet_state_manager.wallets.items():
             if wallet.type() == CCWallet.type():
-                if wallet.get_colour() == limitations_program_hash_hex:
-                    self.log.warning(f"Not creating wallet for already existing CAT wallet")
-                    raise ValueError(f"Wallet already exists")
+                if wallet.get_colour() == limitations_program_hash_hex:  # type: ignore
+                    self.log.warning("Not creating wallet for already existing CAT wallet")
+                    raise ValueError("Wallet already exists")
 
         self.wallet_state_manager = wallet_state_manager
         if limitations_program_hash_hex in DEFAULT_CATS:
@@ -513,7 +513,6 @@ class CCWallet:
                 return proof
         return None
 
-
     async def create_tandem_xch_tx(
         self,
         fee: uint64,
@@ -564,7 +563,6 @@ class CCWallet:
             assert chia_tx.spend_bundle is not None
 
         return chia_tx, announcement
-
 
     async def generate_unsigned_spendbundle(
         self,
@@ -622,12 +620,18 @@ class CCWallet:
                 first = False
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
-                        announcement = Announcement(coin.name(), b'$', b'\xca')
-                        chia_tx, _ = await self.create_tandem_xch_tx(fee, regular_chia_to_claim, announcement_to_assert=announcement)
-                        innersol = self.standard_wallet.make_solution(primaries=primaries, coin_announcements={announcement.message})
+                        announcement = Announcement(coin.name(), b"$", b"\xca")
+                        chia_tx, _ = await self.create_tandem_xch_tx(
+                            fee, uint64(regular_chia_to_claim), announcement_to_assert=announcement
+                        )
+                        innersol = self.standard_wallet.make_solution(
+                            primaries=primaries, coin_announcements={announcement.message}
+                        )
                     elif regular_chia_to_claim > fee:
-                        chia_tx, announcement = await self.create_tandem_xch_tx(fee, regular_chia_to_claim)
-                        innersol = self.standard_wallet.make_solution(primaries=primaries, coin_announcements_to_assert={announcement.name()})
+                        chia_tx, _ = await self.create_tandem_xch_tx(fee, uint64(regular_chia_to_claim))
+                        innersol = self.standard_wallet.make_solution(
+                            primaries=primaries, coin_announcements_to_assert={announcement.name()}
+                        )
                 else:
                     innersol = self.standard_wallet.make_solution(primaries=primaries)
             else:
@@ -652,12 +656,15 @@ class CCWallet:
         if chia_tx is not None and chia_tx.spend_bundle is not None:
             chia_spend_bundle = chia_tx.spend_bundle
 
-        return SpendBundle.aggregate(
-            [
-                cat_spend_bundle,
-                chia_spend_bundle,
-            ]
-        ), chia_tx
+        return (
+            SpendBundle.aggregate(
+                [
+                    cat_spend_bundle,
+                    chia_spend_bundle,
+                ]
+            ),
+            chia_tx,
+        )
 
     async def generate_signed_transaction(
         self,
@@ -690,42 +697,46 @@ class CCWallet:
         spend_bundle = await self.sign(unsigned_spend_bundle)
 
         # TODO add support for array in stored records
-        tx_list = [TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=puzzle_hashes[0],
-            amount=uint64(payment_sum),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=spend_bundle.name(),
-        )]
+        tx_list = [
+            TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=puzzle_hashes[0],
+                amount=uint64(payment_sum),
+                fee_amount=uint64(0),
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=spend_bundle,
+                additions=spend_bundle.additions(),
+                removals=spend_bundle.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=spend_bundle.name(),
+            )
+        ]
 
         if chia_tx is not None:
-            tx_list.append(TransactionRecord(
-                confirmed_at_height=chia_tx.confirmed_at_height,
-                created_at_time=chia_tx.created_at_time,
-                to_puzzle_hash=chia_tx.to_puzzle_hash,
-                amount=chia_tx.amount,
-                fee_amount=chia_tx.fee_amount,
-                confirmed=chia_tx.confirmed,
-                sent=chia_tx.sent,
-                spend_bundle=None,
-                additions=chia_tx.additions,
-                removals=chia_tx.removals,
-                wallet_id=chia_tx.wallet_id,
-                sent_to=chia_tx.sent_to,
-                trade_id=chia_tx.trade_id,
-                type=chia_tx.type,
-                name=chia_tx.name,
-            ))
+            tx_list.append(
+                TransactionRecord(
+                    confirmed_at_height=chia_tx.confirmed_at_height,
+                    created_at_time=chia_tx.created_at_time,
+                    to_puzzle_hash=chia_tx.to_puzzle_hash,
+                    amount=chia_tx.amount,
+                    fee_amount=chia_tx.fee_amount,
+                    confirmed=chia_tx.confirmed,
+                    sent=chia_tx.sent,
+                    spend_bundle=None,
+                    additions=chia_tx.additions,
+                    removals=chia_tx.removals,
+                    wallet_id=chia_tx.wallet_id,
+                    sent_to=chia_tx.sent_to,
+                    trade_id=chia_tx.trade_id,
+                    type=chia_tx.type,
+                    name=chia_tx.name,
+                )
+            )
 
         return tx_list
 

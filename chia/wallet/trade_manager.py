@@ -277,7 +277,9 @@ class TradeManager:
                             to_exclude: List[Coin] = []
                         else:
                             to_exclude = spend_bundle.removals()
-                        zero_spend_bundle: SpendBundle = await wallet.generate_zero_val_coin(False, to_exclude)
+                        zero_spend_bundle: SpendBundle = await wallet.generate_zero_val_coin(  # type: ignore
+                            False, to_exclude
+                        )
 
                         if spend_bundle is None:
                             spend_bundle = zero_spend_bundle

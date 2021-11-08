@@ -232,12 +232,12 @@ class WalletRpcClient(RpcClient):
         memos: Optional[List[str]] = None,
     ) -> TransactionRecord:
         send_dict = {
-                "wallet_id": wallet_id,
-                "amount": amount,
-                "inner_address": inner_address,
-                "fee": fee,
-                "memos": memos if memos else [],
-            }
+            "wallet_id": wallet_id,
+            "amount": amount,
+            "inner_address": inner_address,
+            "fee": fee,
+            "memos": memos if memos else [],
+        }
         res = await self.fetch("cc_spend", send_dict)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
 

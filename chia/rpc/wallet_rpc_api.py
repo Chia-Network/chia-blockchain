@@ -226,7 +226,6 @@ class WalletRpcApi:
             await self.service.keychain_proxy.check_keys(self.service.root_path)
         except Exception as e:
             log.error(f"Failed to check_keys after adding a new key: {e}")
-        request_type = request["type"]
         started = await self.service._start(fingerprint=fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}
