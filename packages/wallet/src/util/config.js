@@ -3,6 +3,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const lodash = require('lodash');
+const sleepData = require('./sleep');
+
+const sleep = sleepData.default;
 
 // defaults used in case of error point to the localhost daemon & its certs
 let self_hostname = 'localhost';
@@ -10,7 +13,7 @@ let self_hostname = 'localhost';
 // global.cert_path = 'config/ssl/daemon/private_daemon.crt';
 // global.key_path = 'config/ssl/daemon/private_daemon.key';
 
-function loadConfig(net) {
+async function loadConfig(net) {
   try {
     // check if CHIA_ROOT is set. it overrides 'net'
     const config_root_dir =
@@ -43,8 +46,13 @@ function loadConfig(net) {
       ),
     ); // jshint ignore:line
   } catch (e) {
-    console.log('error', e);
-    console.log('Error loading config - using defaults');
+    if (e.code === 'ENOENT') {
+      console.log('Waiting for configuration file');
+      await sleep(1000);
+      return loadConfig(net);
+    } else {
+      throw e;
+    }
   }
 }
 
