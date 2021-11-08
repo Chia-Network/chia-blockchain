@@ -166,7 +166,7 @@ class TestCCWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        await time_out_assert(15, wallet.get_confirmed_balance, funds*2-101)
+        await time_out_assert(15, wallet.get_confirmed_balance, funds * 2 - 101)
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 40)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 40)
