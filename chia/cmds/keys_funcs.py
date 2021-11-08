@@ -1,6 +1,6 @@
-from typing import List
-
-from blspy import AugSchemeMPL, G1Element, G2Element
+from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from pathlib import Path
+from typing import Dict, List, Optional
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.util.bech32m import encode_puzzle_hash
@@ -8,7 +8,7 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, unlocks_keyring
-from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
+from chia.wallet.derive_keys import _derive_path, master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 keychain: Keychain = Keychain()
 
@@ -132,3 +132,57 @@ def verify(message: str, public_key: str, signature: str):
     public_key = G1Element.from_bytes(bytes.fromhex(public_key))
     signature = G2Element.from_bytes(bytes.fromhex(signature))
     print(AugSchemeMPL.verify(public_key, messageBytes, signature))
+
+
+def derive_wallet_address(
+    root_path: Path, private_key: PrivateKey, index: int, count: int, prefix: Optional[str], show_hd_path: bool
+):
+    if prefix is None:
+        config: Dict = load_config(root_path, "config.yaml")
+        selected: str = config["selected_network"]
+        prefix = config["network_overrides"]["config"][selected]["address_prefix"]
+    wallet_hd_path_root: str = "m/12381/8444/2/"
+    for i in range(index, index + count):
+        address = encode_puzzle_hash(
+            create_puzzlehash_for_pk(master_sk_to_wallet_sk(private_key, uint32(i)).get_g1()), prefix
+        )
+        if show_hd_path:
+            print(f"Wallet address {i} ({wallet_hd_path_root + str(i)}): {address}")
+        else:
+            print(f"Wallet address {i}: {address}")
+
+
+def derive_child_key(root_path: Path, master_sk: PrivateKey, key_type: str, index: int, count: int, show_hd_path: bool):
+    path: List[uint32] = [uint32(12381), uint32(8444)]
+    if key_type == "farmer":
+        path.append(uint32(0))
+    elif key_type == "pool":
+        path.append(uint32(1))
+    elif key_type == "wallet":
+        path.append(uint32(2))
+    elif key_type == "local":
+        path.append(uint32(3))
+    elif key_type == "backup":
+        path.append(uint32(4))
+    elif key_type == "singleton":
+        path.append(uint32(5))
+    elif key_type == "pool_auth":
+        path.append(uint32(6))
+
+    for i in range(index, index + count):
+        sk = _derive_path(master_sk, path + [uint32(i)])
+        if show_hd_path:
+            hd_path: str = "m/" + "/".join([str(j) for j in path]) + "/" + str(i)
+            print(f"{key_type.capitalize()} public key {i} ({hd_path}): {sk.get_g1()}")
+        else:
+            print(f"{key_type.capitalize()} public key {i}: {sk.get_g1()}")
+
+
+def private_key_for_fingerprint(fingerprint: int) -> PrivateKey:
+    private_keys = keychain.get_all_private_keys()
+
+    for sk, _ in private_keys:
+        if sk.get_g1().get_fingerprint() == fingerprint:
+            return sk
+    print(f"Fingerprint {fingerprint} not found in keychain")
+    return None
