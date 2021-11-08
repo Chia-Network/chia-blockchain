@@ -47,7 +47,7 @@ cd .. || exit
 cd chia-blockchain-gui || exit
 
 echo "npm build"
-npm install
+npm ci
 npm audit fix
 npm run build
 LAST_EXIT_CODE=$?

@@ -97,7 +97,7 @@ Write-Output "   ---"
 $Env:NODE_OPTIONS = "--max-old-space-size=3000"
 npm install --save-dev electron-winstaller
 npm install -g electron-packager
-npm install
+npm ci
 npm audit fix
 
 git status
