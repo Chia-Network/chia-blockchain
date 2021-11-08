@@ -70,7 +70,9 @@ class TestCCTrades:
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100))
+        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+            wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100)
+        )
         await asyncio.sleep(1)
 
         for i in range(1, buffer_blocks):
@@ -148,7 +150,9 @@ class TestCCTrades:
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100))
+        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+            wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100)
+        )
         await asyncio.sleep(1)
 
         for i in range(1, buffer_blocks):
@@ -227,7 +231,9 @@ class TestCCTrades:
         cc_a_2 = wallet_node_a.wallet_state_manager.wallets[2]
         cc_b_2 = wallet_node_b.wallet_state_manager.wallets[2]
 
-        cc_a_3: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node_a.wallet_state_manager, wallet_a, {"identifier": "genesis_by_id"}, uint64(100))
+        cc_a_3: CCWallet = await CCWallet.create_new_cc_wallet(
+            wallet_node_a.wallet_state_manager, wallet_a, {"identifier": "genesis_by_id"}, uint64(100)
+        )
         await asyncio.sleep(1)
 
         for i in range(0, buffer_blocks):
@@ -321,7 +327,9 @@ class TestCCTrades:
         trade_manager_a: TradeManager = wallet_node_a.wallet_state_manager.trade_manager
         trade_manager_b: TradeManager = wallet_node_b.wallet_state_manager.trade_manager
 
-        cc_a_4: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node_a.wallet_state_manager, wallet_a, {"identifier": "genesis_by_id"}, uint64(100))
+        cc_a_4: CCWallet = await CCWallet.create_new_cc_wallet(
+            wallet_node_a.wallet_state_manager, wallet_a, {"identifier": "genesis_by_id"}, uint64(100)
+        )
         await asyncio.sleep(1)
 
         for i in range(0, buffer_blocks):

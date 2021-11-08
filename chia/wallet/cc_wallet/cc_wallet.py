@@ -4,7 +4,7 @@ import logging
 import time
 from dataclasses import replace
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 from blspy import AugSchemeMPL, G2Element
 
@@ -73,7 +73,7 @@ class CCWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
         std_wallet_id = self.standard_wallet.wallet_id
-        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id, None)
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet_already_locked(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
         self.wallet_state_manager = wallet_state_manager
@@ -363,9 +363,6 @@ class CCWallet:
     async def get_new_inner_puzzle(self) -> Program:
         return adapt_inner_to_singleton(await self.standard_wallet.get_new_puzzle())
 
-    async def get_puzzle_hash(self, new: bool):
-        return adapt_inner_puzzle_hash_to_singleton(await self.standard_wallet.get_puzzle_hash(new))
-
     async def get_new_puzzlehash(self) -> bytes32:
         return adapt_inner_puzzle_hash_to_singleton(await self.standard_wallet.get_new_puzzlehash())
 
@@ -576,7 +573,14 @@ class CCWallet:
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
         ignore_max_send_amount: bool = False,
+        memos: Optional[List[Optional[bytes]]] = None,
     ) -> TransactionRecord:
+        if memos is None:
+            memos = [None for _ in range(len(puzzle_hashes))]
+
+        if not (len(memos) == len(puzzle_hashes) == len(amounts)):
+            raise ValueError("Memos, puzzle_hashes, and amounts must have the same length")
+
         # Get coins and calculate amount of change required
         outgoing_amount = uint64(sum(amounts))
         total_outgoing = outgoing_amount + fee
@@ -594,8 +598,8 @@ class CCWallet:
         total_amount = sum([x.amount for x in selected_coins])
         change = total_amount - total_outgoing
         primaries = []
-        for amount, puzzle_hash in zip(amounts, puzzle_hashes):
-            primaries.append({"puzzlehash": puzzle_hash, "amount": amount})
+        for amount, puzzle_hash, memo in zip(amounts, puzzle_hashes, memos):
+            primaries.append({"puzzlehash": puzzle_hash, "amount": amount, "memo": memo})
 
         if change > 0:
             changepuzzlehash = await self.get_new_inner_hash()
