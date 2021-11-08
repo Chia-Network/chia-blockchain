@@ -370,7 +370,7 @@ def chia_full_version_str() -> str:
 
 
 def chia_init(
-    root_path: Path, *, should_check_keys: bool = True, fix_ssl_permissions: bool = False, testnet: bool = False
+    root_path: Path, *, should_check_keys: bool = False, fix_ssl_permissions: bool = False, testnet: bool = False
 ):
     """
     Standard first run initialization or migration steps. Handles config creation,
