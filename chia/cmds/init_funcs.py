@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
+from blspy import PrivateKey
 
 from chia import __version__
 from chia.consensus.coinbase import create_puzzlehash_for_pk
@@ -33,7 +34,15 @@ from chia.util.ssl_check import (
     check_and_fix_permissions_for_ssl_file,
     fix_ssl,
 )
-from chia.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
+from chia.wallet.derive_keys import (
+    master_sk_to_pool_sk,
+    master_sk_to_wallet_sk,
+    master_sk_to_wallet_sk_unhardened,
+    master_sk_to_wallet_sk_intermediate,
+    master_sk_to_wallet_sk_unhardened_intermediate,
+    _derive_path,
+    _derive_path_unhardened,
+)
 from chia.cmds.configure import configure
 
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
@@ -77,16 +86,39 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
     number_of_ph_to_search = 500
     selected = config["selected_network"]
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
+
+    intermediates: Dict[bytes, Tuple[PrivateKey, PrivateKey]] = {}
+    for sk, _ in all_sks:
+        intermediates[bytes(sk)] = (
+            master_sk_to_wallet_sk_intermediate(sk),
+            master_sk_to_wallet_sk_unhardened_intermediate(sk),
+        )
+
     for i in range(number_of_ph_to_search):
         if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
             break
         for sk, _ in all_sks:
             all_targets.append(
-                encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()), prefix)
+                encode_puzzle_hash(
+                    create_puzzlehash_for_pk(_derive_path(intermediates[bytes(sk)][0], [i]).get_g1()), prefix
+                )
             )
+            all_targets.append(
+                encode_puzzle_hash(
+                    create_puzzlehash_for_pk(_derive_path_unhardened(intermediates[bytes(sk)][1], [i]).get_g1()), prefix
+                )
+            )
+            print("All_targets[-1]", all_targets[-1])
+            print("All_targets[-2]", all_targets[-2])
+
             if all_targets[-1] == config["farmer"].get("xch_target_address"):
                 stop_searching_for_farmer = True
             if all_targets[-1] == config["pool"].get("xch_target_address"):
+                stop_searching_for_pool = True
+
+            if all_targets[-2] == config["farmer"].get("xch_target_address"):
+                stop_searching_for_farmer = True
+            if all_targets[-2] == config["pool"].get("xch_target_address"):
                 stop_searching_for_pool = True
 
     # Set the destinations, if necessary

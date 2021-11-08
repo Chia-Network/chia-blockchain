@@ -31,12 +31,22 @@ def master_sk_to_pool_sk(master: PrivateKey) -> PrivateKey:
     return _derive_path(master, [12381, 8444, 1, 0])
 
 
+def master_sk_to_wallet_sk_intermediate(master: PrivateKey) -> PrivateKey:
+    return _derive_path(master, [12381, 8444, 2])
+
+
 def master_sk_to_wallet_sk(master: PrivateKey, index: uint32) -> PrivateKey:
-    return _derive_path(master, [12381, 8444, 2, index])
+    intermediate = master_sk_to_wallet_sk_intermediate(master)
+    return _derive_path(intermediate, [index])
+
+
+def master_sk_to_wallet_sk_unhardened_intermediate(master: PrivateKey) -> PrivateKey:
+    return _derive_path_unhardened(master, [12381, 8444, 2])
 
 
 def master_sk_to_wallet_sk_unhardened(master: PrivateKey, index: uint32) -> PrivateKey:
-    return _derive_path_unhardened(master, [12381, 8444, 2, index])
+    intermediate = master_sk_to_wallet_sk_unhardened_intermediate(master)
+    return _derive_path_unhardened(intermediate, [index])
 
 
 def master_sk_to_local_sk(master: PrivateKey) -> PrivateKey:

@@ -21,7 +21,7 @@ from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cc_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
-from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk
+from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -275,12 +275,17 @@ class WalletRpcApi:
             if found_farmer and found_pool:
                 break
 
-            ph = encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()), prefix)
-
-            if ph == farmer_target:
-                found_farmer = True
-            if ph == pool_target:
-                found_pool = True
+            phs = [
+                encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()), prefix),
+                encode_puzzle_hash(
+                    create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(i)).get_g1()), prefix
+                ),
+            ]
+            for ph in phs:
+                if ph == farmer_target:
+                    found_farmer = True
+                if ph == pool_target:
+                    found_pool = True
 
         return found_farmer, found_pool
 
