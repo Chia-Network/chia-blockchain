@@ -5,6 +5,7 @@ import multiprocessing
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple, Union
+from time import time
 
 from clvm.casts import int_from_bytes
 
@@ -130,12 +131,19 @@ class Blockchain(BlockchainInterface):
         """
         Initializes the state of the Blockchain class from the database.
         """
+        log.info("loading all block headers from DB to build height-to-hash")
+        start = time()
         height_to_hash, sub_epoch_summaries = await self.block_store.get_peak_height_dicts()
+        log.info(f"loading height-to-hash map took {time() - start:0.2} seconds")
         self.__height_to_hash = height_to_hash
         self.__sub_epoch_summaries = sub_epoch_summaries
         self.__block_records = {}
         self.__heights_in_cache = {}
+
+        log.info("loading blocks close to peak")
+        start = time()
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
+        log.info(f"loading blocks close to peak took {time() - start:0.2} seconds")
         for block in block_records.values():
             self.add_block_record(block)
 
