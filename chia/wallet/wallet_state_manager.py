@@ -583,7 +583,7 @@ class WalletStateManager:
             hint_list = cs.hints()
             derivation_record = None
             for hint in hint_list:
-                derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hint.hex())
+                derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
                 if derivation_record is not None:
                     break
 
@@ -745,7 +745,7 @@ class WalletStateManager:
                         amount = 0
                         for coin in additions:
                             derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
-                                coin.puzzle_hash.hex()
+                                coin.puzzle_hash
                             )
                             if derivation_record is None:
                                 to_puzzle_hash = coin.puzzle_hash
@@ -864,7 +864,7 @@ class WalletStateManager:
         if existing is not None:
             return None
 
-        derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash.hex())
+        derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
         if derivation_record is None:
             return None
 
