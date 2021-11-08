@@ -442,15 +442,21 @@ class WalletRpcApi:
         main_wallet = wallet_state_manager.main_wallet
         host = request["host"]
         fee = uint64(request.get("fee", 0))
+        name = request.get("name", "CAT WALLET")
 
         if request["wallet_type"] == "cat_wallet":
             if request["mode"] == "new":
                 async with self.service.wallet_state_manager.lock:
                     cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
-                        wallet_state_manager, main_wallet, {"identifier": "genesis_by_id"}, uint64(request["amount"])
+                        wallet_state_manager,
+                        main_wallet,
+                        {"identifier": "genesis_by_id"},
+                        uint64(request["amount"]),
+                        name,
                     )
                     colour = cc_wallet.get_colour()
                     asyncio.create_task(self._create_backup_and_upload(host))
+                self.service.wallet_state_manager.state_changed("wallet_created")
                 return {"type": cc_wallet.type(), "colour": colour, "wallet_id": cc_wallet.id()}
 
             elif request["mode"] == "existing":
@@ -459,6 +465,7 @@ class WalletRpcApi:
                         wallet_state_manager, main_wallet, request["colour"]
                     )
                     asyncio.create_task(self._create_backup_and_upload(host))
+                self.service.wallet_state_manager.state_changed("wallet_created")
                 return {"type": cc_wallet.type(), "colour": request["colour"], "wallet_id": cc_wallet.id()}
 
             else:  # undefined mode

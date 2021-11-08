@@ -64,10 +64,7 @@ class CCWallet:
 
     @staticmethod
     async def create_new_cc_wallet(
-        wallet_state_manager: Any,
-        wallet: Wallet,
-        cat_tail_info: Dict[str, Any],
-        amount: uint64,
+        wallet_state_manager: Any, wallet: Wallet, cat_tail_info: Dict[str, Any], amount: uint64, name="CAT WALLET"
     ):
         self = CCWallet()
         self.cost_of_single_tx = None
@@ -84,7 +81,7 @@ class CCWallet:
         self.cc_info = CCInfo(empty_bytes, None, [])
         info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "CAT Wallet", WalletType.COLOURED_COIN, info_as_string
+            name, WalletType.COLOURED_COIN, info_as_string
         )
         if self.wallet_info is None:
             raise ValueError("Internal Error")
@@ -161,9 +158,7 @@ class CCWallet:
 
     @staticmethod
     async def create_wallet_for_cc(
-        wallet_state_manager: Any,
-        wallet: Wallet,
-        limitations_program_hash_hex: str,
+        wallet_state_manager: Any, wallet: Wallet, limitations_program_hash_hex: str, name="CAT WALLET"
     ) -> CCWallet:
         self = CCWallet()
         self.cost_of_single_tx = None
@@ -176,7 +171,7 @@ class CCWallet:
         self.cc_info = CCInfo(limitations_program_hash, None, [])
         info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "CC Wallet", WalletType.COLOURED_COIN, info_as_string
+            name, WalletType.COLOURED_COIN, info_as_string
         )
         if self.wallet_info is None:
             raise Exception("wallet_info is None")
