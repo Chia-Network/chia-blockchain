@@ -447,7 +447,7 @@ class WalletStateManager:
 
         latest_timestamp = self.blockchain.get_latest_timestamp()
 
-        if latest_timestamp > int(time.time()) - 4 * 60:
+        if latest_timestamp > int(time.time()) - 10 * 60:
             return True
         return False
 
