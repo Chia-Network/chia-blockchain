@@ -430,6 +430,7 @@ class PoolWallet:
         spend_bundle, singleton_puzzle_hash, launcher_coin_id = await PoolWallet.generate_launcher_spend(
             standard_wallet,
             uint64(1),
+            fee,
             initial_target_state,
             wallet_state_manager.constants.GENESIS_CHALLENGE,
             p2_singleton_delay_time,
@@ -576,6 +577,7 @@ class PoolWallet:
     async def generate_launcher_spend(
         standard_wallet: Wallet,
         amount: uint64,
+        fee: uint64,
         initial_target_state: PoolState,
         genesis_challenge: bytes32,
         delay_time: uint64,
@@ -634,7 +636,7 @@ class PoolWallet:
         create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
-            uint64(0),
+            fee,
             None,
             coins,
             None,

@@ -49,6 +49,16 @@ def event_loop():
     yield loop
 
 
+def verify_fees(creation_tx, fee, block_rewards_after, farmer_wallet_balance_after, farmer_unconfirmed_after):
+    # Assert spend bundle created correctly
+    assert creation_tx.fee_amount == fee
+    assert creation_tx.spend_bundle.fees() == fee
+
+    # Assert wallet balances are correct
+    assert farmer_unconfirmed_after == block_rewards_after - fee - 1
+    assert farmer_unconfirmed_after == farmer_wallet_balance_after
+
+
 class TestPoolWalletRpc:
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):
@@ -150,6 +160,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
     async def test_create_new_pool_wallet_self_farm(self, one_wallet_node_and_rpc, fee):
+        num_blocks = 4
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         our_ph = await wallet_0.get_new_puzzlehash()
@@ -168,8 +179,16 @@ class TestPoolWalletRpc:
             creation_tx.name,
         )
 
-        await self.farm_blocks(full_node_api, our_ph, 6)
+        await self.farm_blocks(full_node_api, 32 * b"0", num_blocks)
+
+        # Assert creation_tx has been spent
         assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
+
+        block_rewards_after = await self.get_total_block_rewards(num_blocks + 1)
+        farmer_wallet_balance_after = await wallet_0.get_confirmed_balance()
+        farmer_unconfirmed_after = await wallet_0.get_unconfirmed_balance()
+
+        verify_fees(creation_tx, fee, block_rewards_after, farmer_wallet_balance_after, farmer_unconfirmed_after)
 
         summaries_response = await client.get_wallets()
         wallet_id: Optional[int] = None
@@ -209,6 +228,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
     async def test_create_new_pool_wallet_farm_to_pool(self, one_wallet_node_and_rpc, fee):
+        num_blocks = 4
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         our_ph = await wallet_0.get_new_puzzlehash()
@@ -227,8 +247,14 @@ class TestPoolWalletRpc:
             creation_tx.name,
         )
 
-        await self.farm_blocks(full_node_api, our_ph, 6)
+        await self.farm_blocks(full_node_api, our_ph, num_blocks)
         assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
+
+        block_rewards_after = await self.get_total_block_rewards(num_blocks + 1)
+        farmer_wallet_balance_after = await wallet_0.get_confirmed_balance()
+        farmer_unconfirmed_after = await wallet_0.get_unconfirmed_balance()
+
+        verify_fees(creation_tx, fee, block_rewards_after, farmer_wallet_balance_after, farmer_unconfirmed_after)
 
         summaries_response = await client.get_wallets()
         wallet_id: Optional[int] = None
@@ -527,6 +553,13 @@ class TestPoolWalletRpc:
         bal = await client.get_wallet_balance(2)
         assert bal["confirmed_wallet_balance"] == 0
         log.warning(f"{await wallet_0.get_confirmed_balance()}")
+
+        block_rewards_after = await self.get_total_block_rewards(4 + 1 + 2 + 2)
+
+        verify_fees(
+            absorb_tx, fee, block_rewards_after, bal["confirmed_wallet_balance"], bal["unconfirmed_wallet_balance"]
+        )
+
         await bt.delete_plot(plot_id)
         assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
         assert (
@@ -755,6 +788,10 @@ class TestPoolWalletRpc:
                 return pw_status.current.state == PoolSingletonState.LEAVING_POOL.value
 
             await time_out_assert(timeout=WAIT_SECS, function=status_is_leaving)
+            block_rewards_after = await self.get_total_block_rewards(1 + 4 + 6 + 1 + 1)
+            farmer_wallet_balance_after = await wallets[0].get_confirmed_balance()
+            farmer_unconfirmed_after = await wallets[0].get_unconfirmed_balance()
+            verify_fees(leave_pool_tx, fee, block_rewards_after, farmer_wallet_balance_after, farmer_unconfirmed_after)
 
             async def status_is_self_pooling():
                 # Farm enough blocks to wait for relative_lock_height
