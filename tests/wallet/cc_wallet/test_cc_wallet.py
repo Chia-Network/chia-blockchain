@@ -155,12 +155,13 @@ class TestCCWallet:
         assert cc_wallet.cc_info.limitations_program_hash == cc_wallet_2.cc_info.limitations_program_hash
 
         cc_2_hash = await cc_wallet_2.get_new_inner_hash()
-        tx_record = await cc_wallet.generate_signed_transaction([uint64(60)], [cc_2_hash], fee=uint64(1))
-        await wallet.wallet_state_manager.add_pending_transaction(tx_record)
-
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
+        tx_records = await cc_wallet.generate_signed_transaction([uint64(60)], [cc_2_hash], fee=uint64(1))
+        for tx_record in tx_records:
+            await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+            if tx_record.spend_bundle is not None:
+                await time_out_assert(
+                    15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+                )
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -174,12 +175,12 @@ class TestCCWallet:
         await time_out_assert(30, cc_wallet_2.get_unconfirmed_balance, 60)
 
         cc_hash = await cc_wallet.get_new_inner_hash()
-        tx_record = await cc_wallet_2.generate_signed_transaction([uint64(15)], [cc_hash])
-        await wallet.wallet_state_manager.add_pending_transaction(tx_record)
-
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
+        tx_records = await cc_wallet_2.generate_signed_transaction([uint64(15)], [cc_hash])
+        for tx_record in tx_records:
+            await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+            await time_out_assert(
+                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+            )
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -291,11 +292,12 @@ class TestCCWallet:
         assert cc_wallet.cc_info.limitations_program_hash == cc_wallet_2.cc_info.limitations_program_hash
 
         cc_2_hash = await cc_wallet_2.get_new_inner_hash()
-        tx_record = await cc_wallet.generate_signed_transaction([uint64(60)], [cc_2_hash])
-        await wallet.wallet_state_manager.add_pending_transaction(tx_record)
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
+        tx_records = await cc_wallet.generate_signed_transaction([uint64(60)], [cc_2_hash])
+        for tx_record in tx_records:
+            await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+            await time_out_assert(
+                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+            )
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
@@ -394,11 +396,12 @@ class TestCCWallet:
         cc_1_hash = await cc_wallet_1.get_new_inner_hash()
         cc_2_hash = await cc_wallet_2.get_new_inner_hash()
 
-        tx_record = await cc_wallet_0.generate_signed_transaction([uint64(60), uint64(20)], [cc_1_hash, cc_2_hash])
-        await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
+        tx_records = await cc_wallet_0.generate_signed_transaction([uint64(60), uint64(20)], [cc_1_hash, cc_2_hash])
+        for tx_record in tx_records:
+            await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
+            await time_out_assert(
+                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+            )
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
@@ -413,17 +416,20 @@ class TestCCWallet:
 
         cc_hash = await cc_wallet_0.get_new_inner_hash()
 
-        tx_record = await cc_wallet_1.generate_signed_transaction([uint64(15)], [cc_hash])
-        await wallet_1.wallet_state_manager.add_pending_transaction(tx_record)
+        tx_records = await cc_wallet_1.generate_signed_transaction([uint64(15)], [cc_hash])
+        for tx_record in tx_records:
+            await wallet_1.wallet_state_manager.add_pending_transaction(tx_record)
+            await time_out_assert(
+                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+            )
 
-        tx_record_2 = await cc_wallet_2.generate_signed_transaction([uint64(20)], [cc_hash])
-        await wallet_2.wallet_state_manager.add_pending_transaction(tx_record_2)
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record_2.spend_bundle.name()
-        )
+        tx_records_2 = await cc_wallet_2.generate_signed_transaction([uint64(20)], [cc_hash])
+        for tx_record in tx_records_2:
+            await wallet_2.wallet_state_manager.add_pending_transaction(tx_record)
+            await time_out_assert(
+                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+            )
+
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
@@ -439,7 +445,7 @@ class TestCCWallet:
         txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cc_wallet_1.id(), 0, 100000)
         print(len(txs))
         # Test with Memo
-        tx_record_3: TransactionRecord = await cc_wallet_1.generate_signed_transaction(
+        tx_records_3: TransactionRecord = await cc_wallet_1.generate_signed_transaction(
             [uint64(30)], [cc_hash], memos=[[b"Markus Walburg"]]
         )
         with pytest.raises(ValueError):
@@ -447,17 +453,18 @@ class TestCCWallet:
                 [uint64(30)], [cc_hash], memos=[[b"too"], [b"many"], [b"memos"]]
             )
 
-        await wallet_1.wallet_state_manager.add_pending_transaction(tx_record_3)
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record_3.spend_bundle.name()
-        )
+        for tx_record in tx_records_3:
+            await wallet_1.wallet_state_manager.add_pending_transaction(tx_record)
+            await time_out_assert(
+                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+            )
         txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cc_wallet_1.id(), 0, 100000)
         for tx in txs:
             if tx.amount == 30:
                 memos = tx.get_memos()
                 assert len(memos) == 1
                 assert b"Markus Walburg" in [v for v_list in memos.values() for v in v_list]
-                assert list(memos.keys())[0] in [a.name() for a in tx_record_3.spend_bundle.additions()]
+                assert list(memos.keys())[0] in [a.name() for a in tx.spend_bundle.additions()]
 
     @pytest.mark.parametrize(
         "trusted",
@@ -520,12 +527,12 @@ class TestCCWallet:
             amounts.append(uint64(i))
             puzzle_hashes.append(cc_2_hash)
         spent_coint = (await cc_wallet.get_cc_spendable_coins())[0].coin
-        tx_record = await cc_wallet.generate_signed_transaction(amounts, puzzle_hashes, coins={spent_coint})
-        await wallet.wallet_state_manager.add_pending_transaction(tx_record)
-
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
+        tx_records = await cc_wallet.generate_signed_transaction(amounts, puzzle_hashes, coins={spent_coint})
+        for tx_record in tx_records:
+            await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+            await time_out_assert(
+                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+            )
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -549,40 +556,40 @@ class TestCCWallet:
         max_sent_amount = await cc_wallet.get_max_send_amount()
 
         # 1) Generate transaction that is under the limit
-        under_limit_tx = None
+        under_limit_txs = None
         try:
-            under_limit_tx = await cc_wallet.generate_signed_transaction(
+            under_limit_txs = await cc_wallet.generate_signed_transaction(
                 [max_sent_amount - 1],
                 [ph],
             )
         except ValueError:
             assert ValueError
 
-        assert under_limit_tx is not None
+        assert under_limit_txs is not None
 
         # 2) Generate transaction that is equal to limit
-        at_limit_tx = None
+        at_limit_txs = None
         try:
-            at_limit_tx = await cc_wallet.generate_signed_transaction(
+            at_limit_txs = await cc_wallet.generate_signed_transaction(
                 [max_sent_amount],
                 [ph],
             )
         except ValueError:
             assert ValueError
 
-        assert at_limit_tx is not None
+        assert at_limit_txs is not None
 
         # 3) Generate transaction that is greater than limit
-        above_limit_tx = None
+        above_limit_txs = None
         try:
-            above_limit_tx = await cc_wallet.generate_signed_transaction(
+            above_limit_txs = await cc_wallet.generate_signed_transaction(
                 [max_sent_amount + 1],
                 [ph],
             )
         except ValueError:
             pass
 
-        assert above_limit_tx is None
+        assert above_limit_txs is None
 
     @pytest.mark.parametrize(
         "trusted",
@@ -639,13 +646,14 @@ class TestCCWallet:
         colour = cc_wallet.get_colour()
 
         cc_2_hash = await wallet2.get_new_puzzlehash()
-        tx_record = await cc_wallet.generate_signed_transaction([uint64(60)], [cc_2_hash], memos=[[cc_2_hash]])
+        tx_records = await cc_wallet.generate_signed_transaction([uint64(60)], [cc_2_hash], memos=[[cc_2_hash]])
 
-        await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+        for tx_record in tx_records:
+            await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
+            await time_out_assert(
+                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+            )
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -664,12 +672,13 @@ class TestCCWallet:
         await time_out_assert(30, cc_wallet_2.get_unconfirmed_balance, 60)
 
         cc_hash = await cc_wallet.get_new_inner_hash()
-        tx_record = await cc_wallet_2.generate_signed_transaction([uint64(15)], [cc_hash])
-        await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+        tx_records = await cc_wallet_2.generate_signed_transaction([uint64(15)], [cc_hash])
+        for tx_record in tx_records:
+            await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
+            await time_out_assert(
+                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+            )
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))

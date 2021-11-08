@@ -327,7 +327,8 @@ class TestFullNodeBlockCompression:
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
 
         # Make a cc transaction
-        tr: TransactionRecord = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
+        trs = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
+        tr: TransactionRecord = trs[0]
         await wallet.wallet_state_manager.add_pending_transaction(tr)
         await time_out_assert(
             10,

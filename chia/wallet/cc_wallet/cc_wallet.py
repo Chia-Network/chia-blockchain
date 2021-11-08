@@ -16,9 +16,11 @@ from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.announcement import Announcement
 from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -255,10 +257,10 @@ class CCWallet:
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
-            tx = await self.generate_signed_transaction(
+            txs = await self.generate_signed_transaction(
                 [coin.amount], [coin.puzzle_hash], coins={coin}, ignore_max_send_amount=True
             )
-            program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
+            program: BlockGenerator = simple_solution_generator(txs[0].spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
             result: NPCResult = get_name_puzzle_conditions(
                 program,
@@ -511,13 +513,66 @@ class CCWallet:
                 return proof
         return None
 
+
+    async def create_tandem_xch_tx(
+        self,
+        fee: uint64,
+        amount_to_claim: uint64,
+        announcement_to_assert: Optional[Announcement] = None,
+    ) -> Tuple[TransactionRecord, Optional[Announcement]]:
+        """
+        This function creates a non-CAT transaction to pay fees, contribute funds for issuance, and absorb melt value.
+        It is meant to be called in `generate_unsigned_spendbundle` and as such should be called under the
+        wallet_state_manager lock
+        """
+        announcement = None
+        if fee > amount_to_claim:
+            chia_coins = await self.standard_wallet.select_coins(fee)
+            origin_id = list(chia_coins)[0].name()
+            selected_amount = sum([c.amount for c in chia_coins])
+            chia_tx = await self.standard_wallet.generate_signed_transaction(
+                uint64(0),
+                (await self.standard_wallet.get_new_puzzlehash()),
+                fee=uint64(fee - amount_to_claim),
+                coins=chia_coins,
+                origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
+                negative_change_allowed=False,
+                announcements_to_consume=set([announcement_to_assert]) if announcement_to_assert is not None else None,
+            )
+            assert chia_tx.spend_bundle is not None
+
+            message = None
+            for spend in chia_tx.spend_bundle.coin_spends:
+                if spend.coin.name() == origin_id:
+                    conditions = spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_python()
+                    for condition in conditions:
+                        if condition[0] == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
+                            message = condition[1]
+
+            assert message is not None
+            announcement = Announcement(origin_id, message)
+        else:
+            chia_coins = await self.standard_wallet.select_coins(fee)
+            selected_amount = sum([c.amount for c in chia_coins])
+            chia_tx = await self.standard_wallet.generate_signed_transaction(
+                uint64(selected_amount + amount_to_claim - fee),
+                (await self.standard_wallet.get_new_puzzlehash()),
+                coins=chia_coins,
+                negative_change_allowed=True,
+                announcements_to_consume=set([announcement_to_assert]) if announcement_to_assert is not None else None,
+            )
+            assert chia_tx.spend_bundle is not None
+
+        return chia_tx, announcement
+
+
     async def generate_unsigned_spendbundle(
         self,
         payments: List[Payment],
         fee: uint64 = uint64(0),
         cat_discrepancy: Optional[Tuple[int, Program]] = None,  # (extra_delta, limitations_solution)
         coins: Set[Coin] = None,
-    ) -> SpendBundle:
+    ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if cat_discrepancy is not None:
             extra_delta, limitations_solution = cat_discrepancy
         else:
@@ -540,20 +595,7 @@ class CCWallet:
         elif payment_amount < starting_amount:
             regular_chia_to_claim = payment_amount
 
-        # Create the absorb/melt transaction
-        chia_spend_bundle = SpendBundle([], G2Element())
-        if fee > 0 or regular_chia_to_claim > 0:
-            chia_coins = await self.standard_wallet.select_coins(fee)
-            selected_amount = sum([c.amount for c in chia_coins])
-            chia_tx = await self.standard_wallet.generate_signed_transaction(
-                uint64(selected_amount + regular_chia_to_claim - fee),
-                (await self.standard_wallet.get_new_puzzlehash()),
-                fee=fee,
-                coins=chia_coins,
-                negative_change_allowed=True,
-            )
-            assert chia_tx.spend_bundle is not None
-            chia_spend_bundle = chia_tx.spend_bundle
+        need_chia_transaction = (fee > 0 or regular_chia_to_claim > 0) and (fee - regular_chia_to_claim != 0)
 
         # Calculate standard puzzle solutions
         change = selected_cat_amount - starting_amount
@@ -573,11 +615,21 @@ class CCWallet:
 
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cc_list = []
+        chia_tx = None
         first = True
         for coin in cat_coins:
             if first:
                 first = False
-                innersol = self.standard_wallet.make_solution(primaries=primaries)
+                if need_chia_transaction:
+                    if fee > regular_chia_to_claim:
+                        announcement = Announcement(coin.name(), b'$', b'\xca')
+                        chia_tx, _ = await self.create_tandem_xch_tx(fee, regular_chia_to_claim, announcement_to_assert=announcement)
+                        innersol = self.standard_wallet.make_solution(primaries=primaries, coin_announcements={announcement.message})
+                    elif regular_chia_to_claim > fee:
+                        chia_tx, announcement = await self.create_tandem_xch_tx(fee, regular_chia_to_claim)
+                        innersol = self.standard_wallet.make_solution(primaries=primaries, coin_announcements_to_assert={announcement.name()})
+                else:
+                    innersol = self.standard_wallet.make_solution(primaries=primaries)
             else:
                 innersol = self.standard_wallet.make_solution()
             inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
@@ -595,12 +647,17 @@ class CCWallet:
             )
             spendable_cc_list.append(new_spendable_cc)
 
+        cat_spend_bundle = unsigned_spend_bundle_for_spendable_ccs(CC_MOD, spendable_cc_list)
+        chia_spend_bundle = SpendBundle([], G2Element())
+        if chia_tx is not None and chia_tx.spend_bundle is not None:
+            chia_spend_bundle = chia_tx.spend_bundle
+
         return SpendBundle.aggregate(
             [
-                unsigned_spend_bundle_for_spendable_ccs(CC_MOD, spendable_cc_list),
+                cat_spend_bundle,
                 chia_spend_bundle,
             ]
-        )
+        ), chia_tx
 
     async def generate_signed_transaction(
         self,
@@ -610,7 +667,7 @@ class CCWallet:
         coins: Set[Coin] = None,
         ignore_max_send_amount: bool = False,
         memos: Optional[List[List[bytes]]] = None,
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
 
@@ -629,11 +686,11 @@ class CCWallet:
             if payment_sum > max_send:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
 
-        unsigned_spend_bundle = await self.generate_unsigned_spendbundle(payments, fee, coins=coins)
+        unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(payments, fee, coins=coins)
         spend_bundle = await self.sign(unsigned_spend_bundle)
 
         # TODO add support for array in stored records
-        return TransactionRecord(
+        tx_list = [TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=puzzle_hashes[0],
@@ -649,7 +706,28 @@ class CCWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-        )
+        )]
+
+        if chia_tx is not None:
+            tx_list.append(TransactionRecord(
+                confirmed_at_height=chia_tx.confirmed_at_height,
+                created_at_time=chia_tx.created_at_time,
+                to_puzzle_hash=chia_tx.to_puzzle_hash,
+                amount=chia_tx.amount,
+                fee_amount=chia_tx.fee_amount,
+                confirmed=chia_tx.confirmed,
+                sent=chia_tx.sent,
+                spend_bundle=None,
+                additions=chia_tx.additions,
+                removals=chia_tx.removals,
+                wallet_id=chia_tx.wallet_id,
+                sent_to=chia_tx.sent_to,
+                trade_id=chia_tx.trade_id,
+                type=chia_tx.type,
+                name=chia_tx.name,
+            ))
+
+        return tx_list
 
     async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof], in_transaction=False):
         """
