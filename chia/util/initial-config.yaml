@@ -440,13 +440,13 @@ data_layer:
   # TODO: organize consistently with other sections
 
   # TODO: shouldn't we not need this since we have no actual public interface (yet)?
-  port: 1234
+  port: 8561
   database_path: "data_layer/db/data_layer_CHALLENGE.sqlite"
   selected_network: *selected_network
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   # TODO: what considerations are there in choosing this?
-  rpc_port: 8561
+  rpc_port: 8562
   logging: *logging
 
   # TODO: which of these are really appropriate?

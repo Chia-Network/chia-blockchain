@@ -3,15 +3,16 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import aiosqlite
-
-from chia.consensus.constants import ConsensusConstants
+from chia.daemon.keychain_proxy import KeychainProxyConnectionFailure
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.data_store import DataStore
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.config import load_config_cli
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
 from chia.util.path import mkdir, path_from_root
+from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -21,38 +22,27 @@ class DataLayer:
     db_path: Path
     connection: aiosqlite.Connection
     config: Dict[str, Any]
-    server: Any
     log: logging.Logger
     wallet: DataLayerWallet
-    wallet_state_manager: Optional[WalletStateManager]
+    wallet_node: Optional[WalletNode]
     state_changed_callback: Optional[Callable[..., object]]
     initialized: bool
 
     def __init__(
         self,
-        # TODO: Is this at least `Dict[str, Any]`?
-        config: Dict[Any, Any],
         root_path: Path,
-        wallet_state_manager: Optional[WalletStateManager],
-        consensus_constants: ConsensusConstants,
+        wallet_node: WalletNode,
         name: Optional[str] = None,
     ):
         if name == "":
             # TODO: If no code depends on "" counting as 'unspecified' then we do not
             #       need this.
             name = None
-
+        config = load_config_cli(root_path, "config.yaml", "data_layer")
         self.initialized = False
-        self.wallet = DataLayerWallet()
         self.config = config
-        self.server = None
-        self.wallet_state_manager = wallet_state_manager
-        self.state_changed_callback = None
+        self.wallet_node = wallet_node
         self.log = logging.getLogger(name if name is None else __name__)
-
-        # self._ui_tasks = set()
-
-        # TODO: use the data layer database
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
@@ -63,13 +53,33 @@ class DataLayer:
     def set_server(self, server: ChiaServer) -> None:
         self.server = server
 
-    async def _start(self) -> None:
+    async def _start(self) -> bool:
         # create the store (db) and data store instance
+        assert self.wallet_node
+        try:
+            private_key = await self.wallet_node.get_key_for_fingerprint(None)
+        except KeychainProxyConnectionFailure:
+            self.log.error("Failed to connect to keychain service")
+            return False
+
+        if private_key is None:
+            self.logged_in = False
+            return False
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
-
+        assert self.wallet_node.wallet_state_manager
+        main_wallet = self.wallet_node.wallet_state_manager.main_wallet
+        amount = uint64(1)  # todo what should amount be ?
+        async with self.wallet_node.wallet_state_manager.lock:
+            res = await self.wallet.create_new_dl_wallet(
+                self.wallet_node.wallet_state_manager, main_wallet, amount, None
+            )
+            if res is False:
+                self.log.error("Failed to create tree")
+        self.wallet = res
         self.initialized = True
+        return True
 
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
@@ -79,24 +89,12 @@ class DataLayer:
     async def _await_closed(self) -> None:
         await self.connection.close()
 
-    async def init_exsiting_data_wallet(self) -> None:
-        # todo implement
-        pass
-
     async def create_store(self) -> bytes32:
-        wallet_state_manager = self.wallet_state_manager
-        assert wallet_state_manager
-        main_wallet = wallet_state_manager.main_wallet
-        amount = uint64(1)  # todo what should amount be ?
-        assert self.wallet_state_manager
-        async with self.wallet_state_manager.lock:
-            res = await self.wallet.create_new_dl_wallet(self.wallet_state_manager, main_wallet, amount, None)
-            if res is False:
-                self.log.error("Failed to create tree")
-        self.wallet = res
-        tree_id = res.dl_info.origin_coin.name()
+        assert self.wallet.dl_info.origin_coin
+        tree_id = self.wallet.dl_info.origin_coin.name()
         res = await self.data_store.create_tree(tree_id)
-        assert res
+        if res is None:
+            self.log.fatal("failed creating store")
         return tree_id
 
     async def insert(

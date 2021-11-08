@@ -47,12 +47,7 @@ async def test_create_insert_get(chia_root: ChiaRoot, wallet_node):
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
 
-    data_layer = DataLayer(
-        config["data_layer"],
-        root_path=root,
-        wallet_state_manager=wallet.wallet_state_manager,
-        consensus_constants=DEFAULT_CONSTANTS,
-    )
+    data_layer = DataLayer(root_path=root, wallet_node=wallet_node)
     connection = await aiosqlite.connect(data_layer.db_path)
     data_layer.connection = connection
     data_layer.db_wrapper = DBWrapper(data_layer.connection)
@@ -97,12 +92,7 @@ async def test_create_double_insert(chia_root: ChiaRoot, wallet_node):
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
 
-    data_layer = DataLayer(
-        config["data_layer"],
-        root_path=root,
-        wallet_state_manager=wallet.wallet_state_manager,
-        consensus_constants=DEFAULT_CONSTANTS,
-    )
+    data_layer = DataLayer(root_path=root, wallet_node=wallet_node)
     connection = await aiosqlite.connect(data_layer.db_path)
     data_layer.connection = connection
     data_layer.db_wrapper = DBWrapper(data_layer.connection)
@@ -152,12 +142,7 @@ async def test_get_pairs(chia_root: ChiaRoot, wallet_node):
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
 
-    data_layer = DataLayer(
-        config["data_layer"],
-        root_path=root,
-        wallet_state_manager=wallet.wallet_state_manager,
-        consensus_constants=DEFAULT_CONSTANTS,
-    )
+    data_layer = DataLayer(root_path=root, wallet_node=wallet_node)
     connection = await aiosqlite.connect(data_layer.db_path)
     data_layer.connection = connection
     data_layer.db_wrapper = DBWrapper(data_layer.connection)
@@ -208,12 +193,7 @@ async def test_get_ancestors(chia_root: ChiaRoot, wallet_node: WalletNode):
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
 
-    data_layer = DataLayer(
-        config["data_layer"],
-        root_path=root,
-        wallet_state_manager=wallet.wallet_state_manager,
-        consensus_constants=DEFAULT_CONSTANTS,
-    )
+    data_layer = DataLayer(root_path=root, wallet_node=wallet_node)
     connection = await aiosqlite.connect(data_layer.db_path)
     data_layer.connection = connection
     data_layer.db_wrapper = DBWrapper(data_layer.connection)
