@@ -48,7 +48,7 @@ const StyledTableCellContent = styled.div`
 `;
 
 const StyledExpandedTableCell = styled(TableCell)`
-  border: 0;
+  ${({ isExpanded }) => !isExpanded ? 'border: 0;' : undefined}
 `;
 
 const StyledExpandedTableCellContent = styled.div`
@@ -200,7 +200,7 @@ export default function Table(props: Props) {
 
             for (let i = 0; i < expandedCellShift; i += 1) {
               expandableCells.push((
-                <StyledExpandedTableCell key={i} style={{ paddingBottom: 0, paddingTop: 0 }}>
+                <StyledExpandedTableCell key={i} style={{ paddingBottom: 0, paddingTop: 0 }} isExpanded={isExpanded}>
                 </StyledExpandedTableCell>
               ));
             }
@@ -240,6 +240,7 @@ export default function Table(props: Props) {
                         maxWidth={col.maxWidth}
                         width={col.width}
                         key={col.key}
+                        isExpanded={isExpanded}
                       >
                         {tooltipValue ? (
                           <Tooltip title={tooltipValue}>
@@ -254,13 +255,13 @@ export default function Table(props: Props) {
                 </StyledTableRow>
                 <StyledExpandedTableRow>
                   {expandableCells}
-                  <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={cols.length - expandedCellShift}>
+                  <StyledExpandedTableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={cols.length - expandedCellShift} isExpanded={isExpanded}>
                     <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                       <StyledExpandedTableCellContent>
                         {expandedField && expandedField(row)}
                       </StyledExpandedTableCellContent>
                     </Collapse>
-                  </TableCell>
+                  </StyledExpandedTableCell>
                 </StyledExpandedTableRow>
               </Fragment>
             );
