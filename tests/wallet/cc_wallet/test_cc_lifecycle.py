@@ -106,9 +106,7 @@ class TestCCLifecycle:
         sim, sim_client = setup_sim
 
         try:
-            # This program is the equivalent of `(i () () ())`
-            # It's a hacky workaround to the fact that `()` is not a valid tail
-            genesis_checker = Program.to([3, [], [], []])
+            genesis_checker = Program.to([])
             checker_solution = Program.to([])
             cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
@@ -268,6 +266,102 @@ class TestCCLifecycle:
                 cost_str="Mint Value",
             )
 
+        finally:
+            await sim.close()
+
+    @pytest.mark.asyncio()
+    async def test_complex_spend(self, setup_sim):
+        sim, sim_client = setup_sim
+
+        try:
+            genesis_checker = Program.to([])
+            checker_solution = Program.to([])
+            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
+            cc_ph: bytes32 = cc_puzzle.get_tree_hash()
+            await sim.farm_block(cc_ph)
+            await sim.farm_block(cc_ph)
+
+            cat_records = await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False)
+            parent_of_mint = cat_records[0].coin
+            parent_of_melt = cat_records[1].coin
+            eve_to_mint = cat_records[2].coin
+            eve_to_melt = cat_records[3].coin
+
+            # Spend two of them to make them non-eve
+            await self.do_spend(
+                sim,
+                sim_client,
+                genesis_checker,
+                [parent_of_mint, parent_of_melt],
+                [NO_LINEAGE_PROOF, NO_LINEAGE_PROOF],
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), parent_of_mint.amount],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    ),
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), parent_of_melt.amount],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    ),
+                ],
+                (MempoolInclusionStatus.SUCCESS, None),
+                limitations_solutions=[checker_solution] * 2,
+                cost_str="Spend two eves",
+            )
+
+            # Make the lineage proofs for the non-eves
+            mint_lineage = LineageProof(parent_of_mint.parent_coin_info, acs_ph, parent_of_mint.amount)
+            melt_lineage = LineageProof(parent_of_melt.parent_coin_info, acs_ph, parent_of_melt.amount)
+
+            # Find the two new coins
+            all_cats = await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False)
+            all_cat_coins = [cr.coin for cr in all_cats]
+            standard_to_mint = list(filter(lambda cr: cr.parent_coin_info == parent_of_mint.name(), all_cat_coins))[0]
+            standard_to_melt = list(filter(lambda cr: cr.parent_coin_info == parent_of_melt.name(), all_cat_coins))[0]
+
+            # Do the complex spend
+            # We have both and eve and non-eve doing both minting and melting
+            await self.do_spend(
+                sim,
+                sim_client,
+                genesis_checker,
+                [eve_to_mint, eve_to_melt, standard_to_mint, standard_to_melt],
+                [NO_LINEAGE_PROOF, NO_LINEAGE_PROOF, mint_lineage, melt_lineage],
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), eve_to_mint.amount + 13],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    ),
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), eve_to_melt.amount - 21],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    ),
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), standard_to_mint.amount + 21],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    ),
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), standard_to_melt.amount - 13],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    ),
+                ],
+                (MempoolInclusionStatus.SUCCESS, None),
+                limitations_solutions=[checker_solution] * 4,
+                extra_deltas=[13, -21, 21, -13],
+                cost_str="Complex Spend",
+            )
         finally:
             await sim.close()
 

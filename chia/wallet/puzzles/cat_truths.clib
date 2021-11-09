@@ -12,7 +12,7 @@
     )
   )
 
-  ; CAT Truths is: (((innerpuzhash . my_amount) . (lineage_proof . cat_struct)) . ((my_id . full_puzhash) . (my_parent . ())))
+  ; CAT Truths is: ((Inner puzzle hash . (MOD hash . (MOD hash hash . TAIL hash))) . (my_id . (my_parent_info my_puzhash my_amount)))
 
   (defun-inline my_inner_puzzle_hash_cat_truth (Truths) (f (f Truths)))
   (defun-inline cat_struct_truth (Truths) (r (f Truths)))
