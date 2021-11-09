@@ -180,7 +180,7 @@ class WalletStateManager:
                 if wallet_info.id == 1:
                     continue
                 wallet = await Wallet.create(config, wallet_info)
-            elif wallet_info.type == WalletType.COLOURED_COIN:
+            elif wallet_info.type == WalletType.CAT:
                 wallet = await CATWallet.create(
                     self,
                     self.main_wallet,
@@ -225,7 +225,7 @@ class WalletStateManager:
                 wallet = await Wallet.create(self.config, wallet_info)
                 self.wallets[wallet_info.id] = wallet
             # TODO add RL AND DiD WALLETS HERE
-            elif wallet_info.type == WalletType.COLOURED_COIN:
+            elif wallet_info.type == WalletType.CAT:
                 wallet = await CATWallet.create(
                     self,
                     self.main_wallet,
@@ -950,7 +950,7 @@ class WalletStateManager:
         )
         await self.coin_store.add_coin_record(coin_record_1)
 
-        if wallet_type == WalletType.COLOURED_COIN or wallet_type == WalletType.DISTRIBUTED_ID:
+        if wallet_type == WalletType.CAT or wallet_type == WalletType.DISTRIBUTED_ID:
             wallet = self.wallets[wallet_id]
             await wallet.coin_added(coin, height)
 
@@ -1062,7 +1062,7 @@ class WalletStateManager:
     async def get_wallet_for_asset_id(self, asset_id):
         for wallet_id in self.wallets:
             wallet = self.wallets[wallet_id]
-            if wallet.type() == WalletType.COLOURED_COIN:
+            if wallet.type() == WalletType.CAT:
                 if bytes(wallet.cat_info.limitations_program_hash).hex() == asset_id:
                     return wallet
         return None

@@ -636,7 +636,7 @@ class WalletRpcApi:
         if wallet.type() == WalletType.STANDARD_WALLET:
             raw_puzzle_hash = await wallet.get_puzzle_hash(create_new)
             address = encode_puzzle_hash(raw_puzzle_hash, prefix)
-        elif wallet.type() == WalletType.COLOURED_COIN:
+        elif wallet.type() == WalletType.CAT:
             raw_puzzle_hash = await wallet.standard_wallet.get_puzzle_hash(create_new)
             address = encode_puzzle_hash(raw_puzzle_hash, prefix)
         else:
@@ -656,7 +656,7 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
-        if wallet.type() == WalletType.COLOURED_COIN:
+        if wallet.type() == WalletType.CAT:
             raise ValueError("send_transaction does not work for CAT wallets")
 
         if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):

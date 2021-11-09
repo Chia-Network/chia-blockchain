@@ -83,7 +83,7 @@ class CATWallet:
         self.cat_info = CATInfo(empty_bytes, None, [])
         info_as_string = bytes(self.cat_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.COLOURED_COIN, info_as_string
+            name, WalletType.CAT, info_as_string
         )
         if self.wallet_info is None:
             raise ValueError("Internal Error")
@@ -170,7 +170,7 @@ class CATWallet:
         self.cat_info = CATInfo(limitations_program_hash, None, [])
         info_as_string = bytes(self.cat_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.COLOURED_COIN, info_as_string
+            name, WalletType.CAT, info_as_string
         )
         if self.wallet_info is None:
             raise Exception("wallet_info is None")
@@ -197,7 +197,7 @@ class CATWallet:
 
     @classmethod
     def type(cls) -> uint8:
-        return uint8(WalletType.COLOURED_COIN)
+        return uint8(WalletType.CAT)
 
     def id(self) -> uint32:
         return self.wallet_info.id

@@ -117,7 +117,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
                 print("Submitting transaction...")
                 res = await wallet_client.send_transaction(wallet_id, final_amount, address, final_fee, memos)
                 break
-            elif typ == WalletType.COLOURED_COIN:
+            elif typ == WalletType.CAT:
                 final_amount = uint64(int(amount * units["cat"]))
                 print("Submitting transaction...")
                 res = await wallet_client.cat_spend(wallet_id, final_amount, address, final_fee, memos)
@@ -155,7 +155,7 @@ async def delete_unconfirmed_transactions(args: dict, wallet_client: WalletRpcCl
 
 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
-    if typ == WalletType.COLOURED_COIN:
+    if typ == WalletType.CAT:
         return "", units["cat"]
     if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG, WalletType.RATE_LIMITED]:
         return address_prefix, units["chia"]
