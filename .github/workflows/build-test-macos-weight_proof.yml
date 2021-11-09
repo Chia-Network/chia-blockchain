@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS core-ssl Tests
+name: MacOS weight_proof Tests
 
 on:
   push:
@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: MacOS core-ssl Tests
+    name: MacOS weight_proof Tests
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -97,10 +97,10 @@ jobs:
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
-    - name: Test core-ssl code with pytest
+    - name: Test weight_proof code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/ssl/test_*.py -s -v --durations 0
+        ./venv/bin/py.test tests/weight_proof/test_*.py -s -v --durations 0
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
