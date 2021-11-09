@@ -6,7 +6,7 @@ name: Ubuntu TEST_NAME Test
 on:
   push:
     branches:
-      - main_
+      - main
     tags:
         - '**'
   pull_request:
