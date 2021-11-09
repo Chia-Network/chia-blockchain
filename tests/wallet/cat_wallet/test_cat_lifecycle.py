@@ -14,11 +14,11 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.cc_wallet.cc_utils import (
-    CC_MOD,
-    SpendableCC,
-    construct_cc_puzzle,
-    unsigned_spend_bundle_for_spendable_ccs,
+from chia.wallet.cat_wallet.cat_utils import (
+    CAT_MOD,
+    SpendableCAT,
+    construct_cat_puzzle,
+    unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.puzzles.genesis_checkers import (
     GenesisById,
@@ -35,7 +35,7 @@ acs_ph = acs.get_tree_hash()
 NO_LINEAGE_PROOF = LineageProof()
 
 
-class TestCCLifecycle:
+class TestCATLifecycle:
     cost: Dict[str, int] = {}
 
     @pytest.fixture(scope="function")
@@ -66,12 +66,12 @@ class TestCCLifecycle:
         if extra_deltas is None:
             extra_deltas = [0] * len(coins)
 
-        spendable_cc_list: List[SpendableCC] = []
+        spendable_cat_list: List[SpendableCAT] = []
         for coin, innersol, proof, limitations_solution, extra_delta in zip(
             coins, inner_solutions, lineage_proofs, limitations_solutions, extra_deltas
         ):
-            spendable_cc_list.append(
-                SpendableCC(
+            spendable_cat_list.append(
+                SpendableCAT(
                     coin,
                     genesis_checker.get_tree_hash(),
                     acs,
@@ -83,9 +83,9 @@ class TestCCLifecycle:
                 )
             )
 
-        spend_bundle: SpendBundle = unsigned_spend_bundle_for_spendable_ccs(
-            CC_MOD,
-            spendable_cc_list,
+        spend_bundle: SpendBundle = unsigned_spend_bundle_for_spendable_cats(
+            CAT_MOD,
+            spendable_cat_list,
         )
         agg_sig = AugSchemeMPL.aggregate(signatures)
         result = await sim_client.push_tx(
@@ -102,16 +102,16 @@ class TestCCLifecycle:
         await sim.farm_block()
 
     @pytest.mark.asyncio()
-    async def test_cc_mod(self, setup_sim):
+    async def test_cat_mod(self, setup_sim):
         sim, sim_client = setup_sim
 
         try:
             genesis_checker = Program.to([])
             checker_solution = Program.to([])
-            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
-            cc_ph: bytes32 = cc_puzzle.get_tree_hash()
-            await sim.farm_block(cc_ph)
-            starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cc_ph))[0].coin
+            cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, genesis_checker.get_tree_hash(), acs)
+            cat_ph: bytes32 = cat_puzzle.get_tree_hash()
+            await sim.farm_block(cat_ph)
+            starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph))[0].coin
 
             # Testing the eve spend
             await self.do_spend(
@@ -140,7 +140,7 @@ class TestCCLifecycle:
             # Testing a combination of two
             coins: List[Coin] = [
                 record.coin
-                for record in (await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))
+                for record in (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
             ]
             coins = [coins[0], coins[1]]
             await self.do_spend(
@@ -166,7 +166,7 @@ class TestCCLifecycle:
             # Testing a combination of three
             coins = [
                 record.coin
-                for record in (await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))
+                for record in (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
             ]
             total_amount: uint64 = uint64(sum([c.amount for c in coins]))
             await self.do_spend(
@@ -192,14 +192,14 @@ class TestCCLifecycle:
 
             # Spend with a standard lineage proof
             parent_coin: Coin = coins[0]  # The first one is the one we didn't light on fire
-            _, curried_args = cc_puzzle.uncurry()
+            _, curried_args = cat_puzzle.uncurry()
             _, _, innerpuzzle = curried_args.as_iter()
             lineage_proof = LineageProof(parent_coin.parent_coin_info, innerpuzzle.get_tree_hash(), parent_coin.amount)
             await self.do_spend(
                 sim,
                 sim_client,
                 genesis_checker,
-                [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
+                [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
                 [lineage_proof],
                 [Program.to([[51, acs.get_tree_hash(), total_amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
@@ -212,7 +212,7 @@ class TestCCLifecycle:
                 sim,
                 sim_client,
                 genesis_checker,
-                [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
+                [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
                 [
                     Program.to(
@@ -249,7 +249,7 @@ class TestCCLifecycle:
                 sim,
                 sim_client,
                 genesis_checker,
-                [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
+                [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
                 [
                     Program.to(
@@ -276,12 +276,12 @@ class TestCCLifecycle:
         try:
             genesis_checker = Program.to([])
             checker_solution = Program.to([])
-            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
-            cc_ph: bytes32 = cc_puzzle.get_tree_hash()
-            await sim.farm_block(cc_ph)
-            await sim.farm_block(cc_ph)
+            cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, genesis_checker.get_tree_hash(), acs)
+            cat_ph: bytes32 = cat_puzzle.get_tree_hash()
+            await sim.farm_block(cat_ph)
+            await sim.farm_block(cat_ph)
 
-            cat_records = await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False)
+            cat_records = await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False)
             parent_of_mint = cat_records[0].coin
             parent_of_melt = cat_records[1].coin
             eve_to_mint = cat_records[2].coin
@@ -318,7 +318,7 @@ class TestCCLifecycle:
             melt_lineage = LineageProof(parent_of_melt.parent_coin_info, acs_ph, parent_of_melt.amount)
 
             # Find the two new coins
-            all_cats = await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False)
+            all_cats = await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False)
             all_cat_coins = [cr.coin for cr in all_cats]
             standard_to_mint = list(filter(lambda cr: cr.parent_coin_info == parent_of_mint.name(), all_cat_coins))[0]
             standard_to_melt = list(filter(lambda cr: cr.parent_coin_info == parent_of_melt.name(), all_cat_coins))[0]
@@ -377,12 +377,12 @@ class TestCCLifecycle:
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
             genesis_checker: Program = GenesisById.construct([Program.to(starting_coin.name())])
             checker_solution: Program = GenesisById.solve([], {})
-            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
-            cc_ph: bytes32 = cc_puzzle.get_tree_hash()
+            cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, genesis_checker.get_tree_hash(), acs)
+            cat_ph: bytes32 = cat_puzzle.get_tree_hash()
 
             await sim_client.push_tx(
                 SpendBundle(
-                    [CoinSpend(starting_coin, standard_acs, Program.to([[51, cc_ph, starting_coin.amount]]))],
+                    [CoinSpend(starting_coin, standard_acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
                     G2Element(),
                 )
             )
@@ -392,7 +392,7 @@ class TestCCLifecycle:
                 sim,
                 sim_client,
                 genesis_checker,
-                [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
+                [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
                 [
                     Program.to(
@@ -422,12 +422,12 @@ class TestCCLifecycle:
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
             genesis_checker: Program = GenesisByPuzhash.construct([Program.to(starting_coin.puzzle_hash)])
             checker_solution: Program = GenesisByPuzhash.solve([], starting_coin.to_json_dict())
-            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
-            cc_ph: bytes32 = cc_puzzle.get_tree_hash()
+            cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, genesis_checker.get_tree_hash(), acs)
+            cat_ph: bytes32 = cat_puzzle.get_tree_hash()
 
             await sim_client.push_tx(
                 SpendBundle(
-                    [CoinSpend(starting_coin, standard_acs, Program.to([[51, cc_ph, starting_coin.amount]]))],
+                    [CoinSpend(starting_coin, standard_acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
                     G2Element(),
                 )
             )
@@ -437,7 +437,7 @@ class TestCCLifecycle:
                 sim,
                 sim_client,
                 genesis_checker,
-                [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
+                [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
                 [
                     Program.to(
@@ -463,13 +463,13 @@ class TestCCLifecycle:
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
             genesis_checker: Program = EverythingWithSig.construct([Program.to(sk.get_g1())])
             checker_solution: Program = EverythingWithSig.solve([], {})
-            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
-            cc_ph: bytes32 = cc_puzzle.get_tree_hash()
-            await sim.farm_block(cc_ph)
+            cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, genesis_checker.get_tree_hash(), acs)
+            cat_ph: bytes32 = cat_puzzle.get_tree_hash()
+            await sim.farm_block(cat_ph)
 
             # Test eve spend
             # We don't sign any message data because CLVM 0 translates to b'' apparently
-            starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cc_ph))[0].coin
+            starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph))[0].coin
             signature: G2Element = AugSchemeMPL.sign(
                 sk, (starting_coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA)
             )
@@ -495,7 +495,7 @@ class TestCCLifecycle:
             )
 
             # Test melting value
-            coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin
+            coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin
             signature = AugSchemeMPL.sign(
                 sk, (int_to_bytes(-1) + coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA)
             )
@@ -522,7 +522,7 @@ class TestCCLifecycle:
             )
 
             # Test minting value
-            coin = (await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin
+            coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin
             signature = AugSchemeMPL.sign(sk, (int_to_bytes(1) + coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA))
 
             # Need something to fund the minting
@@ -580,12 +580,12 @@ class TestCCLifecycle:
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
             genesis_checker: Program = DelegatedLimitations.construct([Program.to(sk.get_g1())])
-            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
-            cc_ph: bytes32 = cc_puzzle.get_tree_hash()
+            cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, genesis_checker.get_tree_hash(), acs)
+            cat_ph: bytes32 = cat_puzzle.get_tree_hash()
 
             await sim_client.push_tx(
                 SpendBundle(
-                    [CoinSpend(starting_coin, standard_acs, Program.to([[51, cc_ph, starting_coin.amount]]))],
+                    [CoinSpend(starting_coin, standard_acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
                     G2Element(),
                 )
             )
@@ -610,7 +610,7 @@ class TestCCLifecycle:
                 sim,
                 sim_client,
                 genesis_checker,
-                [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
+                [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
                 [
                     Program.to(

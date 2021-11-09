@@ -4,7 +4,7 @@ from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
-from chia.wallet.cc_wallet import cc_utils
+from chia.wallet.cat_wallet import cat_utils
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.trade_status import TradeStatus
 
@@ -62,12 +62,12 @@ def get_discrepancies_for_spend_bundle(
     trade_offer: SpendBundle,
 ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
     try:
-        cc_discrepancies: Dict[str, int] = dict()
+        cat_discrepancies: Dict[str, int] = dict()
         for coinsol in trade_offer.coin_spends:
             puzzle: Program = Program.from_bytes(bytes(coinsol.puzzle_reveal))
             solution: Program = Program.from_bytes(bytes(coinsol.solution))
             # work out the deficits between coin amount and expected output for each
-            matched, curried_args = cc_utils.match_cat_puzzle(puzzle)
+            matched, curried_args = cat_utils.match_cat_puzzle(puzzle)
             if matched:
                 # Calculate output amounts
                 mod_hash, genesis_checker_hash, inner_puzzle = curried_args
@@ -75,19 +75,19 @@ def get_discrepancies_for_spend_bundle(
 
                 total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
                 colour = bytes(genesis_checker_hash).hex()
-                if colour in cc_discrepancies:
-                    cc_discrepancies[colour] += coinsol.coin.amount - total
+                if colour in cat_discrepancies:
+                    cat_discrepancies[colour] += coinsol.coin.amount - total
                 else:
-                    cc_discrepancies[colour] = coinsol.coin.amount - total
+                    cat_discrepancies[colour] = coinsol.coin.amount - total
             else:
                 coin_amount = coinsol.coin.amount
                 out_amount = get_output_amount_for_puzzle_and_solution(puzzle, solution)
                 diff = coin_amount - out_amount
-                if "chia" in cc_discrepancies:
-                    cc_discrepancies["chia"] = cc_discrepancies["chia"] + diff
+                if "chia" in cat_discrepancies:
+                    cat_discrepancies["chia"] = cat_discrepancies["chia"] + diff
                 else:
-                    cc_discrepancies["chia"] = diff
+                    cat_discrepancies["chia"] = diff
 
-        return True, cc_discrepancies, None
+        return True, cat_discrepancies, None
     except Exception as e:
         return False, None, e

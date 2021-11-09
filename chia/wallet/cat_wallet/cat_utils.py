@@ -10,7 +10,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.cc_loader import CC_MOD
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 
 NULL_SIGNATURE = G2Element()
 
@@ -19,7 +19,7 @@ ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 
 # information needed to spend a cc
 @dataclasses.dataclass
-class SpendableCC:
+class SpendableCAT:
     coin: Coin
     limitations_program_hash: bytes32
     inner_puzzle: Program
@@ -35,13 +35,13 @@ def match_cat_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
     Given a puzzle test if it's a CAT and, if it is, return the curried arguments
     """
     mod, curried_args = puzzle.uncurry()
-    if mod == CC_MOD:
+    if mod == CAT_MOD:
         return True, curried_args.as_iter()
     else:
         return False, iter(())
 
 
-def construct_cc_puzzle(mod_code: Program, limitations_program_hash: bytes32, inner_puzzle: Program) -> Program:
+def construct_cat_puzzle(mod_code: Program, limitations_program_hash: bytes32, inner_puzzle: Program) -> Program:
     """
     Given an inner puzzle hash and genesis_coin_checker calculate a puzzle program for a specific cc.
     """
@@ -67,24 +67,24 @@ def subtotals_for_deltas(deltas) -> List[int]:
     return subtotals
 
 
-def next_info_for_spendable_cc(spendable_cc: SpendableCC) -> Program:
-    c = spendable_cc.coin
-    list = [c.parent_coin_info, spendable_cc.inner_puzzle.get_tree_hash(), c.amount]
+def next_info_for_spendable_cat(spendable_cat: SpendableCAT) -> Program:
+    c = spendable_cat.coin
+    list = [c.parent_coin_info, spendable_cat.inner_puzzle.get_tree_hash(), c.amount]
     return Program.to(list)
 
 
 # This should probably return UnsignedSpendBundle if that type ever exists
-def unsigned_spend_bundle_for_spendable_ccs(mod_code: Program, spendable_cc_list: List[SpendableCC]) -> SpendBundle:
+def unsigned_spend_bundle_for_spendable_cats(mod_code: Program, spendable_cat_list: List[SpendableCAT]) -> SpendBundle:
     """
-    Given a list of `SpendableCC` objects, create a `SpendBundle` that spends all those coins.
+    Given a list of `SpendableCAT` objects, create a `SpendBundle` that spends all those coins.
     Note that no signing is done here, so it falls on the caller to sign the resultant bundle.
     """
 
-    N = len(spendable_cc_list)
+    N = len(spendable_cat_list)
 
     # figure out what the deltas are by running the inner puzzles & solutions
     deltas = []
-    for spend_info in spendable_cc_list:
+    for spend_info in spendable_cat_list:
         error, conditions, cost = conditions_dict_for_solution(
             spend_info.inner_puzzle, spend_info.inner_solution, INFINITE_COST
         )
@@ -103,16 +103,16 @@ def unsigned_spend_bundle_for_spendable_ccs(mod_code: Program, spendable_cc_list
     infos_for_next = []
     infos_for_me = []
     ids = []
-    for _ in spendable_cc_list:
-        infos_for_next.append(next_info_for_spendable_cc(_))
+    for _ in spendable_cat_list:
+        infos_for_next.append(next_info_for_spendable_cat(_))
         infos_for_me.append(Program.to(_.coin.as_list()))
         ids.append(_.coin.name())
 
     coin_spends = []
     for index in range(N):
-        spend_info = spendable_cc_list[index]
+        spend_info = spendable_cat_list[index]
 
-        puzzle_reveal = construct_cc_puzzle(mod_code, spend_info.limitations_program_hash, spend_info.inner_puzzle)
+        puzzle_reveal = construct_cat_puzzle(mod_code, spend_info.limitations_program_hash, spend_info.inner_puzzle)
 
         prev_index = (index - 1) % N
         next_index = (index + 1) % N

@@ -19,8 +19,8 @@ from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
-from chia.wallet.cc_wallet.cat_constants import DEFAULT_CATS
-from chia.wallet.cc_wallet.cc_wallet import CCWallet
+from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
@@ -81,10 +81,10 @@ class WalletRpcApi:
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
             # Coloured coins and trading
-            "/cc_set_name": self.cc_set_name,
-            "/cc_get_name": self.cc_get_name,
-            "/cc_spend": self.cc_spend,
-            "/cc_get_colour": self.cc_get_colour,
+            "/cat_set_name": self.cat_set_name,
+            "/cat_get_name": self.cat_get_name,
+            "/cat_spend": self.cat_spend,
+            "/cat_get_colour": self.cat_get_colour,
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_discrepancies_for_offer": self.get_discrepancies_for_offer,
             "/respond_to_offer": self.respond_to_offer,
@@ -391,24 +391,24 @@ class WalletRpcApi:
             name = request.get("name", "CAT Wallet")
             if request["mode"] == "new":
                 async with self.service.wallet_state_manager.lock:
-                    cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+                    cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
                         wallet_state_manager,
                         main_wallet,
                         {"identifier": "genesis_by_id"},
                         uint64(request["amount"]),
                         name,
                     )
-                    colour = cc_wallet.get_colour()
+                    colour = cat_wallet.get_colour()
                 self.service.wallet_state_manager.state_changed("wallet_created")
-                return {"type": cc_wallet.type(), "colour": colour, "wallet_id": cc_wallet.id()}
+                return {"type": cat_wallet.type(), "colour": colour, "wallet_id": cat_wallet.id()}
 
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
-                    cc_wallet = await CCWallet.create_wallet_for_cc(
+                    cat_wallet = await CATWallet.create_wallet_for_cat(
                         wallet_state_manager, main_wallet, request["colour"]
                     )
                 self.service.wallet_state_manager.state_changed("wallet_created")
-                return {"type": cc_wallet.type(), "colour": request["colour"], "wallet_id": cc_wallet.id()}
+                return {"type": cat_wallet.type(), "colour": request["colour"], "wallet_id": cat_wallet.id()}
 
             else:  # undefined mode
                 pass
@@ -729,27 +729,27 @@ class WalletRpcApi:
     async def get_cat_list(self, request):
         return {"cat_list": list(DEFAULT_CATS.values())}
 
-    async def cc_set_name(self, request):
+    async def cat_set_name(self, request):
         assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
-        wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
         await wallet.set_name(str(request["name"]))
         return {"wallet_id": wallet_id}
 
-    async def cc_get_name(self, request):
+    async def cat_get_name(self, request):
         assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
-        wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
         name: str = await wallet.get_name()
         return {"wallet_id": wallet_id, "name": name}
 
-    async def cc_spend(self, request):
+    async def cat_spend(self, request):
         assert self.service.wallet_state_manager is not None
 
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
         wallet_id = int(request["wallet_id"])
-        wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
 
@@ -775,10 +775,10 @@ class WalletRpcApi:
             "transaction_id": tx.name,
         }
 
-    async def cc_get_colour(self, request):
+    async def cat_get_colour(self, request):
         assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
-        wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
         colour: str = wallet.get_colour()
         return {"colour": colour, "wallet_id": wallet_id}
 

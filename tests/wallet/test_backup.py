@@ -9,7 +9,7 @@
 # from chia.types.peer_info import PeerInfo
 # from chia.util.ints import uint16, uint32, uint64
 # from tests.setup_nodes import setup_simulators_and_wallets
-# from chia.wallet.cc_wallet.cc_wallet import CCWallet
+# from chia.wallet.cat_wallet.cat_wallet import CATWallet
 # from tests.time_out_assert import time_out_assert
 #
 #
@@ -19,7 +19,7 @@
 #     yield loop
 #
 #
-# class TestCCWalletBackup:
+# class TestCATWalletBackup:
 #     @pytest.fixture(scope="function")
 #     async def two_wallet_nodes(self):
 #         async for _ in setup_simulators_and_wallets(1, 1, {}):
@@ -49,14 +49,14 @@
 #
 #         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 #
-#         cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+#         cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
 #         wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100))
 #
 #         for i in range(1, num_blocks):
 #             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 #
-#         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
-#         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
+#         await time_out_assert(15, cat_wallet.get_confirmed_balance, 100)
+#         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 100)
 #
 #         # Write backup to file
 #         filename = f"test-backup-{token_bytes(16).hex()}"
@@ -80,8 +80,8 @@
 #         all_wallets = wallet_node.wallet_state_manager.wallets
 #         assert len(all_wallets) == 2
 #
-#         cc_wallet_from_backup = wallet_node.wallet_state_manager.wallets[2]
+#         cat_wallet_from_backup = wallet_node.wallet_state_manager.wallets[2]
 #
-#         await time_out_assert(15, cc_wallet_from_backup.get_confirmed_balance, 100)
+#         await time_out_assert(15, cat_wallet_from_backup.get_confirmed_balance, 100)
 #         if file_path.exists():
 #             file_path.unlink()

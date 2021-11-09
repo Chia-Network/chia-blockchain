@@ -28,12 +28,12 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.db_synchronous import db_synchronous_on
-from chia.wallet.cc_wallet.cc_utils import match_cat_puzzle, construct_cc_puzzle
-from chia.wallet.cc_wallet.cc_wallet import CCWallet
+from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.key_val_store import KeyValStore
-from chia.wallet.puzzles.cc_loader import CC_MOD
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
@@ -181,7 +181,7 @@ class WalletStateManager:
                     continue
                 wallet = await Wallet.create(config, wallet_info)
             elif wallet_info.type == WalletType.COLOURED_COIN:
-                wallet = await CCWallet.create(
+                wallet = await CATWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -226,7 +226,7 @@ class WalletStateManager:
                 self.wallets[wallet_info.id] = wallet
             # TODO add RL AND DiD WALLETS HERE
             elif wallet_info.type == WalletType.COLOURED_COIN:
-                wallet = await CCWallet.create(
+                wallet = await CATWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -591,14 +591,14 @@ class WalletStateManager:
                 self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             else:
                 our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(bytes(derivation_record.pubkey))
-                cc_puzzle = construct_cc_puzzle(CC_MOD, bytes(genesis_coin_checker_hash)[1:], our_inner_puzzle)
-                if cc_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                cat_puzzle = construct_cat_puzzle(CAT_MOD, bytes(genesis_coin_checker_hash)[1:], our_inner_puzzle)
+                if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                     return None, None
-                cc_wallet = await CCWallet.create_wallet_for_cc(
+                cat_wallet = await CATWallet.create_wallet_for_cat(
                     self, self.main_wallet, bytes(genesis_coin_checker_hash).hex()[2:]
                 )
-                wallet_id = cc_wallet.id()
-                wallet_type = WalletType(cc_wallet.type())
+                wallet_id = cat_wallet.id()
+                wallet_type = WalletType(cat_wallet.type())
                 self.state_changed("wallet_created")
 
         return wallet_id, wallet_type
@@ -1063,7 +1063,7 @@ class WalletStateManager:
         for wallet_id in self.wallets:
             wallet = self.wallets[wallet_id]
             if wallet.type() == WalletType.COLOURED_COIN:
-                if bytes(wallet.cc_info.limitations_program_hash).hex() == colour:
+                if bytes(wallet.cat_info.limitations_program_hash).hex() == colour:
                     return wallet
         return None
 

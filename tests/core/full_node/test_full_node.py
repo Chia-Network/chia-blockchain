@@ -38,7 +38,7 @@ from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from tests.wallet_tools import WalletTool
-from chia.wallet.cc_wallet.cc_wallet import CCWallet
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.transaction_record import TransactionRecord
 
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
@@ -290,7 +290,7 @@ class TestFullNodeBlockCompression:
 
         # Creates a cc wallet
         async with wallet_node_1.wallet_state_manager.lock:
-            cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+            cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
                 wallet_node_1.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
             )
         tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
@@ -327,7 +327,7 @@ class TestFullNodeBlockCompression:
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
 
         # Make a cc transaction
-        trs = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
+        trs = await cat_wallet.generate_signed_transaction([uint64(60)], [ph])
         tr: TransactionRecord = trs[0]
         await wallet.wallet_state_manager.add_pending_transaction(tr)
         await time_out_assert(

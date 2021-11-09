@@ -208,20 +208,20 @@ class WalletRpcClient(RpcClient):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
         }
-        return bytes.fromhex((await self.fetch("cc_get_colour", request))["colour"])
+        return bytes.fromhex((await self.fetch("cat_get_colour", request))["colour"])
 
     async def get_cat_name(self, wallet_id: str) -> str:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
         }
-        return (await self.fetch("cc_get_name", request))["name"]
+        return (await self.fetch("cat_get_name", request))["name"]
 
     async def set_cat_name(self, wallet_id: str, name: str) -> None:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "name": name,
         }
-        await self.fetch("cc_set_name", request)
+        await self.fetch("cat_set_name", request)
 
     async def cat_spend(
         self,
@@ -238,7 +238,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "memos": memos if memos else [],
         }
-        res = await self.fetch("cc_spend", send_dict)
+        res = await self.fetch("cat_spend", send_dict)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
 
     # DID wallet

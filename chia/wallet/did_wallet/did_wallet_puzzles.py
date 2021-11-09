@@ -41,7 +41,7 @@ def get_pubkey_from_innerpuz(innerpuz: Program) -> G1Element:
 
 def is_did_innerpuz(inner_f: Program):
     """
-    You may want to generalize this if different `CC_MOD` templates are supported.
+    You may want to generalize this if different `CAT_MOD` templates are supported.
     """
     return inner_f == DID_INNERPUZ_MOD
 
@@ -52,7 +52,7 @@ def is_did_core(inner_f: Program):
 
 def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program]]:
     """
-    Take a puzzle and return `None` if it's not a `CC_MOD` cc, or
+    Take a puzzle and return `None` if it's not a `CAT_MOD` cc, or
     a triple of `mod_hash, genesis_coin_checker, inner_puzzle` if it is.
     """
     r = puzzle.uncurry()
