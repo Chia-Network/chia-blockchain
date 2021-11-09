@@ -78,6 +78,7 @@ async def fetch(url: str):
 class PlotState(str, Enum):
     SUBMITTED = "SUBMITTED"
     RUNNING = "RUNNING"
+    COPYING = "COPYING"
     REMOVING = "REMOVING"
     FINISHED = "FINISHED"
 
@@ -664,12 +665,14 @@ class WebSocketServer:
         id: str = config["id"]
         plotter: str = config["plotter"]
         final_words: List[str] = []
+        copying_words: List[str] = []
 
         if plotter == "chiapos":
             final_words = ["Renamed final file"]
         elif plotter == "bladebit":
             final_words = ["Finished plotting in"]
         elif plotter == "madmax":
+            copying_words = ["Started copy to"]
             temp_dir = config["temp_dir"]
             final_dir = config["final_dir"]
             if temp_dir == final_dir:
@@ -682,7 +685,8 @@ class WebSocketServer:
         while True:
             new_data = await loop.run_in_executor(io_pool_exc, fp.readline)
 
-            if config["state"] is not PlotState.RUNNING:
+            # If the plot state is not RUNNING or COPYING, we can stop watching the log
+            if config["state"] not in [PlotState.RUNNING, PlotState.COPYING]:
                 return None
 
             if new_data not in (None, ""):
@@ -694,6 +698,12 @@ class WebSocketServer:
                 for word in final_words:
                     if word in new_data:
                         return None
+                for word in copying_words:
+                    if word in new_data:
+                        # If we detect that the current plot is being copied, we can start the next plot
+                        config["state"] = PlotState.COPYING
+                        self._run_next_serial_plotting(loop, config["queue"])
+                        break
             else:
                 time.sleep(0.5)
 
