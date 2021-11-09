@@ -574,7 +574,7 @@ class WalletStateManager:
         matched, curried_args = match_cat_puzzle(Program.from_bytes(bytes(cs.puzzle_reveal)))
 
         if matched:
-            mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
+            mod_hash, tail_hash, inner_puzzle = curried_args
             inner_puzzle_hash = inner_puzzle.get_tree_hash()
             self.log.info(
                 f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}"
@@ -591,11 +591,11 @@ class WalletStateManager:
                 self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             else:
                 our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(bytes(derivation_record.pubkey))
-                cat_puzzle = construct_cat_puzzle(CAT_MOD, bytes(genesis_coin_checker_hash)[1:], our_inner_puzzle)
+                cat_puzzle = construct_cat_puzzle(CAT_MOD, bytes(tail_hash)[1:], our_inner_puzzle)
                 if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                     return None, None
                 cat_wallet = await CATWallet.create_wallet_for_cat(
-                    self, self.main_wallet, bytes(genesis_coin_checker_hash).hex()[2:]
+                    self, self.main_wallet, bytes(tail_hash).hex()[2:]
                 )
                 wallet_id = cat_wallet.id()
                 wallet_type = WalletType(cat_wallet.type())

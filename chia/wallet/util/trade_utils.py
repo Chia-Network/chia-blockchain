@@ -70,11 +70,11 @@ def get_discrepancies_for_spend_bundle(
             matched, curried_args = cat_utils.match_cat_puzzle(puzzle)
             if matched:
                 # Calculate output amounts
-                mod_hash, genesis_checker_hash, inner_puzzle = curried_args
+                mod_hash, tail_hash, inner_puzzle = curried_args
                 innersol = solution.first()
 
                 total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
-                colour = bytes(genesis_checker_hash).hex()
+                colour = bytes(tail_hash).hex()
                 if colour in cat_discrepancies:
                     cat_discrepancies[colour] += coinsol.coin.amount - total
                 else:

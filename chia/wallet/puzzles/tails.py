@@ -16,10 +16,10 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.transaction_record import TransactionRecord
 
-GENESIS_BY_ID_MOD = load_clvm("genesis-by-coin-id-with-0.clvm")
-GENESIS_BY_PUZHASH_MOD = load_clvm("genesis-by-puzzle-hash-with-0.clvm")
+GENESIS_BY_ID_MOD = load_clvm("genesis_by_coin_id.clvm")
+GENESIS_BY_PUZHASH_MOD = load_clvm("genesis_by_puzzle_hash.clvm")
 EVERYTHING_WITH_SIG_MOD = load_clvm("everything_with_signature.clvm")
-DELEGATED_LIMITATIONS_MOD = load_clvm("delegated_genesis_checker.clvm")
+DELEGATED_LIMITATIONS_MOD = load_clvm("delegated_tail.clvm")
 
 
 class LimitationsProgram:
@@ -73,10 +73,10 @@ class GenesisById(LimitationsProgram):
 
         cat_inner: Program = await wallet.get_new_inner_puzzle()
         await wallet.add_lineage(origin_id, LineageProof())
-        genesis_coin_checker: Program = cls.construct([Program.to(origin_id)])
+        tail: Program = cls.construct([Program.to(origin_id)])
 
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(
-            CAT_MOD, genesis_coin_checker.get_tree_hash(), cat_inner
+            CAT_MOD, tail.get_tree_hash(), cat_inner
         ).get_tree_hash()
 
         tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
@@ -85,7 +85,7 @@ class GenesisById(LimitationsProgram):
         assert tx_record.spend_bundle is not None
 
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
-            Program.to([51, 0, -113, genesis_coin_checker, []]),
+            Program.to([51, 0, -113, tail, []]),
             wallet.standard_wallet.make_solution(
                 primaries=[{"puzzlehash": cat_inner.get_tree_hash(), "amount": amount}],
             ),
@@ -95,18 +95,18 @@ class GenesisById(LimitationsProgram):
             [
                 SpendableCAT(
                     list(filter(lambda a: a.amount == amount, tx_record.additions))[0],
-                    genesis_coin_checker.get_tree_hash(),
+                    tail.get_tree_hash(),
                     cat_inner,
                     inner_solution,
-                    limitations_program_reveal=genesis_coin_checker,
+                    limitations_program_reveal=tail,
                 )
             ],
         )
         signed_eve_spend = await wallet.sign(eve_spend)
 
-        if wallet.cat_info.my_genesis_checker is None:
+        if wallet.cat_info.my_tail is None:
             await wallet.save_info(
-                CATInfo(genesis_coin_checker.get_tree_hash(), genesis_coin_checker, wallet.cat_info.lineage_proofs),
+                CATInfo(tail.get_tree_hash(), tail, wallet.cat_info.lineage_proofs),
                 False,
             )
 

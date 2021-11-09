@@ -238,7 +238,7 @@ class TestCATWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         colour = cat_wallet.get_colour()
-        await cat_wallet.set_tail_program(bytes(cat_wallet.cat_info.my_genesis_checker).hex())
+        await cat_wallet.set_tail_program(bytes(cat_wallet.cat_info.my_tail).hex())
         assert await wallet_node.wallet_state_manager.get_wallet_for_colour(colour) == cat_wallet
 
         # Test that the a default CAT will initialize correctly

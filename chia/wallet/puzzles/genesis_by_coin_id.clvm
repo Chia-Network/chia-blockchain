@@ -1,4 +1,4 @@
-; This is a "genesis checker" for use with cc.clvm.
+; This is a TAIL for use with cat.clvm.
 ;
 ; This checker allows new CATs to be created if they have a particular coin id as parent
 ;

@@ -43,7 +43,7 @@ def match_cat_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
 
 def construct_cat_puzzle(mod_code: Program, limitations_program_hash: bytes32, inner_puzzle: Program) -> Program:
     """
-    Given an inner puzzle hash and genesis_coin_checker calculate a puzzle program for a specific cc.
+    Given an inner puzzle hash and tail hash calculate a puzzle program for a specific cc.
     """
     return mod_code.curry(mod_code.get_tree_hash(), limitations_program_hash, inner_puzzle)
 

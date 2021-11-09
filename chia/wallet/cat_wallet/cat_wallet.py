@@ -35,7 +35,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.genesis_checkers import ALL_LIMITATIONS_PROGRAMS
+from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -333,7 +333,7 @@ class CATWallet:
         puzzle: Program = response.puzzle
         matched, curried_args = match_cat_puzzle(puzzle)
         if matched:
-            mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
+            mod_hash, tail_hash, inner_puzzle = curried_args
             self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}")
             parent_coin = None
             coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
@@ -601,10 +601,10 @@ class CATWallet:
             primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
 
         limitations_program_reveal = Program.to([])
-        if self.cat_info.my_genesis_checker is None:
+        if self.cat_info.my_tail is None:
             assert cat_discrepancy is None
         elif cat_discrepancy is not None:
-            limitations_program_reveal = self.cat_info.my_genesis_checker
+            limitations_program_reveal = self.cat_info.my_tail
 
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cat_list = []
@@ -745,14 +745,14 @@ class CATWallet:
         self.log.info(f"Adding parent {name}: {lineage}")
         current_list = self.cat_info.lineage_proofs.copy()
         current_list.append((name, lineage))
-        cat_info: CATInfo = CATInfo(self.cat_info.limitations_program_hash, self.cat_info.my_genesis_checker, current_list)
+        cat_info: CATInfo = CATInfo(self.cat_info.limitations_program_hash, self.cat_info.my_tail, current_list)
         await self.save_info(cat_info, in_transaction)
 
     async def remove_lineage(self, name: bytes32, in_transaction=False):
         self.log.info(f"Removing parent {name} (probably had a non-CAT parent)")
         current_list = self.cat_info.lineage_proofs.copy()
         current_list = list(filter(lambda tup: tup[0] != name, current_list))
-        cat_info: CATInfo = CATInfo(self.cat_info.limitations_program_hash, self.cat_info.my_genesis_checker, current_list)
+        cat_info: CATInfo = CATInfo(self.cat_info.limitations_program_hash, self.cat_info.my_tail, current_list)
         await self.save_info(cat_info, in_transaction)
 
     async def save_info(self, cat_info: CATInfo, in_transaction):

@@ -81,7 +81,7 @@ class TestCATTrades:
         await time_out_assert(15, cat_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 100)
 
-        assert cat_wallet.cat_info.my_genesis_checker is not None
+        assert cat_wallet.cat_info.my_tail is not None
         colour = cat_wallet.get_colour()
 
         cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
@@ -89,7 +89,7 @@ class TestCATTrades:
         )
         await asyncio.sleep(1)
 
-        assert cat_wallet.cat_info.my_genesis_checker == cat_wallet_2.cat_info.my_genesis_checker
+        assert cat_wallet.cat_info.my_tail == cat_wallet_2.cat_info.my_tail
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -162,7 +162,7 @@ class TestCATTrades:
         await time_out_assert(15, cat_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 100)
 
-        assert cat_wallet.cat_info.my_genesis_checker is not None
+        assert cat_wallet.cat_info.my_tail is not None
         colour = cat_wallet.get_colour()
 
         cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
@@ -170,7 +170,7 @@ class TestCATTrades:
         )
         await asyncio.sleep(1)
 
-        assert cat_wallet.cat_info.my_genesis_checker == cat_wallet_2.cat_info.my_genesis_checker
+        assert cat_wallet.cat_info.my_tail == cat_wallet_2.cat_info.my_tail
 
         ph = await wallet_1.get_new_puzzlehash()
         for i in range(0, buffer_blocks):
@@ -247,7 +247,7 @@ class TestCATTrades:
         cat_balance = await cat_a_2.get_unconfirmed_balance()
         cat_balance_2 = await cat_b_2.get_unconfirmed_balance()
 
-        assert cat_a_3.cat_info.my_genesis_checker is not None
+        assert cat_a_3.cat_info.my_tail is not None
         red = cat_a_3.get_colour()
 
         for i in range(0, buffer_blocks):
@@ -256,7 +256,7 @@ class TestCATTrades:
         cat_b_3: CATWallet = await CATWallet.create_wallet_for_cat(wallet_node_b.wallet_state_manager, wallet_b, red)
         await asyncio.sleep(1)
 
-        assert cat_a_3.cat_info.my_genesis_checker == cat_b_3.cat_info.my_genesis_checker
+        assert cat_a_3.cat_info.my_tail == cat_b_3.cat_info.my_tail
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))

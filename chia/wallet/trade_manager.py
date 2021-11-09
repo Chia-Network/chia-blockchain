@@ -399,8 +399,8 @@ class TradeManager:
             matched, curried_args = cat_utils.match_cat_puzzle(puzzle)
             if matched:
                 # Calculate output amounts
-                mod_hash, genesis_checker_hash, inner_puzzle = curried_args
-                colour = bytes(genesis_checker_hash).hex()
+                mod_hash, tail_hash, inner_puzzle = curried_args
+                colour = bytes(tail_hash).hex()
                 if colour not in wallets:
                     wallets[colour] = await self.wallet_state_manager.get_wallet_for_colour(colour)
                 unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(wallets[colour].id())
@@ -477,7 +477,7 @@ class TradeManager:
             # Firstly get the output coin
             my_output_coin = my_cat_spends.pop()
             spendable_cat_list = []
-            genesis_coin_checker = Program.from_bytes(bytes.fromhex(colour))
+            tail = Program.from_bytes(bytes.fromhex(colour))
             # Make the rest of the coins assert the output coin is consumed
             for coloured_coin in my_cat_spends:
                 inner_solution = self.wallet_state_manager.main_wallet.make_solution(consumed=[my_output_coin.name()])
@@ -492,7 +492,7 @@ class TradeManager:
                 spendable_cat_list.append(
                     SpendableCAT(
                         coloured_coin,
-                        genesis_coin_checker.get_tree_hash(),
+                        tail.get_tree_hash(),
                         inner_puzzle,
                         inner_solution,
                         lineage_proof=lineage_proof,
@@ -507,11 +507,11 @@ class TradeManager:
 
                 matched, curried_args = match_cat_puzzle(puzzle)
                 if matched:
-                    mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
+                    mod_hash, tail_hash, inner_puzzle = curried_args
                     spendable_cat_list.append(
                         SpendableCAT(
                             cat_coinsol.coin,
-                            genesis_coin_checker_hash,
+                            tail_hash,
                             inner_puzzle,
                             solution.first(),
                             lineage_proof=solution.rest().rest().first(),
@@ -531,7 +531,7 @@ class TradeManager:
             spendable_cat_list.append(
                 SpendableCAT(
                     my_output_coin,
-                    genesis_coin_checker_hash,
+                    tail_hash,
                     inner_puzzle,
                     inner_solution,
                     lineage_proof=lineage_proof,
