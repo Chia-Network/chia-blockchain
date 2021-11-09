@@ -29,7 +29,7 @@ export const StyledTableRow = styled(TableRow)`
 
 const StyledExpandedTableRow = styled(TableRow)`
   background-color: ${({ theme }) =>
-    theme.palette.type === 'dark' ? '#1E1E1E' : '#FAFAFA'};
+    theme.palette.type === 'dark' ? '#1E1E1E' : '#EEEEEE'};
 `;
 
 const StyledTableCell = styled(({ width, minWidth, maxWidth, ...rest }) => (
@@ -116,7 +116,6 @@ export default function Table(props: Props) {
   );
 
   function handleToggleExpand(rowId: string) {
-    console.log(expanded[rowId], rowId);
     setExpanded({
       ...expanded,
       [rowId]: !expanded[rowId],

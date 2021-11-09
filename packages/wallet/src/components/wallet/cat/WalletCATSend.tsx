@@ -153,9 +153,7 @@ export default function WalletCATSend(props: Props) {
       queryData.memos = memos;
     }
 
-    console.log('queryData', queryData);
     const response = await spendCAT(queryData).unwrap();
-    console.log('response', response);
 
     const result = getTransactionResult(response.transaction);
     if (result.success) {
