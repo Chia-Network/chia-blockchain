@@ -46,12 +46,13 @@ export default class CATWallet extends Wallet {
     });
   }
 
-  async spend(walletId: number, innerAddress: string, amount: string, fee: string) {
+  async spend(walletId: number, innerAddress: string, amount: string, fee: string, memos?: string[]) {
     return this.command('cc_spend', {
       walletId,
       innerAddress,
       amount,
       fee,
+      memos,
     });
   }
 
