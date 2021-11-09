@@ -110,6 +110,9 @@
      (include curry-and-treehash.clinc)
      (include cat_truths.clib)
 
+     (defconstant ANNOUNCEMENT_MORPH_BYTE 0xca)
+     (defconstant RING_MORPH_BYTE 0xcb)
+
      (defmacro assert items
          (if (r items)
              (list if (f items) (c assert (r items)) (q . (x)))
@@ -130,7 +133,7 @@
      (defun sha256tree1 (TREE)
            (if (l TREE)
                (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
-               (sha256 1 TREE)))
+               (sha256 ONE TREE)))
 
     ; take two lists and merge them into one
     (defun merge_list (list_a list_b)
@@ -167,7 +170,11 @@
                     (r (r condition)))
          )
          (if (= (f condition) CREATE_COIN_ANNOUNCEMENT)
-           (list CREATE_COIN_ANNOUNCEMENT (sha256 0xca (f (r condition))))
+           (c CREATE_COIN_ANNOUNCEMENT
+                (c (sha256 ANNOUNCEMENT_MORPH_BYTE (f (r condition)))
+                    (r (r condition))
+                )
+           )
            condition
          )
        )
@@ -186,7 +193,7 @@
      ;; calculate the hash of an announcement
      ;; we add 0xcb so ring announcements exist in a different namespace to announcements from inner_puzzles
      (defun-inline calculate_annoucement_id (this_coin_id this_subtotal next_coin_id cat_mod_struct)
-       (sha256 next_coin_id (sha256 0xcb this_coin_id this_subtotal))
+       (sha256 next_coin_id (sha256 RING_MORPH_BYTE this_coin_id this_subtotal))
      )
 
      ;; create the `ASSERT_COIN_ANNOUNCEMENT` condition that ensures the next coin's announcement is correct
@@ -204,7 +211,7 @@
      ;; we add 0xcb so ring announcements exist in a different namespace to announcements from inner_puzzles
      (defun-inline create_announcement_condition (prev_coin_id prev_subtotal)
        (list CREATE_COIN_ANNOUNCEMENT
-             (sha256 0xcb prev_coin_id prev_subtotal)
+             (sha256 RING_MORPH_BYTE prev_coin_id prev_subtotal)
        )
       )
 
@@ -242,43 +249,35 @@
 
 
       ;; This next section of code loops through all of the conditions to do three things:
-      ;;   1) Look for a "magic" value of -113 and, if one exists, take note of the tail reveal and solution
+      ;;   1) Look for a "magic" value of -113 and, if one exists, filter it, and take note of the tail reveal and solution
       ;;   2) Morph any CREATE_COIN or CREATE_COIN_ANNOUNCEMENT conditions
       ;;   3) Sum the total output amount of all of the CREATE_COINs that are output by the inner puzzle
       ;;
       ;; After everything return a struct in the format (morphed_conditions . (output_sum . tail_reveal_and_solution))
-      
-      (defun-inline condition_opcode (condition) (f condition))
-      (defun-inline condition_magic_value (condition) (f (r (r condition))))
+      ;; If multiple magic conditions are specified, the later one will take precedence
+
       (defun-inline condition_tail_reveal (condition) (f (r (r (r condition)))))
       (defun-inline condition_tail_solution (condition) (f (r (r (r (r condition))))))
 
-      (defun cons_to_first (item cons_box)
-        (c (c item (f cons_box)) (r cons_box))
-      )
-
-      (defun add_value_to_second (value struct)
-        (c (f struct) (c (+ value (f (r struct))) (r (r struct))))
+      (defun cons_onto_first_and_add_to_second (morphed_condition output_value struct)
+        (c (c morphed_condition (f struct)) (c (+ output_value (f (r struct))) (r (r struct))))
       )
 
       (defun find_and_strip_tail_info (inner_conditions cat_mod_struct tail_reveal_and_solution)
         (if inner_conditions
-            (if (and
-                  (= (condition_opcode (f inner_conditions)) CREATE_COIN)
-                  (= (condition_magic_value (f inner_conditions)) -113)
-                )
+            (if (= (output_value_for_condition (f inner_conditions)) -113)  ; Checks this is a CREATE_COIN of value -113
                 (find_and_strip_tail_info
                   (r inner_conditions)
                   cat_mod_struct
                   (c (condition_tail_reveal (f inner_conditions)) (condition_tail_solution (f inner_conditions)))
                 )
-                (cons_to_first (morph_condition (f inner_conditions) cat_mod_struct)
-                  (add_value_to_second (output_value_for_condition (f inner_conditions))
-                    (find_and_strip_tail_info
-                      (r inner_conditions)
-                      cat_mod_struct
-                      tail_reveal_and_solution
-                    )
+                (cons_onto_first_and_add_to_second
+                  (morph_condition (f inner_conditions) cat_mod_struct)
+                  (output_value_for_condition (f inner_conditions))
+                  (find_and_strip_tail_info
+                    (r inner_conditions)
+                    cat_mod_struct
+                    tail_reveal_and_solution
                   )
                 )
             )
@@ -318,17 +317,17 @@
       (if tail_reveal_and_solution
           (assert (= (sha256tree1 (f tail_reveal_and_solution)) (cat_tail_program_hash_truth Truths))
             (merge_list
-              inner_conditions
               (a  (f tail_reveal_and_solution)
                   (list
                     Truths
                     parent_is_cat
-                    lineage_proof
+                    lineage_proof ; Lineage proof is only guaranteed to be true if parent_is_cat
                     extra_delta
                     inner_conditions
                     (r tail_reveal_and_solution)
                   )
               )
+              inner_conditions
             )
           )
           (assert parent_is_cat (not extra_delta)
@@ -369,7 +368,7 @@
         )
     )
 
-    ; CAT TRUTHS struct is: ; CAT Truths is: (((innerpuzhash . my_amount) . (lineage_proof . cat_struct)) . ((my_id . full_puzhash) . (my_parent . ())))
+    ; CAT TRUTHS struct is: ; CAT Truths is: ((Inner puzzle hash . (MOD hash . (MOD hash hash . TAIL hash))) . (my_id . (my_parent_info my_puzhash my_amount)))
     ; create truths - this_coin_info verified true because we calculated my ID from it!
     ; lineage proof is verified later by cat parent check or tail_program
 
@@ -404,7 +403,7 @@
 
     (stager
         ;; calculate cat_mod_struct, inner_puzzle_hash, coin_id
-        (list MOD_HASH (sha256 1 MOD_HASH) TAIL_PROGRAM_HASH)
+        (list MOD_HASH (sha256 ONE MOD_HASH) TAIL_PROGRAM_HASH)
         (a INNER_PUZZLE inner_puzzle_solution)
         lineage_proof
         (sha256tree1 INNER_PUZZLE)
