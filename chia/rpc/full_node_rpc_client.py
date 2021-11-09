@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Tuple, Any
 from chia.consensus.block_record import BlockRecord
 from chia.full_node.signage_point import SignagePoint
 from chia.rpc.rpc_client import RpcClient
+from chia.rpc.type_conversions import block_record_from_json
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
@@ -41,8 +42,7 @@ class FullNodeRpcClient(RpcClient):
             response = await self.fetch("get_block_record_by_height", {"height": height})
         except Exception:
             return None
-        return block_record_from_json_dict()
-        return BlockRecord.from_json_dict(response["block_record"])
+        return block_record_from_json(response["block_record"])
 
     async def get_block_record(self, header_hash) -> Optional[BlockRecord]:
         try:

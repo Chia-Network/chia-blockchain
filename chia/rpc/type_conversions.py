@@ -65,4 +65,3 @@ def coin_spend_from_json(coin_spend_json: Dict) -> CoinSpend:
     if "coin_id" in coin_spend_json["coin"]:
         del coin_spend_json["coin"]["coin_id"]
     return CoinSpend.from_json_dict(coin_spend_json)
-

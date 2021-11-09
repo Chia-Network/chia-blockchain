@@ -5,7 +5,6 @@ from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.rpc.type_conversions import block_record_to_json, coin_record_to_json, coin_spend_to_json
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -28,8 +27,7 @@ class FullNodeRpcApi:
 
     def get_routes(self) -> Dict[str, Callable]:
         return {
-            ## WARNING: When updating this, make sure to update the documentation on the chia-docs repository.
-
+            # WARNING: When updating this, make sure to update the documentation on the chia-docs repository.
             # Blockchain
             "/get_blockchain_state": self.get_blockchain_state,
             "/get_block": self.get_block,
@@ -74,7 +72,6 @@ class FullNodeRpcApi:
             )
             return payloads
         return []
-
 
     # this function is just here for backwards-compatibility. It will probably
     # be removed in the future
@@ -156,7 +153,7 @@ class FullNodeRpcApi:
         assert space is not None
         response: Dict = {
             "blockchain_state": {
-                "peak": block_record_to_json(peak),
+                "peak": block_record_to_json(peak) if peak is not None else None,
                 "genesis_challenge_initialized": self.service.initialized,
                 "sync": {
                     "sync_mode": sync_mode,
@@ -573,8 +570,9 @@ class FullNodeRpcApi:
         puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
         solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
         cs: CoinSpend = CoinSpend(coin_record.coin, puzzle_ser, solution_ser)
-        return {"coin_solution": coin_spend_to_json(cs), "coin_spend": coin_spend_to_json(cs)}
 
+        # NOTE: coin_solution will be deprecated in the future
+        return {"coin_solution": coin_spend_to_json(cs), "coin_spend": coin_spend_to_json(cs)}
 
     async def get_additions_and_removals(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:
@@ -591,7 +589,10 @@ class FullNodeRpcApi:
             additions: List[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block.height)
             removals: List[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(block.height)
 
-        return {"additions": [coin_record_to_json(cr) for cr in additions], "removals": [coin_record_to_json(cr) for cr in removals]}
+        return {
+            "additions": [coin_record_to_json(cr) for cr in additions],
+            "removals": [coin_record_to_json(cr) for cr in removals],
+        }
 
     async def get_all_mempool_tx_ids(self, request: Dict) -> Optional[Dict]:
         ids = list(self.service.mempool_manager.mempool.spends.keys())
