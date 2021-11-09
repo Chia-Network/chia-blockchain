@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS core-ssl Tests
+name: MacOS util Tests
 
 on:
   push:
@@ -15,9 +15,9 @@ on:
 
 jobs:
   build:
-    name: MacOS core-ssl Tests
+    name: MacOS util Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -97,10 +97,10 @@ jobs:
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
-    - name: Test core-ssl code with pytest
+    - name: Test util code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/ssl/test_*.py -s -v --durations 0
+        ./venv/bin/py.test tests/util/test_*.py -s -v --durations 0
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

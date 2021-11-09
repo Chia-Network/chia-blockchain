@@ -199,8 +199,9 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
     call_args.append("-t")
     # s if s[-1] == os.path.sep else s + os.path.sep
     call_args.append(dir_with_trailing_slash(args.tmpdir))
-    call_args.append("-2")
-    call_args.append(dir_with_trailing_slash(args.tmpdir2))
+    if len(args.tmpdir2) > 0:
+        call_args.append("-2")
+        call_args.append(dir_with_trailing_slash(args.tmpdir2))
     call_args.append("-d")
     call_args.append(dir_with_trailing_slash(args.finaldir))
     if plot_keys.pool_contract_address is not None:
@@ -214,8 +215,10 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
     call_args.append(str(args.buckets))
     call_args.append("-v")
     call_args.append(str(args.buckets3))
-    call_args.append("-w")
-    call_args.append(str(int(args.waitforcopy)))
+    if args.waitforcopy:
+        call_args.append("-w")
+    if args.tmptoggle:
+        call_args.append("-G")
     call_args.append("-K")
     call_args.append(str(args.rmulti2))
     if args.size != 32:
