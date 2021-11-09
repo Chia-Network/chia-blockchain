@@ -833,6 +833,7 @@ class WebSocketServer:
         for item in self.plots_queue:
             if item["queue"] == queue and item["state"] is PlotState.SUBMITTED and item["parallel"] is False:
                 next_plot_id = item["id"]
+                break
 
         if next_plot_id is not None:
             loop.create_task(self._start_plotting(next_plot_id, loop, queue))
