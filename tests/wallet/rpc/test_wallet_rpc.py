@@ -280,14 +280,14 @@ class TestWalletRpc:
             res = await client.create_new_cat_and_wallet(20)
             assert res["success"]
             cat_0_id = res["wallet_id"]
-            colour = bytes.fromhex(res["colour"])
-            assert len(colour) > 0
+            asset_id = bytes.fromhex(res["asset_id"])
+            assert len(asset_id) > 0
 
             bal_0 = await client.get_wallet_balance(cat_0_id)
             assert bal_0["confirmed_wallet_balance"] == 0
             assert bal_0["pending_coin_removal_count"] == 1
-            col = await client.get_cat_colour(cat_0_id)
-            assert col == colour
+            col = await client.get_cat_asset_id(cat_0_id)
+            assert col == asset_id
             assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"
             await client.set_cat_name(cat_0_id, "My cat")
             assert (await client.get_cat_name(cat_0_id)) == "My cat"
@@ -303,11 +303,11 @@ class TestWalletRpc:
             assert bal_0["unspent_coin_count"] == 1
 
             # Creates a second wallet with the same CAT
-            res = await client_2.create_wallet_for_existing_cat(colour)
+            res = await client_2.create_wallet_for_existing_cat(asset_id)
             assert res["success"]
             cat_1_id = res["wallet_id"]
-            colour_1 = bytes.fromhex(res["colour"])
-            assert colour_1 == colour
+            asset_id_1 = bytes.fromhex(res["asset_id"])
+            assert asset_id_1 == asset_id
 
             await asyncio.sleep(1)
             for i in range(0, 5):

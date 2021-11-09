@@ -74,11 +74,11 @@ def get_discrepancies_for_spend_bundle(
                 innersol = solution.first()
 
                 total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
-                colour = bytes(tail_hash).hex()
-                if colour in cat_discrepancies:
-                    cat_discrepancies[colour] += coinsol.coin.amount - total
+                asset_id = bytes(tail_hash).hex()
+                if asset_id in cat_discrepancies:
+                    cat_discrepancies[asset_id] += coinsol.coin.amount - total
                 else:
-                    cat_discrepancies[colour] = coinsol.coin.amount - total
+                    cat_discrepancies[asset_id] = coinsol.coin.amount - total
             else:
                 coin_amount = coinsol.coin.amount
                 out_amount = get_output_amount_for_puzzle_and_solution(puzzle, solution)

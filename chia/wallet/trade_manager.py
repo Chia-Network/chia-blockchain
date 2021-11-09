@@ -363,7 +363,7 @@ class TradeManager:
             if key == "chia":
                 continue
             self.log.info(f"value is {key}")
-            exists = await wsm.get_wallet_for_colour(key)
+            exists = await wsm.get_wallet_for_asset_id(key)
             if exists is not None:
                 continue
 
@@ -389,7 +389,7 @@ class TradeManager:
         aggsig = offer_spend_bundle.aggregated_signature
         cat_discrepancies: Dict[bytes32, int] = dict()
         chia_discrepancy = None
-        wallets: Dict[bytes32, Any] = dict()  # colour to wallet dict
+        wallets: Dict[bytes32, Any] = dict()  # asset_id to wallet dict
 
         for coinsol in offer_spend_bundle.coin_spends:
             puzzle: Program = Program.from_bytes(bytes(coinsol.puzzle_reveal))
@@ -400,25 +400,25 @@ class TradeManager:
             if matched:
                 # Calculate output amounts
                 mod_hash, tail_hash, inner_puzzle = curried_args
-                colour = bytes(tail_hash).hex()
-                if colour not in wallets:
-                    wallets[colour] = await self.wallet_state_manager.get_wallet_for_colour(colour)
-                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(wallets[colour].id())
+                asset_id = bytes(tail_hash).hex()
+                if asset_id not in wallets:
+                    wallets[asset_id] = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
+                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(wallets[asset_id].id())
                 if coinsol.coin in [record.coin for record in unspent]:
                     return False, None, "can't respond to own offer"
 
                 innersol = solution.first()
 
                 total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
-                if colour in cat_discrepancies:
-                    cat_discrepancies[colour] += coinsol.coin.amount - total
+                if asset_id in cat_discrepancies:
+                    cat_discrepancies[asset_id] += coinsol.coin.amount - total
                 else:
-                    cat_discrepancies[colour] = coinsol.coin.amount - total
+                    cat_discrepancies[asset_id] = coinsol.coin.amount - total
                 # Store coinsol and output amount for later
-                if colour in cat_coinsol_outamounts:
-                    cat_coinsol_outamounts[colour].append((coinsol, total))
+                if asset_id in cat_coinsol_outamounts:
+                    cat_coinsol_outamounts[asset_id].append((coinsol, total))
                 else:
-                    cat_coinsol_outamounts[colour] = [(coinsol, total)]
+                    cat_coinsol_outamounts[asset_id] = [(coinsol, total)]
 
             else:
                 # standard chia coin
@@ -442,19 +442,19 @@ class TradeManager:
 
         zero_spend_list: List[SpendBundle] = []
         spend_bundle = None
-        # create coloured coin
+        # create CAT
         self.log.info(cat_discrepancies)
-        for colour in cat_discrepancies.keys():
-            if cat_discrepancies[colour] < 0:
-                my_cat_spends = await wallets[colour].select_coins(abs(cat_discrepancies[colour]))
+        for asset_id in cat_discrepancies.keys():
+            if cat_discrepancies[asset_id] < 0:
+                my_cat_spends = await wallets[asset_id].select_coins(abs(cat_discrepancies[asset_id]))
             else:
                 if chia_spend_bundle is None:
                     to_exclude: List = []
                 else:
                     to_exclude = chia_spend_bundle.removals()
-                my_cat_spends = await wallets[colour].select_coins(0)
+                my_cat_spends = await wallets[asset_id].select_coins(0)
                 if my_cat_spends is None or my_cat_spends == set():
-                    zero_spend_bundle: SpendBundle = await wallets[colour].generate_zero_val_coin(False, to_exclude)
+                    zero_spend_bundle: SpendBundle = await wallets[asset_id].generate_zero_val_coin(False, to_exclude)
                     if zero_spend_bundle is None:
                         return (
                             False,
@@ -477,21 +477,21 @@ class TradeManager:
             # Firstly get the output coin
             my_output_coin = my_cat_spends.pop()
             spendable_cat_list = []
-            tail = Program.from_bytes(bytes.fromhex(colour))
+            tail = Program.from_bytes(bytes.fromhex(asset_id))
             # Make the rest of the coins assert the output coin is consumed
-            for coloured_coin in my_cat_spends:
+            for cat in my_cat_spends:
                 inner_solution = self.wallet_state_manager.main_wallet.make_solution(consumed=[my_output_coin.name()])
-                inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(coloured_coin.puzzle_hash)
+                inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(cat.puzzle_hash)
                 assert inner_puzzle is not None
 
-                sigs = await wallets[colour].get_sigs(inner_puzzle, inner_solution, coloured_coin.name())
+                sigs = await wallets[asset_id].get_sigs(inner_puzzle, inner_solution, cat.name())
                 sigs.append(aggsig)
                 aggsig = AugSchemeMPL.aggregate(sigs)
 
-                lineage_proof = await wallets[colour].get_lineage_proof_for_coin(coloured_coin)
+                lineage_proof = await wallets[asset_id].get_lineage_proof_for_coin(cat)
                 spendable_cat_list.append(
                     SpendableCAT(
-                        coloured_coin,
+                        cat,
                         tail.get_tree_hash(),
                         inner_puzzle,
                         inner_solution,
@@ -499,8 +499,8 @@ class TradeManager:
                     )
                 )
 
-            # Create SpendableCAT for each of the coloured coins received
-            for cat_coinsol_out in cat_coinsol_outamounts[colour]:
+            # Create SpendableCAT for each of the CATs received
+            for cat_coinsol_out in cat_coinsol_outamounts[asset_id]:
                 cat_coinsol = cat_coinsol_out[0]
                 puzzle = Program.from_bytes(bytes(cat_coinsol.puzzle_reveal))
                 solution = Program.from_bytes(bytes(cat_coinsol.solution))
@@ -519,15 +519,15 @@ class TradeManager:
                     )
 
             # Finish the output coin SpendableCAT with new information
-            newinnerpuzhash = await wallets[colour].get_new_inner_hash()
-            outputamount = sum([c.amount for c in my_cat_spends]) + cat_discrepancies[colour] + my_output_coin.amount
+            newinnerpuzhash = await wallets[asset_id].get_new_inner_hash()
+            outputamount = sum([c.amount for c in my_cat_spends]) + cat_discrepancies[asset_id] + my_output_coin.amount
             inner_solution = self.wallet_state_manager.main_wallet.make_solution(
                 primaries=[{"puzzlehash": newinnerpuzhash, "amount": outputamount}]
             )
             inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(my_output_coin.puzzle_hash)
             assert inner_puzzle is not None
 
-            lineage_proof = await wallets[colour].get_lineage_proof_for_coin(my_output_coin)
+            lineage_proof = await wallets[asset_id].get_lineage_proof_for_coin(my_output_coin)
             spendable_cat_list.append(
                 SpendableCAT(
                     my_output_coin,
@@ -538,7 +538,7 @@ class TradeManager:
                 )
             )
 
-            sigs = await wallets[colour].get_sigs(inner_puzzle, inner_solution, my_output_coin.name())
+            sigs = await wallets[asset_id].get_sigs(inner_puzzle, inner_solution, my_output_coin.name())
             sigs.append(aggsig)
             aggsig = AugSchemeMPL.aggregate(sigs)
             if spend_bundle is None:
@@ -608,8 +608,8 @@ class TradeManager:
                 )
             my_tx_records.append(tx_record)
 
-        for colour, amount in cat_discrepancies.items():
-            wallet = wallets[colour]
+        for asset_id, amount in cat_discrepancies.items():
+            wallet = wallets[asset_id]
             if chia_discrepancy > 0:
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),

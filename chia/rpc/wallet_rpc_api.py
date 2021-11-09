@@ -84,7 +84,7 @@ class WalletRpcApi:
             "/cat_set_name": self.cat_set_name,
             "/cat_get_name": self.cat_get_name,
             "/cat_spend": self.cat_spend,
-            "/cat_get_colour": self.cat_get_colour,
+            "/cat_get_asset_id": self.cat_get_asset_id,
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_discrepancies_for_offer": self.get_discrepancies_for_offer,
             "/respond_to_offer": self.respond_to_offer,
@@ -398,17 +398,17 @@ class WalletRpcApi:
                         uint64(request["amount"]),
                         name,
                     )
-                    colour = cat_wallet.get_colour()
+                    asset_id = cat_wallet.get_asset_id()
                 self.service.wallet_state_manager.state_changed("wallet_created")
-                return {"type": cat_wallet.type(), "colour": colour, "wallet_id": cat_wallet.id()}
+                return {"type": cat_wallet.type(), "asset_id": asset_id, "wallet_id": cat_wallet.id()}
 
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
                     cat_wallet = await CATWallet.create_wallet_for_cat(
-                        wallet_state_manager, main_wallet, request["colour"]
+                        wallet_state_manager, main_wallet, request["asset_id"]
                     )
                 self.service.wallet_state_manager.state_changed("wallet_created")
-                return {"type": cat_wallet.type(), "colour": request["colour"], "wallet_id": cat_wallet.id()}
+                return {"type": cat_wallet.type(), "asset_id": request["asset_id"], "wallet_id": cat_wallet.id()}
 
             else:  # undefined mode
                 pass
@@ -775,12 +775,12 @@ class WalletRpcApi:
             "transaction_id": tx.name,
         }
 
-    async def cat_get_colour(self, request):
+    async def cat_get_asset_id(self, request):
         assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
         wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        colour: str = wallet.get_colour()
-        return {"colour": colour, "wallet_id": wallet_id}
+        asset_id: str = wallet.get_asset_id()
+        return {"asset_id": asset_id, "wallet_id": wallet_id}
 
     async def create_offer_for_ids(self, request):
         assert self.service.wallet_state_manager is not None

@@ -1059,11 +1059,11 @@ class WalletStateManager:
 
         return 0
 
-    async def get_wallet_for_colour(self, colour):
+    async def get_wallet_for_asset_id(self, asset_id):
         for wallet_id in self.wallets:
             wallet = self.wallets[wallet_id]
             if wallet.type() == WalletType.COLOURED_COIN:
-                if bytes(wallet.cat_info.limitations_program_hash).hex() == colour:
+                if bytes(wallet.cat_info.limitations_program_hash).hex() == asset_id:
                     return wallet
         return None
 

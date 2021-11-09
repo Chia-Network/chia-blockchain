@@ -195,20 +195,20 @@ class WalletRpcClient(RpcClient):
         }
         return await self.fetch("create_new_wallet", request)
 
-    async def create_wallet_for_existing_cat(self, colour: bytes) -> Dict:
+    async def create_wallet_for_existing_cat(self, asset_id: bytes) -> Dict:
         request: Dict[str, Any] = {
             "wallet_type": "cat_wallet",
-            "colour": colour.hex(),
+            "asset_id": asset_id.hex(),
             "mode": "existing",
             "host": f"{self.hostname}:{self.port}",
         }
         return await self.fetch("create_new_wallet", request)
 
-    async def get_cat_colour(self, wallet_id: str) -> bytes:
+    async def get_cat_asset_id(self, wallet_id: str) -> bytes:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
         }
-        return bytes.fromhex((await self.fetch("cat_get_colour", request))["colour"])
+        return bytes.fromhex((await self.fetch("cat_get_asset_id", request))["asset_id"])
 
     async def get_cat_name(self, wallet_id: str) -> str:
         request: Dict[str, Any] = {

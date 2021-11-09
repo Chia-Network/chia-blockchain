@@ -107,7 +107,7 @@ class CATWallet:
 
         await self.wallet_state_manager.add_new_wallet(self, self.id())
 
-        # Change and actual coloured coin
+        # Change and actual CAT
         non_ephemeral_coins: List[Coin] = spend_bundle.not_ephemeral_additions()
         cat_coin = None
         puzzle_store = self.wallet_state_manager.puzzle_store
@@ -120,7 +120,7 @@ class CATWallet:
                 cat_coin = c
 
         if cat_coin is None:
-            raise ValueError("Internal Error, unable to generate new coloured coin")
+            raise ValueError("Internal Error, unable to generate new CAT")
         cat_pid: bytes32 = cat_coin.parent_coin_info
 
         cat_record = TransactionRecord(
@@ -157,7 +157,7 @@ class CATWallet:
 
         for id, wallet in wallet_state_manager.wallets.items():
             if wallet.type() == CATWallet.type():
-                if wallet.get_colour() == limitations_program_hash_hex:  # type: ignore
+                if wallet.get_asset_id() == limitations_program_hash_hex:  # type: ignore
                     self.log.warning("Not creating wallet for already existing CAT wallet")
                     raise ValueError("Wallet already exists")
 
@@ -281,7 +281,7 @@ class CATWallet:
         self.wallet_info = new_info
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info, False)
 
-    def get_colour(self) -> str:
+    def get_asset_id(self) -> str:
         return bytes(self.cat_info.limitations_program_hash).hex()
 
     async def set_tail_program(self, tail_program: str):

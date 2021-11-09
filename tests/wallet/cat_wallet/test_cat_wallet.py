@@ -53,7 +53,7 @@ class TestCATWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_colour_creation(self, two_wallet_nodes, trusted):
+    async def test_cat_creation(self, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -155,9 +155,9 @@ class TestCATWallet:
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 100)
 
         assert cat_wallet.cat_info.limitations_program_hash is not None
-        colour = cat_wallet.get_colour()
+        asset_id = cat_wallet.get_asset_id()
 
-        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(wallet_node_2.wallet_state_manager, wallet2, colour)
+        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(wallet_node_2.wallet_state_manager, wallet2, asset_id)
 
         assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
@@ -202,7 +202,7 @@ class TestCATWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_get_wallet_for_colour(self, two_wallet_nodes, trusted):
+    async def test_get_wallet_for_asset_id(self, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -237,9 +237,9 @@ class TestCATWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
-        colour = cat_wallet.get_colour()
+        asset_id = cat_wallet.get_asset_id()
         await cat_wallet.set_tail_program(bytes(cat_wallet.cat_info.my_tail).hex())
-        assert await wallet_node.wallet_state_manager.get_wallet_for_colour(colour) == cat_wallet
+        assert await wallet_node.wallet_state_manager.get_wallet_for_asset_id(asset_id) == cat_wallet
 
         # Test that the a default CAT will initialize correctly
         asset = DEFAULT_CATS[next(iter(DEFAULT_CATS))]
@@ -254,7 +254,7 @@ class TestCATWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_cat_spend_uncoloured(self, two_wallet_nodes, trusted):
+    async def test_cat_doesnt_see_eve(self, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -302,9 +302,9 @@ class TestCATWallet:
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 100)
 
         assert cat_wallet.cat_info.limitations_program_hash is not None
-        colour = cat_wallet.get_colour()
+        asset_id = cat_wallet.get_asset_id()
 
-        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(wallet_node_2.wallet_state_manager, wallet2, colour)
+        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(wallet_node_2.wallet_state_manager, wallet2, asset_id)
 
         assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
@@ -403,14 +403,14 @@ class TestCATWallet:
         await time_out_assert(15, cat_wallet_0.get_unconfirmed_balance, 100)
 
         assert cat_wallet_0.cat_info.limitations_program_hash is not None
-        colour = cat_wallet_0.get_colour()
+        asset_id = cat_wallet_0.get_asset_id()
 
         cat_wallet_1: CATWallet = await CATWallet.create_wallet_for_cat(
-            wallet_node_1.wallet_state_manager, wallet_1, colour
+            wallet_node_1.wallet_state_manager, wallet_1, asset_id
         )
 
         cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
-            wallet_node_2.wallet_state_manager, wallet_2, colour
+            wallet_node_2.wallet_state_manager, wallet_2, asset_id
         )
 
         assert cat_wallet_0.cat_info.limitations_program_hash == cat_wallet_1.cat_info.limitations_program_hash

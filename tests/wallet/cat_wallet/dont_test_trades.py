@@ -82,10 +82,10 @@ class TestCATTrades:
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 100)
 
         assert cat_wallet.cat_info.my_tail is not None
-        colour = cat_wallet.get_colour()
+        asset_id = cat_wallet.get_asset_id()
 
         cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
-            wallet_node_1.wallet_state_manager, wallet_1, colour
+            wallet_node_1.wallet_state_manager, wallet_1, asset_id
         )
         await asyncio.sleep(1)
 
@@ -129,7 +129,7 @@ class TestCATTrades:
         assert offer is not None
 
         assert offer["chia"] == -10
-        assert offer[colour] == 30
+        assert offer[asset_id] == 30
 
         success, trade, reason = await trade_manager_1.respond_to_offer(file_path)
         await asyncio.sleep(1)
@@ -163,10 +163,10 @@ class TestCATTrades:
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 100)
 
         assert cat_wallet.cat_info.my_tail is not None
-        colour = cat_wallet.get_colour()
+        asset_id = cat_wallet.get_asset_id()
 
         cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
-            wallet_node_1.wallet_state_manager, wallet_1, colour
+            wallet_node_1.wallet_state_manager, wallet_1, asset_id
         )
         await asyncio.sleep(1)
 
@@ -200,10 +200,10 @@ class TestCATTrades:
         assert success is True
         assert offer is not None
 
-        assert cat_wallet.get_colour() == cat_wallet_2.get_colour()
+        assert cat_wallet.get_asset_id() == cat_wallet_2.get_asset_id()
 
         assert offer["chia"] == -10
-        assert offer[colour] == 30
+        assert offer[asset_id] == 30
 
         success, trade, reason = await trade_manager_1.respond_to_offer(file_path)
         await asyncio.sleep(1)
@@ -219,7 +219,7 @@ class TestCATTrades:
         assert TradeStatus(trade_2.status) is TradeStatus.CONFIRMED
 
     @pytest.mark.asyncio
-    async def test_cat_trade_with_multiple_colours(self, wallets_prefarm):
+    async def test_cat_trade_with_multiple_asset_ids(self, wallets_prefarm):
         # This test start with CATWallet in both wallets. wall
         # wallet1 {wallet_id: 2 = 70}
         # wallet2 {wallet_id: 2 = 30}
@@ -228,7 +228,7 @@ class TestCATTrades:
         wallet_a = wallet_node_a.wallet_state_manager.main_wallet
         wallet_b = wallet_node_b.wallet_state_manager.main_wallet
 
-        # cat_a_2 = coloured coin, Alice, wallet id = 2
+        # cat_a_2 = CAT, Alice, wallet id = 2
         cat_a_2 = wallet_node_a.wallet_state_manager.wallets[2]
         cat_b_2 = wallet_node_b.wallet_state_manager.wallets[2]
 
@@ -248,7 +248,7 @@ class TestCATTrades:
         cat_balance_2 = await cat_b_2.get_unconfirmed_balance()
 
         assert cat_a_3.cat_info.my_tail is not None
-        red = cat_a_3.get_colour()
+        red = cat_a_3.get_asset_id()
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -286,11 +286,11 @@ class TestCATTrades:
         assert offer is not None
         assert offer["chia"] == -1000
 
-        colour_2 = cat_a_2.get_colour()
-        colour_3 = cat_a_3.get_colour()
+        asset_id_2 = cat_a_2.get_asset_id()
+        asset_id_3 = cat_a_3.get_asset_id()
 
-        assert offer[colour_2] == 20
-        assert offer[colour_3] == 50
+        assert offer[asset_id_2] == 20
+        assert offer[asset_id_3] == 50
 
         success, trade, reason = await trade_manager_1.respond_to_offer(file_path)
         await asyncio.sleep(1)
@@ -305,8 +305,8 @@ class TestCATTrades:
         await time_out_assert(15, cat_a_3.get_confirmed_balance, 50)
         await time_out_assert(15, cat_a_3.get_unconfirmed_balance, 50)
 
-        await time_out_assert(15, cat_a_2.get_unconfirmed_balance, cat_balance - offer[colour_2])
-        await time_out_assert(15, cat_b_2.get_unconfirmed_balance, cat_balance_2 + offer[colour_2])
+        await time_out_assert(15, cat_a_2.get_unconfirmed_balance, cat_balance - offer[asset_id_2])
+        await time_out_assert(15, cat_b_2.get_unconfirmed_balance, cat_balance_2 + offer[asset_id_2])
 
         trade = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
 
@@ -338,9 +338,9 @@ class TestCATTrades:
 
         await time_out_assert(15, cat_a_4.get_confirmed_balance, 100)
 
-        colour = cat_a_4.get_colour()
+        asset_id = cat_a_4.get_asset_id()
 
-        cat_b_4: CATWallet = await CATWallet.create_wallet_for_cat(wallet_node_b.wallet_state_manager, wallet_b, colour)
+        cat_b_4: CATWallet = await CATWallet.create_wallet_for_cat(wallet_node_b.wallet_state_manager, wallet_b, asset_id)
         cat_balance = await cat_a_4.get_confirmed_balance()
         cat_balance_2 = await cat_b_4.get_confirmed_balance()
         offer_dict = {1: -30, cat_a_4.id(): 50}
