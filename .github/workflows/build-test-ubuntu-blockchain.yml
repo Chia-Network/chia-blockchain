@@ -6,7 +6,7 @@ name: Ubuntu blockchain Test
 on:
   push:
     branches:
-      - main
+      - main_
     tags:
         - '**'
   pull_request:
