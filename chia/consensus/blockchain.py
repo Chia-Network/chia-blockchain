@@ -148,6 +148,8 @@ class Blockchain(BlockchainInterface):
 
         assert peak is not None
         self._peak_height = self.block_record(peak).height
+        assert self.__height_map.contains_height(self._peak_height)
+        assert not self.__height_map.contains_height(self._peak_height + 1)
 
     def get_peak(self) -> Optional[BlockRecord]:
         """
