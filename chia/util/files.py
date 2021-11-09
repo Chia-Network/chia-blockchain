@@ -58,20 +58,21 @@ async def move_file_async(src: Path, dst: Path, *, reattempts: int = 6, reattemp
         log.debug(f"Moved {src} to {dst}")
 
 
-async def write_file_async(file_path: Path, data: Union[str, bytes], *, file_mode: int = 0o600):
+async def write_file_async(file_path: Path, data: Union[str, bytes], *, file_mode: int = 0o600, dir_mode: int = 0o700):
     """
     Writes the provided data to a temporary file and then moves it to the final destination.
     """
 
-    dir_perms: int = 0o700
     # Create the parent directory if necessary
-    os.makedirs(file_path.parent, mode=dir_perms, exist_ok=True)
+    os.makedirs(file_path.parent, mode=dir_mode, exist_ok=True)
 
     mode: str = "w+" if type(data) == str else "w+b"
     temp_file_path: Path
     async with tempfile.NamedTemporaryFile(dir=file_path.parent, mode=mode, delete=False) as f:
         temp_file_path = f.name
         await f.write(data)
+        await f.flush()
+        os.fsync(f.fileno())
 
     try:
         await move_file_async(temp_file_path, file_path)
