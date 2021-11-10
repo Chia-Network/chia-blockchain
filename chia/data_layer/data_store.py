@@ -153,9 +153,18 @@ class DataStore:
 
         return node_hash
 
-    async def change_root_status(self, hash: bytes32, status: Status = Status.pending) -> bytes32:
+    async def change_root_status(self, root:Root, status: Status = Status.PENDING) -> bytes32:
         async with self.db_wrapper.locked_transaction(lock=True):
-            await self.db.execute("UPDATE OR FAIL root SET status = ? WHERE hash=?", (status.value, hash))
+            c = await self.db.execute(
+                "UPDATE root SET status = ? WHERE tree_id=? and generation = ?",
+                (
+                    status.value,
+                    root.tree_id.hex(),
+                    root.generation,
+                ),
+            )
+            await c.close()
+
 
     async def check(self) -> None:
         for check in self._checks:
@@ -249,7 +258,7 @@ class DataStore:
         _check_hashes,
     )
 
-    async def create_tree(self, tree_id: bytes32, *, lock: bool = True, status: Status = Status.pending) -> bool:
+    async def create_tree(self, tree_id: bytes32, *, lock: bool = True, status: Status = Status.PENDING) -> bool:
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self._insert_root(tree_id=tree_id, node_hash=None, status=status)
 
@@ -465,7 +474,7 @@ class DataStore:
         side: Optional[Side],
         *,
         lock: bool = True,
-        status: Status = Status.pending,
+        status: Status = Status.PENDING,
     ) -> bytes32:
         async with self.db_wrapper.locked_transaction(lock=lock):
             was_empty = await self.table_is_empty(tree_id=tree_id, lock=False)
@@ -533,7 +542,7 @@ class DataStore:
 
         return new_terminal_node_hash
 
-    async def delete(self, key: bytes, tree_id: bytes32, *, lock: bool = True, status: Status = Status.pending) -> None:
+    async def delete(self, key: bytes, tree_id: bytes32, *, lock: bool = True, status: Status = Status.PENDING) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             ancestors = await self.get_ancestors(node_hash=node.hash, tree_id=tree_id, lock=False)

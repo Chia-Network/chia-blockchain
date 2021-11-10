@@ -559,7 +559,7 @@ async def test_check_internal_key_value_are_null(
     async with raw_data_store.db_wrapper.locked_transaction():
         await raw_data_store.db.execute(
             "INSERT INTO node(hash, node_type, key, value,status) VALUES(:hash, :node_type, :key, :value,:status)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **key_value, "status": Status.committed.value},
+            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **key_value, "status": Status.COMMITTED.value},
         )
 
     with pytest.raises(
@@ -583,12 +583,12 @@ async def test_check_internal_left_right_are_bytes32(raw_data_store: DataStore, 
         # needed to satisfy foreign key constraints
         await raw_data_store.db.execute(
             "INSERT INTO node(hash, node_type,status) VALUES(:hash, :node_type,:status)",
-            {"hash": b"abc".hex(), "node_type": NodeType.TERMINAL, "status": Status.committed.value},
+            {"hash": b"abc".hex(), "node_type": NodeType.TERMINAL, "status": Status.COMMITTED.value},
         )
 
         await raw_data_store.db.execute(
             "INSERT INTO node(hash, node_type, left, right,status) VALUES(:hash, :node_type, :left, :right,:status)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **left_right, "status": Status.committed.value},
+            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **left_right, "status": Status.COMMITTED.value},
         )
 
     with pytest.raises(
@@ -611,7 +611,7 @@ async def test_check_terminal_left_right_are_null(raw_data_store: DataStore, lef
     async with raw_data_store.db_wrapper.locked_transaction():
         await raw_data_store.db.execute(
             "INSERT INTO node(hash, node_type, left, right,status) VALUES(:hash, :node_type, :left, :right, :status)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.TERMINAL, **left_right, "status": Status.committed.value},
+            {"hash": a_bytes_32.hex(), "node_type": NodeType.TERMINAL, **left_right, "status": Status.COMMITTED.value},
         )
 
     with pytest.raises(
@@ -633,7 +633,7 @@ async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataSto
                     "tree_id": tree_id.hex(),
                     "generation": generation,
                     "node_hash": None,
-                    "status": Status.committed.value,
+                    "status": Status.COMMITTED.value,
                 },
             )
 
@@ -656,7 +656,7 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
                     "tree_id": tree_id.hex(),
                     "generation": generation,
                     "node_hash": None,
-                    "status": Status.committed.value,
+                    "status": Status.COMMITTED.value,
                 },
             )
 
@@ -677,7 +677,7 @@ async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
                 "node_type": NodeType.INTERNAL,
                 "left": a_bytes_32.hex(),
                 "right": a_bytes_32.hex(),
-                "status": Status.committed.value,
+                "status": Status.COMMITTED.value,
             },
         )
 
@@ -698,7 +698,7 @@ async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
                 "node_type": NodeType.TERMINAL,
                 "key": Program.to((1, 2)).as_bin().hex(),
                 "value": Program.to((1, 2)).as_bin().hex(),
-                "status": Status.committed.value,
+                "status": Status.COMMITTED.value,
             },
         )
 
@@ -716,5 +716,19 @@ async def test_root_state(data_store: DataStore, tree_id: bytes32) -> None:
     await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
     is_empty = await data_store.table_is_empty(tree_id=tree_id)
     root = await data_store.get_tree_root(tree_id)
-    assert root.status == Status.pending.value
+    assert root.status == Status.PENDING.value
+    assert not is_empty
+
+
+@pytest.mark.asyncio
+async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> None:
+    key = b"\x01\x02"
+    value = b"abc"
+    await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+    is_empty = await data_store.table_is_empty(tree_id=tree_id)
+    root = await data_store.get_tree_root(tree_id)
+    assert root.status == Status.PENDING.value
+    await data_store.change_root_status(root, Status.COMMITTED)
+    root = await data_store.get_tree_root(tree_id)
+    assert root.status == Status.COMMITTED.value
     assert not is_empty
