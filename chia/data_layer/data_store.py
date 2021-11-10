@@ -1,3 +1,4 @@
+import enum
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, replace
@@ -33,6 +34,11 @@ log = logging.getLogger(__name__)
 # TODO: review and replace all asserts
 
 
+class Status(enum.Enum):
+    pending = 1
+    committed = 2
+
+
 @dataclass
 class DataStore:
     """A key/value store with the pairs being terminal nodes in a CLVM object tree."""
@@ -62,7 +68,8 @@ class DataStore:
                     left TEXT REFERENCES node,
                     right TEXT REFERENCES node,
                     key TEXT,
-                    value TEXT
+                    value TEXT,
+                    status INTEGER NOT NULL
                 )
                 """
             )
@@ -72,6 +79,7 @@ class DataStore:
                     tree_id TEXT NOT NULL,
                     generation INTEGER NOT NULL,
                     node_hash TEXT,
+                    status INTEGER NOT NULL,
                     PRIMARY KEY(tree_id, generation),
                     FOREIGN KEY(node_hash) REFERENCES node(hash)
                 )
@@ -80,7 +88,9 @@ class DataStore:
 
         return self
 
-    async def _insert_root(self, tree_id: bytes32, node_hash: Optional[bytes32]) -> None:
+    async def _insert_root(
+        self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status
+    ) -> None:
         # TODO: maybe verify a transaction is active
 
         existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
@@ -91,15 +101,18 @@ class DataStore:
             generation = existing_generation + 1
 
         await self.db.execute(
-            "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
+            "INSERT INTO root(tree_id, generation, node_hash,status) VALUES(:tree_id, :generation, :node_hash,:status)",
             {
                 "tree_id": tree_id.hex(),
                 "generation": generation,
                 "node_hash": None if node_hash is None else node_hash.hex(),
+                "status": status.value,
             },
         )
 
-    async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
+    async def _insert_internal_node(
+        self, left_hash: bytes32, right_hash: bytes32, status: Status = Status.pending
+    ) -> bytes32:
         # TODO: maybe verify a transaction is active
 
         node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
@@ -108,8 +121,8 @@ class DataStore:
         #       "the same row"?
         await self.db.execute(
             """
-            INSERT OR IGNORE INTO node(hash, node_type, left, right, key, value)
-            VALUES(:hash, :node_type, :left, :right, :key, :value)
+            INSERT OR IGNORE INTO node(hash, node_type, left, right, key, value,status)
+            VALUES(:hash, :node_type, :left, :right, :key, :value:status)
             """,
             {
                 "hash": node_hash.hex(),
@@ -118,12 +131,13 @@ class DataStore:
                 "right": right_hash.hex(),
                 "key": None,
                 "value": None,
+                "status": status.value,
             },
         )
 
         return node_hash
 
-    async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
+    async def _insert_terminal_node(self, key: bytes, value: bytes, status: Status = Status.pending) -> bytes32:
         # TODO: maybe verify a transaction is active
 
         node_hash = Program.to((key, value)).get_tree_hash()
@@ -132,8 +146,8 @@ class DataStore:
         #       "the same row"?
         await self.db.execute(
             """
-            INSERT OR IGNORE INTO node(hash, node_type, left, right, key, value)
-            VALUES(:hash, :node_type, :left, :right, :key, :value)
+            INSERT OR IGNORE INTO node(hash, node_type, left, right, key, value, status)
+            VALUES(:hash, :node_type, :left, :right, :key, :value,:status)
             """,
             {
                 "hash": node_hash.hex(),
@@ -142,10 +156,19 @@ class DataStore:
                 "right": None,
                 "key": key.hex(),
                 "value": value.hex(),
+                "status": status.value,
             },
         )
 
         return node_hash
+
+    async def change_node_status(self, hash: bytes32, status: Status = Status.pending) -> bytes32:
+        async with self.db_wrapper.locked_transaction(lock=True):
+            await self.db.execute("UPDATE OR FAIL node SET status = ? WHERE hash=?", (status.value, hash))
+
+    async def change_root_status(self, hash: bytes32, status: Status = Status.pending) -> bytes32:
+        async with self.db_wrapper.locked_transaction(lock=True):
+            await self.db.execute("UPDATE OR FAIL root SET status = ? WHERE hash=?", (status.value, hash))
 
     async def check(self) -> None:
         for check in self._checks:
@@ -239,9 +262,9 @@ class DataStore:
         _check_hashes,
     )
 
-    async def create_tree(self, tree_id: bytes32, *, lock: bool = True) -> bool:
+    async def create_tree(self, tree_id: bytes32, *, lock: bool = True,status:Status = Status.pending) -> bool:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            await self._insert_root(tree_id=tree_id, node_hash=None)
+            await self._insert_root(tree_id=tree_id, node_hash=None,status=status)
 
         return True
 
@@ -455,6 +478,7 @@ class DataStore:
         side: Optional[Side],
         *,
         lock: bool = True,
+        status:Status = Status.pending
     ) -> bytes32:
         async with self.db_wrapper.locked_transaction(lock=lock):
             was_empty = await self.table_is_empty(tree_id=tree_id, lock=False)
@@ -482,7 +506,7 @@ class DataStore:
                 # TODO: a real exception
                 assert side is None
 
-                await self._insert_root(tree_id=tree_id, node_hash=new_terminal_node_hash)
+                await self._insert_root(tree_id=tree_id, node_hash=new_terminal_node_hash,status = status)
             else:
                 # TODO: a real exception
                 assert side is not None
@@ -518,18 +542,18 @@ class DataStore:
 
                     new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
 
-                await self._insert_root(tree_id=tree_id, node_hash=new_hash)
+                await self._insert_root(tree_id=tree_id, node_hash=new_hash,status=status)
 
         return new_terminal_node_hash
 
-    async def delete(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> None:
+    async def delete(self, key: bytes, tree_id: bytes32, *, lock: bool = True,status:Status = Status.pending) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             ancestors = await self.get_ancestors(node_hash=node.hash, tree_id=tree_id, lock=False)
 
             if len(ancestors) == 0:
                 # the only node is being deleted
-                await self._insert_root(tree_id=tree_id, node_hash=None)
+                await self._insert_root(tree_id=tree_id, node_hash=None,status=status)
 
                 return
 
@@ -538,7 +562,7 @@ class DataStore:
 
             if len(ancestors) == 1:
                 # the parent is the root so the other side will become the new root
-                await self._insert_root(tree_id=tree_id, node_hash=other_hash)
+                await self._insert_root(tree_id=tree_id, node_hash=other_hash,status=status)
 
                 return
 
@@ -562,7 +586,7 @@ class DataStore:
 
                 old_child_hash = ancestor.hash
 
-            await self._insert_root(tree_id=tree_id, node_hash=new_child_hash)
+            await self._insert_root(tree_id=tree_id, node_hash=new_child_hash,status=status)
 
         return
 
