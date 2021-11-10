@@ -1,3 +1,4 @@
+import enum
 from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Dict, Optional, Tuple, Type, Union
@@ -7,6 +8,11 @@ import aiosqlite as aiosqlite
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+
+
+class Status(enum.Enum):
+    PENDING = 1
+    COMMITTED = 2
 
 
 class NodeType(IntEnum):
@@ -119,6 +125,7 @@ class Root:
     tree_id: bytes32
     node_hash: Optional[bytes32]
     generation: int
+    status: Status
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "Root":
@@ -132,6 +139,7 @@ class Root:
             tree_id=bytes32(hexstr_to_bytes(row["tree_id"])),
             node_hash=node_hash,
             generation=row["generation"],
+            status=row["status"],
         )
 
 
