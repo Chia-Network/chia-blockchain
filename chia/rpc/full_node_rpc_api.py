@@ -4,7 +4,7 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.rpc.type_conversions import block_record_to_json, coin_record_to_json, coin_spend_to_json
+from chia.rpc.type_conversions import block_record_to_json, coin_record_to_json, coin_spend_to_json, full_block_to_json
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -273,7 +273,7 @@ class FullNodeRpcApi:
         if block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        return {"block": block}
+        return {"block": full_block_to_json(block)}
 
     async def get_blocks(self, request: Dict) -> Optional[Dict]:
         if "start" not in request:
@@ -290,13 +290,7 @@ class FullNodeRpcApi:
         for a in range(start, end):
             block_range.append(uint32(a))
         blocks: List[FullBlock] = await self.service.block_store.get_full_blocks_at(block_range)
-        json_blocks = []
-        for block in blocks:
-            json = block.to_json_dict()
-            if not exclude_hh:
-                json["header_hash"] = block.header_hash.hex()
-            json_blocks.append(json)
-        return {"blocks": json_blocks}
+        return {"blocks": [full_block_to_json(block) for block in blocks]}
 
     async def get_block_records(self, request: Dict) -> Optional[Dict]:
         if "start" not in request:
@@ -360,6 +354,8 @@ class FullNodeRpcApi:
         return {"block_record": block_record_to_json(record)}
 
     async def get_unfinished_block_headers(self, request: Dict) -> Optional[Dict]:
+        # Note, the header hashes and heights are not established yet, since these depend on which blocks get added to
+        # the blockchain
 
         peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
         if peak is None:
