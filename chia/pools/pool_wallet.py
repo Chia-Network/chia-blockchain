@@ -776,9 +776,11 @@ class PoolWallet:
         all_spends: List[CoinSpend] = []
         total_amount = 0
 
+        the_coin_record_in_question = None
         for coin_record in unspent_coin_records:
             if coin_record.coin not in coin_to_height_farmed:
                 continue
+            the_coin_record_in_question = coin_record
             if len(all_spends) >= 100:
                 # Limit the total number of spends, so it fits into the block
                 break
@@ -797,7 +799,7 @@ class PoolWallet:
             self.log.info(
                 f"Farmer coin: {coin_record.coin} {coin_record.coin.name()} {coin_to_height_farmed[coin_record.coin]}"
             )
-        if len(all_spends) == 0:
+        if len(all_spends) == 0 or the_coin_record_in_question is None:
             raise ValueError("Nothing to claim, no unspent coinbase rewards")
 
         spend_bundle: SpendBundle = SpendBundle(all_spends, G2Element())
@@ -810,7 +812,17 @@ class PoolWallet:
             assert get_max_send_amount > fee
             amount = uint64(0)
             my_address = await self.standard_wallet.get_new_puzzlehash()
-            fee_spend = await self.standard_wallet.generate_signed_transaction(amount, my_address, fee)
+            fee_spend = await self.standard_wallet.generate_signed_transaction(
+                amount,
+                my_address,
+                fee,
+                None,
+                None,
+                None,
+                False,
+                {Announcement(the_coin_record_in_question.coin.name(), b"$").name()},
+            )
+
             full_spend = SpendBundle.aggregate([fee_spend.spend_bundle, spend_bundle])
 
         assert full_spend.fees() == fee
