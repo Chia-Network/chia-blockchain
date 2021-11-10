@@ -193,7 +193,7 @@ class KeyringWrapper:
         return KeyringWrapper.__shared_instance
 
     @staticmethod
-    def set_shared_instance(instance: 'KeyringWrapper'):
+    def set_shared_instance(instance: "KeyringWrapper"):
         KeyringWrapper.__shared_instance = instance
 
     @staticmethod
