@@ -8,7 +8,7 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.data_store import DataStore
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.config import load_config_cli
+from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
 from chia.util.path import mkdir, path_from_root
@@ -38,7 +38,7 @@ class DataLayer:
             # TODO: If no code depends on "" counting as 'unspecified' then we do not
             #       need this.
             name = None
-        config = load_config_cli(root_path, "config.yaml", "data_layer")
+        config = load_config(root_path, "config.yaml", "data_layer")
         self.initialized = False
         self.config = config
         self.wallet_node = wallet_node

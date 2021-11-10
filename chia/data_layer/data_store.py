@@ -101,7 +101,9 @@ class DataStore:
             generation = existing_generation + 1
 
         await self.db.execute(
-            "INSERT INTO root(tree_id, generation, node_hash,status) VALUES(:tree_id, :generation, :node_hash,:status)",
+            """
+            INSERT INTO root(tree_id, generation, node_hash, status) VALUES(:tree_id, :generation, :node_hash, :status)
+            """,
             {
                 "tree_id": tree_id.hex(),
                 "generation": generation,
@@ -121,8 +123,8 @@ class DataStore:
         #       "the same row"?
         await self.db.execute(
             """
-            INSERT OR IGNORE INTO node(hash, node_type, left, right, key, value,status)
-            VALUES(:hash, :node_type, :left, :right, :key, :value:status)
+            INSERT OR IGNORE INTO node(hash, node_type, left, right, key, value, status)
+            VALUES(:hash, :node_type, :left, :right, :key, :value, :status)
             """,
             {
                 "hash": node_hash.hex(),
@@ -147,7 +149,7 @@ class DataStore:
         await self.db.execute(
             """
             INSERT OR IGNORE INTO node(hash, node_type, left, right, key, value, status)
-            VALUES(:hash, :node_type, :left, :right, :key, :value,:status)
+            VALUES(:hash, :node_type, :left, :right, :key, :value, :status)
             """,
             {
                 "hash": node_hash.hex(),
@@ -314,13 +316,13 @@ class DataStore:
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
-                    tree_from_root_hash(hash, node_type, left, right, key, value, depth) AS (
+                    tree_from_root_hash(hash, node_type, left, right, key, value, status, depth) AS (
                         SELECT node.*, 0 AS depth FROM node WHERE node.hash == :root_hash
                         UNION ALL
                         SELECT node.*, tree_from_root_hash.depth + 1 AS depth FROM node, tree_from_root_hash
                         WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
                     ),
-                    ancestors(hash, node_type, left, right, key, value, depth) AS (
+                    ancestors(hash, node_type, left, right, key, value, status, depth) AS (
                         SELECT node.*, NULL AS depth FROM node
                         WHERE node.left == :reference_hash OR node.right == :reference_hash
                         UNION ALL
@@ -352,7 +354,7 @@ class DataStore:
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
-                    tree_from_root_hash(hash, node_type, left, right, key, value, depth, rights) AS (
+                    tree_from_root_hash(hash, node_type, left, right, key, value, status, depth, rights) AS (
                         SELECT node.*, 0 AS depth, 0 AS rights FROM node WHERE node.hash == :root_hash
                         UNION ALL
                         SELECT
@@ -631,7 +633,7 @@ class DataStore:
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
-                    tree_from_root_hash(hash, node_type, left, right, key, value) AS (
+                    tree_from_root_hash(hash, node_type, left, right, key, value, status) AS (
                         SELECT node.* FROM node WHERE node.hash == :root_hash
                         UNION ALL
                         SELECT node.* FROM node, tree_from_root_hash
