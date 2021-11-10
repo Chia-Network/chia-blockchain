@@ -5,7 +5,7 @@ import traceback
 from pathlib import Path
 from random import Random
 from secrets import randbits
-from typing import Dict, Optional, List, Set, Callable
+from typing import Dict, Optional, List, Set
 
 import aiosqlite
 
@@ -238,7 +238,6 @@ class FullNodeDiscovery:
             if self.address_manager is None:
                 return
             self.pending_outbound_connections.add(addr.host)
-
             client_connected = await self.server.start_client(
                 addr,
                 on_connect=self.on_connect_callback,
