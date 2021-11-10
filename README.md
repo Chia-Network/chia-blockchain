@@ -18,6 +18,9 @@ Silicoin(SIT) is a modern cryptocurrency built from scratch, designed to be effi
 Please visit our wiki for more information:
 [wiki](https://github.com/silicoin-network/silicoin-blockchain/wiki).
 
+Please use the latest release
+[v1.1.1](https://github.com/silicoin-network/silicoin-blockchain/wiki).
+
 ## Resource Links
 
 [ChiaHub](https://www.chia-hub.com/)
