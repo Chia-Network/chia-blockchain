@@ -716,7 +716,7 @@ async def test_root_state(data_store: DataStore, tree_id: bytes32) -> None:
     await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
     is_empty = await data_store.table_is_empty(tree_id=tree_id)
     root = await data_store.get_tree_root(tree_id)
-    assert root.status == Status.PENDING.value
+    assert root.status.value == Status.PENDING.value
     assert not is_empty
 
 
@@ -727,8 +727,8 @@ async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> Non
     await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
     is_empty = await data_store.table_is_empty(tree_id=tree_id)
     root = await data_store.get_tree_root(tree_id)
-    assert root.status == Status.PENDING.value
+    assert root.status.value == Status.PENDING.value
     await data_store.change_root_status(root, Status.COMMITTED)
     root = await data_store.get_tree_root(tree_id)
-    assert root.status == Status.COMMITTED.value
+    assert root.status.value == Status.COMMITTED.value
     assert not is_empty

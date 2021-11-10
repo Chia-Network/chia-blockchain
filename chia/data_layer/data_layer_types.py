@@ -139,7 +139,7 @@ class Root:
             tree_id=bytes32(hexstr_to_bytes(row["tree_id"])),
             node_hash=node_hash,
             generation=row["generation"],
-            status=row["status"],
+            status=Status(row["status"]),
         )
 
 
