@@ -12,9 +12,9 @@ from chia.data_layer.data_layer_errors import (
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
 )
-from chia.data_layer.data_layer_types import NodeType, ProofOfInclusionLayer, Side
+from chia.data_layer.data_layer_types import NodeType, ProofOfInclusionLayer, Side, Status
 from chia.data_layer.data_layer_util import _debug_dump
-from chia.data_layer.data_store import DataStore, Status
+from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -707,3 +707,14 @@ async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
         match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
     ):
         await raw_data_store._check_hashes()
+
+
+@pytest.mark.asyncio
+async def test_root_state(data_store: DataStore, tree_id: bytes32) -> None:
+    key = b"\x01\x02"
+    value = b"abc"
+    await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+    is_empty = await data_store.table_is_empty(tree_id=tree_id)
+    root = await data_store.get_tree_root(tree_id)
+    assert root.status == Status.pending.value
+    assert not is_empty

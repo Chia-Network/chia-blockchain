@@ -21,6 +21,7 @@ from chia.data_layer.data_layer_types import (
     ProofOfInclusionLayer,
     Side,
     TerminalNode,
+    Status,
 )
 from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
@@ -32,11 +33,6 @@ log = logging.getLogger(__name__)
 
 
 # TODO: review and replace all asserts
-
-
-class Status(enum.Enum):
-    pending = 1
-    committed = 2
 
 
 @dataclass
@@ -286,7 +282,7 @@ class DataStore:
         generation: int = row["MAX(generation)"]
         return generation
 
-    async def get_tree_root(self, tree_id: bytes32, *, lock: bool = True) -> Root:
+    async def get_tree_root(self, tree_id: bytes32, *, lock: bool = True) -> (Root):
         async with self.db_wrapper.locked_transaction(lock=lock):
             generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
             cursor = await self.db.execute(
