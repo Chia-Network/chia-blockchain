@@ -143,16 +143,6 @@ class TempKeyring:
         # Patch supports_os_passphrase_storage() to return use_os_credential_store
         mock_supports_os_passphrase_storage.return_value = use_os_credential_store
 
-        mock_configure_backend_patch = patch.object(KeyringWrapper, "_configure_backend")
-        mock_configure_backend = mock_configure_backend_patch.start()
-        setup_mock_file_keyring(mock_configure_backend, temp_dir, populate=populate)
-
-        mock_configure_legacy_backend_patch: Any = None
-        if setup_cryptfilekeyring is False:
-            mock_configure_legacy_backend_patch = patch.object(KeyringWrapper, "_configure_legacy_backend")
-            mock_configure_legacy_backend = mock_configure_legacy_backend_patch.start()
-            mock_configure_legacy_backend.return_value = None
-
         mock_data_root_patch = patch.object(platform_, "data_root")
         mock_data_root = mock_data_root_patch.start()
 
@@ -164,8 +154,23 @@ class TempKeyring:
             crypt_file_keyring = create_empty_cryptfilekeyring()
             add_dummy_key_to_cryptfilekeyring(crypt_file_keyring)
 
+        keyring_wrapper = KeyringWrapper()
+
+        # Setup KeyringWrapper mocking
+        mock_configure_backend_patch = patch.object(keyring_wrapper, "_configure_backend")
+        mock_configure_backend = mock_configure_backend_patch.start()
+        setup_mock_file_keyring(mock_configure_backend, temp_dir, populate=populate)
+
+        mock_configure_legacy_backend_patch: Any = None
+        if setup_cryptfilekeyring is False:
+            mock_configure_legacy_backend_patch = patch.object(keyring_wrapper, "_configure_legacy_backend")
+            mock_configure_legacy_backend = mock_configure_legacy_backend_patch.start()
+            mock_configure_legacy_backend.return_value = None
+
+        keyring_wrapper.refresh_keyrings(keys_root_path=Path(temp_dir))
+        KeyringWrapper.set_shared_instance(keyring_wrapper)
+
         keychain = Keychain(user=user, service=service)
-        keychain.keyring_wrapper = KeyringWrapper(keys_root_path=Path(temp_dir))
 
         # Stash the temp_dir in the keychain instance
         keychain._temp_dir = temp_dir  # type: ignore
@@ -193,7 +198,7 @@ class TempKeyring:
         assert not self.cleaned_up
 
         if self.delete_on_cleanup:
-            self.keychain.keyring_wrapper.keyring.cleanup_keyring_file_watcher()
+            self.keychain.keyring_wrapper.cleanup_keyring()
             temp_dir = self.keychain._temp_dir
             print(f"Cleaning up temp keychain in dir: {temp_dir}")
             shutil.rmtree(temp_dir)

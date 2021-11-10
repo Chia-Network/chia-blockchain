@@ -104,17 +104,25 @@ class KeyringWrapper:
     cached_passphrase_is_validated: bool = False
     legacy_keyring = None
 
-    def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH):
+    @staticmethod
+    def create(keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH) -> "KeyringWrapper":
         """
-        Initializes the keyring backend based on the OS. For Linux, we previously
-        used CryptFileKeyring. We now use our own FileKeyring backend and migrate
-        the data from the legacy CryptFileKeyring (on write).
+        Create a new KeyringWrapper instance.
         """
-        self.keys_root_path = keys_root_path
-        self.refresh_keyrings()
+        instance: KeyringWrapper = KeyringWrapper()
+        instance.refresh_keyrings(keys_root_path)
+        return instance
 
-    def refresh_keyrings(self):
-        self.keyring = None
+    def refresh_keyrings(self, keys_root_path: Optional[Path]) -> None:
+        """
+        Initializes or updates the keyring backend based on the OS. For Linux, we
+        previously used CryptFileKeyring. We now use our own FileKeyring backend
+        and migrate the data from the legacy CryptFileKeyring (on write).
+        """
+        if keys_root_path is not None:
+            self.keys_root_path = keys_root_path
+
+        self.cleanup_keyring()
         self.keyring = self._configure_backend()
 
         # Configure the legacy keyring if keyring passphrases are supported to support migration (if necessary)
@@ -180,13 +188,25 @@ class KeyringWrapper:
     @staticmethod
     def get_shared_instance(create_if_necessary=True):
         if not KeyringWrapper.__shared_instance and create_if_necessary:
-            KeyringWrapper.__shared_instance = KeyringWrapper(keys_root_path=KeyringWrapper.__keys_root_path)
+            KeyringWrapper.__shared_instance = KeyringWrapper.create(keys_root_path=KeyringWrapper.__keys_root_path)
 
         return KeyringWrapper.__shared_instance
 
     @staticmethod
+    def set_shared_instance(instance: 'KeyringWrapper'):
+        KeyringWrapper.__shared_instance = instance
+
+    @staticmethod
     def cleanup_shared_instance():
-        KeyringWrapper.__shared_instance = None
+        if KeyringWrapper.__shared_instance is not None:
+            KeyringWrapper.__shared_instance.cleanup_keyring()
+            KeyringWrapper.__shared_instance = None
+
+    def cleanup_keyring(self):
+        filekeyring: Optional[FileKeyring] = self.keyring if type(self.keyring) == FileKeyring else None
+        if filekeyring is not None:
+            filekeyring.cleanup_keyring_file_watcher()
+        self.keyring = None
 
     def get_keyring(self):
         """
