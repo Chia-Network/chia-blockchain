@@ -181,6 +181,7 @@ export default function WalletHistory(props: Props) {
           rowsPerPage={10}
           metadata={metadata}
           expandedCellShift={1}
+          uniqueField="name"
           expandedField={(row) => {
             const { confirmedAtHeight, memos } = row;
             const memoValues = Object.values(memos);
