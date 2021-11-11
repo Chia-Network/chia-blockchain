@@ -148,7 +148,7 @@ export default function Table(props: Props) {
   const preparedRows = useMemo<InternalTableRow[]>(
     () =>
       rows.map((row, rowIndex) => ({
-        $uniqueId: uniqueField ? row[uniqueField] : rowIndex,
+        $uniqueId: uniqueField ? get(row, uniqueField) : rowIndex,
         ...row,
       })),
     [rows],
