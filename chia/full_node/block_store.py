@@ -58,7 +58,7 @@ class BlockStore:
         await self.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
-        
+
         # this index was initially created and deployed without where condition "is_peak = 1"
         # to replace the old index with the new one, uncomment the drop
         # await self.db.execute("DROP INDEX IF EXISTS peak on block_records(is_peak)")
@@ -357,8 +357,7 @@ class BlockStore:
         # certain height are not compact. And if we do have compact orphan blocks, then all that
         # happens is that the occasional chain block stays uncompact - not ideal, but harmless.
         cursor = await self.db.execute(
-            f"SELECT height FROM full_blocks WHERE is_fully_compactified=0 "
-            f"ORDER BY RANDOM() LIMIT {number}"
+            f"SELECT height FROM full_blocks WHERE is_fully_compactified=0 ORDER BY RANDOM() LIMIT {number}"
         )
         rows = await cursor.fetchall()
         await cursor.close()
