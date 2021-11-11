@@ -113,18 +113,14 @@ class DLOWallet:
         claim_target: bytes32,
         recovery_target: bytes32,
         recovery_timelock: uint64,
-        fee=uint64(0)
+        fee=uint64(0),
     ):
         coins = await self.select_coin(1)
         coin = coins.pop()
         solution = Program.to([0, coin.amount])
 
         full_puzzle: Program = create_offer_fullpuz(
-            leaf_reveal,
-            host_genesis_id,
-            claim_target,
-            recovery_target,
-            recovery_timelock
+            leaf_reveal, host_genesis_id, claim_target, recovery_target, recovery_timelock
         )
         coin_spend = CoinSpend(coin, full_puzzle, solution)
         sb = SpendBundle([coin_spend], AugSchemeMPL.aggregated([]))

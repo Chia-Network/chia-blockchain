@@ -23,11 +23,7 @@ async def generate_datalayer_offer_spend(
     recovery_timelock: uint64 = input_list[5]
 
     full_puzzle: Program = create_offer_fullpuz(
-        leaf_reveal,
-        host_genesis_id,
-        claim_target,
-        recovery_target,
-        recovery_timelock
+        leaf_reveal, host_genesis_id, claim_target, recovery_target, recovery_timelock
     )
     tr = await special_wallet.standard_wallet.generate_signed_transaction(full_puzzle, amount)
     await special_wallet.wallet_state_manager.interested_store.add_interested_puzzle_hash(
@@ -51,11 +47,7 @@ async def create_recover_dl_offer_spend(
     recovery_timelock: uint64 = input_list[4]
 
     full_puzzle: Program = create_offer_fullpuz(
-        leaf_reveal,
-        host_genesis_id,
-        claim_target,
-        recovery_target,
-        recovery_timelock
+        leaf_reveal, host_genesis_id, claim_target, recovery_target, recovery_timelock
     )
     coin_spend = CoinSpend(coin, full_puzzle, solution)
     sb = SpendBundle([coin_spend], AugSchemeMPL.aggregated([]))
