@@ -111,7 +111,9 @@ class DataLayerWallet:
             raise ValueError("Not enough balance")
 
         try:
-            spend_bundle, dl_puzzle_hash, launcher_coin, inner_inner_puz = await self.generate_launcher_spend(uint64(amount), root_hash)
+            spend_bundle, dl_puzzle_hash, launcher_coin, inner_inner_puz = await self.generate_launcher_spend(
+                uint64(amount), root_hash
+            )
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id(), False)
             raise

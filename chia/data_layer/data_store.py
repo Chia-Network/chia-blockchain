@@ -153,7 +153,7 @@ class DataStore:
 
         return node_hash
 
-    async def change_root_status(self, root:Root, status: Status = Status.PENDING) -> bytes32:
+    async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> bytes32:
         async with self.db_wrapper.locked_transaction(lock=True):
             c = await self.db.execute(
                 "UPDATE root SET status = ? WHERE tree_id=? and generation = ?",
@@ -164,7 +164,6 @@ class DataStore:
                 ),
             )
             await c.close()
-
 
     async def check(self) -> None:
         for check in self._checks:
