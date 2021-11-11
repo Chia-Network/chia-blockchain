@@ -47,7 +47,7 @@ const StyledTableCellContent = styled.div`
   white-space: nowrap;
 `;
 
-const StyledExpandedTableCell = styled(TableCell)`
+const StyledExpandedTableCell = styled(({ isExpanded, ...rest}) => <TableCell {...rest} />)`
   ${({ isExpanded }) => !isExpanded ? 'border: 0;' : undefined}
 `;
 
@@ -240,7 +240,6 @@ export default function Table(props: Props) {
                         maxWidth={col.maxWidth}
                         width={col.width}
                         key={col.key}
-                        isExpanded={isExpanded}
                       >
                         {tooltipValue ? (
                           <Tooltip title={tooltipValue}>
