@@ -36,7 +36,6 @@ from chia.util.ssl_check import (
 from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk_intermediate,
-    master_sk_to_wallet_sk_unhardened_intermediate,
     _derive_path,
     _derive_path_unhardened,
 )
@@ -83,12 +82,9 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
     selected = config["selected_network"]
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
 
-    intermediates: Dict[bytes, Tuple[PrivateKey, PrivateKey]] = {}
+    intermediates: Dict[bytes, PrivateKey] = {}
     for sk, _ in all_sks:
-        intermediates[bytes(sk)] = (
-            master_sk_to_wallet_sk_intermediate(sk),
-            master_sk_to_wallet_sk_unhardened_intermediate(sk),
-        )
+        intermediates[bytes(sk)] = master_sk_to_wallet_sk_intermediate(sk)
 
     for i in range(number_of_ph_to_search):
         if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
@@ -96,12 +92,12 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
         for sk, _ in all_sks:
             all_targets.append(
                 encode_puzzle_hash(
-                    create_puzzlehash_for_pk(_derive_path(intermediates[bytes(sk)][0], [i]).get_g1()), prefix
+                    create_puzzlehash_for_pk(_derive_path(intermediates[bytes(sk)], [i]).get_g1()), prefix
                 )
             )
             all_targets.append(
                 encode_puzzle_hash(
-                    create_puzzlehash_for_pk(_derive_path_unhardened(intermediates[bytes(sk)][1], [i]).get_g1()), prefix
+                    create_puzzlehash_for_pk(_derive_path_unhardened(intermediates[bytes(sk)], [i]).get_g1()), prefix
                 )
             )
 
