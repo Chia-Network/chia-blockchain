@@ -73,6 +73,7 @@ class WalletRpcApi:
             "/get_wallet_balance": self.get_wallet_balance,
             "/get_transaction": self.get_transaction,
             "/get_transactions": self.get_transactions,
+            "/get_transaction_count": self.get_transaction_count,
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
             "/send_transaction_multi": self.send_transaction_multi,
@@ -610,6 +611,16 @@ class WalletRpcApi:
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(wallet_id, start, end)
         return {
             "transactions": [tr.to_json_dict_convenience(self.service.config) for tr in transactions],
+            "wallet_id": wallet_id,
+        }
+
+    async def get_transaction_count(self, request: Dict) -> Dict:
+        assert self.service.wallet_state_manager is not None
+
+        wallet_id = int(request["wallet_id"])
+        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(wallet_id)
+        return {
+            "count": count,
             "wallet_id": wallet_id,
         }
 
