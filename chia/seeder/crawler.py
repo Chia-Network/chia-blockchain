@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 import traceback
+import ipaddress
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -229,9 +230,11 @@ class Crawler:
                 await self.crawl_store.load_to_db()
                 await self.crawl_store.load_reliable_peers_to_db()
                 total_records = self.crawl_store.get_total_records()
+                ipv6_count = self.crawl_store.get_ipv6_peers()
                 self.log.error("***")
                 self.log.error("Finished batch:")
                 self.log.error(f"Total IPs stored in DB: {total_records}.")
+                self.log.error(f"Total IPV6 addresses stored in DB: {ipv6_count}")
                 self.log.error(f"Total connections attempted since crawler started: {total_nodes}.")
                 self.log.error(f"Total unique nodes attempted since crawler started: {len(tried_nodes)}.")
                 t_now = time.time()
@@ -246,12 +249,32 @@ class Crawler:
                 available_peers = len(self.host_to_version)
                 addresses_count = len(self.best_timestamp_per_peer)
                 total_records = self.crawl_store.get_total_records()
-                ipv6_count = self.crawl_store.get_ipv6_peers()
+                ipv6_addresses_count = 0
+                for host in self.best_timestamp_per_peer.keys():
+                    try:
+                        _ = ipaddress.IPv6Address(host)
+                        ipv6_addresses_count += 1
+                    except ValueError:
+                        continue
                 self.log.error(
-                    "IP addresses gossiped with timestamp in the last 5 days with respond_peers messages: "
-                    f"{addresses_count}."
+                    "IPv4 addresses gossiped with timestamp in the last 5 days with respond_peers messages: "
+                    f"{addresses_count - ipv6_addresses_count}."
                 )
-                self.log.error(f"Total nodes reachable in the last 5 days: {available_peers}.")
+                self.log.error(
+                    "IPv6 addresses gossiped with timestamp in the last 5 days with respond_peers messages: "
+                    f"{ipv6_addresses_count}."
+                )
+                ipv6_available_peers = 0
+                for host in self.host_to_version.keys():
+                    try:
+                        _ = ipaddress.IPv6Address(host)
+                        ipv6_available_peers += 1
+                    except ValueError:
+                        continue
+                self.log.error(
+                    f"Total IPv4 nodes reachable in the last 5 days: {available_peers - ipv6_available_peers}."
+                )
+                self.log.error(f"Total IPv6 nodes reachable in the last 5 days: {ipv6_available_peers}.")
                 self.log.error("Version distribution among reachable in the last 5 days (at least 100 nodes):")
                 if "minimum_version_count" in self.config and self.config["minimum_version_count"] > 0:
                     minimum_version_count = self.config["minimum_version_count"]
@@ -266,7 +289,6 @@ class Crawler:
                     "Peers to crawl from in the next batch (total IPs - ignored - banned): "
                     f"{total_records - banned_peers - ignored_peers}"
                 )
-                self.log.error(f"Total IPV6 gossiped in the last 5 days with respond_peers messages: {ipv6_count}")
                 self.log.error("***")
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
