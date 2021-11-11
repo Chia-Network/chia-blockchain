@@ -746,7 +746,7 @@ export const walletApi = createApi({
 
         function unsubscribe() {
           if (subscribeResponse) {
-            console.log('Unsubscribing from tx_updates');
+            // console.log('Unsubscribing from tx_updates');
             subscribeResponse.data();
             subscribeResponse = undefined;
           }
@@ -778,13 +778,13 @@ export const walletApi = createApi({
                 );
 
                 if (transaction) {
-                  console.log('we found transaction with all data hurai');
+                  // console.log('we found transaction with all data hurai');
                   resolve({
                     transaction,
                     transactionId: transaction.name,
                   });
                 } else {
-                  console.log('we do not have transaction in the list with data', updatedTransactions);
+                  // console.log('we do not have transaction in the list with data', updatedTransactions);
                 }
               }
 
@@ -796,7 +796,7 @@ export const walletApi = createApi({
                   args: [(data: any) => {
                     const { additionalData: { transaction } } = data;
 
-                    console.log('update received');
+                    // console.log('update received');
   
                     updatedTransactions.push(transaction);
                     processUpdates();
@@ -805,14 +805,14 @@ export const walletApi = createApi({
               }
 
               // make transaction
-              console.log('sending transaction');
+              // console.log('sending transaction');
               const { data: sendTransactionData, error, ...rest } = await fetchWithBQ({
                 command: 'spend',
                 service: CAT,
                 args: [walletId, address, amount, fee, memos],
               });
 
-              console.log('response', sendTransactionData, error, rest);
+              // console.log('response', sendTransactionData, error, rest);
 
               if (error) {
                 reject(error);
@@ -965,7 +965,7 @@ export const walletApi = createApi({
           }
 
           await fetchWithBQ({
-            command: 'cc_set_name',
+            command: 'setName',
             service: CAT,
             args: [walletId, name],
           });
