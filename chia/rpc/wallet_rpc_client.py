@@ -111,6 +111,16 @@ class WalletRpcClient(RpcClient):
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in res["transactions"]]
 
+    async def get_transaction_count(
+        self,
+        wallet_id: str,
+    ) -> List[TransactionRecord]:
+        res = await self.fetch(
+            "get_transaction_count",
+            {"wallet_id": wallet_id},
+        )
+        return res["count"]
+
     async def get_next_address(self, wallet_id: str, new_address: bool) -> str:
         return (await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))["address"]
 
