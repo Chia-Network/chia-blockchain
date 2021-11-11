@@ -271,7 +271,9 @@ class Crawler:
                         ipv6_available_peers += 1
                     except ValueError:
                         continue
-                self.log.error(f"Total IPv4 nodes reachable in the last 5 days: {available_peers - ipv6_available_peers}.")
+                self.log.error(
+                    f"Total IPv4 nodes reachable in the last 5 days: {available_peers - ipv6_available_peers}."
+                )
                 self.log.error(f"Total IPv6 nodes reachable in the last 5 days: {ipv6_available_peers}.")
                 self.log.error("Version distribution among reachable in the last 5 days (at least 100 nodes):")
                 if "minimum_version_count" in self.config and self.config["minimum_version_count"] > 0:
