@@ -342,6 +342,9 @@ class TestWalletRpc:
             transactions = await client.get_transactions("1")
             assert len(transactions) > 1
 
+            transaction_count = await client.get_transaction_count("1")
+            assert transaction_count == len(transactions)
+
             pks = await client.get_public_keys()
             assert len(pks) == 1
 
