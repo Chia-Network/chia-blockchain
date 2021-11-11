@@ -3,14 +3,15 @@ import time
 from typing import Any, Dict, List, Optional, Set
 
 from blspy import AugSchemeMPL
-
+from dataclasses import dataclass
+from chia.util.streamable import Streamable, streamable
 from chia.types.blockchain_format.coin import Coin
 from chia.wallet.db_wallet.db_wallet_puzzles import create_offer_fullpuz
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -19,12 +20,14 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
 
-class DLOInfo:
-    leaf_reveal: bytes
-    host_genesis_id: bytes32
-    claim_target: bytes32
-    recovery_target: bytes32
-    recovery_timelock: uint64
+@dataclass(frozen=True)
+@streamable
+class DLOInfo(Streamable):
+    leaf_reveal: Optional[bytes]
+    host_genesis_id: Optional[bytes32]
+    claim_target: Optional[bytes32]
+    recovery_target: Optional[bytes32]
+    recovery_timelock: Optional[uint64]
 
 
 class DLOWallet:
@@ -38,12 +41,14 @@ class DLOWallet:
     base_inner_puzzle_hash: Optional[bytes32]
     cost_of_single_tx: Optional[int]
 
+    @classmethod
+    def type(cls) -> uint8:
+        return uint8(WalletType.DATA_LAYER_OFFER)
+
     @staticmethod
-    async def create_new_sp(
+    async def create_new_dlo_wallet(
         wallet_state_manager: Any,
         wallet: Wallet,
-        amount: uint64,
-        type_specific_parameters: List = [],
     ):
         self = DLOWallet()
         self.cost_of_single_tx = None
@@ -51,28 +56,31 @@ class DLOWallet:
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
-        std_wallet_id = self.standard_wallet.wallet_id
-        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id, None)
-        if amount > bal:
-            raise ValueError("Not enough balance")
         self.wallet_state_manager = wallet_state_manager
-
-        self.dlo_info = DLOInfo(type, None, type_specific_parameters)
+        self.dlo_info = DLOInfo(None, None, None, None, None)
         info_as_string = bytes(self.dlo_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "DLO Wallet", WalletType.DATA_LAYER_OFFER, info_as_string
+            "DLO Wallet", WalletType.DATA_LAYER_OFFER.value, info_as_string
         )
+        self.wallet_id = self.wallet_info.id
         if self.wallet_info is None:
             raise ValueError("Internal Error")
+        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        return self
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
-        return create_offer_fullpuz(
-            self.dlo_info.leaf_reveal,
-            self.dlo_info.host_genesis_id,
-            self.dlo_info.claim_target,
-            self.dlo_info.recovery_target,
-            self.dlo_info.recovery_timelock,
-        )
+        if self.dlo_info.leaf_reveal is not None:
+            return create_offer_fullpuz(
+                self.dlo_info.leaf_reveal,
+                self.dlo_info.host_genesis_id,
+                self.dlo_info.claim_target,
+                self.dlo_info.recovery_target,
+                self.dlo_info.recovery_timelock,
+            )
+        return Program.to(pubkey)
+
+    def id(self):
+        return self.wallet_info.id
 
     async def generate_datalayer_offer_spend(
         self: Wallet,
@@ -99,7 +107,7 @@ class DLOWallet:
             recovery_target,
             recovery_timelock,
         )
-        tr: TransactionRecord = await self.standard_wallet.generate_signed_transaction(full_puzzle, amount)
+        tr: TransactionRecord = await self.standard_wallet.generate_signed_transaction(amount, full_puzzle.get_tree_hash())
         await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
             full_puzzle.get_tree_hash(), self.wallet_id, True
         )
@@ -219,4 +227,5 @@ class DLOWallet:
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, info_as_string)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
+        await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         return
