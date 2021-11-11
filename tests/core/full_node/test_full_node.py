@@ -13,7 +13,7 @@ from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
-from chia.protocols import full_node_protocol as fnp, full_node_protocol
+from chia.protocols import full_node_protocol as fnp, full_node_protocol, wallet_protocol
 from chia.protocols import timelord_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -762,13 +762,15 @@ class TestFullNodeProtocol:
                 uint32(0),
                 block.reward_chain_block.get_unfinished().get_hash(),
             )
-            asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+            task_1 = asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
             await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
+            task_1.cancel()
 
             await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
             # Ignores, already have
-            asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+            task_2 = asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
             await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
+            task_2.cancel()
 
         # Ignores low weight
         new_peak = fnp.NewPeak(
@@ -840,7 +842,7 @@ class TestFullNodeProtocol:
             )
             assert spend_bundle is not None
             cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, spend_bundle.name()
+                spend_bundle, None, spend_bundle.name()
             )
             log.info(f"Cost result: {cost_result.clvm_cost}")
 
@@ -886,9 +888,9 @@ class TestFullNodeProtocol:
             spend_bundle = wallet_receiver.generate_signed_transaction(
                 uint64(500), receiver_puzzlehash, coin_record.coin, fee=fee
             )
-            respond_transaction = fnp.RespondTransaction(spend_bundle)
+            respond_transaction = wallet_protocol.SendTransaction(spend_bundle)
 
-            await full_node_1.respond_transaction(respond_transaction, peer)
+            await full_node_1.send_transaction(respond_transaction)
 
             request = fnp.RequestTransaction(spend_bundle.get_hash())
             req = await full_node_1.request_transaction(request)

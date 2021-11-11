@@ -1,4 +1,11 @@
 repos:
+-   repo: local
+    hooks:
+    -   id: build-workflows
+        name: Validate github action workflows
+        entry: ./tests/build-workflows.py --fail-on-update
+        language: python
+        pass_filenames: false
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:

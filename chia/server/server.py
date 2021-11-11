@@ -3,10 +3,12 @@ import logging
 import ssl
 import time
 import traceback
+from collections import Counter
 from ipaddress import IPv6Address, ip_address, ip_network, IPv4Network, IPv6Network
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, List, Optional, Union, Set, Tuple
+from typing import Counter as typing_Counter
 
 from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, client_exceptions, web
 from aiohttp.web_app import Application
@@ -494,11 +496,10 @@ class ChiaServer:
                 f"Invalid connection type for connection {connection.peer_host},"
                 f" while closing. Handshake never finished."
             )
+        self.cancel_tasks_from_peer(connection.peer_node_id)
         on_disconnect = getattr(self.node, "on_disconnect", None)
         if on_disconnect is not None:
             on_disconnect(connection)
-
-        self.cancel_tasks_from_peer(connection.peer_node_id)
 
     def cancel_tasks_from_peer(self, peer_id: bytes32):
         if peer_id not in self.tasks_from_peer:
@@ -513,13 +514,16 @@ class ChiaServer:
 
     async def incoming_api_task(self) -> None:
         self.tasks = set()
+        message_types: typing_Counter[str] = Counter()  # Used for debugging information.
         while True:
             payload_inc, connection_inc = await self.incoming_messages.get()
             if payload_inc is None or connection_inc is None:
                 continue
 
             async def api_call(full_message: Message, connection: WSChiaConnection, task_id):
+                nonlocal message_types
                 start_time = time.time()
+                message_type = ""
                 try:
                     if self.received_message_callback is not None:
                         await self.received_message_callback(connection)
@@ -527,9 +531,12 @@ class ChiaServer:
                         f"<- {ProtocolMessageTypes(full_message.type).name} from peer "
                         f"{connection.peer_node_id} {connection.peer_host}"
                     )
-                    message_type: str = ProtocolMessageTypes(full_message.type).name
+                    message_type = ProtocolMessageTypes(full_message.type).name
+                    message_types[message_type] += 1
 
                     f = getattr(self.api, message_type, None)
+                    if len(message_types) % 100 == 0:
+                        self.log.debug(f"Message types: {[(m, n) for m, n in sorted(message_types.items()) if n != 0]}")
 
                     if f is None:
                         self.log.error(f"Non existing function: {message_type}")
@@ -576,6 +583,8 @@ class ChiaServer:
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
                         await connection.reply_to_request(response_message)
+                except TimeoutError:
+                    connection.log.error(f"Timeout error for: {message_type}")
                 except Exception as e:
                     if self.connection_close_task is None:
                         tb = traceback.format_exc()
@@ -587,6 +596,7 @@ class ChiaServer:
                     # TODO: actually throw one of the errors from errors.py and pass this to close
                     await connection.close(self.api_exception_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
                 finally:
+                    message_types[message_type] -= 1
                     if task_id in self.api_tasks:
                         self.api_tasks.pop(task_id)
                     if task_id in self.tasks_from_peer[connection.peer_node_id]:
