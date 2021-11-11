@@ -1,4 +1,5 @@
 import EventEmitter from 'events';
+import debug from 'debug';
 import ServiceName from './constants/ServiceName';
 import Message from './Message';
 import Daemon from './services/Daemon';
@@ -6,6 +7,8 @@ import sleep from './utils/sleep';
 import type Service from './services/Service';
 import ErrorData from './utils/ErrorData';
 import ConnectionState from './constants/ConnectionState';
+
+const log = debug('chia-api:client');
 
 type Options = {
   url: string;
@@ -82,8 +85,10 @@ export default class Client extends EventEmitter {
   }
 
   changeState(state: ConnectionState) {
+    log(`Connection state changed: ${state}`);
     if (state === ConnectionState.CONNECTING && state === this.state) {
       this.reconnectAttempt += 1;
+      log(`Reconnect attempt ${this.reconnectAttempt}`);
     } else {
       this.reconnectAttempt = 0;
     }
@@ -139,7 +144,7 @@ export default class Client extends EventEmitter {
 
   async connect(reconnect?: boolean) {
     if (this.closed) {
-      console.log('Client is closed');
+      log('Client is permanently closed');
       return;
     }
 
@@ -161,8 +166,7 @@ export default class Client extends EventEmitter {
 
     this.changeState(ConnectionState.CONNECTING);
 
-    // const dd = 'wss://localhost:51000';
-    console.log(`Connecting to ${url}`);
+    log(`Connecting to ${url}`);
 
     const ws = new WebSocket(url, {
       key,
@@ -205,10 +209,12 @@ export default class Client extends EventEmitter {
 
         const response = await this.daemon.isRunning(serviceName);
         if (!response.isRunning) {
+          log(`Starting service: ${serviceName}`);
           await this.daemon.startService(serviceName);
         }
 
         // wait for service initialisation
+        log(`Waiting for ping from service: ${serviceName}`);
         while(true) {
           try {
             const { data: pingResponse } = await this.send(new Message({
@@ -225,6 +231,7 @@ export default class Client extends EventEmitter {
           }
         }
 
+        log(`Service: ${serviceName} started`);
         this.started.add(serviceName);
       }
     }
@@ -302,8 +309,9 @@ export default class Client extends EventEmitter {
   private handleMessage = (data: string) => {
     const { options: { camelCase } } = this;
 
+    log('Received message', data.toString());
     const message = Message.fromJSON(data, camelCase);
-    // console.log('RESPONSE', data.toString());
+
     const { requestId } = message;
 
     if (this.requests.has(requestId)) {
@@ -339,7 +347,7 @@ export default class Client extends EventEmitter {
     const currentTimeout = timeout ?? defaultTimeout;
 
     if (!connected) {
-      console.log('API is not connected trying to connect');
+      log('API is not connected trying to connect');
       await this.connect();
     }
 
@@ -351,9 +359,10 @@ export default class Client extends EventEmitter {
       const { requestId } = message;
 
       this.requests.set(requestId, { resolve, reject });
-      this.ws.send(message.toJSON(camelCase));
+      const value = message.toJSON(camelCase);
+      log('Sending message', value);
 
-      // console.log('SEND', message.toJSON(camelCase));
+      this.ws.send(value);
 
       if (currentTimeout) {
         setTimeout(() => {
