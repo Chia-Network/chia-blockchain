@@ -6,6 +6,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
 from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.wallet.dlo_wallet.dlo_wallet import DLOWallet
 from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 from chia.types.blockchain_format.program import Program
 from chia.types.announcement import Announcement
@@ -88,13 +89,13 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        # Wallet1 sets up DIDWallet1 without any backup set
+        # Wallet1 sets up DLWallet1 without any backup set
         async with wallet_node_0.wallet_state_manager.lock:
             dl_wallet_0: DataLayerWallet = await DataLayerWallet.create_new_dl_wallet(
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
             )
 
-        for i in range(1, num_blocks):
+        for i in range(1, num_blocks*2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
@@ -162,7 +163,7 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        # Wallet1 sets up DIDWallet1 without any backup set
+        # Wallet1 sets up DLWallet1 without any backup set
         async with wallet_node_0.wallet_state_manager.lock:
             dl_wallet_0: DataLayerWallet = await DataLayerWallet.create_new_dl_wallet(
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
@@ -202,3 +203,100 @@ class TestDLWallet:
 
         await time_out_assert(15, wallet_2.get_confirmed_balance, 200)
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 200)
+
+    @pytest.mark.asyncio
+    async def test_dlo_wallet(self, three_wallet_nodes):
+        num_blocks = 5
+        full_nodes, wallets = three_wallet_nodes
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
+        wallet_node_0, server_0 = wallets[0]
+        wallet_node_1, server_1 = wallets[1]
+        wallet_node_2, server_2 = wallets[2]
+        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+        wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
+
+        ph = await wallet_0.get_new_puzzlehash()
+        ph1 = await wallet_1.get_new_puzzlehash()
+        ph2 = await wallet_2.get_new_puzzlehash()
+
+        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks - 1)
+            ]
+        )
+
+        await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
+        await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+
+        nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
+        current_tree = MerkleTree(nodes)
+        current_root = current_tree.calculate_root()
+
+        # Wallet1 sets up DLWallet1
+        async with wallet_node_0.wallet_state_manager.lock:
+            dl_wallet_0: DataLayerWallet = await DataLayerWallet.create_new_dl_wallet(
+                wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
+            )
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+        await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
+        await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
+
+        # Wallet1 sets up DLOWallet1
+        async with wallet_node_1.wallet_state_manager.lock:
+            dlo_wallet_1: DLOWallet = await DLOWallet.create_new_dlo_wallet(
+                wallet_node_1.wallet_state_manager, wallet_1,
+            )
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+        await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)
+        await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 0)
+        # leaf_reveal: bytes,
+        # host_genesis_id: bytes32,
+        # claim_target: bytes32,
+        # recovery_target: bytes32,
+        # recovery_timelock: uint64,
+        tr = await dlo_wallet_1.generate_datalayer_offer_spend(
+            uint64(201),
+            Program.to("thing").get_tree_hash(),
+            dl_wallet_0.dl_info.origin_coin.name(),
+            await wallet_2.get_new_puzzlehash(),
+            await wallet_1.get_new_puzzlehash(),
+            10,
+        )
+        await wallet_1.push_transaction(tr)
+
+
+        sb = await dl_wallet_0.create_report_spend()
+        sb = SpendBundle.aggregate([tr.spend_bundle, sb])
+        tr = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=ph2,
+            amount=uint64(201),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=sb,
+            additions=sb.additions(),
+            removals=sb.removals(),
+            wallet_id=dl_wallet_0.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=sb.name(),
+        )
