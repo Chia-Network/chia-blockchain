@@ -62,12 +62,12 @@ class WalletBlockStore:
         await self.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
-        
+
         # this index was initially created and deployed without where condition "is_peak = 1"
         # to replace the old index with the new one, uncomment the drop
         # await self.db.execute("DROP INDEX IF EXISTS peak on block_records(is_peak)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak) where is_peak = 1")
-        
+
         await self.db.commit()
         self.block_cache = LRUCache(1000)
         return self
