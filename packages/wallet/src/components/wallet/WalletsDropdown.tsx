@@ -26,8 +26,8 @@ export default function WalletsDropdown(props: Props) {
     return wallets.map((wallet) => {
       const primaryTitle = wallet.name;
       const secondaryTitle = trans(WalletName[wallet.type]);
-
       const hasSameTitle = primaryTitle.toLowerCase() === secondaryTitle.toLowerCase();
+
       return {
         wallet,
         value: wallet.id,
@@ -69,16 +69,6 @@ export default function WalletsDropdown(props: Props) {
       options={options}
       selected={walletId}
       onSelect={handleSelectWallet}
-      /*
-      anchorOrigin={{
-        vertical: 'bottom',
-        // horizontal: 'center',
-      }}
-      transformOrigin={{
-        vertical: 'top',
-        // horizontal: 'center',
-      }}
-      */
     >
       {(option) => !!option?.wallet && (
         <Flex gap={1} alignItems="center">

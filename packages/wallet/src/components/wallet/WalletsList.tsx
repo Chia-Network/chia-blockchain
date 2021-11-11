@@ -37,7 +37,7 @@ export default function WalletsList() {
           <Loading center />
         ) : (
           <>
-            {wallets.map(wallet => (
+            {wallets.map((wallet) => (
               <Grid key={wallet.id} xs={12} sm={6} md={4} item>
                 <WalletCreateCard
                   onSelect={() => handleSelectWallet(wallet)}
