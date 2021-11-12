@@ -290,7 +290,7 @@ class DataStore:
         generation: int = row["MAX(generation)"]
         return generation
 
-    async def get_tree_root(self, tree_id: bytes32, *, lock: bool = True) -> (Root):
+    async def get_tree_root(self, tree_id: bytes32, *, lock: bool = True) -> Root:
         async with self.db_wrapper.locked_transaction(lock=lock):
             generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
             cursor = await self.db.execute(
