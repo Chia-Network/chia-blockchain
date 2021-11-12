@@ -339,11 +339,15 @@ class TestWalletRpc:
             address = await client.get_next_address("1", True)
             assert len(address) > 10
 
-            transactions = await client.get_transactions("1")
-            assert len(transactions) > 1
+            all_transactions = await client.get_transactions("1")
+            some_transactions = await client.get_transactions("1", 0, 5)
+            some_transactions_2 = await client.get_transactions("1", 5, 10)
+            assert len(all_transactions) > 1
+            assert some_transactions == all_transactions[len(all_transactions)-5:len(all_transactions)]
+            assert some_transactions_2 == all_transactions[len(all_transactions)-10:len(all_transactions)-5]
 
             transaction_count = await client.get_transaction_count("1")
-            assert transaction_count == len(transactions)
+            assert transaction_count == len(all_transactions)
 
             pks = await client.get_public_keys()
             assert len(pks) == 1

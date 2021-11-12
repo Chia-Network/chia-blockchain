@@ -353,10 +353,8 @@ class WalletTransactionStore:
         """
         limit = end - start
         cursor = await self.db_connection.execute(
-            f"SELECT * from transaction_record where wallet_id=? and confirmed_at_height not in"
-            f" (select confirmed_at_height from transaction_record order by confirmed_at_height"
-            f" ASC LIMIT {start})"
-            f" order by confirmed_at_height DESC LIMIT {limit}",
+            f"SELECT * from transaction_record where wallet_id=?"
+            f" order by confirmed_at_height DESC LIMIT {start}, {limit}",
             (wallet_id,),
         )
         rows = await cursor.fetchall()
