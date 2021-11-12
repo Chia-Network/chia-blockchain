@@ -62,7 +62,7 @@ Please use the latest release
 3. Withdraw coins from the staking address:
 
    ```
-   $ silicoin wallet send-from -s sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr -t $RECEIVER
+   $ sit wallet send-from -s sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr -t $RECEIVER
    ```
 
    Do a transaction to transfer the coins from the staking address to any receive address.
