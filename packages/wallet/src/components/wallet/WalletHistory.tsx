@@ -161,7 +161,7 @@ export default function WalletHistory(props: Props) {
     rowsPerPage,
     count,
     pageChange,
-  } = useWalletTransactions(walletId, 1);
+  } = useWalletTransactions(walletId, 10);
   const feeUnit = useCurrencyCode();
 
   const isLoading = isWalletTransactionsLoading || isWalletLoading;
