@@ -18,6 +18,7 @@ from chia.data_layer.data_layer_types import (
     Node,
     NodeType,
     Root,
+    ProofOfInclusion,
     ProofOfInclusionLayer,
     Side,
     TerminalNode,
@@ -649,22 +650,43 @@ class DataStore:
 
         return program
 
-    async def get_proof_of_inclusion_layers(
+    async def get_proof_of_inclusion_by_hash(
+        self,
+        node_hash: bytes32,
+        tree_id: bytes32,
+        *,
+        lock: bool = True,
+    ) -> ProofOfInclusion:
+        """Collect the information for a proof of inclusion of a hash in the Merkle
+        tree.
+        """
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            ancestors = await self.get_ancestors(node_hash=node_hash, tree_id=tree_id, lock=False)
+
+        if len(ancestors) > 0:
+            root_hash = ancestors[-1].hash
+        else:
+            root_hash = node_hash
+
+        layers: List[ProofOfInclusionLayer] = []
+        child_hash = node_hash
+        for parent in ancestors:
+            layer = ProofOfInclusionLayer.from_internal_node(internal_node=parent, traversal_child_hash=child_hash)
+            layers.append(layer)
+            child_hash = parent.hash
+
+        return ProofOfInclusion(node_hash=node_hash, root_hash=root_hash, layers=layers)
+
+    async def get_proof_of_inclusion_by_key(
         self,
         key: bytes,
         tree_id: bytes32,
         *,
         lock: bool = True,
-    ) -> List[ProofOfInclusionLayer]:
+    ) -> ProofOfInclusion:
+        """Collect the information for a proof of inclusion of a key and its value in
+        the Merkle tree.
+        """
         async with self.db_wrapper.locked_transaction(lock=lock):
-            key_node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
-            ancestors = await self.get_ancestors(node_hash=key_node.hash, tree_id=tree_id, lock=False)
-
-            layers: List[ProofOfInclusionLayer] = []
-            child: Union[TerminalNode, InternalNode] = key_node
-            for parent in ancestors:
-                layer = ProofOfInclusionLayer.from_internal_node(internal_node=parent, traversal_child_hash=child.hash)
-                layers.append(layer)
-                child = parent
-
-            return layers
+            node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
+            return await self.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id, lock=False)

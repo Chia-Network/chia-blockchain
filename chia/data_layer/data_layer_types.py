@@ -1,7 +1,7 @@
 import enum
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Dict, Optional, Tuple, Type, Union
+from typing import Dict, List, Optional, Tuple, Type, Union
 
 import aiosqlite as aiosqlite
 
@@ -80,6 +80,27 @@ class ProofOfInclusionLayer:
             other_hash=internal_node.other_child_hash(hash=traversal_child_hash),
             combined_hash=internal_node.hash,
         )
+
+
+other_side_to_bit = {Side.LEFT: 1, Side.RIGHT: 0}
+
+
+@dataclass(frozen=True)
+class ProofOfInclusion:
+    node_hash: bytes32
+    root_hash: bytes32
+    # children before parents
+    layers: List[ProofOfInclusionLayer]
+
+    def as_program(self) -> Program:
+        sibling_sides = sum(
+            other_side_to_bit[layer.other_hash_side] << index for index, layer in enumerate(self.layers)
+        )
+        sibling_hashes = [layer.other_hash for layer in self.layers]
+
+        # TODO: clvm needs py.typed, SExp.to() needs def to(class_: Type[T], v: CastableType) -> T:
+        #       Remove ignore when done.
+        return Program.to([sibling_sides, sibling_hashes])  # type: ignore[no-any-return]
 
 
 @dataclass(frozen=True)
