@@ -1,8 +1,7 @@
-import enum
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 import aiosqlite
 
@@ -33,7 +32,8 @@ from chia.util.db_wrapper import DBWrapper
 log = logging.getLogger(__name__)
 
 
-# TODO: review and replace all asserts
+# TODO: review exceptions for values that shouldn't be displayed
+# TODO: pick exception types other than Exception
 
 
 @dataclass
@@ -85,8 +85,6 @@ class DataStore:
         return self
 
     async def _insert_root(self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status) -> None:
-        # TODO: maybe verify a transaction is active
-
         existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
 
         if existing_generation is None:
@@ -106,50 +104,65 @@ class DataStore:
             },
         )
 
-    async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
-        # TODO: maybe verify a transaction is active
+    async def _insert_node(
+        self,
+        node_hash: str,
+        node_type: NodeType,
+        left_hash: Optional[str],
+        right_hash: Optional[str],
+        key: Optional[str],
+        value: Optional[str],
+    ) -> None:
+        # TODO: can we get sqlite to do this check?
+        values = {
+            "hash": node_hash,
+            "node_type": node_type,
+            "left": left_hash,
+            "right": right_hash,
+            "key": key,
+            "value": value,
+        }
 
+        cursor = await self.db.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
+        result = await cursor.fetchone()
+
+        if result is None:
+            await self.db.execute(
+                """
+                INSERT INTO node(hash, node_type, left, right, key, value)
+                VALUES(:hash, :node_type, :left, :right, :key, :value)
+                """,
+                values,
+            )
+        else:
+            result_dict = dict(result)
+            if result_dict != values:
+                raise Exception(f"Requested insertion of node with matching hash but other values differ: {node_hash}")
+
+    async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
         node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
 
-        # TODO: Review the OR IGNORE bit, should more be done to validate it is
-        #       "the same row"?
-        await self.db.execute(
-            """
-            INSERT OR IGNORE INTO node(hash, node_type, left, right, key, value)
-            VALUES(:hash, :node_type, :left, :right, :key, :value)
-            """,
-            {
-                "hash": node_hash.hex(),
-                "node_type": NodeType.INTERNAL,
-                "left": left_hash.hex(),
-                "right": right_hash.hex(),
-                "key": None,
-                "value": None,
-            },
+        await self._insert_node(
+            node_hash=node_hash.hex(),
+            node_type=NodeType.INTERNAL,
+            left_hash=left_hash.hex(),
+            right_hash=right_hash.hex(),
+            key=None,
+            value=None,
         )
 
         return node_hash
 
     async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
-        # TODO: maybe verify a transaction is active
-
         node_hash = Program.to((key, value)).get_tree_hash()
 
-        # TODO: Review the OR IGNORE bit, should more be done to validate it is
-        #       "the same row"?
-        await self.db.execute(
-            """
-            INSERT OR IGNORE INTO node(hash, node_type, left, right, key, value)
-            VALUES(:hash, :node_type, :left, :right, :key, :value)
-            """,
-            {
-                "hash": node_hash.hex(),
-                "node_type": NodeType.TERMINAL,
-                "left": None,
-                "right": None,
-                "key": key.hex(),
-                "value": value.hex(),
-            },
+        await self._insert_node(
+            node_hash=node_hash.hex(),
+            node_type=NodeType.TERMINAL,
+            left_hash=None,
+            right_hash=None,
+            key=key.hex(),
+            value=value.hex(),
         )
 
         return node_hash
@@ -286,8 +299,8 @@ class DataStore:
             )
             row = await cursor.fetchone()
 
-        # TODO: real handling
-        assert row is not None
+        if row is None:
+            raise Exception(f"No generations found for tree ID: {tree_id.hex()}")
         generation: int = row["MAX(generation)"]
         return generation
 
@@ -305,8 +318,8 @@ class DataStore:
     async def get_ancestors(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> List[InternalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
-            assert root.node_hash
-            assert root  # todo handle errors
+            if root.node_hash is None:
+                raise Exception(f"Root hash is unspecified for tree ID: {tree_id.hex()}")
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
@@ -384,57 +397,19 @@ class DataStore:
                     # the worst case it allows only 62 terminal nodes.
                     raise Exception("Tree depth exceeded 62, unable to guarantee left-to-right node order.")
                 node = row_to_node(row=row)
-                assert isinstance(node, TerminalNode)
+                if not isinstance(node, TerminalNode):
+                    raise Exception(f"Unexpected internal node found: {node.hash.hex()}")
                 terminal_nodes.append(node)
 
         return terminal_nodes
-
-    # async def _insert_program(self, program: Program) -> bytes32:
-    #     if not program.pair:
-    #         # TODO: use a more specific exception
-    #         raise Exception("must be a pair")
-    #
-    #     left = program.first()
-    #     right = program.rest()
-    #
-    #     how_many_pairs = sum(1 if o.pair is not None else 0 for o in [left, right])
-    #
-    #     if how_many_pairs == 1:
-    #         # TODO: use a better exception
-    #         raise Exception("not an allowed state, must terminate with key/value")
-    #
-    #     if how_many_pairs == 0:
-    #         node_hash = await self.insert_key_value(key=left, value=right)
-    #         return node_hash
-    #
-    #     # TODO: unroll the recursion
-    #     left_hash = self._insert_program(program=left)
-    #     right_hash = self._insert_program(program=right)
-    #
-    #     node_hash = Program.to([left_hash, right_hash]).get_tree_hash(left_hash, right_hash)
-    #
-    #     await self.db.execute(
-    #         "INSERT INTO node(hash, node_type, left, right, key, value)"
-    #         " VALUE(:hash, :node_type, :left, :right, :key, :value)",
-    #         {
-    #             "hash": node_hash.hex(),
-    #             "node_type": NodeType.INTERNAL,
-    #             "left": left_hash.hex(),
-    #             "right": right_hash.hex(),
-    #             "key": None,
-    #             "value": None,
-    #         },
-    #     )
-    #
-    #     return node_hash
 
     async def get_node_type(self, node_hash: bytes32, *, lock: bool = True) -> NodeType:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT node_type FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
             raw_node_type = await cursor.fetchone()
 
-        # TODO: real handling
-        assert raw_node_type is not None
+        if raw_node_type is None:
+            raise Exception(f"No node found for specified hash: {node_hash.hex()}")
 
         return NodeType(raw_node_type["node_type"])
 
@@ -484,12 +459,11 @@ class DataStore:
                 # TODO: is there any way the db can enforce this?
                 pairs = await self.get_pairs(tree_id=tree_id, lock=False)
                 if any(key == node.key for node in pairs):
-                    # TODO: more specific exception
-                    raise Exception("key already present")
+                    raise Exception(f"Key already present: {key.hex()}")
 
             if reference_node_hash is None:
-                # TODO: tidy up and real exceptions
-                assert was_empty
+                if not was_empty:
+                    raise Exception(f"Reference node hash must be specified for non-empty tree: {tree_id.hex()}")
             else:
                 reference_node_type = await self.get_node_type(node_hash=reference_node_hash, lock=False)
                 if reference_node_type == NodeType.INTERNAL:
@@ -499,15 +473,17 @@ class DataStore:
             new_terminal_node_hash = await self._insert_terminal_node(key=key, value=value)
 
             if was_empty:
-                # TODO: a real exception
-                assert side is None
+                if side is not None:
+                    raise Exception("Tree was empty so side must be unspecified, got: {side!r}")
 
                 await self._insert_root(tree_id=tree_id, node_hash=new_terminal_node_hash, status=status)
             else:
-                # TODO: a real exception
-                assert side is not None
-                assert reference_node_hash is not None
-                assert root.node_hash  # todo handle errors
+                if side is None:
+                    raise Exception("Tree was not empty, side must be specified.")
+                if reference_node_hash is None:
+                    raise Exception("Tree was not empty, reference node hash must be specified.")
+                if root.node_hash is None:
+                    raise Exception("Internal error.")
 
                 ancestors = await self.get_ancestors(node_hash=reference_node_hash, tree_id=tree_id, lock=False)
 
@@ -525,8 +501,9 @@ class DataStore:
 
                 # create updated replacements for the rest of the internal nodes
                 for ancestor in ancestors:
-                    # TODO: really handle
-                    assert isinstance(ancestor, InternalNode)
+                    if not isinstance(ancestor, InternalNode):
+                        raise Exception(f"Expected an internal node but got: {type(ancestor).__name__}")
+
                     if ancestor.left_hash == traversal_node_hash:
                         left = new_hash
                         right = ancestor.right_hash
@@ -573,11 +550,8 @@ class DataStore:
                     left_hash = ancestor.left_hash
                     right_hash = new_child_hash
                 else:
-                    # TODO real checking and errors
-                    raise Exception("internal error")
+                    raise Exception("Internal error.")
 
-                # TODO: handle if it already exists, recheck other places too.
-                #       INSERT OR IGNORE?
                 new_child_hash = await self._insert_internal_node(left_hash=left_hash, right_hash=right_hash)
 
                 old_child_hash = ancestor.hash
@@ -594,27 +568,15 @@ class DataStore:
             if node.key == key:
                 return node
 
-        # TODO: fill out the exception
-        raise Exception("node not found")
-
-    async def get_node_by_key_bytes(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            nodes = await self.get_pairs(tree_id=tree_id, lock=False)
-
-        for node in nodes:
-            if node.key == key:
-                return node
-
-        # TODO: fill out the exception
-        raise Exception("node not found")
+        raise Exception(f"Key not found: {key.hex()}")
 
     async def get_node(self, node_hash: bytes32, *, lock: bool = True) -> Node:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
             row = await cursor.fetchone()
 
-        # TODO: really handle
-        assert row is not None
+        if row is None:
+            raise Exception(f"Node not found for requested hash: {node_hash.hex()}")
 
         node = row_to_node(row=row)
         return node
@@ -646,6 +608,7 @@ class DataStore:
 
             root_node = hash_to_node[root_node.hash]
             # TODO: clvm needs py.typed, SExp.to() needs def to(class_: Type[T], v: CastableType) -> T:
+            #       Remove the type hint.
             program: Program = Program.to(root_node)
 
         return program
