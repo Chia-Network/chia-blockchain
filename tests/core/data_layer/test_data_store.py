@@ -187,6 +187,48 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
 
 
 @pytest.mark.asyncio
+async def test_insert_internal_node_does_nothing_if_matching(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    kv_node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
+    ancestors = await data_store.get_ancestors(node_hash=kv_node.hash, tree_id=tree_id)
+    parent = ancestors[0]
+
+    async with data_store.db_wrapper.locked_transaction():
+        cursor = await data_store.db.execute("SELECT * FROM node")
+        before = await cursor.fetchall()
+
+    async with data_store.db_wrapper.locked_transaction():
+        await data_store._insert_internal_node(left_hash=parent.left_hash, right_hash=parent.right_hash)
+
+    async with data_store.db_wrapper.locked_transaction():
+        cursor = await data_store.db.execute("SELECT * FROM node")
+        after = await cursor.fetchall()
+
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    kv_node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
+
+    async with data_store.db_wrapper.locked_transaction():
+        cursor = await data_store.db.execute("SELECT * FROM node")
+        before = await cursor.fetchall()
+
+    async with data_store.db_wrapper.locked_transaction():
+        await data_store._insert_terminal_node(key=kv_node.key, value=kv_node.value)
+
+    async with data_store.db_wrapper.locked_transaction():
+        cursor = await data_store.db.execute("SELECT * FROM node")
+        after = await cursor.fetchall()
+
+    assert after == before
+
+
+@pytest.mark.asyncio
 async def test_build_a_tree(
     data_store: DataStore,
     tree_id: bytes32,
@@ -210,18 +252,6 @@ async def test_get_node_by_key(data_store: DataStore, tree_id: bytes32) -> None:
     # TODO: make a nicer relationship between the hash and the key
 
     actual = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
-    assert actual.hash == key_node_hash
-
-
-@pytest.mark.asyncio
-async def test_get_node_by_key_bytes(data_store: DataStore, tree_id: bytes32) -> None:
-    example = await add_0123_example(data_store=data_store, tree_id=tree_id)
-
-    key_node_hash = example.terminal_nodes[2]
-
-    # TODO: make a nicer relationship between the hash and the key
-
-    actual = await data_store.get_node_by_key_bytes(key=Program.to(b"\x02").as_bin(), tree_id=tree_id)
     assert actual.hash == key_node_hash
 
 
