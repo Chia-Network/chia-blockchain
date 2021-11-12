@@ -558,8 +558,8 @@ async def test_check_internal_key_value_are_null(
 ) -> None:
     async with raw_data_store.db_wrapper.locked_transaction():
         await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, key, value,status) VALUES(:hash, :node_type, :key, :value,:status)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **key_value, "status": Status.COMMITTED.value},
+            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
+            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **key_value},
         )
 
     with pytest.raises(
@@ -582,13 +582,13 @@ async def test_check_internal_left_right_are_bytes32(raw_data_store: DataStore, 
     async with raw_data_store.db_wrapper.locked_transaction():
         # needed to satisfy foreign key constraints
         await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type,status) VALUES(:hash, :node_type,:status)",
-            {"hash": b"abc".hex(), "node_type": NodeType.TERMINAL, "status": Status.COMMITTED.value},
+            "INSERT INTO node(hash, node_type) VALUES(:hash, :node_type)",
+            {"hash": b"abc".hex(), "node_type": NodeType.TERMINAL},
         )
 
         await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, left, right,status) VALUES(:hash, :node_type, :left, :right,:status)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **left_right, "status": Status.COMMITTED.value},
+            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
+            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **left_right},
         )
 
     with pytest.raises(
@@ -610,8 +610,8 @@ async def test_check_internal_left_right_are_bytes32(raw_data_store: DataStore, 
 async def test_check_terminal_left_right_are_null(raw_data_store: DataStore, left_right: Dict[str, str]) -> None:
     async with raw_data_store.db_wrapper.locked_transaction():
         await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, left, right,status) VALUES(:hash, :node_type, :left, :right, :status)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.TERMINAL, **left_right, "status": Status.COMMITTED.value},
+            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
+            {"hash": a_bytes_32.hex(), "node_type": NodeType.TERMINAL, **left_right},
         )
 
     with pytest.raises(
@@ -628,7 +628,10 @@ async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataSto
     async with raw_data_store.db_wrapper.locked_transaction():
         for generation in range(1, 5):
             await raw_data_store.db.execute(
-                "INSERT INTO root(tree_id, generation, node_hash,status) VALUES(:tree_id, :generation, :node_hash,:status)",
+                """
+                INSERT INTO root(tree_id, generation, node_hash, status)
+                VALUES(:tree_id, :generation, :node_hash, :status)
+                """,
                 {
                     "tree_id": tree_id.hex(),
                     "generation": generation,
@@ -651,7 +654,10 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
     async with raw_data_store.db_wrapper.locked_transaction():
         for generation in [*range(5), *range(6, 10)]:
             await raw_data_store.db.execute(
-                "INSERT INTO root(tree_id, generation, node_hash,status) VALUES(:tree_id, :generation, :node_hash,:status)",
+                """
+                INSERT INTO root(tree_id, generation, node_hash, status)
+                VALUES(:tree_id, :generation, :node_hash, :status)
+                """,
                 {
                     "tree_id": tree_id.hex(),
                     "generation": generation,
@@ -671,13 +677,12 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
 async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
     async with raw_data_store.db_wrapper.locked_transaction():
         await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, left, right,status) VALUES(:hash, :node_type, :left, :right,:status)",
+            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
             {
                 "hash": a_bytes_32.hex(),
                 "node_type": NodeType.INTERNAL,
                 "left": a_bytes_32.hex(),
                 "right": a_bytes_32.hex(),
-                "status": Status.COMMITTED.value,
             },
         )
 
@@ -692,13 +697,12 @@ async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
 async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
     async with raw_data_store.db_wrapper.locked_transaction():
         await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, key, value,status) VALUES(:hash, :node_type, :key, :value,:status)",
+            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
             {
                 "hash": a_bytes_32.hex(),
                 "node_type": NodeType.TERMINAL,
                 "key": Program.to((1, 2)).as_bin().hex(),
                 "value": Program.to((1, 2)).as_bin().hex(),
-                "status": Status.COMMITTED.value,
             },
         )
 
