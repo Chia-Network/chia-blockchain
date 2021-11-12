@@ -104,10 +104,19 @@ class WalletRpcClient(RpcClient):
     async def get_transactions(
         self,
         wallet_id: str,
+        start: int = None,
+        end: int = None,
     ) -> List[TransactionRecord]:
+        request = {"wallet_id": wallet_id}
+
+        if start is not None:
+            request["start"] = start
+        if end is not None:
+            request["end"] = end
+
         res = await self.fetch(
             "get_transactions",
-            {"wallet_id": wallet_id},
+            request,
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in res["transactions"]]
 
