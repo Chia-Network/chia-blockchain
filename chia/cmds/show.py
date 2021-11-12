@@ -118,7 +118,7 @@ async def show_async(
 
                 host = con["peer_host"]
                 # Strip IPv6 brackets
-                host = host.lstrip("[").rstrip("]")
+                host = host.strip("[]")
                 # Nodetype length is 9 because INTRODUCER will be deprecated
                 if NodeType(con["type"]) is NodeType.FULL_NODE:
                     peak_height = con["peak_height"]
