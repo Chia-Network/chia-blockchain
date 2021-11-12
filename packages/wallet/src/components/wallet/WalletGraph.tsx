@@ -224,7 +224,7 @@ type Props = {
 
 export default function WalletGraph(props: Props) {
   const { walletId, height } = props;
-  const { transactions, isLoading: isWalletTransactionsLoading } = useWalletTransactions(walletId);
+  const { transactions, isLoading: isWalletTransactionsLoading } = useWalletTransactions(walletId, 50);
   const { 
     data: walletBalance, 
     isLoading: isWalletBalanceLoading,

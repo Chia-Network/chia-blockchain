@@ -26,7 +26,7 @@ msgstr ""
 #~ msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 #~ msgstr "*チアのブロックをさらに調べたいですか？オープンソース開発者に提供していただいた <0>Chia Explorer</0> を是非ご覧ください。"
 
-#: src/components/wallet/WalletHistory.tsx:106
+#: src/components/wallet/WalletHistory.tsx:111
 msgid "+"
 msgstr ""
 
@@ -42,7 +42,7 @@ msgstr ""
 #~ msgid "+ Add Wallet"
 #~ msgstr "+ ウォレットを追加"
 
-#: src/components/wallet/WalletHistory.tsx:105
+#: src/components/wallet/WalletHistory.tsx:110
 msgid "-"
 msgstr ""
 
@@ -161,7 +161,11 @@ msgstr "アドレス"
 msgid "Address / Puzzle hash"
 msgstr "アドレス・パズルハッシュ値"
 
-#: src/components/wallet/WalletHistory.tsx:119
+#: src/components/wallet/WalletHistory.tsx:196
+msgid "All"
+msgstr ""
+
+#: src/components/wallet/WalletHistory.tsx:124
 #: src/components/wallet/WalletSend.tsx:160
 #: src/components/wallet/cat/WalletCATSend.tsx:203
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
@@ -231,7 +235,7 @@ msgstr ""
 #~ msgstr "プールコントラクトアドレスから自動生成された名前"
 
 #: src/components/selectKey/SelectKey.tsx:35
-#: src/components/selectKey/SelectKeyItem.tsx:83
+#: src/components/selectKey/SelectKeyItem.tsx:82
 msgid "Back"
 msgstr "戻る"
 
@@ -328,7 +332,7 @@ msgstr ""
 #~ msgid "CCListItems.title"
 #~ msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:136
+#: src/components/selectKey/SelectKeyItem.tsx:135
 msgid "Can be backed up to mnemonic seed"
 msgstr "合言葉でバックアップ作成可能"
 
@@ -457,11 +461,11 @@ msgstr "了承"
 msgid "Confirmation"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:73
+#: src/components/wallet/WalletHistory.tsx:75
 msgid "Confirmed"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:218
+#: src/components/wallet/WalletHistory.tsx:238
 msgid "Confirmed at Height"
 msgstr ""
 
@@ -696,7 +700,7 @@ msgstr ""
 msgid "Custom"
 msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:151
+#: src/components/selectKey/SelectKeyItem.tsx:150
 msgid "DANGER: permanently delete private key"
 msgstr "！危険！: 秘密鍵を永久的に削除"
 
@@ -708,7 +712,7 @@ msgstr "DID Wallet"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:92
+#: src/components/wallet/WalletHistory.tsx:97
 msgid "Date"
 msgstr "日時"
 
@@ -717,7 +721,7 @@ msgstr "日時"
 #~ msgstr "遅延時間"
 
 #: src/components/selectKey/SelectKey.tsx:34
-#: src/components/selectKey/SelectKeyItem.tsx:82
+#: src/components/selectKey/SelectKeyItem.tsx:81
 #: src/components/wallet/WalletHeader.tsx:40
 #: src/components/wallet/did/WalletDID.tsx:449
 #: src/components/wallet/did/WalletDID.tsx:862
@@ -744,7 +748,7 @@ msgstr "全ての鍵を削除"
 #~ msgid "Delete key"
 #~ msgstr "Delete key"
 
-#: src/components/selectKey/SelectKeyItem.tsx:81
+#: src/components/selectKey/SelectKeyItem.tsx:80
 msgid "Delete key {fingerprint}"
 msgstr "鍵 {fingerprint} を削除"
 
@@ -752,7 +756,7 @@ msgstr "鍵 {fingerprint} を削除"
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "全ての鍵を削除するとどれも復元することができなくなりますので、必ずバックアップを取ってください。本当に続行しますか？"
 
-#: src/components/selectKey/SelectKeyItem.tsx:114
+#: src/components/selectKey/SelectKeyItem.tsx:113
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "鍵を削除すると復元することができませんので、必ずバックアップを取ってください。本当に続行しますか？"
 
@@ -938,7 +942,7 @@ msgstr ""
 #~ msgid "Farming Status"
 #~ msgstr "耕作の状態"
 
-#: src/components/wallet/WalletHistory.tsx:129
+#: src/components/wallet/WalletHistory.tsx:134
 #: src/components/wallet/WalletSend.tsx:171
 #: src/components/wallet/cat/WalletCATSend.tsx:216
 #: src/components/wallet/create/createRLAdmin.jsx:244
@@ -1093,7 +1097,7 @@ msgstr "合言葉 (24語) で鍵をインポート"
 #~ msgid "In Progress"
 #~ msgstr "進行中"
 
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 msgid "Incoming"
 msgstr "入金"
 
@@ -1292,12 +1296,12 @@ msgstr ""
 #~ msgid "Manage Your Farming Rewards Target Addresses"
 #~ msgstr "あなたの耕作報酬の宛先アドレスを管理"
 
-#: src/components/wallet/WalletHistory.tsx:78
+#: src/components/wallet/WalletHistory.tsx:80
 #: src/components/wallet/cat/WalletCATSend.tsx:228
 msgid "Memo"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:222
+#: src/components/wallet/WalletHistory.tsx:242
 msgid "Memos"
 msgstr ""
 
@@ -1375,7 +1379,7 @@ msgstr "この鍵はインポートされているため、24語の種があり�
 #~ msgid "No blocks farmed yet"
 #~ msgstr "まだ収穫ブロックはありません"
 
-#: src/components/wallet/WalletHistory.tsx:254
+#: src/components/wallet/WalletHistory.tsx:273
 msgid "No previous transactions"
 msgstr "履歴無し"
 
@@ -1399,8 +1403,8 @@ msgstr "ノード ID"
 #~ msgid "None of your plots have passed the plot filter yet."
 #~ msgstr "お持ちの耕地は現在、どれも耕地フィルターを通過できていません。"
 
-#: src/components/wallet/WalletHistory.tsx:214
-#: src/components/wallet/WalletHistory.tsx:219
+#: src/components/wallet/WalletHistory.tsx:234
+#: src/components/wallet/WalletHistory.tsx:239
 msgid "Not Available"
 msgstr "該当なし"
 
@@ -1466,7 +1470,7 @@ msgstr ""
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 #~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 msgid "Outgoing"
 msgstr "出金"
 
@@ -1486,7 +1490,7 @@ msgstr "出金"
 #~ msgid "Peak Time"
 #~ msgstr "先端の日時"
 
-#: src/components/wallet/WalletHistory.tsx:75
+#: src/components/wallet/WalletHistory.tsx:77
 msgid "Pending"
 msgstr "保留中"
 
@@ -1843,7 +1847,7 @@ msgstr "ポート"
 #~ msgid "Previous Sub Block Hash"
 #~ msgstr "Previous Sub Block Hash"
 
-#: src/components/selectKey/SelectKeyItem.tsx:131
+#: src/components/selectKey/SelectKeyItem.tsx:130
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "公開指紋 {fingerprint} に対応する秘密鍵"
 
@@ -2011,6 +2015,10 @@ msgstr "バックアップからカラードコイン・その他スマートウ
 #~ msgid "Restore Smart Wallets From Backup"
 #~ msgstr ""
 
+#: src/components/wallet/WalletHistory.tsx:83
+msgid "Retire"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
 #~ msgid "SB Height"
@@ -2036,7 +2044,7 @@ msgstr "保存"
 #~ msgid "Second temporary folder location"
 #~ msgstr "2つ目の一時フォルダの場所"
 
-#: src/components/selectKey/SelectKeyItem.tsx:140
+#: src/components/selectKey/SelectKeyItem.tsx:139
 msgid "See private key"
 msgstr "秘密鍵を表示"
 
@@ -2495,7 +2503,7 @@ msgstr "これが全残高 + 保留中残高です: 全ての保留中の取引�
 #~ msgid "Timestamp"
 #~ msgstr "タイムスタンプ"
 
-#: src/components/wallet/WalletHistory.tsx:84
+#: src/components/wallet/WalletHistory.tsx:89
 msgid "To"
 msgstr "宛先"
 
@@ -2591,7 +2599,7 @@ msgstr ""
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:172
+#: src/components/wallet/WalletHistory.tsx:191
 msgid "Transactions"
 msgstr ""
 
@@ -2767,15 +2775,15 @@ msgstr "ウォレット"
 #~ msgid "Want to have a delay before the next plot starts?"
 #~ msgstr "次の耕地を耕しはじめる前に遅延時間を挟みますか？"
 
-#: src/components/selectKey/SelectKeyItem.tsx:107
+#: src/components/selectKey/SelectKeyItem.tsx:106
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
 msgstr "注意: この鍵を使用するウォレットは残高がゼロでない可能性があります。この鍵を削除するとウォレットを失くすかもしれません。"
 
-#: src/components/selectKey/SelectKeyItem.tsx:89
+#: src/components/selectKey/SelectKeyItem.tsx:88
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
 msgstr "注意: この鍵は耕作報酬アドレスに使われています。この鍵を削除すると、今後の耕作報酬を失くすかもしれません。"
 
-#: src/components/selectKey/SelectKeyItem.tsx:98
+#: src/components/selectKey/SelectKeyItem.tsx:97
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr "注意: この鍵はプール報酬アドレスに使われています。この鍵を削除すると、今後のプール報酬を失くすかもしれません。"
 

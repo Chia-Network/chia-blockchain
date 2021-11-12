@@ -26,7 +26,7 @@ msgstr ""
 #~ msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 #~ msgstr "*¿Quieres explorar más los bloques de Chia? Échale un vistazo a <0>Chia Explorer</0> construido en código abierto."
 
-#: src/components/wallet/WalletHistory.tsx:106
+#: src/components/wallet/WalletHistory.tsx:111
 msgid "+"
 msgstr ""
 
@@ -42,7 +42,7 @@ msgstr ""
 #~ msgid "+ Add Wallet"
 #~ msgstr "+ Añadir Monedero"
 
-#: src/components/wallet/WalletHistory.tsx:105
+#: src/components/wallet/WalletHistory.tsx:110
 msgid "-"
 msgstr ""
 
@@ -161,7 +161,11 @@ msgstr "Dirección"
 msgid "Address / Puzzle hash"
 msgstr "Dirección / Enigma hash"
 
-#: src/components/wallet/WalletHistory.tsx:119
+#: src/components/wallet/WalletHistory.tsx:196
+msgid "All"
+msgstr ""
+
+#: src/components/wallet/WalletHistory.tsx:124
 #: src/components/wallet/WalletSend.tsx:160
 #: src/components/wallet/cat/WalletCATSend.tsx:203
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
@@ -231,7 +235,7 @@ msgstr ""
 #~ msgstr "Nombre generado automáticamente desde la dirección del contrato del fondo"
 
 #: src/components/selectKey/SelectKey.tsx:35
-#: src/components/selectKey/SelectKeyItem.tsx:83
+#: src/components/selectKey/SelectKeyItem.tsx:82
 msgid "Back"
 msgstr "Atrás"
 
@@ -328,7 +332,7 @@ msgstr ""
 #~ msgid "CCListItems.title"
 #~ msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:136
+#: src/components/selectKey/SelectKeyItem.tsx:135
 msgid "Can be backed up to mnemonic seed"
 msgstr "Puede respaldarse en una semilla mnemotécnica"
 
@@ -457,11 +461,11 @@ msgstr "Confirmar"
 msgid "Confirmation"
 msgstr "Confirmación"
 
-#: src/components/wallet/WalletHistory.tsx:73
+#: src/components/wallet/WalletHistory.tsx:75
 msgid "Confirmed"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:218
+#: src/components/wallet/WalletHistory.tsx:238
 msgid "Confirmed at Height"
 msgstr ""
 
@@ -696,7 +700,7 @@ msgstr ""
 msgid "Custom"
 msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:151
+#: src/components/selectKey/SelectKeyItem.tsx:150
 msgid "DANGER: permanently delete private key"
 msgstr "ADVERTENCIA: eliminar llave privada permanentemente"
 
@@ -708,7 +712,7 @@ msgstr "DID Wallet"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:92
+#: src/components/wallet/WalletHistory.tsx:97
 msgid "Date"
 msgstr "Fecha"
 
@@ -717,7 +721,7 @@ msgstr "Fecha"
 #~ msgstr "Retraso"
 
 #: src/components/selectKey/SelectKey.tsx:34
-#: src/components/selectKey/SelectKeyItem.tsx:82
+#: src/components/selectKey/SelectKeyItem.tsx:81
 #: src/components/wallet/WalletHeader.tsx:40
 #: src/components/wallet/did/WalletDID.tsx:449
 #: src/components/wallet/did/WalletDID.tsx:862
@@ -744,7 +748,7 @@ msgstr "Borrar todas las llaves"
 #~ msgid "Delete key"
 #~ msgstr "Delete key"
 
-#: src/components/selectKey/SelectKeyItem.tsx:81
+#: src/components/selectKey/SelectKeyItem.tsx:80
 msgid "Delete key {fingerprint}"
 msgstr "Eliminar llave {fingerprint}"
 
@@ -752,7 +756,7 @@ msgstr "Eliminar llave {fingerprint}"
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Borrar todas las llaves eliminará permanentemente las llaves de su ordenador, asegúrese de tener una copia de seguridad. ¿Esta seguro de que quiere continuar?"
 
-#: src/components/selectKey/SelectKeyItem.tsx:114
+#: src/components/selectKey/SelectKeyItem.tsx:113
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Borrar la llave eliminará permanentemente la llave de su ordenador, asegurase de tener una copia de seguridad. ¿Está seguro de que quiere continuar?"
 
@@ -938,7 +942,7 @@ msgstr "Llave Pública de Granjero:"
 #~ msgid "Farming Status"
 #~ msgstr "Estado de Cultivo"
 
-#: src/components/wallet/WalletHistory.tsx:129
+#: src/components/wallet/WalletHistory.tsx:134
 #: src/components/wallet/WalletSend.tsx:171
 #: src/components/wallet/cat/WalletCATSend.tsx:216
 #: src/components/wallet/create/createRLAdmin.jsx:244
@@ -1093,7 +1097,7 @@ msgstr "Importar desde Mnemotécnica (24 palabras)"
 #~ msgid "In Progress"
 #~ msgstr "En Progreso"
 
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 msgid "Incoming"
 msgstr "Entrante"
 
@@ -1292,12 +1296,12 @@ msgstr ""
 #~ msgid "Manage Your Farming Rewards Target Addresses"
 #~ msgstr "Administrar sus Direcciones Objetivo de Recompensas de Cultivo"
 
-#: src/components/wallet/WalletHistory.tsx:78
+#: src/components/wallet/WalletHistory.tsx:80
 #: src/components/wallet/cat/WalletCATSend.tsx:228
 msgid "Memo"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:222
+#: src/components/wallet/WalletHistory.tsx:242
 msgid "Memos"
 msgstr ""
 
@@ -1375,7 +1379,7 @@ msgstr "No hay semilla de 24 palabras, ya que esta llave es importada."
 #~ msgid "No blocks farmed yet"
 #~ msgstr "Aún no hay bloques cultivados"
 
-#: src/components/wallet/WalletHistory.tsx:254
+#: src/components/wallet/WalletHistory.tsx:273
 msgid "No previous transactions"
 msgstr "No hay transacciones previas"
 
@@ -1399,8 +1403,8 @@ msgstr "ID de Nodo"
 #~ msgid "None of your plots have passed the plot filter yet."
 #~ msgstr "Ninguna de sus parcelas a pasado un filtro de parcela aún."
 
-#: src/components/wallet/WalletHistory.tsx:214
-#: src/components/wallet/WalletHistory.tsx:219
+#: src/components/wallet/WalletHistory.tsx:234
+#: src/components/wallet/WalletHistory.tsx:239
 msgid "Not Available"
 msgstr "No Disponible"
 
@@ -1466,7 +1470,7 @@ msgstr ""
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 #~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 msgid "Outgoing"
 msgstr "Enviado"
 
@@ -1486,7 +1490,7 @@ msgstr "Enviado"
 #~ msgid "Peak Time"
 #~ msgstr "Hora del Pico"
 
-#: src/components/wallet/WalletHistory.tsx:75
+#: src/components/wallet/WalletHistory.tsx:77
 msgid "Pending"
 msgstr "Pendiente"
 
@@ -1843,7 +1847,7 @@ msgstr "Puerto"
 #~ msgid "Previous Sub Block Hash"
 #~ msgstr "Previous Sub Block Hash"
 
-#: src/components/selectKey/SelectKeyItem.tsx:131
+#: src/components/selectKey/SelectKeyItem.tsx:130
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Llave privada con huella digital pública {fingerprint}"
 
@@ -2011,6 +2015,10 @@ msgstr "Restaurar Metadatos de Monedas de Color y otras Carteras Inteligentes de
 #~ msgid "Restore Smart Wallets From Backup"
 #~ msgstr ""
 
+#: src/components/wallet/WalletHistory.tsx:83
+msgid "Retire"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
 #~ msgid "SB Height"
@@ -2036,7 +2044,7 @@ msgstr "Guardar"
 #~ msgid "Second temporary folder location"
 #~ msgstr "Ubicación de carpeta temporal secundaria"
 
-#: src/components/selectKey/SelectKeyItem.tsx:140
+#: src/components/selectKey/SelectKeyItem.tsx:139
 msgid "See private key"
 msgstr "Ver llave privada"
 
@@ -2495,7 +2503,7 @@ msgstr "Este es el saldo total + saldo pendiente: es lo que será su saldo despu
 #~ msgid "Timestamp"
 #~ msgstr "Marca de tiempo"
 
-#: src/components/wallet/WalletHistory.tsx:84
+#: src/components/wallet/WalletHistory.tsx:89
 msgid "To"
 msgstr "A"
 
@@ -2591,7 +2599,7 @@ msgstr ""
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:172
+#: src/components/wallet/WalletHistory.tsx:191
 msgid "Transactions"
 msgstr ""
 
@@ -2767,15 +2775,15 @@ msgstr "Carteras"
 #~ msgid "Want to have a delay before the next plot starts?"
 #~ msgstr "¿Quiere tener un retraso antes de que comience la próxima parcela?"
 
-#: src/components/selectKey/SelectKeyItem.tsx:107
+#: src/components/selectKey/SelectKeyItem.tsx:106
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
 msgstr "Advertencia: Esta clave se utiliza para una cartera que puede tener un saldo distinto de cero. Al eliminar esta clave puede perder el acceso a esta cartera"
 
-#: src/components/selectKey/SelectKeyItem.tsx:89
+#: src/components/selectKey/SelectKeyItem.tsx:88
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
 msgstr "Advertencia: Esta llave se utiliza para tu dirección de recompensas de recolección. Al eliminar esta clave puedes perder el acceso a futuras recompensas"
 
-#: src/components/selectKey/SelectKeyItem.tsx:98
+#: src/components/selectKey/SelectKeyItem.tsx:97
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr "Advertencia: Esta llave se utiliza para la dirección de recompensas de fondo. Al eliminar esta clave puedes perder el acceso a futuras recompensas de fondo"
 

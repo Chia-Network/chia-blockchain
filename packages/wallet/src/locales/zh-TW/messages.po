@@ -26,7 +26,7 @@ msgstr ""
 #~ msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 #~ msgstr "＊想更進一步探索 Chia 區塊鍵？看看開源開發者打造的 <0>Chia Explorer</0>"
 
-#: src/components/wallet/WalletHistory.tsx:106
+#: src/components/wallet/WalletHistory.tsx:111
 msgid "+"
 msgstr ""
 
@@ -42,7 +42,7 @@ msgstr ""
 #~ msgid "+ Add Wallet"
 #~ msgstr "+ 新增錢包"
 
-#: src/components/wallet/WalletHistory.tsx:105
+#: src/components/wallet/WalletHistory.tsx:110
 msgid "-"
 msgstr ""
 
@@ -161,7 +161,11 @@ msgstr "位址"
 msgid "Address / Puzzle hash"
 msgstr "位址 / 拼圖雜湊值"
 
-#: src/components/wallet/WalletHistory.tsx:119
+#: src/components/wallet/WalletHistory.tsx:196
+msgid "All"
+msgstr ""
+
+#: src/components/wallet/WalletHistory.tsx:124
 #: src/components/wallet/WalletSend.tsx:160
 #: src/components/wallet/cat/WalletCATSend.tsx:203
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
@@ -231,7 +235,7 @@ msgstr ""
 #~ msgstr "自動從農會合約地址建立名稱"
 
 #: src/components/selectKey/SelectKey.tsx:35
-#: src/components/selectKey/SelectKeyItem.tsx:83
+#: src/components/selectKey/SelectKeyItem.tsx:82
 msgid "Back"
 msgstr "返回"
 
@@ -328,7 +332,7 @@ msgstr ""
 #~ msgid "CCListItems.title"
 #~ msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:136
+#: src/components/selectKey/SelectKeyItem.tsx:135
 msgid "Can be backed up to mnemonic seed"
 msgstr "可以備份到助記符號種子"
 
@@ -457,11 +461,11 @@ msgstr "確認"
 msgid "Confirmation"
 msgstr "確認"
 
-#: src/components/wallet/WalletHistory.tsx:73
+#: src/components/wallet/WalletHistory.tsx:75
 msgid "Confirmed"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:218
+#: src/components/wallet/WalletHistory.tsx:238
 msgid "Confirmed at Height"
 msgstr ""
 
@@ -696,7 +700,7 @@ msgstr ""
 msgid "Custom"
 msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:151
+#: src/components/selectKey/SelectKeyItem.tsx:150
 msgid "DANGER: permanently delete private key"
 msgstr "危險：將永久刪除私鑰"
 
@@ -708,7 +712,7 @@ msgstr "DID Wallet"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:92
+#: src/components/wallet/WalletHistory.tsx:97
 msgid "Date"
 msgstr "日期"
 
@@ -717,7 +721,7 @@ msgstr "日期"
 #~ msgstr "延遲"
 
 #: src/components/selectKey/SelectKey.tsx:34
-#: src/components/selectKey/SelectKeyItem.tsx:82
+#: src/components/selectKey/SelectKeyItem.tsx:81
 #: src/components/wallet/WalletHeader.tsx:40
 #: src/components/wallet/did/WalletDID.tsx:449
 #: src/components/wallet/did/WalletDID.tsx:862
@@ -744,7 +748,7 @@ msgstr "刪除全部金鑰"
 #~ msgid "Delete key"
 #~ msgstr "Delete key"
 
-#: src/components/selectKey/SelectKeyItem.tsx:81
+#: src/components/selectKey/SelectKeyItem.tsx:80
 msgid "Delete key {fingerprint}"
 msgstr "刪除帳號指紋：{fingerprint}"
 
@@ -752,7 +756,7 @@ msgstr "刪除帳號指紋：{fingerprint}"
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "刪除全部金鑰將會永久從你的電腦中移除，請確保你有備份。你確定要繼續？"
 
-#: src/components/selectKey/SelectKeyItem.tsx:114
+#: src/components/selectKey/SelectKeyItem.tsx:113
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "刪除此金鑰將會永久從你的電腦中移除，請確保你有備份。你確定要繼續？"
 
@@ -938,7 +942,7 @@ msgstr "農夫公鑰:"
 #~ msgid "Farming Status"
 #~ msgstr "耕種狀態"
 
-#: src/components/wallet/WalletHistory.tsx:129
+#: src/components/wallet/WalletHistory.tsx:134
 #: src/components/wallet/WalletSend.tsx:171
 #: src/components/wallet/cat/WalletCATSend.tsx:216
 #: src/components/wallet/create/createRLAdmin.jsx:244
@@ -1093,7 +1097,7 @@ msgstr "從助記詞(24 字) 匯入"
 #~ msgid "In Progress"
 #~ msgstr "進行中"
 
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 msgid "Incoming"
 msgstr "轉入"
 
@@ -1292,12 +1296,12 @@ msgstr "管理還原的 DID"
 #~ msgid "Manage Your Farming Rewards Target Addresses"
 #~ msgstr "管理你的耕種獎勵目標地址"
 
-#: src/components/wallet/WalletHistory.tsx:78
+#: src/components/wallet/WalletHistory.tsx:80
 #: src/components/wallet/cat/WalletCATSend.tsx:228
 msgid "Memo"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:222
+#: src/components/wallet/WalletHistory.tsx:242
 msgid "Memos"
 msgstr ""
 
@@ -1375,7 +1379,7 @@ msgstr "由這個鑰匙是匯入的，沒有 24 個字種子。"
 #~ msgid "No blocks farmed yet"
 #~ msgstr "還沒有耕種收穫到的區塊"
 
-#: src/components/wallet/WalletHistory.tsx:254
+#: src/components/wallet/WalletHistory.tsx:273
 msgid "No previous transactions"
 msgstr "沒有上一個交易"
 
@@ -1399,8 +1403,8 @@ msgstr "節點 ID"
 #~ msgid "None of your plots have passed the plot filter yet."
 #~ msgstr "你還沒有任何的耕地通過篩選。"
 
-#: src/components/wallet/WalletHistory.tsx:214
-#: src/components/wallet/WalletHistory.tsx:219
+#: src/components/wallet/WalletHistory.tsx:234
+#: src/components/wallet/WalletHistory.tsx:239
 msgid "Not Available"
 msgstr "尚無"
 
@@ -1466,7 +1470,7 @@ msgstr "只允許一個備份檔案。"
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 #~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 msgid "Outgoing"
 msgstr "匯出"
 
@@ -1486,7 +1490,7 @@ msgstr "匯出"
 #~ msgid "Peak Time"
 #~ msgstr "峰值時間"
 
-#: src/components/wallet/WalletHistory.tsx:75
+#: src/components/wallet/WalletHistory.tsx:77
 msgid "Pending"
 msgstr "待確認中"
 
@@ -1843,7 +1847,7 @@ msgstr "通訊埠"
 #~ msgid "Previous Sub Block Hash"
 #~ msgstr "Previous Sub Block Hash"
 
-#: src/components/selectKey/SelectKeyItem.tsx:131
+#: src/components/selectKey/SelectKeyItem.tsx:130
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "帶有公有指紋 {fingerprint} 的私鑰"
 
@@ -2011,6 +2015,10 @@ msgstr "從備份還原有色代幣和其他智慧錢包的元數據"
 #~ msgid "Restore Smart Wallets From Backup"
 #~ msgstr ""
 
+#: src/components/wallet/WalletHistory.tsx:83
+msgid "Retire"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
 #~ msgid "SB Height"
@@ -2036,7 +2044,7 @@ msgstr "儲存"
 #~ msgid "Second temporary folder location"
 #~ msgstr "第二暫存資料夾位置"
 
-#: src/components/selectKey/SelectKeyItem.tsx:140
+#: src/components/selectKey/SelectKeyItem.tsx:139
 msgid "See private key"
 msgstr "看私鑰"
 
@@ -2495,7 +2503,7 @@ msgstr "這是總餘額 + 未結餘額：這是在全部未結交易結清後你
 #~ msgid "Timestamp"
 #~ msgstr "時間戳記"
 
-#: src/components/wallet/WalletHistory.tsx:84
+#: src/components/wallet/WalletHistory.tsx:89
 msgid "To"
 msgstr "到"
 
@@ -2591,7 +2599,7 @@ msgstr ""
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:172
+#: src/components/wallet/WalletHistory.tsx:191
 msgid "Transactions"
 msgstr ""
 
@@ -2767,15 +2775,15 @@ msgstr "錢包"
 #~ msgid "Want to have a delay before the next plot starts?"
 #~ msgstr "想要在下次規劃耕地開始前有一段延遲？"
 
-#: src/components/selectKey/SelectKeyItem.tsx:107
+#: src/components/selectKey/SelectKeyItem.tsx:106
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
 msgstr "警告：這個金鑰的錢包還有餘額，如果刪除金鑰可能會導致你遺失這個錢包"
 
-#: src/components/selectKey/SelectKeyItem.tsx:89
+#: src/components/selectKey/SelectKeyItem.tsx:88
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
 msgstr "警告：這個金鑰用於你的耕種獎勵地址。刪除金鑰後可能會無法領取之後的耕種獎勵。"
 
-#: src/components/selectKey/SelectKeyItem.tsx:98
+#: src/components/selectKey/SelectKeyItem.tsx:97
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr "警告：這個金鑰用於你的農會獎勵地址。刪除金鑰後可能會無法領取之後的農會獎勵。"
 

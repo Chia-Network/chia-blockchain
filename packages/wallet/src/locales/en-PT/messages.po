@@ -26,7 +26,7 @@ msgstr ""
 #~ msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 #~ msgstr "*Wants t' explore taken booty further? See <0>Chia Explorer</0> by a mighty free pirate."
 
-#: src/components/wallet/WalletHistory.tsx:106
+#: src/components/wallet/WalletHistory.tsx:111
 msgid "+"
 msgstr ""
 
@@ -42,7 +42,7 @@ msgstr ""
 #~ msgid "+ Add Wallet"
 #~ msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:105
+#: src/components/wallet/WalletHistory.tsx:110
 msgid "-"
 msgstr ""
 
@@ -161,7 +161,11 @@ msgstr "Coordinates"
 msgid "Address / Puzzle hash"
 msgstr "Coordinates / Puzzle hash"
 
-#: src/components/wallet/WalletHistory.tsx:119
+#: src/components/wallet/WalletHistory.tsx:196
+msgid "All"
+msgstr ""
+
+#: src/components/wallet/WalletHistory.tsx:124
 #: src/components/wallet/WalletSend.tsx:160
 #: src/components/wallet/cat/WalletCATSend.tsx:203
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
@@ -231,7 +235,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:35
-#: src/components/selectKey/SelectKeyItem.tsx:83
+#: src/components/selectKey/SelectKeyItem.tsx:82
 msgid "Back"
 msgstr "Backwarrrds"
 
@@ -328,7 +332,7 @@ msgstr ""
 #~ msgid "CCListItems.title"
 #~ msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:136
+#: src/components/selectKey/SelectKeyItem.tsx:135
 msgid "Can be backed up to mnemonic seed"
 msgstr "Can be scribbled down as mnemonic seed"
 
@@ -457,11 +461,11 @@ msgstr "Yarr"
 msgid "Confirmation"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:73
+#: src/components/wallet/WalletHistory.tsx:75
 msgid "Confirmed"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:218
+#: src/components/wallet/WalletHistory.tsx:238
 msgid "Confirmed at Height"
 msgstr ""
 
@@ -696,7 +700,7 @@ msgstr ""
 msgid "Custom"
 msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:151
+#: src/components/selectKey/SelectKeyItem.tsx:150
 msgid "DANGER: permanently delete private key"
 msgstr "Arrr: Burn all your treasure maps"
 
@@ -708,7 +712,7 @@ msgstr "DID Wallet"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:92
+#: src/components/wallet/WalletHistory.tsx:97
 msgid "Date"
 msgstr "Date"
 
@@ -717,7 +721,7 @@ msgstr "Date"
 #~ msgstr "Wait"
 
 #: src/components/selectKey/SelectKey.tsx:34
-#: src/components/selectKey/SelectKeyItem.tsx:82
+#: src/components/selectKey/SelectKeyItem.tsx:81
 #: src/components/wallet/WalletHeader.tsx:40
 #: src/components/wallet/did/WalletDID.tsx:449
 #: src/components/wallet/did/WalletDID.tsx:862
@@ -744,7 +748,7 @@ msgstr "Burn all treasure maps"
 #~ msgid "Delete key"
 #~ msgstr "Delete key"
 
-#: src/components/selectKey/SelectKeyItem.tsx:81
+#: src/components/selectKey/SelectKeyItem.tsx:80
 msgid "Delete key {fingerprint}"
 msgstr ""
 
@@ -752,7 +756,7 @@ msgstr ""
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Burnin' all treasure maps will permanently scuttle the treasure maps from yer computer, make sure ye 'ave backups. Are ye sure ye wants t' go on?"
 
-#: src/components/selectKey/SelectKeyItem.tsx:114
+#: src/components/selectKey/SelectKeyItem.tsx:113
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Burnin' the treasure map will permanently scuttle the treasure map from yer computer, make sure ye 'ave backups. Are ye sure ye wants t' go on?"
 
@@ -938,7 +942,7 @@ msgstr ""
 #~ msgid "Farming Status"
 #~ msgstr "State o' Lootin' Trip"
 
-#: src/components/wallet/WalletHistory.tsx:129
+#: src/components/wallet/WalletHistory.tsx:134
 #: src/components/wallet/WalletSend.tsx:171
 #: src/components/wallet/cat/WalletCATSend.tsx:216
 #: src/components/wallet/create/createRLAdmin.jsx:244
@@ -1093,7 +1097,7 @@ msgstr "Get from Mnemonics (24 words)"
 #~ msgid "In Progress"
 #~ msgstr "Workin' on it"
 
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 msgid "Incoming"
 msgstr "Goin' In"
 
@@ -1292,12 +1296,12 @@ msgstr ""
 #~ msgid "Manage Your Farming Rewards Target Addresses"
 #~ msgstr "Manage Your Plunder's Final Treasure Chest"
 
-#: src/components/wallet/WalletHistory.tsx:78
+#: src/components/wallet/WalletHistory.tsx:80
 #: src/components/wallet/cat/WalletCATSend.tsx:228
 msgid "Memo"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:222
+#: src/components/wallet/WalletHistory.tsx:242
 msgid "Memos"
 msgstr ""
 
@@ -1375,7 +1379,7 @@ msgstr "No 24 word seed 'cause this treasure map be imported."
 #~ msgid "No blocks farmed yet"
 #~ msgstr "No Ships Taken"
 
-#: src/components/wallet/WalletHistory.tsx:254
+#: src/components/wallet/WalletHistory.tsx:273
 msgid "No previous transactions"
 msgstr "No previous transactions"
 
@@ -1399,8 +1403,8 @@ msgstr "Node ID"
 #~ msgid "None of your plots have passed the plot filter yet."
 #~ msgstr "None of your barrages has hit a ship."
 
-#: src/components/wallet/WalletHistory.tsx:214
-#: src/components/wallet/WalletHistory.tsx:219
+#: src/components/wallet/WalletHistory.tsx:234
+#: src/components/wallet/WalletHistory.tsx:239
 msgid "Not Available"
 msgstr "Nothin' 'ere"
 
@@ -1466,7 +1470,7 @@ msgstr ""
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 #~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 msgid "Outgoing"
 msgstr "Goin' Out"
 
@@ -1486,7 +1490,7 @@ msgstr "Goin' Out"
 #~ msgid "Peak Time"
 #~ msgstr "Time o' last lucky boardin'"
 
-#: src/components/wallet/WalletHistory.tsx:75
+#: src/components/wallet/WalletHistory.tsx:77
 msgid "Pending"
 msgstr "Workin' on it"
 
@@ -1843,7 +1847,7 @@ msgstr "Port"
 #~ msgid "Previous Sub Block Hash"
 #~ msgstr "Previous Sub Block Hash"
 
-#: src/components/selectKey/SelectKeyItem.tsx:131
+#: src/components/selectKey/SelectKeyItem.tsx:130
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Private treasure map wit' public fingerprint {fingerprint}"
 
@@ -2011,6 +2015,10 @@ msgstr "Get Metadata fer Jinxed Dubloons 'n other Smart Wallets from Scribbled N
 #~ msgid "Restore Smart Wallets From Backup"
 #~ msgstr ""
 
+#: src/components/wallet/WalletHistory.tsx:83
+msgid "Retire"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
 #~ msgid "SB Height"
@@ -2036,7 +2044,7 @@ msgstr "Save"
 #~ msgid "Second temporary folder location"
 #~ msgstr "Sec'nd temporary folder"
 
-#: src/components/selectKey/SelectKeyItem.tsx:140
+#: src/components/selectKey/SelectKeyItem.tsx:139
 msgid "See private key"
 msgstr "Look at private treasure map"
 
@@ -2495,7 +2503,7 @@ msgstr "'tis ye whole treasure + ye under way treasure: 'tis wha' yer trasure wi
 #~ msgid "Timestamp"
 #~ msgstr "Time 'n Date"
 
-#: src/components/wallet/WalletHistory.tsx:84
+#: src/components/wallet/WalletHistory.tsx:89
 msgid "To"
 msgstr "To"
 
@@ -2591,7 +2599,7 @@ msgstr ""
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:172
+#: src/components/wallet/WalletHistory.tsx:191
 msgid "Transactions"
 msgstr ""
 
@@ -2767,15 +2775,15 @@ msgstr "Treasure Chests"
 #~ msgid "Want to have a delay before the next plot starts?"
 #~ msgstr "Wants t' wait afore crimpin' the next crewdog?"
 
-#: src/components/selectKey/SelectKeyItem.tsx:107
+#: src/components/selectKey/SelectKeyItem.tsx:106
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
 msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:89
+#: src/components/selectKey/SelectKeyItem.tsx:88
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
 msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:98
+#: src/components/selectKey/SelectKeyItem.tsx:97
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr ""
 

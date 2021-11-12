@@ -26,7 +26,7 @@ msgstr ""
 #~ msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 #~ msgstr "*Vil du udforske Chias blokke yderligerer? Se <0>Chia Explorer</0> bygget af en open source udvikler."
 
-#: src/components/wallet/WalletHistory.tsx:106
+#: src/components/wallet/WalletHistory.tsx:111
 msgid "+"
 msgstr ""
 
@@ -42,7 +42,7 @@ msgstr ""
 #~ msgid "+ Add Wallet"
 #~ msgstr "+ Tilføj Pung"
 
-#: src/components/wallet/WalletHistory.tsx:105
+#: src/components/wallet/WalletHistory.tsx:110
 msgid "-"
 msgstr ""
 
@@ -161,7 +161,11 @@ msgstr "Addresse"
 msgid "Address / Puzzle hash"
 msgstr "Addresse / Puzzle hash"
 
-#: src/components/wallet/WalletHistory.tsx:119
+#: src/components/wallet/WalletHistory.tsx:196
+msgid "All"
+msgstr ""
+
+#: src/components/wallet/WalletHistory.tsx:124
 #: src/components/wallet/WalletSend.tsx:160
 #: src/components/wallet/cat/WalletCATSend.tsx:203
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
@@ -231,7 +235,7 @@ msgstr ""
 #~ msgstr "Autogenereret navn fra pulje kontraktadresse"
 
 #: src/components/selectKey/SelectKey.tsx:35
-#: src/components/selectKey/SelectKeyItem.tsx:83
+#: src/components/selectKey/SelectKeyItem.tsx:82
 msgid "Back"
 msgstr "Tilbage"
 
@@ -328,7 +332,7 @@ msgstr ""
 #~ msgid "CCListItems.title"
 #~ msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:136
+#: src/components/selectKey/SelectKeyItem.tsx:135
 msgid "Can be backed up to mnemonic seed"
 msgstr "Kan sikkerhedskopieres af et mnemonisk seed"
 
@@ -457,11 +461,11 @@ msgstr "Bekræft"
 msgid "Confirmation"
 msgstr "Bekræftelse"
 
-#: src/components/wallet/WalletHistory.tsx:73
+#: src/components/wallet/WalletHistory.tsx:75
 msgid "Confirmed"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:218
+#: src/components/wallet/WalletHistory.tsx:238
 msgid "Confirmed at Height"
 msgstr ""
 
@@ -696,7 +700,7 @@ msgstr ""
 msgid "Custom"
 msgstr ""
 
-#: src/components/selectKey/SelectKeyItem.tsx:151
+#: src/components/selectKey/SelectKeyItem.tsx:150
 msgid "DANGER: permanently delete private key"
 msgstr "ADVARSEL: permanent sletning af privat nøgle"
 
@@ -708,7 +712,7 @@ msgstr "DID Wallet"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:92
+#: src/components/wallet/WalletHistory.tsx:97
 msgid "Date"
 msgstr "Dato"
 
@@ -717,7 +721,7 @@ msgstr "Dato"
 #~ msgstr "Forsinkelse"
 
 #: src/components/selectKey/SelectKey.tsx:34
-#: src/components/selectKey/SelectKeyItem.tsx:82
+#: src/components/selectKey/SelectKeyItem.tsx:81
 #: src/components/wallet/WalletHeader.tsx:40
 #: src/components/wallet/did/WalletDID.tsx:449
 #: src/components/wallet/did/WalletDID.tsx:862
@@ -744,7 +748,7 @@ msgstr "Slet alle nøgler"
 #~ msgid "Delete key"
 #~ msgstr "Delete key"
 
-#: src/components/selectKey/SelectKeyItem.tsx:81
+#: src/components/selectKey/SelectKeyItem.tsx:80
 msgid "Delete key {fingerprint}"
 msgstr "Slet nøgle {fingerprint}"
 
@@ -752,7 +756,7 @@ msgstr "Slet nøgle {fingerprint}"
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Sletning af alle nøgler vil permanent fjerne nøglerne fra din computer, vær sikker på at du har backup. Er du sikker du vil fortsætte?"
 
-#: src/components/selectKey/SelectKeyItem.tsx:114
+#: src/components/selectKey/SelectKeyItem.tsx:113
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Sletning af nøglen vil permanent fjerne nøglen fra denne computer, vær sikker på at du har backup. Er du sikker på at du bil fortsætte?"
 
@@ -938,7 +942,7 @@ msgstr "Farmer offentlig nøgle:"
 #~ msgid "Farming Status"
 #~ msgstr "Farmer Status"
 
-#: src/components/wallet/WalletHistory.tsx:129
+#: src/components/wallet/WalletHistory.tsx:134
 #: src/components/wallet/WalletSend.tsx:171
 #: src/components/wallet/cat/WalletCATSend.tsx:216
 #: src/components/wallet/create/createRLAdmin.jsx:244
@@ -1093,7 +1097,7 @@ msgstr "Importer fra mnemonik (24 ord)"
 #~ msgid "In Progress"
 #~ msgstr "Igangværende"
 
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 msgid "Incoming"
 msgstr "Indgående"
 
@@ -1292,12 +1296,12 @@ msgstr "Administrer Gendannelses-DID'er"
 #~ msgid "Manage Your Farming Rewards Target Addresses"
 #~ msgstr "Administrer Din Farmer Gevinst Addresse"
 
-#: src/components/wallet/WalletHistory.tsx:78
+#: src/components/wallet/WalletHistory.tsx:80
 #: src/components/wallet/cat/WalletCATSend.tsx:228
 msgid "Memo"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:222
+#: src/components/wallet/WalletHistory.tsx:242
 msgid "Memos"
 msgstr ""
 
@@ -1375,7 +1379,7 @@ msgstr "Ingen 24 ord seed, da denne nøgle allerede er importeret."
 #~ msgid "No blocks farmed yet"
 #~ msgstr "Ingen blokke farmet endnu"
 
-#: src/components/wallet/WalletHistory.tsx:254
+#: src/components/wallet/WalletHistory.tsx:273
 msgid "No previous transactions"
 msgstr "Ingen tidligere transaktioner"
 
@@ -1399,8 +1403,8 @@ msgstr "Node ID"
 #~ msgid "None of your plots have passed the plot filter yet."
 #~ msgstr "Ingen af dine plotfiler har passeret plotfilteret endnu."
 
-#: src/components/wallet/WalletHistory.tsx:214
-#: src/components/wallet/WalletHistory.tsx:219
+#: src/components/wallet/WalletHistory.tsx:234
+#: src/components/wallet/WalletHistory.tsx:239
 msgid "Not Available"
 msgstr "Ikke Tilgængelig"
 
@@ -1466,7 +1470,7 @@ msgstr "Kun én backup fil er tilladt."
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 #~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 msgid "Outgoing"
 msgstr "Udgående"
 
@@ -1486,7 +1490,7 @@ msgstr "Udgående"
 #~ msgid "Peak Time"
 #~ msgstr "Top Tidspunkt"
 
-#: src/components/wallet/WalletHistory.tsx:75
+#: src/components/wallet/WalletHistory.tsx:77
 msgid "Pending"
 msgstr "Afventende"
 
@@ -1843,7 +1847,7 @@ msgstr "Port"
 #~ msgid "Previous Sub Block Hash"
 #~ msgstr "Previous Sub Block Hash"
 
-#: src/components/selectKey/SelectKeyItem.tsx:131
+#: src/components/selectKey/SelectKeyItem.tsx:130
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Privat nøgle med public fingeraftryk {fingerprint}"
 
@@ -2011,6 +2015,10 @@ msgstr "Gendan Metadata for Farvede Mønter og andrer Smart Punge fra Backup"
 #~ msgid "Restore Smart Wallets From Backup"
 #~ msgstr ""
 
+#: src/components/wallet/WalletHistory.tsx:83
+msgid "Retire"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
 #~ msgid "SB Height"
@@ -2036,7 +2044,7 @@ msgstr "Gem"
 #~ msgid "Second temporary folder location"
 #~ msgstr "Sekundær midlertidlig folder placering"
 
-#: src/components/selectKey/SelectKeyItem.tsx:140
+#: src/components/selectKey/SelectKeyItem.tsx:139
 msgid "See private key"
 msgstr "Se privat nøgle"
 
@@ -2495,7 +2503,7 @@ msgstr "Dette er den totalle + afventende saldo: det er hvad din balance vil væ
 #~ msgid "Timestamp"
 #~ msgstr "Tidsstempel"
 
-#: src/components/wallet/WalletHistory.tsx:84
+#: src/components/wallet/WalletHistory.tsx:89
 msgid "To"
 msgstr "Til"
 
@@ -2591,7 +2599,7 @@ msgstr ""
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:172
+#: src/components/wallet/WalletHistory.tsx:191
 msgid "Transactions"
 msgstr ""
 
@@ -2767,15 +2775,15 @@ msgstr "Punge"
 #~ msgid "Want to have a delay before the next plot starts?"
 #~ msgstr "Vil du have en forsinkelse før det næste plot starter?"
 
-#: src/components/selectKey/SelectKeyItem.tsx:107
+#: src/components/selectKey/SelectKeyItem.tsx:106
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
 msgstr "Advarsel: Denne nøgle bruges til en tegnebog, der kan have en saldo der ikke er nul. Ved at slette denne nøgle kan du miste adgangen til denne tegnebog"
 
-#: src/components/selectKey/SelectKeyItem.tsx:89
+#: src/components/selectKey/SelectKeyItem.tsx:88
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
 msgstr "Advarsel: Denne nøgle bruges som farmer belønningsadresse. Ved at slette denne nøgle kan du miste adgang til fremtidige farmer belønninger"
 
-#: src/components/selectKey/SelectKeyItem.tsx:98
+#: src/components/selectKey/SelectKeyItem.tsx:97
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr "Advarsel: Denne nøgle bruges som pulje belønningsadresse. Ved at slette denne nøgle kan du miste adgang til fremtidige pulje belønninger"
 

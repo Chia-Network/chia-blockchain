@@ -3,7 +3,6 @@ import { Wallet, CAT, WalletType } from '@chia/api';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import type Transaction from '../@types/Transaction';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
-import { rest } from 'lodash';
 
 const baseQuery = chiaLazyBaseQuery({
   service: Wallet,
@@ -499,12 +498,16 @@ export const walletApi = createApi({
 
     getTransactions: build.query<Transaction[], {
       walletId: number;
+      start?: number;
+      end?: number;
     }>({
       query: ({
         walletId,
+        start,
+        end,
       }) => ({
         command: 'getTransactions',
-        args: [walletId],
+        args: [walletId, start, end],
       }),
       transformResponse: (response: any) => response?.transactions,
       providesTags(result) {
@@ -522,6 +525,28 @@ export const walletApi = createApi({
       }, {
         command: 'onPendingTransaction',
         endpoint: () => walletApi.endpoints.getTransactions,
+      }]),
+    }),
+
+    getTransactionsCount: build.query<number, {
+      walletId: number;
+    }>({
+      query: ({
+        walletId,
+      }) => ({
+        command: 'getTransactionsCount',
+        args: [walletId],
+      }),
+      transformResponse: (response: any) => response?.count,
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
+        command: 'onCoinAdded',
+        endpoint: () => walletApi.endpoints.getTransactionsCount,
+      }, {
+        command: 'onCoinRemoved',
+        endpoint: () => walletApi.endpoints.getTransactionsCount,
+      }, {
+        command: 'onPendingTransaction',
+        endpoint: () => walletApi.endpoints.getTransactionsCount,
       }]),
     }),
 
@@ -1010,6 +1035,7 @@ export const {
   useGetBackupInfoByWordsQuery,
   useGetPrivateKeyQuery,
   useGetTransactionsQuery,
+  useGetTransactionsCountQuery,
   useGetCurrentAddressQuery,
   useGetNextAddressMutation,
   useFarmBlockMutation,

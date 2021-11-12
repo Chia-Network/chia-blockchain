@@ -187,8 +187,16 @@ export default class Wallet extends Service {
     });
   }
 
-  async getTransactions(walletId: number) {
+  async getTransactions(walletId: number, start?: number, end?: number) {
     return this.command('get_transactions', {
+      walletId,
+      start,
+      end,
+    });
+  }
+
+  async getTransactionsCount(walletId: number) {
+    return this.command('get_transaction_count', {
       walletId,
     });
   }

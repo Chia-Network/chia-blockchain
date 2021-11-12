@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { ConfirmDialog, useOpenDialog, Loading, useShowError } from '@chia/core';
+import { ConfirmDialog, useOpenDialog, LoadingOverlay, useShowError } from '@chia/core';
 import { Alert } from '@material-ui/lab';
 import {
   Tooltip,
@@ -21,7 +21,6 @@ import {
   useLogInAndSkipImportMutation,
 } from '@chia/api-react';
 import SelectKeyDetailDialog from './SelectKeyDetailDialog';
-import LoadingOverlay from './LoadingOverlay';
 
 const StyledFingerprintListItem = styled(ListItem)`
   padding-right: ${({ theme }) => `${theme.spacing(11)}px`};

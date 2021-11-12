@@ -3,7 +3,7 @@ import { Trans } from '@lingui/macro';
 import moment from 'moment';
 import { Box, IconButton, Table as TableBase, TableBody, TableCell, TableRow, Tooltip, Typography, Chip } from '@material-ui/core';
 import { CallReceived as CallReceivedIcon, CallMade as CallMadeIcon, ExpandLess as ExpandLessIcon, ExpandMore as ExpandMoreIcon } from '@material-ui/icons';
-import { Card, CardKeyValue, CopyToClipboard, Flex, Loading, Table } from '@chia/core';
+import { Card, CardKeyValue, CopyToClipboard, Flex, Loading, TableControlled } from '@chia/core';
 import styled from 'styled-components';
 import type { Row } from '../core/components/Table/Table';
 import {
@@ -15,6 +15,7 @@ import WalletType from '../../constants/WalletType';
 import useWallet from '../../hooks/useWallet';
 import useWalletTransactions from '../../hooks/useWalletTransactions';
 import useCurrencyCode from '../../hooks/useCurrencyCode';
+import toBech32m from '../../util/toBech32m';
 
 const StyledTableCellSmall = styled(TableCell)`
   border-bottom: 0;
@@ -51,9 +52,10 @@ const getCols = (type: WalletType) => [
   },
   {
     width: '100%',
-    field: (row: Row) => {
+    field: (row: Row, metadata) => {
       const { confirmed: isConfirmed, memos  } = row;
       const hasMemos = !!memos && !!Object.values(memos).length;
+      const isRetire = row.toAddress === metadata.retireAddress;
 
       return (
         <Flex flexDirection="column" gap={1}>
@@ -76,6 +78,9 @@ const getCols = (type: WalletType) => [
             )}
             {hasMemos && (
               <Chip size="small" variant="outlined" label={<Trans>Memo</Trans>} />
+            )}
+            {isRetire && (
+              <Chip size="small" variant="outlined" label={<Trans>Retire</Trans>} />
             )}
           </Flex>
         </Flex>
@@ -149,15 +154,30 @@ export default function WalletHistory(props: Props) {
   const { walletId } = props;
 
   const { wallet, loading: isWalletLoading, unit } = useWallet(walletId);
-  const { transactions, isLoading: isWalletTransactionsLoading } = useWalletTransactions(walletId);
+  const { 
+    transactions, 
+    isLoading: isWalletTransactionsLoading,
+    page,
+    rowsPerPage,
+    count,
+    pageChange,
+  } = useWalletTransactions(walletId, 1);
   const feeUnit = useCurrencyCode();
 
   const isLoading = isWalletTransactionsLoading || isWalletLoading;
 
-  const metadata = useMemo(() => ({
-    unit,
-    feeUnit,
-  }), [unit, feeUnit]);
+  const metadata = useMemo(() => {
+    const retireAddress = feeUnit && toBech32m(
+      '0000000000000000000000000000000000000000000000000000000000000000', 
+      feeUnit,
+    );
+
+    return {
+      unit,
+      feeUnit,
+      retireAddress,
+    };
+  }, [unit, feeUnit]);
 
   const cols = useMemo(() => {
     if (!wallet) {
@@ -167,18 +187,18 @@ export default function WalletHistory(props: Props) {
     return getCols(wallet.type);
   }, [wallet?.type]);
 
-
   return (
     <Card title={<Trans>Transactions</Trans>}>
-      {isLoading ? (
-        <Loading center />
-      ) : transactions?.length ? (
-        <div>
-        <Table
+      {transactions?.length ? (
+        <TableControlled
           cols={cols}
           rows={transactions}
-          rowsPerPageOptions={[10, 25, 100]}
-          rowsPerPage={10}
+          rowsPerPageOptions={[5, 10, 25, 50, 100, { value: -1, label: <Trans>All</Trans> }]}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          count={count}
+          onPageChange={pageChange}
+          isLoading={isLoading}
           metadata={metadata}
           expandedCellShift={1}
           uniqueField="name"
@@ -248,7 +268,6 @@ export default function WalletHistory(props: Props) {
           }}
           pages
         />
-        </div>
       ) : (
         <Typography variant="body2">
           <Trans>No previous transactions</Trans>

@@ -50,6 +50,7 @@ export const {
   useGetBackupInfoByWordsQuery,
   useGetPrivateKeyQuery,
   useGetTransactionsQuery,
+  useGetTransactionsCountQuery,
   useGetCurrentAddressQuery,
   useGetNextAddressMutation,
   useFarmBlockMutation,
@@ -58,6 +59,7 @@ export const {
   useGetSyncStatusQuery,
   useGetConnectionsQuery: useGetWalletConnectionsQuery,
   useCreateBackupMutation,
+
   // CAT
   useCreateNewCATWalletMutation,
   useCreateCATWalletForExistingMutation,
