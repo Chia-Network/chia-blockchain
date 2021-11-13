@@ -1,5 +1,4 @@
 import asyncio
-import atexit
 import signal
 
 from secrets import token_bytes
@@ -19,28 +18,34 @@ from chia.simulator.start_simulator import service_kwargs_for_full_node_simulato
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from tests.block_tools import create_block_tools, create_block_tools_async, test_constants
+from tests.block_tools import BlockTools, create_block_tools, create_block_tools_async, test_constants
 from tests.util.keyring import TempKeyring
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import bytes_to_mnemonic
 from tests.time_out_assert import time_out_assert_custom_interval
+from typing import Tuple
 
 
-def cleanup_keyring(keyring: TempKeyring):
-    keyring.cleanup()
+# temp_keyring = TempKeyring()
+# keychain = temp_keyring.get_keychain()
+# atexit.register(cleanup_keyring, temp_keyring)  # Attempt to cleanup the temp keychain
+# bt = create_block_tools(constants=test_constants, keychain=keychain)
 
-
-temp_keyring = TempKeyring()
-keychain = temp_keyring.get_keychain()
-atexit.register(cleanup_keyring, temp_keyring)  # Attempt to cleanup the temp keychain
-bt = create_block_tools(constants=test_constants, keychain=keychain)
-
-self_hostname = bt.config["self_hostname"]
+# self_hostname = bt.config["self_hostname"]
+self_hostname = "localhost"
 
 
 def constants_for_dic(dic):
     return test_constants.replace(**dic)
+
+
+def setup_shared_block_tools_and_keyring(
+    consensus_constants: ConsensusConstants = test_constants,
+) -> Tuple[BlockTools, TempKeyring]:
+    temp_keyring = TempKeyring()
+    bt = create_block_tools(constants=consensus_constants, keychain=temp_keyring.get_keychain())
+    return bt, temp_keyring
 
 
 async def _teardown_nodes(node_aiters: List) -> None:
@@ -126,13 +131,14 @@ async def setup_wallet_node(
     port,
     consensus_constants: ConsensusConstants,
     local_bt,
+    shared_b_tools: BlockTools,
     full_node_port=None,
     introducer_port=None,
     key_seed=None,
     starting_height=None,
 ):
     with TempKeyring() as keychain:
-        config = bt.config["wallet"]
+        config = shared_b_tools.config["wallet"]
         config["port"] = port
         config["rpc_port"] = port + 1000
         if starting_height is not None:
@@ -148,7 +154,7 @@ async def setup_wallet_node(
         db_path_key_suffix = str(first_pk.get_fingerprint())
         db_name = f"test-wallet-db-{port}-KEY.sqlite"
         db_path_replaced: str = db_name.replace("KEY", db_path_key_suffix)
-        db_path = bt.root_path / db_path_replaced
+        db_path = shared_b_tools.root_path / db_path_replaced
 
         if db_path.exists():
             db_path.unlink()
@@ -211,11 +217,12 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
 async def setup_farmer(
     port,
     consensus_constants: ConsensusConstants,
-    b_tools,
+    b_tools: BlockTools,
+    shared_b_tools: BlockTools,
     full_node_port: Optional[uint16] = None,
 ):
-    config = bt.config["farmer"]
-    config_pool = bt.config["pool"]
+    config = shared_b_tools.config["farmer"]
+    config_pool = shared_b_tools.config["pool"]
 
     config["xch_target_address"] = encode_puzzle_hash(b_tools.farmer_ph, "xch")
     config["pool_public_keys"] = [bytes(pk).hex() for pk in b_tools.pool_pubkeys]
@@ -246,10 +253,10 @@ async def setup_farmer(
     await service.wait_closed()
 
 
-async def setup_introducer(port):
+async def setup_introducer(port, shared_b_tools: BlockTools):
     kwargs = service_kwargs_for_introducer(
-        bt.root_path,
-        bt.config["introducer"],
+        shared_b_tools.root_path,
+        shared_b_tools.config["introducer"],
     )
     kwargs.update(
         advertised_port=port,
@@ -383,13 +390,21 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int):
         keyring.cleanup()
 
 
-async def setup_node_and_wallet(consensus_constants: ConsensusConstants, starting_height=None, key_seed=None):
+async def setup_node_and_wallet(
+    consensus_constants: ConsensusConstants, shared_b_tools: BlockTools, starting_height=None, key_seed=None
+):
     with TempKeyring() as keychain:
         btools = await create_block_tools_async(constants=test_constants, keychain=keychain)
         node_iters = [
             setup_full_node(consensus_constants, "blockchain_test.db", 21234, btools, simulator=False),
             setup_wallet_node(
-                21235, consensus_constants, btools, None, starting_height=starting_height, key_seed=key_seed
+                21235,
+                consensus_constants,
+                btools,
+                shared_b_tools,
+                None,
+                starting_height=starting_height,
+                key_seed=key_seed,
             ),
         ]
 
@@ -405,6 +420,7 @@ async def setup_simulators_and_wallets(
     simulator_count: int,
     wallet_count: int,
     dic: Dict,
+    shared_b_tools: BlockTools,
     starting_height=None,
     key_seed=None,
     starting_port=50000,
@@ -444,6 +460,7 @@ async def setup_simulators_and_wallets(
                 port,
                 bt_tools.constants,
                 bt_tools,
+                shared_b_tools,
                 None,
                 key_seed=seed,
                 starting_height=starting_height,
@@ -456,10 +473,10 @@ async def setup_simulators_and_wallets(
         await _teardown_nodes(node_iters)
 
 
-async def setup_farmer_harvester(consensus_constants: ConsensusConstants):
+async def setup_farmer_harvester(consensus_constants: ConsensusConstants, shared_bt: BlockTools):
     node_iters = [
-        setup_harvester(21234, 21235, consensus_constants, bt),
-        setup_farmer(21235, consensus_constants, bt),
+        setup_harvester(21234, 21235, consensus_constants, shared_bt),
+        setup_farmer(21235, consensus_constants, shared_bt, shared_bt),
     ]
 
     harvester, harvester_server = await node_iters[0].__anext__()
@@ -471,7 +488,7 @@ async def setup_farmer_harvester(consensus_constants: ConsensusConstants):
 
 
 async def setup_full_system(
-    consensus_constants: ConsensusConstants, b_tools=None, b_tools_1=None, connect_to_daemon=False
+    consensus_constants: ConsensusConstants, b_tools=None, b_tools_1=None, shared_b_tools=None, connect_to_daemon=False
 ):
     with TempKeyring() as keychain1, TempKeyring() as keychain2:
         if b_tools is None:
@@ -479,9 +496,9 @@ async def setup_full_system(
         if b_tools_1 is None:
             b_tools_1 = await create_block_tools_async(constants=test_constants, keychain=keychain2)
         node_iters = [
-            setup_introducer(21233),
+            setup_introducer(21233, shared_b_tools),
             setup_harvester(21234, 21235, consensus_constants, b_tools),
-            setup_farmer(21235, consensus_constants, b_tools, uint16(21237)),
+            setup_farmer(21235, consensus_constants, b_tools, shared_b_tools, uint16(21237)),
             setup_vdf_clients(8000),
             setup_timelord(21236, 21237, False, consensus_constants, b_tools),
             setup_full_node(

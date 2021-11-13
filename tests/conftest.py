@@ -1,5 +1,10 @@
 import pytest
 
+from tests.block_tools import BlockTools
+from tests.setup_nodes import setup_shared_block_tools_and_keyring
+from tests.util.keyring import TempKeyring
+from typing import Optional
+
 
 # TODO: tests.setup_nodes (which is also imported by tests.util.blockchain) creates a
 #       global BlockTools at tests.setup_nodes.bt.  This results in an attempt to create
@@ -10,6 +15,51 @@ import pytest
 #       creation, including the filesystem modification, away from the import but
 #       that seems like a separate step and until then locating the imports in the
 #       fixtures avoids the issue.
+
+
+class BlockToolsFixtureHelper:
+    def __init__(self, block_tools: BlockTools, keyring: TempKeyring) -> None:
+        self.block_tools: BlockTools = block_tools
+        self.keyring: TempKeyring = keyring
+
+    def cleanup(self) -> None:
+        if self.keyring is not None:
+            self.keyring.cleanup()
+        self.block_tools = None
+        self.keyring = None
+
+
+shared_block_tools_helper: Optional[BlockToolsFixtureHelper] = None
+
+
+def get_shared_block_tools_helper() -> BlockToolsFixtureHelper:
+    global shared_block_tools_helper
+    if shared_block_tools_helper is None:
+        b_tools, keyring = setup_shared_block_tools_and_keyring()
+        shared_block_tools_helper = BlockToolsFixtureHelper(b_tools, keyring)
+    return shared_block_tools_helper
+
+
+@pytest.fixture(scope="module")
+def cleanup_shared_block_tools(request) -> None:
+    """
+    This fixture is run once per module and is used to clean up the shared block tools
+    after all tests in the module have run.
+    """
+
+    def cleanup():
+        get_shared_block_tools_helper().cleanup()
+
+    request.addfinalizer(cleanup)
+
+
+@pytest.fixture(scope="module")
+def shared_b_tools(cleanup_shared_block_tools) -> BlockTools:
+    """
+    This fixture is run once per module and is used to create the shared block tools
+    for all tests in the module.
+    """
+    return get_shared_block_tools_helper().block_tools
 
 
 @pytest.fixture(scope="function")
@@ -80,3 +130,9 @@ async def default_10000_blocks_compact():
         normalized_to_identity_cc_ip=True,
         normalized_to_identity_cc_sp=True,
     )
+
+
+@pytest.fixture(scope="function")
+async def get_temp_keyring():
+    with TempKeyring() as keychain:
+        yield keychain
