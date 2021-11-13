@@ -37,7 +37,7 @@ upnp_dependencies = [
 dev_dependencies = [
     "pytest",
     "pytest-asyncio",
-    "pytest-monitor",
+    "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
     "flake8",
     "mypy",
