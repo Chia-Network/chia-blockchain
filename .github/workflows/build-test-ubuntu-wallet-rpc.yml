@@ -100,7 +100,7 @@ jobs:
     - name: Install developer requirements
       run: |
         . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
+        venv/bin/python -m pip install -e .[dev]
 
     - name: Test wallet-rpc code with pytest
       run: |
