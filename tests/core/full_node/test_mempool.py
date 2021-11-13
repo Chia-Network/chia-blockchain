@@ -2158,6 +2158,7 @@ class TestMaliciousGenerators:
         assert run_time < 2
         print(f"run time:{run_time}")
 
+    @pytest.mark.flaky(reruns=5)
     def test_duplicate_reserve_fee(self):
         opcode = ConditionOpcode.RESERVE_FEE
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
