@@ -13,8 +13,7 @@ from chia.full_node.hint_store import HintStore
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper
 from chia.util.path import mkdir
-
-from tests.setup_nodes import bt
+from tests.block_tools import BlockTools
 
 blockchain_db_counter: int = 0
 
@@ -38,6 +37,7 @@ async def create_blockchain(constants: ConsensusConstants):
 def persistent_blocks(
     num_of_blocks: int,
     db_name: str,
+    shared_b_tools: BlockTools,
     seed: bytes = b"",
     empty_sub_slots=0,
     normalized_to_identity_cc_eos: bool = False,
@@ -71,6 +71,7 @@ def persistent_blocks(
         num_of_blocks,
         seed,
         empty_sub_slots,
+        shared_b_tools,
         normalized_to_identity_cc_eos,
         normalized_to_identity_icc_eos,
         normalized_to_identity_cc_sp,
@@ -83,13 +84,14 @@ def new_test_db(
     num_of_blocks: int,
     seed: bytes,
     empty_sub_slots: int,
+    shared_b_tools: BlockTools,
     normalized_to_identity_cc_eos: bool = False,  # CC_EOS,
     normalized_to_identity_icc_eos: bool = False,  # ICC_EOS
     normalized_to_identity_cc_sp: bool = False,  # CC_SP,
     normalized_to_identity_cc_ip: bool = False,  # CC_IP
 ):
     print(f"create {path} with {num_of_blocks} blocks with ")
-    blocks: List[FullBlock] = bt.get_consecutive_blocks(
+    blocks: List[FullBlock] = shared_b_tools.get_consecutive_blocks(
         num_of_blocks,
         seed=seed,
         skip_slots=empty_sub_slots,

@@ -11,7 +11,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import disconnect_all_and_reconnect
-from tests.setup_nodes import bt, self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants
+from tests.setup_nodes import self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 
 
@@ -33,22 +33,22 @@ def event_loop():
 
 class TestWalletSync:
     @pytest.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_node_and_wallet(test_constants):
+    async def wallet_node(self, shared_b_tools):
+        async for _ in setup_node_and_wallet(test_constants, shared_b_tools):
             yield _
 
     @pytest.fixture(scope="function")
-    async def wallet_node_simulator(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
+    async def wallet_node_simulator(self, shared_b_tools):
+        async for _ in setup_simulators_and_wallets(1, 1, {}, shared_b_tools):
             yield _
 
     @pytest.fixture(scope="function")
-    async def wallet_node_starting_height(self):
-        async for _ in setup_node_and_wallet(test_constants, starting_height=100):
+    async def wallet_node_starting_height(self, shared_b_tools):
+        async for _ in setup_node_and_wallet(test_constants, shared_b_tools, starting_height=100):
             yield _
 
     @pytest.mark.asyncio
-    async def test_basic_sync_wallet(self, wallet_node, default_400_blocks):
+    async def test_basic_sync_wallet(self, wallet_node, default_400_blocks, shared_b_tools):
 
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
@@ -63,7 +63,7 @@ class TestWalletSync:
 
         # Tests a reorg with the wallet
         num_blocks = 30
-        blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
+        blocks_reorg = shared_b_tools.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
         for i in range(1, len(blocks_reorg)):
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks_reorg[i]))
 
@@ -103,7 +103,7 @@ class TestWalletSync:
         # Tests a reorg with the wallet
 
     @pytest.mark.asyncio
-    async def test_long_sync_wallet(self, wallet_node, default_1000_blocks, default_400_blocks):
+    async def test_long_sync_wallet(self, wallet_node, default_1000_blocks, default_400_blocks, shared_b_tools):
 
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
@@ -129,7 +129,7 @@ class TestWalletSync:
 
         # Tests a short reorg
         num_blocks = 30
-        blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_1000_blocks[:-5])
+        blocks_reorg = shared_b_tools.get_consecutive_blocks(num_blocks, block_list_input=default_1000_blocks[:-5])
 
         for i in range(1, len(blocks_reorg)):
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks_reorg[i]))
@@ -139,7 +139,7 @@ class TestWalletSync:
         )
 
     @pytest.mark.asyncio
-    async def test_wallet_reorg_sync(self, wallet_node_simulator, default_400_blocks):
+    async def test_wallet_reorg_sync(self, wallet_node_simulator, default_400_blocks, shared_b_tools):
         num_blocks = 5
         full_nodes, wallets = wallet_node_simulator
         full_node_api = full_nodes[0]
@@ -174,7 +174,7 @@ class TestWalletSync:
 
         # Reorg blocks that carry reward
         num_blocks = 30
-        blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
+        blocks_reorg = shared_b_tools.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
 
         for block in blocks_reorg[-30:]:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -183,7 +183,7 @@ class TestWalletSync:
         await time_out_assert(5, wallet.get_confirmed_balance, 0)
 
     @pytest.mark.asyncio
-    async def test_wallet_reorg_get_coinbase(self, wallet_node_simulator, default_400_blocks):
+    async def test_wallet_reorg_get_coinbase(self, wallet_node_simulator, default_400_blocks, shared_b_tools):
         full_nodes, wallets = wallet_node_simulator
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
@@ -200,7 +200,7 @@ class TestWalletSync:
 
         # Reorg blocks that carry reward
         num_blocks_reorg = 30
-        blocks_reorg = bt.get_consecutive_blocks(num_blocks_reorg, block_list_input=default_400_blocks[:-5])
+        blocks_reorg = shared_b_tools.get_consecutive_blocks(num_blocks_reorg, block_list_input=default_400_blocks[:-5])
 
         for block in blocks_reorg[:-5]:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -212,10 +212,10 @@ class TestWalletSync:
         await time_out_assert(10, get_tx_count, 0, 1)
 
         num_blocks_reorg_1 = 40
-        blocks_reorg_1 = bt.get_consecutive_blocks(
+        blocks_reorg_1 = shared_b_tools.get_consecutive_blocks(
             1, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph, block_list_input=blocks_reorg[:-30]
         )
-        blocks_reorg_2 = bt.get_consecutive_blocks(num_blocks_reorg_1, block_list_input=blocks_reorg_1)
+        blocks_reorg_2 = shared_b_tools.get_consecutive_blocks(num_blocks_reorg_1, block_list_input=blocks_reorg_1)
 
         for block in blocks_reorg_2[-41:]:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))

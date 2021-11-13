@@ -81,50 +81,55 @@ async def empty_blockchain():
 block_format_version = "rc4"
 
 
-@pytest.fixture(scope="session")
-async def default_400_blocks():
+@pytest.fixture(scope="module")
+async def default_400_blocks(shared_b_tools):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(400, f"test_blocks_400_{block_format_version}.db", seed=b"alternate2")
+    return persistent_blocks(400, f"test_blocks_400_{block_format_version}.db", shared_b_tools, seed=b"alternate2")
 
 
-@pytest.fixture(scope="session")
-async def default_1000_blocks():
+@pytest.fixture(scope="module")
+async def default_1000_blocks(shared_b_tools):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(1000, f"test_blocks_1000_{block_format_version}.db")
+    return persistent_blocks(1000, f"test_blocks_1000_{block_format_version}.db", shared_b_tools)
 
 
-@pytest.fixture(scope="session")
-async def pre_genesis_empty_slots_1000_blocks():
+@pytest.fixture(scope="module")
+async def pre_genesis_empty_slots_1000_blocks(shared_b_tools):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
-        1000, f"pre_genesis_empty_slots_1000_blocks{block_format_version}.db", seed=b"alternate2", empty_sub_slots=1
+        1000,
+        f"pre_genesis_empty_slots_1000_blocks{block_format_version}.db",
+        shared_b_tools,
+        seed=b"alternate2",
+        empty_sub_slots=1,
     )
 
 
-@pytest.fixture(scope="session")
-async def default_10000_blocks():
+@pytest.fixture(scope="module")
+async def default_10000_blocks(shared_b_tools):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(10000, f"test_blocks_10000_{block_format_version}.db")
+    return persistent_blocks(10000, f"test_blocks_10000_{block_format_version}.db", shared_b_tools)
 
 
-@pytest.fixture(scope="session")
-async def default_20000_blocks():
+@pytest.fixture(scope="module")
+async def default_20000_blocks(shared_b_tools):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db")
+    return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db", shared_b_tools)
 
 
-@pytest.fixture(scope="session")
-async def default_10000_blocks_compact():
+@pytest.fixture(scope="module")
+async def default_10000_blocks_compact(shared_b_tools):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
         10000,
         f"test_blocks_10000_compact_{block_format_version}.db",
+        shared_b_tools,
         normalized_to_identity_cc_eos=True,
         normalized_to_identity_icc_eos=True,
         normalized_to_identity_cc_ip=True,
