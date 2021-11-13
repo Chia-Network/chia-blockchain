@@ -2072,6 +2072,7 @@ class TestMaliciousGenerators:
             ConditionOpcode.ASSERT_SECONDS_RELATIVE,
         ],
     )
+    @pytest.mark.flaky(reruns=5)
     def test_duplicate_large_integer(self, opcode):
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
         start_time = time()

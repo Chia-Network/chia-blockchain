@@ -37,6 +37,7 @@ upnp_dependencies = [
 dev_dependencies = [
     "pytest",
     "pytest-asyncio",
+    "pytest-rerunfailures",
     "flake8",
     "mypy",
     "black",
