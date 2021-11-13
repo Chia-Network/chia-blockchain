@@ -1,14 +1,27 @@
 #!/bin/bash
 set -e
 
+USAGE_TEXT="\
+Usage: $0 [-d]
+
+  -d                          install development dependencies
+  -h                          display this help and exit
+"
+
+usage() {
+  echo "${USAGE_TEXT}"
+}
+
 EXTRAS=
 
-while getopts d flag
+while getopts dh flag
 do
-    case "${flag}" in
-        # development
-        d) EXTRAS=${EXTRAS}dev,;;
-    esac
+  case "${flag}" in
+    # development
+    d) EXTRAS=${EXTRAS}dev,;;
+    h) usage; exit 0;;
+    *) echo; usage; exit 1;;
+  esac
 done
 
 UBUNTU=false
