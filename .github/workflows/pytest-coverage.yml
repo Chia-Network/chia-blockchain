@@ -7,7 +7,7 @@ name: pytest-coverage-commentator
 on:
   push:
     branches:
-      - main
+      - test-new-runner
     tags:
         - '**'
   pull_request:
@@ -17,14 +17,14 @@ on:
 jobs:
   build:
     name: Ubuntu pytest coverage
-    runs-on: ubuntu-latest
-    timeout-minutes: 600
+    runs-on: matrix.os
+    timeout-minutes: 4320 # 72 hr
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
         python-version: [3.9]
-        os: [ubuntu-latest]
+        os: [test-coverage]
 
     steps:
     - name: Cancel previous runs on the same branch
