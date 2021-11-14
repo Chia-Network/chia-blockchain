@@ -17,7 +17,7 @@ on:
 jobs:
   build:
     name: Ubuntu pytest coverage
-    runs-on: matrix.os
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 4320 # 72 hr
     strategy:
       fail-fast: false
