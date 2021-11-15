@@ -13,7 +13,7 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, 
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
-from tests.setup_nodes import bt, test_constants
+from tests.setup_nodes import test_constants
 
 from .make_block_generator import make_block_generator
 
@@ -54,11 +54,11 @@ def large_block_generator(size):
 
 class TestCostCalculation:
     @pytest.mark.asyncio
-    async def test_basics(self):
-        wallet_tool = bt.get_pool_wallet_tool()
+    async def test_basics(self, shared_b_tools):
+        wallet_tool = shared_b_tools.get_pool_wallet_tool()
         ph = wallet_tool.get_new_puzzlehash()
         num_blocks = 3
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, [], guarantee_transaction_block=True, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph
         )
         coinbase = None
@@ -105,12 +105,12 @@ class TestCostCalculation:
         )
 
     @pytest.mark.asyncio
-    async def test_strict_mode(self):
-        wallet_tool = bt.get_pool_wallet_tool()
+    async def test_strict_mode(self, shared_b_tools):
+        wallet_tool = shared_b_tools.get_pool_wallet_tool()
         ph = wallet_tool.get_new_puzzlehash()
 
         num_blocks = 3
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, [], guarantee_transaction_block=True, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph
         )
 
