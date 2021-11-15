@@ -16,7 +16,7 @@ from chia.util.condition_tools import ConditionOpcode
 from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
 
-from tests.core.full_node.test_conditions import bt, check_spend_bundle_validity, initial_blocks
+from tests.core.full_node.test_conditions import check_spend_bundle_validity, initial_blocks
 
 
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
@@ -96,7 +96,7 @@ def p2_singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32
     return p2_singleton_puzzle(launcher_id, launcher_puzzle_hash).get_tree_hash()
 
 
-def test_only_odd_coins_0():
+def test_only_odd_coins_0(shared_b_tools):
     blocks = initial_blocks()
     farmed_coin = list(blocks[-1].get_included_reward_coins())[0]
 
@@ -114,7 +114,7 @@ def test_only_odd_coins_0():
     coin_spend = CoinSpend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, conditions)
     spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_spend], G2Element())])
     run = asyncio.get_event_loop().run_until_complete
-    coins_added, coins_removed = run(check_spend_bundle_validity(bt.constants, blocks, spend_bundle))
+    coins_added, coins_removed = run(check_spend_bundle_validity(shared_b_tools.constants, blocks, spend_bundle))
 
     coin_set_added = set([_.coin for _ in coins_added])
     coin_set_removed = set([_.coin for _ in coins_removed])
