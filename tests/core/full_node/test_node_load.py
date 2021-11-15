@@ -7,7 +7,7 @@ from chia.protocols import full_node_protocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from tests.connection_utils import connect_and_get_peer
-from tests.setup_nodes import bt, self_hostname, setup_two_nodes, test_constants
+from tests.setup_nodes import self_hostname, setup_two_nodes, test_constants
 from tests.time_out_assert import time_out_assert
 
 
@@ -24,10 +24,10 @@ class TestNodeLoad:
             yield _
 
     @pytest.mark.asyncio
-    async def test_blocks_load(self, two_nodes):
+    async def test_blocks_load(self, two_nodes, shared_b_tools):
         num_blocks = 50
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        blocks = bt.get_consecutive_blocks(num_blocks)
+        blocks = shared_b_tools.get_consecutive_blocks(num_blocks)
         peer = await connect_and_get_peer(server_1, server_2)
         await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[0]), peer)
 
