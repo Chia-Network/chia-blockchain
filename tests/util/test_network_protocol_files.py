@@ -41,22 +41,27 @@ def parse_farmer_protocol(input_bytes):
     message_bytes, input_bytes = parse_blob(input_bytes)
     message = farmer_protocol.NewSignagePoint.from_bytes(message_bytes)
     assert message == new_signage_point
+    assert message_bytes == bytes(new_signage_point)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
     message = farmer_protocol.DeclareProofOfSpace.from_bytes(message_bytes)
     assert message == declare_proof_of_space
+    assert message_bytes == bytes(declare_proof_of_space)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
     message = farmer_protocol.RequestSignedValues.from_bytes(message_bytes)
     assert message == request_signed_values
+    assert message_bytes == bytes(request_signed_values)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
     message = farmer_protocol.FarmingInfo.from_bytes(message_bytes)
     assert message == farming_info
+    assert message_bytes == bytes(farming_info)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
     message = farmer_protocol.SignedValues.from_bytes(message_bytes)
     assert message == signed_values
+    assert message_bytes == bytes(signed_values)
 
     return input_bytes
 
