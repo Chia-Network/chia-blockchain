@@ -14,7 +14,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16
 from tests.core.node_height import node_height_exactly, node_height_between
-from tests.setup_nodes import bt, self_hostname, setup_n_nodes, setup_two_nodes, test_constants
+from tests.setup_nodes import self_hostname, setup_n_nodes, setup_two_nodes, test_constants
 from tests.time_out_assert import time_out_assert
 
 
@@ -49,7 +49,7 @@ class TestFullSync:
             yield _
 
     @pytest.mark.asyncio
-    async def test_long_sync_from_zero(self, five_nodes, default_400_blocks):
+    async def test_long_sync_from_zero(self, five_nodes, default_400_blocks, shared_b_tools):
         # Must be larger than "sync_block_behind_threshold" in the config
         num_blocks = len(default_400_blocks)
         blocks: List[FullBlock] = default_400_blocks
@@ -127,7 +127,7 @@ class TestFullSync:
         await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_4, num_blocks - 1)
 
         # Deep reorg, fall back from batch sync to long sync
-        blocks_node_5 = bt.get_consecutive_blocks(60, block_list_input=blocks[:350], seed=b"node5")
+        blocks_node_5 = shared_b_tools.get_consecutive_blocks(60, block_list_input=blocks[:350], seed=b"node5")
         for block in blocks_node_5:
             await full_node_5.full_node.respond_block(full_node_protocol.RespondBlock(block))
         await server_5.start_client(
@@ -208,12 +208,12 @@ class TestFullSync:
         await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
 
     @pytest.mark.asyncio
-    async def test_batch_sync(self, two_nodes):
+    async def test_batch_sync(self, two_nodes, shared_b_tools):
         # Must be below "sync_block_behind_threshold" in the config
         num_blocks = 20
         num_blocks_2 = 9
-        blocks = bt.get_consecutive_blocks(num_blocks)
-        blocks_2 = bt.get_consecutive_blocks(num_blocks_2, seed=b"123")
+        blocks = shared_b_tools.get_consecutive_blocks(num_blocks)
+        blocks_2 = shared_b_tools.get_consecutive_blocks(num_blocks_2, seed=b"123")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         # 12 blocks to node_1
@@ -231,10 +231,10 @@ class TestFullSync:
         await time_out_assert(60, node_height_exactly, True, full_node_2, num_blocks - 1)
 
     @pytest.mark.asyncio
-    async def test_backtrack_sync_1(self, two_nodes):
-        blocks = bt.get_consecutive_blocks(1, skip_slots=1)
-        blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
-        blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
+    async def test_backtrack_sync_1(self, two_nodes, shared_b_tools):
+        blocks = shared_b_tools.get_consecutive_blocks(1, skip_slots=1)
+        blocks = shared_b_tools.get_consecutive_blocks(1, blocks, skip_slots=0)
+        blocks = shared_b_tools.get_consecutive_blocks(1, blocks, skip_slots=0)
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         # 3 blocks to node_1 in different sub slots
@@ -248,9 +248,9 @@ class TestFullSync:
         await time_out_assert(60, node_height_exactly, True, full_node_2, 2)
 
     @pytest.mark.asyncio
-    async def test_backtrack_sync_2(self, two_nodes):
-        blocks = bt.get_consecutive_blocks(1, skip_slots=3)
-        blocks = bt.get_consecutive_blocks(8, blocks, skip_slots=0)
+    async def test_backtrack_sync_2(self, two_nodes, shared_b_tools):
+        blocks = shared_b_tools.get_consecutive_blocks(1, skip_slots=3)
+        blocks = shared_b_tools.get_consecutive_blocks(8, blocks, skip_slots=0)
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         # 3 blocks to node_1 in different sub slots
@@ -264,10 +264,10 @@ class TestFullSync:
         await time_out_assert(60, node_height_exactly, True, full_node_2, 8)
 
     @pytest.mark.asyncio
-    async def test_close_height_but_big_reorg(self, three_nodes):
-        blocks_a = bt.get_consecutive_blocks(50)
-        blocks_b = bt.get_consecutive_blocks(51, seed=b"B")
-        blocks_c = bt.get_consecutive_blocks(90, seed=b"C")
+    async def test_close_height_but_big_reorg(self, three_nodes, shared_b_tools):
+        blocks_a = shared_b_tools.get_consecutive_blocks(50)
+        blocks_b = shared_b_tools.get_consecutive_blocks(51, seed=b"B")
+        blocks_c = shared_b_tools.get_consecutive_blocks(90, seed=b"C")
         full_node_1, full_node_2, full_node_3 = three_nodes
         server_1 = full_node_1.full_node.server
         server_2 = full_node_2.full_node.server
