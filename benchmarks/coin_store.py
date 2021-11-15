@@ -79,6 +79,9 @@ async def run_new_block_benchmark():
     sql_logging: bool = "--sql-logging" in sys.argv
     db_wrapper: DBWrapper = await setup_db(sql_logging)
 
+    # keep track of benchmark total time
+    all_test_time = 0
+
     try:
         coin_store = await CoinStore.create(db_wrapper)
 
@@ -170,6 +173,7 @@ async def run_new_block_benchmark():
         if verbose:
             print("")
         print(f"{total_time:0.4f}s, MOSTLY ADDITIONS additions: {total_add} removals: {total_remove}")
+        all_test_time += total_time
 
         if verbose:
             print("Profiling mostly removals ", end="")
@@ -221,6 +225,7 @@ async def run_new_block_benchmark():
         if verbose:
             print("")
         print(f"{total_time:0.4f}s, MOSTLY REMOVALS additions: {total_add} removals: {total_remove}")
+        all_test_time += total_time
 
         if verbose:
             print("Profiling full block transactions", end="")
@@ -269,6 +274,7 @@ async def run_new_block_benchmark():
         if verbose:
             print("")
         print(f"{total_time:0.4f}s, FULLBLOCKS additions: {total_add} removals: {total_remove}")
+        all_test_time += total_time
 
         if verbose:
             print("profiling get_coin_records_by_names, include_spent ", end="")
@@ -291,6 +297,7 @@ async def run_new_block_benchmark():
             f"{total_time:0.4f}s, GET RECORDS BY NAMES with spent {NUM_ITERS} "
             f"lookups found {found_coins} coins in total"
         )
+        all_test_time += total_time
 
         if verbose:
             print("profiling get_coin_records_by_names, without spent coins ", end="")
@@ -313,6 +320,7 @@ async def run_new_block_benchmark():
             f"{total_time:0.4f}s, GET RECORDS BY NAMES without spent {NUM_ITERS} "
             f"lookups found {found_coins} coins in total"
         )
+        all_test_time += total_time
 
         if verbose:
             print("profiling get_coin_removed_at_height ", end="")
@@ -333,6 +341,8 @@ async def run_new_block_benchmark():
             f"{total_time:0.4f}s, GET COINS REMOVED AT HEIGHT {block_height-1} blocks, "
             f"found {found_coins} coins in total"
         )
+        all_test_time += total_time
+        print(f"all tests completed in {all_test_time:0.4f}s")
 
     finally:
         await db_wrapper.db.close()
