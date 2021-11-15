@@ -173,6 +173,14 @@ jobs:
         aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/beta/ChiaSetup-latest-beta.exe
         aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download-chia-net/beta/ChiaSetup-latest-beta.exe.sha256
 
+    - name: Upload CATs Beta Installer
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/protocol_and_cats_rebased'
+      env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/cats-beta-installers/ChiaSetup-latest-cats-beta.exe
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download-chia-net/cats-beta-installers/ChiaSetup-latest-cats-beta.exe.sha256
+
     - name: Upload Release Files
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && startsWith(github.ref, 'refs/tags/')
       env:
