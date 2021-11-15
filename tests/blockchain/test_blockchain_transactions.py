@@ -13,7 +13,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
 from tests.wallet_tools import WalletTool
-from tests.setup_nodes import bt, setup_two_nodes, test_constants
+from tests.setup_nodes import setup_two_nodes, test_constants
 from tests.util.generator_tools_testing import run_and_get_removals_and_additions
 
 BURN_PUZZLE_HASH = b"0" * 32
@@ -37,13 +37,13 @@ class TestBlockchainTransactions:
             yield _
 
     @pytest.mark.asyncio
-    async def test_basic_blockchain_tx(self, two_nodes):
+    async def test_basic_blockchain_tx(self, two_nodes, shared_b_tools):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
@@ -74,7 +74,7 @@ class TestBlockchainTransactions:
         )
         assert next_spendbundle is not None
 
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             block_list_input=blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -98,13 +98,13 @@ class TestBlockchainTransactions:
             assert not unspent.coinbase
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_with_double_spend(self, two_nodes):
+    async def test_validate_blockchain_with_double_spend(self, two_nodes, shared_b_tools):
         num_blocks = 5
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_3, server_1, server_2 = two_nodes
@@ -124,7 +124,7 @@ class TestBlockchainTransactions:
 
         block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
 
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             block_list_input=blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -138,13 +138,13 @@ class TestBlockchainTransactions:
         assert err == Err.DOUBLE_SPEND
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_duplicate_output(self, two_nodes):
+    async def test_validate_blockchain_duplicate_output(self, two_nodes, shared_b_tools):
         num_blocks = 3
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
@@ -164,7 +164,7 @@ class TestBlockchainTransactions:
             1000, receiver_puzzlehash, spend_coin, additional_outputs=[(receiver_puzzlehash, 1000)]
         )
 
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             block_list_input=blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -178,13 +178,13 @@ class TestBlockchainTransactions:
         assert err == Err.DUPLICATE_OUTPUT
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_with_reorg_double_spend(self, two_nodes):
+    async def test_validate_blockchain_with_reorg_double_spend(self, two_nodes, shared_b_tools):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
@@ -201,7 +201,7 @@ class TestBlockchainTransactions:
 
         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
 
-        blocks_spend = bt.get_consecutive_blocks(
+        blocks_spend = shared_b_tools.get_consecutive_blocks(
             1,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             guarantee_transaction_block=True,
@@ -212,7 +212,7 @@ class TestBlockchainTransactions:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         # Reorg at height 5, add up to and including height 12
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             7,
             blocks[:6],
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -224,7 +224,7 @@ class TestBlockchainTransactions:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         # Spend the same coin in the new reorg chain at height 13
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             new_blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -237,7 +237,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.NEW_PEAK
 
         # But can't spend it twice
-        new_blocks_double = bt.get_consecutive_blocks(
+        new_blocks_double = shared_b_tools.get_consecutive_blocks(
             1,
             new_blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -250,7 +250,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.INVALID_BLOCK
 
         # Now test Reorg at block 5, same spend at block height 12
-        new_blocks_reorg = bt.get_consecutive_blocks(
+        new_blocks_reorg = shared_b_tools.get_consecutive_blocks(
             1,
             new_blocks[:12],
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -262,7 +262,7 @@ class TestBlockchainTransactions:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         # Spend at height 13 is also OK (same height)
-        new_blocks_reorg = bt.get_consecutive_blocks(
+        new_blocks_reorg = shared_b_tools.get_consecutive_blocks(
             1,
             new_blocks[:13],
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -274,7 +274,7 @@ class TestBlockchainTransactions:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         # Spend at height 14 is not OK (already spend)
-        new_blocks_reorg = bt.get_consecutive_blocks(
+        new_blocks_reorg = shared_b_tools.get_consecutive_blocks(
             1,
             new_blocks[:14],
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -287,7 +287,7 @@ class TestBlockchainTransactions:
                 await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_spend_reorg_coin(self, two_nodes):
+    async def test_validate_blockchain_spend_reorg_coin(self, two_nodes, shared_b_tools):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -295,7 +295,7 @@ class TestBlockchainTransactions:
         receiver_2_puzzlehash = WALLET_A_PUZZLE_HASHES[2]
         receiver_3_puzzlehash = WALLET_A_PUZZLE_HASHES[3]
 
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
@@ -313,7 +313,7 @@ class TestBlockchainTransactions:
         assert spend_coin
         spend_bundle = wallet_a.generate_signed_transaction(uint64(1000), receiver_1_puzzlehash, spend_coin)
 
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks[:5],
             seed=b"spend_reorg_coin",
@@ -335,7 +335,7 @@ class TestBlockchainTransactions:
 
         spend_bundle = wallet_a.generate_signed_transaction(uint64(1000), receiver_2_puzzlehash, coin_2)
 
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             new_blocks[:6],
             seed=b"spend_reorg_coin",
@@ -356,7 +356,7 @@ class TestBlockchainTransactions:
 
         spend_bundle = wallet_a.generate_signed_transaction(uint64(1000), receiver_3_puzzlehash, coin_3)
 
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             new_blocks[:7],
             seed=b"spend_reorg_coin",
@@ -368,20 +368,20 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_spend_reorg_cb_coin(self, two_nodes):
+    async def test_validate_blockchain_spend_reorg_cb_coin(self, two_nodes, shared_b_tools):
         num_blocks = 15
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_1_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
 
-        blocks = bt.get_consecutive_blocks(num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash)
+        blocks = shared_b_tools.get_consecutive_blocks(num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash)
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         # Spends a coinbase created in reorg
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             5,
             blocks[:6],
             seed=b"reorg cb coin",
@@ -399,7 +399,7 @@ class TestBlockchainTransactions:
                 spend_coin = coin
         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_1_puzzlehash, spend_coin)
 
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             new_blocks,
             seed=b"reorg cb coin",
@@ -411,13 +411,13 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_spend_reorg_since_genesis(self, two_nodes):
+    async def test_validate_blockchain_spend_reorg_since_genesis(self, two_nodes, shared_b_tools):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_1_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
 
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
@@ -432,13 +432,13 @@ class TestBlockchainTransactions:
                 spend_coin = coin
         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_1_puzzlehash, spend_coin)
 
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1, blocks, seed=b"", farmer_reward_puzzle_hash=coinbase_puzzlehash, transaction_data=spend_bundle
         )
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
         # Spends a coin in a genesis reorg, that was already spent
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             12,
             [],
             seed=b"reorg since genesis",
@@ -449,7 +449,7 @@ class TestBlockchainTransactions:
         for block in new_blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             new_blocks,
             seed=b"reorg since genesis",
@@ -460,14 +460,14 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
     @pytest.mark.asyncio
-    async def test_assert_my_coin_id(self, two_nodes):
+    async def test_assert_my_coin_id(self, two_nodes, shared_b_tools):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
@@ -502,7 +502,7 @@ class TestBlockchainTransactions:
 
         # Invalid block bundle
         # Create another block that includes our transaction
-        invalid_new_blocks = bt.get_consecutive_blocks(
+        invalid_new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -517,7 +517,7 @@ class TestBlockchainTransactions:
 
         # Valid block bundle
         # Create another block that includes our transaction
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -529,7 +529,7 @@ class TestBlockchainTransactions:
         assert err is None
 
     @pytest.mark.asyncio
-    async def test_assert_coin_announcement_consumed(self, two_nodes):
+    async def test_assert_coin_announcement_consumed(self, two_nodes, shared_b_tools):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -537,7 +537,7 @@ class TestBlockchainTransactions:
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
@@ -582,7 +582,7 @@ class TestBlockchainTransactions:
         # Invalid block bundle
         assert block1_spend_bundle is not None
         # Create another block that includes our transaction
-        invalid_new_blocks = bt.get_consecutive_blocks(
+        invalid_new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -599,7 +599,7 @@ class TestBlockchainTransactions:
         bundle_together = SpendBundle.aggregate([block1_spend_bundle, block2_spend_bundle])
 
         # Create another block that includes our transaction
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -613,7 +613,7 @@ class TestBlockchainTransactions:
         assert err is None
 
     @pytest.mark.asyncio
-    async def test_assert_puzzle_announcement_consumed(self, two_nodes):
+    async def test_assert_puzzle_announcement_consumed(self, two_nodes, shared_b_tools):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -621,7 +621,7 @@ class TestBlockchainTransactions:
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
@@ -666,7 +666,7 @@ class TestBlockchainTransactions:
         # Invalid block bundle
         assert block1_spend_bundle is not None
         # Create another block that includes our transaction
-        invalid_new_blocks = bt.get_consecutive_blocks(
+        invalid_new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -683,7 +683,7 @@ class TestBlockchainTransactions:
         bundle_together = SpendBundle.aggregate([block1_spend_bundle, block2_spend_bundle])
 
         # Create another block that includes our transaction
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -697,14 +697,14 @@ class TestBlockchainTransactions:
         assert err is None
 
     @pytest.mark.asyncio
-    async def test_assert_height_absolute(self, two_nodes):
+    async def test_assert_height_absolute(self, two_nodes, shared_b_tools):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
@@ -729,7 +729,7 @@ class TestBlockchainTransactions:
 
         # program that will be sent too early
         assert block1_spend_bundle is not None
-        invalid_new_blocks = bt.get_consecutive_blocks(
+        invalid_new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -742,7 +742,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.INVALID_BLOCK
         assert err == Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
 
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -752,7 +752,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.NEW_PEAK
 
         # At index 11, it can be spent
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             new_blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -764,14 +764,14 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
-    async def test_assert_height_relative(self, two_nodes):
+    async def test_assert_height_relative(self, two_nodes, shared_b_tools):
         num_blocks = 11
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
@@ -798,7 +798,7 @@ class TestBlockchainTransactions:
 
         # program that will be sent too early
         assert block1_spend_bundle is not None
-        invalid_new_blocks = bt.get_consecutive_blocks(
+        invalid_new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -811,7 +811,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.INVALID_BLOCK
         assert err == Err.ASSERT_HEIGHT_RELATIVE_FAILED
 
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -821,7 +821,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.NEW_PEAK
 
         # At index 12, it can be spent
-        new_blocks = bt.get_consecutive_blocks(
+        new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             new_blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -833,7 +833,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
-    async def test_assert_seconds_relative(self, two_nodes):
+    async def test_assert_seconds_relative(self, two_nodes, shared_b_tools):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -841,7 +841,7 @@ class TestBlockchainTransactions:
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
@@ -866,7 +866,7 @@ class TestBlockchainTransactions:
 
         # program that will be sent to early
         assert block1_spend_bundle is not None
-        invalid_new_blocks = bt.get_consecutive_blocks(
+        invalid_new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -880,7 +880,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.INVALID_BLOCK
         assert err == Err.ASSERT_SECONDS_RELATIVE_FAILED
 
-        valid_new_blocks = bt.get_consecutive_blocks(
+        valid_new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -893,7 +893,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
-    async def test_assert_seconds_absolute(self, two_nodes):
+    async def test_assert_seconds_absolute(self, two_nodes, shared_b_tools):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -901,7 +901,7 @@ class TestBlockchainTransactions:
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
@@ -927,7 +927,7 @@ class TestBlockchainTransactions:
 
         # program that will be sent to early
         assert block1_spend_bundle is not None
-        invalid_new_blocks = bt.get_consecutive_blocks(
+        invalid_new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -941,7 +941,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.INVALID_BLOCK
         assert err == Err.ASSERT_SECONDS_ABSOLUTE_FAILED
 
-        valid_new_blocks = bt.get_consecutive_blocks(
+        valid_new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -954,7 +954,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
-    async def test_assert_fee_condition(self, two_nodes):
+    async def test_assert_fee_condition(self, two_nodes, shared_b_tools):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -962,7 +962,7 @@ class TestBlockchainTransactions:
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
@@ -991,7 +991,7 @@ class TestBlockchainTransactions:
         )
         log.warning(block1_spend_bundle_good.additions())
         log.warning(f"Spend bundle fees: {block1_spend_bundle_good.fees()}")
-        invalid_new_blocks = bt.get_consecutive_blocks(
+        invalid_new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
@@ -1003,7 +1003,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.INVALID_BLOCK
         assert err == Err.RESERVE_FEE_CONDITION_FAILED
 
-        valid_new_blocks = bt.get_consecutive_blocks(
+        valid_new_blocks = shared_b_tools.get_consecutive_blocks(
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
