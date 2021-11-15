@@ -133,7 +133,7 @@ jobs:
       if: steps.check_secrets.outputs.HAS_SECRET && github.ref == 'refs/heads/protocol_and_cats_rebased'
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
-      run:
+      run: |
         aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb s3://download-chia-net/cats-beta-installers/chia-blockchain_arm64_latest_cats_beta.deb
         aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb.sha256 s3://download-chia-net/cats-beta-installers/chia-blockchain_arm64_latest_cats_beta.deb.sha256
 
