@@ -500,14 +500,18 @@ export const walletApi = createApi({
       walletId: number;
       start?: number;
       end?: number;
+      sortKey?: 'CONFIRMED_AT_HEIGHT' | 'RELEVANCE';
+      reverse?: boolean;
     }>({
       query: ({
         walletId,
         start,
         end,
+        sortKey,
+        reverse,
       }) => ({
         command: 'getTransactions',
-        args: [walletId, start, end],
+        args: [walletId, start, end, sortKey, reverse],
       }),
       transformResponse: (response: any) => response?.transactions,
       providesTags(result) {

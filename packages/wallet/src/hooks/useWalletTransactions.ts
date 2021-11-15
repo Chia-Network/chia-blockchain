@@ -3,7 +3,13 @@ import { orderBy } from 'lodash';
 import { useGetTransactionsQuery, useGetTransactionsCountQuery } from '@chia/api-react';
 import Transaction from '../types/Transaction';
 
-export default function useWalletTransactions(walletId: number, defaultRowsPerPage: number = 10, defaultPage: number = 0): {
+export default function useWalletTransactions(
+  walletId: number, 
+  defaultRowsPerPage: number = 10, 
+  defaultPage: number = 0, 
+  sortKey?: 'CONFIRMED_AT_HEIGHT' | 'RELEVANCE',
+  reverse?: boolean,
+): {
   isLoading: boolean;
   transactions?: Transaction[];
   count?: number;
@@ -33,6 +39,8 @@ export default function useWalletTransactions(walletId: number, defaultRowsPerPa
     walletId,
     start,
     end,
+    sortKey,
+    reverse,
   }, {
     skipToken: count === undefined,
   });

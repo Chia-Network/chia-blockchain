@@ -187,11 +187,13 @@ export default class Wallet extends Service {
     });
   }
 
-  async getTransactions(walletId: number, start?: number, end?: number) {
+  async getTransactions(walletId: number, start?: number, end?: number, sortKey?: 'CONFIRMED_AT_HEIGHT' | 'RELEVANCE', reverse?: boolean) {
     return this.command('get_transactions', {
       walletId,
       start,
       end,
+      sortKey,
+      reverse,
     });
   }
 
