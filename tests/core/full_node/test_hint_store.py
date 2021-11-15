@@ -11,7 +11,6 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from tests.util.db_connection import DBConnection
 from tests.wallet_tools import WalletTool
-from tests.setup_nodes import bt
 
 
 @pytest.fixture(scope="module")
@@ -51,20 +50,20 @@ class TestHintStore:
             assert coins_for_non_hint == []
 
     @pytest.mark.asyncio
-    async def test_hints_in_blockchain(self, empty_blockchain):  # noqa: F811
+    async def test_hints_in_blockchain(self, empty_blockchain, shared_b_tools):  # noqa: F811
         blockchain: Blockchain = empty_blockchain
 
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             5,
             block_list_input=[],
             guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=bt.pool_ph,
-            pool_reward_puzzle_hash=bt.pool_ph,
+            farmer_reward_puzzle_hash=shared_b_tools.pool_ph,
+            pool_reward_puzzle_hash=shared_b_tools.pool_ph,
         )
         for block in blocks:
             await blockchain.receive_block(block)
 
-        wt: WalletTool = bt.get_pool_wallet_tool()
+        wt: WalletTool = shared_b_tools.get_pool_wallet_tool()
         puzzle_hash = 32 * b"\0"
         amount = int_to_bytes(1)
         hint = 32 * b"\5"
@@ -79,7 +78,7 @@ class TestHintStore:
             condition_dic=condition_dict,
         )
 
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             10, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
 
