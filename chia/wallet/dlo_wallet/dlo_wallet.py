@@ -114,6 +114,37 @@ class DLOWallet:
         self.standard_wallet.push_transaction(tr)
         return tr
 
+    async def claim_dl_offer(
+        self,
+        offer_coin: Coin,
+        full_puzzle: Program,
+        db_innerpuz_hash: bytes32,
+        current_root: bytes32,
+        inclusion_proof: bytes,
+        fee: uint64 = uint64(0),
+    ):
+        solution = Program.to([1, offer_coin.amount, db_innerpuz_hash, current_root, inclusion_proof])
+        sb = SpendBundle([CoinSpend(offer_coin, full_puzzle, solution)], AugSchemeMPL.aggregate([]))
+        tr = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=self.dlo_info.claim_target,
+            amount=uint64(offer_coin.amount),
+            fee_amount=uint64(fee),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=sb,
+            additions=list(sb.additions()),
+            removals=list(sb.removals()),
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=sb.name(),
+        )
+        self.standard_wallet.push_transaction(tr)
+        return
+
     async def create_recover_dl_offer_spend(
         self,
         leaf_reveal: bytes,
@@ -151,6 +182,11 @@ class DLOWallet:
         )
         self.standard_wallet.push_transaction(tr)
         return tr
+
+    async def get_coin(self) -> Coin:
+        coins = await self.select_coins(1)
+        coin = coins.pop()
+        return coin
 
     async def get_confirmed_balance(self, record_list=None) -> uint64:
         if record_list is None:
