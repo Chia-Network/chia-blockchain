@@ -32,18 +32,19 @@ async def test_create_insert_get(chia_root: ChiaRoot, wallet_node):
     wallet_node, server_2 = wallets[0]
     wallet = wallet_node.wallet_state_manager.main_wallet
     ph = await wallet.get_new_puzzlehash()
-
     await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
     rpc_api = WalletRpcApi(wallet_node)
+    res = await rpc_api.init_data_layer()
+    assert res["result"] is True
     key = b"a"
     value = b"\x00\x01"
     changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
     res = await rpc_api.create_kv_store()
+    assert res is not None
     store_id = bytes32(hexstr_to_bytes(res["id"]))
     print(f"store id is {store_id}")
     spendable = await wallet.get_spendable_balance()
@@ -69,15 +70,15 @@ async def test_create_double_insert(chia_root: ChiaRoot, wallet_node):
     wallet_node, server_2 = wallets[0]
     wallet = wallet_node.wallet_state_manager.main_wallet
     ph = await wallet.get_new_puzzlehash()
-
     await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
 
     rpc_api = WalletRpcApi(wallet_node)
+    res = await rpc_api.init_data_layer()
+    assert res["result"] is True
     key1 = b"a"
     value1 = b"\x01\x02"
     key2 = b"b"
@@ -120,6 +121,8 @@ async def test_get_pairs(chia_root: ChiaRoot, wallet_node):
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
     rpc_api = WalletRpcApi(wallet_node)
+    res = await rpc_api.init_data_layer()
+    assert res["result"] is True
     key1 = b"a"
     value1 = b"\x01\x02"
     changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
@@ -155,14 +158,14 @@ async def test_get_ancestors(chia_root: ChiaRoot, wallet_node: WalletNode):
     assert wallet_node.wallet_state_manager
     wallet = wallet_node.wallet_state_manager.main_wallet
     ph = await wallet.get_new_puzzlehash()
-
     await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
     rpc_api = WalletRpcApi(wallet_node)
+    res = await rpc_api.init_data_layer()
+    assert res["result"] is True
     key1 = b"a"
     value1 = b"\x01\x02"
     changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]

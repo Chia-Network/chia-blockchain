@@ -5,6 +5,16 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
 
+async def init_data_layer(extra_params, wallet_client: WalletRpcClient, fingerprint) -> Optional[Dict[str, Any]]:
+    # TODO: nice cli error handling
+    try:
+        response = await wallet_client.init_data_layer()
+    except Exception as e:
+        print(f"Exception from 'data': {e}")
+        return None
+    return response
+
+
 async def create_kv_store_cmd(wallet_client: WalletRpcClient) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
     try:

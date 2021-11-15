@@ -117,6 +117,7 @@ class WalletRpcApi:
             "/update_kv_store": self.update_kv_store,
             "/get_value": self.get_value,
             "/get_pairs": self.get_pairs,
+            "/init_data_layer": self.init_data_layer,
         }
 
     async def _state_changed(self, *args) -> List[WsRpcMessage]:
@@ -1264,6 +1265,10 @@ class WalletRpcApi:
     ##########################################################################################
     # Data Layer Wallet
     ##########################################################################################
+
+    async def init_data_layer(self, request: Dict[str, Any] = None) -> Dict[str, Any]:
+        value = await self.service.init_data_layer()
+        return {"result": value}
 
     async def create_kv_store(self, request: Dict[str, Any] = None) -> Dict[str, Any]:
         value = await self.service.data_layer.create_store()

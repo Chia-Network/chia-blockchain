@@ -83,18 +83,31 @@ def create_rpc_port_option():
     )
 
 
+@data_cmd.command("init_data_layer", short_help="init data layer wallet")
+# @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@create_rpc_port_option()
+def init_data_layer(
+    # fingerprint: int,
+    wallet_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import init_data_layer
+    from .wallet_funcs import execute_with_wallet
+
+    run(execute_with_wallet(wallet_rpc_port, 0, {}, init_data_layer))
+
+
 @data_cmd.command("create_kv_store", short_help="Get a data row by its hash")
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+# @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
 def create_kv_store(
     # table_string: str,
-    fingerprint: int,
+    # fingerprint: int,
     wallet_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import create_kv_store_cmd
     from .wallet_funcs import execute_with_wallet
 
-    run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, create_kv_store_cmd))
+    run(execute_with_wallet(wallet_rpc_port, 0, {}, create_kv_store_cmd))
 
 
 @data_cmd.command("get_value", short_help="Get a data row by its hash")

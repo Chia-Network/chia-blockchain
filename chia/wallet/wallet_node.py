@@ -240,8 +240,6 @@ class WalletNode:
         self.logged_in_fingerprint = fingerprint
         self.logged_in = True
         self.data_layer = DataLayer(self.root_path, self.wallet_state_manager)
-        res = await self.data_layer.start()
-        assert res  # todo error handling
         return True
 
     def _close(self):
@@ -1013,6 +1011,9 @@ class WalletNode:
 
         else:
             return []
+
+    async def init_data_layer(self) -> bool:
+        return await self.data_layer.start()
 
 
 async def wallet_next_block_check(
