@@ -3,10 +3,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import aiosqlite
-from chia.daemon.keychain_proxy import KeychainProxyConnectionFailure
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.data_store import DataStore
-from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
@@ -107,6 +105,7 @@ class DataLayer:
         res = await self.wallet.create_update_state_spend(root.node_hash)
         assert res
         # todo register callback to change status in data store
+        # await self.data_store.change_root_status(root, Status.COMMITTED)
         return True
 
     async def get_value(self, store_id: bytes32, key: bytes32) -> bytes32:
