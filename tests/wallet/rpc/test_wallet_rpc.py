@@ -96,7 +96,9 @@ class TestWalletRpc:
         await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
 
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, shared_b_tools.root_path, config)
-        client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, shared_b_tools.root_path, config)
+        client_node = await FullNodeRpcClient.create(
+            self_hostname, test_rpc_port_node, shared_b_tools.root_path, config
+        )
         try:
             addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")
             tx_amount = 15600000

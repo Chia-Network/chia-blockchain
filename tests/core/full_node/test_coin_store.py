@@ -18,7 +18,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.ints import uint64, uint32
 from tests.wallet_tools import WalletTool
-from tests.setup_nodes import bt, test_constants
+from tests.setup_nodes import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.util.db_connection import DBConnection
 
@@ -57,12 +57,12 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0])
-    async def test_basic_coin_store(self, cache_size: uint32):
+    async def test_basic_coin_store(self, cache_size: uint32, shared_b_tools):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
         # Generate some coins
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             10,
             [],
             farmer_reward_puzzle_hash=reward_ph,
@@ -83,7 +83,7 @@ class TestCoinStoreWithBlocks:
         async with DBConnection() as db_wrapper:
             coin_store = await CoinStore.create(db_wrapper, cache_size=cache_size)
 
-            blocks = bt.get_consecutive_blocks(
+            blocks = shared_b_tools.get_consecutive_blocks(
                 10,
                 blocks,
                 farmer_reward_puzzle_hash=reward_ph,
@@ -103,8 +103,8 @@ class TestCoinStoreWithBlocks:
                         block_gen: BlockGenerator = BlockGenerator(block.transactions_generator, [])
                         npc_result = get_name_puzzle_conditions(
                             block_gen,
-                            bt.constants.MAX_BLOCK_COST_CLVM,
-                            cost_per_byte=bt.constants.COST_PER_BYTE,
+                            shared_b_tools.constants.MAX_BLOCK_COST_CLVM,
+                            cost_per_byte=shared_b_tools.constants.COST_PER_BYTE,
                             safe_mode=False,
                         )
                         tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
@@ -154,8 +154,8 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_set_spent(self, cache_size: uint32):
-        blocks = bt.get_consecutive_blocks(9, [])
+    async def test_set_spent(self, cache_size: uint32, shared_b_tools):
+        blocks = shared_b_tools.get_consecutive_blocks(9, [])
 
         async with DBConnection() as db_wrapper:
             coin_store = await CoinStore.create(db_wrapper, cache_size=cache_size)
@@ -188,8 +188,8 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_rollback(self, cache_size: uint32):
-        blocks = bt.get_consecutive_blocks(20)
+    async def test_rollback(self, cache_size: uint32, shared_b_tools):
+        blocks = shared_b_tools.get_consecutive_blocks(20)
 
         async with DBConnection() as db_wrapper:
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
@@ -240,12 +240,12 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_basic_reorg(self, cache_size: uint32):
+    async def test_basic_reorg(self, cache_size: uint32, shared_b_tools):
 
         async with DBConnection() as db_wrapper:
             initial_block_count = 30
             reorg_length = 15
-            blocks = bt.get_consecutive_blocks(initial_block_count)
+            blocks = shared_b_tools.get_consecutive_blocks(initial_block_count)
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
             hint_store = await HintStore.create(db_wrapper)
@@ -270,7 +270,7 @@ class TestCoinStoreWithBlocks:
                             assert record.confirmed_block_index == block.height
                             assert record.spent_block_index == 0
 
-                blocks_reorg_chain = bt.get_consecutive_blocks(
+                blocks_reorg_chain = shared_b_tools.get_consecutive_blocks(
                     reorg_length, blocks[: initial_block_count - 10], seed=b"2"
                 )
 
@@ -300,12 +300,12 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_get_puzzle_hash(self, cache_size: uint32):
+    async def test_get_puzzle_hash(self, cache_size: uint32, shared_b_tools):
         async with DBConnection() as db_wrapper:
             num_blocks = 20
             farmer_ph = 32 * b"0"
             pool_ph = 32 * b"1"
-            blocks = bt.get_consecutive_blocks(
+            blocks = shared_b_tools.get_consecutive_blocks(
                 num_blocks,
                 farmer_reward_puzzle_hash=farmer_ph,
                 pool_reward_puzzle_hash=pool_ph,

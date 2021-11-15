@@ -22,7 +22,7 @@ from tests.wallet_tools import WalletTool
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.test_coin_store import get_future_reward_coins
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import bt, setup_simulators_and_wallets, test_constants
+from tests.setup_nodes import setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 
 log = logging.getLogger(__name__)
@@ -45,12 +45,14 @@ def event_loop():
 
 
 @pytest.fixture(scope="module")
-async def wallet_nodes():
-    async_gen = setup_simulators_and_wallets(1, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000})
+async def wallet_nodes(shared_b_tools):
+    async_gen = setup_simulators_and_wallets(
+        1, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000}, shared_b_tools
+    )
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     server_1 = full_node_1.full_node.server
-    wallet_a = bt.get_pool_wallet_tool()
+    wallet_a = shared_b_tools.get_pool_wallet_tool()
     wallet_receiver = WalletTool(full_node_1.full_node.constants)
     yield full_node_1, server_1, wallet_a, wallet_receiver
 
@@ -60,13 +62,13 @@ async def wallet_nodes():
 
 class TestPerformance:
     @pytest.mark.asyncio
-    async def test_full_block_performance(self, wallet_nodes):
+    async def test_full_block_performance(self, wallet_nodes, shared_b_tools):
         full_node_1, server_1, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
         full_node_1.full_node.mempool_manager.limit_factor = 1
 
         wallet_ph = wallet_a.get_new_puzzlehash()
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             10,
             block_list_input=blocks,
             guarantee_transaction_block=True,
@@ -108,7 +110,7 @@ class TestPerformance:
             respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
             await full_node_1.respond_transaction(respond_transaction_2, fake_peer)
 
-            blocks = bt.get_consecutive_blocks(
+            blocks = shared_b_tools.get_consecutive_blocks(
                 1,
                 block_list_input=blocks,
                 guarantee_transaction_block=True,
@@ -169,7 +171,7 @@ class TestPerformance:
             spend_bundle = mempool_bundle[0]
 
         current_blocks = await full_node_1.get_all_full_blocks()
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             1,
             transaction_data=spend_bundle,
             block_list_input=current_blocks,
