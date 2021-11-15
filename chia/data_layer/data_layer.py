@@ -106,7 +106,7 @@ class DataLayer:
         assert root.node_hash
         res = await self.wallet.create_update_state_spend(root.node_hash)
         assert res
-        # todo need to mark data as pending and change once tx is confirmed
+        # todo register callback to change status in data store
         return True
 
     async def get_value(self, store_id: bytes32, key: bytes32) -> bytes32:
