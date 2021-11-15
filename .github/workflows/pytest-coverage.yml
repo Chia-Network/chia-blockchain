@@ -18,7 +18,7 @@ jobs:
   build:
     name: Ubuntu pytest coverage
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 4320 # 72 hr
+    timeout-minutes: 600
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -107,6 +107,9 @@ jobs:
       run: |
         . ./activate
         ./venv/bin/py.test --cache-clear --cov=chia tests/ | tee pytest-coverage.txt
+      register: coverage
+    - debug:
+        msg: "{{ configure.stdout }}"
 
     - name: Display Python Test Code coverage
       uses: coroo/pytest-coverage-commentator@v1.0.2
