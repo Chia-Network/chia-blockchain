@@ -4,7 +4,6 @@ import itertools
 import pytest
 
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed
-from tests.setup_nodes import bt
 
 
 @pytest.fixture(scope="module")
@@ -15,9 +14,9 @@ def event_loop():
 
 class TestMerkleSet:
     @pytest.mark.asyncio
-    async def test_basics(self):
+    async def test_basics(self, shared_b_tools):
         num_blocks = 20
-        blocks = bt.get_consecutive_blocks(num_blocks)
+        blocks = shared_b_tools.get_consecutive_blocks(num_blocks)
 
         merkle_set = MerkleSet()
         merkle_set_reverse = MerkleSet()
