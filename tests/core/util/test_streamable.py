@@ -26,10 +26,10 @@ from chia.util.streamable import (
     parse_size_hints,
     parse_str,
 )
-from tests.setup_nodes import bt, test_constants
+from tests.setup_nodes import test_constants
 
 
-class TestStreamable(unittest.TestCase):
+class TestStreamable:
     def test_basic(self):
         @dataclass(frozen=True)
         @streamable
@@ -68,8 +68,8 @@ class TestStreamable(unittest.TestCase):
         except NotImplementedError:
             pass
 
-    def test_json(self):
-        block = bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
+    def test_json(self, shared_b_tools):
+        block = shared_b_tools.create_genesis_block(test_constants, bytes([0] * 32), b"0")
 
         dict_block = block.to_json_dict()
         assert FullBlock.from_json_dict(dict_block) == block
