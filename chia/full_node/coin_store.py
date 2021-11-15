@@ -7,7 +7,7 @@ from chia.types.coin_record import CoinRecord
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
-from time import time
+from time import time, time_ns
 import logging
 
 log = logging.getLogger(__name__)
@@ -45,6 +45,23 @@ class CoinStore:
                 " coin_parent text,"
                 " amount blob,"
                 " timestamp bigint)"
+            )
+        )
+
+        await self.coin_record_db.execute(
+            (
+                "CREATE TEMPORARY TABLE IF NOT EXISTS temp_coin_record("
+                "coin_name text,"
+                " confirmed_index bigint,"
+                " spent_index bigint,"
+                " spent int,"
+                " coinbase int,"
+                " puzzle_hash text,"
+                " coin_parent text,"
+                " amount blob,"
+                " timestamp bigint,"
+                " tx_id bigint,"
+                " PRIMARY KEY(tx_id, coin_name))"
             )
         )
 
@@ -394,6 +411,7 @@ class CoinStore:
 
     # Store CoinRecord in DB and ram cache
     async def _add_coin_records(self, records: List[CoinRecord]) -> None:
+        txId = time_ns()
 
         values = []
         for record in records:
@@ -409,13 +427,27 @@ class CoinStore:
                     record.coin.parent_coin_info.hex(),
                     bytes(record.coin.amount),
                     record.timestamp,
+                    txId,
                 )
             )
 
         cursor = await self.coin_record_db.executemany(
-            "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO temp_coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             values,
         )
+
+        cursor = await self.coin_record_db.execute(
+            "INSERT INTO coin_record (coin_name, confirmed_index, spent_index, spent, coinbase, puzzle_hash, coin_parent, amount, timestamp)"
+            "     SELECT coin_name, confirmed_index, spent_index, spent, coinbase, puzzle_hash, coin_parent, amount, timestamp"
+            "       FROM temp_coin_record"
+            "      WHERE tx_id = ?",
+            (txId,),
+        )
+
+        await self.coin_record_db.execute(
+            "DELETE FROM temp_coin_record WHERE tx_id = ?", (txId,),
+        )
+
         await cursor.close()
 
     # Update coin_record to be spent in DB

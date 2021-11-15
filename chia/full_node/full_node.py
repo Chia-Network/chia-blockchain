@@ -151,12 +151,8 @@ class FullNode:
         self.respond_transaction_semaphore = asyncio.Semaphore(200)
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
-        await self.connection.execute("pragma journal_mode=wal")
 
-        await self.connection.execute(
-            "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path))
-        )
-
+        #do sql logging, if enabled
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
@@ -168,6 +164,15 @@ class FullNode:
                 log.close()
 
             await self.connection.set_trace_callback(sql_trace_callback)
+
+        #configure sqlite database
+        await self.connection.execute("pragma journal_mode=wal")
+        await self.connection.execute("pragma temp_store=memory")
+
+        await self.connection.execute(
+            "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path))
+        )
+
         self.db_wrapper = DBWrapper(self.connection)
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
