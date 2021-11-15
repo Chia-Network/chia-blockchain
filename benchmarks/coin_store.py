@@ -2,6 +2,7 @@ import asyncio
 import random
 import secrets
 from time import time
+from datetime import datetime
 from pathlib import Path
 from chia.full_node.coin_store import CoinStore
 from typing import List, Tuple
@@ -23,14 +24,26 @@ NUM_ITERS = 200
 ph = bytes32(b"a" * 32)
 
 
-async def setup_db() -> DBWrapper:
+async def setup_db(sql_logging: bool) -> DBWrapper:
     db_filename = Path("coin-store-benchmark.db")
     try:
         os.unlink(db_filename)
     except FileNotFoundError:
         pass
     connection = await aiosqlite.connect(db_filename)
-    await connection.execute("pragma journal_mode=wal")
+
+    def sql_trace_callback(req: str):
+       sql_log_path="/chia/scratch/disk03/sql.log"
+       #sql_log_path="sql.log"
+       timestamp = datetime.now().strftime("%H:%M:%S.%f")
+       log = open(sql_log_path, "a")
+       log.write(timestamp + " " + req + "\n")
+       log.close()
+
+    if sql_logging:
+        await connection.set_trace_callback(sql_trace_callback)
+
+    await connection.execute("pragma journal_mode=WAL")
     await connection.execute("pragma synchronous=FULL")
     return DBWrapper(connection)
 
@@ -62,9 +75,10 @@ def rewards(height: uint32) -> Tuple[Coin, Coin]:
 
 async def run_new_block_benchmark():
 
-    db_wrapper: DBWrapper = await setup_db()
-
     verbose: bool = "--verbose" in sys.argv
+    sql_logging: bool = "--sql-logging" in sys.argv
+    db_wrapper: DBWrapper = await setup_db(sql_logging)
+
     try:
         coin_store = await CoinStore.create(db_wrapper)
 
