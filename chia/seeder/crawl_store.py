@@ -72,7 +72,6 @@ class CrawlStore:
 
         await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS peer_id on peer_reliability(peer_id)")
         await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS ignore_till on peer_reliability(ignore_till)")
-        await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS is_reliable on peer_reliability(is_reliable)")
 
         await self.crawl_db.commit()
         self.last_timestamp = 0
@@ -115,7 +114,7 @@ class CrawlStore:
         await cursor.close()
         cursor = await self.crawl_db.execute(
             "INSERT OR REPLACE INTO peer_reliability"
-            " VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 peer_reliability.peer_id,
                 peer_reliability.ignore_till,
@@ -135,7 +134,6 @@ class CrawlStore:
                 peer_reliability.stat_1m.weight,
                 peer_reliability.stat_1m.count,
                 peer_reliability.stat_1m.reliability,
-                int(peer_reliability.is_reliable()),
                 peer_reliability.tries,
                 peer_reliability.successes,
             ),
