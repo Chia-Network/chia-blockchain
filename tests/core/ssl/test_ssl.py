@@ -51,18 +51,18 @@ async def establish_connection(server: ChiaServer, dummy_port: int, ssl_context)
 
 class TestSSL:
     @pytest.fixture(scope="function")
-    async def harvester_farmer(self):
-        async for _ in setup_farmer_harvester(test_constants):
+    async def harvester_farmer(self, shared_b_tools):
+        async for _ in setup_farmer_harvester(test_constants, shared_b_tools):
             yield _
 
     @pytest.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
+    async def wallet_node(self, shared_b_tools):
+        async for _ in setup_simulators_and_wallets(1, 1, {}, shared_b_tools):
             yield _
 
     @pytest.fixture(scope="function")
-    async def introducer(self):
-        async for _ in setup_introducer(21233):
+    async def introducer(self, shared_b_tools):
+        async for _ in setup_introducer(21233, shared_b_tools):
             yield _
 
     @pytest.fixture(scope="function")

@@ -3,6 +3,7 @@ import pytest
 from tests.block_tools import BlockTools
 from tests.setup_nodes import setup_shared_block_tools_and_keyring
 from tests.util.keyring import TempKeyring
+from tests.wallet_tools import WalletTool
 from typing import Optional
 
 
@@ -30,7 +31,18 @@ class BlockToolsFixtureHelper:
         self.cleaned_up = True
 
 
+class WalletToolFixtureHelper:
+    def __init__(self, wallet_tool: WalletTool) -> None:
+        self.wallet_tool: WalletTool = wallet_tool
+        self.cleaned_up: bool = False
+
+    def cleanup(self) -> None:
+        assert self.cleaned_up is False
+        self.cleaned_up = True
+
+
 shared_block_tools_helper: Optional[BlockToolsFixtureHelper] = None
+shared_wallet_tool_helper: Optional[WalletToolFixtureHelper] = None
 
 
 def get_shared_block_tools_helper() -> BlockToolsFixtureHelper:
@@ -41,6 +53,14 @@ def get_shared_block_tools_helper() -> BlockToolsFixtureHelper:
     return shared_block_tools_helper
 
 
+def get_shared_wallet_tool_helper(b_tools: BlockTools) -> WalletToolFixtureHelper:
+    global shared_wallet_tool_helper
+    if shared_wallet_tool_helper is None:
+        wallet_tool = b_tools.get_pool_wallet_tool()
+        shared_wallet_tool_helper = WalletToolFixtureHelper(wallet_tool)
+    return shared_wallet_tool_helper
+
+
 @pytest.fixture(scope="module")
 def cleanup_shared_block_tools(request) -> None:
     """
@@ -49,7 +69,26 @@ def cleanup_shared_block_tools(request) -> None:
     """
 
     def cleanup():
-        get_shared_block_tools_helper().cleanup()
+        global shared_block_tools_helper
+        if shared_block_tools_helper is not None:
+            shared_block_tools_helper.cleanup()
+            shared_block_tools_helper = None
+
+    request.addfinalizer(cleanup)
+
+
+@pytest.fixture(scope="module")
+def cleanup_shared_wallet_tool(request) -> None:
+    """
+    This fixture is run once per module and is used to clean up the shared wallet tool
+    after all tests in the module have run.
+    """
+
+    def cleanup():
+        global shared_wallet_tool_helper
+        if shared_wallet_tool_helper is not None:
+            shared_wallet_tool_helper.cleanup()
+            shared_wallet_tool_helper = None
 
     request.addfinalizer(cleanup)
 
@@ -61,6 +100,15 @@ def shared_b_tools(cleanup_shared_block_tools) -> BlockTools:
     for all tests in the module.
     """
     return get_shared_block_tools_helper().block_tools
+
+
+@pytest.fixture(scope="module")
+def wallet_a(shared_b_tools, cleanup_shared_wallet_tool) -> WalletTool:
+    """
+    This fixture is run once per module and is used to create the shared wallet tool
+    for all tests in the module.
+    """
+    return get_shared_wallet_tool_helper(shared_b_tools).wallet_tool
 
 
 @pytest.fixture(scope="function")
