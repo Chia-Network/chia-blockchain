@@ -461,8 +461,12 @@ class CoinStore:
                 self.coin_record_cache.put(
                     r.name, CoinRecord(r.coin, r.confirmed_block_index, index, True, r.coinbase, r.timestamp)
                 )
-            updates.append((index, coin_name.hex()))
+            updates.append((coin_name.hex()))
 
-        await self.coin_record_db.executemany(
-            "UPDATE OR FAIL coin_record SET spent=1,spent_index=? WHERE coin_name=?", updates
-        )
+        if len(updates) > 0:
+            cursor = await self.coin_record_db.execute(
+                f'UPDATE coin_record '
+                f'   SET spent=1, spent_index=? '
+                f' WHERE coin_name in ({"?," * (len(coin_names) - 1)}?)',
+                (index,) + tuple(updates),
+            )
