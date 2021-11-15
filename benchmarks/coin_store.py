@@ -23,6 +23,8 @@ NUM_ITERS = 200
 # farmer puzzle hash
 ph = bytes32(b"a" * 32)
 
+# we need seeded random, to have reproducible benchmark runs
+random.seed(123456789)
 
 async def setup_db(sql_logging: bool) -> DBWrapper:
     db_filename = Path("coin-store-benchmark.db")
