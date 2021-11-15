@@ -12,7 +12,6 @@ from chia.types.peer_info import PeerInfo
 from tests.block_tools import test_constants
 from chia.util.ints import uint16
 from tests.setup_nodes import (
-    bt,
     self_hostname,
     setup_farmer_harvester,
     setup_introducer,
@@ -67,8 +66,8 @@ class TestSSL:
             yield _
 
     @pytest.fixture(scope="function")
-    async def timelord(self):
-        async for _ in setup_timelord(21236, 21237, False, test_constants, bt):
+    async def timelord(self, shared_b_tools):
+        async for _ in setup_timelord(21236, 21237, False, test_constants, shared_b_tools):
             yield _
 
     @pytest.mark.asyncio
