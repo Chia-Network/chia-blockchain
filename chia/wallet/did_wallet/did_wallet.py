@@ -890,7 +890,7 @@ class DIDWallet:
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            did_hash.hex()
+            did_hash
         )
         inner_puzzle: Program = did_wallet_puzzles.create_innerpuz(
             bytes(record.pubkey),

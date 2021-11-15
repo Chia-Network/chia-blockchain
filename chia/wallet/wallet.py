@@ -403,7 +403,15 @@ class Wallet:
             non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
 
         transaction = await self._generate_unsigned_transaction(
-            amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send_amount, coin_announcements_to_consume, puzzle_announcements_to_consume
+            amount,
+            puzzle_hash,
+            fee,
+            origin_id,
+            coins,
+            primaries,
+            ignore_max_send_amount,
+            coin_announcements_to_consume,
+            puzzle_announcements_to_consume,
         )
         assert len(transaction) > 0
 

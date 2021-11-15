@@ -12,7 +12,7 @@ from chia.data_layer.data_layer_errors import (
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
 )
-from chia.data_layer.data_layer_types import NodeType, ProofOfInclusionLayer, Side, Status
+from chia.data_layer.data_layer_types import NodeType, ProofOfInclusion, ProofOfInclusionLayer, Side, Status
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
@@ -187,6 +187,48 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
 
 
 @pytest.mark.asyncio
+async def test_insert_internal_node_does_nothing_if_matching(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    kv_node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
+    ancestors = await data_store.get_ancestors(node_hash=kv_node.hash, tree_id=tree_id)
+    parent = ancestors[0]
+
+    async with data_store.db_wrapper.locked_transaction():
+        cursor = await data_store.db.execute("SELECT * FROM node")
+        before = await cursor.fetchall()
+
+    async with data_store.db_wrapper.locked_transaction():
+        await data_store._insert_internal_node(left_hash=parent.left_hash, right_hash=parent.right_hash)
+
+    async with data_store.db_wrapper.locked_transaction():
+        cursor = await data_store.db.execute("SELECT * FROM node")
+        after = await cursor.fetchall()
+
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    kv_node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
+
+    async with data_store.db_wrapper.locked_transaction():
+        cursor = await data_store.db.execute("SELECT * FROM node")
+        before = await cursor.fetchall()
+
+    async with data_store.db_wrapper.locked_transaction():
+        await data_store._insert_terminal_node(key=kv_node.key, value=kv_node.value)
+
+    async with data_store.db_wrapper.locked_transaction():
+        cursor = await data_store.db.execute("SELECT * FROM node")
+        after = await cursor.fetchall()
+
+    assert after == before
+
+
+@pytest.mark.asyncio
 async def test_build_a_tree(
     data_store: DataStore,
     tree_id: bytes32,
@@ -210,18 +252,6 @@ async def test_get_node_by_key(data_store: DataStore, tree_id: bytes32) -> None:
     # TODO: make a nicer relationship between the hash and the key
 
     actual = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
-    assert actual.hash == key_node_hash
-
-
-@pytest.mark.asyncio
-async def test_get_node_by_key_bytes(data_store: DataStore, tree_id: bytes32) -> None:
-    example = await add_0123_example(data_store=data_store, tree_id=tree_id)
-
-    key_node_hash = example.terminal_nodes[2]
-
-    # TODO: make a nicer relationship between the hash and the key
-
-    actual = await data_store.get_node_by_key_bytes(key=Program.to(b"\x02").as_bin(), tree_id=tree_id)
     assert actual.hash == key_node_hash
 
 
@@ -494,13 +524,20 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
 
 
 @pytest.mark.asyncio
-async def test_proof_of_inclusion_layers(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_proof_of_inclusion_by_hash(data_store: DataStore, tree_id: bytes32) -> None:
+    """A proof of inclusion contains the expected sibling side, sibling hash, combined
+    hash, key, value, and root hash values.
+    """
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
+    root = await data_store.get_tree_root(tree_id=tree_id)
+    node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
 
-    layers = await data_store.get_proof_of_inclusion_layers(key=b"\x04", tree_id=tree_id)
+    proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
 
-    # TODO: verify this data
-    assert layers == [
+    print(node)
+    await _debug_dump(db=data_store.db)
+
+    expected_layers = [
         ProofOfInclusionLayer(
             other_hash_side=Side.RIGHT,
             other_hash=bytes32.fromhex("fb66fe539b3eb2020dfbfadfd601fa318521292b41f04c2057c16fca6b947ca1"),
@@ -517,6 +554,73 @@ async def test_proof_of_inclusion_layers(data_store: DataStore, tree_id: bytes32
             combined_hash=bytes32.fromhex("7a5193a4e31a0a72f6623dfeb2876022ab74a48abb5966088a1c6f5451cc5d81"),
         ),
     ]
+
+    assert proof == ProofOfInclusion(node_hash=node.hash, root_hash=root.node_hash, layers=expected_layers)
+
+
+@pytest.mark.asyncio
+async def test_proof_of_inclusion_by_hash_no_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
+    """Check proper proof of inclusion creation when the node being proved is the root."""
+    await data_store.autoinsert(key=b"\x04", value=b"\x03", tree_id=tree_id)
+    root = await data_store.get_tree_root(tree_id=tree_id)
+    node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
+
+    proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
+
+    assert proof == ProofOfInclusion(node_hash=node.hash, root_hash=root.node_hash, layers=[])
+
+
+@pytest.mark.asyncio
+async def test_proof_of_inclusion_by_hash_program(data_store: DataStore, tree_id: bytes32) -> None:
+    """The proof of inclusion program has the expected Python equivalence."""
+
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+    node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
+
+    proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
+
+    assert proof.as_program() == [
+        b"\x04",
+        [
+            bytes32.fromhex("fb66fe539b3eb2020dfbfadfd601fa318521292b41f04c2057c16fca6b947ca1"),
+            bytes32.fromhex("6d3af8d93db948e8b6aa4386958e137c6be8bab726db86789594b3588b35adcd"),
+            bytes32.fromhex("c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2"),
+        ],
+    ]
+
+
+@pytest.mark.asyncio
+async def test_proof_of_inclusion_by_hash_equals_by_key(data_store: DataStore, tree_id: bytes32) -> None:
+    """The proof of inclusion is equal between hash and key requests."""
+
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+    node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
+
+    proof_by_hash = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
+    proof_by_key = await data_store.get_proof_of_inclusion_by_key(key=b"\x04", tree_id=tree_id)
+
+    assert proof_by_hash == proof_by_key
+
+
+@pytest.mark.asyncio
+async def test_proof_of_inclusion_by_hash_bytes(data_store: DataStore, tree_id: bytes32) -> None:
+    """The proof of inclusion provided by the data store is able to be converted to a
+    program and subsequently to bytes.
+    """
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+    node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
+
+    proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
+
+    expected = (
+        b"\xff\x04\xff\xff\xa0\xfbf\xfeS\x9b>\xb2\x02\r\xfb\xfa\xdf\xd6\x01\xfa1\x85!)"
+        b"+A\xf0L W\xc1o\xcak\x94|\xa1\xff\xa0m:\xf8\xd9=\xb9H\xe8\xb6\xaaC\x86\x95"
+        b"\x8e\x13|k\xe8\xba\xb7&\xdb\x86x\x95\x94\xb3X\x8b5\xad\xcd\xff\xa0\xc8R\xec"
+        b"\xd8\xfbaT\x9a\nB\xf9\xeb\x9d\xdee\xe6\xc9J\x01\x93M\xbd\x9c\x1d5\xab\x94"
+        b"\xe2\xa0\xaeX\xe2\x80\x80"
+    )
+
+    assert bytes(proof.as_program()) == expected
 
 
 # @pytest.mark.asyncio
@@ -558,8 +662,8 @@ async def test_check_internal_key_value_are_null(
 ) -> None:
     async with raw_data_store.db_wrapper.locked_transaction():
         await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, key, value,status) VALUES(:hash, :node_type, :key, :value,:status)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **key_value, "status": Status.COMMITTED.value},
+            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
+            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **key_value},
         )
 
     with pytest.raises(
@@ -582,13 +686,13 @@ async def test_check_internal_left_right_are_bytes32(raw_data_store: DataStore, 
     async with raw_data_store.db_wrapper.locked_transaction():
         # needed to satisfy foreign key constraints
         await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type,status) VALUES(:hash, :node_type,:status)",
-            {"hash": b"abc".hex(), "node_type": NodeType.TERMINAL, "status": Status.COMMITTED.value},
+            "INSERT INTO node(hash, node_type) VALUES(:hash, :node_type)",
+            {"hash": b"abc".hex(), "node_type": NodeType.TERMINAL},
         )
 
         await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, left, right,status) VALUES(:hash, :node_type, :left, :right,:status)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **left_right, "status": Status.COMMITTED.value},
+            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
+            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **left_right},
         )
 
     with pytest.raises(
@@ -610,8 +714,8 @@ async def test_check_internal_left_right_are_bytes32(raw_data_store: DataStore, 
 async def test_check_terminal_left_right_are_null(raw_data_store: DataStore, left_right: Dict[str, str]) -> None:
     async with raw_data_store.db_wrapper.locked_transaction():
         await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, left, right,status) VALUES(:hash, :node_type, :left, :right, :status)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.TERMINAL, **left_right, "status": Status.COMMITTED.value},
+            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
+            {"hash": a_bytes_32.hex(), "node_type": NodeType.TERMINAL, **left_right},
         )
 
     with pytest.raises(
@@ -628,7 +732,10 @@ async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataSto
     async with raw_data_store.db_wrapper.locked_transaction():
         for generation in range(1, 5):
             await raw_data_store.db.execute(
-                "INSERT INTO root(tree_id, generation, node_hash,status) VALUES(:tree_id, :generation, :node_hash,:status)",
+                """
+                INSERT INTO root(tree_id, generation, node_hash, status)
+                VALUES(:tree_id, :generation, :node_hash, :status)
+                """,
                 {
                     "tree_id": tree_id.hex(),
                     "generation": generation,
@@ -651,7 +758,10 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
     async with raw_data_store.db_wrapper.locked_transaction():
         for generation in [*range(5), *range(6, 10)]:
             await raw_data_store.db.execute(
-                "INSERT INTO root(tree_id, generation, node_hash,status) VALUES(:tree_id, :generation, :node_hash,:status)",
+                """
+                INSERT INTO root(tree_id, generation, node_hash, status)
+                VALUES(:tree_id, :generation, :node_hash, :status)
+                """,
                 {
                     "tree_id": tree_id.hex(),
                     "generation": generation,
@@ -671,13 +781,12 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
 async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
     async with raw_data_store.db_wrapper.locked_transaction():
         await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, left, right,status) VALUES(:hash, :node_type, :left, :right,:status)",
+            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
             {
                 "hash": a_bytes_32.hex(),
                 "node_type": NodeType.INTERNAL,
                 "left": a_bytes_32.hex(),
                 "right": a_bytes_32.hex(),
-                "status": Status.COMMITTED.value,
             },
         )
 
@@ -692,13 +801,12 @@ async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
 async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
     async with raw_data_store.db_wrapper.locked_transaction():
         await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, key, value,status) VALUES(:hash, :node_type, :key, :value,:status)",
+            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
             {
                 "hash": a_bytes_32.hex(),
                 "node_type": NodeType.TERMINAL,
                 "key": Program.to((1, 2)).as_bin().hex(),
                 "value": Program.to((1, 2)).as_bin().hex(),
-                "status": Status.COMMITTED.value,
             },
         )
 

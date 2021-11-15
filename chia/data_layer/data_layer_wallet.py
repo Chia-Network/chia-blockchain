@@ -111,7 +111,9 @@ class DataLayerWallet:
             raise ValueError("Not enough balance")
 
         try:
-            spend_bundle, dl_puzzle_hash, launcher_coin, inner_inner_puz = await self.generate_launcher_spend(uint64(amount), root_hash)
+            spend_bundle, dl_puzzle_hash, launcher_coin, inner_inner_puz = await self.generate_launcher_spend(
+                uint64(amount), root_hash
+            )
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id(), False)
             raise
@@ -327,6 +329,18 @@ class DataLayerWallet:
         spend_bundle = SpendBundle([coin_spend], AugSchemeMPL.aggregate([]))
 
         return spend_bundle
+
+    async def get_info_for_offer_claim(
+        self,
+    ):
+        current_full_puz = create_host_fullpuz(
+            self.dl_info.current_inner_inner,
+            self.dl_info.root_hash,
+            self.dl_info.origin_coin.name(),
+        )
+        db_innerpuz_hash = self.dl_info.current_inner_inner
+        current_root = self.dl_info.root_hash
+        return current_full_puz, db_innerpuz_hash, current_root
 
     async def select_coins(self, amount: uint64, exclude: List[Coin] = []) -> Optional[Set[Coin]]:
         """Returns a set of coins that can be used for generating a new transaction."""
