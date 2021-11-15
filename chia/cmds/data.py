@@ -83,34 +83,42 @@ def create_rpc_port_option():
     )
 
 
-@data_cmd.command("init_data_layer", short_help="init data layer wallet")
-# @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@data_cmd.command("start_data_layer", short_help="starts data layer wallet")
+# @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=False)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
-def init_data_layer(
-    # fingerprint: int,
+def start_data_layer(
+    fingerprint: int,
     wallet_rpc_port: int,
+    # id:int,
 ) -> None:
-    from chia.cmds.data_funcs import init_data_layer
+    from chia.cmds.data_funcs import start_data_layer_cmd
     from .wallet_funcs import execute_with_wallet
 
-    run(execute_with_wallet(wallet_rpc_port, 0, {}, init_data_layer))
+    # extra_params = {"id": id}
+    run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, start_data_layer_cmd))
 
 
 @data_cmd.command("create_kv_store", short_help="Get a data row by its hash")
-# @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+# @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
 def create_kv_store(
     # table_string: str,
-    # fingerprint: int,
+    fingerprint: int,
     wallet_rpc_port: int,
+    # id: int,
 ) -> None:
     from chia.cmds.data_funcs import create_kv_store_cmd
     from .wallet_funcs import execute_with_wallet
 
-    run(execute_with_wallet(wallet_rpc_port, 0, {}, create_kv_store_cmd))
+    # extra_params = {"id": id}
+    run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, create_kv_store_cmd))
 
 
 @data_cmd.command("get_value", short_help="Get a data row by its hash")
+# @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_key_option()
 @create_kv_store_id_option()
 @create_rpc_port_option()
@@ -119,6 +127,7 @@ def get_value(
     key: str,
     fingerprint: int,
     wallet_rpc_port: int,
+    # id: int,
 ) -> None:
     from chia.cmds.data_funcs import get_value_cmd
     from .wallet_funcs import execute_with_wallet
@@ -128,6 +137,8 @@ def get_value(
 
 
 @data_cmd.command("update_kv_store", short_help="Update a table.")
+# @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_kv_store_id_option()
 @create_rpc_port_option()
 @create_changelist_option()
@@ -136,6 +147,7 @@ def update_kv_store(
     changelist_string: str,
     fingerprint: int,
     wallet_rpc_port: int,
+    # id: int,
 ) -> None:
     from chia.cmds.data_funcs import update_kv_store_cmd
     from .wallet_funcs import execute_with_wallet

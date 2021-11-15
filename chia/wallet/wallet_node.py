@@ -1012,7 +1012,7 @@ class WalletNode:
         else:
             return []
 
-    async def init_data_layer(self) -> bool:
+    async def start_data_layer(self) -> bool:
         return await self.data_layer.start()
 
 

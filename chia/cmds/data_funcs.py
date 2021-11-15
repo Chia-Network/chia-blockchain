@@ -5,17 +5,17 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
 
-async def init_data_layer(extra_params, wallet_client: WalletRpcClient, fingerprint) -> Optional[Dict[str, Any]]:
+async def start_data_layer_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
     try:
-        response = await wallet_client.init_data_layer()
+        response = await wallet_client.start_data_layer()
     except Exception as e:
         print(f"Exception from 'data': {e}")
         return None
     return response
 
 
-async def create_kv_store_cmd(wallet_client: WalletRpcClient) -> Optional[Dict[str, Any]]:
+async def create_kv_store_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
     try:
         response = await wallet_client.create_kv_store()
@@ -25,7 +25,7 @@ async def create_kv_store_cmd(wallet_client: WalletRpcClient) -> Optional[Dict[s
     return response
 
 
-async def get_value_cmd(args: dict, wallet_client: WalletRpcClient) -> Optional[Dict[str, Any]]:
+async def get_value_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
     tree_id = args.get("tree_id", None)
     key = args.get("key", None)
@@ -40,7 +40,7 @@ async def get_value_cmd(args: dict, wallet_client: WalletRpcClient) -> Optional[
     return response
 
 
-async def update_kv_store_cmd(args: dict, wallet_client: WalletRpcClient) -> Optional[Dict[str, Any]]:
+async def update_kv_store_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
     tree_id = args.get("tree_id", None)
     changelist = args.get("changelist", None)
