@@ -18,18 +18,18 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint8
 from tests.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
-from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 
 
 class TestRpc:
     @pytest.fixture(scope="function")
-    async def two_nodes(self):
-        async for _ in setup_simulators_and_wallets(2, 0, {}):
+    async def two_nodes(self, shared_b_tools):
+        async for _ in setup_simulators_and_wallets(2, 0, {}, shared_b_tools):
             yield _
 
     @pytest.mark.asyncio
-    async def test1(self, two_nodes):
+    async def test1(self, two_nodes, shared_b_tools):
         num_blocks = 5
         test_rpc_port = uint16(21522)
         nodes, _ = two_nodes
@@ -43,7 +43,7 @@ class TestRpc:
 
         full_node_rpc_api = FullNodeRpcApi(full_node_api_1.full_node)
 
-        config = bt.config
+        config = shared_b_tools.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
 
@@ -53,21 +53,21 @@ class TestRpc:
             daemon_port,
             test_rpc_port,
             stop_node_cb,
-            bt.root_path,
+            shared_b_tools.root_path,
             config,
             connect_to_daemon=False,
         )
 
         try:
-            client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+            client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, shared_b_tools.root_path, config)
             state = await client.get_blockchain_state()
             assert state["peak"] is None
             assert not state["sync"]["sync_mode"]
             assert state["difficulty"] > 0
             assert state["sub_slot_iters"] > 0
 
-            blocks = bt.get_consecutive_blocks(num_blocks)
-            blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
+            blocks = shared_b_tools.get_consecutive_blocks(num_blocks)
+            blocks = shared_b_tools.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
             assert len(await client.get_unfinished_block_headers()) == 0
             assert len((await client.get_block_records(0, 100))) == 0
@@ -135,7 +135,7 @@ class TestRpc:
 
             assert len(await client.get_coin_records_by_puzzle_hash(ph)) == 0
             assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 0
-            blocks = bt.get_consecutive_blocks(
+            blocks = shared_b_tools.get_consecutive_blocks(
                 2,
                 block_list_input=blocks,
                 guarantee_transaction_block=True,
@@ -209,7 +209,7 @@ class TestRpc:
             await rpc_cleanup()
 
     @pytest.mark.asyncio
-    async def test_signage_points(self, two_nodes, empty_blockchain):
+    async def test_signage_points(self, two_nodes, empty_blockchain, shared_b_tools):
         test_rpc_port = uint16(21522)
         nodes, _ = two_nodes
         full_node_api_1, full_node_api_2 = nodes
@@ -224,7 +224,7 @@ class TestRpc:
 
         full_node_rpc_api = FullNodeRpcApi(full_node_api_1.full_node)
 
-        config = bt.config
+        config = shared_b_tools.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
 
@@ -234,13 +234,13 @@ class TestRpc:
             daemon_port,
             test_rpc_port,
             stop_node_cb,
-            bt.root_path,
+            shared_b_tools.root_path,
             config,
             connect_to_daemon=False,
         )
 
         try:
-            client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+            client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, shared_b_tools.root_path, config)
 
             # Only provide one
             res = await client.get_recent_signage_point_or_eos(None, None)
@@ -254,11 +254,11 @@ class TestRpc:
             res = await client.get_recent_signage_point_or_eos(None, std_hash(b"0"))
             assert res is None
 
-            blocks = bt.get_consecutive_blocks(5)
+            blocks = shared_b_tools.get_consecutive_blocks(5)
             for block in blocks:
                 await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1, force_overflow=True)
+            blocks = shared_b_tools.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1, force_overflow=True)
 
             blockchain = full_node_api_1.full_node.blockchain
             second_blockchain = empty_blockchain
@@ -298,7 +298,7 @@ class TestRpc:
             assert res["signage_point"] == sp
             assert not res["reverted"]
 
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+            blocks = shared_b_tools.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
             selected_eos = blocks[-1].finished_sub_slots[0]
 
             # Don't have EOS yet
@@ -319,7 +319,7 @@ class TestRpc:
 
             # Do another one but without sending the slot
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+            blocks = shared_b_tools.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
             selected_eos = blocks[-1].finished_sub_slots[-1]
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
 
@@ -330,7 +330,7 @@ class TestRpc:
             assert not res["reverted"]
 
             # Perform a reorg
-            blocks = bt.get_consecutive_blocks(12, seed=b"1234")
+            blocks = shared_b_tools.get_consecutive_blocks(12, seed=b"1234")
             for block in blocks:
                 await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
