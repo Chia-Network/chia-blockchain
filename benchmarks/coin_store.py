@@ -47,6 +47,8 @@ async def setup_db(sql_logging: bool) -> DBWrapper:
 
     await connection.execute("pragma journal_mode=WAL")
     await connection.execute("pragma synchronous=FULL")
+    await connection.execute("pragma temp_store=MEMORY")
+
     return DBWrapper(connection)
 
 
