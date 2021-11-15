@@ -108,8 +108,7 @@ jobs:
         . ./activate
         ./venv/bin/py.test --cache-clear --cov=chia tests/ | tee pytest-coverage.txt
       register: coverage
-    - debug:
-      msg: "{{ coverage.stdout }}"
+
 
     - name: Display Python Test Code coverage
       uses: coroo/pytest-coverage-commentator@v1.0.2
