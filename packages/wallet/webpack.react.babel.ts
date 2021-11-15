@@ -70,6 +70,7 @@ export default {
     path: path.resolve(__dirname, './build/renderer'),
     filename: 'js/[name].js',
     publicPath: './',
+    hashFunction: "sha256",
   },
   resolve: {
     extensions: ['.wasm', '.mjs', '.ts', '.tsx', '.js', '.jsx', '.json'],
