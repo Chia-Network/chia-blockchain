@@ -21,12 +21,13 @@ class BlockToolsFixtureHelper:
     def __init__(self, block_tools: BlockTools, keyring: TempKeyring) -> None:
         self.block_tools: BlockTools = block_tools
         self.keyring: TempKeyring = keyring
+        self.cleaned_up: bool = False
 
     def cleanup(self) -> None:
+        assert self.cleaned_up is False
         if self.keyring is not None:
             self.keyring.cleanup()
-        self.block_tools = None
-        self.keyring = None
+        self.cleaned_up = True
 
 
 shared_block_tools_helper: Optional[BlockToolsFixtureHelper] = None
