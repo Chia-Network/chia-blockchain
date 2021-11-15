@@ -49,15 +49,7 @@ export default function useWalletTransactions(
   const error = transactionsError || transactionsCountError;
 
   // TODO move sorting to the backend
-  const transactionsOrdered = useMemo(() => {
-    if (transactions) {
-      return orderBy(
-        transactions,
-        ['confirmed', 'confirmedAtHeight', 'createdAtTime'],
-        ['asc', 'desc', 'desc'],
-      );
-    }
-  }, [transactions]);
+  const transactionsOrdered = transactions;
 
   function handlePageChange(rowsPerPage: number, page: number) {
     setRowsPerPage(rowsPerPage);
