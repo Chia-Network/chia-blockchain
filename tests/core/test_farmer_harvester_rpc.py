@@ -26,7 +26,7 @@ from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_pooling_authentication_sk
-from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
+from tests.setup_nodes import self_hostname, setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 log = logging.getLogger(__name__)
@@ -34,12 +34,12 @@ log = logging.getLogger(__name__)
 
 class TestRpc:
     @pytest.fixture(scope="function")
-    async def simulation(self):
-        async for _ in setup_farmer_harvester(test_constants):
+    async def simulation(self, shared_b_tools):
+        async for _ in setup_farmer_harvester(test_constants, shared_b_tools):
             yield _
 
     @pytest.mark.asyncio
-    async def test1(self, simulation):
+    async def test1(self, simulation, shared_b_tools):
         test_rpc_port = uint16(21522)
         test_rpc_port_2 = uint16(21523)
         harvester, farmer_api = simulation
@@ -50,7 +50,7 @@ class TestRpc:
         def stop_node_cb_2():
             pass
 
-        config = bt.config
+        config = shared_b_tools.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
 
@@ -63,7 +63,7 @@ class TestRpc:
             daemon_port,
             test_rpc_port,
             stop_node_cb,
-            bt.root_path,
+            shared_b_tools.root_path,
             config,
             connect_to_daemon=False,
         )
@@ -73,14 +73,14 @@ class TestRpc:
             daemon_port,
             test_rpc_port_2,
             stop_node_cb_2,
-            bt.root_path,
+            shared_b_tools.root_path,
             config,
             connect_to_daemon=False,
         )
 
         try:
-            client = await FarmerRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
-            client_2 = await HarvesterRpcClient.create(self_hostname, test_rpc_port_2, bt.root_path, config)
+            client = await FarmerRpcClient.create(self_hostname, test_rpc_port, shared_b_tools.root_path, config)
+            client_2 = await HarvesterRpcClient.create(self_hostname, test_rpc_port_2, shared_b_tools.root_path, config)
 
             async def have_connections():
                 return len(await client.get_connections()) > 0
@@ -124,7 +124,9 @@ class TestRpc:
                 str(plot_dir),
                 filename,
                 18,
-                stream_plot_info_pk(bt.pool_pk, bt.farmer_pk, AugSchemeMPL.key_gen(bytes([4] * 32))),
+                stream_plot_info_pk(
+                    shared_b_tools.pool_pk, shared_b_tools.farmer_pk, AugSchemeMPL.key_gen(bytes([4] * 32))
+                ),
                 token_bytes(32),
                 128,
                 0,
@@ -141,7 +143,9 @@ class TestRpc:
                 str(plot_dir),
                 filename_2,
                 18,
-                stream_plot_info_ph(std_hash(b"random ph"), bt.farmer_pk, AugSchemeMPL.key_gen(bytes([5] * 32))),
+                stream_plot_info_ph(
+                    std_hash(b"random ph"), shared_b_tools.farmer_pk, AugSchemeMPL.key_gen(bytes([5] * 32))
+                ),
                 plot_id_2,
                 128,
                 0,
@@ -157,7 +161,9 @@ class TestRpc:
                 str(plot_dir_sub),
                 filename_2,
                 18,
-                stream_plot_info_ph(std_hash(b"random ph"), bt.farmer_pk, AugSchemeMPL.key_gen(bytes([5] * 32))),
+                stream_plot_info_ph(
+                    std_hash(b"random ph"), shared_b_tools.farmer_pk, AugSchemeMPL.key_gen(bytes([5] * 32))
+                ),
                 plot_id_2,
                 128,
                 0,
@@ -455,9 +461,11 @@ class TestRpc:
             targets_2 = await client.get_reward_targets(True)
             assert targets_2["have_pool_sk"] and targets_2["have_farmer_sk"]
 
-            new_ph: bytes32 = create_puzzlehash_for_pk(master_sk_to_wallet_sk(bt.farmer_master_sk, uint32(10)).get_g1())
+            new_ph: bytes32 = create_puzzlehash_for_pk(
+                master_sk_to_wallet_sk(shared_b_tools.farmer_master_sk, uint32(10)).get_g1()
+            )
             new_ph_2: bytes32 = create_puzzlehash_for_pk(
-                master_sk_to_wallet_sk(bt.pool_master_sk, uint32(472)).get_g1()
+                master_sk_to_wallet_sk(shared_b_tools.pool_master_sk, uint32(472)).get_g1()
             )
 
             await client.set_reward_targets(encode_puzzle_hash(new_ph, "xch"), encode_puzzle_hash(new_ph_2, "xch"))
@@ -467,7 +475,7 @@ class TestRpc:
             assert targets_3["have_pool_sk"] and targets_3["have_farmer_sk"]
 
             new_ph_3: bytes32 = create_puzzlehash_for_pk(
-                master_sk_to_wallet_sk(bt.pool_master_sk, uint32(1888)).get_g1()
+                master_sk_to_wallet_sk(shared_b_tools.pool_master_sk, uint32(1888)).get_g1()
             )
             await client.set_reward_targets(None, encode_puzzle_hash(new_ph_3, "xch"))
             targets_4 = await client.get_reward_targets(True)
