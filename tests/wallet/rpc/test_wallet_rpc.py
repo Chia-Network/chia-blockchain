@@ -18,7 +18,7 @@ from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
-from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
+from tests.setup_nodes import setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
@@ -26,12 +26,12 @@ log = logging.getLogger(__name__)
 
 class TestWalletRpc:
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
+    async def two_wallet_nodes(self, shared_b_tools):
+        async for _ in setup_simulators_and_wallets(1, 2, {}, shared_b_tools):
             yield _
 
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction(self, two_wallet_nodes):
+    async def test_wallet_make_transaction(self, two_wallet_nodes, shared_b_tools):
         test_rpc_port = uint16(21529)
         test_rpc_port_node = uint16(21530)
         num_blocks = 5
@@ -62,7 +62,7 @@ class TestWalletRpc:
 
         wallet_rpc_api = WalletRpcApi(wallet_node)
 
-        config = bt.config
+        config = shared_b_tools.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
 
@@ -77,7 +77,7 @@ class TestWalletRpc:
             daemon_port,
             test_rpc_port_node,
             stop_node_cb,
-            bt.root_path,
+            shared_b_tools.root_path,
             config,
             connect_to_daemon=False,
         )
@@ -87,7 +87,7 @@ class TestWalletRpc:
             daemon_port,
             test_rpc_port,
             stop_node_cb,
-            bt.root_path,
+            shared_b_tools.root_path,
             config,
             connect_to_daemon=False,
         )
@@ -95,8 +95,8 @@ class TestWalletRpc:
         await time_out_assert(5, wallet.get_confirmed_balance, initial_funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
 
-        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
-        client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
+        client = await WalletRpcClient.create(self_hostname, test_rpc_port, shared_b_tools.root_path, config)
+        client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, shared_b_tools.root_path, config)
         try:
             addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")
             tx_amount = 15600000
