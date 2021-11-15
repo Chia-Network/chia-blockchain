@@ -12,7 +12,7 @@ from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.util.db_wrapper import DBWrapper
-from tests.setup_nodes import bt, test_constants
+from tests.setup_nodes import test_constants
 
 log = logging.getLogger(__name__)
 
@@ -25,9 +25,9 @@ def event_loop():
 
 class TestBlockStore:
     @pytest.mark.asyncio
-    async def test_block_store(self):
+    async def test_block_store(self, shared_b_tools):
         assert sqlite3.threadsafety == 1
-        blocks = bt.get_consecutive_blocks(10)
+        blocks = shared_b_tools.get_consecutive_blocks(10)
 
         db_filename = Path("blockchain_test.db")
         db_filename_2 = Path("blockchain_test2.db")
@@ -85,12 +85,12 @@ class TestBlockStore:
         db_filename_2.unlink()
 
     @pytest.mark.asyncio
-    async def test_deadlock(self):
+    async def test_deadlock(self, shared_b_tools):
         """
         This test was added because the store was deadlocking in certain situations, when fetching and
         adding blocks repeatedly. The issue was patched.
         """
-        blocks = bt.get_consecutive_blocks(10)
+        blocks = shared_b_tools.get_consecutive_blocks(10)
         db_filename = Path("blockchain_test.db")
         db_filename_2 = Path("blockchain_test2.db")
 
