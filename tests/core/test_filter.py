@@ -4,7 +4,7 @@ from typing import List
 import pytest
 from chiabip158 import PyBIP158
 
-from tests.setup_nodes import setup_simulators_and_wallets, bt
+from tests.setup_nodes import setup_simulators_and_wallets
 
 
 @pytest.fixture(scope="module")
@@ -15,19 +15,19 @@ def event_loop():
 
 class TestFilter:
     @pytest.fixture(scope="function")
-    async def wallet_and_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
+    async def wallet_and_node(self, shared_b_tools):
+        async for _ in setup_simulators_and_wallets(1, 1, {}, shared_b_tools):
             yield _
 
     @pytest.mark.asyncio
-    async def test_basic_filter_test(self, wallet_and_node):
+    async def test_basic_filter_test(self, wallet_and_node, shared_b_tools):
         full_nodes, wallets = wallet_and_node
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         num_blocks = 2
         ph = await wallet.get_new_puzzlehash()
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             10,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=ph,

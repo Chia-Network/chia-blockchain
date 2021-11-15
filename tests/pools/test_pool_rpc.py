@@ -24,7 +24,7 @@ from chia.util.config import load_config
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 
@@ -37,9 +37,9 @@ def get_pool_plot_dir():
     return get_plot_dir() / Path("pool_tests")
 
 
-async def create_pool_plot(p2_singleton_puzzle_hash: bytes32) -> Optional[bytes32]:
-    plot_id = await bt.new_plot(p2_singleton_puzzle_hash, get_pool_plot_dir())
-    await bt.refresh_plots()
+async def create_pool_plot(p2_singleton_puzzle_hash: bytes32, shared_b_tools) -> Optional[bytes32]:
+    plot_id = await shared_b_tools.new_plot(p2_singleton_puzzle_hash, get_pool_plot_dir())
+    await shared_b_tools.refresh_plots()
     return plot_id
 
 
@@ -51,14 +51,14 @@ def event_loop():
 
 class TestPoolWalletRpc:
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
+    async def two_wallet_nodes(self, shared_b_tools):
+        async for _ in setup_simulators_and_wallets(1, 2, {}, shared_b_tools):
             yield _
 
     @pytest.fixture(scope="function")
-    async def one_wallet_node_and_rpc(self):
+    async def one_wallet_node_and_rpc(self, shared_b_tools):
         rmtree(get_pool_plot_dir(), ignore_errors=True)
-        async for nodes in setup_simulators_and_wallets(1, 1, {}):
+        async for nodes in setup_simulators_and_wallets(1, 1, {}, shared_b_tools):
             full_nodes, wallets = nodes
             full_node_api = full_nodes[0]
             full_node_server = full_node_api.server
@@ -72,7 +72,7 @@ class TestPoolWalletRpc:
 
             await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
             api_user = WalletRpcApi(wallet_node_0)
-            config = bt.config
+            config = shared_b_tools.config
             hostname = config["self_hostname"]
             daemon_port = config["daemon_port"]
             test_rpc_port = uint16(21529)
@@ -83,11 +83,11 @@ class TestPoolWalletRpc:
                 daemon_port,
                 test_rpc_port,
                 lambda x: None,
-                bt.root_path,
+                shared_b_tools.root_path,
                 config,
                 connect_to_daemon=False,
             )
-            client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+            client = await WalletRpcClient.create(self_hostname, test_rpc_port, shared_b_tools.root_path, config)
 
             yield client, wallet_node_0, full_node_api
 
@@ -96,7 +96,7 @@ class TestPoolWalletRpc:
             await rpc_cleanup()
 
     @pytest.fixture(scope="function")
-    async def setup(self, two_wallet_nodes):
+    async def setup(self, two_wallet_nodes, shared_b_tools):
         rmtree(get_pool_plot_dir(), ignore_errors=True)
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -110,7 +110,7 @@ class TestPoolWalletRpc:
 
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         api_user = WalletRpcApi(wallet_node_0)
-        config = bt.config
+        config = shared_b_tools.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
         test_rpc_port = uint16(21529)
@@ -121,11 +121,11 @@ class TestPoolWalletRpc:
             daemon_port,
             test_rpc_port,
             lambda x: None,
-            bt.root_path,
+            shared_b_tools.root_path,
             config,
             connect_to_daemon=False,
         )
-        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+        client = await WalletRpcClient.create(self_hostname, test_rpc_port, shared_b_tools.root_path, config)
 
         return (
             full_nodes,
@@ -353,7 +353,7 @@ class TestPoolWalletRpc:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
-    async def test_absorb_self(self, one_wallet_node_and_rpc, fee):
+    async def test_absorb_self(self, one_wallet_node_and_rpc, fee, shared_b_tools):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         our_ph = await wallet_0.get_new_puzzlehash()
@@ -377,10 +377,10 @@ class TestPoolWalletRpc:
         status: PoolWalletInfo = (await client.pw_status(2))[0]
 
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
-        plot_id: Optional[bytes32] = await create_pool_plot(status.p2_singleton_puzzle_hash)
+        plot_id: Optional[bytes32] = await create_pool_plot(status.p2_singleton_puzzle_hash, shared_b_tools)
         assert plot_id is not None
         all_blocks = await full_node_api.get_all_full_blocks()
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             3,
             block_list_input=all_blocks,
             force_plot_id=plot_id,
@@ -446,11 +446,11 @@ class TestPoolWalletRpc:
         with pytest.raises(ValueError):
             await client.pw_absorb_rewards(2, fee)
 
-        await bt.delete_plot(plot_id)
+        await shared_b_tools.delete_plot(plot_id)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
-    async def test_absorb_pooling(self, one_wallet_node_and_rpc, fee):
+    async def test_absorb_pooling(self, one_wallet_node_and_rpc, fee, shared_b_tools):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         our_ph = await wallet_0.get_new_puzzlehash()
@@ -476,9 +476,9 @@ class TestPoolWalletRpc:
 
         log.warning(f"{await wallet_0.get_confirmed_balance()}")
         assert status.current.state == PoolSingletonState.FARMING_TO_POOL.value
-        plot_id: bytes32 = await create_pool_plot(status.p2_singleton_puzzle_hash)
+        plot_id: bytes32 = await create_pool_plot(status.p2_singleton_puzzle_hash, shared_b_tools)
         all_blocks = await full_node_api.get_all_full_blocks()
-        blocks = bt.get_consecutive_blocks(
+        blocks = shared_b_tools.get_consecutive_blocks(
             3,
             block_list_input=all_blocks,
             force_plot_id=plot_id,
@@ -527,7 +527,7 @@ class TestPoolWalletRpc:
         bal = await client.get_wallet_balance(2)
         assert bal["confirmed_wallet_balance"] == 0
         log.warning(f"{await wallet_0.get_confirmed_balance()}")
-        await bt.delete_plot(plot_id)
+        await shared_b_tools.delete_plot(plot_id)
         assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
         assert (
             wallet_node_0.wallet_state_manager.get_peak().height == full_node_api.full_node.blockchain.get_peak().height
@@ -861,7 +861,7 @@ class TestPoolWalletRpc:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
-    async def test_change_pools_reorg(self, setup, fee):
+    async def test_change_pools_reorg(self, setup, fee, shared_b_tools):
         """This tests Pool A -> escaping -> reorg -> escaping -> Pool B"""
         full_nodes, wallets, receive_address, client, rpc_cleanup = setup
         our_ph = receive_address[0]

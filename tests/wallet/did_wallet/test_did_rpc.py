@@ -9,7 +9,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
 from chia.wallet.util.wallet_types import WalletType
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 
@@ -32,7 +32,7 @@ class TestDIDWallet:
             yield _
 
     @pytest.mark.asyncio
-    async def test_create_did(self, three_wallet_nodes):
+    async def test_create_did(self, three_wallet_nodes, shared_b_tools):
         num_blocks = 4
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -54,18 +54,20 @@ class TestDIDWallet:
         log.info("Waiting for initial money in Wallet 0 ...")
 
         api_one = WalletRpcApi(wallet_node_0)
-        config = bt.config
+        config = shared_b_tools.config
         daemon_port = config["daemon_port"]
         test_rpc_port = uint16(21529)
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, bt.config)
+        client = await WalletRpcClient.create(
+            self_hostname, test_rpc_port, shared_b_tools.root_path, shared_b_tools.config
+        )
         rpc_server_cleanup = await start_rpc_server(
             api_one,
             self_hostname,
             daemon_port,
             test_rpc_port,
             lambda x: None,
-            bt.root_path,
+            shared_b_tools.root_path,
             config,
             connect_to_daemon=False,
         )
