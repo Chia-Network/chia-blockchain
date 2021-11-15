@@ -67,7 +67,9 @@ class TestRpc:
             assert state["sub_slot_iters"] > 0
 
             blocks = shared_b_tools.get_consecutive_blocks(num_blocks)
-            blocks = shared_b_tools.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
+            blocks = shared_b_tools.get_consecutive_blocks(
+                num_blocks, block_list_input=blocks, guarantee_transaction_block=True
+            )
 
             assert len(await client.get_unfinished_block_headers()) == 0
             assert len((await client.get_block_records(0, 100))) == 0
@@ -258,7 +260,9 @@ class TestRpc:
             for block in blocks:
                 await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-            blocks = shared_b_tools.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1, force_overflow=True)
+            blocks = shared_b_tools.get_consecutive_blocks(
+                1, block_list_input=blocks, skip_slots=1, force_overflow=True
+            )
 
             blockchain = full_node_api_1.full_node.blockchain
             second_blockchain = empty_blockchain

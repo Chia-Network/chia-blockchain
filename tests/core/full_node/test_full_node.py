@@ -100,7 +100,9 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def wallet_nodes(shared_b_tools):
-    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 400000000}, shared_b_tools)
+    async_gen = setup_simulators_and_wallets(
+        2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 400000000}, shared_b_tools
+    )
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -150,7 +152,9 @@ async def wallet_nodes_mainnet(shared_b_tools):
 
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
-    async def do_test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs, shared_b_tools):
+    async def do_test_block_compression(
+        self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs, shared_b_tools
+    ):
         nodes, wallets = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -397,7 +401,9 @@ class TestFullNodeBlockCompression:
 
     @pytest.mark.asyncio
     async def test_block_compression_2(self, setup_two_nodes_and_wallet, empty_blockchain, shared_b_tools):
-        await self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000, False, shared_b_tools)
+        await self.do_test_block_compression(
+            setup_two_nodes_and_wallet, empty_blockchain, 3000000000000, False, shared_b_tools
+        )
 
 
 class TestFullNodeProtocol:
@@ -537,7 +543,9 @@ class TestFullNodeProtocol:
         blocks = await full_node_1.get_all_full_blocks()
         saved_seed = b""
         for i in range(0, 9999999):
-            blocks = shared_b_tools.get_consecutive_blocks(5, block_list_input=blocks, skip_slots=1, seed=i.to_bytes(4, "big"))
+            blocks = shared_b_tools.get_consecutive_blocks(
+                5, block_list_input=blocks, skip_slots=1, seed=i.to_bytes(4, "big")
+            )
             if len(blocks[-1].finished_sub_slots) == 0:
                 saved_seed = i.to_bytes(4, "big")
                 break
@@ -753,7 +761,9 @@ class TestFullNodeProtocol:
         blocks = await full_node_1.get_all_full_blocks()
         blocks = shared_b_tools.get_consecutive_blocks(3, block_list_input=blocks)  # Alternate chain
 
-        blocks_reorg = shared_b_tools.get_consecutive_blocks(3, block_list_input=blocks[:-1], seed=b"214")  # Alternate chain
+        blocks_reorg = shared_b_tools.get_consecutive_blocks(
+            3, block_list_input=blocks[:-1], seed=b"214"
+        )  # Alternate chain
         for block in blocks[-3:]:
             new_peak = fnp.NewPeak(
                 block.header_hash,
@@ -1237,7 +1247,9 @@ class TestFullNodeProtocol:
             blocks[-1], "foliage_transaction_block.timestamp", unf.foliage_transaction_block.timestamp + 1
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fbh_sig = shared_b_tools.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+        new_fbh_sig = shared_b_tools.get_plot_signature(
+            new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key
+        )
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fbh_sig)
         block_2 = recursive_replace(block_2, "transactions_generator", None)
 
