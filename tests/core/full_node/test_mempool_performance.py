@@ -11,7 +11,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
 from tests.connection_utils import connect_and_get_peer
-from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 
@@ -33,13 +33,13 @@ def event_loop():
 
 class TestMempoolPerformance:
     @pytest.fixture(scope="module")
-    async def wallet_nodes(self):
-        key_seed = bt.farmer_master_sk_entropy
-        async for _ in setup_simulators_and_wallets(2, 1, {}, key_seed=key_seed):
+    async def wallet_nodes(self, shared_b_tools):
+        key_seed = shared_b_tools.farmer_master_sk_entropy
+        async for _ in setup_simulators_and_wallets(2, 1, {}, shared_b_tools, key_seed=key_seed):
             yield _
 
     @pytest.mark.asyncio
-    async def test_mempool_update_performance(self, wallet_nodes, default_400_blocks):
+    async def test_mempool_update_performance(self, wallet_nodes, default_400_blocks, shared_b_tools):
         blocks = default_400_blocks
         full_nodes, wallets = wallet_nodes
         wallet_node = wallets[0][0]
@@ -67,7 +67,7 @@ class TestMempoolPerformance:
         for con in cons:
             await con.close()
 
-        blocks = bt.get_consecutive_blocks(3, blocks)
+        blocks = shared_b_tools.get_consecutive_blocks(3, blocks)
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
 
         for block in blocks[-2:]:
