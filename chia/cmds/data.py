@@ -7,7 +7,7 @@ import click
 logger = logging.getLogger(__name__)
 
 
-# TODO: this is more general and should be part of refactoring the overall CLI code duplication
+# # TODO: this is more general and should be part of refactoring the overall CLI code duplication
 def run(coro: Coroutine):
     import asyncio
 
@@ -74,9 +74,9 @@ def create_kv_store_name_option():
 
 def create_rpc_port_option():
     return click.option(
-        "-dp",
-        "--data-rpc-port",
-        help="Set the port where the Farmer is hosting the RPC interface. See the rpc_port under farmer in config.yaml",
+        "-wp",
+        "--wallet-rpc-port",
+        help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
         type=int,
         default=None,
         show_default=True,
@@ -84,15 +84,17 @@ def create_rpc_port_option():
 
 
 @data_cmd.command("create_kv_store", short_help="Get a data row by its hash")
-@create_kv_store_id_option()
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
 def create_kv_store(
-    table_string: str,
-    data_rpc_port: int,
+    # table_string: str,
+    fingerprint: int,
+    wallet_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import create_kv_store_cmd
+    from .wallet_funcs import execute_with_wallet
 
-    run(create_kv_store_cmd(rpc_port=data_rpc_port, table_string=table_string))
+    run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, create_kv_store_cmd))
 
 
 @data_cmd.command("get_value", short_help="Get a data row by its hash")
@@ -102,11 +104,14 @@ def create_kv_store(
 def get_value(
     tree_id: str,
     key: str,
-    data_rpc_port: int,
+    fingerprint: int,
+    wallet_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_value_cmd
+    from .wallet_funcs import execute_with_wallet
 
-    run(get_value_cmd(rpc_port=data_rpc_port, tree_id=tree_id, key=key))
+    extra_params = {"tree_id": tree_id, "key": key}
+    run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_value_cmd))
 
 
 @data_cmd.command("update_kv_store", short_help="Update a table.")
@@ -116,10 +121,12 @@ def get_value(
 def update_kv_store(
     tree_id: str,
     changelist_string: str,
-    data_rpc_port: int,
+    fingerprint: int,
+    wallet_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import update_kv_store_cmd
+    from .wallet_funcs import execute_with_wallet
 
     changelist = json.loads(changelist_string)
-
-    run(update_kv_store_cmd(rpc_port=data_rpc_port, tree_id=tree_id, changelist=changelist))
+    extra_params = {"tree_id": tree_id, "changelist": changelist}
+    run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, update_kv_store_cmd))

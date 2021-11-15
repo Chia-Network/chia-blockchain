@@ -2,21 +2,14 @@ from typing import List, Dict
 import pytest
 
 # flake8: noqa: F401
-import aiosqlite
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_store import DataStore
-from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
+from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
-from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint16
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_state_manager import WalletStateManager
-
 from tests.core.data_layer.util import ChiaRoot
 from tests.setup_nodes import setup_simulators_and_wallets, self_hostname
 
@@ -46,14 +39,7 @@ async def test_create_insert_get(chia_root: ChiaRoot, wallet_node):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
-
-    data_layer = DataLayer(root_path=root, wallet_node=wallet_node)
-    connection = await aiosqlite.connect(data_layer.db_path)
-    data_layer.connection = connection
-    data_layer.db_wrapper = DBWrapper(data_layer.connection)
-    data_layer.data_store = await DataStore.create(data_layer.db_wrapper)
-    data_layer.initialized = True
-    rpc_api = DataLayerRpcApi(data_layer)
+    rpc_api = WalletRpcApi(wallet_node)
     key = b"a"
     value = b"\x00\x01"
     changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
@@ -69,7 +55,6 @@ async def test_create_insert_get(chia_root: ChiaRoot, wallet_node):
     await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
     with pytest.raises(Exception):
         val = await rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
-    await connection.close()
 
 
 @pytest.mark.asyncio
@@ -92,13 +77,7 @@ async def test_create_double_insert(chia_root: ChiaRoot, wallet_node):
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
 
-    data_layer = DataLayer(root_path=root, wallet_node=wallet_node)
-    connection = await aiosqlite.connect(data_layer.db_path)
-    data_layer.connection = connection
-    data_layer.db_wrapper = DBWrapper(data_layer.connection)
-    data_layer.data_store = await DataStore.create(data_layer.db_wrapper)
-    data_layer.initialized = True
-    rpc_api = DataLayerRpcApi(data_layer)
+    rpc_api = WalletRpcApi(wallet_node)
     key1 = b"a"
     value1 = b"\x01\x02"
     key2 = b"b"
@@ -119,7 +98,6 @@ async def test_create_double_insert(chia_root: ChiaRoot, wallet_node):
     await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
     with pytest.raises(Exception):
         val = await rpc_api.get_value({"id": store_id.hex(), "key": key1.hex()})
-    await connection.close()
 
 
 @pytest.mark.asyncio
@@ -141,14 +119,7 @@ async def test_get_pairs(chia_root: ChiaRoot, wallet_node):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
-
-    data_layer = DataLayer(root_path=root, wallet_node=wallet_node)
-    connection = await aiosqlite.connect(data_layer.db_path)
-    data_layer.connection = connection
-    data_layer.db_wrapper = DBWrapper(data_layer.connection)
-    data_layer.data_store = await DataStore.create(data_layer.db_wrapper)
-    data_layer.initialized = True
-    rpc_api = DataLayerRpcApi(data_layer)
+    rpc_api = WalletRpcApi(wallet_node)
     key1 = b"a"
     value1 = b"\x01\x02"
     changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
@@ -169,7 +140,6 @@ async def test_get_pairs(chia_root: ChiaRoot, wallet_node):
     await rpc_api.update_kv_store({"id": tree_id.hex(), "changelist": changelist})
     val = await rpc_api.get_pairs({"id": tree_id.hex()})
     # todo check values match
-    await connection.close()
 
 
 @pytest.mark.asyncio
@@ -192,14 +162,7 @@ async def test_get_ancestors(chia_root: ChiaRoot, wallet_node: WalletNode):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
-
-    data_layer = DataLayer(root_path=root, wallet_node=wallet_node)
-    connection = await aiosqlite.connect(data_layer.db_path)
-    data_layer.connection = connection
-    data_layer.db_wrapper = DBWrapper(data_layer.connection)
-    data_layer.data_store = await DataStore.create(data_layer.db_wrapper)
-    data_layer.initialized = True
-    rpc_api = DataLayerRpcApi(data_layer)
+    rpc_api = WalletRpcApi(wallet_node)
     key1 = b"a"
     value1 = b"\x01\x02"
     changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
@@ -220,4 +183,3 @@ async def test_get_ancestors(chia_root: ChiaRoot, wallet_node: WalletNode):
     await rpc_api.update_kv_store({"id": tree_id.hex(), "changelist": changelist})
     val = await rpc_api.get_ancestors({"id": tree_id.hex(), "key": key1.hex()})
     # todo assert values
-    await connection.close()

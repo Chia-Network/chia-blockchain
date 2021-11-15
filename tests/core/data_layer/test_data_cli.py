@@ -26,12 +26,12 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
 
         changelist: List[Dict[str, str]] = [{"action": "insert", "row_data": row_data}]
 
-        create = chia_root.run(args=["data", "create_table", "--table", "test table"])
+        create = chia_root.run(args=["wallet", "create_table", "--table", "test table"])
         print(f"create {create}")
         # TODO get store id from cli response
         store_id = "0102030405060708091011121314151617181920212223242526272829303132"
         update = chia_root.run(
-            args=["data", "update_table", "--table", store_id, "--changelist", json.dumps(changelist)]
+            args=["wallet", "update_table", "--table", store_id, "--changelist", json.dumps(changelist)]
         )
         print(f"update {update}")
         completed_process = chia_root.run(args=["data", "get_row", "--table", store_id, "--row_hash", row_hash])

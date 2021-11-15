@@ -12,8 +12,12 @@ from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
 from chia.util.path import mkdir, path_from_root
-from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
+
+
+def init_data_wallet() -> DataLayerWallet:
+    # todo implement
+    pass
 
 
 class DataLayer:
@@ -23,15 +27,14 @@ class DataLayer:
     connection: aiosqlite.Connection
     config: Dict[str, Any]
     log: logging.Logger
-    wallet: DataLayerWallet
-    wallet_node: Optional[WalletNode]
+    wallet_state_manager: WalletStateManager
     state_changed_callback: Optional[Callable[..., object]]
     initialized: bool
 
     def __init__(
         self,
         root_path: Path,
-        wallet_node: WalletNode,
+        wallet_state_manager: WalletStateManager,
         name: Optional[str] = None,
     ):
         if name == "":
@@ -41,40 +44,23 @@ class DataLayer:
         config = load_config(root_path, "config.yaml", "data_layer")
         self.initialized = False
         self.config = config
-        self.wallet_node = wallet_node
+        self.wallet_state_manager = wallet_state_manager
         self.log = logging.getLogger(name if name is None else __name__)
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
 
-    def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
-        self.state_changed_callback = callback
-
-    def set_server(self, server: ChiaServer) -> None:
-        self.server = server
-
-    async def _start(self) -> bool:
+    async def start(self) -> bool:
         # create the store (db) and data store instance
-        assert self.wallet_node
-        try:
-            private_key = await self.wallet_node.get_key_for_fingerprint(None)
-        except KeychainProxyConnectionFailure:
-            self.log.error("Failed to connect to keychain service")
-            return False
-
-        if private_key is None:
-            self.logged_in = False
-            return False
+        assert self.wallet_state_manager
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
-        assert self.wallet_node.wallet_state_manager
-        main_wallet = self.wallet_node.wallet_state_manager.main_wallet
+        assert self.wallet_state_manager
+        main_wallet = self.wallet_state_manager.main_wallet
         amount = uint64(1)  # todo what should amount be ?
-        async with self.wallet_node.wallet_state_manager.lock:
-            res = await self.wallet.create_new_dl_wallet(
-                self.wallet_node.wallet_state_manager, main_wallet, amount, None
-            )
+        async with self.wallet_state_manager.lock:
+            res = await DataLayerWallet.create_new_dl_wallet(self.wallet_state_manager, main_wallet, amount, None)
             if res is False:
                 self.log.error("Failed to create tree")
         self.wallet = res

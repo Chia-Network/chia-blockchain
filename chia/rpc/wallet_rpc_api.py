@@ -2,11 +2,12 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Any
 
 from blspy import PrivateKey, G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.data_layer.data_layer_types import Side
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -111,6 +112,11 @@ class WalletRpcApi:
             "/pw_self_pool": self.pw_self_pool,
             "/pw_absorb_rewards": self.pw_absorb_rewards,
             "/pw_status": self.pw_status,
+            # Data Layer Wallet
+            "/create_kv_store": self.create_kv_store,
+            "/update_kv_store": self.update_kv_store,
+            "/get_value": self.get_value,
+            "/get_pairs": self.get_pairs,
         }
 
     async def _state_changed(self, *args) -> List[WsRpcMessage]:
@@ -1254,3 +1260,62 @@ class WalletRpcApi:
             "state": state.to_json_dict(),
             "unconfirmed_transactions": unconfirmed_transactions,
         }
+
+    ##########################################################################################
+    # Data Layer Wallet
+    ##########################################################################################
+
+    async def create_kv_store(self, request: Dict[str, Any] = None) -> Dict[str, Any]:
+        value = await self.service.data_layer.create_store()
+        return {"id": value.hex()}
+
+    async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        store_id = hexstr_to_bytes(request["id"])
+        key = hexstr_to_bytes(request["key"])
+        value = await self.service.data_layer.get_value(store_id=store_id, key=key)
+        return {"data": value.hex()}
+
+    async def get_pairs(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        value = await self.service.data_layer.get_pairs(store_id)
+        return {"data": value.hex()}
+
+    async def get_ancestors(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        key = hexstr_to_bytes(request["key"])
+        value = await self.service.data_layer.get_ancestors(key, store_id)
+        return {"data": value.hex()}
+
+    async def update_kv_store(self, request: Dict[str, Any]):
+        """
+        rows_to_add a list of clvm objects as bytes to add to talbe
+        rows_to_remove a list of row hashes to remove
+        """
+        changelist = [process_change(change) for change in request["changelist"]]
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        # todo input checks
+        await self.service.data_layer.insert(store_id, changelist)
+
+
+def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
+    # TODO: A full class would likely be nice for this so downstream doesn't
+    #       have to deal with maybe-present attributes or Dict[str, Any] hints.
+    reference_node_hash = change.get("reference_node_hash")
+    if reference_node_hash is not None:
+        reference_node_hash = bytes32(hexstr_to_bytes(reference_node_hash))
+
+    side = change.get("side")
+    if side is not None:
+        side = Side(side)
+
+    value = change.get("value")
+    if value is not None:
+        value = hexstr_to_bytes(value)
+
+    return {
+        **change,
+        "key": hexstr_to_bytes(change["key"]),
+        "value": value,
+        "reference_node_hash": reference_node_hash,
+        "side": side,
+    }

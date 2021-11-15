@@ -20,6 +20,7 @@ from chia.daemon.keychain_proxy import (
     connect_to_keychain_and_validate,
     wrap_local_keychain,
 )
+from chia.data_layer.data_layer import DataLayer
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
@@ -238,6 +239,9 @@ class WalletNode:
         self.sync_task = asyncio.create_task(self.sync_job())
         self.logged_in_fingerprint = fingerprint
         self.logged_in = True
+        self.data_layer = DataLayer(self.root_path, self.wallet_state_manager)
+        res = await self.data_layer.start()
+        assert res  # todo error handling
         return True
 
     def _close(self):
