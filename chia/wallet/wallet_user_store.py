@@ -33,11 +33,17 @@ class WalletUserStore:
             )
         )
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS name on users_wallets(name)")
+        # this index is not used by any queries, don't create it for new
+        # installs, and remove it from existing installs in the future
+        # await self.db.execute("DROP INDEX IF EXISTS name on users_wallet(name)")
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS type on users_wallets(wallet_type)")
+        # this index is not used by any queries, don't create it for new
+        # installs, and remove it from existing installs in the future
+        # await self.db.execute("DROP INDEX IF EXISTS type on users_wallet(wallet_type)")
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS data on users_wallets(data)")
+        # this index is not used by any queries, don't create it for new
+        # installs, and remove it from existing installs in the future
+        # await self.db.execute("DROP INDEX IF EXISTS data on users_wallet(data)")
 
         await self.db_connection.commit()
         await self.init_wallet()
