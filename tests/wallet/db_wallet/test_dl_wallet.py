@@ -280,9 +280,20 @@ class TestDLWallet:
         )
         await wallet_1.push_transaction(tr)
 
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
+        # create a second DLO Wallet and claim the coin
+        async with wallet_node_2.wallet_state_manager.lock:
+            dlo_wallet_2: DLOWallet = await DLOWallet.create_new_dlo_wallet(
+                wallet_node_2.wallet_state_manager, wallet_2,
+            )
+        offer_coin = await dlo_wallet_1.get_coin()
+        full_puzzle, db_innerpuz_hash, current_root = await dl_wallet_0.get_info_for_offer_claim()
+        inclusion_proof = current_tree.generate_proof(Program.to("thing").get_tree_hash()),
+        sb2 = await dlo_wallet_2.claim_dl_offer(offer_coin, full_puzzle, db_innerpuz_hash, current_root, inclusion_proof)
         sb = await dl_wallet_0.create_report_spend()
-        sb = SpendBundle.aggregate([tr.spend_bundle, sb])
+        sb = SpendBundle.aggregate([sb2, sb])
         tr = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -300,3 +311,9 @@ class TestDLWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=sb.name(),
         )
+        await wallet_2.push_transaction(tr)
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+        await time_out_assert(15, wallet_2.get_confirmed_balance, 201)
+        await time_out_assert(15, wallet_2.get_unconfirmed_balance, 201)
