@@ -11,7 +11,7 @@ from blspy import AugSchemeMPL, G2Element
 from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.protocols.wallet_protocol import PuzzleSolutionResponse
+from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -22,8 +22,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.json_util import dict_to_json_str
-from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.cc_wallet.cc_info import CCInfo
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
@@ -325,36 +323,24 @@ class CCWallet:
 
     async def puzzle_solution_received(self, response: PuzzleSolutionResponse, action_id: int):
         coin_name = response.coin_name
-        height = response.height
         puzzle: Program = response.puzzle
-        matched, curried_args = match_cat_puzzle(puzzle)
-        header_hash = self.wallet_state_manager.blockchain.height_to_hash(height)
-        block: Optional[
-            HeaderBlockRecord
-        ] = await self.wallet_state_manager.blockchain.block_store.get_header_block_record(header_hash)
-        if block is None:
-            return None
-
-        removals = block.removals
-        parent_coin = None
-        for coin in removals:
-            if coin.name() == coin_name:
-                parent_coin = coin
-        if parent_coin is None:
-            raise ValueError("Error in finding parent")
-
-        if matched:
-            mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
+        r = uncurry_cc(puzzle)
+        if r is not None:
+            mod_hash, genesis_coin_checker_hash, inner_puzzle = r
             self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}")
-            await self.add_lineage(
-                coin_name, LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount)
-            )
-        else:
-            # await self.add_lineage(coin_name, LineageProof())
-            # The comment above is what it should be when we have some way of
-            # identifying that this is a coin with a TAIL we can spend, and not some spoof
-            pass
-        await self.wallet_state_manager.action_store.action_done(action_id)
+            parent_coin = None
+            coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
+            if coin_record is None:
+                coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.get_coin_state([coin_name])
+                if coin_states is not None:
+                    parent_coin = coin_states[0].coin
+            if coin_record is not None:
+                parent_coin = coin_record.coin
+            if parent_coin is None:
+                raise ValueError("Error in finding parent")
+            lineage_proof = get_lineage_proof_from_coin_and_puz(parent_coin, puzzle)
+            await self.add_lineage(coin_name, lineage_proof)
+            await self.wallet_state_manager.action_store.action_done(action_id)
 
     async def get_new_inner_hash(self) -> bytes32:
         puzzle = adapt_inner_to_singleton(await self.standard_wallet.get_new_puzzle())
