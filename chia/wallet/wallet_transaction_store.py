@@ -52,10 +52,8 @@ class WalletTransactionStore:
             "CREATE INDEX IF NOT EXISTS tx_confirmed_index on transaction_record(confirmed_at_height)"
         )
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS tx_created_index on transaction_record(created_at_time)"
-        )
-
+        # index tx_created_index is a duplicate to tx_created_time and can be dropped
+        await self.db_connection.execute("DROP INDEX IF EXISTS tx_created_index on transaction_record(created_at_time)")
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS tx_confirmed on transaction_record(confirmed)")
 
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS tx_sent on transaction_record(sent)")
