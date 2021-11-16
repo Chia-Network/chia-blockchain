@@ -1,5 +1,6 @@
 # Github actions template config.
 oses = ["ubuntu", "macos"]
+root_test_dirs = ["wallet"]
 
 # Defaults are conservative.
 parallel = False
