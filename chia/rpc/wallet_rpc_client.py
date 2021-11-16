@@ -8,6 +8,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_sorting import SortKey
 
 
 class WalletRpcClient(RpcClient):
@@ -108,10 +109,24 @@ class WalletRpcClient(RpcClient):
     async def get_transactions(
         self,
         wallet_id: str,
+        start: int = None,
+        end: int = None,
+        sort_key: SortKey = None,
+        reverse: bool = False,
     ) -> List[TransactionRecord]:
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+
+        if start is not None:
+            request["start"] = start
+        if end is not None:
+            request["end"] = end
+        if sort_key is not None:
+            request["sort_key"] = sort_key.name
+        request["reverse"] = reverse
+
         res = await self.fetch(
             "get_transactions",
-            {"wallet_id": wallet_id},
+            request,
         )
         reverted_tx: List[TransactionRecord] = []
         for modified_tx in res["transactions"]:
