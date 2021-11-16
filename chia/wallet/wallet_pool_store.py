@@ -31,7 +31,7 @@ class WalletPoolStore:
         return self
 
     async def _clear_database(self):
-        cursor = await self.db_connection.execute("DELETE FROM interested_coins")
+        cursor = await self.db_connection.execute("DELETE FROM pool_state_transitions")
         await cursor.close()
         await self.db_connection.commit()
 
