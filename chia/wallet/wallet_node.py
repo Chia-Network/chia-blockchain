@@ -1040,6 +1040,7 @@ class WalletNode:
             coin_state_before_fork: List[CoinState] = all_coins_state.coin_states
         else:
             # Otherwise, we only want to apply changes before the fork point, since we are synced to a different peer
+            # We are just validating that there is no missing information
             coin_state_before_fork = []
             for coin_state_entry in all_coins_state.coin_states:
                 if coin_state_entry.spent_height is not None:

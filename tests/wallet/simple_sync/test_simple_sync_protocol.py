@@ -64,10 +64,6 @@ class TestSimpleSyncProtocol:
             all_messages.append(message)
         return all_messages
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
     @pytest.mark.asyncio
     async def test_subscribe_for_ph(self, wallet_node_simulator):
         num_blocks = 4
