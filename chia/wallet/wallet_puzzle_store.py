@@ -54,11 +54,13 @@ class WalletPuzzleStore:
 
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS pubkey on derivation_paths(pubkey)")
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_type on derivation_paths(wallet_type)")
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS dp_wallet_type on derivation_paths(wallet_type)")
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on derivation_paths(wallet_id)")
-
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS used on derivation_paths(wallet_type)")
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS dp_wallet_id on derivation_paths(wallet_id)")
+        # the index named used was created on column wallet_type
+        # drop this version of the index and create an index on column used
+        await self.db.execute("DROP INDEX IF EXISTS used on derivation_paths(wallet_type)")
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS dp_used on derivation_paths(used)")
 
         await self.db_connection.commit()
         # Lock
