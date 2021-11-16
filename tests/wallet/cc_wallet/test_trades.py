@@ -22,8 +22,8 @@ def event_loop():
 
 
 @pytest.fixture(scope="module")
-async def two_wallet_nodes():
-    async for _ in setup_simulators_and_wallets(1, 2, {}):
+async def two_wallet_nodes(shared_b_tools):
+    async for _ in setup_simulators_and_wallets(1, 2, {}, shared_b_tools):
         yield _
 
 

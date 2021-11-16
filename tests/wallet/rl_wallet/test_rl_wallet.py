@@ -18,8 +18,8 @@ def event_loop():
 
 class TestCCWallet:
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
+    async def two_wallet_nodes(self, shared_b_tools):
+        async for _ in setup_simulators_and_wallets(1, 2, {}, shared_b_tools):
             yield _
 
     @pytest.mark.asyncio

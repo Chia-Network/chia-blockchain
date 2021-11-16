@@ -27,8 +27,8 @@ def event_loop():
 
 class TestDIDWallet:
     @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
+    async def three_wallet_nodes(self, shared_b_tools):
+        async for _ in setup_simulators_and_wallets(1, 3, {}, shared_b_tools):
             yield _
 
     @pytest.mark.asyncio

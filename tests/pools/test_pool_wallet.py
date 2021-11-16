@@ -28,8 +28,8 @@ def event_loop():
 
 class TestPoolWallet2:
     @pytest.fixture(scope="function")
-    async def one_wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
+    async def one_wallet_node(self, shared_b_tools):
+        async for _ in setup_simulators_and_wallets(1, 1, {}, shared_b_tools):
             yield _
 
     @pytest.mark.asyncio

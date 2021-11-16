@@ -34,18 +34,18 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
 
 class TestCCWallet:
     @pytest.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
+    async def wallet_node(self, shared_b_tools):
+        async for _ in setup_simulators_and_wallets(1, 1, {}, shared_b_tools):
             yield _
 
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
+    async def two_wallet_nodes(self, shared_b_tools):
+        async for _ in setup_simulators_and_wallets(1, 2, {}, shared_b_tools):
             yield _
 
     @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
+    async def three_wallet_nodes(self, shared_b_tools):
+        async for _ in setup_simulators_and_wallets(1, 3, {}, shared_b_tools):
             yield _
 
     @pytest.mark.asyncio
