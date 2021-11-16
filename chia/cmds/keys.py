@@ -152,8 +152,12 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
     from .keys_funcs import private_key_for_fingerprint
 
     if fingerprint is not None:
-        ctx.obj["private_key"] = private_key_for_fingerprint(fingerprint)
-    else:
+        private_key = private_key_for_fingerprint(fingerprint)
+        if private_key is None:
+            ctx.fail(f"Fingerprint {fingerprint} not found in keyring")
+        else:
+            ctx.obj["private_key"] = private_key
+    elif filename is not None:
         # TODO: Move into keys_funcs
         from pathlib import Path
         from chia.util.keychain import mnemonic_to_seed
@@ -165,10 +169,29 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
         ctx.obj["private_key"] = private_key
 
 
-@derive_cmd.command("wallet-address", short_help="Derive wallet addresses")
-@click.option("--index", "-i", help="Index of the first wallet address to derive", default=0)
-@click.option("--count", "-c", help="Number of wallet addresses to derive, starting at index", default=1)
-@click.option("--prefix", "-p", help="Address prefix (xch for mainnet, txch for testnet)", default=None, type=str)
+# @derive_cmd.command("search", short_help="Search the keyring for a matching derived key or wallet address")
+# @click.argument("search_term", type=str)
+# @click.option("--limit", "-l", default=500, help="Limit the number of derivations to search", type=int)
+# def search_cmd(search_term: str, limit: int):
+#     from .keys_funcs import search_derive
+
+#     search_derive(search_term, limit)
+
+
+@derive_cmd.command("wallet-address", short_help="Derive wallet receive addresses")
+@click.option(
+    "--index", "-i", help="Index of the first wallet address to derive. Index 0 is the first wallet address.", default=0
+)
+@click.option("--count", "-n", help="Number of wallet addresses to derive, starting at index.", default=1)
+@click.option("--prefix", "-x", help="Address prefix (xch for mainnet, txch for testnet)", default=None, type=str)
+@click.option(
+    "--public-derivation",
+    "-p",
+    help="Derive wallet addresses using public derivation from the master key. Also known as unhardened derivation.",
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
 @click.option(
     "--show-hd-path",
     help="Show the HD path of the derived wallet addresses",
@@ -177,10 +200,14 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
     is_flag=True,
 )
 @click.pass_context
-def wallet_address_cmd(ctx: click.Context, index: int, count: int, prefix: Optional[str], show_hd_path: bool):
+def wallet_address_cmd(
+    ctx: click.Context, index: int, count: int, prefix: Optional[str], public_derivation: bool, show_hd_path: bool
+):
     from .keys_funcs import derive_wallet_address
 
-    derive_wallet_address(ctx.obj["root_path"], ctx.obj["private_key"], index, count, prefix, show_hd_path)
+    derive_wallet_address(
+        ctx.obj["root_path"], ctx.obj["private_key"], index, count, prefix, public_derivation, show_hd_path
+    )
 
 
 @derive_cmd.command("child-key", short_help="Derive child keys")
@@ -192,8 +219,18 @@ def wallet_address_cmd(ctx: click.Context, index: int, count: int, prefix: Optio
     required=True,
     type=click.Choice(["farmer", "pool", "wallet", "local", "backup", "singleton", "pool_auth"]),
 )
-@click.option("--index", "-i", help="Index of the first child key to derive", default=0)
-@click.option("--count", "-c", help="Number of child keys to derive, starting at index", default=1)
+@click.option(
+    "--index", "-i", help="Index of the first child key to derive. Index 0 is the first child key.", default=0
+)
+@click.option("--count", "-n", help="Number of child keys to derive, starting at index.", default=1)
+@click.option(
+    "--public-derivation",
+    "-p",
+    help="Derive wallet addresses using public derivation from the master key. Also known as unhardened derivation.",
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
 @click.option(
     "--show-hd-path",
     help="Show the HD path of the derived wallet addresses",
@@ -202,7 +239,11 @@ def wallet_address_cmd(ctx: click.Context, index: int, count: int, prefix: Optio
     is_flag=True,
 )
 @click.pass_context
-def child_key_cmd(ctx: click.Context, key_type: str, index: int, count: int, show_hd_path: bool):
+def child_key_cmd(
+    ctx: click.Context, key_type: str, index: int, count: int, public_derivation: bool, show_hd_path: bool
+):
     from .keys_funcs import derive_child_key
 
-    derive_child_key(ctx.obj["root_path"], ctx.obj["private_key"], key_type, index, count, show_hd_path)
+    derive_child_key(
+        ctx.obj["root_path"], ctx.obj["private_key"], key_type, index, count, public_derivation, show_hd_path
+    )

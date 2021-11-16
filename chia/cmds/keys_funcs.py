@@ -8,7 +8,14 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, unlocks_keyring
-from chia.wallet.derive_keys import _derive_path, master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
+from chia.wallet.derive_keys import (
+    _derive_path,
+    _derive_path_unhardened,
+    master_sk_to_farmer_sk,
+    master_sk_to_pool_sk,
+    master_sk_to_wallet_sk,
+    master_sk_to_wallet_sk_unhardened,
+)
 
 keychain: Keychain = Keychain()
 
@@ -134,8 +141,35 @@ def verify(message: str, public_key: str, signature: str):
     print(AugSchemeMPL.verify(public_key, messageBytes, signature))
 
 
+# def search_derive(search_term: str, limit: int):
+#     private_keys = keychain.get_all_private_keys()
+#     if len(private_keys) == 0:
+#         print("There are no saved private keys")
+#         return None
+#     for sk, seed in private_keys:
+#         mnemonic = bytes_to_mnemonic(seed)
+#         if search_term in mnemonic:
+#             print("Found private key with mnemonic seed:")
+#             print(mnemonic)
+#             print("Master public key (m):", sk.get_g1())
+#             print(
+#                 "First wallet address:",
+#                 encode_puzzle_hash(
+#                     create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix
+#                 ),
+#             )
+#             return None
+#     print("No private key found with mnemonic seed:", search_term)
+
+
 def derive_wallet_address(
-    root_path: Path, private_key: PrivateKey, index: int, count: int, prefix: Optional[str], show_hd_path: bool
+    root_path: Path,
+    private_key: PrivateKey,
+    index: int,
+    count: int,
+    prefix: Optional[str],
+    public_derivation: bool,
+    show_hd_path: bool,
 ):
     if prefix is None:
         config: Dict = load_config(root_path, "config.yaml")
@@ -143,16 +177,27 @@ def derive_wallet_address(
         prefix = config["network_overrides"]["config"][selected]["address_prefix"]
     wallet_hd_path_root: str = "m/12381/8444/2/"
     for i in range(index, index + count):
-        address = encode_puzzle_hash(
-            create_puzzlehash_for_pk(master_sk_to_wallet_sk(private_key, uint32(i)).get_g1()), prefix
-        )
+        derived_key: PrivateKey
+        if public_derivation:
+            sk = master_sk_to_wallet_sk_unhardened(private_key, uint32(i))
+        else:
+            sk = master_sk_to_wallet_sk(private_key, uint32(i))
+        address = encode_puzzle_hash(create_puzzlehash_for_pk(sk.get_g1()), prefix)
         if show_hd_path:
             print(f"Wallet address {i} ({wallet_hd_path_root + str(i)}): {address}")
         else:
             print(f"Wallet address {i}: {address}")
 
 
-def derive_child_key(root_path: Path, master_sk: PrivateKey, key_type: str, index: int, count: int, show_hd_path: bool):
+def derive_child_key(
+    root_path: Path,
+    master_sk: PrivateKey,
+    key_type: str,
+    index: int,
+    count: int,
+    public_derivation: bool,
+    show_hd_path: bool,
+):
     path: List[uint32] = [uint32(12381), uint32(8444)]
     if key_type == "farmer":
         path.append(uint32(0))
@@ -170,7 +215,10 @@ def derive_child_key(root_path: Path, master_sk: PrivateKey, key_type: str, inde
         path.append(uint32(6))
 
     for i in range(index, index + count):
-        sk = _derive_path(master_sk, path + [uint32(i)])
+        if public_derivation:
+            sk = _derive_path_unhardened(master_sk, path + [uint32(i)])
+        else:
+            sk = _derive_path(master_sk, path + [uint32(i)])
         if show_hd_path:
             hd_path: str = "m/" + "/".join([str(j) for j in path]) + "/" + str(i)
             print(f"{key_type.capitalize()} public key {i} ({hd_path}): {sk.get_g1()}")
@@ -178,11 +226,10 @@ def derive_child_key(root_path: Path, master_sk: PrivateKey, key_type: str, inde
             print(f"{key_type.capitalize()} public key {i}: {sk.get_g1()}")
 
 
-def private_key_for_fingerprint(fingerprint: int) -> PrivateKey:
+def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:
     private_keys = keychain.get_all_private_keys()
 
     for sk, _ in private_keys:
         if sk.get_g1().get_fingerprint() == fingerprint:
             return sk
-    print(f"Fingerprint {fingerprint} not found in keychain")
     return None
