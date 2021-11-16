@@ -70,7 +70,7 @@ class WalletTransactionStore:
             "CREATE INDEX IF NOT EXISTS tx_to_puzzle_hash on transaction_record(to_puzzle_hash)"
         )
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on transaction_record(wallet_id)")
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS tx_wallet_id on transaction_record(wallet_id)")
 
         await self.db_connection.commit()
         self.tx_record_cache = {}
