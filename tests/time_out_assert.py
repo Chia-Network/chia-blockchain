@@ -18,7 +18,7 @@ async def time_out_assert_custom_interval(timeout: int, interval, function, valu
         if value == f_res:
             return None
         await asyncio.sleep(interval)
-    assert False, "Timed assertion timed out"
+    assert False, f"Timed assertion timed out after {timeout} seconds: expected {value!r}, got {f_res!r}"
 
 
 async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
