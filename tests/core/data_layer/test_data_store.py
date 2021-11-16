@@ -1,18 +1,13 @@
 import itertools
 import logging
-from typing import AsyncIterable, Awaitable, Callable, Dict, List, Optional
+import sqlite3
+from typing import AsyncIterable, Awaitable, Callable, Dict, List
 
 import aiosqlite
 import pytest
 
-from chia.data_layer.data_layer_errors import (
-    InternalKeyValueError,
-    InternalLeftRightNotBytes32Error,
-    NodeHashError,
-    TerminalLeftRightError,
-    TreeGenerationIncrementingError,
-)
-from chia.data_layer.data_layer_types import NodeType, ProofOfInclusion, ProofOfInclusionLayer, Side, Status
+from chia.data_layer.data_layer_errors import TreeGenerationIncrementingError
+from chia.data_layer.data_layer_types import ProofOfInclusion, ProofOfInclusionLayer, Side, Status
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
@@ -102,7 +97,6 @@ async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
     await raw_data_store.create_tree(tree_id=tree_id)
 
 
-@pytest.mark.xfail(strict=True)
 @pytest.mark.parametrize(argnames=["length"], argvalues=[[length] for length in [*range(0, 32), *range(33, 48)]])
 @pytest.mark.asyncio
 async def test_create_tree_fails_for_not_bytes32(raw_data_store: DataStore, length: int) -> None:
@@ -647,84 +641,6 @@ valid_program_hex = Program.to((b"abc", 2)).as_bin().hex()
 invalid_program_hex = b"\xab\xcd".hex()
 
 
-@pytest.mark.parametrize(
-    argnames="key_value",
-    argvalues=[
-        {"key": another_bytes_32.hex(), "value": None},
-        {"key": None, "value": another_bytes_32.hex()},
-    ],
-    ids=["key", "value"],
-)
-@pytest.mark.asyncio
-async def test_check_internal_key_value_are_null(
-    raw_data_store: DataStore,
-    key_value: Dict[str, Optional[str]],
-) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
-        await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **key_value},
-        )
-
-    with pytest.raises(
-        InternalKeyValueError,
-        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
-    ):
-        await raw_data_store._check_internal_key_value_are_null()
-
-
-@pytest.mark.parametrize(
-    argnames="left_right",
-    argvalues=[
-        {"left": a_bytes_32.hex(), "right": b"abc".hex()},
-        {"left": b"abc".hex(), "right": a_bytes_32.hex()},
-    ],
-    ids=["left", "right"],
-)
-@pytest.mark.asyncio
-async def test_check_internal_left_right_are_bytes32(raw_data_store: DataStore, left_right: Dict[str, str]) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
-        # needed to satisfy foreign key constraints
-        await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type) VALUES(:hash, :node_type)",
-            {"hash": b"abc".hex(), "node_type": NodeType.TERMINAL},
-        )
-
-        await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **left_right},
-        )
-
-    with pytest.raises(
-        InternalLeftRightNotBytes32Error,
-        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
-    ):
-        await raw_data_store._check_internal_left_right_are_bytes32()
-
-
-@pytest.mark.parametrize(
-    argnames="left_right",
-    argvalues=[
-        {"left": a_bytes_32.hex(), "right": None},
-        {"left": None, "right": a_bytes_32.hex()},
-    ],
-    ids=["left", "right"],
-)
-@pytest.mark.asyncio
-async def test_check_terminal_left_right_are_null(raw_data_store: DataStore, left_right: Dict[str, str]) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
-        await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.TERMINAL, **left_right},
-        )
-
-    with pytest.raises(
-        TerminalLeftRightError,
-        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
-    ):
-        await raw_data_store._check_terminal_left_right_are_null()
-
-
 @pytest.mark.asyncio
 async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataStore) -> None:
     tree_id = hexstr_to_bytes("c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd")
@@ -778,46 +694,6 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
 
 
 @pytest.mark.asyncio
-async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
-        await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
-            {
-                "hash": a_bytes_32.hex(),
-                "node_type": NodeType.INTERNAL,
-                "left": a_bytes_32.hex(),
-                "right": a_bytes_32.hex(),
-            },
-        )
-
-    with pytest.raises(
-        NodeHashError,
-        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
-    ):
-        await raw_data_store._check_hashes()
-
-
-@pytest.mark.asyncio
-async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
-        await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
-            {
-                "hash": a_bytes_32.hex(),
-                "node_type": NodeType.TERMINAL,
-                "key": Program.to((1, 2)).as_bin().hex(),
-                "value": Program.to((1, 2)).as_bin().hex(),
-            },
-        )
-
-    with pytest.raises(
-        NodeHashError,
-        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
-    ):
-        await raw_data_store._check_hashes()
-
-
-@pytest.mark.asyncio
 async def test_root_state(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
@@ -840,3 +716,19 @@ async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> Non
     root = await data_store.get_tree_root(tree_id)
     assert root.status.value == Status.COMMITTED.value
     assert not is_empty
+
+
+@pytest.mark.asyncio
+async def test_node_update_fails(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+    node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
+
+    async with data_store.db_wrapper.locked_transaction():
+        with pytest.raises(sqlite3.IntegrityError, match=r"^updates not allowed to the node table$"):
+            await data_store.db.execute(
+                "UPDATE node SET value = :value WHERE hash == :hash",
+                {
+                    "hash": node.hash.hex(),
+                    "value": node.value.hex(),
+                },
+            )

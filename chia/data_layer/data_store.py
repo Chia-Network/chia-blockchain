@@ -5,13 +5,7 @@ from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 import aiosqlite
 
-from chia.data_layer.data_layer_errors import (
-    InternalKeyValueError,
-    InternalLeftRightNotBytes32Error,
-    NodeHashError,
-    TerminalLeftRightError,
-    TreeGenerationIncrementingError,
-)
+from chia.data_layer.data_layer_errors import TreeGenerationIncrementingError
 from chia.data_layer.data_layer_types import (
     InternalNode,
     Node,
@@ -57,25 +51,89 @@ class DataStore:
         await self.db.execute("PRAGMA foreign_keys=ON")
 
         async with self.db_wrapper.locked_transaction():
+            bytes32_glob = f"'{'[0-9a-f]' * 64}'"
+            # TODO: Probably switch from hash being text to blob to more accurately
+            #       represent the data and simplify checks.
+            # TODO: add tests for the sql checks
+            # TODO: remove _check_* functions that are redundant with these sql checks
             await self.db.execute(
-                """
+                f"""
                 CREATE TABLE IF NOT EXISTS node(
-                    hash TEXT PRIMARY KEY NOT NULL,
-                    node_type INTEGER NOT NULL,
-                    left TEXT REFERENCES node,
-                    right TEXT REFERENCES node,
-                    key TEXT,
-                    value TEXT
+                    hash TEXT PRIMARY KEY NOT NULL CHECK(length(hash) == 64 AND glob({bytes32_glob}, hash)),
+                    node_type INTEGER NOT NULL CHECK(
+                        node_type == {int(NodeType.INTERNAL)}
+                        OR node_type == {int(NodeType.TERMINAL)}
+                    ),
+                    left TEXT REFERENCES node CHECK(
+                        (
+                            node_type == {int(NodeType.INTERNAL)}
+                            AND length(left) == 64
+                            AND glob({bytes32_glob}, left)
+                        )
+                        OR
+                        (
+                            node_type == {int(NodeType.TERMINAL)}
+                            AND left IS NULL
+                        )
+                    ),
+                    right TEXT REFERENCES node CHECK(
+                        (
+                            node_type == {int(NodeType.INTERNAL)}
+                            AND length(right) == 64
+                            AND glob({bytes32_glob}, right)
+                        )
+                        OR
+                        (
+                            node_type == {int(NodeType.TERMINAL)}
+                            AND right IS NULL
+                        )
+                    ),
+                    key TEXT CHECK(
+                        (
+                            node_type == {int(NodeType.TERMINAL)}
+                            AND length(key) % 2 == 0
+                            AND glob(replace(hex(zeroblob(length(key))), '00', '[0-9a-f]'), key)
+                        )
+                        OR
+                        (
+                            node_type == {int(NodeType.INTERNAL)}
+                            AND key IS NULL
+                        )
+                    ),
+                    value TEXT CHECK(
+                        (
+                            node_type == {int(NodeType.TERMINAL)}
+                            AND length(value) % 2 == 0
+                            AND glob(replace(hex(zeroblob(length(value))), '00', '[0-9a-f]'), value)
+                        )
+                        OR
+                        (
+                            node_type == {int(NodeType.INTERNAL)}
+                            AND value IS NULL
+                        )
+                    )
                 )
                 """
             )
             await self.db.execute(
                 """
+                CREATE TRIGGER IF NOT EXISTS no_node_updates
+                BEFORE UPDATE ON node
+                BEGIN
+                    SELECT RAISE(FAIL, 'updates not allowed to the node table');
+                END
+                """
+            )
+            await self.db.execute(
+                f"""
                 CREATE TABLE IF NOT EXISTS root(
-                    tree_id TEXT NOT NULL,
-                    generation INTEGER NOT NULL,
-                    node_hash TEXT,
-                    status INTEGER NOT NULL,
+                    tree_id TEXT NOT NULL CHECK(length(tree_id) == 64 AND glob({bytes32_glob}, tree_id)),
+                    generation INTEGER NOT NULL CHECK(generation >= 0),
+                    node_hash TEXT CHECK(length(node_hash) == 64 AND glob({bytes32_glob}, node_hash)),
+                    status INTEGER NOT NULL CHECK(
+                        status == {int(Status.PENDING)}
+                        OR status == {int(Status.COMMITTED)}
+                    ),
                     PRIMARY KEY(tree_id, generation),
                     FOREIGN KEY(node_hash) REFERENCES node(hash)
                 )
@@ -183,46 +241,6 @@ class DataStore:
         for check in self._checks:
             await check(self)
 
-    async def _check_internal_key_value_are_null(self, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
-                "SELECT * FROM node WHERE node_type == :node_type AND (key NOT NULL OR value NOT NULL)",
-                {"node_type": NodeType.INTERNAL},
-            )
-            hashes = [hexstr_to_bytes(row["hash"]) async for row in cursor]
-
-        if len(hashes) > 0:
-            raise InternalKeyValueError(node_hashes=hashes)
-
-    async def _check_internal_left_right_are_bytes32(self, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
-                "SELECT * FROM node WHERE node_type == :node_type",
-                {"node_type": NodeType.INTERNAL},
-            )
-
-            hashes = []
-            async for row in cursor:
-                try:
-                    bytes32(hexstr_to_bytes(row["left"]))
-                    bytes32(hexstr_to_bytes(row["right"]))
-                except ValueError:
-                    hashes.append(hexstr_to_bytes(row["hash"]))
-
-        if len(hashes) > 0:
-            raise InternalLeftRightNotBytes32Error(node_hashes=hashes)
-
-    async def _check_terminal_left_right_are_null(self, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
-                "SELECT * FROM node WHERE node_type == :node_type AND (left NOT NULL OR right NOT NULL)",
-                {"node_type": NodeType.TERMINAL},
-            )
-            hashes = [hexstr_to_bytes(row["hash"]) async for row in cursor]
-
-        if len(hashes) > 0:
-            raise TerminalLeftRightError(node_hashes=hashes)
-
     async def _check_roots_are_incrementing(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT * FROM root ORDER BY tree_id, generation")
@@ -243,33 +261,7 @@ class DataStore:
             if len(bad_trees) > 0:
                 raise TreeGenerationIncrementingError(tree_ids=bad_trees)
 
-    async def _check_hashes(self, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute("SELECT * FROM node")
-
-            bad_node_hashes: bytes32 = []
-            async for row in cursor:
-                node = row_to_node(row=row)
-                if isinstance(node, InternalNode):
-                    expected_hash = Program.to((node.left_hash, node.right_hash)).get_tree_hash(
-                        node.left_hash, node.right_hash
-                    )
-                elif isinstance(node, TerminalNode):
-                    expected_hash = Program.to((node.key, node.value)).get_tree_hash()
-
-                if node.hash != expected_hash:
-                    bad_node_hashes.append(node.hash)
-
-        if len(bad_node_hashes) > 0:
-            raise NodeHashError(node_hashes=bad_node_hashes)
-
-    _checks: Tuple[Callable[["DataStore"], Awaitable[None]], ...] = (
-        _check_internal_key_value_are_null,
-        _check_internal_left_right_are_bytes32,
-        _check_terminal_left_right_are_null,
-        _check_roots_are_incrementing,
-        _check_hashes,
-    )
+    _checks: Tuple[Callable[["DataStore"], Awaitable[None]], ...] = (_check_roots_are_incrementing,)
 
     async def create_tree(self, tree_id: bytes32, *, lock: bool = True, status: Status = Status.PENDING) -> bool:
         async with self.db_wrapper.locked_transaction(lock=lock):
