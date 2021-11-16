@@ -209,7 +209,7 @@ class TradeStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT * from trade_records WHERE sent<? and confirmed=?",
+            "SELECT * from trade_records WHERE sent<? and confirmed_at_index=?",
             (
                 4,
                 0,
@@ -229,7 +229,7 @@ class TradeStore:
         Returns the list of all trades that have not yet been confirmed.
         """
 
-        cursor = await self.db_connection.execute("SELECT * from trade_records WHERE confirmed=?", (0,))
+        cursor = await self.db_connection.execute("SELECT * from trade_records WHERE confirmed_at_index=?", (0,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
