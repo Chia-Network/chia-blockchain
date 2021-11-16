@@ -21,6 +21,9 @@ from tests.core.data_layer.util import ChiaRoot
 from tests.setup_nodes import setup_simulators_and_wallets, self_hostname
 
 
+pytestmark = pytest.mark.data_layer
+
+
 @pytest.fixture(scope="function")
 async def wallet_node():
     async for _ in setup_simulators_and_wallets(1, 1, {}):

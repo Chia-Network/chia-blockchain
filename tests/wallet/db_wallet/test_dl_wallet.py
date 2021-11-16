@@ -19,6 +19,9 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 
 
+pytestmark = pytest.mark.data_layer
+
+
 @pytest.fixture(scope="module")
 def event_loop():
     loop = asyncio.get_event_loop()
