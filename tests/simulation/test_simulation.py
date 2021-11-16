@@ -33,8 +33,8 @@ class TestSimulation:
                 yield _
 
     @pytest.fixture(scope="function")
-    async def simulation(self):
-        async for _ in setup_full_system(test_constants_modified):
+    async def simulation(self, shared_b_tools):
+        async for _ in setup_full_system(test_constants_modified, shared_b_tools=shared_b_tools):
             yield _
 
     @pytest.mark.asyncio
