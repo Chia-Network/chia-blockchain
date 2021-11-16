@@ -50,13 +50,19 @@ class WalletCoinStore:
             "CREATE INDEX IF NOT EXISTS coin_confirmed_height on coin_record(confirmed_height)"
         )
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_spent_height on coin_record(spent_height)")
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_spent on coin_record(spent)")
+        # this index is not used by any queries, don't create it for new
+        # installs, and remove it from existing installs in the future
+        # await self.db.execute("DROP INDEX IF EXISTS coin_spent on coin_record(spent)")
 
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_puzzlehash on coin_record(puzzle_hash)")
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_type on coin_record(wallet_type)")
+        # this index is not used by any queries, don't create it for new
+        # installs, and remove it from existing installs in the future
+        # await self.db.execute("DROP INDEX IF EXISTS wallet_type on coin_record(wallet_type)")
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on coin_record(wallet_id)")
+        # this index is not used by any queries, don't create it for new
+        # installs, and remove it from existing installs in the future
+        # await self.db.execute("DROP INDEX IF EXISTS wallet_id on coin_record(wallet_id)")
 
         await self.db_connection.commit()
         self.coin_record_cache = {}
