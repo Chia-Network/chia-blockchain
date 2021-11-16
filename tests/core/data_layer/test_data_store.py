@@ -653,7 +653,7 @@ async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataSto
                 VALUES(:tree_id, :generation, :node_hash, :status)
                 """,
                 {
-                    "tree_id": tree_id.hex(),
+                    "tree_id": tree_id,
                     "generation": generation,
                     "node_hash": None,
                     "status": Status.COMMITTED.value,
@@ -679,7 +679,7 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
                 VALUES(:tree_id, :generation, :node_hash, :status)
                 """,
                 {
-                    "tree_id": tree_id.hex(),
+                    "tree_id": tree_id,
                     "generation": generation,
                     "node_hash": None,
                     "status": Status.COMMITTED.value,
@@ -728,7 +728,7 @@ async def test_node_update_fails(data_store: DataStore, tree_id: bytes32) -> Non
             await data_store.db.execute(
                 "UPDATE node SET value = :value WHERE hash == :hash",
                 {
-                    "hash": node.hash.hex(),
-                    "value": node.value.hex(),
+                    "hash": node.hash,
+                    "value": node.value,
                 },
             )

@@ -20,7 +20,6 @@ from chia.data_layer.data_layer_types import (
 from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 
 log = logging.getLogger(__name__)
@@ -59,16 +58,15 @@ class DataStore:
             await self.db.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS node(
-                    hash TEXT PRIMARY KEY NOT NULL CHECK(length(hash) == 64 AND glob({bytes32_glob}, hash)),
+                    hash BLOB PRIMARY KEY NOT NULL CHECK(length(hash) == 32),
                     node_type INTEGER NOT NULL CHECK(
                         node_type == {int(NodeType.INTERNAL)}
                         OR node_type == {int(NodeType.TERMINAL)}
                     ),
-                    left TEXT REFERENCES node CHECK(
+                    left BLOB REFERENCES node CHECK(
                         (
                             node_type == {int(NodeType.INTERNAL)}
-                            AND length(left) == 64
-                            AND glob({bytes32_glob}, left)
+                            AND length(left) == 32
                         )
                         OR
                         (
@@ -76,11 +74,10 @@ class DataStore:
                             AND left IS NULL
                         )
                     ),
-                    right TEXT REFERENCES node CHECK(
+                    right BLOB REFERENCES node CHECK(
                         (
                             node_type == {int(NodeType.INTERNAL)}
-                            AND length(right) == 64
-                            AND glob({bytes32_glob}, right)
+                            AND length(right) == 32
                         )
                         OR
                         (
@@ -88,11 +85,10 @@ class DataStore:
                             AND right IS NULL
                         )
                     ),
-                    key TEXT CHECK(
+                    key BLOB CHECK(
                         (
                             node_type == {int(NodeType.TERMINAL)}
-                            AND length(key) % 2 == 0
-                            AND glob(replace(hex(zeroblob(length(key))), '00', '[0-9a-f]'), key)
+                            AND key IS NOT NULL
                         )
                         OR
                         (
@@ -100,11 +96,10 @@ class DataStore:
                             AND key IS NULL
                         )
                     ),
-                    value TEXT CHECK(
+                    value BLOB CHECK(
                         (
                             node_type == {int(NodeType.TERMINAL)}
-                            AND length(value) % 2 == 0
-                            AND glob(replace(hex(zeroblob(length(value))), '00', '[0-9a-f]'), value)
+                            AND value IS NOT NULL
                         )
                         OR
                         (
@@ -127,9 +122,9 @@ class DataStore:
             await self.db.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS root(
-                    tree_id TEXT NOT NULL CHECK(length(tree_id) == 64 AND glob({bytes32_glob}, tree_id)),
+                    tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
                     generation INTEGER NOT NULL CHECK(generation >= 0),
-                    node_hash TEXT CHECK(length(node_hash) == 64 AND glob({bytes32_glob}, node_hash)),
+                    node_hash BLOB CHECK(length(node_hash) == 32),
                     status INTEGER NOT NULL CHECK(
                         status == {int(Status.PENDING)}
                         OR status == {int(Status.COMMITTED)}
@@ -155,21 +150,21 @@ class DataStore:
             INSERT INTO root(tree_id, generation, node_hash, status) VALUES(:tree_id, :generation, :node_hash, :status)
             """,
             {
-                "tree_id": tree_id.hex(),
+                "tree_id": tree_id,
                 "generation": generation,
-                "node_hash": None if node_hash is None else node_hash.hex(),
+                "node_hash": None if node_hash is None else node_hash,
                 "status": status.value,
             },
         )
 
     async def _insert_node(
         self,
-        node_hash: str,
+        node_hash: bytes32,
         node_type: NodeType,
-        left_hash: Optional[str],
-        right_hash: Optional[str],
-        key: Optional[str],
-        value: Optional[str],
+        left_hash: Optional[bytes32],
+        right_hash: Optional[bytes32],
+        key: Optional[bytes],
+        value: Optional[bytes],
     ) -> None:
         # TODO: can we get sqlite to do this check?
         values = {
@@ -201,10 +196,10 @@ class DataStore:
         node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
 
         await self._insert_node(
-            node_hash=node_hash.hex(),
+            node_hash=node_hash,
             node_type=NodeType.INTERNAL,
-            left_hash=left_hash.hex(),
-            right_hash=right_hash.hex(),
+            left_hash=left_hash,
+            right_hash=right_hash,
             key=None,
             value=None,
         )
@@ -215,12 +210,12 @@ class DataStore:
         node_hash = Program.to((key, value)).get_tree_hash()
 
         await self._insert_node(
-            node_hash=node_hash.hex(),
+            node_hash=node_hash,
             node_type=NodeType.TERMINAL,
             left_hash=None,
             right_hash=None,
-            key=key.hex(),
-            value=value.hex(),
+            key=key,
+            value=value,
         )
 
         return node_hash
@@ -231,7 +226,7 @@ class DataStore:
                 "UPDATE root SET status = ? WHERE tree_id=? and generation = ?",
                 (
                     status.value,
-                    root.tree_id.hex(),
+                    root.tree_id,
                     root.generation,
                 ),
             )
@@ -279,7 +274,7 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT DISTINCT tree_id FROM root")
 
-        tree_ids = {bytes32(hexstr_to_bytes(row["tree_id"])) async for row in cursor}
+        tree_ids = {bytes32(row["tree_id"]) async for row in cursor}
 
         return tree_ids
 
@@ -287,7 +282,7 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
                 "SELECT MAX(generation) FROM root WHERE tree_id == :tree_id",
-                {"tree_id": tree_id.hex()},
+                {"tree_id": tree_id},
             )
             row = await cursor.fetchone()
 
@@ -301,7 +296,7 @@ class DataStore:
             generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
             cursor = await self.db.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation",
-                {"tree_id": tree_id.hex(), "generation": generation},
+                {"tree_id": tree_id, "generation": generation},
             )
             [root_dict] = [row async for row in cursor]
 
@@ -332,7 +327,7 @@ class DataStore:
                 WHERE tree_from_root_hash.hash == ancestors.hash
                 ORDER BY tree_from_root_hash.depth DESC
                 """,
-                {"reference_hash": node_hash.hex(), "root_hash": root.node_hash.hex()},
+                {"reference_hash": node_hash, "root_hash": root.node_hash},
             )
 
             # The resulting rows must represent internal nodes.  InternalNode.from_row()
@@ -371,7 +366,7 @@ class DataStore:
                 WHERE node_type == :node_type
                 ORDER BY depth ASC, rights ASC
                 """,
-                {"root_hash": root.node_hash.hex(), "node_type": NodeType.TERMINAL},
+                {"root_hash": root.node_hash, "node_type": NodeType.TERMINAL},
             )
 
             terminal_nodes: List[TerminalNode] = []
@@ -397,7 +392,7 @@ class DataStore:
 
     async def get_node_type(self, node_hash: bytes32, *, lock: bool = True) -> NodeType:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute("SELECT node_type FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
+            cursor = await self.db.execute("SELECT node_type FROM node WHERE hash == :hash", {"hash": node_hash})
             raw_node_type = await cursor.fetchone()
 
         if raw_node_type is None:
@@ -564,7 +559,7 @@ class DataStore:
 
     async def get_node(self, node_hash: bytes32, *, lock: bool = True) -> Node:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
+            cursor = await self.db.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
             row = await cursor.fetchone()
 
         if row is None:
@@ -589,7 +584,7 @@ class DataStore:
                     )
                 SELECT * FROM tree_from_root_hash
                 """,
-                {"root_hash": root_node.hash.hex()},
+                {"root_hash": root_node.hash},
             )
             nodes = [row_to_node(row=row) async for row in cursor]
             hash_to_node: Dict[bytes32, Node] = {}
