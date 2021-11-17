@@ -153,6 +153,20 @@ async def delete_unconfirmed_transactions(args: dict, wallet_client: WalletRpcCl
     await wallet_client.delete_unconfirmed_transactions(wallet_id)
     print(f"Successfully deleted all unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}")
 
+async def add_token(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    asset_id = args["asset_id"]
+    token_name = args["token_name"]
+    try:
+        asset_id_bytes: bytes32 = hexstr_to_bytes(asset_id)
+        response = await wallet_client.create_wallet_for_existing_cat(asset_id_bytes)
+        wallet_id = response["wallet_id"]
+        await wallet_client.set_cat_name(wallet_id, token_name)
+        print(f"Successfully added {token_name} with wallet id {wallet_id} on key {fingerprint}")
+    except ValueError as e:
+        if "fromhex()" in str(e):
+            print(f"{asset_id} is not a valid Asset ID")
+        else:
+            raise e
 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
     if typ == WalletType.COLOURED_COIN:
