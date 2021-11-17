@@ -22,8 +22,12 @@ from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
-expected_result: PlotRefreshResult = PlotRefreshResult()
-expected_result_matched = True
+
+class TestRefreshResult:
+    loaded: int = 0
+    removed: int = 0
+    processed: int = 0
+    remaining: int = 0
 
 
 class TestDirectory:
@@ -85,6 +89,11 @@ def trigger_remove_plot(_: Path, plot_path: str):
 
 # Note: We assign `expected_result_matched` in the callback and assert it in the test thread to avoid
 # crashing the refresh thread of the plot manager with invalid assertions.
+
+expected_result: TestRefreshResult = TestRefreshResult()
+expected_result_matched = True
+
+
 def refresh_callback(event: PlotRefreshEvents, refresh_result: PlotRefreshResult):
     global expected_result_matched
     if event != PlotRefreshEvents.done:
@@ -95,10 +104,12 @@ def refresh_callback(event: PlotRefreshEvents, refresh_result: PlotRefreshResult
     )
 
 
-def validate_values(names: List[str], actual: PlotRefreshResult, expected: PlotRefreshResult):
+def validate_values(names: List[str], actual: PlotRefreshResult, expected: TestRefreshResult):
     for name in names:
         try:
             actual_value = actual.__getattribute__(name)
+            if type(actual_value) == list:
+                actual_value = len(actual_value)
             expected_value = expected.__getattribute__(name)
             if actual_value != expected_value:
                 log.error(f"{name} invalid: actual {actual_value} expected {expected_value}")
