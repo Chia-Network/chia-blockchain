@@ -56,7 +56,7 @@ class WalletTransactionStore:
         await self.db_connection.execute("DROP INDEX IF EXISTS tx_created_index on transaction_record(created_at_time)")
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS tx_confirmed on transaction_record(confirmed)")
         # this index is not used by any queries, don't create it for new
-        # installs, and remove it from existing installs in the future
+        # installs,  and remove it from existing installs in the future
         # await self.db.execute("DROP INDEX IF EXISTS tx_sent on transaction_record(sent)")
         # this index is not used by any queries, don't create it for new
         # installs, and remove it from existing installs in the future
