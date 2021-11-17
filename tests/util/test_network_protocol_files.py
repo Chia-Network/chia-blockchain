@@ -17,6 +17,31 @@ from tests.util.network_protocol_data import (
     request_signed_values,
     farming_info,
     signed_values,
+    new_peak,
+    new_transaction,
+    request_transaction,
+    respond_transaction,
+    request_proof_of_weight,
+    respond_proof_of_weight,
+    request_block,
+    reject_block,
+    request_blocks,
+    respond_blocks,
+    reject_blocks,
+    respond_block,
+    new_unfinished_block,
+    request_unfinished_block,
+    respond_unfinished_block,
+    new_signage_point_or_end_of_subslot,
+    request_signage_point_or_end_of_subslot,
+    respond_signage_point,
+    respond_end_of_subslot,
+    request_mempool_transaction,
+    new_compact_vdf,
+    request_compact_vdf,
+    respond_compact_vdf,
+    request_peers,
+    respond_peers,
 )
 
 log = logging.getLogger(__name__)
@@ -66,6 +91,135 @@ def parse_farmer_protocol(input_bytes):
     return input_bytes
 
 
+def parse_full_node_protocol(input_bytes):
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.NewPeak.from_bytes(message_bytes)
+    assert message == new_peak
+    assert message_bytes == bytes(new_peak)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.NewTransaction.from_bytes(message_bytes)
+    assert message == new_transaction
+    assert message_bytes == bytes(new_transaction)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RequestTransaction.from_bytes(message_bytes)
+    assert message == request_transaction
+    assert message_bytes == bytes(request_transaction)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RespondTransaction.from_bytes(message_bytes)
+    assert message == respond_transaction
+    assert message_bytes == bytes(respond_transaction)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RequestProofOfWeight.from_bytes(message_bytes)
+    assert message == request_proof_of_weight
+    assert message_bytes == bytes(request_proof_of_weight)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RespondProofOfWeight.from_bytes(message_bytes)
+    assert message == respond_proof_of_weight
+    assert message_bytes == bytes(respond_proof_of_weight)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RequestBlock.from_bytes(message_bytes)
+    assert message == request_block
+    assert message_bytes == bytes(request_block)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RejectBlock.from_bytes(message_bytes)
+    assert message == reject_block
+    assert message_bytes == bytes(reject_block)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RequestBlocks.from_bytes(message_bytes)
+    assert message == request_blocks
+    assert message_bytes == bytes(request_blocks)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RespondBlocks.from_bytes(message_bytes)
+    assert message == respond_blocks
+    assert message_bytes == bytes(respond_blocks)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RejectBlocks.from_bytes(message_bytes)
+    assert message == reject_blocks
+    assert message_bytes == bytes(reject_blocks)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RespondBlock.from_bytes(message_bytes)
+    assert message == respond_block
+    assert message_bytes == bytes(respond_block)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.NewUnfinishedBlock.from_bytes(message_bytes)
+    assert message == new_unfinished_block
+    assert message_bytes == bytes(new_unfinished_block)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RequestUnfinishedBlock.from_bytes(message_bytes)
+    assert message == request_unfinished_block
+    assert message_bytes == bytes(request_unfinished_block)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RespondUnfinishedBlock.from_bytes(message_bytes)
+    assert message == respond_unfinished_block
+    assert message_bytes == bytes(respond_unfinished_block)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.NewSignagePointOrEndOfSubSlot.from_bytes(message_bytes)
+    assert message == new_signage_point_or_end_of_subslot
+    assert message_bytes == bytes(new_signage_point_or_end_of_subslot)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RequestSignagePointOrEndOfSubSlot.from_bytes(message_bytes)
+    assert message == request_signage_point_or_end_of_subslot
+    assert message_bytes == bytes(request_signage_point_or_end_of_subslot)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RespondSignagePoint.from_bytes(message_bytes)
+    assert message == respond_signage_point
+    assert message_bytes == bytes(respond_signage_point)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RespondEndOfSubSlot.from_bytes(message_bytes)
+    assert message == respond_end_of_subslot
+    assert message_bytes == bytes(respond_end_of_subslot)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RequestMempoolTransactions.from_bytes(message_bytes)
+    assert message == request_mempool_transaction
+    assert message_bytes == bytes(request_mempool_transaction)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.NewCompactVDF.from_bytes(message_bytes)
+    assert message == new_compact_vdf
+    assert message_bytes == bytes(new_compact_vdf)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RequestCompactVDF.from_bytes(message_bytes)
+    assert message == request_compact_vdf
+    assert message_bytes == bytes(request_compact_vdf)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RespondCompactVDF.from_bytes(message_bytes)
+    assert message == respond_compact_vdf
+    assert message_bytes == bytes(respond_compact_vdf)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RequestPeers.from_bytes(message_bytes)
+    assert message == request_peers
+    assert message_bytes == bytes(request_peers)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = full_node_protocol.RespondPeers.from_bytes(message_bytes)
+    assert message == respond_peers
+    assert message_bytes == bytes(respond_peers)    
+
+    return input_bytes
+
+
 class TestNetworkProtocolFiles:
     def test_network_protocol_files(self):
         filename = get_network_protocol_filename()
@@ -73,4 +227,5 @@ class TestNetworkProtocolFiles:
         with open(filename, "rb") as f:
             input_bytes = f.read()
         input_bytes = parse_farmer_protocol(input_bytes)
+        input_bytes = parse_full_node_protocol(input_bytes)
         assert input_bytes == b""

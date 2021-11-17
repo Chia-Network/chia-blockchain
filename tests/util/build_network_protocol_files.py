@@ -7,6 +7,31 @@ from tests.util.network_protocol_data import (
     request_signed_values,
     farming_info,
     signed_values,
+    new_peak,
+    new_transaction,
+    request_transaction,
+    respond_transaction,
+    request_proof_of_weight,
+    respond_proof_of_weight,
+    request_block,
+    reject_block,
+    request_blocks,
+    respond_blocks,
+    reject_blocks,
+    respond_block,
+    new_unfinished_block,
+    request_unfinished_block,
+    respond_unfinished_block,
+    new_signage_point_or_end_of_subslot,
+    request_signage_point_or_end_of_subslot,
+    respond_signage_point,
+    respond_end_of_subslot,
+    request_mempool_transaction,
+    new_compact_vdf,
+    request_compact_vdf,
+    respond_compact_vdf,
+    request_peers,
+    respond_peers,
 )
 from chia.util.ints import uint32
 
@@ -34,8 +59,38 @@ def get_farmer_protocol_bytes() -> bytes:
     return result
 
 
+def get_full_node_bytes() -> bytes:
+    result = b""
+    result += encode_data(new_peak)
+    result += encode_data(new_transaction)
+    result += encode_data(request_transaction)
+    result += encode_data(respond_transaction)
+    result += encode_data(request_proof_of_weight)
+    result += encode_data(respond_proof_of_weight)
+    result += encode_data(request_block)
+    result += encode_data(reject_block)
+    result += encode_data(request_blocks)
+    result += encode_data(respond_blocks)
+    result += encode_data(reject_blocks)
+    result += encode_data(respond_block)
+    result += encode_data(new_unfinished_block)
+    result += encode_data(request_unfinished_block)
+    result += encode_data(respond_unfinished_block)
+    result += encode_data(new_signage_point_or_end_of_subslot)
+    result += encode_data(request_signage_point_or_end_of_subslot)
+    result += encode_data(respond_signage_point)
+    result += encode_data(respond_end_of_subslot)
+    result += encode_data(request_mempool_transaction)
+    result += encode_data(new_compact_vdf)
+    result += encode_data(request_compact_vdf)
+    result += encode_data(respond_compact_vdf)
+    result += encode_data(request_peers)
+    result += encode_data(respond_peers)
+    return result
+
+
 def get_protocol_bytes() -> bytes:
-    return get_farmer_protocol_bytes()
+    return get_farmer_protocol_bytes() + get_full_node_bytes()
 
 
 if __name__ == "__main__":
