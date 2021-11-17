@@ -19,7 +19,7 @@ Please visit our wiki for more information:
 [wiki](https://github.com/silicoin-network/silicoin-blockchain/wiki).
 
 Please use the latest release
-[v1.1.1](https://github.com/silicoin-network/silicoin-blockchain/wiki).
+[v1.1.3](https://github.com/silicoin-network/silicoin-blockchain/releases/tag/v1.1.3).
 
 ## Resource Links
 
