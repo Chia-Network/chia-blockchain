@@ -1,5 +1,9 @@
-from ipaddress import ip_address, IPv4Network, IPv6Network
-from typing import Iterable, Union, Any
+import asyncio
+from ipaddress import IPv4Network, IPv6Network, ip_address
+from typing import Any, Iterable, Union
+
+import nest_asyncio
+
 from chia.server.outbound_message import NodeType
 
 
@@ -41,3 +45,27 @@ def class_for_type(type: NodeType) -> Any:
 
         return HarvesterAPI
     raise ValueError("No class for type")
+
+
+def asyncio_run(future, as_task=True):
+    """
+    A better implementation of `asyncio.run`.
+
+    :param future: A future or task or call of an async method.
+    :param as_task: Forces the future to be scheduled as task (needed for e.g. aiohttp).
+    """
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:  # no event loop running:
+        loop = asyncio.new_event_loop()
+        return loop.run_until_complete(_to_task(future, as_task, loop))
+    else:
+        nest_asyncio.apply(loop)
+        return asyncio.run(_to_task(future, as_task, loop))
+
+
+def _to_task(future, as_task, loop):
+    if not as_task or isinstance(future, asyncio.Task):
+        return future
+    return loop.create_task(future)

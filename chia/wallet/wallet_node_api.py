@@ -1,8 +1,8 @@
-from chia.protocols import full_node_protocol, introducer_protocol, wallet_protocol
+from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, wallet_protocol
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.api_decorators import api_request, peer_required, execute_task
+from chia.util.api_decorators import api_request, execute_task, peer_required
 from chia.util.errors import Err
 from chia.wallet.wallet_node import WalletNode
 
@@ -132,3 +132,7 @@ class WalletNodeAPI:
     @api_request
     async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
         self.log.warning(f"Reject header blocks: {request}")
+
+    @api_request
+    async def respond_stakings(self, response: farmer_protocol.FarmerStakings):
+        self.farmer.log.warning("Respond stakings came too late")

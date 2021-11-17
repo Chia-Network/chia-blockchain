@@ -20,10 +20,10 @@ from chia.protocols import farmer_protocol, full_node_protocol, introducer_proto
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
+    CoinState,
     PuzzleSolutionResponse,
     RejectHeaderBlocks,
     RejectHeaderRequest,
-    CoinState,
     RespondSESInfo,
 )
 from chia.server.outbound_message import Message, make_msg
@@ -40,8 +40,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.api_decorators import api_request, bytes_required, execute_task, peer_required
-from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task, reply_type
+from chia.util.api_decorators import api_request, bytes_required, execute_task, peer_required, reply_type
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -436,6 +435,7 @@ class FullNodeAPI:
         peer: ws.WSChiaConnection,
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
+            self.log.info("[debug] ignore unfinished block, still in sync")
             return None
         await self.full_node.respond_unfinished_block(respond_unfinished_block, peer)
         return None
@@ -819,7 +819,7 @@ class FullNodeAPI:
                     uint32(0),
                 )
                 farmer_ph = self.full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
-                # difficulty_coeff = 1.0
+                difficulty_coeff = 20.0
             else:
                 farmer_ph = request.farmer_puzzle_hash
                 if request.proof_of_space.pool_contract_puzzle_hash is not None:
@@ -828,9 +828,9 @@ class FullNodeAPI:
                     assert request.pool_target is not None
                     pool_target = request.pool_target
 
-                # difficulty_coeff = await self.full_node.blockchain.get_farmer_difficulty_coeff(
-                #     request.proof_of_space.farmer_public_key
-                # )
+                difficulty_coeff = await self.full_node.blockchain.get_farmer_difficulty_coeff(
+                    request.proof_of_space.farmer_public_key
+                )
 
             if peak is None or peak.height <= self.full_node.constants.MAX_SUB_SLOT_BLOCKS:
                 difficulty = self.full_node.constants.DIFFICULTY_STARTING
@@ -849,7 +849,7 @@ class FullNodeAPI:
                 quality_string,
                 request.proof_of_space.size,
                 difficulty,
-                0.5,  # TODO
+                difficulty_coeff,
                 request.challenge_chain_sp,
             )
             sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
@@ -900,6 +900,7 @@ class FullNodeAPI:
                 height: uint32 = uint32(prev_b.height + 1)
             else:
                 height = uint32(0)
+            self.log.info(f"[debug] creating block {height} {difficulty_coeff}")
             self.full_node.full_node_store.add_candidate_block(quality_string, height, unfinished_block)
 
             foliage_sb_data_hash = unfinished_block.foliage.foliage_block_data.get_hash()
@@ -957,6 +958,7 @@ class FullNodeAPI:
         block, which only needs a Proof of Time to be finished. If the signature is valid,
         we call the unfinished_block routine.
         """
+        self.log.info("[debug] signed_values")
         candidate_tuple: Optional[Tuple[uint32, UnfinishedBlock]] = self.full_node.full_node_store.get_candidate_block(
             farmer_request.quality_string
         )
@@ -1341,7 +1343,9 @@ class FullNodeAPI:
     async def request_stakings(self, request: farmer_protocol.RequestStakings) -> Optional[Message]:
         stakings = []
         for pk in request.public_keys:
-            difficulty_coeff = await self.full_node.blockchain.get_farmer_difficulty_coeff(pk)
+            difficulty_coeff = await self.full_node.blockchain.get_farmer_difficulty_coeff(
+                pk, request.height, request.blocks
+            )
             stakings.append((pk, str(difficulty_coeff)))
         msg = make_msg(ProtocolMessageTypes.respond_stakings, farmer_protocol.FarmerStakings(stakings=stakings))
         return msg

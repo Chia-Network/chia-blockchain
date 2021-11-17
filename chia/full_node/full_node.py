@@ -4,6 +4,7 @@ import logging
 import random
 import time
 import traceback
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
@@ -30,12 +31,7 @@ from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import SyncStore
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
-from chia.protocols.full_node_protocol import (
-    RequestBlocks,
-    RespondBlock,
-    RespondBlocks,
-    RespondSignagePoint,
-)
+from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks, RespondSignagePoint
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
 from chia.server.node_discovery import FullNodePeers
@@ -59,9 +55,8 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
-from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
-from datetime import datetime
+from chia.util.safe_cancel_task import cancel_task_safe
 
 
 class FullNode:
@@ -291,17 +286,18 @@ class FullNode:
                 if not response:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self.blockchain.lock:
-                    success, advanced_peak, fork_height, coin_changes = await self.receive_block_batch(
-                        response.blocks, peer, None
-                    )
-                    if not success:
-                        raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
-                    if advanced_peak:
-                        peak = self.blockchain.get_peak()
-                        peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
-                        assert peak is not None and peak_fb is not None and fork_height is not None
-                        await self.peak_post_processing(peak_fb, peak, fork_height, peer, coin_changes)
-                        self.log.info(f"Added blocks {height}-{end_height}")
+                    for block in response.blocks:
+                        success, advanced_peak, fork_height, coin_changes = await self.receive_block_batch(
+                            [block], peer, None
+                        )
+                        if not success:
+                            raise ValueError(f"Error short batch syncing, failed to validate block {block.height}")
+                        if advanced_peak:
+                            peak = self.blockchain.get_peak()
+                            peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
+                            assert peak is not None and peak_fb is not None and fork_height is not None
+                            await self.peak_post_processing(peak_fb, peak, fork_height, peer, coin_changes)
+                    self.log.info(f"Added blocks {height}-{end_height}")
         except Exception:
             self.sync_store.batch_syncing.remove(peer.peer_node_id)
             raise
@@ -434,7 +430,7 @@ class FullNode:
 
             if request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
                 # This case of being behind but not by so much
-                if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
+                if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 128, 0)), request.height):
                     return None
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
@@ -451,7 +447,11 @@ class FullNode:
             peak_block = await self.blockchain.get_full_peak()
         if peak_block is not None:
             peak = self.blockchain.block_record(peak_block.header_hash)
+            self.log.info(f"send_peak_to_timelords {peak.height} {peak.required_iters}")
             difficulty = self.blockchain.get_next_difficulty(peak.header_hash, False)
+            difficulty_coeff = await self.blockchain.get_farmer_difficulty_coeff(
+                peak.farmer_public_key, peak.height - 1 if peak.height > 0 else 0
+            )
             ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
                 self.constants,
                 self.blockchain,
@@ -482,6 +482,7 @@ class FullNode:
             timelord_new_peak: timelord_protocol.NewPeakTimelord = timelord_protocol.NewPeakTimelord(
                 peak_block.reward_chain_block,
                 difficulty,
+                str(difficulty_coeff),
                 peak.deficit,
                 peak.sub_slot_iters,
                 ses,
@@ -916,7 +917,8 @@ class FullNode:
 
         blocks_to_validate: List[FullBlock] = []
         for i, block in enumerate(all_blocks):
-            if not self.blockchain.contains_block(block.header_hash):
+            # If the block is not on current chain, re-validate
+            if not self.blockchain.contains_block_in_peak_chain(block.header_hash):
                 blocks_to_validate = all_blocks[i:]
                 break
         if len(blocks_to_validate) == 0:
@@ -949,6 +951,7 @@ class FullNode:
             result, error, fork_height, coin_changes = await self.blockchain.receive_block(
                 block, pre_validation_results[i], None if advanced_peak else fork_point
             )
+            self.log.info(f"[debug] post receive block {block.height} {fork_height}")
             coin_record_list, hint_records = coin_changes
 
             # Update all changes
@@ -1400,6 +1403,7 @@ class FullNode:
         We can validate it and if it's a good block, propagate it to other peers and
         timelords.
         """
+        self.log.info(f"[debug] respond_unfinished_block {farmed_block}")
         block = respond_unfinished_block.unfinished_block
 
         if block.prev_header_hash != self.constants.GENESIS_CHALLENGE and not self.blockchain.contains_block(
@@ -1528,6 +1532,7 @@ class FullNode:
             assert block.reward_chain_block.reward_chain_sp_vdf is not None
             rc_prev = block.reward_chain_block.reward_chain_sp_vdf.challenge
 
+        self.log.info("send timelord request NewUnfinishedBlockTimelord")
         timelord_request = timelord_protocol.NewUnfinishedBlockTimelord(
             block.reward_chain_block,
             difficulty,
@@ -1535,10 +1540,12 @@ class FullNode:
             block.foliage,
             ses,
             rc_prev,
+            validate_result.difficulty_coeff,
         )
 
         timelord_msg = make_msg(ProtocolMessageTypes.new_unfinished_block_timelord, timelord_request)
         await self.server.send_to_all([timelord_msg], NodeType.TIMELORD)
+        self.log.info("send timelord request NewUnfinishedBlockTimelord end")
 
         full_node_request = full_node_protocol.NewUnfinishedBlock(block.reward_chain_block.get_hash())
         msg = make_msg(ProtocolMessageTypes.new_unfinished_block, full_node_request)
@@ -1645,7 +1652,7 @@ class FullNode:
         try:
             await self.respond_block(full_node_protocol.RespondBlock(block))
         except Exception as e:
-            self.log.warning(f"Consensus error validating block: {e}")
+            self.log.exception(f"Consensus error validating block: {e}")
             if timelord_peer is not None:
                 # Only sends to the timelord who sent us this VDF, to reset them to the correct peak
                 await self.send_peak_to_timelords(peer=timelord_peer)

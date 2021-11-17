@@ -138,7 +138,7 @@ class FullNodeRpcApi:
             is_connected = False
         synced = await self.service.synced() and is_connected
 
-        space = await self.service.blockchain.get_peak_network_space(4608)
+        space = await self.service.blockchain.get_peak_network_space(4608, peak)
         response: Dict = {
             "blockchain_state": {
                 "peak": peak,

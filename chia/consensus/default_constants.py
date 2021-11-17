@@ -47,9 +47,10 @@ testnet_kwargs = {
     # The cost per byte of generator program
     "COST_PER_BYTE": 12000,
     "WEIGHT_PROOF_THRESHOLD": 2,
-    "BLOCKS_CACHE_SIZE": 4608 + (128 * 4),
+    "STAKING_ESTIMATE_BLOCK_RANGE": 4608 * 3,
+    "BLOCKS_CACHE_SIZE": 4608 * 3 + (128 * 4),  # should be bigger than STAKING_ESTIMAGE_BLOCK_RANGE
     "WEIGHT_PROOF_RECENT_BLOCKS": 1000,
-    "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
+    "MAX_BLOCK_COUNT_PER_REQUESTS": 32,
     "NETWORK_TYPE": 0,
     "MAX_GENERATOR_SIZE": 1000000,
     "MAX_GENERATOR_REF_LIST_SIZE": 512,  # Number of references allowed in the block generator ref list

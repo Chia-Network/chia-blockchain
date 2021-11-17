@@ -1,5 +1,6 @@
 import logging
 import time
+from decimal import Decimal
 from typing import Callable, Optional
 
 from chia.protocols import timelord_protocol
@@ -57,6 +58,7 @@ class TimelordAPI:
                     new_unfinished_block.reward_chain_block,
                     self.timelord.last_state.get_sub_slot_iters(),
                     self.timelord.last_state.get_difficulty(),
+                    Decimal(new_unfinished_block.difficulty_coeff),
                 )
             except Exception:
                 return None

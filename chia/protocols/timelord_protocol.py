@@ -21,6 +21,7 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 class NewPeakTimelord(Streamable):
     reward_chain_block: RewardChainBlock
     difficulty: uint64
+    difficulty_coeff: str
     deficit: uint8
     sub_slot_iters: uint64  # SSi in the slot where NewPeak has been infused
     sub_epoch_summary: Optional[
@@ -42,6 +43,7 @@ class NewUnfinishedBlockTimelord(Streamable):
     # This is the last thing infused in the reward chain before this signage point.
     # The challenge that the SP reward chain VDF is based off of, or in the case of sp index 0, the previous infusion
     rc_prev: bytes32
+    difficulty_coeff: str
 
 
 @dataclass(frozen=True)

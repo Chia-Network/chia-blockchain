@@ -1,5 +1,6 @@
 import json
 import time
+from decimal import Decimal
 from typing import Any, Callable, Dict, List, Optional
 
 import aiohttp
@@ -84,7 +85,7 @@ class FarmerAPI:
                 computed_quality_string,
                 new_proof_of_space.proof.size,
                 sp.difficulty,
-                float(new_proof_of_space.difficulty_coeff),
+                Decimal(new_proof_of_space.difficulty_coeff),
                 new_proof_of_space.sp_hash,
             )
 
@@ -260,6 +261,7 @@ class FarmerAPI:
         """
         There are two cases: receiving signatures for sps, or receiving signatures for the block.
         """
+        self.farmer.log.info("[debug] farmer respond_signatures")
         if response.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(f"Do not have challenge hash {response.challenge_hash}")
             return None
@@ -357,6 +359,7 @@ class FarmerAPI:
                     return None
 
         else:
+            self.farmer.log.info("[debug] respond_signatures block signatures")
             # This is a response with block signatures
             for sk in self.farmer.get_private_keys():
                 (
@@ -433,7 +436,12 @@ class FarmerAPI:
                     p2_singleton_puzzle_hash,
                 )
             )
-        rsp = await peer.request_stakings(farmer_protocol.RequestStakings(public_keys=self.farmer.get_public_keys()))
+        rsp: Optional[farmer_protocol.FarmerStakings] = await peer.request_stakings(
+            farmer_protocol.RequestStakings(public_keys=self.farmer.get_public_keys(), height=None, blocks=None)
+        )
+        if rsp is None or not isinstance(rsp, farmer_protocol.FarmerStakings):
+            self.log.warning(f"bad RequestStakings response from peer {rsp}")
+            return
         message = harvester_protocol.NewSignagePointHarvester(
             new_signage_point.challenge_hash,
             new_signage_point.difficulty,

@@ -3,24 +3,29 @@ import dataclasses
 import logging
 import multiprocessing
 from concurrent.futures.process import ProcessPoolExecutor
+from decimal import Decimal
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+
+from blspy import G1Element
 
 from chia.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
+from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_spend import CoinSpend
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import recurse_jsonify
 from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.wallet_block_store import WalletBlockStore
@@ -77,6 +82,8 @@ class WalletBlockchain(BlockchainInterface):
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
     log: logging.Logger
+
+    stakings: Dict[bytes, uint64] = {}
 
     @staticmethod
     async def create(
@@ -189,7 +196,7 @@ class WalletBlockchain(BlockchainInterface):
         )
 
         if trusted is False and pre_validation_result is None:
-            required_iters, error = validate_finished_header_block(
+            required_iters, _, error = validate_finished_header_block(
                 self.constants, self, block, False, difficulty, sub_slot_iters
             )
         elif trusted:
@@ -203,7 +210,7 @@ class WalletBlockchain(BlockchainInterface):
                 block.transactions_filter,
             )
 
-            required_iters, val_error = validate_unfinished_header_block(
+            required_iters, _, val_error = validate_unfinished_header_block(
                 self.constants,
                 self,
                 unfinished_header_block,
@@ -401,6 +408,11 @@ class WalletBlockchain(BlockchainInterface):
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self.__block_records[header_hash]
 
+    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+        if self.contains_block(header_hash):
+            return self.block_record(header_hash)
+        return None
+
     def height_to_block_record(self, height: uint32, check_db=False) -> BlockRecord:
         header_hash = self.height_to_hash(height)
         return self.block_record(header_hash)
@@ -497,3 +509,40 @@ class WalletBlockchain(BlockchainInterface):
         if block_record.height not in self.__heights_in_cache.keys():
             self.__heights_in_cache[block_record.height] = set()
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
+
+    async def get_network_space(self, newer: bytes32, older: bytes32) -> uint128:
+        newer_block = await self.block_store.get_block_record(newer)
+        if newer_block is None:
+            raise ValueError("Newer block not found")
+        older_block = await self.block_store.get_block_record(older)
+        if older_block is None:
+            raise ValueError("Newer block not found")
+        delta_weight = newer_block.weight - older_block.weight
+
+        delta_iters = newer_block.total_iters - older_block.total_iters
+        weight_div_iters = delta_weight / delta_iters
+        additional_difficulty_constant = self.constants.DIFFICULTY_CONSTANT_FACTOR
+        eligible_plots_filter_multiplier = 2 ** self.constants.NUMBER_ZERO_BITS_PLOT_FILTER
+        network_space_bytes_estimate = (
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR
+            * weight_div_iters
+            * additional_difficulty_constant
+            * eligible_plots_filter_multiplier
+        )
+        return uint128(int(network_space_bytes_estimate))
+
+    async def get_peak_network_space(self, block_range: int) -> uint128:
+        peak = self.get_peak()
+
+        if peak is not None and peak.height > 1:
+            # Average over the last day
+            older_header_hash = self.height_to_hash(uint32(max(1, peak.height - block_range)))
+            assert older_header_hash is not None
+            return await self.get_network_space(peak.header_hash, older_header_hash)
+        else:
+            return uint128(0)
+
+    async def get_farmer_difficulty_coeff(
+        self, farmer_public_key: G1Element, height: Optional[uint32] = None
+    ) -> Decimal:
+        return self.stakings.get(bytes(farmer_public_key), Decimal(20))

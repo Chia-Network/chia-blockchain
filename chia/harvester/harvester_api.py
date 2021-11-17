@@ -1,5 +1,6 @@
 import asyncio
 import time
+from decimal import Decimal
 from pathlib import Path
 from typing import Callable, List, Tuple
 
@@ -67,12 +68,12 @@ class HarvesterAPI:
         start = time.time()
         assert len(new_challenge.challenge_hash) == 32
 
-        stakings = {bytes(k): float(v) for k, v in new_challenge.stakings}
+        stakings = {bytes(k): Decimal(v) for k, v in new_challenge.stakings}
 
         loop = asyncio.get_running_loop()
 
         def blocking_lookup(
-            filename: Path, plot_info: PlotInfo, difficulty_coeff: float
+            filename: Path, plot_info: PlotInfo, difficulty_coeff: Decimal
         ) -> List[Tuple[bytes32, ProofOfSpace]]:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
             # so it should be run in a thread pool.
@@ -173,7 +174,7 @@ class HarvesterAPI:
                     self.harvester.log.error(f"Error get staking for public key {plot_info.farmer_public_key}, {e}")
                     return filename, []
             else:
-                difficulty_coeff = 1.0
+                difficulty_coeff = Decimal(1)
 
             proofs_of_space_and_q: List[Tuple[bytes32, ProofOfSpace]] = await loop.run_in_executor(
                 self.harvester.executor, blocking_lookup, filename, plot_info, difficulty_coeff

@@ -13,7 +13,7 @@ git clean -fdx
 cd ../
 
 echo "venv & install ========================="
-python3 -m venv venv
+python3.7 -m venv venv
 . ./venv/bin/activate
 
 python -m pip install --upgrade pip
@@ -43,6 +43,8 @@ deactivate
 
 echo "cp daemon ========================="
 #daemon
-cp -r dist/daemon ../chia-blockchain-gui
+#cp -r dist/daemon ../chia-blockchain-gui
+rm -rf ../../sit-linux
+cp -r dist/daemon ../../sit-linux
 cd ../
 

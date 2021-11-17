@@ -4,10 +4,12 @@ import logging
 import socket
 import time
 import traceback
+from decimal import Decimal
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
-from blspy import PrivateKey
+from blspy import G1Element, PrivateKey
+
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
@@ -21,7 +23,7 @@ from chia.daemon.keychain_proxy import (
     wrap_local_keychain,
 )
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
-from chia.protocols import wallet_protocol
+from chia.protocols import farmer_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
@@ -47,11 +49,12 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint32, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.util.keychain import Keychain
 from chia.util.lru_cache import LRUCache
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
 from chia.util.path import mkdir, path_from_root
+from chia.util.profiler import profile_task
 from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.settings.settings_objects import BackupInitialized
@@ -61,7 +64,6 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action import WalletAction
 from chia.wallet.wallet_blockchain import ReceiveBlockResult
 from chia.wallet.wallet_state_manager import WalletStateManager
-from chia.util.profiler import profile_task
 
 
 class WalletNode:
@@ -408,6 +410,33 @@ class WalletNode:
                 return True
         return False
 
+    async def update_stakings(self, peer: WSChiaConnection, height: uint64, farmer_public_key: G1Element) -> None:
+        "fetch staking"
+        height = height - 1 if height > 0 else 0
+        blockchain = self.wallet_state_manager.blockchain
+
+        # calculate blocks from cache
+        blocks = 0
+        if blockchain.get_peak_height() is not None:
+            block_range = self.constants.STAKING_ESTIMATE_BLOCK_RANGE
+            curr: Optional[BlockRecord] = blockchain.try_block_record(blockchain.height_to_hash(height))
+            begin_height = max((curr.height if curr is not None else 0) - block_range, 1)
+            while curr is not None and curr.height > begin_height:
+                if curr.farmer_public_key == farmer_public_key:
+                    blocks += 1
+                curr = blockchain.try_block_record(curr.prev_hash)
+
+        res: Optional[farmer_protocol.FarmerStakings] = await peer.request_stakings(
+            farmer_protocol.RequestStakings(
+                public_keys=[farmer_public_key],
+                height=height,
+                blocks=blocks,
+            )
+        )
+        if res is None or not isinstance(res, farmer_protocol.FarmerStakings):
+            raise ValueError("Peer returned no response")
+        self.wallet_state_manager.blockchain.stakings.update({bytes(k): Decimal(v) for k, v in res.stakings})
+
     async def complete_blocks(self, header_blocks: List[HeaderBlock], peer: WSChiaConnection):
         if self.wallet_state_manager is None:
             return None
@@ -416,6 +445,10 @@ class WalletNode:
         trusted = self.server.is_trusted_peer(peer, self.config["trusted_peers"])
         async with self.wallet_state_manager.blockchain.lock:
             for block in header_blocks:
+                await self.update_stakings(
+                    peer, block.height, block.reward_chain_block.proof_of_space.farmer_public_key
+                )
+
                 if block.is_transaction_block:
                     # Find additions and removals
                     (additions, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
@@ -702,6 +735,11 @@ class WalletNode:
 
         for i in range(len(header_blocks)):
             header_block = header_blocks[i]
+
+            await self.update_stakings(
+                peer, header_block.height, header_block.reward_chain_block.proof_of_space.farmer_public_key
+            )
+
             if not trusted and pre_validation_results is not None and pre_validation_results[i].error is not None:
                 raise ValidationError(Err(pre_validation_results[i].error))
 
@@ -757,7 +795,7 @@ class WalletNode:
                 advanced_peak = True
                 self.wallet_state_manager.state_changed("new_block")
             elif result == ReceiveBlockResult.INVALID_BLOCK:
-                raise ValueError("Value error peer sent us invalid block")
+                raise ValueError(f"Value error peer sent us invalid block {error} {fork_h}")
         if advanced_peak:
             await self.wallet_state_manager.create_more_puzzle_hashes()
         return True, advanced_peak

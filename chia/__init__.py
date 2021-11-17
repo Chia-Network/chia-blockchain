@@ -1,7 +1,10 @@
+import nest_asyncio
 from pkg_resources import DistributionNotFound, get_distribution, resource_filename
 
+nest_asyncio.apply()
+
 try:
-    __version__ = get_distribution("chia-blockchain").version
+    __version__ = "1.1.3(Venus)"
 except DistributionNotFound:
     # package is not installed
     __version__ = "unknown"

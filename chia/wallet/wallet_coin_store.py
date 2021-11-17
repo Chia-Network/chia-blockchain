@@ -1,10 +1,11 @@
+import sqlite3
 from typing import Dict, List, Optional, Set
 
 import aiosqlite
-import sqlite3
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.wallet.util.wallet_types import WalletType
@@ -247,3 +248,26 @@ class WalletCoinStore:
             (height,),
         )
         await c2.close()
+
+    # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
+    async def get_coin_records_by_puzzle_hash2(
+        self,
+        include_spent_coins: bool,
+        puzzle_hash: bytes32,
+        start_height: uint32 = uint32(0),
+        end_height: uint32 = uint32((2 ** 32) - 1),
+    ) -> List[CoinRecord]:
+        coins = set()
+        cursor = await self.db_connection.execute(
+            f"SELECT * from coin_record INDEXED BY coin_puzzlehash WHERE puzzle_hash=? "
+            f"AND confirmed_height>=? AND confirmed_height<? "
+            f"{'' if include_spent_coins else 'AND spent=0'}",
+            (puzzle_hash.hex(), start_height, end_height),
+        )
+        rows = await cursor.fetchall()
+
+        await cursor.close()
+        for row in rows:
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+        return list(coins)

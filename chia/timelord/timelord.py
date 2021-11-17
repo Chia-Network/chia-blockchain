@@ -5,7 +5,8 @@ import logging
 import random
 import time
 import traceback
-from typing import Callable, Dict, List, Optional, Tuple, Set
+from decimal import Decimal
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from chiavdf import create_discriminant
 
@@ -166,6 +167,7 @@ class Timelord:
                 rc_block,
                 sub_slot_iters,
                 difficulty,
+                Decimal(block.difficulty_coeff),
             )
         except Exception as e:
             log.warning(f"Received invalid unfinished block: {e}.")
@@ -250,6 +252,7 @@ class Timelord:
                     self.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
         # Remove all unfinished blocks that have already passed.
         self.unfinished_blocks = new_unfinished_blocks
+        log.info(f"reset_chains new_unfinished_blocks: {len(self.unfinished_blocks)}")
         # Signage points.
         if not only_eos and len(self.signage_point_iters) > 0:
             count_signage = 0
@@ -308,6 +311,7 @@ class Timelord:
 
     async def _handle_subslot_end(self):
         self.last_state.set_state(self.new_subslot_end)
+        log.info(f"handle_subslot_end, unfinished_blocks: {len(self.unfinished_blocks)}")
         for block in self.unfinished_blocks:
             if self._can_infuse_unfinished_block(block) is not None:
                 self.total_unfinished += 1
@@ -468,6 +472,7 @@ class Timelord:
                             unfinished_block.reward_chain_block,
                             self.last_state.get_sub_slot_iters(),
                             self.last_state.get_difficulty(),
+                            Decimal(unfinished_block.difficulty_coeff),
                         )
                     except Exception as e:
                         log.error(f"Error {e}")
@@ -624,6 +629,7 @@ class Timelord:
                     self.new_peak = timelord_protocol.NewPeakTimelord(
                         new_reward_chain_block,
                         block.difficulty,
+                        block.difficulty_coeff,
                         uint8(new_deficit),
                         block.sub_slot_iters,
                         new_sub_epoch_summary,

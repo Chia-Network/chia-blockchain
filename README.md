@@ -18,9 +18,6 @@ Silicoin(SIT) is a modern cryptocurrency built from scratch, designed to be effi
 Please visit our wiki for more information:
 [wiki](https://github.com/silicoin-network/silicoin-blockchain/wiki).
 
-Please use the latest release
-[v1.1.3](https://github.com/silicoin-network/silicoin-blockchain/releases/tag/v1.1.3).
-
 ## Resource Links
 
 [ChiaHub](https://www.chia-hub.com/)
@@ -36,7 +33,7 @@ Please use the latest release
 1. Query the staking addresses according to your farming plot list:
 
    ```
-   $ sit farm summary
+   $ silicoin farm summary
    ...
    Staking addresses:
      sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr (balance: 0, plots: 27)
@@ -46,13 +43,13 @@ Please use the latest release
 2. Deposit coins to the staking address:
 
    ```
-   $ sit wallet send -t sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr -a 1
+   $ silicoin wallet send -t sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr -a 1
    ```
 
    Wait for the transaction get confirmed, query staking balance again:
 
    ```
-   $ sit farm summary
+   $ silicoin farm summary
    ...
    Staking addresses:
      sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr (balance: 1, plots: 27)
@@ -62,7 +59,7 @@ Please use the latest release
 3. Withdraw coins from the staking address:
 
    ```
-   $ sit wallet send-from -s sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr -t $RECEIVER
+   $ silicoin wallet send-from -s sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr -t $RECEIVER
    ```
 
    Do a transaction to transfer the coins from the staking address to any receive address.

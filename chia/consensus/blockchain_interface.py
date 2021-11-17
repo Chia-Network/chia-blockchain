@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Dict, List, Optional
 
 from blspy import G1Element
@@ -9,6 +10,7 @@ from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.ints import uint32
+from chia.util.network import asyncio_run
 
 
 class BlockchainInterface:
@@ -86,5 +88,12 @@ class BlockchainInterface:
     def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:
         pass
 
-    async def get_farmer_difficulty_coeff(self, farmer_public_key: G1Element) -> float:
-        pass
+    async def get_farmer_difficulty_coeff(
+        self, farmer_public_key: G1Element, height: Optional[uint32] = None
+    ) -> Decimal:
+        raise NotImplementedError("get_farmer_difficulty_coeff not implemented")
+
+    def get_farmer_difficulty_coeff_sync(
+        self, farmer_public_key: G1Element, height: Optional[uint32] = None
+    ) -> Decimal:
+        return asyncio_run(self.get_farmer_difficulty_coeff(farmer_public_key, height))
