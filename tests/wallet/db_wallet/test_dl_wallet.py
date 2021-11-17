@@ -75,6 +75,16 @@ class TestDLWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
+        # def wallet_height_at_least(wallet_node, h):
+        #     height = wallet_node.wallet_state_manager.blockchain.get_peak_height()
+        #     if height == h:
+        #         return True
+        #     return False
+        #
+        # await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 4)
+        # await time_out_assert(10, node_height_at_least, True, full_node_1, 4)
+        # await time_out_assert(10, node_height_at_least, True, full_node_2, 4)
+
         funds = sum(
             [
                 calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
@@ -82,8 +92,10 @@ class TestDLWallet:
             ]
         )
 
+        # print(f" - - - - - - - A {funds}")
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+        # print(f" - - - - - - - B {await wallet_0.get_confirmed_balance()}")
 
         nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
         current_tree = MerkleTree(nodes)
@@ -95,11 +107,23 @@ class TestDLWallet:
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
             )
 
+        # print(f" - - - - - - - C {await wallet_0.get_confirmed_balance()}")
+
+        # await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 0)
+        # await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 0)
+        await asyncio.sleep(30)
+
+        print(f" - - - - - - - D {await dl_wallet_0.get_confirmed_balance()}")
+        print(f" - - - - - - - D {await dl_wallet_0.get_unconfirmed_balance()}")
+
         for i in range(1, num_blocks*2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
+
+        print(f" - - - - - - - E {await dl_wallet_0.get_confirmed_balance()}")
+        print(f" - - - - - - - E {await dl_wallet_0.get_unconfirmed_balance()}")
 
         assert dl_wallet_0.dl_info.root_hash == current_root
 
@@ -107,11 +131,29 @@ class TestDLWallet:
         new_merkle_tree = MerkleTree(nodes)
         await dl_wallet_0.create_update_state_spend(new_merkle_tree.calculate_root())
 
-        for i in range(1, num_blocks * 2):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        print(f" - - - - - - - F {await dl_wallet_0.get_confirmed_balance()}")
+        print(f" - - - - - - - F {await dl_wallet_0.get_unconfirmed_balance()}")
 
+        for i in range(1, num_blocks * 80):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            # await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            print(f" - - - - - - {i} G {await dl_wallet_0.get_confirmed_balance()}")
+            print(f" - - - - - - - G {await dl_wallet_0.get_unconfirmed_balance()}")
+            x = await dl_wallet_0.get_unconfirmed_balance()
+            if x == 101:
+                print(f" + + + + + {i}")
+                break
+
+        await asyncio.sleep(30)
+        print(f" - - - - - - - H {await dl_wallet_0.get_confirmed_balance()}")
+        print(f" - - - - - - - H {await dl_wallet_0.get_unconfirmed_balance()}")
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
+        print(f" - - - - - - - I {await dl_wallet_0.get_confirmed_balance()}")
+        print(f" - - - - - - - I {await dl_wallet_0.get_unconfirmed_balance()}")
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
+
+        print(f" - - - - - - - J {await dl_wallet_0.get_confirmed_balance()}")
+        print(f" - - - - - - - J {await dl_wallet_0.get_unconfirmed_balance()}")
 
         assert dl_wallet_0.dl_info.root_hash == new_merkle_tree.calculate_root()
         coins = await dl_wallet_0.select_coins(1)
@@ -126,7 +168,7 @@ class TestDLWallet:
         )
 
     @pytest.mark.asyncio
-    async def test_announce_coin(self, three_wallet_nodes):
+    async def _test_announce_coin(self, three_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -205,7 +247,7 @@ class TestDLWallet:
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 200)
 
     @pytest.mark.asyncio
-    async def test_dlo_wallet(self, three_wallet_nodes):
+    async def _test_dlo_wallet(self, three_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
