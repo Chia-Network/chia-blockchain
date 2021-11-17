@@ -2,7 +2,7 @@ from setuptools import setup
 
 dependencies = [
     "multidict==5.1.0",  # Avoid 5.2.0 due to Avast
-    "blspy==1.0.6",  # Signature library
+    "blspy==1.0.7",  # Signature library
     "chiavdf==1.0.3",  # timelord and vdf verification
     "chiabip158==1.0",  # bip158-style wallet filters
     "chiapos==1.0.6",  # proof of space
