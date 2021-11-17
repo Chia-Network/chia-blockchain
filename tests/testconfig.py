@@ -2,7 +2,7 @@
 oses = ["ubuntu", "macos"]
 
 # Defaults are conservative.
-parallel = True
+parallel = False
 checkout_blocks_and_plots = True
 install_timelord = True
 job_timeout = 30
