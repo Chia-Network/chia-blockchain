@@ -105,7 +105,7 @@ jobs:
     - name: Test core-full_node code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/full_node/test_*.py -s -v --durations 0
+        ./venv/bin/py.test tests/core/full_node/test_*.py -s -v --durations 0 -n auto
 
 
     - name: Check resource usage
