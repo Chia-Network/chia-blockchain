@@ -199,7 +199,12 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         balances = await wallet_client.get_wallet_balance(wallet_id)
         typ = WalletType(int(summary["type"]))
         address_prefix, scale = wallet_coin_unit(typ, address_prefix)
-        print(f"Wallet ID {wallet_id} type {typ.name} {summary['name']}")
+        if typ == WalletType.COLOURED_COIN:
+            asset_id = await wallet_client.get_cat_colour(wallet_id)
+            asset_id_str = f"(Asset ID: {asset_id.hex()})"
+        else:
+            asset_id_str = f""
+        print(f"Wallet ID {wallet_id} type {typ.name} {summary['name']} {asset_id_str}")
         print(f"   -Total Balance: {print_balance(balances['confirmed_wallet_balance'], scale, address_prefix)}")
         print(
             f"   -Pending Total Balance: {print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
