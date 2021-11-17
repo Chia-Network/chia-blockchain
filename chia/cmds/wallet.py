@@ -172,6 +172,7 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fing
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_unconfirmed_transactions))
 
+
 @wallet_cmd.command("add_token", short_help="Add a CAT to the wallet by its asset ID")
 @click.option(
     "-wp",
@@ -198,10 +199,9 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fing
     default=None,
     help="The wallet fingerprint you wish to add the token to",
 )
-def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str, fingerprint: Optional[int]) -> None:
+def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str, fingerprint: int) -> None:
     extra_params = {"asset_id": asset_id, "token_name": token_name}
     import asyncio
     from .wallet_funcs import execute_with_wallet, add_token
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_token))
-
