@@ -24,7 +24,7 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [3.9]
-        os: [test-coverage]
+        os: [Special-Test-Runner]
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -107,8 +107,6 @@ jobs:
       run: |
         . ./activate
         ./venv/bin/py.test --cache-clear --cov=chia tests/ | tee pytest-coverage.txt
-      register: coverage
-
 
     - name: Display Python Test Code coverage
       uses: coroo/pytest-coverage-commentator@v1.0.2
