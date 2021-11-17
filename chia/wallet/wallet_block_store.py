@@ -45,7 +45,7 @@ class WalletBlockStore:
         # it. For now, just don't create it for new installs. In the future we
         # may remove the index from existing installations as well
         # await self.coin_record_db.execute("DROP INDEX IF EXISTS header_hash")
-        
+
         await self.db.execute("CREATE INDEX IF NOT EXISTS timestamp on header_blocks(timestamp)")
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS height on header_blocks(height)")
@@ -68,7 +68,7 @@ class WalletBlockStore:
         # it. For now, just don't create it for new installs. In the future we
         # may remove the index from existing installations as well
         # await self.coin_record_db.execute("DROP INDEX IF EXISTS hh")
-        
+
         await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
         await self.db.commit()
         self.block_cache = LRUCache(1000)

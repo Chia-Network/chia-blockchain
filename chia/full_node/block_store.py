@@ -61,7 +61,7 @@ class BlockStore:
         # it. For now, just don't create it for new installs. In the future we
         # may remove the index from existing installations as well
         # await self.coin_record_db.execute("DROP INDEX IF EXISTS header_hash")
-        
+
         await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
 
         # this index is not used by any queries, don't create it for new
