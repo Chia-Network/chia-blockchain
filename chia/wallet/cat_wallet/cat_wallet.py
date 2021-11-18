@@ -28,6 +28,7 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
+    CAT_ANNOUNCEMENT_MORPH,
     SpendableCAT,
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
@@ -82,9 +83,7 @@ class CATWallet:
         empty_bytes = bytearray(32)
         self.cat_info = CATInfo(empty_bytes, None, [])
         info_as_string = bytes(self.cat_info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.CAT, info_as_string
-        )
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
         if self.wallet_info is None:
             raise ValueError("Internal Error")
 
@@ -169,9 +168,7 @@ class CATWallet:
         limitations_program_hash = hexstr_to_bytes(limitations_program_hash_hex)
         self.cat_info = CATInfo(limitations_program_hash, None, [])
         info_as_string = bytes(self.cat_info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.CAT, info_as_string
-        )
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
         if self.wallet_info is None:
             raise Exception("wallet_info is None")
 
@@ -288,7 +285,9 @@ class CATWallet:
     async def set_tail_program(self, tail_program: str):
         assert Program.fromhex(tail_program).get_tree_hash() == self.cat_info.limitations_program_hash
         await self.save_info(
-            CATInfo(self.cat_info.limitations_program_hash, Program.fromhex(tail_program), self.cat_info.lineage_proofs),
+            CATInfo(
+                self.cat_info.limitations_program_hash, Program.fromhex(tail_program), self.cat_info.lineage_proofs
+            ),
             False,
         )
 
@@ -616,7 +615,7 @@ class CATWallet:
                 first = False
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
-                        announcement = Announcement(coin.name(), b"$", b"\xca")
+                        announcement = Announcement(coin.name(), b"$", CAT_ANNOUNCEMENT_MORPH)
                         chia_tx, _ = await self.create_tandem_xch_tx(
                             fee, uint64(regular_chia_to_claim), announcement_to_assert=announcement
                         )

@@ -13,7 +13,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 
 NULL_SIGNATURE = G2Element()
-
+CAT_ANNOUNCEMENT_MORPH = b"\xca"
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 
 
