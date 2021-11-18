@@ -11,6 +11,8 @@ for path in test_root.rglob("**/"):
     if len(test_file_paths) > 0:
         test_paths.append(path.relative_to(test_root))
 
+test_paths = sorted(test_paths)
+
 configuration = [{'path': os.fspath(path), 'name': '.'.join(path.parts)} for path in test_paths]
 configuration_json = json.dumps(configuration)
 
