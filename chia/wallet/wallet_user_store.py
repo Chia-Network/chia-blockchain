@@ -33,17 +33,17 @@ class WalletUserStore:
             )
         )
 
-        # this index is not used by any queries, don't create it for new
-        # installs, and remove it from existing installs in the future
-        # await self.db.execute("DROP INDEX IF EXISTS name on users_wallet(name)")
-
-        # this index is not used by any queries, don't create it for new
-        # installs, and remove it from existing installs in the future
-        # await self.db.execute("DROP INDEX IF EXISTS type on users_wallet(wallet_type)")
-
-        # this index is not used by any queries, don't create it for new
-        # installs, and remove it from existing installs in the future
-        # await self.db.execute("DROP INDEX IF EXISTS data on users_wallet(data)")
+        # the indexes on table users_wallets are not used by any queries,
+        # don't create them for new installs and remove them from existing installs
+        # to ensure that only the indexes are only dropped when created on table users_wallets
+        # dynamically build the drop index statement
+        cursor = await self.db_connection.execute(
+            "SELECT 'DROP INDEX '||name FROM sqlite_master WHERE name in ('name','type','data') "
+            "AND tbl_name = 'users_wallets' AND type = 'index'"
+        )
+        rows = await cursor.fetchall()
+        for row in rows:
+            await self.db_connection.execute(row[0])
 
         await self.db_connection.commit()
         await self.init_wallet()
