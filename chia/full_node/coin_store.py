@@ -220,7 +220,7 @@ class CoinStore:
         puzzle_hashes_db = tuple([ph.hex() for ph in puzzle_hashes])
         cursor = await self.coin_record_db.execute(
             f"SELECT * from coin_record INDEXED BY coin_puzzle_hash "
-            f'WHERE puzzle_hash in ({"?," * (len(puzzle_hashes) - 1)}?) '
+            f'WHERE puzzle_hash IN ({"?," * (len(puzzle_hashes) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             puzzle_hashes_db + (start_height, end_height),
@@ -247,7 +247,7 @@ class CoinStore:
         coins = set()
         names_db = tuple([name.hex() for name in names])
         cursor = await self.coin_record_db.execute(
-            f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(names) - 1)}?) '
+            f'SELECT * from coin_record WHERE coin_name IN ({"?," * (len(names) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             names_db + (start_height, end_height),
@@ -284,7 +284,7 @@ class CoinStore:
         coins = set()
         puzzle_hashes_db = tuple([ph.hex() for ph in puzzle_hashes])
         cursor = await self.coin_record_db.execute(
-            f'SELECT * from coin_record WHERE puzzle_hash in ({"?," * (len(puzzle_hashes) - 1)}?) '
+            f'SELECT * from coin_record WHERE puzzle_hash IN ({"?," * (len(puzzle_hashes) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             puzzle_hashes_db + (start_height, end_height),
@@ -311,7 +311,7 @@ class CoinStore:
         coins = set()
         parent_ids_db = tuple([pid.hex() for pid in parent_ids])
         cursor = await self.coin_record_db.execute(
-            f'SELECT * from coin_record WHERE coin_parent in ({"?," * (len(parent_ids) - 1)}?) '
+            f'SELECT * from coin_record WHERE coin_parent IN ({"?," * (len(parent_ids) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             parent_ids_db + (start_height, end_height),
@@ -338,7 +338,7 @@ class CoinStore:
         coins = set()
         coin_ids_db = tuple([pid.hex() for pid in coin_ids])
         cursor = await self.coin_record_db.execute(
-            f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(coin_ids) - 1)}?) '
+            f'SELECT * from coin_record WHERE coin_name IN ({"?," * (len(coin_ids) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             coin_ids_db + (start_height, end_height),
@@ -462,6 +462,6 @@ class CoinStore:
             cursor = await self.coin_record_db.execute(
                 f'UPDATE coin_record '
                 f'   SET spent=1, spent_index=? '
-                f' WHERE coin_name in ({"?," * (len(coin_names) - 1)}?)',
+                f' WHERE coin_name IN ({"?," * (len(coin_names) - 1)}?)',
                 (index,) + tuple(updates),
             )

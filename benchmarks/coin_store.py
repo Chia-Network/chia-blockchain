@@ -35,8 +35,7 @@ async def setup_db(sql_logging: bool) -> DBWrapper:
     connection = await aiosqlite.connect(db_filename)
 
     def sql_trace_callback(req: str):
-       sql_log_path="/chia/scratch/disk03/sql.log"
-       #sql_log_path="sql.log"
+       sql_log_path="sql.log"
        timestamp = datetime.now().strftime("%H:%M:%S.%f")
        log = open(sql_log_path, "a")
        log.write(timestamp + " " + req + "\n")
@@ -45,9 +44,9 @@ async def setup_db(sql_logging: bool) -> DBWrapper:
     if sql_logging:
         await connection.set_trace_callback(sql_trace_callback)
 
-    await connection.execute("pragma journal_mode=WAL")
-    await connection.execute("pragma synchronous=FULL")
-    await connection.execute("pragma temp_store=MEMORY")
+    await connection.execute("pragma journal_mode=wal")
+    await connection.execute("pragma synchronous=full")
+    await connection.execute("pragma temp_store=memory")
 
     return DBWrapper(connection)
 
