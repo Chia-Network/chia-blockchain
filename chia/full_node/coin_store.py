@@ -458,10 +458,12 @@ class CoinStore:
                 )
             updates.append((coin_name.hex()))
 
-        if len(updates) > 0:
+        chunk_size = 500
+        for i in range(0, len(updates), chunk_size):
+            update = updates[i:i + chunk_size]
             cursor = await self.coin_record_db.execute(
                 f'UPDATE coin_record '
                 f'   SET spent=1, spent_index=? '
-                f' WHERE coin_name IN ({"?," * (len(coin_names) - 1)}?)',
-                (index,) + tuple(updates),
+                f' WHERE coin_name IN ({"?," * (len(update) - 1)}?)',
+                (index,) + tuple(update),
             )
