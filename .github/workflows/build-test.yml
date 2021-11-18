@@ -25,6 +25,7 @@ jobs:
         shell: python
         # TODO: this should probably be in a separate .py file
         run: |
+          import json
           import pathlib
 
           test_root = pathlib.Path('tests')
