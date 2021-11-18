@@ -78,13 +78,15 @@ jobs:
         ln -s $GITHUB_WORKSPACE/.chia
         echo "$HOME/.chia"
         ls -al $HOME/.chia
+      if: succeeded() || failed()
+
 
     - name: Install ubuntu dependencies
       run: |
-        sudo apt-get install software-properties-common
+        sudo apt-get install software-properties-common -y
         sudo add-apt-repository ppa:deadsnakes/ppa
         sudo apt-get update
-        sudo apt-get install -y python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git
+        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
 
     - name: Run install script
       env:
