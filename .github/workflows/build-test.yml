@@ -46,7 +46,7 @@ jobs:
       test_paths: ${{ steps.find_test_paths.outputs.test_paths }}
 
   test:
-    name: ${{ matrix.os.emoji }} ${{ matrix.python.name }}
+    name: ${{ matrix.os.emoji }} ${{ matrix.python.name }} ${{ matrix.test_path }}
     needs: find_test_paths
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: 60
@@ -54,7 +54,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        test_directory: ${{ fromJson(needs.find_test_paths.outputs.test_paths) }}
+        test_path: ${{ fromJson(needs.find_test_paths.outputs.test_paths) }}
         os:
           - emoji: 🍎
             matrix: macos
@@ -186,4 +186,4 @@ jobs:
       - name: Test blockchain code with pytest
         run: |
           . ./activate
-          ./venv/bin/pytest ${{ matrix.test_directory }} -s -v --durations 0
+          ./venv/bin/pytest ${{ matrix.test_path }} -s -v --durations 0
