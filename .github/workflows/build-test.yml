@@ -29,6 +29,7 @@ jobs:
       test_paths: ${{ steps.find_test_paths.outputs.test_paths }}
 
   test:
+    # Should match JOB_NAME below
     name: ${{ matrix.os.emoji }} ${{ matrix.python.name }} ${{ matrix.test_path }}
     needs: find_test_paths
     runs-on: ${{ matrix.os.runs-on }}
@@ -72,6 +73,9 @@ jobs:
             python:
               matrix: '3.7'
 
+    env:
+      # Shoud match name above
+      JOB_NAME: ${{ matrix.os.emoji }} ${{ matrix.python.name }} ${{ matrix.test_path }}
 
     steps:
       - name: Cancel previous runs on the same branch
@@ -169,9 +173,78 @@ jobs:
       - name: Install developer requirements
         run: |
           . ./activate
-          venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
+          venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor coverage pytest-cov
 
       - name: Test blockchain code with pytest
         run: |
           . ./activate
-          ./venv/bin/pytest tests/${{ matrix.test_path }} -s -v --durations 0
+          venv/bin/pytest --cov=chia --cov-report=term-missing --cov-report=xml:coverage.xml tests/${{ matrix.test_path }} -s -v --durations 0
+
+      - name: Coverage Processing
+        run: |
+          mkdir coverage_reports
+          cp .coverage "coverage_reports/.coverage.${{ env.JOB_NAME }}"
+          cp coverage.xml "coverage_reports/coverage.${{ env.JOB_NAME }}.xml"
+
+      - name: Publish Coverage
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage
+          path: coverage_reports/*
+
+  coverage:
+    name: Coverage - ${{ matrix.os.name }} ${{ matrix.python.name }}
+    runs-on: ${{ matrix.os.runs-on }}
+    needs:
+      - test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os:
+              name: Ubuntu
+              runs-on: ubuntu-latest
+            python:
+              name: CPython 3.8
+              action: '3.8'
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Download Coverage
+        if: matrix.task.download_coverage
+        uses: actions/download-artifact@v2
+        with:
+          name: coverage
+          path: coverage_reports
+
+      - name: Set up ${{ matrix.python.name }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python.action }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install coverage diff-cover
+
+      - name: Coverage Processing
+        if: always()
+        run: |
+          coverage combine coverage_reports/
+          coverage xml -o coverage.xml
+          coverage report --fail-under=35 --ignore-errors --show-missing
+          diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage.xml
+
+          mkdir all_coverage_report
+          cp .coverage "all_coverage_report/.coverage.all"
+          cp coverage.xml "all_coverage_report/coverage.all.xml"
+
+      - name: Upload Coverage
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage
+          path: all_coverage_report/*
