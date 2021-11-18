@@ -191,6 +191,7 @@ jobs:
         with:
           name: coverage
           path: coverage_reports/*
+          if-no-files-found: error
 
   coverage:
     name: Coverage - ${{ matrix.os.name }} ${{ matrix.python.name }}
