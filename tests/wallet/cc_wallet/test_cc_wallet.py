@@ -197,7 +197,7 @@ class TestCCWallet:
         assert await wallet_node.wallet_state_manager.get_wallet_for_colour(colour) == cc_wallet
 
     # TODO: review how this should be handled or fixed
-    @pytest.mark.skipif(condition=sys.platform == 'darwin')
+    @pytest.mark.skipif(condition=sys.platform == 'darwin', reason='temporary skip')
     @pytest.mark.asyncio
     async def test_generate_zero_val(self, two_wallet_nodes):
         num_blocks = 4
