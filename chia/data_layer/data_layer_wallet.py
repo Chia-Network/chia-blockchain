@@ -274,7 +274,7 @@ class DataLayerWallet:
         # await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         next_full_puz = create_host_fullpuz(new_inner_inner_puzzle, root_hash, self.dl_info.origin_coin.name())
         await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
-            next_full_puz.get_tree_hash(), self.wallet_id, True
+            next_full_puz.get_tree_hash(), self.wallet_id
         )
         dl_record = TransactionRecord(
             confirmed_at_height=uint32(0),
