@@ -11,7 +11,7 @@ on:
       - '**'
 
 jobs:
-  find_test_paths:
+  get_configuration:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -21,23 +21,23 @@ jobs:
         with:
           python-version: '3.8'
       - name: Find test paths
-        id: find_test_paths
+        id: get_configuration
         run: |
           python tests/build-job-matrix.py
 
     outputs:
-      test_paths: ${{ steps.find_test_paths.outputs.test_paths }}
+      configuration: ${{ steps.get_configuration.outputs.configuration }}
 
   test:
     # Should match JOB_NAME below
-    name: ${{ matrix.os.emoji }} ${{ matrix.python.name }} ${{ matrix.test_path }}
-    needs: find_test_paths
+    name: ${{ matrix.os.emoji }} ${{ matrix.python.name }} ${{ matrix.configuration.name }}
+    needs: get_configuration
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        test_path: ${{ fromJson(needs.find_test_paths.outputs.test_paths) }}
+        test_path: ${{ fromJson(needs.get_configuration.outputs.configuration) }}
         os:
           - emoji: 🍎
             matrix: macos
@@ -75,7 +75,7 @@ jobs:
 
     env:
       # Shoud match name above
-      JOB_NAME: ${{ matrix.os.emoji }} ${{ matrix.python.name }} ${{ matrix.test_path }}
+      JOB_NAME: ${{ matrix.os.emoji }} ${{ matrix.python.name }} ${{ matrix.configuration.name }}
 
     steps:
       - name: Cancel previous runs on the same branch
@@ -178,7 +178,7 @@ jobs:
       - name: Test blockchain code with pytest
         run: |
           . ./activate
-          venv/bin/pytest --cov=chia --cov-report=term-missing --cov-report=xml:coverage.xml tests/${{ matrix.test_path }} -s -v --durations 0
+          venv/bin/pytest --cov=chia --cov-report=term-missing --cov-report=xml:coverage.xml "tests/${{ matrix.configuration.path }}" -s -v --durations 0
 
       - name: Coverage Processing
         run: |

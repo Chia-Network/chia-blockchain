@@ -11,10 +11,10 @@ for path in test_root.rglob("**/"):
     if len(test_file_paths) > 0:
         test_paths.append(path.relative_to(test_root))
 
-path_strings = [os.fspath(path) for path in test_paths]
-test_path_json = json.dumps(path_strings)
+configuration = [{'path': os.fspath(path), 'name': '.'.join(path.parts)} for path in test_paths]
+configuration_json = json.dumps(configuration)
 
-print(f'::set-output name=test_paths::{test_path_json}')
+print(f'::set-output name=configuration::{configuration_json}')
 
 import sys
 sys.exit()
