@@ -299,10 +299,10 @@ class TestFileKeyringSynchronization:
 
             # When: timing out waiting for the child process (because it aborted)
             with pytest.raises(TimeoutError):
-                res.get(timeout=2)
+                res.get(timeout=6)
 
             # Expect: Reacquiring the lock should succeed after the child exits, automatically releasing the lock
-            assert lock.acquire_write_lock(timeout=(2)) is True
+            assert lock.acquire_write_lock(timeout=(6)) is True
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
