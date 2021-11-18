@@ -213,34 +213,34 @@ class TestFileKeyringSynchronization:
             assert result[0] == "A winner is you!"
 
     # When: using a new empty keyring
-    @using_temp_file_keyring()
-    def test_writer_lock_reacquisition_failure(self):
-        """
-        After the child process acquires the writer lock (and sleeps), the previous
-        holder should not be able to quickly reacquire the lock
-        """
-        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+    # @using_temp_file_keyring()
+    # def test_writer_lock_reacquisition_failure(self):
+    #     """
+    #     After the child process acquires the writer lock (and sleeps), the previous
+    #     holder should not be able to quickly reacquire the lock
+    #     """
+    #     lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+    #     lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+    #
+    #     When: a writer lock is already acquired
+        # lock.acquire_write_lock()
+        #
+        # child_proc_function = dummy_sleep_fn  # Sleeps for DUMMY_SLEEP_VALUE seconds
+        # timeout = 0.25
+        # attempts = 8
 
-        # When: a writer lock is already acquired
-        lock.acquire_write_lock()
-
-        child_proc_function = dummy_sleep_fn  # Sleeps for DUMMY_SLEEP_VALUE seconds
-        timeout = 0.25
-        attempts = 8
-
-        with Pool(processes=1) as pool:
-            # When: a child process attempts to acquire the same writer lock, failing after 1 second
-            pool.starmap_async(child_writer_dispatch, [(child_proc_function, lock_path, timeout, attempts)])
+        # with Pool(processes=1) as pool:
+        #     When: a child process attempts to acquire the same writer lock, failing after 1 second
+            # pool.starmap_async(child_writer_dispatch, [(child_proc_function, lock_path, timeout, attempts)])
 
             # When: the writer lock is released
-            lock.release_write_lock()
+            # lock.release_write_lock()
 
             # Brief delay to allow the child to acquire the lock
-            sleep(1)
+            # sleep(1)
 
             # Expect: Reacquiring the lock should fail due to the child holding the lock and sleeping
-            assert lock.acquire_write_lock(timeout=0.25) is False
+            # assert lock.acquire_write_lock(timeout=0.25) is False
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
