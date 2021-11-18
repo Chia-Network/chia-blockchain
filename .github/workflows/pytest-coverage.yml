@@ -78,7 +78,7 @@ jobs:
         ln -s $GITHUB_WORKSPACE/.chia
         echo "$HOME/.chia"
         ls -al $HOME/.chia
-      if: succeeded() || failed()
+      continue-on-error: true
 
 
     - name: Install ubuntu dependencies
