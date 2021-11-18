@@ -74,8 +74,9 @@ jobs:
               matrix: '3.7'
 
     env:
-      # Shoud match name above
-      JOB_NAME: ${{ matrix.configuration.name }} ${{ matrix.os.emoji }} ${{ matrix.python.name }}
+      # Should match name above
+      # TODO: or maybe not quite?
+      JOB_NAME: ${{ matrix.configuration.name }}_${{ matrix.os.name }}_${{ matrix.python.name }}
 
     steps:
       - name: Cancel previous runs on the same branch
