@@ -14,6 +14,8 @@ for path in test_root.rglob("**/"):
 configuration = [{'path': os.fspath(path), 'name': '.'.join(path.parts)} for path in test_paths]
 configuration_json = json.dumps(configuration)
 
+print(json.dumps(configuration, indent=4))
+
 print(f'::set-output name=configuration::{configuration_json}')
 
 import sys

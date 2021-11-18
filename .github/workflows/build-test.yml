@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test_path: ${{ fromJson(needs.get_configuration.outputs.configuration) }}
+        configuration: ${{ fromJson(needs.get_configuration.outputs.configuration) }}
         os:
           - emoji: 🍎
             matrix: macos
