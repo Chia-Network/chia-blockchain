@@ -22,25 +22,8 @@ jobs:
           python-version: '3.8'
       - name: Find test paths
         id: find_test_paths
-        shell: python
-        # TODO: this should probably be in a separate .py file
         run: |
-          import json
-          import os
-          import pathlib
-
-          test_root = pathlib.Path('tests')
-          test_paths = []
-
-          for path in test_root.rglob("**/"):
-              test_file_paths = list(path.glob("test_*.py"))
-              if len(test_file_paths) > 0:
-                  test_paths.append(path.relative_to(test_root))
-
-          path_strings = [os.fspath(path) for path in test_paths]
-          test_path_json = json.dumps(path_strings)
-
-          print(f'::set-output name=test_paths::{test_path_json}')
+          python tests/build-job-matrix.py
 
     outputs:
       test_paths: ${{ steps.find_test_paths.outputs.test_paths }}

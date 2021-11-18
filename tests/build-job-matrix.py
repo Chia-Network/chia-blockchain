@@ -1,4 +1,25 @@
 #!/usr/bin/env python3
+import json
+import os
+import pathlib
+
+test_root = pathlib.Path('tests')
+test_paths = []
+
+for path in test_root.rglob("**/"):
+    test_file_paths = list(path.glob("test_*.py"))
+    if len(test_file_paths) > 0:
+        test_paths.append(path.relative_to(test_root))
+
+path_strings = [os.fspath(path) for path in test_paths]
+test_path_json = json.dumps(path_strings)
+
+print(f'::set-output name=test_paths::{test_path_json}')
+
+import sys
+sys.exit()
+
+# TODO: actually integrate the configuration tooling below with the CI output above
 
 # Run from the current directory.
 
