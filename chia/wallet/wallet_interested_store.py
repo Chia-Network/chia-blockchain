@@ -75,6 +75,7 @@ class WalletInterestedStore:
 
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
+            print(f" ==== {self.db_wrapper.lock}")
         try:
             cursor = await self.db_connection.execute(
                 "INSERT OR REPLACE INTO interested_puzzle_hashes VALUES (?, ?)", (puzzle_hash.hex(), wallet_id)

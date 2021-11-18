@@ -111,7 +111,7 @@ class TestDLWallet:
 
         # await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 0)
         # await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 0)
-        await asyncio.sleep(30)
+        # await asyncio.sleep(30)
 
         print(f" - - - - - - - D {await dl_wallet_0.get_confirmed_balance()}")
         print(f" - - - - - - - D {await dl_wallet_0.get_unconfirmed_balance()}")

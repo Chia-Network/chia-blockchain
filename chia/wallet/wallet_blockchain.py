@@ -2,6 +2,7 @@ import asyncio
 import dataclasses
 import logging
 import multiprocessing
+import sqlite3
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
@@ -227,41 +228,61 @@ class WalletBlockchain(BlockchainInterface):
         )
         heights_changed: Set[Tuple[uint32, Optional[bytes32]]] = set()
         # Always add the block to the database
-        async with self.wallet_state_manager_lock:
-            async with self.block_store.db_wrapper.lock:
-                try:
-                    await self.block_store.db_wrapper.begin_transaction()
-                    await self.block_store.add_block_record(header_block_record, block_record, additional_coin_spends)
-                    self.add_block_record(block_record)
-                    self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
-                    fork_height, records_to_add = await self._reconsider_peak(
-                        block_record, genesis, fork_point_with_peak, additional_coin_spends, heights_changed
-                    )
-                    for record in records_to_add:
-                        if record.sub_epoch_summary_included is not None:
-                            self.__sub_epoch_summaries[record.height] = record.sub_epoch_summary_included
-                    await self.block_store.db_wrapper.commit_transaction()
-                except BaseException as e:
-                    self.log.error(f"Error during db transaction: {e}")
-                    if self.block_store.db_wrapper.db._connection is not None:
-                        await self.block_store.db_wrapper.rollback_transaction()
-                        self.remove_block_record(block_record.header_hash)
-                        self.block_store.rollback_cache_block(block_record.header_hash)
-                        await self.coin_store.rebuild_wallet_cache()
-                        await self.tx_store.rebuild_tx_cache()
-                        await self.pool_store.rebuild_cache()
-                        for height, replaced in heights_changed:
-                            # If it was replaced change back to the previous value otherwise pop the change
-                            if replaced is not None:
-                                self.__height_to_hash[height] = replaced
-                            else:
-                                self.__height_to_hash.pop(height)
-                    raise
-            if fork_height is not None:
-                self.log.info(f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")
-                return ReceiveBlockResult.NEW_PEAK, None, fork_height
-            else:
-                return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
+        try:
+            async with self.wallet_state_manager_lock:
+                print(f" > > > > acquired wallet lock {self.wallet_state_manager_lock}")
+                async with self.block_store.db_wrapper.lock:
+                    print(f"         acquired block db lock {self.block_store.db_wrapper.lock}")
+                    try:
+                        print(f"         begin transaction")
+                        try:
+                            await self.block_store.db_wrapper.begin_transaction()
+                        except sqlite3.OperationalError:
+                            d = {}
+                            for task in asyncio.all_tasks():
+                                import io
+                                f = io.StringIO()
+                                task.print_stack(file=f)
+                                d[task] = f.getvalue()
+                            for task, stack in d.items(): print(f"\n\n + + + + +\n    {task}\n{stack}")
+                            raise
+                        await self.block_store.add_block_record(header_block_record, block_record, additional_coin_spends)
+                        self.add_block_record(block_record)
+                        self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
+                        fork_height, records_to_add = await self._reconsider_peak(
+                            block_record, genesis, fork_point_with_peak, additional_coin_spends, heights_changed
+                        )
+                        for record in records_to_add:
+                            if record.sub_epoch_summary_included is not None:
+                                self.__sub_epoch_summaries[record.height] = record.sub_epoch_summary_included
+                        await self.block_store.db_wrapper.commit_transaction()
+                    except BaseException as e:
+                        self.log.error(f"Error during db transaction: {e}")
+                        if self.block_store.db_wrapper.db._connection is not None:
+                            await self.block_store.db_wrapper.rollback_transaction()
+                            print(f"         rollback transaction")
+                            self.remove_block_record(block_record.header_hash)
+                            self.block_store.rollback_cache_block(block_record.header_hash)
+                            await self.coin_store.rebuild_wallet_cache()
+                            await self.tx_store.rebuild_tx_cache()
+                            await self.pool_store.rebuild_cache()
+                            for height, replaced in heights_changed:
+                                # If it was replaced change back to the previous value otherwise pop the change
+                                if replaced is not None:
+                                    self.__height_to_hash[height] = replaced
+                                else:
+                                    self.__height_to_hash.pop(height)
+                        raise
+                    finally:
+                        print(f"         finally")
+
+                if fork_height is not None:
+                    self.log.info(f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")
+                    return ReceiveBlockResult.NEW_PEAK, None, fork_height
+                else:
+                    return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
+        finally:
+            print(f"         wallet lock released")
 
     async def _reconsider_peak(
         self,

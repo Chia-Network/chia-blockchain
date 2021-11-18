@@ -145,6 +145,15 @@ class WalletStateManager:
         )
 
         self.db_wrapper = DBWrapper(self.db_connection)
+
+        def sql_trace_callback(req: str):
+            print(self, self.db_connection, req)
+            # timestamp = datetime.now().strftime("%H:%M:%S.%f")
+            # log = open(sql_log_path, "a")
+            # log.write(timestamp + " " + req + "\n")
+            # log.close()
+
+        await self.db_connection.set_trace_callback(sql_trace_callback)
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
         self.tx_store = await WalletTransactionStore.create(self.db_wrapper)
         self.puzzle_store = await WalletPuzzleStore.create(self.db_wrapper)
@@ -291,7 +300,9 @@ class WalletStateManager:
         for wallet_id in targets:
             target_wallet = self.wallets[wallet_id]
 
+            print(f" (((( {in_transaction} {self}")
             last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
+            print(f" )))) {in_transaction} {self}")
 
             start_index = 0
             derivation_paths: List[DerivationRecord] = []

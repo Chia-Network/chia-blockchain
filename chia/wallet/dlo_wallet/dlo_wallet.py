@@ -263,5 +263,6 @@ class DLOWallet:
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, info_as_string)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
+        assert in_transaction
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         return

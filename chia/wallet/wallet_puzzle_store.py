@@ -305,6 +305,9 @@ class WalletPuzzleStore:
         Returns the last derivation path by derivation_index.
         """
 
+        import sys
+        import traceback
+        traceback.print_stack(file=sys.stdout)
         cursor = await self.db_connection.execute(
             f"SELECT MAX(derivation_index) FROM derivation_paths WHERE wallet_id={wallet_id};"
         )
