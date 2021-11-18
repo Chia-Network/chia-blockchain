@@ -51,7 +51,7 @@ export default function PublicKeys() {
 
 #### **`Application.tsx`**
 ```tsx
-import React from 'react';
+import React, { Suspense } from 'react';
 import Websocket from 'ws'; // or read this value from electron main application
 import { store, api } from '@chia/api-react';
 import PublicKeys from './PublicKeys';
@@ -66,9 +66,11 @@ api.initializeConfig({
 
 export default function Application() {
   return (
-    <Provider store={store}>
-      <PublickKeys />
-    </Provider>
+    <Suspense fallback={<div>Loading...</div>}>
+      <Provider store={store}>
+        <PublickKeys />
+      </Provider>
+    </Suspense>
   );
 }
 ```
