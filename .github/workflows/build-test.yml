@@ -71,12 +71,18 @@ jobs:
         python:
           - name: '3.7'
             action: '3.7'
+            apt: '3.7'
+            install_sh: '3.7'
             matrix: '3.7'
           - name: '3.8'
             action: '3.8'
+            apt: '3.8'
+            install_sh: '3.8'
             matrix: '3.8'
           - name: '3.9'
             action: '3.9'
+            apt: '3.9'
+            install_sh: '3.8'
             matrix: '3.9'
         exclude:
           - os:
@@ -154,12 +160,12 @@ jobs:
           sudo apt-get install software-properties-common
           sudo add-apt-repository ppa:deadsnakes/ppa
           sudo apt-get update
-          sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
+          sudo apt-get install python${{ matrix.python.apt }}-venv python${{ matrix.python.apt }}-distutils git -y
 
       - name: Run install script (macOS)
         if: matrix.os.matrix == 'macos'
         env:
-          INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+          INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
           BUILD_VDF_CLIENT: "N"
         run: |
           brew install boost
@@ -168,7 +174,7 @@ jobs:
       - name: Run install script (Ubuntu)
         if: matrix.os.matrix == 'ubuntu'
         env:
-          INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+          INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
         run: |
           sh install.sh
 
