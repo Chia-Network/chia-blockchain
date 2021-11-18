@@ -214,7 +214,6 @@ jobs:
           fetch-depth: 0
 
       - name: Download Coverage
-        if: matrix.task.download_coverage
         uses: actions/download-artifact@v2
         with:
           name: coverage
