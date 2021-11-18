@@ -51,19 +51,19 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-node-
 
-#    - name: Get pip cache dir
-#      id: pip-cache
-#      run: |
-#        echo "::set-output name=dir::$(pip cache dir)"
-#
-#    - name: Cache pip
-#      uses: actions/cache@v2.1.6
-#      with:
-#        path: ${{ steps.pip-cache.outputs.dir }}
-#        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-#        restore-keys: |
-#          ${{ runner.os }}-pip-
-#
+    - name: Get pip cache dir
+      id: pip-cache
+      run: |
+        echo "::set-output name=dir::$(pip cache dir)"
+
+    - name: Cache pip
+      uses: actions/cache@v2.1.6
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
     - name: Checkout test blocks and plots
       uses: actions/checkout@v2
       with:
@@ -72,36 +72,36 @@ jobs:
         ref: '0.27.0'
         fetch-depth: 1
 
-#    - name: Link home directory
-#      run: |
-#        cd $HOME
-#        ln -s $GITHUB_WORKSPACE/.chia
-#        echo "$HOME/.chia"
-#        ls -al $HOME/.chia
-#
-#    - name: Install ubuntu dependencies
-#      run: |
-#        sudo apt-get install software-properties-common
-#        sudo add-apt-repository ppa:deadsnakes/ppa
-#        sudo apt-get update
-#        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
-#
-#    - name: Run install script
-#      env:
-#        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-#      run: |
-#        sh install.sh
-#
-#    - name: Install timelord
-#      run: |
-#        . ./activate
-#        sh install-timelord.sh
-#        ./vdf_bench square_asm 400000
-#
-#    - name: Install developer requirements
-#      run: |
-#        . ./activate
-#        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor flake8 pytest-cov
+    - name: Link home directory
+      run: |
+        cd $HOME
+        ln -s $GITHUB_WORKSPACE/.chia
+        echo "$HOME/.chia"
+        ls -al $HOME/.chia
+
+    - name: Install ubuntu dependencies
+      run: |
+        sudo apt-get install software-properties-common
+        sudo add-apt-repository ppa:deadsnakes/ppa
+        sudo apt-get update
+        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
+
+    - name: Run install script
+      env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+      run: |
+        sh install.sh
+
+    - name: Install timelord
+      run: |
+        . ./activate
+        sh install-timelord.sh
+        ./vdf_bench square_asm 400000
+
+    - name: Install developer requirements
+      run: |
+        . ./activate
+        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor flake8 pytest-cov
 
     - name: Build coverage file
       run: |
