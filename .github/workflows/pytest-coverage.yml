@@ -107,7 +107,7 @@ jobs:
     - name: Build coverage file
       run: |
         . ./activate
-        ./venv/bin/py.test --cache-clear --cov=chia tests/ | tee pytest-coverage.txt
+        ./venv/bin/py.test --cache-clear --cov=chia --cov-append tests/ | tee pytest-coverage.txt
 
     - name: Display Python Test Code coverage
       uses: coroo/pytest-coverage-commentator@v1.0.2
