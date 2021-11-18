@@ -1,0 +1,14 @@
+[run]
+branch=True
+source=
+  chia
+  tests
+
+[report]
+precision = 1
+exclude_lines =
+  pragma: no cover
+  abc\.abstractmethod
+  typing\.overload
+  ^\s*\.\.\.\s*$
+  if typing.TYPE_CHECKING:
