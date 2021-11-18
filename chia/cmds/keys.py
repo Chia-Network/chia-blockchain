@@ -146,7 +146,7 @@ def verify_cmd(message: str, public_key: str, signature: str):
 )
 @click.pass_context
 def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optional[str]):
-    if fingerprint is None and filename is None:
+    if fingerprint is None and filename is None and ctx.invoked_subcommand != "search":
         ctx.fail("Please specify either a fingerprint or a mnemonic seed filename")
 
     from .keys_funcs import private_key_for_fingerprint
@@ -169,13 +169,14 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
         ctx.obj["private_key"] = private_key
 
 
-# @derive_cmd.command("search", short_help="Search the keyring for a matching derived key or wallet address")
-# @click.argument("search_term", type=str)
-# @click.option("--limit", "-l", default=500, help="Limit the number of derivations to search", type=int)
-# def search_cmd(search_term: str, limit: int):
-#     from .keys_funcs import search_derive
+@derive_cmd.command("search", short_help="Search the keyring for a matching derived key or wallet address")
+@click.argument("search_term", type=str)
+@click.option("--limit", "-l", default=500, help="Limit the number of derivations to search against", type=int)
+@click.pass_context
+def search_cmd(ctx: click.Context, search_term: str, limit: int):
+    from .keys_funcs import search_derive
 
-#     search_derive(search_term, limit)
+    search_derive(ctx.obj["root_path"], ctx.obj.get("private_key", None), search_term, limit)
 
 
 @derive_cmd.command("wallet-address", short_help="Derive wallet receive addresses")
@@ -232,6 +233,14 @@ def wallet_address_cmd(
     is_flag=True,
 )
 @click.option(
+    "--show-private-keys",
+    "-s",
+    help="Display derived private keys",
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
+@click.option(
     "--show-hd-path",
     help="Show the HD path of the derived wallet addresses",
     default=False,
@@ -240,10 +249,23 @@ def wallet_address_cmd(
 )
 @click.pass_context
 def child_key_cmd(
-    ctx: click.Context, key_type: str, index: int, count: int, public_derivation: bool, show_hd_path: bool
+    ctx: click.Context,
+    key_type: str,
+    index: int,
+    count: int,
+    public_derivation: bool,
+    show_private_keys: bool,
+    show_hd_path: bool,
 ):
     from .keys_funcs import derive_child_key
 
     derive_child_key(
-        ctx.obj["root_path"], ctx.obj["private_key"], key_type, index, count, public_derivation, show_hd_path
+        ctx.obj["root_path"],
+        ctx.obj["private_key"],
+        key_type,
+        index,
+        count,
+        public_derivation,
+        show_private_keys,
+        show_hd_path,
     )

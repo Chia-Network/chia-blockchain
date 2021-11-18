@@ -1,6 +1,8 @@
+import sys
+
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.util.bech32m import encode_puzzle_hash
@@ -141,25 +143,66 @@ def verify(message: str, public_key: str, signature: str):
     print(AugSchemeMPL.verify(public_key, messageBytes, signature))
 
 
-# def search_derive(search_term: str, limit: int):
-#     private_keys = keychain.get_all_private_keys()
-#     if len(private_keys) == 0:
-#         print("There are no saved private keys")
-#         return None
-#     for sk, seed in private_keys:
-#         mnemonic = bytes_to_mnemonic(seed)
-#         if search_term in mnemonic:
-#             print("Found private key with mnemonic seed:")
-#             print(mnemonic)
-#             print("Master public key (m):", sk.get_g1())
-#             print(
-#                 "First wallet address:",
-#                 encode_puzzle_hash(
-#                     create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix
-#                 ),
-#             )
-#             return None
-#     print("No private key found with mnemonic seed:", search_term)
+def search_derive(
+    root_path: Path,
+    private_key: Optional[PrivateKey],
+    search_term: str,
+    limit: int,
+):
+    private_keys: List[PrivateKey]
+    if private_key is None:
+        private_keys = [sk for sk, _ in keychain.get_all_private_keys()]
+    else:
+        private_keys = [private_key]
+
+    for sk in private_keys:
+        print(f"Searching keys derived from: {sk.get_g1().get_fingerprint()}")
+        path_root: str = "m/12381/8444/"
+        current_path: str = ""
+        current_path_indices: List[int] = [12381, 8444]
+        found_item: Any = None
+        found_item_type: str = ""
+        sys.stdout.write(path_root)
+        for account in range(7):
+            current_path = path_root + f"{account}/"
+            current_path_indices.append(account)
+            sys.stdout.write(f"{account}/")
+            for index in range(limit):
+                current_path += f"{index}"
+                current_path_indices.append(index)
+                sys.stdout.write(f"{index}")
+                sys.stdout.flush()
+                child_sk = _derive_path(sk, current_path_indices)
+                child_pk = child_sk.get_g1()
+                address: str = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), "xch")
+                sys.stdout.write("\b" * len(str(index)))
+                sys.stdout.flush()
+                if search_term in str(child_pk):
+                    found_item = child_pk
+                    found_item_type = "public key"
+                    break
+                if search_term in str(child_sk):
+                    found_item = child_sk
+                    found_item_type = "private key"
+                    break
+                elif search_term in address:
+                    found_item = address
+                    found_item_type = "address"
+                    break
+                current_path = current_path[: -len(str(index))]
+                current_path_indices = current_path_indices[:-1]
+            sys.stdout.write("\b" * (1 + len(str(account))))
+            current_path_indices = current_path_indices[:-1]
+
+            if found_item is not None:
+                break
+        if found_item is not None:
+            break
+        print()
+    print()
+    if found_item is not None:
+        print(f"Found {found_item_type}: {found_item}")
+        print(f"HD Path: {current_path}")
 
 
 def derive_wallet_address(
@@ -196,34 +239,39 @@ def derive_child_key(
     index: int,
     count: int,
     public_derivation: bool,
+    show_private_keys: bool,
     show_hd_path: bool,
 ):
-    path: List[uint32] = [uint32(12381), uint32(8444)]
+    path: List[int] = [12381, 8444]
     if key_type == "farmer":
-        path.append(uint32(0))
+        path.append(0)
     elif key_type == "pool":
-        path.append(uint32(1))
+        path.append(1)
     elif key_type == "wallet":
-        path.append(uint32(2))
+        path.append(2)
     elif key_type == "local":
-        path.append(uint32(3))
+        path.append(3)
     elif key_type == "backup":
-        path.append(uint32(4))
+        path.append(4)
     elif key_type == "singleton":
-        path.append(uint32(5))
+        path.append(5)
     elif key_type == "pool_auth":
-        path.append(uint32(6))
+        path.append(6)
 
     for i in range(index, index + count):
         if public_derivation:
-            sk = _derive_path_unhardened(master_sk, path + [uint32(i)])
+            sk = _derive_path_unhardened(master_sk, path + [i])
         else:
-            sk = _derive_path(master_sk, path + [uint32(i)])
+            sk = _derive_path(master_sk, path + [i])
         if show_hd_path:
             hd_path: str = "m/" + "/".join([str(j) for j in path]) + "/" + str(i)
             print(f"{key_type.capitalize()} public key {i} ({hd_path}): {sk.get_g1()}")
+            if show_private_keys:
+                print(f"{key_type.capitalize()} private key {i} ({hd_path}): {sk}")
         else:
             print(f"{key_type.capitalize()} public key {i}: {sk.get_g1()}")
+            if show_private_keys:
+                print(f"{key_type.capitalize()} private key {i}: {sk}")
 
 
 def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:
