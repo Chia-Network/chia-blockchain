@@ -75,10 +75,9 @@ jobs:
     - name: Link home directory
       run: |
         cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
+        ln -s $GITHUB_WORKSPACE/.chia || echo "Link exists, skipping step"
         echo "$HOME/.chia"
         ls -al $HOME/.chia
-      continue-on-error: true
 
 
     - name: Install ubuntu dependencies
