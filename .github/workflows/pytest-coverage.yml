@@ -64,14 +64,14 @@ jobs:
 #        restore-keys: |
 #          ${{ runner.os }}-pip-
 #
-#    - name: Checkout test blocks and plots
-#      uses: actions/checkout@v2
-#      with:
-#        repository: 'Chia-Network/test-cache'
-#        path: '.chia'
-#        ref: '0.27.0'
-#        fetch-depth: 1
-#
+    - name: Checkout test blocks and plots
+      uses: actions/checkout@v2
+      with:
+        repository: 'Chia-Network/test-cache'
+        path: '.chia'
+        ref: '0.27.0'
+        fetch-depth: 1
+
 #    - name: Link home directory
 #      run: |
 #        cd $HOME
