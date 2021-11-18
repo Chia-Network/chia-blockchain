@@ -1,0 +1,185 @@
+name: test
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+        - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  find_test_paths:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Setup Python environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Find test paths
+        id: find_test_paths
+        shell: python
+        # TODO: this should probably be in a separate .py file
+        run: |
+          import pathlib
+
+          test_root = pathlib.Path('tests')
+          test_paths = []
+
+          for path in test_root.rglob("**/"):
+              test_file_paths = list(path.glob("test_*.py"))
+              if len(test_file_paths) > 0:
+              test_paths.append(path)
+
+          echo "::set-output name=matrix::$(vendor/bin/monorepo-builder packages-json --names)"
+          print(f'::set-output name=test_paths::{json.dumps(test_paths)}')
+
+    outputs:
+      test_paths: ${{steps.find_test_paths.outputs.test_paths
+
+  test:
+    name: ${{ matrix.os.emoji }} ${{
+    needs: find_test_paths
+    runs-on: ${{ matrix.os.runs-on }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        test_directory: ${{ fromJson(needs.find_test_paths.outputs.test_paths) }}
+        os:
+          - emoji: 🍎
+            matrix: macos
+            name: macOS
+            runs-on: macos-latest
+          - emoji: 🐧
+            matrix: ubuntu
+            name: Ubuntu
+            runs-on: ubuntu-latest
+#          - emoji: 🪟
+#            matrix: windows
+#            name: Windows
+#            runs-on: windows-latest
+        python:
+          - name: '3.7'
+            action: '3.7'
+            matrix: '3.7'
+          - name: '3.8'
+            action: '3.8'
+            matrix: '3.8'
+          - name: '3.9'
+            action: '3.9'
+            matrix: '3.9'
+        exclude:
+          - os:
+              matrix: macos
+            python:
+              matrix: '3.7'
+
+
+    steps:
+      - name: Cancel previous runs on the same branch
+        if: ${{ github.ref != 'refs/heads/main' }}
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python.action }}
+
+      - name: Create keychain for CI use
+        if: matrix.os.matrix == 'macos'
+        run: |
+          security create-keychain -p foo chiachain
+          security default-keychain -s chiachain
+          security unlock-keychain -p foo chiachain
+          security set-keychain-settings -t 7200 -u chiachain
+
+      - name: Cache npm
+        if: matrix.os.matrix == 'ubuntu'
+        uses: actions/cache@v2.1.6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: Cache pip
+        uses: actions/cache@v2.1.6
+        with:
+          # Note that new runners may break this https://github.com/actions/cache/issues/292
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Checkout test blocks and plots
+        uses: actions/checkout@v2
+        with:
+          repository: 'Chia-Network/test-cache'
+          path: '.chia'
+          ref: '0.27.0'
+          fetch-depth: 1
+
+      - name: Link home directory
+        run: |
+          cd $HOME
+          ln -s $GITHUB_WORKSPACE/.chia
+          echo "$HOME/.chia"
+          ls -al $HOME/.chia
+
+      - name: Install ubuntu dependencies
+        if: matrix.os.matrix == 'ubuntu'
+        run: |
+          sudo apt-get install software-properties-common
+          sudo add-apt-repository ppa:deadsnakes/ppa
+          sudo apt-get update
+          sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
+
+      - name: Run install script (macOS)
+        if: matrix.os.matrix == 'macos'
+        env:
+          INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+          BUILD_VDF_CLIENT: "N"
+        run: |
+          brew install boost
+          sh install.sh
+
+      - name: Run install script (Ubuntu)
+        if: matrix.os.matrix == 'ubuntu'
+        env:
+          INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+        run: |
+          sh install.sh
+
+      - name: Install timelord
+        run: |
+          . ./activate
+          sh install-timelord.sh
+          ./vdf_bench square_asm 400000
+
+      - name: Install developer requirements
+        run: |
+          . ./activate
+          venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
+
+      - name: Test blockchain code with pytest
+        run: |
+          . ./activate
+          ./venv/bin/pytest ${{ matrix.test_directory }} -s -v --durations 0
