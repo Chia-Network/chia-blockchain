@@ -42,7 +42,7 @@ jobs:
       test_paths: ${{steps.find_test_paths.outputs.test_paths
 
   test:
-    name: ${{ matrix.os.emoji }} ${{
+    name: ${{ matrix.os.emoji }} ${{ matrix.python.name }}
     needs: find_test_paths
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: 60
