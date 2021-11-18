@@ -34,7 +34,7 @@ jobs:
           for path in test_root.rglob("**/"):
               test_file_paths = list(path.glob("test_*.py"))
               if len(test_file_paths) > 0:
-              test_paths.append(path)
+                  test_paths.append(path)
 
           echo "::set-output name=matrix::$(vendor/bin/monorepo-builder packages-json --names)"
           print(f'::set-output name=test_paths::{json.dumps(test_paths)}')
