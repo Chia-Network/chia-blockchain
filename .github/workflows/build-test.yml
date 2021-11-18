@@ -40,7 +40,7 @@ jobs:
           print(f'::set-output name=test_paths::{json.dumps(test_paths)}')
 
     outputs:
-      test_paths: ${{steps.find_test_paths.outputs.test_paths
+      test_paths: ${{ steps.find_test_paths.outputs.test_paths }}
 
   test:
     name: ${{ matrix.os.emoji }} ${{ matrix.python.name }}
