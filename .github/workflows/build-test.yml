@@ -30,7 +30,7 @@ jobs:
 
   test:
     # Should match JOB_NAME below
-    name: ${{ matrix.os.emoji }} ${{ matrix.python.name }} ${{ matrix.configuration.name }}
+    name: ${{ matrix.configuration.name }} ${{ matrix.os.emoji }} ${{ matrix.python.name }}
     needs: get_configuration
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: 60
@@ -75,7 +75,7 @@ jobs:
 
     env:
       # Shoud match name above
-      JOB_NAME: ${{ matrix.os.emoji }} ${{ matrix.python.name }} ${{ matrix.configuration.name }}
+      JOB_NAME: ${{ matrix.configuration.name }} ${{ matrix.os.emoji }} ${{ matrix.python.name }}
 
     steps:
       - name: Cancel previous runs on the same branch
