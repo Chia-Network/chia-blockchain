@@ -34,6 +34,7 @@ class DLOInfo(Streamable):
 class DLOWallet:
     wallet_state_manager: Any
     log: logging.Logger
+    wallet_id: uint32
     wallet_info: WalletInfo
     coin_record: WalletCoinRecord
     sp_info: DLOInfo
@@ -84,7 +85,7 @@ class DLOWallet:
         return self.wallet_info.id
 
     async def generate_datalayer_offer_spend(
-        self: Wallet,
+        self,
         amount: uint64,
         leaf_reveal: bytes,
         host_genesis_id: bytes32,
@@ -203,7 +204,7 @@ class DLOWallet:
         return tr
 
     async def get_coin(self) -> Coin:
-        coins = await self.select_coins(1)
+        coins = await self.select_coins(uint64(1))
         if coins is None or coins == set():
             coin = self.dlo_info.active_offer
         else:

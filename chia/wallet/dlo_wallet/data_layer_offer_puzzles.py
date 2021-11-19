@@ -7,10 +7,11 @@ from chia.util.ints import uint64
 from chia.wallet.wallet import Wallet
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
+from chia.wallet.dlo_wallet.dlo_wallet import DLOWallet
 
 
 async def generate_datalayer_offer_spend(
-    special_wallet: Wallet,
+    special_wallet: DLOWallet,
     input_list: List,
 ):
 
@@ -33,7 +34,7 @@ async def generate_datalayer_offer_spend(
 
 
 async def create_recover_dl_offer_spend(
-    special_wallet: Wallet,
+    special_wallet: DLOWallet,
     input_list: List,
 ):
     coins = await special_wallet.select_coin(1)

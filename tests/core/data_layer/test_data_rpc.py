@@ -1,12 +1,13 @@
-from typing import List, Dict
+from typing import AsyncIterator, Dict, List, Tuple
 import pytest
 
-# flake8: noqa: F401
 import aiosqlite
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_store import DataStore
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
+from chia.server.server import ChiaServer
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -23,23 +24,25 @@ from tests.setup_nodes import setup_simulators_and_wallets, self_hostname
 
 pytestmark = pytest.mark.data_layer
 
+nodes = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]
 
 @pytest.fixture(scope="function")
-async def wallet_node():
+async def one_wallet_node() -> AsyncIterator[nodes]:
     async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
 
 
 @pytest.mark.asyncio
-async def test_create_insert_get(chia_root: ChiaRoot, wallet_node):
+async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     root = chia_root.path
     config = load_config(root, "config.yaml")
     config["data_layer"]["database_path"] = "data_layer_test.sqlite"
     num_blocks = 5
-    full_nodes, wallets = wallet_node
+    full_nodes, wallets = one_wallet_node
     full_node_api = full_nodes[0]
     server_1 = full_node_api.full_node.server
     wallet_node, server_2 = wallets[0]
+    assert wallet_node.wallet_state_manager is not None
     wallet = wallet_node.wallet_state_manager.main_wallet
     ph = await wallet.get_new_puzzlehash()
 
@@ -76,15 +79,16 @@ async def test_create_insert_get(chia_root: ChiaRoot, wallet_node):
 
 
 @pytest.mark.asyncio
-async def test_create_double_insert(chia_root: ChiaRoot, wallet_node):
+async def test_create_double_insert(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     root = chia_root.path
     config = load_config(root, "config.yaml")
     config["data_layer"]["database_path"] = "data_layer_test.sqlite"
     num_blocks = 5
-    full_nodes, wallets = wallet_node
+    full_nodes, wallets = one_wallet_node
     full_node_api = full_nodes[0]
     server_1 = full_node_api.full_node.server
     wallet_node, server_2 = wallets[0]
+    assert wallet_node.wallet_state_manager is not None
     wallet = wallet_node.wallet_state_manager.main_wallet
     ph = await wallet.get_new_puzzlehash()
 
@@ -126,15 +130,16 @@ async def test_create_double_insert(chia_root: ChiaRoot, wallet_node):
 
 
 @pytest.mark.asyncio
-async def test_get_pairs(chia_root: ChiaRoot, wallet_node):
+async def test_get_pairs(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     root = chia_root.path
     config = load_config(root, "config.yaml")
     config["data_layer"]["database_path"] = "data_layer_test.sqlite"
     num_blocks = 5
-    full_nodes, wallets = wallet_node
+    full_nodes, wallets = one_wallet_node
     full_node_api = full_nodes[0]
     server_1 = full_node_api.full_node.server
     wallet_node, server_2 = wallets[0]
+    assert wallet_node.wallet_state_manager is not None
     wallet = wallet_node.wallet_state_manager.main_wallet
     ph = await wallet.get_new_puzzlehash()
 
@@ -176,12 +181,12 @@ async def test_get_pairs(chia_root: ChiaRoot, wallet_node):
 
 
 @pytest.mark.asyncio
-async def test_get_ancestors(chia_root: ChiaRoot, wallet_node: WalletNode):
+async def test_get_ancestors(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     root = chia_root.path
     config = load_config(root, "config.yaml")
     config["data_layer"]["database_path"] = "data_layer_test.sqlite"
     num_blocks = 5
-    full_nodes, wallets = wallet_node
+    full_nodes, wallets = one_wallet_node
     full_node_api = full_nodes[0]
     server_1 = full_node_api.full_node.server
     wallet_node, server_2 = wallets[0]

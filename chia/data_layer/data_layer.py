@@ -71,12 +71,9 @@ class DataLayer:
         main_wallet = self.wallet_node.wallet_state_manager.main_wallet
         amount = uint64(1)  # todo what should amount be ?
         async with self.wallet_node.wallet_state_manager.lock:
-            res = await self.wallet.create_new_dl_wallet(
+            self.wallet = await self.wallet.create_new_dl_wallet(
                 self.wallet_node.wallet_state_manager, main_wallet, amount, None
             )
-            if res is False:
-                self.log.error("Failed to create tree")
-        self.wallet = res
         self.initialized = True
         return True
 
