@@ -21,6 +21,7 @@ configuration = [
     c
     for c in configuration
     if c['name'] not in [
+        'blockchain.test_blockchain_transactions',
         'core.full_node.test_mempool',
         'core.full_node.test_node_load',
         'core.full_node.test_performance',
