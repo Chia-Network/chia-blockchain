@@ -138,7 +138,7 @@ for dir in test_dirs:
         # TODO: handle CHECK_RESOURCE_USAGE
         'job_timeout': conf['job_timeout'],
         # TODO: disabled for now while debugging
-        'pytest_parallel_args': '-n auto' if conf['parallel'] else '',
+        # 'pytest_parallel_args': '-n auto' if conf['parallel'] else '',
         'checkout_blocks_and_plots': conf["checkout_blocks_and_plots"],
         'install_timelord': conf["install_timelord"],
         'path': os.fspath(relative_dir),
