@@ -5,8 +5,13 @@ import pytest
 
 
 def get_chia_processes():
+    us = psutil.Process()
+
     chia_processes = []
     for process in psutil.process_iter():
+        if process == us:
+            continue
+
         with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
             if process.name().startswith("chia_"):
                 chia_processes.append(process)
