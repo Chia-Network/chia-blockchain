@@ -34,7 +34,8 @@ class NotarizedPayment(Payment):
     @classmethod
     def from_condition(cls, condition: Program) -> "NotarizedPayment":
         p = Payment.from_condition(condition)
-        return cls(*p.as_condition_args(), bytes32(next(condition.as_iter()).as_python()))
+        puzzle_hash, amount, memos = tuple(p.as_condition_args())
+        return cls(puzzle_hash, amount, memos, bytes32(next(condition.as_iter()).as_python()))
 
 
 @dataclass(frozen=True)
@@ -51,55 +52,59 @@ class Offer:
         requested_payments: Dict[Optional[bytes32], List[Payment]],  # `None` means you are requesting XCH
         coins: List[Coin],
     ) -> Dict[Optional[bytes32], List[NotarizedPayment]]:
-        sorted_coins = sorted(coins, key=Coin.name)
-        sorted_coin_list = [c.as_list() for c in sorted_coins]
-        nonce = Program.to(sorted_coin_list).get_tree_hash()
+        sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
+        sorted_coin_list: List[List] = [c.as_list() for c in sorted_coins]
+        nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
 
+        notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
         for tail_hash, payments in requested_payments.items():
-            requested_payments[tail_hash] = [NotarizedPayment(*p.as_condition_args(), nonce) for p in payments]
+            notarized_payments[tail_hash] = []
+            for p in payments:
+                puzzle_hash, amount, memos = tuple(p.as_condition_args())
+                notarized_payments[tail_hash].append(NotarizedPayment(puzzle_hash, amount, memos, nonce))
 
-        return requested_payments
+        return notarized_payments
 
     @staticmethod
     def calculate_announcements(
         notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]],
     ) -> List[Announcement]:
-        announcements = []
+        announcements: List[Announcement] = []
         for tail, payments in notarized_payments.items():
             if tail:
-                settlement_ph = construct_cat_puzzle(CAT_MOD, tail, OFFER_MOD).get_tree_hash()
+                settlement_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail, OFFER_MOD).get_tree_hash()
             else:
                 settlement_ph = OFFER_MOD.get_tree_hash()
 
-            messages = [p.as_condition().get_tree_hash() for p in payments]
+            messages: List[bytes32] = [p.as_condition().get_tree_hash() for p in payments]
             announcements.extend([Announcement(settlement_ph, msg) for msg in messages])
 
         return announcements
 
     def __post_init__(self):
         # Verify that there is at least something being offered
-        offered_coins = self.get_offered_coins()
+        offered_coins: Dict[bytes32, List[Coin]] = self.get_offered_coins()
         if offered_coins == {}:
             raise ValueError("Bundle is not offering anything")
 
         # Verify that there are no duplicate payments
         for payments in self.requested_payments.values():
-            payment_programs = [p.name() for p in payments]
+            payment_programs: List[bytes32] = [p.name() for p in payments]
             if len(set(payment_programs)) != len(payment_programs):
                 raise ValueError("Bundle has duplicate requested payments")
 
     def get_offered_coins(self) -> Dict[bytes32, List[Coin]]:
-        offered_coins = {}
+        offered_coins: Dict[bytes32, List[Coin]] = {}
 
         for addition in self.bundle.additions():
-            parent_puzzle = list(
+            parent_puzzle: Program = list(
                 filter(lambda cs: cs.coin.name() == addition.parent_coin_info, self.bundle.coin_spends)
-            )[0].puzzle_reveal
+            )[0].puzzle_reveal.to_program()
             matched, curried_args = match_cat_puzzle(parent_puzzle)
             if matched:
-                _, tail_hash, _ = curried_args
-                tail_hash = bytes32(tail_hash.as_python())
-                offer_ph = construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD).get_tree_hash()
+                _, tail_hash_program, _ = curried_args
+                tail_hash: Optional[bytes32] = bytes32(tail_hash_program.as_python())
+                offer_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD).get_tree_hash()
             else:
                 tail_hash = None
                 offer_ph = OFFER_MOD.get_tree_hash()
@@ -113,8 +118,8 @@ class Offer:
         return offered_coins
 
     def get_offered_amounts(self) -> Dict[Optional[bytes32], int]:
-        offered_coins = self.get_offered_coins()
-        offered_amounts = {}
+        offered_coins: Dict[bytes32, List[Coin]] = self.get_offered_coins()
+        offered_amounts: Dict[Optional[bytes32], int] = {}
         for asset_id, coins in offered_coins.items():
             offered_amounts[asset_id] = uint64(sum([c.amount for c in coins]))
         return offered_amounts
@@ -123,16 +128,16 @@ class Offer:
         return self.requested_payments
 
     def get_requested_amounts(self) -> Dict[Optional[bytes32], int]:
-        requested_amounts = {}
+        requested_amounts: Dict[Optional[bytes32], int] = {}
         for asset_id, coins in self.requested_payments.items():
             requested_amounts[asset_id] = uint64(sum([c.amount for c in coins]))
         return requested_amounts
 
     def arbitrage(self) -> Dict[Optional[bytes32], int]:
-        offered_amounts = self.get_offered_amounts()
-        requested_amounts = self.get_requested_amounts()
+        offered_amounts: Dict[Optional[bytes32], int] = self.get_offered_amounts()
+        requested_amounts: Dict[Optional[bytes32], int] = self.get_requested_amounts()
 
-        arbitrage_dict = {}
+        arbitrage_dict: Dict[Optional[bytes32], int] = {}
         for asset_id in [*requested_amounts.keys(), *offered_amounts.keys()]:
             arbitrage_dict[asset_id] = offered_amounts.get(asset_id, 0) - requested_amounts.get(asset_id, 0)
 
@@ -167,24 +172,24 @@ class Offer:
         if not self.is_valid():
             raise ValueError("Offer is currently incomplete")
 
-        completion_spends = []
+        completion_spends: List[CoinSpend] = []
         for tail_hash, payments in self.requested_payments.items():
-            offered_coins = self.get_offered_coins()[tail_hash]
-            arbitrage_amount = self.arbitrage()[tail_hash]
-            all_payments = payments.copy()
+            offered_coins: List[Coin] = self.get_offered_coins()[tail_hash]
+            arbitrage_amount: int = self.arbitrage()[tail_hash]
+            all_payments: List[NotarizedPayment] = payments.copy()
             if arbitrage_amount > 0:
-                all_payments.append(NotarizedPayment(arbitrage_ph, arbitrage_amount))
+                all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount)))
 
             for coin in offered_coins:
                 inner_solution = Program.to(
                     [np.as_condition() for np in all_payments] if coin == offered_coins[0] else []
                 )
                 if tail_hash:
-                    parent_spend = list(
+                    parent_spend: CoinSpend = list(
                         filter(lambda cs: cs.coin.name() == coin.parent_coin_info, self.bundle.coin_spends)
                     )[0]
-                    parent_coin = parent_spend.coin
-                    matched, curried_args = match_cat_puzzle(parent_spend.puzzle_reveal)
+                    parent_coin: Coin = parent_spend.coin
+                    matched, curried_args = match_cat_puzzle(parent_spend.puzzle_reveal.to_program())
                     assert matched
                     _, _, inner_puzzle = curried_args
                     spendable_cat = SpendableCAT(
@@ -196,8 +201,10 @@ class Offer:
                             parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount
                         ),
                     )
-                    solution = (
-                        unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_cat]).coin_spends[0].solution
+                    solution: Program = (
+                        unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_cat])
+                        .coin_spends[0]
+                        .solution.to_program()
                     )
                 else:
                     solution = inner_solution
@@ -221,15 +228,15 @@ class Offer:
         as_spend_bundle.stream(f)
 
     def __bytes__(self) -> bytes:
-        additional_coin_spends = []
+        additional_coin_spends: List[CoinSpend] = []
         for tail_hash, payments in self.requested_payments.items():
-            puzzle_reveal = construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD) if tail_hash else OFFER_MOD
+            puzzle_reveal: Program = construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD) if tail_hash else OFFER_MOD
             additional_coin_spends.append(
                 CoinSpend(
                     Coin(
                         ZERO_32,
                         puzzle_reveal.get_tree_hash(),
-                        0,
+                        uint64(0),
                     ),
                     puzzle_reveal,
                     Program.to([np.as_condition() for np in payments]),
@@ -248,14 +255,14 @@ class Offer:
     @classmethod
     def from_bytes(cls, as_bytes: bytes) -> "Offer":
         bundle = SpendBundle.from_bytes(as_bytes)
-        requested_payments = {}
-        leftover_coin_spends = []
+        requested_payments: Dict[bytes32, List[NotarizedPayment]] = {}
+        leftover_coin_spends: List[CoinSpend] = []
         for coin_spend in bundle.coin_spends:
             if coin_spend.coin.parent_coin_info == ZERO_32:
                 matched, curried_args = match_cat_puzzle(coin_spend.puzzle_reveal)
                 if matched:
-                    _, tail_hash, _ = curried_args
-                    tail_hash = bytes32(tail_hash.as_python())
+                    _, tail_hash_program, _ = curried_args
+                    tail_hash: Optional[bytes32] = bytes32(tail_hash_program.as_python())
                 else:
                     tail_hash = None
                 requested_payments[tail_hash] = [

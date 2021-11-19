@@ -24,9 +24,9 @@ class Payment:
 
     @classmethod
     def from_condition(cls, condition: Program) -> "Payment":
-        python_condition = condition.as_python()
+        python_condition: List = condition.as_python()
         puzzle_hash, amount = python_condition[1:3]
-        memos = None
+        memos: Optional[List[Optional[bytes]]] = None
         if len(python_condition) > 3:
             memos = python_condition[3]
-        return cls(bytes32(puzzle_hash), int.from_bytes(amount, "big"), memos)
+        return cls(bytes32(puzzle_hash), uint64(int.from_bytes(amount, "big")), memos)

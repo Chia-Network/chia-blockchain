@@ -18,9 +18,8 @@ from chia.wallet.cat_wallet.cat_utils import (
     SpendableCAT,
     unsigned_spend_bundle_for_spendable_cats,
 )
-
 from chia.wallet.payment import Payment
-from chia.wallet.puzzles.offer import Offer
+from chia.wallet.puzzles.offer import Offer, NotarizedPayment
 
 acs = Program.to(1)
 acs_ph = acs.get_tree_hash()
@@ -49,18 +48,21 @@ class TestOfferLifecycle:
         return sim, sim_client
 
     async def generate_coins(
-        self, sim, sim_client, requested_coins: Dict[Optional[str], List[uint64]]
+        self,
+        sim,
+        sim_client,
+        requested_coins: Dict[Optional[str], List[uint64]],
     ) -> Dict[Optional[str], List[Coin]]:
         await sim.farm_block(acs_ph)
-        parent_coin = [cr.coin for cr in await (sim_client.get_coin_records_by_puzzle_hash(acs_ph))][0]
+        parent_coin: Coin = [cr.coin for cr in await (sim_client.get_coin_records_by_puzzle_hash(acs_ph))][0]
 
         cat_bundles: List[SpendBundle] = []
         payments: List[Payment] = []
         for tail_str, amounts in requested_coins.items():
             for amount in amounts:
                 if tail_str:
-                    tail = str_to_tail(tail_str)  # Making a fake but unique TAIL
-                    cat_puzzle = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
+                    tail: Program = str_to_tail(tail_str)  # Making a fake but unique TAIL
+                    cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
                     payments.append(Payment(cat_puzzle.get_tree_hash(), amount))
                     cat_bundles.append(
                         unsigned_spend_bundle_for_spendable_cats(
@@ -92,7 +94,7 @@ class TestOfferLifecycle:
         await sim_client.push_tx(SpendBundle.aggregate([parent_bundle, *cat_bundles]))
         await sim.farm_block()
 
-        coin_dict = {}
+        coin_dict: Dict[Optional[bytes32], List[Coin]] = {}
         coin_dict[None] = list(
             filter(
                 lambda c: c.amount < 250000000000,
@@ -104,8 +106,8 @@ class TestOfferLifecycle:
         )
         for tail_str, _ in requested_coins.items():
             if tail_str:
-                tail = str_to_tail_hash(tail_str)
-                cat_ph = construct_cat_puzzle(CAT_MOD, tail, acs).get_tree_hash()
+                tail_hash: bytes32 = str_to_tail_hash(tail_str)
+                cat_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail_hash, acs).get_tree_hash()
                 coin_dict[tail_str] = [
                     cr.coin
                     for cr in await (sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
@@ -120,10 +122,10 @@ class TestOfferLifecycle:
         offered_amount: uint64,
         tail_str: Optional[str] = None,
     ) -> SpendBundle:
-        announcement_assertions = [[63, a.name()] for a in announcements]
-        selected_coin_amount = sum([c.amount for c in selected_coins])
-        non_primaries = [] if len(selected_coins) < 2 else selected_coins[1:]
-        inner_solution = [
+        announcement_assertions: List[List] = [[63, a.name()] for a in announcements]
+        selected_coin_amount: int = sum([c.amount for c in selected_coins])
+        non_primaries: List[Coin] = [] if len(selected_coins) < 2 else selected_coins[1:]
+        inner_solution: List[List] = [
             [51, Offer.ph(), offered_amount],  # Offered coin
             [51, acs_ph, uint64(selected_coin_amount - offered_amount)],  # Change
             *announcement_assertions,
@@ -141,7 +143,7 @@ class TestOfferLifecycle:
                 G2Element(),
             )
         else:
-            spendable_cats = [
+            spendable_cats: List[SpendableCAT] = [
                 SpendableCAT(
                     c,
                     str_to_tail_hash(tail_str),
@@ -164,41 +166,47 @@ class TestOfferLifecycle:
         sim, sim_client = setup_sim
 
         try:
-            coins_needed = {
+            coins_needed: Dict[Optional[str], List[int]] = {
                 None: [500, 400, 300],
                 "red": [250, 100],
                 "blue": [3000],
             }
-            all_coins = await self.generate_coins(sim, sim_client, coins_needed)
-            chia_coins = all_coins[None]
-            red_coins = all_coins["red"]
-            blue_coins = all_coins["blue"]
+            all_coins: Dict[Optional[str], List[Coin]] = await self.generate_coins(sim, sim_client, coins_needed)
+            chia_coins: List[Coin] = all_coins[None]
+            red_coins: List[Coin] = all_coins["red"]
+            blue_coins: List[Coin] = all_coins["blue"]
 
             # Create an XCH Offer for RED
-            chia_requested_payments = {
+            chia_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
                 str_to_tail_hash("red"): [
                     Payment(acs_ph, 100, [b"memo"]),
                     Payment(acs_ph, 200, [b"memo"]),
                 ]
             }
 
-            chia_requested_payments = Offer.notarize_payments(chia_requested_payments, chia_coins)
-            chia_announcements = Offer.calculate_announcements(chia_requested_payments)
-            chia_secured_bundle = self.generate_secure_bundle(chia_coins, chia_announcements, 1000)
+            chia_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
+                chia_requested_payments, chia_coins
+            )
+            chia_announcements: List[Announcement] = Offer.calculate_announcements(chia_requested_payments)
+            chia_secured_bundle: SpendBundle = self.generate_secure_bundle(chia_coins, chia_announcements, 1000)
             chia_offer = Offer(chia_requested_payments, chia_secured_bundle)
             assert not chia_offer.is_valid()
 
             # Create a RED Offer for XCH
-            red_requested_payments = {
+            red_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
                 None: [
                     Payment(acs_ph, 300, [b"red memo"]),
                     Payment(acs_ph, 400, [b"red memo"]),
                 ]
             }
 
-            red_requested_payments = Offer.notarize_payments(red_requested_payments, red_coins)
-            red_announcements = Offer.calculate_announcements(red_requested_payments)
-            red_secured_bundle = self.generate_secure_bundle(red_coins, red_announcements, 350, tail_str="red")
+            red_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
+                red_requested_payments, red_coins
+            )
+            red_announcements: List[Announcement] = Offer.calculate_announcements(red_requested_payments)
+            red_secured_bundle: SpendBundle = self.generate_secure_bundle(
+                red_coins, red_announcements, 350, tail_str="red"
+            )
             red_offer = Offer(red_requested_payments, red_secured_bundle)
             assert not red_offer.is_valid()
 
@@ -209,7 +217,7 @@ class TestOfferLifecycle:
             assert new_offer.is_valid()
 
             # Create yet another offer of BLUE for XCH
-            blue_requested_payments = {
+            blue_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
                 None: [
                     Payment(acs_ph, 200, [b"blue memo"]),
                 ],
@@ -218,13 +226,17 @@ class TestOfferLifecycle:
                 ],
             }
 
-            blue_requested_payments = Offer.notarize_payments(blue_requested_payments, blue_coins)
-            blue_announcements = Offer.calculate_announcements(blue_requested_payments)
-            blue_secured_bundle = self.generate_secure_bundle(blue_coins, blue_announcements, 2000, tail_str="blue")
+            blue_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
+                blue_requested_payments, blue_coins
+            )
+            blue_announcements: List[Announcement] = Offer.calculate_announcements(blue_requested_payments)
+            blue_secured_bundle: SpendBundle = self.generate_secure_bundle(
+                blue_coins, blue_announcements, 2000, tail_str="blue"
+            )
             blue_offer = Offer(blue_requested_payments, blue_secured_bundle)
             assert not blue_offer.is_valid()
 
-            new_offer = Offer.aggregate([new_offer, blue_offer])
+            new_offer: Offer = Offer.aggregate([new_offer, blue_offer])
             assert new_offer.get_offered_amounts() == {
                 None: 1000,
                 str_to_tail_hash("red"): 350,
@@ -235,7 +247,7 @@ class TestOfferLifecycle:
 
             assert Offer.from_bytes(bytes(new_offer)) == new_offer
 
-            arbitrage_ph = Program.to([3, [], [], 1])
+            arbitrage_ph: bytes32 = Program.to([3, [], [], 1]).get_tree_hash()
             result = await sim_client.push_tx(new_offer.to_valid_spend(arbitrage_ph))
             assert result == (MempoolInclusionStatus.SUCCESS, None)
             await sim.farm_block()
