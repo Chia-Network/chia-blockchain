@@ -99,7 +99,9 @@ class DLOWallet:
             recovery_target,
             recovery_timelock,
         )
-        tr: TransactionRecord = await self.standard_wallet.generate_signed_transaction(amount, full_puzzle.get_tree_hash())
+        tr: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
+            amount, full_puzzle.get_tree_hash()
+        )
         await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
             full_puzzle.get_tree_hash(), self.wallet_id, True
         )

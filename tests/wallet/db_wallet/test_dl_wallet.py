@@ -95,7 +95,7 @@ class TestDLWallet:
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
             )
 
-        for i in range(1, num_blocks*2):
+        for i in range(1, num_blocks * 2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
@@ -263,7 +263,8 @@ class TestDLWallet:
         # Wallet1 sets up DLOWallet1
         async with wallet_node_1.wallet_state_manager.lock:
             dlo_wallet_1: DLOWallet = await DLOWallet.create_new_dlo_wallet(
-                wallet_node_1.wallet_state_manager, wallet_1,
+                wallet_node_1.wallet_state_manager,
+                wallet_1,
             )
 
         for i in range(1, num_blocks):
@@ -295,12 +296,13 @@ class TestDLWallet:
         # create a second DLO Wallet and claim the coin
         async with wallet_node_2.wallet_state_manager.lock:
             dlo_wallet_2: DLOWallet = await DLOWallet.create_new_dlo_wallet(
-                wallet_node_2.wallet_state_manager, wallet_2,
+                wallet_node_2.wallet_state_manager,
+                wallet_2,
             )
         offer_coin = await dlo_wallet_1.get_coin()
         offer_full_puzzle = dlo_wallet_1.puzzle_for_pk(0x00)
         db_puzzle, db_innerpuz, current_root = await dl_wallet_0.get_info_for_offer_claim()
-        inclusion_proof = current_tree.generate_proof(Program.to("thing").get_tree_hash()),
+        inclusion_proof = (current_tree.generate_proof(Program.to("thing").get_tree_hash()),)
         if len(inclusion_proof) == 1:
             inclusion_proof = inclusion_proof[0]
             # breakpoint()
