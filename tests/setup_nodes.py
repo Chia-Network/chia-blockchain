@@ -43,6 +43,45 @@ def constants_for_dic(dic):
     return test_constants.replace(**dic)
 
 
+import contextlib
+import time
+
+import psutil
+
+def get_chia_processes():
+    us = psutil.Process()
+
+    parents = set()
+    chia_processes = set()
+    for process in psutil.process_iter():
+        with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+            if process == us:
+                continue
+
+            if process.name().startswith("chia_"):
+                chia_processes.add(process)
+                parents.update(process.parents())
+
+    return set(chia_processes) - set(parents)
+
+
+def gotta_kill_em_all():
+    yield
+
+    chia_processes = get_chia_processes()
+
+    while len(chia_processes) > 0:
+        time.sleep(1)
+
+        print(f"gotta_kill_em_all: About to kill {len(chia_processes)} processes")
+        for process in chia_processes:
+            with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                print(f"gotta_kill_em_all: Killing {process}")
+                process.kill()
+
+        chia_processes = get_chia_processes()
+
+
 async def _teardown_nodes(node_aiters: List) -> None:
     awaitables = [node_iter.__anext__() for node_iter in node_aiters]
     for sublist_awaitable in asyncio.as_completed(awaitables):
@@ -50,6 +89,8 @@ async def _teardown_nodes(node_aiters: List) -> None:
             await sublist_awaitable
         except StopAsyncIteration:
             pass
+
+    gotta_kill_em_all()
 
 
 async def setup_daemon(btools):
