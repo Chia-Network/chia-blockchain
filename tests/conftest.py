@@ -1,4 +1,30 @@
+import contextlib
+
+import psutil
 import pytest
+
+
+def get_chia_processes():
+    chia_processes = []
+    for process in psutil.process_iter():
+        with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+            if process.name().startswith("chia_"):
+                chia_processes.append(process)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def gotta_kill_em_all():
+    yield
+
+    chia_processes = get_chia_processes()
+
+    while len(chia_processes) > 0:
+        for process in chia_processes:
+            with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                print(f"gotta_kill_em_all: Killing {process}")
+                process.kill()
+
+        chia_processes = get_chia_processes()
 
 
 # TODO: tests.setup_nodes (which is also imported by tests.util.blockchain) creates a
