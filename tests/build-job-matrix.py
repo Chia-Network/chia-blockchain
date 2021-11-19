@@ -12,12 +12,36 @@ import testconfig
 root_path = Path(__file__).parent.resolve()
 
 
-def subdirs() -> List[Path]:
-    dirs: List[Path] = []
-    for r in root_path.iterdir():
-        if r.is_dir():
-            dirs.extend(Path(r).rglob("**/"))
-    return sorted(d for d in dirs if not (any(c.startswith("_") for c in d.parts) or any(c.startswith(".") for c in d.parts)))
+def skip(path: Path) -> bool:
+    return any(part.startswith(("_", ".")) for part in path.parts)
+
+
+def subdirs(per: str) -> List[Path]:
+    dirs: List[Path]
+
+    if per == "directory":
+        glob_pattern = "**/"
+    elif per == "file":
+        glob_pattern = "**/test_*.py"
+    else:
+        raise Exception(f"Unrecognized per: {per!r}")
+
+    paths = [path for path in root_path.rglob(glob_pattern) if not skip(path=path)]
+
+    if per == "directory":
+        filtered_paths = []
+        for path in paths:
+            relative_path = path.relative_to(root_path)
+            logging.info(f"Considering: {relative_path}")
+            if len([f for f in path.glob("test_*.py")]) == 0:
+                logging.info(f"Skipping {relative_path}: no tests collected")
+                continue
+
+            filtered_paths.append(path)
+
+        paths = filtered_paths
+
+    return sorted(paths)
 
 
 def module_dict(module):
@@ -112,6 +136,7 @@ def dir_path(string):
 
 # args
 arg_parser = argparse.ArgumentParser(description="Generate GitHub test matrix configuration")
+arg_parser.add_argument("--per", type=str, choices=["directory", "file"], required=True)
 arg_parser.add_argument("--verbose", "-v", action="store_true")
 args = arg_parser.parse_args()
 
@@ -119,18 +144,22 @@ if args.verbose:
     logging.basicConfig(format="%(asctime)s:%(message)s", level=logging.DEBUG)
 
 # main
-test_dirs = subdirs()
+test_paths = subdirs(per=args.per)
 # current_workflows: Dict[Path, str] = {file: read_file(file) for file in args.output_dir.iterdir()}
 # changed: bool = False
 
 configuration = []
 
-for dir in test_dirs:
-    relative_dir = dir.relative_to(root_path)
-    logging.info(f"Considering: {relative_dir}")
-    if len([f for f in Path(root_path / dir).glob("test_*.py")]) == 0:
-        logging.info(f"Skipping {dir}: no tests collected")
-        continue
+for path in test_paths:
+    relative_path = path.relative_to(root_path)
+
+    dir: Path
+    if path.is_dir():
+        dir = path
+        path_for_cli = f"{os.fspath(relative_path)}/test_*.py"
+    else:
+        dir = path.parent
+        path_for_cli = f"{os.fspath(relative_path)}"
 
     conf = update_config(module_dict(testconfig), dir_config(dir))
 
@@ -141,8 +170,8 @@ for dir in test_dirs:
         # 'pytest_parallel_args': '-n auto' if conf['parallel'] else '',
         'checkout_blocks_and_plots': conf["checkout_blocks_and_plots"],
         'install_timelord': conf["install_timelord"],
-        'path': os.fspath(relative_dir),
-        'name': '.'.join(relative_dir.with_suffix('').parts),
+        'path': os.fspath(path_for_cli),
+        'name': '.'.join(relative_path.with_suffix('').parts),
     }
     for_matrix = dict(sorted(for_matrix.items()))
     configuration.append(for_matrix)
