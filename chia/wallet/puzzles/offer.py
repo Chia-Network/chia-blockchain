@@ -177,6 +177,7 @@ class Offer:
         return all([value >= 0 for value in self.arbitrage().values()])
 
     # A "valid" spend means that this bundle can be pushed to the network and will succeed
+    # This differs from the `to_spend_bundle` method which deliberately creates an invalid SpendBundle
     def to_valid_spend(self, arbitrage_ph: bytes32) -> SpendBundle:
         if not self.is_valid():
             raise ValueError("Offer is currently incomplete")
@@ -231,18 +232,7 @@ class Offer:
 
         return SpendBundle.aggregate([SpendBundle(completion_spends, G2Element()), self.bundle])
 
-    # Methods to make this a valid Streamable member
-    # We basically hijack the SpendBundle versions for most of it
-    @classmethod
-    def parse(cls, f) -> "Offer":
-        parsed_bundle = SpendBundle.parse(f)
-        return cls.from_bytes(bytes(parsed_bundle))
-
-    def stream(self, f):
-        as_spend_bundle = SpendBundle.from_bytes(bytes(self))
-        as_spend_bundle.stream(f)
-
-    def __bytes__(self) -> bytes:
+    def to_spend_bundle(self) -> SpendBundle:
         # Before we serialze this as a SpendBundle, we need to serialze the `requested_payments` as dummy CoinSpends
         additional_coin_spends: List[CoinSpend] = []
         for tail_hash, payments in self.requested_payments.items():
@@ -259,24 +249,21 @@ class Offer:
                 )
             )
 
-        return bytes(
-            SpendBundle.aggregate(
-                [
-                    SpendBundle(additional_coin_spends, G2Element()),
-                    self.bundle,
-                ]
-            )
+        return SpendBundle.aggregate(
+            [
+                SpendBundle(additional_coin_spends, G2Element()),
+                self.bundle,
+            ]
         )
 
     @classmethod
-    def from_bytes(cls, as_bytes: bytes) -> "Offer":
-        # Because of the __bytes__ method, we need to parse the dummy CoinSpends as `requested_payments`
-        bundle = SpendBundle.from_bytes(as_bytes)
+    def from_spend_bundle(cls, bundle: SpendBundle) -> "Offer":
+        # Because of the `to_spend_bundle` method, we need to parse the dummy CoinSpends as `requested_payments`
         requested_payments: Dict[bytes32, List[NotarizedPayment]] = {}
         leftover_coin_spends: List[CoinSpend] = []
         for coin_spend in bundle.coin_spends:
             if coin_spend.coin.parent_coin_info == ZERO_32:
-                matched, curried_args = match_cat_puzzle(coin_spend.puzzle_reveal)
+                matched, curried_args = match_cat_puzzle(coin_spend.puzzle_reveal.to_program())
                 if matched:
                     _, tail_hash_program, _ = curried_args
                     tail_hash: Optional[bytes32] = bytes32(tail_hash_program.as_python())
@@ -290,3 +277,23 @@ class Offer:
                 leftover_coin_spends.append(coin_spend)
 
         return cls(requested_payments, SpendBundle(leftover_coin_spends, bundle.aggregated_signature))
+
+    # Methods to make this a valid Streamable member
+    # We basically hijack the SpendBundle versions for most of it
+    @classmethod
+    def parse(cls, f) -> "Offer":
+        parsed_bundle = SpendBundle.parse(f)
+        return cls.from_bytes(bytes(parsed_bundle))
+
+    def stream(self, f):
+        as_spend_bundle = SpendBundle.from_bytes(bytes(self))
+        as_spend_bundle.stream(f)
+
+    def __bytes__(self) -> bytes:
+        return bytes(self.to_spend_bundle())
+
+    @classmethod
+    def from_bytes(cls, as_bytes: bytes) -> "Offer":
+        # Because of the __bytes__ method, we need to parse the dummy CoinSpends as `requested_payments`
+        bundle = SpendBundle.from_bytes(as_bytes)
+        return cls.from_spend_bundle(bundle)
