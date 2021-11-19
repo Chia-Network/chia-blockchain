@@ -201,8 +201,8 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         balances = await wallet_client.get_wallet_balance(wallet_id)
         typ = WalletType(int(summary["type"]))
         address_prefix, scale = wallet_coin_unit(typ, address_prefix)
-        if typ == WalletType.COLOURED_COIN:
-            asset_id = await wallet_client.get_cat_colour(wallet_id)
+        if typ == WalletType.CAT:
+            asset_id = await wallet_client.get_cat_asset_id(wallet_id)
             asset_id_str = f"(Asset ID: {asset_id.hex()})"
         else:
             asset_id_str = ""
