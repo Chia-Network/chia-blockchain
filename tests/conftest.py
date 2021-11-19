@@ -11,6 +11,8 @@ def get_chia_processes():
             if process.name().startswith("chia_"):
                 chia_processes.append(process)
 
+    return chia_processes
+
 
 @pytest.fixture(scope="function", autouse=True)
 def gotta_kill_em_all():
