@@ -117,7 +117,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
         )
     if updated_target:
         print(
-            f"To change the XCH destination addresses, edit the `xch_target_address` entries in"
+            f"To change the SIT destination addresses, edit the `xch_target_address` entries in"
             f" {(new_root / 'config' / 'config.yaml').absolute()}."
         )
 
