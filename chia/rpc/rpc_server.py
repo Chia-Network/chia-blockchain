@@ -65,6 +65,8 @@ class RpcServer:
         for payload in payloads:
             if "success" not in payload["data"]:
                 payload["data"]["success"] = True
+            if self.websocket is None:
+                return None
             try:
                 await self.websocket.send_str(dict_to_json_str(payload))
             except Exception:
