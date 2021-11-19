@@ -15,7 +15,7 @@ test_paths = sorted(test_paths)
 
 configuration = [{'path': os.fspath(path), 'name': '.'.join(path.parts)} for path in test_paths]
 # TODO: remove this.  filtering just to avoid the hanging tests while
-configuration = [c for c in configuration if c['name'] in ['plotting', 'generator']]
+configuration = [c for c in configuration if c['name'] in ['plotting', 'generator', 'core.full_node']]
 configuration_json = json.dumps(configuration)
 
 print(json.dumps(configuration, indent=4))
