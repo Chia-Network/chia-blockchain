@@ -78,13 +78,17 @@ class WalletNodeAPI:
         assert peer.peer_node_id is not None
         name = peer.peer_node_id.hex()
         status = MempoolInclusionStatus(ack.status)
-        if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
+        if self.wallet_node.wallet_state_manager is None:
             return None
         if status == MempoolInclusionStatus.SUCCESS:
             self.wallet_node.log.info(f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}")
         elif status == MempoolInclusionStatus.PENDING:
             self.wallet_node.log.info(f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
         else:
+            if not self.wallet_node.is_trusted(peer) and ack.error == Err.NO_TRANSACTIONS_WHILE_SYNCING.name:
+                self.wallet_node.log.info(f"Peer {peer.get_peer_info()} is not synced, closing connection")
+                await peer.close()
+                return
             self.wallet_node.log.warning(f"SpendBundle has been rejected by the FullNode. {ack}")
         if ack.error is not None:
             await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, status, Err[ack.error])
@@ -117,7 +121,7 @@ class WalletNodeAPI:
 
     @api_request
     async def respond_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):
-        if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
+        if self.wallet_node.wallet_state_manager is None:
             return None
         await self.wallet_node.wallet_state_manager.puzzle_solution_received(request)
 
@@ -132,3 +136,28 @@ class WalletNodeAPI:
     @api_request
     async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
         self.log.warning(f"Reject header blocks: {request}")
+
+    @peer_required
+    @api_request
+    async def coin_state_update(self, request: wallet_protocol.CoinStateUpdate, peer: WSChiaConnection):
+        await self.wallet_node.state_update_received(request, peer)
+
+    @api_request
+    async def respond_to_ph_update(self, request: wallet_protocol.RespondToPhUpdates):
+        pass
+
+    @api_request
+    async def respond_to_coin_update(self, request: wallet_protocol.RespondToCoinUpdates):
+        pass
+
+    @api_request
+    async def respond_children(self, request: wallet_protocol.RespondChildren):
+        pass
+
+    @api_request
+    async def respond_ses_hashes(self, request: wallet_protocol.RespondSESInfo):
+        pass
+
+    @api_request
+    async def respond_blocks(self, request: full_node_protocol.RespondBlocks) -> None:
+        pass

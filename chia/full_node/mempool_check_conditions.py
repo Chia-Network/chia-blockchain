@@ -112,7 +112,7 @@ def get_name_puzzle_conditions(
                     conditions.append((ConditionOpcode(bytes([c[0]])), cwa))
                 npc_list.append(NPC(r.coin_name, r.puzzle_hash, conditions))
             return NPCResult(None, npc_list, uint64(clvm_cost))
-    except Exception as e:
+    except BaseException as e:
         log.debug(f"get_name_puzzle_condition failed: {e}")
         return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), [], uint64(0))
 

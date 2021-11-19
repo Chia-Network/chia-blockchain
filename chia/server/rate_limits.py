@@ -80,8 +80,8 @@ rate_limits_other = {
     ProtocolMessageTypes.respond_puzzle_solution: RLSettings(1000, 1024 * 1024),
     ProtocolMessageTypes.reject_puzzle_solution: RLSettings(1000, 100),
     ProtocolMessageTypes.new_peak_wallet: RLSettings(200, 300),
-    ProtocolMessageTypes.request_block_header: RLSettings(500, 100),
-    ProtocolMessageTypes.respond_block_header: RLSettings(500, 500 * 1024),
+    ProtocolMessageTypes.request_block_header: RLSettings(1000, 100),
+    ProtocolMessageTypes.respond_block_header: RLSettings(1000, 500 * 1024),
     ProtocolMessageTypes.reject_header_request: RLSettings(500, 100),
     ProtocolMessageTypes.request_removals: RLSettings(500, 50 * 1024, 10 * 1024 * 1024),
     ProtocolMessageTypes.respond_removals: RLSettings(500, 1024 * 1024, 10 * 1024 * 1024),
@@ -102,6 +102,10 @@ rate_limits_other = {
     ProtocolMessageTypes.respond_to_ph_update: RLSettings(1000, 100 * 1024 * 1024),
     ProtocolMessageTypes.register_interest_in_coin: RLSettings(1000, 100 * 1024 * 1024),
     ProtocolMessageTypes.respond_to_coin_update: RLSettings(1000, 100 * 1024 * 1024),
+    ProtocolMessageTypes.request_ses_hashes: RLSettings(1000, 1 * 1024 * 1024),
+    ProtocolMessageTypes.respond_ses_hashes: RLSettings(1000, 1 * 1024 * 1024),
+    ProtocolMessageTypes.request_children: RLSettings(1000, 1024 * 1024),
+    ProtocolMessageTypes.respond_children: RLSettings(1000, 1 * 1024 * 1024),
 }
 
 

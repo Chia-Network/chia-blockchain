@@ -54,11 +54,6 @@ block_cipher = None
 
 SERVERS = [
     "wallet",
-    "full_node",
-    "harvester",
-    "farmer",
-    "introducer",
-    "timelord",
 ]
 
 # TODO: collapse all these entry points into one `chia_exec` entrypoint that accepts the server as a parameter

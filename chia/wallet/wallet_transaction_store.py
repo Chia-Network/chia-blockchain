@@ -141,6 +141,17 @@ class WalletTransactionStore:
             if not in_transaction:
                 self.db_wrapper.lock.release()
 
+    async def delete_transaction_record(self, tx_id: bytes32) -> None:
+        if tx_id in self.tx_record_cache:
+            tx_record = self.tx_record_cache.pop(tx_id)
+            if tx_record.wallet_id in self.unconfirmed_for_wallet:
+                tx_cache = self.unconfirmed_for_wallet[tx_record.wallet_id]
+                if tx_id in tx_cache:
+                    tx_cache.pop(tx_id)
+
+        c = await self.db_connection.execute("DELETE FROM transaction_record WHERE bundle_id=?", (tx_id,))
+        await c.close()
+
     async def set_confirmed(self, tx_id: bytes32, height: uint32):
         """
         Updates transaction to be confirmed.
@@ -166,6 +177,7 @@ class WalletTransactionStore:
             trade_id=None,
             type=current.type,
             name=current.name,
+            memos=current.memos,
         )
         await self.add_transaction_record(tx, True)
 
@@ -216,6 +228,7 @@ class WalletTransactionStore:
             trade_id=None,
             type=current.type,
             name=current.name,
+            memos=current.memos,
         )
 
         await self.add_transaction_record(tx, False)
@@ -241,6 +254,7 @@ class WalletTransactionStore:
             trade_id=None,
             type=record.type,
             name=record.name,
+            memos=record.memos,
         )
         await self.add_transaction_record(tx, True)
 
@@ -339,10 +353,8 @@ class WalletTransactionStore:
         """
         limit = end - start
         cursor = await self.db_connection.execute(
-            f"SELECT * from transaction_record where wallet_id=? and confirmed_at_height not in"
-            f" (select confirmed_at_height from transaction_record order by confirmed_at_height"
-            f" ASC LIMIT {start})"
-            f" order by confirmed_at_height DESC LIMIT {limit}",
+            f"SELECT * from transaction_record where wallet_id=?"
+            f" order by confirmed_at_height DESC LIMIT {start}, {limit}",
             (wallet_id,),
         )
         rows = await cursor.fetchall()

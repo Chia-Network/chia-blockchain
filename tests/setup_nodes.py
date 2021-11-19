@@ -159,8 +159,8 @@ async def setup_wallet_node(
         if introducer_port is not None:
             config["introducer_peer"]["port"] = introducer_port
             config["peer_connect_interval"] = 10
-        else:
-            config["introducer_peer"] = None
+
+        config["dns_servers"] = []
 
         if full_node_port is not None:
             config["full_node_peer"] = {}
@@ -177,7 +177,7 @@ async def setup_wallet_node(
 
         service = Service(**kwargs)
 
-        await service.start(new_wallet=True)
+        await service.start()
 
         yield service._node, service._node.server
 
@@ -408,6 +408,7 @@ async def setup_simulators_and_wallets(
     starting_height=None,
     key_seed=None,
     starting_port=50000,
+    simple_wallet=True,
 ):
     with TempKeyring() as keychain1, TempKeyring() as keychain2:
         simulators: List[FullNodeAPI] = []

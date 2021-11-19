@@ -25,8 +25,10 @@ dependencies = [
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     "click==7.1.2",  # For the CLI
-    "dnspython==2.1.0",  # Query DNS seeds
-    "watchdog==2.1.3",  # Filesystem event watching - watches keyring.yaml
+    # Query DNS seeds (unreleased commit)
+    "dnspythonchia==2.2.0",
+    "packaging==21.0",
+    "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
 ]
 
 upnp_dependencies = [
@@ -120,4 +122,4 @@ kwargs = dict(
 
 
 if __name__ == "__main__":
-    setup(**kwargs)  # type: ignore
+    setup(**kwargs)

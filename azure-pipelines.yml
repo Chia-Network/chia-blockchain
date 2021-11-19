@@ -59,8 +59,8 @@ steps:
 
   - task: NodeTool@0
     inputs:
-      versionSpec: '14.x'
-    displayName: "Setup Node 14.x"
+      versionSpec: '16.x'
+    displayName: "Setup Node 16.x"
 
   - bash: |
       . ./activate
@@ -93,6 +93,7 @@ steps:
       export AWS_SECRET_ACCESS_KEY=$(SecretKey)
       export AWS_DEFAULT_REGION=us-west-2
       aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-chia-net/builds/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-chia-net/protocol_and_cats_rebased/
     displayName: "Upload to S3"
 
   - bash: |
@@ -115,6 +116,17 @@ steps:
       aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256 s3://download-chia-net/beta/Chia-intel_latest_beta.dmg.sha256
     displayName: "Upload Beta Files"
     condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/heads/main'))
+
+  - bash: |
+      export AWS_ACCESS_KEY_ID=$(AccessKey)
+      export AWS_SECRET_ACCESS_KEY=$(SecretKey)
+      export AWS_DEFAULT_REGION=us-west-2
+      cd $(System.DefaultWorkingDirectory)/build_scripts/
+      export CHIA_VERSION="Chia-"$(<version.txt)
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-chia-net/cats-beta-installers/Chia-intel_latest_cats_beta.dmg
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256 s3://download-chia-net/cats-beta-installers/Chia-intel_latest_cats_beta.dmg.sha256
+    displayName: "Upload CATs Beta Files"
+    condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/heads/protocol_and_cats_rebased'))
 
   - bash: |
       export AWS_ACCESS_KEY_ID=$(AccessKey)

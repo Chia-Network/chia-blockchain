@@ -44,11 +44,7 @@ class KeyringMaxUnlockAttempts(Exception):
 
 
 def supports_keyring_passphrase() -> bool:
-    # TODO: Enable once all platforms are supported and GUI work is finalized (including migration)
     return False or os.environ.get("CHIA_PASSPHRASE_SUPPORT", "").lower() in ["1", "true"]
-    # from sys import platform
-
-    # return platform == "linux"
 
 
 def supports_os_passphrase_storage() -> bool:

@@ -1,6 +1,7 @@
 import logging
 
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -29,6 +30,27 @@ class PlotInfo:
     plot_public_key: G1Element
     file_size: int
     time_modified: float
+
+
+class PlotRefreshEvents(Enum):
+    """
+    This are the events the `PlotManager` will trigger with the callback during a full refresh cycle:
+
+      - started: This event indicates the start of a refresh cycle and contains the total number of files to
+                 process in `PlotRefreshResult.remaining`.
+
+      - batch_processed: This event gets triggered if one batch has been processed. The values of
+                         `PlotRefreshResult.{loaded|removed|processed}` are the results of this specific batch.
+
+      - done: This event gets triggered after all batches has been processed. The values of
+              `PlotRefreshResult.{loaded|removed|processed}` are the totals of all batches.
+
+      Note: The values of `PlotRefreshResult.{remaining|duration}` have the same meaning for all events.
+    """
+
+    started = 0
+    batch_processed = 1
+    done = 2
 
 
 @dataclass

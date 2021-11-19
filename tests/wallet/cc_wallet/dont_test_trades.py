@@ -70,7 +70,9 @@ class TestCCTrades:
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_0.wallet_state_manager, wallet_0, uint64(100))
+        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+            wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100)
+        )
 
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -92,8 +94,9 @@ class TestCCTrades:
         await time_out_assert(15, wallet_height_at_least, True, wallet_node_0, 31)
         # send cc_wallet 2 a coin
         cc_hash = await cc_wallet_2.get_new_inner_hash()
-        tx_record = await cc_wallet.generate_signed_transaction([uint64(1)], [cc_hash])
-        await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
+        tx_records = await cc_wallet.generate_signed_transaction([uint64(1)], [cc_hash])
+        for tx_record in tx_records:
+            await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
         await time_out_assert(15, wallet_height_at_least, True, wallet_node_0, 35)
@@ -142,7 +145,9 @@ class TestCCTrades:
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_0.wallet_state_manager, wallet_0, uint64(100))
+        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+            wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100)
+        )
 
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -216,7 +221,9 @@ class TestCCTrades:
         cc_a_2 = wallet_node_a.wallet_state_manager.wallets[2]
         cc_b_2 = wallet_node_b.wallet_state_manager.wallets[2]
 
-        cc_a_3: CCWallet = await CCWallet.create_new_cc(wallet_node_a.wallet_state_manager, wallet_a, uint64(100))
+        cc_a_3: CCWallet = await CCWallet.create_new_cc_wallet(
+            wallet_node_a.wallet_state_manager, wallet_a, {"identifier": "genesis_by_id"}, uint64(100)
+        )
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -305,7 +312,9 @@ class TestCCTrades:
         trade_manager_a: TradeManager = wallet_node_a.wallet_state_manager.trade_manager
         trade_manager_b: TradeManager = wallet_node_b.wallet_state_manager.trade_manager
 
-        cc_a_4: CCWallet = await CCWallet.create_new_cc(wallet_node_a.wallet_state_manager, wallet_a, uint64(100))
+        cc_a_4: CCWallet = await CCWallet.create_new_cc_wallet(
+            wallet_node_a.wallet_state_manager, wallet_a, {"identifier": "genesis_by_id"}, uint64(100)
+        )
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))

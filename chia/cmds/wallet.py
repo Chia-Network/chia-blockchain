@@ -88,6 +88,7 @@ def get_transactions_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-a", "--amount", help="How much chia to send, in XCH", type=str, required=True)
+@click.option("-e", "--memo", help="Additional memo for the transaction", type=str, default=None)
 @click.option(
     "-m",
     "--fee",
@@ -102,9 +103,16 @@ def get_transactions_cmd(
     "-o", "--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False
 )
 def send_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, id: int, amount: str, fee: str, address: str, override: bool
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    amount: str,
+    memo: str,
+    fee: str,
+    address: str,
+    override: bool,
 ) -> None:
-    extra_params = {"id": id, "amount": amount, "fee": fee, "address": address, "override": override}
+    extra_params = {"id": id, "amount": amount, "fee": fee, "address": address, "override": override, "memo": memo}
     import asyncio
     from .wallet_funcs import execute_with_wallet, send
 
@@ -163,3 +171,37 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fing
     from .wallet_funcs import execute_with_wallet, delete_unconfirmed_transactions
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_unconfirmed_transactions))
+
+
+@wallet_cmd.command("add_token", short_help="Add a CAT to the wallet by its asset ID")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option(
+    "-id",
+    "--asset-id",
+    help="The Asset ID of the coin you wish to add (the treehash of the TAIL program)",
+    required=True,
+)
+@click.option(
+    "-n",
+    "--token-name",
+    help="The name you wish to designate to the token",
+)
+@click.option(
+    "-f",
+    "--fingerprint",
+    type=int,
+    default=None,
+    help="The wallet fingerprint you wish to add the token to",
+)
+def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str, fingerprint: int) -> None:
+    extra_params = {"asset_id": asset_id, "token_name": token_name}
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, add_token
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_token))
