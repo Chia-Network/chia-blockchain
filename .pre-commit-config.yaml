@@ -28,4 +28,4 @@ repos:
     rev: v0.910
     hooks:
     - id: mypy
-      additional_dependencies: [types-setuptools, types-PyYAML]
+      additional_dependencies: [types-aiofiles, types-setuptools, types-PyYAML]
