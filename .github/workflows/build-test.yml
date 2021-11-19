@@ -179,7 +179,7 @@ jobs:
       - name: Test blockchain code with pytest
         run: |
           . ./activate
-          venv/bin/pytest --cov=chia --cov-report=term-missing --cov-report=xml:coverage.xml "tests/${{ matrix.configuration.path }}" -s -v --durations 0
+          venv/bin/pytest --cov=chia --cov=tests --cov-report=term-missing --cov-report=xml:coverage.xml "tests/${{ matrix.configuration.path }}" -s -v --durations 0
 
       - name: Coverage Processing
         run: |
