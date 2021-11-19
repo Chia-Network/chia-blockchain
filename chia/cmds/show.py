@@ -49,6 +49,13 @@ async def show_async(
             sync_mode = blockchain_state["sync"]["sync_mode"]
             total_iters = peak.total_iters if peak is not None else 0
             num_blocks: int = 10
+            network_name = config["selected_network"]
+            genesis_challenge = config["farmer"]["network_overrides"]["constants"][network_name]["GENESIS_CHALLENGE"]
+            full_node_port = config["full_node"]["port"]
+            full_node_rpc_port = config["full_node"]["rpc_port"]
+
+            print(f"Network: {network_name}    Port: {full_node_port}   Rpc Port: {full_node_rpc_port}")
+            print(f"Genesis Challenge: {genesis_challenge}")
 
             if synced:
                 print("Current Blockchain Status: Full Node Synced")
