@@ -6,16 +6,14 @@ import pathlib
 test_root = pathlib.Path('tests')
 test_paths = []
 
-for path in test_root.rglob("**/"):
-    test_file_paths = list(path.glob("test_*.py"))
-    if len(test_file_paths) > 0:
-        test_paths.append(path.relative_to(test_root))
+for path in test_root.rglob("**/test_*.py"):
+    test_paths.append(path.relative_to(test_root))
 
 test_paths = sorted(test_paths)
 
 configuration = [{'path': os.fspath(path), 'name': '.'.join(path.parts)} for path in test_paths]
 # TODO: remove this.  filtering just to avoid the hanging tests while
-configuration = [c for c in configuration if c['name'] in ['plotting', 'generator', 'core.full_node']]
+# configuration = [c for c in configuration if c['name'] in ['plotting', 'generator', 'core.full_node']]
 configuration_json = json.dumps(configuration)
 
 print(json.dumps(configuration, indent=4))
