@@ -99,6 +99,7 @@ class FullNode:
     _blockchain_lock_ultra_priority: LockClient
     _blockchain_lock_high_priority: LockClient
     _blockchain_lock_low_priority: LockClient
+    _transaction_queue_task: Optional[asyncio.Task]
 
     def __init__(
         self,
@@ -137,6 +138,7 @@ class FullNode:
         self.peer_puzzle_hash: Dict[bytes32, Set[bytes32]] = {}  # Peer ID: Set[puzzle_hash]
         self.peer_sub_counter: Dict[bytes32, int] = {}  # Peer ID: int (subscription count)
         mkdir(self.db_path.parent)
+        self._transaction_queue_task = None
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -709,7 +711,8 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.close())
         if self.uncompact_task is not None:
             self.uncompact_task.cancel()
-        self._transaction_queue_task.cancel()
+        if self._transaction_queue_task is not None:
+            self._transaction_queue_task.cancel()
         self._blockchain_lock_queue.close()
 
     async def _await_closed(self):
