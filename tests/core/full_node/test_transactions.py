@@ -154,41 +154,55 @@ class TestTransactions:
         full_node_api_2 = full_nodes[2]
         server_2 = full_node_api_2.server
 
+        print(f" === debug: A")
         ph = await wallet_0.wallet_state_manager.main_wallet.get_new_puzzlehash()
 
         # wallet0 <-> sever0 <-> server1
 
+        print(f" === debug: B")
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
+        print(f" === debug: C")
         await server_0.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
+        print(f" === debug: D")
         for i in range(num_blocks):
+            print(f" === debug: D {i}")
             await full_node_api_0.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
+        print(f" === debug: E")
         all_blocks = await full_node_api_0.get_all_full_blocks()
 
+        print(f" === debug: F")
         for block in all_blocks:
+            print(f" === debug: F {block}")
             await full_node_api_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
+        print(f" === debug: G")
         await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
+        print(f" === debug: H")
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, token_bytes(), 0)
+        print(f" === debug: I")
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
+        print(f" === debug: J")
         await time_out_assert(
             10,
             full_node_api_0.full_node.mempool_manager.get_spendbundle,
             tx.spend_bundle,
             tx.name,
         )
+        print(f" === debug: K")
         await time_out_assert(
             10,
             full_node_api_1.full_node.mempool_manager.get_spendbundle,
             tx.spend_bundle,
             tx.name,
         )
+        print(f" === debug: L")
         await time_out_assert(
             10,
             full_node_api_2.full_node.mempool_manager.get_spendbundle,
@@ -199,23 +213,28 @@ class TestTransactions:
         # make a final connection.
         # wallet0 <-> sever0 <-> server1 <-> server2
 
+        print(f" === debug: M")
         await server_1.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
 
+        print(f" === debug: N")
         await time_out_assert(
             10,
             full_node_api_0.full_node.mempool_manager.get_spendbundle,
             tx.spend_bundle,
             tx.name,
         )
+        print(f" === debug: O")
         await time_out_assert(
             10,
             full_node_api_1.full_node.mempool_manager.get_spendbundle,
             tx.spend_bundle,
             tx.name,
         )
+        print(f" === debug: P")
         await time_out_assert(
             10,
             full_node_api_2.full_node.mempool_manager.get_spendbundle,
             tx.spend_bundle,
             tx.name,
         )
+        print(f" === debug: Q")
