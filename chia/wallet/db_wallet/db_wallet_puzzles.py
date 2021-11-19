@@ -8,6 +8,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 
 
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
+# TODO: need new data layer specific clvm
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 DB_HOST_MOD = load_clvm("database_layer.clvm")
 DB_OFFER_MOD = load_clvm("database_offer.clvm")

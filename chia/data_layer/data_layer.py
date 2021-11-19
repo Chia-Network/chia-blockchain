@@ -13,7 +13,6 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 class DataLayer:

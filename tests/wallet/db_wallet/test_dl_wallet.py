@@ -10,7 +10,6 @@ from chia.wallet.dlo_wallet.dlo_wallet import DLOWallet
 from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 from chia.types.blockchain_format.program import Program
 from chia.types.announcement import Announcement
-from blspy import AugSchemeMPL
 from chia.types.spend_bundle import SpendBundle
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from tests.time_out_assert import time_out_assert
@@ -61,12 +60,8 @@ class TestDLWallet:
         wallet_node_1, server_1 = wallets[1]
         wallet_node_2, server_2 = wallets[2]
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-        wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
 
         ph = await wallet_0.get_new_puzzlehash()
-        ph1 = await wallet_1.get_new_puzzlehash()
-        ph2 = await wallet_2.get_new_puzzlehash()
 
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
@@ -354,7 +349,6 @@ class TestDLWallet:
 
         ph = await wallet_0.get_new_puzzlehash()
         ph1 = await wallet_1.get_new_puzzlehash()
-        ph2 = await wallet_2.get_new_puzzlehash()
 
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
@@ -392,7 +386,8 @@ class TestDLWallet:
         # Wallet1 sets up DLOWallet1
         async with wallet_node_1.wallet_state_manager.lock:
             dlo_wallet_1: DLOWallet = await DLOWallet.create_new_dlo_wallet(
-                wallet_node_1.wallet_state_manager, wallet_1,
+                wallet_node_1.wallet_state_manager,
+                wallet_1,
             )
 
         for i in range(1, num_blocks):
@@ -426,7 +421,7 @@ class TestDLWallet:
 
         await dlo_wallet_1.create_recover_dl_offer_spend()
 
-        for i in range(1, num_blocks*2):
+        for i in range(1, num_blocks * 2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)

@@ -6,7 +6,7 @@ from blspy import AugSchemeMPL
 from dataclasses import dataclass
 from chia.util.streamable import Streamable, streamable
 from chia.types.blockchain_format.coin import Coin
-from chia.wallet.db_wallet.db_wallet_puzzles import create_offer_fullpuz, uncurry_offer_puzzle
+from chia.wallet.db_wallet.db_wallet_puzzles import create_offer_fullpuz
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend

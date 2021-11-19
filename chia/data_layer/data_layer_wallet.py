@@ -5,9 +5,8 @@ import time
 from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Set, List, Dict
 
-from blspy import G2Element, AugSchemeMPL, G1Element, PrivateKey
+from blspy import G2Element, AugSchemeMPL
 
-from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.consensus.block_record import BlockRecord
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_host_fullpuz,
@@ -24,7 +23,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64
 from secrets import token_bytes
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -265,7 +263,8 @@ class DataLayerWallet:
         coin_spend = CoinSpend(
             my_coin, SerializedProgram.from_program(current_full_puz), SerializedProgram.from_program(full_sol)
         )
-        # fake_for_signature = CoinSpend(my_coin, self.dl_info.current_inner_inner, inner_inner_sol)  # I am about to do something nasty
+        #   I am about to do something nasty
+        # fake_for_signature = CoinSpend(my_coin, self.dl_info.current_inner_inner, inner_inner_sol)
         # fake_sb = await self.standard_wallet.sign_transaction([fake_for_signature])
 
         spend_bundle = await self.sign(coin_spend)
