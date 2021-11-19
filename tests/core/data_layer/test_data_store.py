@@ -27,6 +27,9 @@ from tests.core.data_layer.util import add_0123_example, add_01234567_example, E
 log = logging.getLogger(__name__)
 
 
+pytestmark = pytest.mark.data_layer
+
+
 @pytest.fixture(name="db_connection", scope="function")
 async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
     async with aiosqlite.connect(":memory:") as connection:
