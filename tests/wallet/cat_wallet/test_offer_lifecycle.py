@@ -21,6 +21,8 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.offer import Offer, NotarizedPayment
 
+from tests.clvm.benchmark_costs import cost_of_spend_bundle
+
 acs = Program.to(1)
 acs_ph = acs.get_tree_hash()
 
@@ -262,8 +264,17 @@ class TestOfferLifecycle:
 
             # Make sure we can actually spend the offer once it's valid
             arbitrage_ph: bytes32 = Program.to([3, [], [], 1]).get_tree_hash()
-            result = await sim_client.push_tx(new_offer.to_valid_spend(arbitrage_ph))
+            offer_bundle: SpendBundle = new_offer.to_valid_spend(arbitrage_ph)
+            result = await sim_client.push_tx(offer_bundle)
             assert result == (MempoolInclusionStatus.SUCCESS, None)
+            self.cost["complex offer"] = cost_of_spend_bundle(offer_bundle)
             await sim.farm_block()
         finally:
             await sim.close()
+
+    def test_cost(self):
+        import json
+        import logging
+
+        log = logging.getLogger(__name__)
+        log.warning(json.dumps(self.cost))
