@@ -52,6 +52,7 @@ class Offer:
         requested_payments: Dict[Optional[bytes32], List[Payment]],  # `None` means you are requesting XCH
         coins: List[Coin],
     ) -> Dict[Optional[bytes32], List[NotarizedPayment]]:
+        # This sort should be reproducible in CLVM with `>s`
         sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
         sorted_coin_list: List[List] = [c.as_list() for c in sorted_coins]
         nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
@@ -65,6 +66,7 @@ class Offer:
 
         return notarized_payments
 
+    # The announcements returned from this function must be asserted in whatever spend bundle is created by the wallet
     @staticmethod
     def calculate_announcements(
         notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]],
@@ -93,13 +95,17 @@ class Offer:
             if len(set(payment_programs)) != len(payment_programs):
                 raise ValueError("Bundle has duplicate requested payments")
 
+    # This method does not get every coin that is being offered, only the `settlement_payment` children
     def get_offered_coins(self) -> Dict[bytes32, List[Coin]]:
         offered_coins: Dict[bytes32, List[Coin]] = {}
 
         for addition in self.bundle.additions():
+            # Get the parent puzzle
             parent_puzzle: Program = list(
                 filter(lambda cs: cs.coin.name() == addition.parent_coin_info, self.bundle.coin_spends)
             )[0].puzzle_reveal.to_program()
+
+            # Determine it's TAIL (or lack of)
             matched, curried_args = match_cat_puzzle(parent_puzzle)
             if matched:
                 _, tail_hash_program, _ = curried_args
@@ -109,6 +115,7 @@ class Offer:
                 tail_hash = None
                 offer_ph = OFFER_MOD.get_tree_hash()
 
+            # Check if the puzzle_hash matches the hypothetical `settlement_payments` puzzle hash
             if addition.puzzle_hash == offer_ph:
                 if tail_hash in offered_coins:
                     offered_coins[tail_hash].append(addition)
@@ -143,11 +150,8 @@ class Offer:
 
         return arbitrage_dict
 
-    def is_valid(self) -> bool:
-        return all([value >= 0 for value in self.arbitrage().values()])
-
-    @staticmethod
-    def aggregate(offers: List["Offer"]) -> "Offer":
+    @classmethod
+    def aggregate(cls, offers: List["Offer"]) -> "Offer":
         total_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
         total_bundle = SpendBundle([], G2Element())
         for offer in offers:
@@ -166,8 +170,13 @@ class Offer:
 
             total_bundle = SpendBundle.aggregate([total_bundle, offer.bundle])
 
-        return Offer(total_requested_payments, total_bundle)
+        return cls(total_requested_payments, total_bundle)
 
+    # Validity is defined by having enough funds within the offer to satisfy both sides
+    def is_valid(self) -> bool:
+        return all([value >= 0 for value in self.arbitrage().values()])
+
+    # A "valid" spend means that this bundle can be pushed to the network and will succeed
     def to_valid_spend(self, arbitrage_ph: bytes32) -> SpendBundle:
         if not self.is_valid():
             raise ValueError("Offer is currently incomplete")
@@ -175,6 +184,8 @@ class Offer:
         completion_spends: List[CoinSpend] = []
         for tail_hash, payments in self.requested_payments.items():
             offered_coins: List[Coin] = self.get_offered_coins()[tail_hash]
+
+            # Because of CAT supply laws, we must specify a place for the leftovers to go
             arbitrage_amount: int = self.arbitrage()[tail_hash]
             all_payments: List[NotarizedPayment] = payments.copy()
             if arbitrage_amount > 0:
@@ -185,6 +196,7 @@ class Offer:
                     [np.as_condition() for np in all_payments] if coin == offered_coins[0] else []
                 )
                 if tail_hash:
+                    # CATs have a special way to be solved so we have to do some calculation before getting the solution
                     parent_spend: CoinSpend = list(
                         filter(lambda cs: cs.coin.name() == coin.parent_coin_info, self.bundle.coin_spends)
                     )[0]
@@ -208,6 +220,7 @@ class Offer:
                     )
                 else:
                     solution = inner_solution
+
                 completion_spends.append(
                     CoinSpend(
                         coin,
@@ -218,6 +231,8 @@ class Offer:
 
         return SpendBundle.aggregate([SpendBundle(completion_spends, G2Element()), self.bundle])
 
+    # Methods to make this a valid Streamable member
+    # We basically hijack the SpendBundle versions for most of it
     @classmethod
     def parse(cls, f) -> "Offer":
         parsed_bundle = SpendBundle.parse(f)
@@ -228,6 +243,7 @@ class Offer:
         as_spend_bundle.stream(f)
 
     def __bytes__(self) -> bytes:
+        # Before we serialze this as a SpendBundle, we need to serialze the `requested_payments` as dummy CoinSpends
         additional_coin_spends: List[CoinSpend] = []
         for tail_hash, payments in self.requested_payments.items():
             puzzle_reveal: Program = construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD) if tail_hash else OFFER_MOD
@@ -254,6 +270,7 @@ class Offer:
 
     @classmethod
     def from_bytes(cls, as_bytes: bytes) -> "Offer":
+        # Because of the __bytes__ method, we need to parse the dummy CoinSpends as `requested_payments`
         bundle = SpendBundle.from_bytes(as_bytes)
         requested_payments: Dict[bytes32, List[NotarizedPayment]] = {}
         leftover_coin_spends: List[CoinSpend] = []
@@ -272,4 +289,4 @@ class Offer:
             else:
                 leftover_coin_spends.append(coin_spend)
 
-        return Offer(requested_payments, SpendBundle(leftover_coin_spends, bundle.aggregated_signature))
+        return cls(requested_payments, SpendBundle(leftover_coin_spends, bundle.aggregated_signature))

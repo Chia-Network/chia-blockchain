@@ -25,6 +25,7 @@ acs = Program.to(1)
 acs_ph = acs.get_tree_hash()
 
 
+# Some methods mapping strings to CATs
 def str_to_tail(tail_str: str) -> Program:
     return Program.to([3, [], [1, tail_str], []])
 
@@ -47,6 +48,7 @@ class TestOfferLifecycle:
         await sim.farm_block()
         return sim, sim_client
 
+    # This method takes a dictionary of strings mapping to amounts and generates the appropriate CAT/XCH coins
     async def generate_coins(
         self,
         sim,
@@ -56,8 +58,9 @@ class TestOfferLifecycle:
         await sim.farm_block(acs_ph)
         parent_coin: Coin = [cr.coin for cr in await (sim_client.get_coin_records_by_puzzle_hash(acs_ph))][0]
 
-        cat_bundles: List[SpendBundle] = []
+        # We need to gather a list of initial coins to create as well as spends that do the eve spend for every CAT
         payments: List[Payment] = []
+        cat_bundles: List[SpendBundle] = []
         for tail_str, amounts in requested_coins.items():
             for amount in amounts:
                 if tail_str:
@@ -80,6 +83,7 @@ class TestOfferLifecycle:
                 else:
                     payments.append(Payment(acs_ph, amount))
 
+        # This bundle create all of the initial coins
         parent_bundle = SpendBundle(
             [
                 CoinSpend(
@@ -91,19 +95,12 @@ class TestOfferLifecycle:
             G2Element(),
         )
 
+        # Then we aggregate it with all of the eve spends
         await sim_client.push_tx(SpendBundle.aggregate([parent_bundle, *cat_bundles]))
         await sim.farm_block()
 
+        # Search for all of the coins and put them into a dictionary
         coin_dict: Dict[Optional[bytes32], List[Coin]] = {}
-        coin_dict[None] = list(
-            filter(
-                lambda c: c.amount < 250000000000,
-                [
-                    cr.coin
-                    for cr in await (sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))
-                ],
-            )
-        )
         for tail_str, _ in requested_coins.items():
             if tail_str:
                 tail_hash: bytes32 = str_to_tail_hash(tail_str)
@@ -112,9 +109,22 @@ class TestOfferLifecycle:
                     cr.coin
                     for cr in await (sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
                 ]
+            else:
+                coin_dict[None] = list(
+                    filter(
+                        lambda c: c.amount < 250000000000,
+                        [
+                            cr.coin
+                            for cr in await (
+                                sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False)
+                            )
+                        ],
+                    )
+                )
 
         return coin_dict
 
+    # This method simulates a wallet's `generate_signed_transaction` but doesn't bother with non-offer announcements
     def generate_secure_bundle(
         self,
         selected_coins: List[Coin],
@@ -130,6 +140,7 @@ class TestOfferLifecycle:
             [51, acs_ph, uint64(selected_coin_amount - offered_amount)],  # Change
             *announcement_assertions,
         ]
+
         if tail_str is None:
             bundle = SpendBundle(
                 [
@@ -150,7 +161,7 @@ class TestOfferLifecycle:
                     acs,
                     Program.to(
                         [
-                            [51, 0, -113, str_to_tail(tail_str), Program.to([])],
+                            [51, 0, -113, str_to_tail(tail_str), Program.to([])],  # Use the TAIL rather than lineage
                             *(inner_solution if c == selected_coins[0] else []),
                         ]
                     ),
@@ -162,7 +173,7 @@ class TestOfferLifecycle:
         return bundle
 
     @pytest.mark.asyncio()
-    async def test_driver_code(self, setup_sim):
+    async def test_complex_offer(self, setup_sim):
         sim, sim_client = setup_sim
 
         try:
@@ -216,7 +227,7 @@ class TestOfferLifecycle:
             assert new_offer.get_requested_amounts() == {None: 700, str_to_tail_hash("red"): 300}
             assert new_offer.is_valid()
 
-            # Create yet another offer of BLUE for XCH
+            # Create yet another offer of BLUE for XCH and RED
             blue_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
                 None: [
                     Payment(acs_ph, 200, [b"blue memo"]),
@@ -236,6 +247,7 @@ class TestOfferLifecycle:
             blue_offer = Offer(blue_requested_payments, blue_secured_bundle)
             assert not blue_offer.is_valid()
 
+            # Test a re-aggregation
             new_offer: Offer = Offer.aggregate([new_offer, blue_offer])
             assert new_offer.get_offered_amounts() == {
                 None: 1000,
@@ -245,8 +257,10 @@ class TestOfferLifecycle:
             assert new_offer.get_requested_amounts() == {None: 900, str_to_tail_hash("red"): 350}
             assert new_offer.is_valid()
 
+            # Test (de)serialization
             assert Offer.from_bytes(bytes(new_offer)) == new_offer
 
+            # Make sure we can actually spend the offer once it's valid
             arbitrage_ph: bytes32 = Program.to([3, [], [], 1]).get_tree_hash()
             result = await sim_client.push_tx(new_offer.to_valid_spend(arbitrage_ph))
             assert result == (MempoolInclusionStatus.SUCCESS, None)
