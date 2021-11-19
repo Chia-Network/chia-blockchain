@@ -111,7 +111,7 @@ class DLOWallet:
         if active_coin is None:
             raise ValueError("Unable to find created coin")
 
-        self.standard_wallet.push_transaction(tr)
+        await self.standard_wallet.push_transaction(tr)
         dlo_info = DLOInfo(
             leaf_reveal,
             host_genesis_id,
@@ -158,22 +158,28 @@ class DLOWallet:
 
     async def create_recover_dl_offer_spend(
         self,
-        leaf_reveal: bytes,
-        host_genesis_id: bytes32,
-        claim_target: bytes32,
-        recovery_target: bytes32,
-        recovery_timelock: uint64,
+        leaf_reveal: bytes = None,
+        host_genesis_id: bytes32 = None,
+        claim_target: bytes32 = None,
+        recovery_target: bytes32 = None,
+        recovery_timelock: uint64 = None,
         fee=uint64(0),
     ):
-        coins = await self.select_coin(1)
-        coin = coins.pop()
+
+        coin = self.dlo_info.active_offer
         solution = Program.to([0, coin.amount])
 
+        if leaf_reveal is None:
+            leaf_reveal = self.dlo_info.leaf_reveal
+            host_genesis_id = self.dlo_info.host_genesis_id
+            claim_target = self.dlo_info.claim_target
+            recovery_target = self.dlo_info.recovery_target
+            recovery_timelock = self.dlo_info.recovery_timelock
         full_puzzle: Program = create_offer_fullpuz(
             leaf_reveal, host_genesis_id, claim_target, recovery_target, recovery_timelock
         )
         coin_spend = CoinSpend(coin, full_puzzle, solution)
-        sb = SpendBundle([coin_spend], AugSchemeMPL.aggregated([]))
+        sb = SpendBundle([coin_spend], AugSchemeMPL.aggregate([]))
         tr = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -191,7 +197,7 @@ class DLOWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=sb.name(),
         )
-        self.standard_wallet.push_transaction(tr)
+        await self.standard_wallet.push_transaction(tr)
         return tr
 
     async def get_coin(self) -> Coin:
