@@ -336,3 +336,98 @@ class TestDLWallet:
 
         await time_out_assert(15, wallet_2.get_confirmed_balance, 201)
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 201)
+
+    @pytest.mark.asyncio
+    async def test_dlo_wallet_reclaim(self, three_wallet_nodes):
+        num_blocks = 5
+        full_nodes, wallets = three_wallet_nodes
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
+        wallet_node_0, server_0 = wallets[0]
+        wallet_node_1, server_1 = wallets[1]
+        wallet_node_2, server_2 = wallets[2]
+        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+        wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
+
+        ph = await wallet_0.get_new_puzzlehash()
+        ph1 = await wallet_1.get_new_puzzlehash()
+        ph2 = await wallet_2.get_new_puzzlehash()
+
+        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks - 1)
+            ]
+        )
+
+        await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
+        await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+
+        nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
+        current_tree = MerkleTree(nodes)
+        current_root = current_tree.calculate_root()
+
+        # Wallet1 sets up DLWallet1
+        async with wallet_node_0.wallet_state_manager.lock:
+            dl_wallet_0: DataLayerWallet = await DataLayerWallet.create_new_dl_wallet(
+                wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
+            )
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+        await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
+        await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
+
+        # Wallet1 sets up DLOWallet1
+        async with wallet_node_1.wallet_state_manager.lock:
+            dlo_wallet_1: DLOWallet = await DLOWallet.create_new_dlo_wallet(
+                wallet_node_1.wallet_state_manager, wallet_1,
+            )
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+        await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)
+        await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 0)
+        # leaf_reveal: bytes,
+        # host_genesis_id: bytes32,
+        # claim_target: bytes32,
+        # recovery_target: bytes32,
+        # recovery_timelock: uint64,
+        tr = await dlo_wallet_1.generate_datalayer_offer_spend(
+            uint64(201),
+            Program.to("thing").get_tree_hash(),
+            dl_wallet_0.dl_info.origin_coin.name(),
+            await wallet_2.get_new_puzzlehash(),
+            await wallet_1.get_new_puzzlehash(),
+            10,
+        )
+        await wallet_1.push_transaction(tr)
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+        await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 201)
+        await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 201)
+
+        await time_out_assert(15, wallet_1.get_confirmed_balance, 21999999999799)
+        await time_out_assert(15, wallet_1.get_unconfirmed_balance, 21999999999799)
+
+        await dlo_wallet_1.create_recover_dl_offer_spend()
+
+        for i in range(1, num_blocks*2):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)
+        await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 0)
+        await time_out_assert(15, wallet_1.get_confirmed_balance, 24000000000000)
+        await time_out_assert(15, wallet_1.get_unconfirmed_balance, 24000000000000)
