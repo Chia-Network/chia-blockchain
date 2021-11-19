@@ -4,6 +4,7 @@ relative_files=True
 source=
   chia
   tests
+concurrency=multiprocessing
 
 [report]
 precision = 1
