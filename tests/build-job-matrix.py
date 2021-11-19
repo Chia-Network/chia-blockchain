@@ -1,56 +1,13 @@
 #!/usr/bin/env python3
-import json
-import os
-import pathlib
-
-test_root = pathlib.Path('tests')
-test_paths = []
-
-for path in test_root.rglob("**/test_*.py"):
-    test_paths.append(path.relative_to(test_root))
-
-test_paths = sorted(test_paths)
-
-configuration = [{'path': os.fspath(path), 'name': '.'.join(path.with_suffix('').parts)} for path in test_paths]
-# TODO: remove this.  filtering just to avoid the hanging tests while
-# configuration = [c for c in configuration if c['name'] in ['plotting', 'generator', 'core.full_node']]
-# TODO: these are entirely commented out
-configuration = [c for c in configuration if c['name'] not in ['wallet.test_backup', 'wallet.test_wallet_store']]
-# TODO: these seem to hang
-# configuration = [
-#     c
-#     for c in configuration
-#     if c['name'] not in [
-#         'blockchain.test_blockchain_transactions',
-#         'core.full_node.test_mempool',
-#         'core.full_node.test_node_load',
-#         'core.full_node.test_performance',
-#         'core.full_node.test_transactions',
-#         'wallet.cc_wallet.test_cc_wallet',
-#         'wallet.sync.test_wallet_sync',
-#         'wallet.test_wallet_store',
-#     ]
-# ]
-configuration_json = json.dumps(configuration)
-
-print(json.dumps(configuration, indent=4))
-
-print(f'::set-output name=configuration::{configuration_json}')
-
-import sys
-sys.exit()
-
-# TODO: actually integrate the configuration tooling below with the CI output above
-
-# Run from the current directory.
-
 import argparse
-import sys
-
-import testconfig
+import json
 import logging
+import os
 from pathlib import Path
 from typing import Dict, List
+
+import testconfig
+
 
 root_path = Path(__file__).parent.resolve()
 
@@ -60,7 +17,7 @@ def subdirs() -> List[Path]:
     for r in root_path.iterdir():
         if r.is_dir():
             dirs.extend(Path(r).rglob("**/"))
-    return [d for d in dirs if not (any(c.startswith("_") for c in d.parts) or any(c.startswith(".") for c in d.parts))]
+    return sorted(d for d in dirs if not (any(c.startswith("_") for c in d.parts) or any(c.startswith(".") for c in d.parts)))
 
 
 def module_dict(module):
@@ -81,14 +38,14 @@ def read_file(filename: Path) -> str:
     return filename.read_bytes().decode("utf8")
 
 
-# Input file
-def workflow_yaml_template_text(os):
-    return read_file(Path(root_path / f"runner-templates/build-test-{os}"))
+# # Input file
+# def workflow_yaml_template_text(os):
+#     return read_file(Path(root_path / f"runner-templates/build-test-{os}"))
 
 
-# Output files
-def workflow_yaml_file(dir, os, test_name):
-    return Path(dir / f"build-test-{os}-{test_name}.yml")
+# # Output files
+# def workflow_yaml_file(dir, os, test_name):
+#     return Path(dir / f"build-test-{os}-{test_name}.yml")
 
 
 # String function from test dir to test name
@@ -96,42 +53,42 @@ def test_name(dir):
     return "-".join(dir.relative_to(root_path).parts)
 
 
-def transform_template(template_text, replacements):
-    t = template_text
-    for r, v in replacements.items():
-        t = t.replace(r, v)
-    return t
+# def transform_template(template_text, replacements):
+#     t = template_text
+#     for r, v in replacements.items():
+#         t = t.replace(r, v)
+#     return t
 
 
-# Replace with update_config
-def generate_replacements(conf, dir):
-    replacements = {
-        "INSTALL_TIMELORD": read_file(Path(root_path / "runner-templates/install-timelord.include.yml")).rstrip(),
-        "CHECKOUT_TEST_BLOCKS_AND_PLOTS": read_file(
-            Path(root_path / "runner-templates/checkout-test-plots.include.yml")
-        ).rstrip(),
-        "TEST_DIR": "",
-        "TEST_NAME": "",
-        "PYTEST_PARALLEL_ARGS": "",
-    }
-
-    if not conf["checkout_blocks_and_plots"]:
-        replacements[
-            "CHECKOUT_TEST_BLOCKS_AND_PLOTS"
-        ] = "# Omitted checking out blocks and plots repo Chia-Network/test-cache"
-    if not conf["install_timelord"]:
-        replacements["INSTALL_TIMELORD"] = "# Omitted installing Timelord"
-    if conf["parallel"]:
-        replacements["PYTEST_PARALLEL_ARGS"] = " -n auto"
-    if conf["job_timeout"]:
-        replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
-    replacements["TEST_DIR"] = "/".join([*dir.relative_to(root_path.parent).parts, "test_*.py"])
-    replacements["TEST_NAME"] = test_name(dir)
-    if "test_name" in conf:
-        replacements["TEST_NAME"] = conf["test_name"]
-    for var in conf["custom_vars"]:
-        replacements[var] = conf[var] if var in conf else ""
-    return replacements
+# # Replace with update_config
+# def generate_replacements(conf, dir):
+#     replacements = {
+#         "INSTALL_TIMELORD": read_file(Path(root_path / "runner-templates/install-timelord.include.yml")).rstrip(),
+#         "CHECKOUT_TEST_BLOCKS_AND_PLOTS": read_file(
+#             Path(root_path / "runner-templates/checkout-test-plots.include.yml")
+#         ).rstrip(),
+#         "TEST_DIR": "",
+#         "TEST_NAME": "",
+#         "PYTEST_PARALLEL_ARGS": "",
+#     }
+#
+#     if not conf["checkout_blocks_and_plots"]:
+#         replacements[
+#             "CHECKOUT_TEST_BLOCKS_AND_PLOTS"
+#         ] = "# Omitted checking out blocks and plots repo Chia-Network/test-cache"
+#     if not conf["install_timelord"]:
+#         replacements["INSTALL_TIMELORD"] = "# Omitted installing Timelord"
+#     if conf["parallel"]:
+#         replacements["PYTEST_PARALLEL_ARGS"] = " -n auto"
+#     if conf["job_timeout"]:
+#         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
+#     replacements["TEST_DIR"] = "/".join([*dir.relative_to(root_path.parent).parts, "test_*.py"])
+#     replacements["TEST_NAME"] = test_name(dir)
+#     if "test_name" in conf:
+#         replacements["TEST_NAME"] = conf["test_name"]
+#     for var in conf["custom_vars"]:
+#         replacements[var] = conf[var] if var in conf else ""
+#     return replacements
 
 
 # Overwrite with directory specific values
@@ -154,9 +111,7 @@ def dir_path(string):
 
 
 # args
-arg_parser = argparse.ArgumentParser(description="Build github workflows")
-arg_parser.add_argument("--output-dir", "-d", default="../.github/workflows", type=dir_path)
-arg_parser.add_argument("--fail-on-update", "-f", action="store_true")
+arg_parser = argparse.ArgumentParser(description="Generate GitHub test matrix configuration")
 arg_parser.add_argument("--verbose", "-v", action="store_true")
 args = arg_parser.parse_args()
 
@@ -165,27 +120,58 @@ if args.verbose:
 
 # main
 test_dirs = subdirs()
-current_workflows: Dict[Path, str] = {file: read_file(file) for file in args.output_dir.iterdir()}
-changed: bool = False
+# current_workflows: Dict[Path, str] = {file: read_file(file) for file in args.output_dir.iterdir()}
+# changed: bool = False
 
-for os in testconfig.oses:
-    template_text = workflow_yaml_template_text(os)
-    for dir in test_dirs:
-        if len([f for f in Path(root_path / dir).glob("test_*.py")]) == 0:
-            logging.info(f"Skipping {dir}: no tests collected")
-            continue
-        conf = update_config(module_dict(testconfig), dir_config(dir))
-        replacements = generate_replacements(conf, dir)
-        txt = transform_template(template_text, replacements)
-        logging.info(f"Writing {os}-{test_name(dir)}")
-        workflow_yaml_path: Path = workflow_yaml_file(args.output_dir, os, test_name(dir))
-        if workflow_yaml_path not in current_workflows or current_workflows[workflow_yaml_path] != txt:
-            changed = True
-        workflow_yaml_path.write_bytes(txt.encode("utf8"))
+configuration = []
 
-if changed:
-    print("New workflow updates available.")
-    if args.fail_on_update:
-        sys.exit(1)
-else:
-    print("Nothing to do.")
+for dir in test_dirs:
+    relative_dir = dir.relative_to(root_path)
+    logging.info(f"Considering: {relative_dir}")
+    if len([f for f in Path(root_path / dir).glob("test_*.py")]) == 0:
+        logging.info(f"Skipping {dir}: no tests collected")
+        continue
+
+    conf = update_config(module_dict(testconfig), dir_config(dir))
+
+    for_matrix = {
+        # TODO: handle CHECK_RESOURCE_USAGE
+        'job_timeout': conf['job_timeout'],
+        # TODO: disabled for now while debugging
+        'pytest_parallel_args': '-n auto' if conf['parallel'] else '',
+        'checkout_blocks_and_plots': conf["checkout_blocks_and_plots"],
+        'install_timelord': conf["install_timelord"],
+        'path': os.fspath(relative_dir),
+        'name': '.'.join(relative_dir.with_suffix('').parts),
+    }
+    for_matrix = dict(sorted(for_matrix.items()))
+    configuration.append(for_matrix)
+
+
+# configuration = [{'path': os.fspath(path), 'name': '.'.join(path.with_suffix('').parts)} for path in test_paths]
+# # TODO: remove this.  filtering just to avoid the hanging tests while
+# # configuration = [c for c in configuration if c['name'] in ['plotting', 'generator', 'core.full_node']]
+# # TODO: these are entirely commented out
+# configuration = [c for c in configuration if c['name'] not in ['wallet.test_backup', 'wallet.test_wallet_store']]
+# # TODO: these seem to hang
+# # configuration = [
+# #     c
+# #     for c in configuration
+# #     if c['name'] not in [
+# #         'blockchain.test_blockchain_transactions',
+# #         'core.full_node.test_mempool',
+# #         'core.full_node.test_node_load',
+# #         'core.full_node.test_performance',
+# #         'core.full_node.test_transactions',
+# #         'wallet.cc_wallet.test_cc_wallet',
+# #         'wallet.sync.test_wallet_sync',
+# #         'wallet.test_wallet_store',
+# #     ]
+# # ]
+
+configuration_json = json.dumps(configuration)
+
+for line in json.dumps(configuration, indent=4).splitlines():
+    logging.info(line)
+
+print(f'{configuration_json}')

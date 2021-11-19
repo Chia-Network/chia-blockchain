@@ -23,7 +23,7 @@ jobs:
       - name: Find test paths
         id: get_configuration
         run: |
-          python tests/build-job-matrix.py
+          echo ::set-output name=configuration::$(python tests/build-job-matrix.py --verbose)
 
     outputs:
       configuration: ${{ steps.get_configuration.outputs.configuration }}
@@ -33,7 +33,7 @@ jobs:
     name: ${{ matrix.configuration.name }} ${{ matrix.os.emoji }} ${{ matrix.python.name }}
     needs: get_configuration
     runs-on: ${{ matrix.os.runs-on }}
-    timeout-minutes: 60
+    timeout-minutes: ${{ matrix.configuration.job_timeout }}
     strategy:
       fail-fast: false
       matrix:
@@ -127,6 +127,7 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Checkout test blocks and plots
+        if: matrix.configuration.checkout_blocks_and_plots
         uses: actions/checkout@v2
         with:
           repository: 'Chia-Network/test-cache'
@@ -166,6 +167,7 @@ jobs:
           sh install.sh
 
       - name: Install timelord
+        if: matrix.configuration.install_timelord
         run: |
           . ./activate
           sh install-timelord.sh
@@ -179,7 +181,7 @@ jobs:
       - name: Test blockchain code with pytest
         run: |
           . ./activate
-          venv/bin/pytest --cov=chia --cov=tests --cov-report=term-missing --cov-report=xml:coverage.xml "tests/${{ matrix.configuration.path }}" -s -v --durations 0
+          venv/bin/pytest --cov=chia --cov=tests --cov-report=term-missing --cov-report=xml:coverage.xml "tests/${{ matrix.configuration.path }}" -s -v --durations 0 ${{ matrix.configuration.pytest_parallel_args }}
 
       - name: Coverage Processing
         run: |
