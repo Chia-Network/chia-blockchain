@@ -1,4 +1,5 @@
 import contextlib
+import time
 
 import psutil
 import pytest
@@ -7,16 +8,18 @@ import pytest
 def get_chia_processes():
     us = psutil.Process()
 
-    chia_processes = []
+    parents = set()
+    chia_processes = set()
     for process in psutil.process_iter():
-        if process == us:
-            continue
-
         with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
-            if process.name().startswith("chia_"):
-                chia_processes.append(process)
+            if process == us:
+                continue
 
-    return chia_processes
+            if process.name().startswith("chia_"):
+                chia_processes.add(process)
+                parents.update(process.parents())
+
+    return set(chia_processes) - set(parents)
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -26,6 +29,9 @@ def gotta_kill_em_all():
     chia_processes = get_chia_processes()
 
     while len(chia_processes) > 0:
+        time.sleep(1)
+
+        print(f"gotta_kill_em_all: About to kill {len(chia_processes)} processes")
         for process in chia_processes:
             with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
                 print(f"gotta_kill_em_all: Killing {process}")
