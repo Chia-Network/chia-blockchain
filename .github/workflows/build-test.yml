@@ -192,6 +192,7 @@ jobs:
       - name: Coverage Processing
         run: |
           venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
+          venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
 
           mkdir coverage_reports
           cp .coverage "coverage_reports/.coverage.${{ env.JOB_NAME }}"
