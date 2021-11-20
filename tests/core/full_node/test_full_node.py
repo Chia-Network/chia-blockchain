@@ -392,7 +392,7 @@ class TestFullNodeBlockCompression:
 
     @pytest.mark.asyncio
     async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
-        await self.do_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000, True)
+        await self.do_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000, False)
 
     @pytest.mark.asyncio
     async def test_block_compression_2(self, setup_two_nodes_and_wallet, empty_blockchain):
