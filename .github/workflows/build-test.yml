@@ -189,15 +189,17 @@ jobs:
           ls -la
           find . -iname '*coverage*'
 
-      - name: Coverage report
-        run: |
-          venv/bin/coverage report --rcfile=.coveragerc --show-missing
-
       - name: Coverage Processing
         run: |
+          venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
+
           mkdir coverage_reports
           cp .coverage "coverage_reports/.coverage.${{ env.JOB_NAME }}"
           cp coverage.xml "coverage_reports/coverage.${{ env.JOB_NAME }}.xml"
+
+      - name: Coverage report
+        run: |
+          venv/bin/coverage report --rcfile=.coveragerc --show-missing
 
       - name: Publish Coverage
         uses: actions/upload-artifact@v2
