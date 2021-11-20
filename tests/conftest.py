@@ -20,12 +20,18 @@ async def empty_blockchain():
     from tests.util.blockchain import create_blockchain
     from tests.setup_nodes import test_constants
 
+    print(f" ==== empty_blockchain A")
     bc1, connection, db_path = await create_blockchain(test_constants)
+    print(f" ==== empty_blockchain B")
     yield bc1
+    print(f" ==== empty_blockchain C")
 
     await connection.close()
+    print(f" ==== empty_blockchain D")
     bc1.shut_down()
+    print(f" ==== empty_blockchain E")
     db_path.unlink()
+    print(f" ==== empty_blockchain F")
 
 
 block_format_version = "rc4"

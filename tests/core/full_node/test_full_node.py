@@ -128,8 +128,12 @@ async def setup_two_nodes():
 
 @pytest.fixture(scope="function")
 async def setup_two_nodes_and_wallet():
+    print(f" ==== setup_two_nodes_and_wallet A")
     async for _ in setup_simulators_and_wallets(2, 1, {}, starting_port=51200):
+        print(f" ==== setup_two_nodes_and_wallet B")
         yield _
+        print(f" ==== setup_two_nodes_and_wallet C")
+    print(f" ==== setup_two_nodes_and_wallet D")
 
 
 @pytest.fixture(scope="function")

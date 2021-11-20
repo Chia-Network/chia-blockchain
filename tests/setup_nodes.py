@@ -450,18 +450,24 @@ async def setup_simulators_and_wallets(
     key_seed=None,
     starting_port=50000,
 ):
+    print(f" ==== setup_simulators_and_wallets A")
     with TempKeyring() as keychain1, TempKeyring() as keychain2:
+        print(f" ==== setup_simulators_and_wallets B")
         simulators: List[FullNodeAPI] = []
         wallets = []
         node_iters = []
 
+        print(f" ==== setup_simulators_and_wallets C")
         consensus_constants = constants_for_dic(dic)
         for index in range(0, simulator_count):
+            print(f" ==== setup_simulators_and_wallets C {index} A")
             port = starting_port + index
             db_name = f"blockchain_test_{port}.db"
+            print(f" ==== setup_simulators_and_wallets C {index} B")
             bt_tools = await create_block_tools_async(
                 consensus_constants, const_dict=dic, keychain=keychain1
             )  # block tools modifies constants
+            print(f" ==== setup_simulators_and_wallets C {index} C")
             sim = setup_full_node(
                 bt_tools.constants,
                 db_name,
@@ -469,18 +475,25 @@ async def setup_simulators_and_wallets(
                 bt_tools,
                 simulator=True,
             )
+            print(f" ==== setup_simulators_and_wallets C {index} D")
             simulators.append(await sim.__anext__())
+            print(f" ==== setup_simulators_and_wallets C {index} E")
             node_iters.append(sim)
+            print(f" ==== setup_simulators_and_wallets C {index} F")
 
+        print(f" ==== setup_simulators_and_wallets D")
         for index in range(0, wallet_count):
+            print(f" ==== setup_simulators_and_wallets D {index} A")
             if key_seed is None:
                 seed = std_hash(uint32(index))
             else:
                 seed = key_seed
             port = starting_port + 5000 + index
+            print(f" ==== setup_simulators_and_wallets D {index} B")
             bt_tools = await create_block_tools_async(
                 consensus_constants, const_dict=dic, keychain=keychain2
             )  # block tools modifies constants
+            print(f" ==== setup_simulators_and_wallets D {index} C")
             wlt = setup_wallet_node(
                 port,
                 bt_tools.constants,
@@ -489,12 +502,19 @@ async def setup_simulators_and_wallets(
                 key_seed=seed,
                 starting_height=starting_height,
             )
+            print(f" ==== setup_simulators_and_wallets D {index} D")
             wallets.append(await wlt.__anext__())
+            print(f" ==== setup_simulators_and_wallets D {index} E")
             node_iters.append(wlt)
+            print(f" ==== setup_simulators_and_wallets D {index} F")
 
+        print(f" ==== setup_simulators_and_wallets E")
         yield simulators, wallets
+        print(f" ==== setup_simulators_and_wallets F")
 
         await _teardown_nodes(node_iters)
+        print(f" ==== setup_simulators_and_wallets G")
+    print(f" ==== setup_simulators_and_wallets H")
 
 
 async def setup_farmer_harvester(consensus_constants: ConsensusConstants):
