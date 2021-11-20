@@ -23,7 +23,7 @@ jobs:
       - name: Find test paths
         id: get_configuration
         run: |
-          echo ::set-output name=configuration::$(python tests/build-job-matrix.py --per file --verbose)
+          echo ::set-output name=configuration::$(python tests/build-job-matrix.py --per directory --verbose)
 
     outputs:
       configuration: ${{ steps.get_configuration.outputs.configuration }}
