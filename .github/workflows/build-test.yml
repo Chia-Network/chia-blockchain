@@ -184,8 +184,14 @@ jobs:
       - name: Test blockchain code with pytest
         run: |
           . ./activate
-          venv/bin/coverage run venv/bin/pytest tests/${{ matrix.configuration.path }} -s -v --durations 0 ${{ matrix.configuration.pytest_parallel_args }}
+          venv/bin/coverage --rcfile=.coveragerc run venv/bin/pytest tests/${{ matrix.configuration.path }} -s -v --durations 0 ${{ matrix.configuration.pytest_parallel_args }}
 #          venv/bin/pytest --cov=chia --cov=tests --cov-report=term-missing --cov-report=xml:coverage.xml tests/${{ matrix.configuration.path }} -s -v --durations 0 ${{ matrix.configuration.pytest_parallel_args }}
+          ls -la
+          find . -iname '*coverage*'
+
+      - name: Coverage report
+        run: |
+          venv/bin/coverage report --rcfile=.coveragerc --show-missing
 
       - name: Coverage Processing
         run: |
@@ -247,7 +253,9 @@ jobs:
           cp .coverage "all_coverage_report/.coverage.all"
           cp coverage.xml "all_coverage_report/coverage.all.xml"
 
-          coverage report --fail-under=35 --ignore-errors --show-missing
+      - name: Coverage report
+        run: |
+          coverage report --rcfile=.coveragerc --fail-under=35 --ignore-errors --show-missing
           diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage.xml
 
       - name: Upload Coverage
