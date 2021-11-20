@@ -211,3 +211,4 @@ class TestPerformance:
 
         pr.create_stats()
         pr.dump_stats("./full-block-benchmark.pstats")
+        print(" ==== done in test_full_block_performance")
