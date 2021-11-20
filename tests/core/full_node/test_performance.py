@@ -7,7 +7,7 @@ import time
 from typing import Dict
 
 import pytest
-import cProfile
+# import cProfile
 
 from chia.consensus.block_record import BlockRecord
 from chia.full_node.full_node_api import FullNodeAPI
@@ -135,8 +135,8 @@ class TestPerformance:
             spend_bundles.append(spend_bundle)
             spend_bundle_ids.append(spend_bundle.get_hash())
 
-        pr = cProfile.Profile()
-        pr.enable()
+        # pr = cProfile.Profile()
+        # pr.enable()
 
         start = time.time()
         num_tx: int = 0
@@ -153,8 +153,8 @@ class TestPerformance:
                 break
         log.warning(f"Num Tx: {num_tx}")
         log.warning(f"Time for mempool: {time.time() - start}")
-        pr.create_stats()
-        pr.dump_stats("./mempool-benchmark.pstats")
+        # pr.create_stats()
+        # pr.dump_stats("./mempool-benchmark.pstats")
 
         # Create an unfinished block
         peak = full_node_1.full_node.blockchain.get_peak()
@@ -188,19 +188,19 @@ class TestPerformance:
             [],
         )
 
-        pr = cProfile.Profile()
-        pr.enable()
+        # pr = cProfile.Profile()
+        # pr.enable()
 
         start = time.time()
         res = await full_node_1.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished), fake_peer)
         log.warning(f"Res: {res}")
         log.warning(f"Time for unfinished: {time.time() - start}")
 
-        pr.create_stats()
-        pr.dump_stats("./unfinished-benchmark.pstats")
+        # pr.create_stats()
+        # pr.dump_stats("./unfinished-benchmark.pstats")
 
-        pr = cProfile.Profile()
-        pr.enable()
+        # pr = cProfile.Profile()
+        # pr.enable()
 
         start = time.time()
         # No transactions generator, the full node already cached it from the unfinished block
@@ -209,6 +209,6 @@ class TestPerformance:
         log.warning(f"Res: {res}")
         log.warning(f"Time for full block: {time.time() - start}")
 
-        pr.create_stats()
-        pr.dump_stats("./full-block-benchmark.pstats")
+        # pr.create_stats()
+        # pr.dump_stats("./full-block-benchmark.pstats")
         print(" ==== done in test_full_block_performance")
