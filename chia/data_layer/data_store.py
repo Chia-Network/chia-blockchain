@@ -50,7 +50,6 @@ class DataStore:
         await self.db.execute("PRAGMA foreign_keys=ON")
 
         async with self.db_wrapper.locked_transaction():
-            bytes32_glob = f"'{'[0-9a-f]' * 64}'"
             # TODO: Probably switch from hash being text to blob to more accurately
             #       represent the data and simplify checks.
             # TODO: add tests for the sql checks
