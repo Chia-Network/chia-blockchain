@@ -184,7 +184,7 @@ jobs:
       - name: Test blockchain code with pytest
         run: |
           . ./activate
-          venv/bin/coverage --rcfile=.coveragerc run venv/bin/pytest tests/${{ matrix.configuration.path }} -s -v --durations 0 ${{ matrix.configuration.pytest_parallel_args }}
+          venv/bin/coverage run --rcfile=.coveragerc venv/bin/pytest tests/${{ matrix.configuration.path }} -s -v --durations 0 ${{ matrix.configuration.pytest_parallel_args }}
           # venv/bin/pytest --cov=chia --cov=tests --cov-report=term-missing --cov-report=xml:coverage.xml tests/${{ matrix.configuration.path }} -s -v --durations 0 ${{ matrix.configuration.pytest_parallel_args }}
           ls -la
           find . -iname '*coverage*'
