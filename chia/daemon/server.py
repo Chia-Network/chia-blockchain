@@ -575,7 +575,7 @@ class WebSocketServer:
     def get_version(self) -> Dict[str, Any]:
         response = {"success": True, "version": __version__}
         return response
-        
+
     async def get_plotters(self) -> Dict[str, Any]:
         plotters: Dict[str, Any] = get_available_plotters(self.root_path)
         response: Dict[str, Any] = {"success": True, "plotters": plotters}
