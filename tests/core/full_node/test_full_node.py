@@ -415,7 +415,7 @@ class TestFullNodeBlockCompression:
         await self.do_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000, False)
 
 
-class _TestFullNodeProtocol:
+class TestFullNodeProtocol:
     @pytest.mark.asyncio
     async def test_spendbundle_serialization(self):
         sb: SpendBundle = make_spend_bundle(1)
