@@ -150,6 +150,7 @@ async def wallet_nodes_mainnet():
 
 class TestFullNodeBlockCompression:
     async def do_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
+        print(f" ==== A")
         nodes, wallets = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -158,18 +159,25 @@ class TestFullNodeBlockCompression:
         full_node_2 = nodes[1]
         wallet_node_1 = wallets[0][0]
         wallet = wallet_node_1.wallet_state_manager.main_wallet
+        print(f" ==== B")
         _ = await connect_and_get_peer(server_1, server_2)
+        print(f" ==== C")
         _ = await connect_and_get_peer(server_1, server_3)
 
+        print(f" ==== D")
         ph = await wallet.get_new_puzzlehash()
 
+        print(f" ==== F")
         for i in range(4):
+            print(f" ==== F {i}")
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
+        print(f" ==== G")
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 4)
         await time_out_assert(10, node_height_at_least, True, full_node_1, 4)
         await time_out_assert(10, node_height_at_least, True, full_node_2, 4)
 
+        print(f" ==== H")
         # Send a transaction to mempool
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             tx_size,
@@ -195,6 +203,7 @@ class TestFullNodeBlockCompression:
         assert detect_potential_template_generator(uint32(5), program) is not None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
+        print(f" ==== I")
         # Send another tx
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             20000,
@@ -227,6 +236,7 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_2, 8)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 8)
 
+        print(f" ==== J")
         # Send another 2 tx
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
@@ -251,6 +261,7 @@ class TestFullNodeBlockCompression:
             tr.name,
         )
 
+        print(f" ==== K")
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             50000,
             ph,
@@ -275,6 +286,7 @@ class TestFullNodeBlockCompression:
             tr.name,
         )
 
+        print(f" ==== L")
         # Farm a block
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         await time_out_assert(10, node_height_at_least, True, full_node_1, 9)
@@ -310,6 +322,7 @@ class TestFullNodeBlockCompression:
             tr.name,
         )
 
+        print(f" ==== M")
         # Farm a block
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         await time_out_assert(10, node_height_at_least, True, full_node_1, 10)
@@ -344,6 +357,7 @@ class TestFullNodeBlockCompression:
             tr.name,
         )
 
+        print(f" ==== N")
         # Farm a block
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         await time_out_assert(10, node_height_at_least, True, full_node_1, 11)
@@ -362,6 +376,7 @@ class TestFullNodeBlockCompression:
         all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
         assert height == len(all_blocks) - 1
 
+        print(f" ==== O")
         assert full_node_1.full_node.full_node_store.previous_generator is not None
         if test_reorgs:
             reog_blocks = bt.get_consecutive_blocks(14)
@@ -389,17 +404,18 @@ class TestFullNodeBlockCompression:
             for block in reog_blocks:
                 await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
             assert full_node_1.full_node.full_node_store.previous_generator is None
+        print(f" ==== P")
 
     @pytest.mark.asyncio
     async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
         await self.do_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000, False)
 
     @pytest.mark.asyncio
-    async def test_block_compression_2(self, setup_two_nodes_and_wallet, empty_blockchain):
+    async def _test_block_compression_2(self, setup_two_nodes_and_wallet, empty_blockchain):
         await self.do_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000, False)
 
 
-class TestFullNodeProtocol:
+class _TestFullNodeProtocol:
     @pytest.mark.asyncio
     async def test_spendbundle_serialization(self):
         sb: SpendBundle = make_spend_bundle(1)
