@@ -11,7 +11,8 @@ on:
       - '**'
 
 jobs:
-  get_configuration:
+  configure_tests:
+    name: Configure tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -21,23 +22,23 @@ jobs:
         with:
           python-version: '3.8'
       - name: Find test paths
-        id: get_configuration
+        id: configure_tests
         run: |
           echo ::set-output name=configuration::$(python tests/build-job-matrix.py --per directory --verbose)
 
     outputs:
-      configuration: ${{ steps.get_configuration.outputs.configuration }}
+      configuration: ${{ steps.configure_tests.outputs.configuration }}
 
   test:
     # Should match JOB_NAME below
     name: ${{ matrix.configuration.name }} ${{ matrix.os.emoji }} ${{ matrix.python.name }}
-    needs: get_configuration
+    needs: configure_tests
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: ${{ matrix.configuration.job_timeout }}
     strategy:
       fail-fast: false
       matrix:
-        configuration: ${{ fromJson(needs.get_configuration.outputs.configuration) }}
+        configuration: ${{ fromJson(needs.configure_tests.outputs.configuration) }}
         os:
           - emoji: 🍎
             matrix: macos
