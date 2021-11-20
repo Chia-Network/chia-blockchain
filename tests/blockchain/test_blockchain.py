@@ -27,6 +27,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
+from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from tests.block_tools import create_block_tools_async, get_vdf_info_and_proof
@@ -36,13 +37,8 @@ from chia.util.ints import uint8, uint64, uint32
 from chia.util.merkle_set import MerkleSet
 from chia.util.recursive_replace import recursive_replace
 from tests.wallet_tools import WalletTool
-from tests.core.fixtures import default_400_blocks  # noqa: F401; noqa: F401
-from tests.core.fixtures import default_1000_blocks  # noqa: F401
-from tests.core.fixtures import default_10000_blocks  # noqa: F401
-from tests.core.fixtures import default_10000_blocks_compact  # noqa: F401
-from tests.core.fixtures import empty_blockchain  # noqa: F401
-from tests.core.fixtures import create_blockchain
 from tests.setup_nodes import bt, test_constants
+from tests.util.blockchain import create_blockchain
 from tests.util.keyring import TempKeyring
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -216,7 +212,13 @@ class TestBlockHeaderValidation:
             block.transactions_generator,
             [],
         )
-        validate_res = await blockchain.validate_unfinished_block(unf, False)
+        npc_result = None
+        if unf.transactions_generator is not None:
+            block_generator: BlockGenerator = await blockchain.get_block_generator(unf)
+            block_bytes = bytes(unf)
+            npc_result = await blockchain.run_generator(block_bytes, block_generator)
+
+        validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
         err = validate_res.error
         assert err is None
         result, err, _, _ = await blockchain.receive_block(block)
@@ -233,7 +235,12 @@ class TestBlockHeaderValidation:
             block.transactions_generator,
             [],
         )
-        validate_res = await blockchain.validate_unfinished_block(unf, False)
+        npc_result = None
+        if unf.transactions_generator is not None:
+            block_generator: BlockGenerator = await blockchain.get_block_generator(unf)
+            block_bytes = bytes(unf)
+            npc_result = await blockchain.run_generator(block_bytes, block_generator)
+        validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
         assert validate_res.error is None
 
     @pytest.mark.asyncio
@@ -316,7 +323,14 @@ class TestBlockHeaderValidation:
                     block.transactions_generator,
                     [],
                 )
-                validate_res = await blockchain.validate_unfinished_block(unf, skip_overflow_ss_validation=True)
+                npc_result = None
+                if block.transactions_generator is not None:
+                    block_generator: BlockGenerator = await blockchain.get_block_generator(unf)
+                    block_bytes = bytes(unf)
+                    npc_result = await blockchain.run_generator(block_bytes, block_generator)
+                validate_res = await blockchain.validate_unfinished_block(
+                    unf, npc_result, skip_overflow_ss_validation=True
+                )
                 assert validate_res.error is None
                 return None
 

@@ -63,7 +63,7 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
       MIN_PLOT_SIZE: 18
       NETWORK_TYPE: 1
-      MEMPOOL_BLOCK_BUFFER: 10
+      MEMPOOL_BLOCK_BUFFER: 50
       EPOCH_BLOCKS: 768
       DIFFICULTY_STARTING: 30
   config:
@@ -255,11 +255,23 @@ full_node:
   # The full node server (if run) will run on this port
   port: 8444
 
+  # controls the sync-to-disk behavior of the database connection. Can be one of:
+  # "on"    enables syncing to disk, minimizes risk of corrupting the DB in
+  #         power-loss, disk failure or kernel panics
+  # "full"  enables extra syncing to disk for additional safety from
+  #         power-failures and kernel panics
+  # "off"   disables syncing, lightens disk load and improves performance.
+  #         increases risk of corrupting DB in power-loss, disk failure or
+  #         kernel panics
+  # "auto"  on/off is decided based on a heuristic of how likely a failure is on
+  #         the particular system we're running on. Defaults to "full".
+  db_sync: auto
+
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v1_CHALLENGE.sqlite
-  peer_db_path: db/peer_table_node.sqlite
+  peers_file_path: db/peers.dat
   simulator_database_path: sim_db/simulator_blockchain_v1_CHALLENGE.sqlite
-  simulator_peer_db_path: sim_db/peer_table_node.sqlite
+  simulator_peers_file_path: sim_db/peer_table_node.dat
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -379,6 +391,9 @@ wallet:
 
   enable_profiler: False
 
+  # see description for full_node.db_sync
+  db_sync: auto
+
   # The minimum height that we care about for our transactions. Set to zero
   # If we are restoring from private key and don't know the height.
   starting_height: 0
@@ -393,7 +408,7 @@ wallet:
 
   testing: False
   database_path: wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite
-  wallet_peers_path: wallet/db/wallet_peers.sqlite
+  wallet_peers_file_path: wallet/db/wallet_peers.dat
 
   logging: *logging
   network_overrides: *network_overrides

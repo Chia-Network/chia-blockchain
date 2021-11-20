@@ -11,10 +11,12 @@ from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
     PlotRefreshResult,
     PlotsRefreshParameter,
+    PlotRefreshEvents,
     get_plot_filenames,
     find_duplicate_plot_IDs,
     parse_plot_info,
 )
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
@@ -23,12 +25,13 @@ from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_s
 log = logging.getLogger(__name__)
 
 
-def plot_refresh_callback(refresh_result: PlotRefreshResult):
-    log.info(f"loaded {refresh_result.loaded_plots} plots, {refresh_result.remaining_files} remaining")
+def plot_refresh_callback(event: PlotRefreshEvents, refresh_result: PlotRefreshResult):
+    log.info(f"event: {event.name}, loaded {refresh_result.loaded} plots, {refresh_result.remaining} remaining")
 
 
 def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo):
     config = load_config(root_path, "config.yaml")
+    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_sleep_milliseconds=0)
     plot_manager: PlotManager = PlotManager(
         root_path,
@@ -94,7 +97,6 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.info("")
         log.info(f"Starting to test each plot with {num} challenges each\n")
     total_good_plots: Counter = Counter()
-    total_bad_plots = 0
     total_size = 0
     bad_plots_list: List[Path] = []
 
@@ -102,7 +104,11 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         for plot_path, plot_info in plot_manager.plots.items():
             pr = plot_info.prover
             log.info(f"Testing plot {plot_path} k={pr.get_size()}")
-            log.info(f"\tPool public key: {plot_info.pool_public_key}")
+            if plot_info.pool_public_key is not None:
+                log.info(f"\t{'Pool public key:':<23} {plot_info.pool_public_key}")
+            if plot_info.pool_contract_puzzle_hash is not None:
+                pca: str = encode_puzzle_hash(plot_info.pool_contract_puzzle_hash, address_prefix)
+                log.info(f"\t{'Pool contract address:':<23} {pca}")
 
             # Look up local_sk from plot to save locked memory
             (
@@ -111,8 +117,8 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                 local_master_sk,
             ) = parse_plot_info(pr.get_memo())
             local_sk = master_sk_to_local_sk(local_master_sk)
-            log.info(f"\tFarmer public key: {farmer_public_key}")
-            log.info(f"\tLocal sk: {local_sk}")
+            log.info(f"\t{'Farmer public key:' :<23} {farmer_public_key}")
+            log.info(f"\t{'Local sk:' :<23} {local_sk}")
             total_proofs = 0
             caught_exception: bool = False
             for i in range(num_start, num_end):
@@ -165,7 +171,6 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                 total_good_plots[pr.get_size()] += 1
                 total_size += plot_path.stat().st_size
             else:
-                total_bad_plots += 1
                 log.error(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
                 bad_plots_list.append(plot_path)
     log.info("")
@@ -175,11 +180,17 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     log.info(f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
     for (k, count) in sorted(dict(total_good_plots).items()):
         log.info(f"{count} plots of size {k}")
-    grand_total_bad = total_bad_plots + len(plot_manager.failed_to_open_filenames)
+    grand_total_bad = len(bad_plots_list) + len(plot_manager.failed_to_open_filenames)
     if grand_total_bad > 0:
         log.warning(f"{grand_total_bad} invalid plots found:")
-        for bad_plot_path in bad_plots_list:
-            log.warning(f"{bad_plot_path}")
+        if len(bad_plots_list) > 0:
+            log.warning(f"    {len(bad_plots_list)} bad plots:")
+            for bad_plot_path in bad_plots_list:
+                log.warning(f"{bad_plot_path}")
+        if len(plot_manager.failed_to_open_filenames) > 0:
+            log.warning(f"    {len(plot_manager.failed_to_open_filenames)} unopenable plots:")
+            for unopenable_plot_path in plot_manager.failed_to_open_filenames.keys():
+                log.warning(f"{unopenable_plot_path}")
     if len(plot_manager.no_key_filenames) > 0:
         log.warning(
             f"There are {len(plot_manager.no_key_filenames)} plots with a farmer or pool public key that "

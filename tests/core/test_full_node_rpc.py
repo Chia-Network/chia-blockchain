@@ -20,7 +20,7 @@ from tests.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
-from tests.core.fixtures import empty_blockchain
+from tests.util.rpc import validate_get_routes
 
 
 class TestRpc:
@@ -61,6 +61,7 @@ class TestRpc:
 
         try:
             client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+            await validate_get_routes(client, full_node_rpc_api)
             state = await client.get_blockchain_state()
             assert state["peak"] is None
             assert not state["sync"]["sync_mode"]

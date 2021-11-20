@@ -6,6 +6,78 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.2.11 Chia blockchain 2021-11-4
+
+Farmers rejoice: today's release integrates two plotters in broad use in the Chia community: Bladebit, created by @harold-b, and Madmax, created by @madMAx43v3r. Both of these plotters bring significant improvements in plotting time. More plotting info [here](https://github.com/Chia-Network/chia-blockchain/wiki/Alternative--Plotters).
+This release also includes several important performance improvements as a result of last weekends "Dust Storm", with two goals in mind: make sure everyone can farm at all times, and improve how many transactions per second each node can accept, especially for low-end hardware. Please know that these optimizations are only the first wave in a series of many over the next few releases to help address this going forward. While the changes we have implemented in this update may not necessarily solve for _every_ possible congestion scenario, they should go a long way towards helping low-end systems perform closer to expectations if this happens again.
+
+### Added
+
+- Performance improvements for nodes to support higher transaction volumes, especially for low powered devices like RaspBerry Pi. Full details at [#9050](https://github.com/Chia-Network/chia-blockchain/pull/9050).
+  - Improved multi-core usage through process pools.
+  - Prioritized block validation.
+  - Added transaction queues for more efficient handling of incoming transactions.
+  - Increased BLS pairing cache.
+- Integrated the Bladebit plotter to CLI and GUI. Thanks @harold-b for all your hard work on this, and welcome again to the Chia Network team!
+- Added the Madmax plotter to CLI and GUI. Thanks @madMAx43v3r for your support!
+- Added option to configure your node to testnet using to `chia init --testnet`.
+
+### Changed
+
+- Improved the wallet GUI's startup loading time by loading the default private key's fingerprint.
+- Upgraded from clvm_rs 0.1.14 to 0.1.15.
+
+### Fixed
+
+- Minor verbiage and syntax changes in CLI and GUI.
+- Partial version to fix launcher name definition.
+- Fix harvester plot loading perfomance issues.
+- Fixed a packaging failure when passphrase is being used. Thanks @ForkFarmer for reporting this defect.
+- Fixed launcher name definition, which resolved an issue for some users in which wallet-node couldn't sync.
+- Fixed a bug in the GUI that prevented some users from switching their plotNFT.
+
+### Known Issues
+
+- PlotNFT transactions via CLI (e.g. `chia plotnft join`) now accept a fee parameter, but it is not yet operable.
+
+## 1.2.10 Chia blockchain 2021-10-25
+
+We have some great improvements in this release: We launched our migration of keys to a common encrypted keyring.yaml file, and we secure this with an optional passphrase in both GUI and CLI. We've added a passphrase hint in case you forget your passphrase. More info on our [wiki](https://github.com/Chia-Network/chia-blockchain/wiki/Passphrase-Protected-Chia-Keys-and-Key-Storage-Migration). We also launched a new Chialisp compiler in clvm_tools_rs which substantially improves compile time for Chialisp developers. We also addressed a widely reported issue in which a system failure, such as a power outage, would require some farmers to sync their full node from zero. This release also includes several other improvements and fixes.
+
+### Added
+
+- Added support for keyring migration from keychain, and the addition of passphrase support. Learn more at our [wiki](https://github.com/Chia-Network/chia-blockchain/wiki/Passphrase-Protected-Chia-Keys-and-Key-Storage-Migration).
+- Enabled experimental use of a new Chialisp compiler in clvm_tools_rs in chia-blockchain, which is off by default, and substantially improves compile time.
+- Added Windows PowerShell scripts to support installation from source.
+- Added a test to check that we don't reorg subslots unless there is a new peak.
+- Added harvester info to farmer logging.
+- Add 'points found 24h' to CLI reporting.
+- Added an alternative to pkm_pairs_for_conditions_dict() which is a bit more straightforward and returns the public keys and messages in the forms we need them to validate them.
+- Added ability to see unopenable plots at the end of plots check.
+- Added Program.at utility function.
+
+### Changed
+
+- Truncate points_[found,acknowledged]_24h to 24 hours at each signage point.
+- Improved reliability of test_farmer_harvester_rpc.py, by increasing the interval between harvester checks, which should avoid spamming logs with excessive plot refreshing and cache updates.
+- Thanks @cross for change that allows using IPv6 address in config.yaml for remote harvesters and other chia services.
+- Change to stop creating unused indexes in block_records and full_blocks tables.
+- Removed unnecessary index in CoinStore & add additional benchmarks.
+- Changed db_sync setting to default to FULL. In a prior release, this setting caused some users to have to resync their full node from zero if the node went offline, such as in a power outage. Users can change this to OFF in config.yaml.
+- Updated the coin_store benchmark to enable synchronous mode when talking to the DB, since that's the default now, and improves the output a bit.
+- Updated the old comment on chia/util/streamable.py with newer developer documentation.
+- Minor GUI changes based on community feedback.
+- Thanks @jack60612 for your help in improving our GUI code, including upgrading to electron 13, migration to electron remote, updating the latest dependencies, and more.
+
+### Fixed
+
+- Corrected a super-linter name typo to GitHub
+- Thanks @sharjeelaziz for correcting our typo in your name. Our apologies for the error!
+- In macOS builds, changed the export value of NOTARIZE to fix some build failures.
+- Fix log output for duplicated plots.
+- Removed a flaky mtime check for plots that resolved an issue where file_path.stat() shows multiple copies of plots and slows performance of the farmer. Thanks @timporter for the assist on this one.
+- Thanks @jcteng for fixing a bug on the Chia DID wallet that showed 'mojo:'' instead of 'mojo'.
+
 ## 1.2.9 Chia blockchain 2021-10-01
 
 ### Changed
