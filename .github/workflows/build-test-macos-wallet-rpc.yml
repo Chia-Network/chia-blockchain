@@ -17,7 +17,7 @@ jobs:
   build:
     name: MacOS wallet-rpc Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: JOB_TIMEOUT
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -95,7 +95,7 @@ jobs:
     - name: Install developer requirements
       run: |
         . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist coverage
+        venv/bin/python -m pip install pytest pytest-asyncio coverage
 
     - name: Test wallet-rpc code with pytest
       run: |
