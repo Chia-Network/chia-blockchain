@@ -1,6 +1,8 @@
 def node_height_at_least(node, h):
     if node.full_node.blockchain.get_peak() is not None:
+        print(f" ==== node_height_at_least {node.full_node.blockchain.get_peak().height!r} >= {h!r}")
         return node.full_node.blockchain.get_peak().height >= h
+    print(f" ==== node_height_at_least False (h == {h!r})")
     return False
 
 
