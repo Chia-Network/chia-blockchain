@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 
@@ -10,6 +12,12 @@ import pytest
 #       creation, including the filesystem modification, away from the import but
 #       that seems like a separate step and until then locating the imports in the
 #       fixtures avoids the issue.
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    loop = asyncio.get_event_loop()
+    yield loop
 
 
 @pytest.fixture(scope="function")
@@ -29,6 +37,12 @@ async def empty_blockchain():
 
 
 block_format_version = "rc4"
+
+
+@pytest.fixture(scope="module")
+def event_loop():
+    loop = asyncio.get_event_loop()
+    yield loop
 
 
 @pytest.fixture(scope="session")

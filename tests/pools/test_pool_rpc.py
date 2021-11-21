@@ -43,12 +43,6 @@ async def create_pool_plot(p2_singleton_puzzle_hash: bytes32) -> Optional[bytes3
     return plot_id
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestPoolWalletRpc:
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):

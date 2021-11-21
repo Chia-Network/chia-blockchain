@@ -18,12 +18,6 @@ from tests.setup_nodes import bt, self_hostname, setup_n_nodes, setup_two_nodes,
 from tests.time_out_assert import time_out_assert
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 log = logging.getLogger(__name__)
 
 

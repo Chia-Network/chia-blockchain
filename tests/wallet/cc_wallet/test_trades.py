@@ -16,12 +16,6 @@ from tests.wallet.sync.test_wallet_sync import wallet_height_at_least
 
 
 @pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
-@pytest.fixture(scope="module")
 async def two_wallet_nodes():
     async for _ in setup_simulators_and_wallets(1, 2, {}):
         yield _

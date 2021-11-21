@@ -25,12 +25,6 @@ def wallet_height_at_least(wallet_node, h):
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestMempoolPerformance:
     @pytest.fixture(scope="module")
     async def wallet_nodes(self):

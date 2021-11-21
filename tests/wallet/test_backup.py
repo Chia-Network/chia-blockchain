@@ -13,12 +13,6 @@
 # from tests.time_out_assert import time_out_assert
 #
 #
-# @pytest.fixture(scope="module")
-# def event_loop():
-#     loop = asyncio.get_event_loop()
-#     yield loop
-#
-#
 # class TestCCWalletBackup:
 #     @pytest.fixture(scope="function")
 #     async def two_wallet_nodes(self):

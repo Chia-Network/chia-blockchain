@@ -42,12 +42,6 @@ from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32, uint64
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 def count_sub_epochs(blockchain, last_hash) -> int:
     curr = blockchain._sub_blocks[last_hash]
     count = 0

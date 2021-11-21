@@ -7,12 +7,6 @@ from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed
 from tests.setup_nodes import bt
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestMerkleSet:
     @pytest.mark.asyncio
     async def test_basics(self):

@@ -20,12 +20,6 @@ from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestPoolWallet2:
     @pytest.fixture(scope="function")
     async def one_wallet_node(self):

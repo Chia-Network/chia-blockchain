@@ -10,12 +10,6 @@
 # from chia.types.coin import Coin
 #
 #
-# @pytest.fixture(scope="module")
-# def event_loop():
-#     loop = asyncio.get_event_loop()
-#     yield loop
-#
-#
 # class TestWalletStore:
 #     @pytest.mark.asyncio
 #     async def test_store(self):

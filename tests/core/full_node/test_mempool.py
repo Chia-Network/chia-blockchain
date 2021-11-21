@@ -71,12 +71,6 @@ def generate_test_spend_bundle(
 
 
 @pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
-@pytest.fixture(scope="module")
 async def two_nodes():
     async_gen = setup_simulators_and_wallets(2, 1, {})
     nodes, _ = await async_gen.__anext__()
