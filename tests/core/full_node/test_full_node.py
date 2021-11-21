@@ -94,8 +94,11 @@ async def get_block_path(full_node: FullNodeAPI):
 
 @pytest.fixture(scope="session")
 def event_loop():
+    print(f"==== event_loop A")
     loop = asyncio.get_event_loop()
+    print(f"==== event_loop B")
     yield loop
+    print(f"==== event_loop C")
 
 
 @pytest.fixture(scope="module")
