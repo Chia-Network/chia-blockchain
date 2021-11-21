@@ -10,7 +10,14 @@ MARMOT = {
     "symbol": "MRMT",
 }
 
+USDS = {
+    "asset_id": "28edea6f7826bc4f8f817adbcbe075819289dd26366e102554f9fe651f482146",
+    "name": "Stably USD",
+    "symbol": "USDS",
+}
+
 DEFAULT_CATS = {
     SPACEBUCKS["asset_id"]: SPACEBUCKS,
     MARMOT["asset_id"]: MARMOT,
+    USDS["asset_id"]: USDS,
 }
