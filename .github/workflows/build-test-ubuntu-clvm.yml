@@ -83,12 +83,12 @@ jobs:
     - name: Install developer requirements
       run: |
         . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
+        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor coverage
 
     - name: Test clvm code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/clvm/test_*.py -s -v --durations 0 -n auto
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/clvm/test_*.py -s -v --durations 0 -n auto
 
 
 #
