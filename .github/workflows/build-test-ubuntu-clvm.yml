@@ -17,7 +17,7 @@ jobs:
   build:
     name: Ubuntu clvm Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: JOB_TIMEOUT
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -88,7 +88,7 @@ jobs:
     - name: Test clvm code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/clvm/test_*.py -s -v --durations 0 -n auto
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/clvm/test_*.py -s -v --durations 0
 
 
 #

@@ -17,7 +17,7 @@ jobs:
   build:
     name: Ubuntu wallet Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: JOB_TIMEOUT
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
