@@ -177,55 +177,55 @@ class TestTransactions:
         full_node_api_2 = full_nodes[2]
         server_2 = full_node_api_2.server
 
-        print(f" === debug: A")
+        print(f" ==== test_mempool_tx_sync: A")
         ph = await wallet_0.wallet_state_manager.main_wallet.get_new_puzzlehash()
 
         # wallet0 <-> sever0 <-> server1
 
-        print(f" === debug: B")
+        print(f" ==== test_mempool_tx_sync: B")
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
-        print(f" === debug: C")
+        print(f" ==== test_mempool_tx_sync: C")
         await server_0.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
-        print(f" === debug: D")
+        print(f" ==== test_mempool_tx_sync: D")
         for i in range(num_blocks):
-            print(f" === debug: D {i}")
+            print(f" ==== test_mempool_tx_sync: D {i}")
             await full_node_api_0.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        print(f" === debug: E")
+        print(f" ==== test_mempool_tx_sync: E")
         all_blocks = await full_node_api_0.get_all_full_blocks()
 
-        print(f" === debug: F")
+        print(f" ==== test_mempool_tx_sync: F")
         for block in all_blocks:
-            print(f" === debug: F {block}")
+            print(f" ==== test_mempool_tx_sync: F {block}")
             await full_node_api_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
-        print(f" === debug: G")
+        print(f" ==== test_mempool_tx_sync: G")
         await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
-        print(f" === debug: H")
+        print(f" ==== test_mempool_tx_sync: H")
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, token_bytes(), 0)
-        print(f" === debug: I")
+        print(f" ==== test_mempool_tx_sync: I")
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
-        print(f" === debug: J")
+        print(f" ==== test_mempool_tx_sync: J")
         await time_out_assert(
             10,
             full_node_api_0.full_node.mempool_manager.get_spendbundle,
             tx.spend_bundle,
             tx.name,
         )
-        print(f" === debug: K")
+        print(f" ==== test_mempool_tx_sync: K")
         await time_out_assert(
             10,
             full_node_api_1.full_node.mempool_manager.get_spendbundle,
             tx.spend_bundle,
             tx.name,
         )
-        print(f" === debug: L")
+        print(f" ==== test_mempool_tx_sync: L")
         await time_out_assert(
             10,
             full_node_api_2.full_node.mempool_manager.get_spendbundle,
@@ -236,28 +236,28 @@ class TestTransactions:
         # make a final connection.
         # wallet0 <-> sever0 <-> server1 <-> server2
 
-        print(f" === debug: M")
+        print(f" ==== test_mempool_tx_sync: M")
         await server_1.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
 
-        print(f" === debug: N")
+        print(f" ==== test_mempool_tx_sync: N")
         await time_out_assert(
             10,
             full_node_api_0.full_node.mempool_manager.get_spendbundle,
             tx.spend_bundle,
             tx.name,
         )
-        print(f" === debug: O")
+        print(f" ==== test_mempool_tx_sync: O")
         await time_out_assert(
             10,
             full_node_api_1.full_node.mempool_manager.get_spendbundle,
             tx.spend_bundle,
             tx.name,
         )
-        print(f" === debug: P")
+        print(f" ==== test_mempool_tx_sync: P")
         await time_out_assert(
             10,
             full_node_api_2.full_node.mempool_manager.get_spendbundle,
             tx.spend_bundle,
             tx.name,
         )
-        print(f" === debug: Q")
+        print(f" ==== test_mempool_tx_sync: Q")

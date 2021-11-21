@@ -1102,7 +1102,7 @@ class WebSocketServer:
         self.services.clear()
 
         # TODO: fix this hack
-        # TODO: let's not kill the tests etc...
+        # TODO: let's not kill the tests etc...d
         # asyncio.get_event_loop().call_later(5, lambda *args: sys.exit(0))
         log.info("chia daemon exiting in 5 seconds")
 
