@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from secrets import token_bytes
 import time
@@ -27,6 +28,12 @@ from tests.time_out_assert import time_out_assert, time_out_assert_custom_interv
 from tests.util.rpc import validate_get_routes
 
 log = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="function")
+def event_loop():
+    loop = asyncio.get_event_loop()
+    yield loop
 
 
 class TestRpc:
