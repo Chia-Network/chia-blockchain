@@ -30,10 +30,14 @@ from tests.util.rpc import validate_get_routes
 log = logging.getLogger(__name__)
 
 
+# https://github.com/pytest-dev/pytest-asyncio/blob/f21e0da345f877755b89ff87b6dcea70815b4497/pytest_asyncio/plugin.py#L224-L229
+# https://github.com/pytest-dev/pytest-asyncio/blob/master/LICENSE ( Apache License 2.0 )
 @pytest.fixture(scope="function")
 def event_loop():
-    loop = asyncio.get_event_loop()
+    """Create an instance of the default event loop for each test case."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
+    loop.close()
 
 
 class TestRpc:
