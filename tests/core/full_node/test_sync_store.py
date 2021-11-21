@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 
 from chia.full_node.sync_store import SyncStore

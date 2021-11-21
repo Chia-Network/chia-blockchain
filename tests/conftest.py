@@ -39,12 +39,6 @@ async def empty_blockchain():
 block_format_version = "rc4"
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 @pytest.fixture(scope="session")
 async def default_400_blocks():
     from tests.util.blockchain import persistent_blocks
