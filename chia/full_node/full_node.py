@@ -758,9 +758,10 @@ class FullNode:
                     if self._shut_down:
                         return None
                     await asyncio.sleep(0.1)
+                    continue
+                break
 
             self.log.info(f"Collected a total of {len(peaks)} peaks.")
-            self.sync_peers_handler = None
 
             # Based on responses from peers about the current peaks, see which peak is the heaviest
             # (similar to longest chain rule).
