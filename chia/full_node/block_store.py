@@ -54,9 +54,8 @@ class BlockStore:
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
 
-        await self.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
-
         if self.db_wrapper.allow_upgrades:
+            await self.db.execute("DROP INDEX IF EXISTS hh")
             await self.db.execute("DROP INDEX IF EXISTS is_block")
             await self.db.execute("DROP INDEX IF EXISTS peak")
             await self.db.execute(
