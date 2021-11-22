@@ -2,7 +2,6 @@ from typing import AsyncIterator, Dict, List, Tuple
 import pytest
 
 import aiosqlite
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_store import DataStore
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
@@ -16,7 +15,6 @@ from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint16
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_state_manager import WalletStateManager
 
 from tests.core.data_layer.util import ChiaRoot
 from tests.setup_nodes import setup_simulators_and_wallets, self_hostname
@@ -25,6 +23,7 @@ from tests.setup_nodes import setup_simulators_and_wallets, self_hostname
 pytestmark = pytest.mark.data_layer
 
 nodes = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]
+
 
 @pytest.fixture(scope="function")
 async def one_wallet_node() -> AsyncIterator[nodes]:
@@ -74,7 +73,7 @@ async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) ->
     changelist = [{"action": "delete", "key": key.hex()}]
     await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
     with pytest.raises(Exception):
-        val = await rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
+        await rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
     await connection.close()
 
 
@@ -125,7 +124,7 @@ async def test_create_double_insert(chia_root: ChiaRoot, one_wallet_node: nodes)
     changelist = [{"action": "delete", "key": key1.hex()}]
     await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
     with pytest.raises(Exception):
-        val = await rpc_api.get_value({"id": store_id.hex(), "key": key1.hex()})
+        await rpc_api.get_value({"id": store_id.hex(), "key": key1.hex()})
     await connection.close()
 
 
@@ -175,7 +174,7 @@ async def test_get_pairs(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     res = await rpc_api.create_kv_store()
     tree_id = bytes32(hexstr_to_bytes(res["id"]))
     await rpc_api.update_kv_store({"id": tree_id.hex(), "changelist": changelist})
-    val = await rpc_api.get_pairs({"id": tree_id.hex()})
+    await rpc_api.get_pairs({"id": tree_id.hex()})
     # todo check values match
     await connection.close()
 
@@ -226,6 +225,6 @@ async def test_get_ancestors(chia_root: ChiaRoot, one_wallet_node: nodes) -> Non
     res = await rpc_api.create_kv_store()
     tree_id = bytes32(hexstr_to_bytes(res["id"]))
     await rpc_api.update_kv_store({"id": tree_id.hex(), "changelist": changelist})
-    val = await rpc_api.get_ancestors({"id": tree_id.hex(), "key": key1.hex()})
+    await rpc_api.get_ancestors({"id": tree_id.hex(), "key": key1.hex()})
     # todo assert values
     await connection.close()

@@ -3,7 +3,7 @@ import atexit
 import signal
 
 from secrets import token_bytes
-from typing import AsyncIterator, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, create_server_for_daemon, daemon_launch_lock_path, singleton
