@@ -1,11 +1,12 @@
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.coin_spend import CoinSpend
 from chia.types.blockchain_format.coin import Coin
 from chia.types.spend_bundle import SpendBundle
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.weight_proof import WeightProof, SubEpochData, SubEpochChallengeSegment, SubSlotData, RecentChainData
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -115,17 +116,22 @@ request_transaction = full_node_protocol.RequestTransaction(
     bytes32(b"a" * 32),
 )
 
-coin_spends = [
-    CoinSpend(
-        Coin(
-            bytes32(bytes.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000989680")),
-            bytes32(bytes.fromhex("ef282f4073e3fb8a1af602204de92c60810d3ebf22d8ad327a97440c474431d1")),
-            uint64(1024),
-        ),
-        SerializedProgram.from_bytes(bytes.fromhex("ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080")),
-        SerializedProgram.from_bytes(bytes.fromhex("ffff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080ff8080")),
-    )
-]
+coin_1 = Coin(
+    bytes32(bytes.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000989680")),
+    bytes32(bytes.fromhex("ef282f4073e3fb8a1af602204de92c60810d3ebf22d8ad327a97440c474431d1")),
+    uint64(1024),
+)
+
+serialized_program_1 = SerializedProgram.from_bytes(bytes.fromhex("ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080"))
+serialized_program_2 = SerializedProgram.from_bytes(bytes.fromhex("ffff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080ff8080"))
+
+coin_spend = CoinSpend(
+    coin_1,
+    serialized_program_1,
+    serialized_program_2,
+)
+
+coin_spends = [coin_spend]
 
 spend_bundle = SpendBundle(
     coin_spends,
@@ -423,4 +429,436 @@ timestamped_peer_info = TimestampedPeerInfo("127.0.0.1", 8444, uint64(100000))
 
 respond_peers = full_node_protocol.RespondPeers(
     [timestamped_peer_info]
+)
+
+
+## WALLET PROTOCOL
+request_puzzle_solution = wallet_protocol.RequestPuzzleSolution(
+    bytes32(b"a" * 32),
+    uint32(10000),
+)
+
+program = Program.from_serialized_program(
+    SerializedProgram.from_bytes(bytes.fromhex("ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080")),
+)
+
+puzzle_solution_response = wallet_protocol.PuzzleSolutionResponse(
+    bytes32(b"a" * 32),
+    uint32(10000),
+    program,
+    program,
+)
+
+respond_puzzle_solution = wallet_protocol.RespondPuzzleSolution(
+    puzzle_solution_response,
+)
+
+reject_puzzle_solution = wallet_protocol.RejectPuzzleSolution(
+    bytes32([0] * 32),
+    uint32(100000),
+)
+
+send_transaction = wallet_protocol.SendTransaction(
+    spend_bundle,
+)
+
+transaction_ack = wallet_protocol.TransactionAck(
+    bytes32([0] * 32),
+    uint8(0),
+    "None",
+)
+
+new_peak_wallet = wallet_protocol.NewPeakWallet(
+    bytes32([0] * 32),
+    uint32(10000),
+    uint128(10000000),
+    uint32(5000),
+)
+
+request_block_header = wallet_protocol.RequestBlockHeader(
+    uint32(10000),
+)
+
+respond_header_block = wallet_protocol.RespondBlockHeader(
+    header_block,
+)
+
+reject_header_request = wallet_protocol.RejectHeaderRequest(
+    uint32(10000),
+)
+
+request_removals = wallet_protocol.RequestRemovals(
+    uint32(10000),
+    bytes32([0] * 32),
+    [bytes32([0] * 32)],
+)
+
+respond_removals = wallet_protocol.RespondRemovals(
+    uint32(10000),
+    bytes32([0] * 32),
+    [(bytes32([0] * 32), coin_1)],
+    [(bytes32([0] * 32), bytes(b"a" * 10))],
+)
+
+reject_removals_request = wallet_protocol.RejectRemovalsRequest(
+    uint32(10000),
+    bytes32(b"a" * 32),
+)
+
+request_additions = wallet_protocol.RequestAdditions(
+    uint32(10000),
+    bytes32([0] * 32),
+    [bytes32([0] * 32)],
+)
+
+respond_additions = wallet_protocol.RespondAdditions(
+    uint32(10000),
+    bytes32([0] * 32),
+    [(bytes32([0] * 32), [coin_1, coin_1])],
+    [(bytes32([0] * 32), bytes(b"a" * 10), bytes(b"a" * 10))],
+)
+
+reject_additions = wallet_protocol.RejectAdditionsRequest(
+    uint32(10000),
+    bytes32(b"a" * 32),
+)
+
+request_header_blocks = wallet_protocol.RequestHeaderBlocks(
+    uint32(1000),
+    uint32(2000),
+)
+
+reject_header_blocks = wallet_protocol.RejectHeaderBlocks(
+    uint32(1000),
+    uint32(2000),
+)
+
+respond_header_blocks = wallet_protocol.RespondHeaderBlocks(
+    uint32(1000),
+    uint32(1000),
+    [header_block],
+)
+
+coin_state = wallet_protocol.CoinState(
+    coin_1,
+    uint32(10000),
+    uint32(5000),
+)
+
+register_for_ph_updates = wallet_protocol.RegisterForPhUpdates(
+    [bytes32([0] * 32)],
+    uint32(5000),
+)
+
+respond_to_ph_updates = wallet_protocol.RespondToPhUpdates(
+    [bytes32([0] * 32)],
+    uint32(5000),
+    [coin_state],
+)
+
+register_for_coin_updates = wallet_protocol.RegisterForCoinUpdates(
+    [bytes32([0] * 32)],
+    uint32(5000),
+)
+
+respond_to_coin_updates = wallet_protocol.RespondToCoinUpdates(
+    [bytes32([0] * 32)],
+    uint32(5000),
+    [coin_state],   
+)
+
+coin_state_update = wallet_protocol.CoinStateUpdate(
+    uint32(10000),
+    uint32(9000),
+    bytes32(b"a" * 32),
+    [coin_state],
+)
+
+request_children = wallet_protocol.RequestChildren(
+    bytes32(b"a" * 32),
+)
+
+respond_children = wallet_protocol.RespondChildren(
+    [coin_state],
+)
+
+request_ses_info = wallet_protocol.RequestSESInfo(
+    uint32(1000),
+    uint32(100000),
+)
+
+respond_ses_info = wallet_protocol.RespondSESInfo(
+    [bytes32([0] * 32)],
+    [[uint32(1), uint32(2), uint32(3)], [uint32(4), uint32(5)]]
+)
+
+
+### HARVESTER PROTOCOL
+pool_difficulty = harvester_protocol.PoolDifficulty(
+    uint64(1000000000),
+    uint64(1000000000),
+    bytes32([0] * 32),
+)
+
+harvester_handhsake = harvester_protocol.HarvesterHandshake(
+    [
+        G1Element(
+            bytes.fromhex(
+                "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+            ),
+        ),
+    ],
+    [
+        G1Element(
+            bytes.fromhex(
+                "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+            ),
+        ),
+    ],
+)
+
+new_signage_point_harvester = harvester_protocol.NewSignagePointHarvester(
+    bytes32([0] * 32),
+    uint64(1000000000),
+    uint64(1000000000),
+    uint8(60),
+    bytes32(b"a" * 32),
+    [pool_difficulty],
+)
+
+new_proof_of_space = harvester_protocol.NewProofOfSpace(
+    bytes32([0] * 32),
+    bytes32([0] * 32),
+    "plot_1",
+    proof_of_space,
+    uint8(60),
+)
+
+request_signatures = harvester_protocol.RequestSignatures(
+    "plot_1",
+    bytes32([0] * 32),
+    bytes32([0] * 32),
+    [bytes32([0] * 32)],
+)
+
+respond_signatures = harvester_protocol.RespondSignatures(
+    "plot_1",
+    bytes32([0] * 32),
+    bytes32([0] * 32),
+    G1Element(
+        bytes.fromhex(
+            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+        ),
+    ),
+    G1Element(
+        bytes.fromhex(
+            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+        ),
+    ),
+    [(bytes32([0] * 32), g2_element)],
+)
+
+plot = harvester_protocol.Plot(
+    "plot_1",
+    uint8(10),
+    bytes32([0] * 32),
+    G1Element(
+        bytes.fromhex(
+            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+        ),
+    ),
+    bytes32([0] * 32),
+    G1Element(
+        bytes.fromhex(
+            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+        ),
+    ),
+    uint64(1000000),
+    uint64(1000000),
+)
+
+request_plots = harvester_protocol.RequestPlots()
+
+respond_plots = harvester_protocol.RespondPlots(
+    [plot],
+    ["str"],
+    ["str"],
+)
+
+### INTRODUCER PROTOCOL
+request_peers_introducer = introducer_protocol.RequestPeersIntroducer()
+
+respond_peers_introducer = introducer_protocol.RespondPeersIntroducer(
+    [
+        TimestampedPeerInfo(
+            "127.0.0.1",
+            8444,
+            uint64(1000000),
+        )
+    ]
+)
+
+
+### POOL PROTOCOL
+authentication_payload = pool_protocol.AuthenticationPayload(
+    "method",
+    bytes32([0] * 32),
+    bytes32([0] * 32),
+    uint64(100000),
+)
+
+get_pool_info_response = pool_protocol.GetPoolInfoResponse(
+    "pool_name",
+    "pool_name",
+    uint64(100000),
+    uint32(10000),
+    uint8(10),
+    "fee",
+    "pool description.",
+    bytes32([0] * 32),
+    uint8(0),
+)
+
+post_partial_payload = pool_protocol.PostPartialPayload(
+    bytes32([0] * 32),
+    uint64(1234),
+    proof_of_space,
+    bytes32([0] * 32),
+    False,
+    bytes32([0] * 32),
+)
+
+post_partial_request = pool_protocol.PostPartialRequest(
+    post_partial_payload,
+    g2_element,
+)
+
+post_partial_response = pool_protocol.PostPartialResponse(
+    uint64(100000),
+)
+
+get_farmer_response = pool_protocol.GetFarmerResponse(
+    G1Element(
+        bytes.fromhex(
+            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+        ),
+    ),
+    "instructions",
+    uint64(100000),
+    uint64(100000),
+)
+
+post_farmer_payload = pool_protocol.PostFarmerPayload(
+    bytes32([0] * 32),
+    uint64(100000),
+    G1Element(
+        bytes.fromhex(
+            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+        ),
+    ),
+    "payout_instructions",
+    uint64(1000000),
+)
+
+post_farmer_request = pool_protocol.PostFarmerRequest(
+    post_farmer_payload,
+    g2_element,
+)
+
+post_farmer_response = pool_protocol.PostFarmerResponse(
+    "welcome",
+)
+
+put_farmer_payload = pool_protocol.PutFarmerPayload(
+    bytes32([0] * 32),
+    uint64(100000),
+    G1Element(
+        bytes.fromhex(
+            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+        ),
+    ),
+    "payload",
+    uint64(1000000),
+)
+
+put_farmer_request = pool_protocol.PutFarmerRequest(
+    put_farmer_payload,
+    g2_element,
+)
+
+put_farmer_response = pool_protocol.PutFarmerResponse(
+    False,
+    False,
+    True,
+)
+
+error_response = pool_protocol.ErrorResponse(
+    uint16(404),
+    "err",
+)
+
+### TIMELORD PROTOCOL
+sub_epoch_summary = SubEpochSummary(
+    bytes32([0] * 32),
+    bytes32([0] * 32),
+    uint8(10),
+    uint64(1000000),
+    uint64(1000000),
+)
+
+new_peak_timelord = timelord_protocol.NewPeakTimelord(
+    reward_chain_block,
+    uint64(1000000),
+    uint8(8),
+    uint64(1000000),
+    sub_epoch_summary,
+    [(bytes32(b"a" * 32), uint128(10000000000))],
+    uint128(10000000000),
+    True,
+)
+
+new_unfinished_block_timelord = timelord_protocol.NewUnfinishedBlockTimelord(
+    reward_chain_block.get_unfinished(),
+    uint64(1000000),
+    uint64(1000000),
+    foliage,
+    sub_epoch_summary,
+    bytes32([0] * 32),
+)
+
+new_infusion_point_vdf = timelord_protocol.NewInfusionPointVDF(
+    bytes32([0] * 32),
+    vdf_info,
+    vdf_proof,
+    vdf_info,
+    vdf_proof,
+    vdf_info,
+    vdf_proof,
+)
+
+new_signage_point_vdf = timelord_protocol.NewSignagePointVDF(
+    uint8(10),
+    vdf_info,
+    vdf_proof,
+    vdf_info,
+    vdf_proof,
+)
+
+new_end_of_sub_slot_bundle = timelord_protocol.NewEndOfSubSlotVDF(
+    end_of_subslot_bundle,
+)
+
+request_compact_proof_of_time = timelord_protocol.RequestCompactProofOfTime(
+    vdf_info,
+    bytes32(b"a" * 32),
+    uint32(100000),
+    uint8(0),
+)
+
+respond_compact_proof_of_time = timelord_protocol.RespondCompactProofOfTime(
+    vdf_info,
+    vdf_proof,
+    bytes32(b"a" * 32),
+    uint32(100000),
+    uint8(0),
 )
