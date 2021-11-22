@@ -98,8 +98,9 @@ class ProofOfInclusion:
         )
         sibling_hashes = [layer.other_hash for layer in self.layers]
 
-        # TODO: clvm needs py.typed, SExp.to() needs def to(class_: Type[T], v: CastableType) -> T:
-        #       Remove ignore when done.
+        # TODO: Remove ignore when done.
+        #       https://github.com/Chia-Network/clvm/pull/102
+        #       https://github.com/Chia-Network/clvm/pull/106
         return Program.to([sibling_sides, sibling_hashes])  # type: ignore[no-any-return]
 
 

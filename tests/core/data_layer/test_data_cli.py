@@ -6,6 +6,9 @@ import pytest
 from tests.core.data_layer.util import ChiaRoot
 
 
+pytestmark = pytest.mark.data_layer
+
+
 @pytest.mark.asyncio
 async def test_help(chia_root: ChiaRoot) -> None:
     """Just a trivial test to make sure the subprocessing is at least working and the

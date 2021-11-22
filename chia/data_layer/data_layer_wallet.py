@@ -3,11 +3,10 @@ import os
 import json
 import time
 from dataclasses import dataclass
-from typing import Any, Optional, Tuple, Set, List, Dict
+from typing import Any, Optional, Tuple, Set, List, Dict, Type, TypeVar
 
-from blspy import G2Element, AugSchemeMPL, G1Element, PrivateKey
+from blspy import G2Element, AugSchemeMPL
 
-from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.consensus.block_record import BlockRecord
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_host_fullpuz,
@@ -21,10 +20,9 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint32, uint64, uint128
 from secrets import token_bytes
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -43,6 +41,8 @@ class DataLayerInfo(Streamable):
     parent_info: List[Tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
     current_inner_inner: Optional[Program]  # represents a Program as bytes
 
+
+_T_DataLayerWallet = TypeVar("_T_DataLayerWallet", bound="DataLayerWallet")
 
 class DataLayerWallet:
     MINIMUM_INITIAL_BALANCE = 1
@@ -70,20 +70,21 @@ class DataLayerWallet:
         tree_id = bytes32.from_bytes(os.urandom(32))
         return tree_id
 
-    @staticmethod
+    @classmethod
     async def create_new_dl_wallet(
+        cls: Type[_T_DataLayerWallet],
         wallet_state_manager: Any,
         wallet: Wallet,
         amount: uint64,
         root_hash: bytes32,
         fee: uint64 = uint64(0),
-        name: str = None,
-    ):
+        name: Optional[str] = None,
+    ) -> _T_DataLayerWallet:
         """
         This must be called under the wallet state manager lock
         """
 
-        self = DataLayerWallet()
+        self = cls()
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
@@ -171,7 +172,7 @@ class DataLayerWallet:
         self,
         amount: uint64,
         initial_root: bytes32,
-    ) -> Tuple[SpendBundle, bytes32, bytes32]:
+    ) -> Tuple[SpendBundle, bytes32, bytes32, Program]:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         """
@@ -265,7 +266,8 @@ class DataLayerWallet:
         coin_spend = CoinSpend(
             my_coin, SerializedProgram.from_program(current_full_puz), SerializedProgram.from_program(full_sol)
         )
-        # fake_for_signature = CoinSpend(my_coin, self.dl_info.current_inner_inner, inner_inner_sol)  # I am about to do something nasty
+        #   I am about to do something nasty
+        # fake_for_signature = CoinSpend(my_coin, self.dl_info.current_inner_inner, inner_inner_sol)
         # fake_sb = await self.standard_wallet.sign_transaction([fake_for_signature])
 
         spend_bundle = await self.sign(coin_spend)
@@ -274,7 +276,7 @@ class DataLayerWallet:
         # await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         next_full_puz = create_host_fullpuz(new_inner_inner_puzzle, root_hash, self.dl_info.origin_coin.name())
         await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
-            next_full_puz.get_tree_hash(), self.wallet_id, True
+            next_full_puz.get_tree_hash(), self.wallet_id
         )
         dl_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -332,7 +334,7 @@ class DataLayerWallet:
 
     async def get_info_for_offer_claim(
         self,
-    ):
+    ) -> Tuple[Program, Optional[Program], bytes32]:
         current_full_puz = create_host_fullpuz(
             self.dl_info.current_inner_inner,
             self.dl_info.root_hash,
@@ -391,9 +393,15 @@ class DataLayerWallet:
         inner_inner_puz = self.standard_wallet.puzzle_for_pk(pubkey)
         innerpuz = create_host_layer_puzzle(inner_inner_puz, self.dl_info.root_hash)
         if self.dl_info.origin_coin is not None:
-            return create_singleton_fullpuz(self.dl_info.origin_coin.name(), innerpuz)
+            # TODO: Remove ignore when done.
+            #       https://github.com/Chia-Network/clvm/pull/102
+            #       https://github.com/Chia-Network/clvm/pull/106
+            return create_singleton_fullpuz(self.dl_info.origin_coin.name(), innerpuz)  # type: ignore[no-any-return]
 
-        return create_singleton_fullpuz(0x00, innerpuz)
+        # TODO: Remove ignore when done.
+        #       https://github.com/Chia-Network/clvm/pull/102
+        #       https://github.com/Chia-Network/clvm/pull/106
+        return create_singleton_fullpuz(0x00, innerpuz)  # type: ignore[no-any-return]
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
@@ -436,7 +444,7 @@ class DataLayerWallet:
     async def new_peak(self, peak: BlockRecord) -> None:
         pass
 
-    async def get_confirmed_balance(self, record_list=None) -> uint64:
+    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint64:
         if record_list is None:
             record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
 
@@ -449,15 +457,17 @@ class DataLayerWallet:
         self.log.info(f"Confirmed balance for dl wallet is {amount}")
         return uint64(amount)
 
-    async def get_unconfirmed_balance(self, record_list=None) -> uint64:
+    async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         confirmed = await self.get_confirmed_balance(record_list)
-        return await self.wallet_state_manager._get_unconfirmed_balance(self.id(), confirmed)
+        # TODO: remove ignore after fixing sized bytes type hints
+        return await self.wallet_state_manager._get_unconfirmed_balance(self.id(), confirmed)  # type: ignore[no-any-return]
 
-    async def get_spendable_balance(self, unspent_records=None) -> uint64:
+    async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
             self.wallet_info.id, unspent_records
         )
-        return spendable_am
+        # TODO: remove ignore after fixing sized bytes type hints
+        return spendable_am  # type: ignore[no-any-return]
 
     async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
         # async def pk_to_sk(pk: G1Element) -> PrivateKey:

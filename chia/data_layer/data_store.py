@@ -607,8 +607,9 @@ class DataStore:
                 hash_to_node[node.hash] = node
 
             root_node = hash_to_node[root_node.hash]
-            # TODO: clvm needs py.typed, SExp.to() needs def to(class_: Type[T], v: CastableType) -> T:
-            #       Remove the type hint.
+            # TODO: Remove ignore when done.
+            #       https://github.com/Chia-Network/clvm/pull/102
+            #       https://github.com/Chia-Network/clvm/pull/106
             program: Program = Program.to(root_node)
 
         return program
