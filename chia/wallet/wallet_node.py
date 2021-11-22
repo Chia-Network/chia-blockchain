@@ -36,6 +36,7 @@ from chia.protocols.wallet_protocol import (
 )
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
+from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
@@ -46,6 +47,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.check_fork_next_block import check_fork_next_block
+from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint128
 from chia.util.keychain import Keychain
@@ -352,16 +354,23 @@ class WalletNode:
     def set_server(self, server: ChiaServer):
         self.server = server
         DNS_SERVERS_EMPTY: list = []
+        network_name: str = self.config["selected_network"]
         # TODO: Perhaps use a different set of DNS seeders for wallets, to split the traffic.
         self.wallet_peers = WalletPeers(
             self.server,
-            self.root_path,
             self.config["target_peer_count"],
-            self.config["wallet_peers_path"],
+            PeerStoreResolver(
+                self.root_path,
+                self.config,
+                selected_network=network_name,
+                peers_file_path_key="wallet_peers_file_path",
+                legacy_peer_db_path_key=WALLET_PEERS_PATH_KEY_DEPRECATED,
+                default_peers_file_path="wallet/db/wallet_peers.dat",
+            ),
             self.config["introducer_peer"],
             DNS_SERVERS_EMPTY,
             self.config["peer_connect_interval"],
-            self.config["selected_network"],
+            network_name,
             None,
             self.log,
         )
