@@ -353,7 +353,9 @@ class BlockStore:
         # certain height are not compact. And if we do have compact orphan blocks, then all that
         # happens is that the occasional chain block stays uncompact - not ideal, but harmless.
         cursor = await self.db.execute(
-            f"SELECT height FROM full_blocks GROUP BY height HAVING sum(is_fully_compactified)=0 "
+            f"SELECT height FROM full_blocks "
+            f"INDEXED BY is_fully_compactified "
+            f"GROUP BY height HAVING sum(is_fully_compactified)=0 "
             f"ORDER BY RANDOM() LIMIT {number}"
         )
         rows = await cursor.fetchall()
