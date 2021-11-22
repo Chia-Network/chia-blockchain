@@ -8,6 +8,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 
 
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
+# TODO: need new data layer specific clvm
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 DB_HOST_MOD = load_clvm("database_layer.clvm")
 DB_OFFER_MOD = load_clvm("database_offer.clvm")
@@ -48,3 +49,31 @@ def create_offer_fullpuz(
         DB_HOST_MOD_HASH, singleton_struct, leaf_reveal, claim_target, recovery_target, recovery_timelock
     )
     return full_puz
+
+
+def uncurry_fullpuz(full_puz: Program):
+    r = full_puz.uncurry()
+    if r is None:
+        return r
+    inner_f, args = r
+
+    singleton_mod_hash, datalayer_puzzle = list(args.as_iter())
+    r = datalayer_puzzle.uncurry()
+    inner_f, args = r
+    db_mod, current_root, innerpuz = list(args.as_iter())
+    return db_mod, current_root, innerpuz
+
+
+def uncurry_offer_puzzle(puzzle: Program):
+    r = puzzle.uncurry()
+    inner_f, args = r
+    DB_HOST_MOD_HASH, singleton_struct, leaf_reveal, claim_target, recovery_target, recovery_timelock = list(
+        args.as_iter()
+    )
+    return (
+        singleton_struct,
+        leaf_reveal.as_atom(),
+        claim_target.as_atom(),
+        recovery_target.as_atom(),
+        recovery_timelock.as_int(),
+    )

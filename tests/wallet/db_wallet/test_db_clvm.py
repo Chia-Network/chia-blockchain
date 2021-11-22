@@ -1,3 +1,5 @@
+import pytest
+
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_host_fullpuz,
     create_offer_fullpuz,
@@ -9,6 +11,9 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.announcement import Announcement
 from chia.wallet.util.merkle_tree import MerkleTree
+
+
+pytestmark = pytest.mark.data_layer
 
 
 def test_create_db_report():
