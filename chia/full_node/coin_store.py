@@ -48,6 +48,22 @@ class CoinStore:
             )
         )
 
+        await self.coin_record_db.execute(
+            "CREATE TEMPORARY TABLE IF NOT EXISTS temp_coin_record("
+            "coin_name text,"
+            " confirmed_index bigint,"
+            " spent_index bigint,"
+            " spent int,"
+            " coinbase int,"
+            " puzzle_hash text,"
+            " coin_parent text,"
+            " amount blob,"
+            " timestamp bigint,"
+            " PRIMARY KEY(coin_name))"
+        )
+
+        await self.coin_record_db.execute("DELETE FROM temp_coin_record;")
+
         # Useful for reorg lookups
         await self.coin_record_db.execute(
             "CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)"
@@ -412,11 +428,21 @@ class CoinStore:
                 )
             )
 
-        cursor = await self.coin_record_db.executemany(
-            "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        await self.coin_record_db.executemany(
+            "INSERT INTO temp_coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
             values,
         )
-        await cursor.close()
+
+        try:
+            await self.coin_record_db.execute(
+                "INSERT INTO coin_record (coin_name, confirmed_index, spent_index, spent, "
+                "coinbase, puzzle_hash, coin_parent, amount, timestamp)"
+                " SELECT coin_name, confirmed_index, spent_index, spent, "
+                "coinbase, puzzle_hash, coin_parent, amount, timestamp"
+                " FROM temp_coin_record"
+            )
+        finally:
+            await self.coin_record_db.execute("DELETE FROM temp_coin_record;")
 
     # Update coin_record to be spent in DB
     async def _set_spent(self, coin_names: List[bytes32], index: uint32):
