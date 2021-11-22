@@ -18,12 +18,6 @@ from tests.util.network_protocol_data import *
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 def parse_blob(input_bytes):
     size_bytes = input_bytes[:4]
     input_bytes = input_bytes[4:]
