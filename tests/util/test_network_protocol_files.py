@@ -186,7 +186,7 @@ def parse_full_node_protocol(input_bytes):
     message_bytes, input_bytes = parse_blob(input_bytes)
     message = full_node_protocol.RespondPeers.from_bytes(message_bytes)
     assert message == respond_peers
-    assert message_bytes == bytes(respond_peers)    
+    assert message_bytes == bytes(respond_peers)
 
     return input_bytes
 

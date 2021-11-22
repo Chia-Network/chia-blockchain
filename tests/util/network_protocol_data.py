@@ -16,7 +16,12 @@ from blspy import G1Element, G2Element
 from chia.types.header_block import HeaderBlock
 from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.types.blockchain_format.slots import ChallengeChainSubSlot, InfusedChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
+from chia.types.blockchain_format.slots import (
+    ChallengeChainSubSlot,
+    InfusedChallengeChainSubSlot,
+    RewardChainSubSlot,
+    SubSlotProofs,
+)
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.peer_info import TimestampedPeerInfo
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
@@ -62,7 +67,11 @@ proof_of_space = ProofOfSpace(
 )
 
 pool_target = PoolTarget(bytes.fromhex("d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"), uint32(0))
-g2_element = G2Element(bytes.fromhex("c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"))
+g2_element = G2Element(
+    bytes.fromhex(
+        "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    )
+)
 
 declare_proof_of_space = farmer_protocol.DeclareProofOfSpace(
     bytes32([0] * 16 + [1] * 16),
@@ -70,11 +79,23 @@ declare_proof_of_space = farmer_protocol.DeclareProofOfSpace(
     uint8(60),
     bytes32([0] * 16 + [1] * 16),
     proof_of_space,
-    G2Element(bytes.fromhex("c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")),
-    G2Element(bytes.fromhex("c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")),
+    G2Element(
+        bytes.fromhex(
+            "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        )
+    ),
+    G2Element(
+        bytes.fromhex(
+            "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        )
+    ),
     bytes32([0] * 32),
     pool_target,
-    G2Element(bytes.fromhex("c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")),
+    G2Element(
+        bytes.fromhex(
+            "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        )
+    ),
 )
 
 request_signed_values = farmer_protocol.RequestSignedValues(
@@ -94,8 +115,16 @@ farming_info = farmer_protocol.FarmingInfo(
 
 signed_values = farmer_protocol.SignedValues(
     bytes32([0] * 16 + [1] * 16),
-    G2Element(bytes.fromhex("c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")),
-    G2Element(bytes.fromhex("c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")),
+    G2Element(
+        bytes.fromhex(
+            "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        )
+    ),
+    G2Element(
+        bytes.fromhex(
+            "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        )
+    ),
 )
 
 
@@ -124,8 +153,16 @@ coin_1 = Coin(
     uint64(1024),
 )
 
-serialized_program_1 = SerializedProgram.from_bytes(bytes.fromhex("ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080"))
-serialized_program_2 = SerializedProgram.from_bytes(bytes.fromhex("ffff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080ff8080"))
+serialized_program_1 = SerializedProgram.from_bytes(
+    bytes.fromhex(
+        "ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080"
+    )
+)
+serialized_program_2 = SerializedProgram.from_bytes(
+    bytes.fromhex(
+        "ffff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080ff8080"
+    )
+)
 
 coin_spend = CoinSpend(
     coin_1,
@@ -137,7 +174,11 @@ coin_spends = [coin_spend]
 
 spend_bundle = SpendBundle(
     coin_spends,
-    G2Element(bytes.fromhex("c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")),
+    G2Element(
+        bytes.fromhex(
+            "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        )
+    ),
 )
 
 respond_transaction = full_node_protocol.RespondTransaction(spend_bundle)
@@ -161,7 +202,7 @@ vdf_info = VDFInfo(
 )
 
 vdf_proof = VDFProof(
-    0,
+    uint8(0),
     bytes(b"0" * 100),
     False,
 )
@@ -275,7 +316,7 @@ transactions_info = TransactionsInfo(
             bytes32(bytes.fromhex("ef282f4073e3fb8a1af602204de92c60810d3ebf22d8ad327a97440c474431d1")),
             uint64(1024),
         ),
-    ]
+    ],
 )
 
 header_block = HeaderBlock(
@@ -333,15 +374,15 @@ full_block = FullBlock(
     foliage,
     foliage_transaction_block,
     transactions_info,
-    SerializedProgram.from_bytes(bytes.fromhex("ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080")),
+    SerializedProgram.from_bytes(
+        bytes.fromhex(
+            "ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080"
+        )
+    ),
     [uint32(10000)],
 )
 
-respond_blocks = full_node_protocol.RespondBlocks(
-    uint32(1000),
-    uint32(2000),
-    [full_block, full_block]
-)
+respond_blocks = full_node_protocol.RespondBlocks(uint32(1000), uint32(2000), [full_block, full_block])
 
 reject_blocks = full_node_protocol.RejectBlocks(
     uint32(50000),
@@ -368,7 +409,11 @@ unfinished_block = UnfinishedBlock(
     foliage,
     foliage_transaction_block,
     transactions_info,
-    SerializedProgram.from_bytes(bytes.fromhex("ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080")),
+    SerializedProgram.from_bytes(
+        bytes.fromhex(
+            "ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080"
+        )
+    ),
     [uint32(10000)],
 )
 
@@ -427,11 +472,9 @@ respond_compact_vdf = full_node_protocol.RespondCompactVDF(
 
 request_peers = full_node_protocol.RequestPeers()
 
-timestamped_peer_info = TimestampedPeerInfo("127.0.0.1", 8444, uint64(100000))
+timestamped_peer_info = TimestampedPeerInfo("127.0.0.1", uint16(8444), uint64(100000))
 
-respond_peers = full_node_protocol.RespondPeers(
-    [timestamped_peer_info]
-)
+respond_peers = full_node_protocol.RespondPeers([timestamped_peer_info])
 
 
 ## WALLET PROTOCOL
@@ -441,7 +484,11 @@ request_puzzle_solution = wallet_protocol.RequestPuzzleSolution(
 )
 
 program = Program.from_serialized_program(
-    SerializedProgram.from_bytes(bytes.fromhex("ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080")),
+    SerializedProgram.from_bytes(
+        bytes.fromhex(
+            "ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080"
+        )
+    ),
 )
 
 puzzle_solution_response = wallet_protocol.PuzzleSolutionResponse(
@@ -566,7 +613,7 @@ register_for_coin_updates = wallet_protocol.RegisterForCoinUpdates(
 respond_to_coin_updates = wallet_protocol.RespondToCoinUpdates(
     [bytes32([0] * 32)],
     uint32(5000),
-    [coin_state],   
+    [coin_state],
 )
 
 coin_state_update = wallet_protocol.CoinStateUpdate(
@@ -590,8 +637,7 @@ request_ses_info = wallet_protocol.RequestSESInfo(
 )
 
 respond_ses_info = wallet_protocol.RespondSESInfo(
-    [bytes32([0] * 32)],
-    [[uint32(1), uint32(2), uint32(3)], [uint32(4), uint32(5)]]
+    [bytes32([0] * 32)], [[uint32(1), uint32(2), uint32(3)], [uint32(4), uint32(5)]]
 )
 
 
@@ -694,7 +740,7 @@ respond_peers_introducer = introducer_protocol.RespondPeersIntroducer(
     [
         TimestampedPeerInfo(
             "127.0.0.1",
-            8444,
+            uint16(8444),
             uint64(1000000),
         )
     ]

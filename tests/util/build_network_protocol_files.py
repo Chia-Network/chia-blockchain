@@ -163,7 +163,7 @@ if __name__ == "__main__":
     if os.path.exists(filename):
         print("Deleting old file.")
         os.remove(filename)
-    f = open(filename, 'wb')
+    f = open(filename, "wb")
     f.write(data)
     f.close()
     print(f"Written {len(data)} bytes.")
