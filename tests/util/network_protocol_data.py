@@ -1,3 +1,5 @@
+# flake8: noqa
+
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace

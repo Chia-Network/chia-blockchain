@@ -1,3 +1,5 @@
+# flake8: noqa
+
 import logging
 import os
 import pytest
