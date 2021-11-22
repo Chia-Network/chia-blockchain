@@ -53,10 +53,16 @@ class CoinStore:
             "CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)"
         )
 
-        await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
-
         if self.db_wrapper.allow_upgrades:
             await self.coin_record_db.execute("DROP INDEX IF EXISTS coin_spent")
+            await self.coin_record_db.execute("DROP INDEX IF EXISTS coin_spent_index")
+            await self.coin_record_db.execute(
+                "CREATE INDEX IF NOT EXISTS coin_spent_idx on coin_record(spent_index) WHERE spent_index>0"
+            )
+        else:
+            await self.coin_record_db.execute(
+                "CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index) WHERE spent_index>0"
+            )
 
         await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)")
 
@@ -149,6 +155,9 @@ class CoinStore:
         return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
+        # coins that haven't been spent have their spent_index=0. and we also
+        # happen to know that height 0 could not have contained any
+        # transactions.
         # Special case to avoid querying all unspent coins (spent_index=0)
         if height == 0:
             return []
