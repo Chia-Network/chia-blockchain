@@ -163,7 +163,7 @@ class WebSocketServer:
 
         self.websocket_server = await serve(
             self.safe_handle,
-            self.self_hostname,
+            "0.0.0.0",
             self.daemon_port,
             max_size=self.daemon_max_message_size,
             ping_interval=500,
