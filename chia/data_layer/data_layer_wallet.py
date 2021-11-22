@@ -461,10 +461,10 @@ class DataLayerWallet:
     async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         confirmed = await self.get_confirmed_balance(record_list)
         # TODO: remove ignore after fixing sized bytes type hints
-        return await self.wallet_state_manager._get_unconfirmed_balance(
+        return await self.wallet_state_manager._get_unconfirmed_balance(  # type: ignore[no-any-return]
             self.id(),
             confirmed,
-        )  # type: ignore[no-any-return]
+        )
 
     async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
