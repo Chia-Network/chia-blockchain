@@ -29,3 +29,7 @@ repos:
     hooks:
     - id: mypy
       additional_dependencies: [types-aiofiles, types-setuptools, types-PyYAML]
+      # This intentionally counters the settings in mypy.ini to allow a loose local
+      # check and a strict CI check. This difference may or may not be retained long
+      # term.
+      args: [--no-warn-unused-ignores]
