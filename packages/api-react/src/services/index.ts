@@ -71,7 +71,7 @@ export const {
   // CAT
   useCreateNewCATWalletMutation,
   useCreateCATWalletForExistingMutation,
-  useGetCATTailQuery,
+  useGetCATAssetIdQuery,
   useGetCatListQuery,
   useGetCATNameQuery,
   useSetCATNameMutation,

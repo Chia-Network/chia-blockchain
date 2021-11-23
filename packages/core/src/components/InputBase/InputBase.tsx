@@ -45,11 +45,12 @@ type ReactRules<T> =
           };
     };
 
-type Props = InputBaseProps & {
+type Props = {
   hideError?: boolean;
   name: string;
   rules?: ReactRules<typeof MaterialInputBase>;
-};
+  children?: ReactNode;
+} & InputBaseProps;
 
 export default function InputBase(props: Props): JSX.Element {
   const { name, ...rest } = props;

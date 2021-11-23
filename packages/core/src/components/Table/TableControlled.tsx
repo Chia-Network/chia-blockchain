@@ -22,7 +22,7 @@ const StyledTableHead = styled(TableHead)`
   font-weight: 500;
 `;
 
-export const StyledTableRow = styled(TableRow)`
+export const StyledTableRow = styled(({ odd, ...rest }) => <TableRow {...rest} />)`
   ${({ odd, theme }) => odd 
     ? `background-color: ${theme.palette.type === 'dark' ? '#515151' : '#FAFAFA'};` 
     : undefined

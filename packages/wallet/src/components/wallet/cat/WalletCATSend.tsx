@@ -88,7 +88,7 @@ export default function WalletCATSend(props: Props) {
   const canSubmit = wallet && !isSpendCatLoading && !loading;
 
   async function handleSubmit(data: SendTransactionData) {
-    const tail = wallet?.meta?.tail;
+    const assetId = wallet?.meta?.assetId;
 
     if (state !== SyncingStatus.SYNCED) {
       throw new Error(t`Please finish syncing before making a transaction`);
@@ -123,7 +123,7 @@ export default function WalletCATSend(props: Props) {
     if (address.slice(0, 14) === 'colour_addr://') {
       const colour_id = address.slice(14, 78);
       address = address.slice(79);
-      if (colour_id !== tail) {
+      if (colour_id !== assetId) {
         throw new Error(t`Error the entered address appears to be for a different colour.`);
       }
     }

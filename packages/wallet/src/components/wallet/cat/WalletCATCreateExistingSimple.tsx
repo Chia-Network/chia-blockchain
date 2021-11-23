@@ -10,7 +10,7 @@ import SyncingStatus from '../../../constants/SyncingStatus';
 
 type CreateExistingCATWalletData = {
   name: string;
-  tail: string;
+  assetId: string;
   symbol?: string;
 };
 
@@ -18,7 +18,7 @@ export default function WalletCATCreateExisting() {
   const methods = useForm<CreateExistingCATWalletData>({
     shouldUnregister: false,
     defaultValues: {
-      tail: '',
+      assetId: '',
       name: '',
       symbol: '',
     },
@@ -28,7 +28,7 @@ export default function WalletCATCreateExisting() {
   const { state } = useWalletState();
 
   async function handleSubmit(values: CreateExistingCATWalletData) {
-    const { name, tail } = values;
+    const { name, assetId } = values;
 
     if (isAddCATTokenLoading) {
       return;
@@ -38,8 +38,8 @@ export default function WalletCATCreateExisting() {
       throw new Error(t`Please wait for wallet synchronization`);
     }
 
-    if (!tail) {
-      throw new Error(t`Please enter a valid TAIL`);
+    if (!assetId) {
+      throw new Error(t`Please enter a valid asset id`);
     }
 
     if (!name) {
@@ -48,7 +48,7 @@ export default function WalletCATCreateExisting() {
 
     const walletId = await addCATToken({
       name,
-      tail,
+      assetId,
       fee: '0',
     }).unwrap();
 
@@ -76,9 +76,9 @@ export default function WalletCATCreateExisting() {
                 </Grid>
                 <Grid xs={12} item>
                   <TextField
-                    name="tail"
+                    name="assetId"
                     variant="outlined"
-                    label={<Trans>Token and Asset Issuance Limitations</Trans>}
+                    label={<Trans>Asset Id</Trans>}
                     multiline
                     fullWidth
                   />

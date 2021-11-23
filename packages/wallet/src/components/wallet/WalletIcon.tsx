@@ -24,7 +24,7 @@ export default function WalletIcon(props: Props) {
   }
 
   if (!isLoading && wallet.type === WalletType.CAT) {
-    const token = catList.find((token) => token.assetId === wallet.meta?.tail);
+    const token = catList.find((token) => token.assetId === wallet.meta?.assetId);
     if (token) {
       return <StyledSymbol color="primary">{token.symbol}</StyledSymbol>;
     }

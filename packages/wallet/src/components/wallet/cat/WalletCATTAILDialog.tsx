@@ -55,13 +55,13 @@ export default function WalletCATTAILDialog(props: Props) {
               <Box flexGrow={1}>
                 <TextField
                   label={<Trans>Asset Id</Trans>}
-                  value={wallet.meta?.tail}
+                  value={wallet.meta?.assetId}
                   variant="filled"
                   InputProps={{
                     readOnly: true,
                     endAdornment: (
                       <InputAdornment position="end">
-                        <CopyToClipboard value={wallet.meta?.tail} />
+                        <CopyToClipboard value={wallet.meta?.assetId} />
                       </InputAdornment>
                     ),
                   }}

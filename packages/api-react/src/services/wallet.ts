@@ -39,18 +39,18 @@ export const walletApi = createApi({
               const { type } = wallet;
               const meta = {};
               if (type === WalletType.CAT) {
-                // get CAT tail
-                const { data: tailData, tailError } = await fetchWithBQ({
-                  command: 'getTail',
+                // get CAT asset
+                const { data: assetData, error: assetError } = await fetchWithBQ({
+                  command: 'getAssetId',
                   service: CAT,
                   args: [wallet.id],
                 });
 
-                if (tailError) {
-                  throw tailError;
+                if (assetError) {
+                  throw assetError;
                 }
 
-                meta.tail = tailData.colour;
+                meta.assetId = assetData.assetId;
 
                 // get CAT name
                 const { data: nameData, error: nameError } = await fetchWithBQ({
@@ -794,33 +794,33 @@ export const walletApi = createApi({
     }),
 
     createCATWalletForExisting: build.mutation<any, {
-      tail: string;
+      assetId: string;
       fee: string;
       host?: string;
     }>({
       query: ({
-        tail,
+        assetId,
         fee,
         host
       }) => ({
         command: 'createWalletForExisting',
         service: CAT,
-        args: [tail, fee, host],
+        args: [assetId, fee, host],
       }),
       invalidatesTags: [{ type: 'Wallets', id: 'LIST' }, { type: 'Transactions', id: 'LIST' }],
     }),
   
-    getCATTail: build.query<string, {
+    getCATAssetId: build.query<string, {
       walletId: number;
     }>({
       query: ({
         walletId,
       }) => ({
-        command: 'getTail',
+        command: 'getAssetId',
         service: CAT,
         args: [walletId],
       }),
-      transformResponse: (response: any) => response?.colour,
+      transformResponse: (response: any) => response?.assetId,
     }),
 
     getCatList: build.query<{
@@ -1074,17 +1074,17 @@ export const walletApi = createApi({
     }),
 
     addCATToken: build.mutation<any, {
-      tail: string;
+      assetId: string;
       name: string;
       fee: string;
       host?: string;
     }>({
-      async queryFn({ tail, name, fee, host }, _queryApi, _extraOptions, fetchWithBQ) {
+      async queryFn({ assetId, name, fee, host }, _queryApi, _extraOptions, fetchWithBQ) {
         try {
           const { data, error } = await fetchWithBQ({
             command: 'createWalletForExisting',
             service: CAT,
-            args: [tail, fee, host],
+            args: [assetId, fee, host],
           });
 
           if (error) {
@@ -1163,7 +1163,7 @@ export const {
   // CAT
   useCreateNewCATWalletMutation,
   useCreateCATWalletForExistingMutation,
-  useGetCATTailQuery,
+  useGetCATAssetIdQuery,
   useGetCatListQuery,
   useGetCATNameQuery,
   useSetCATNameMutation,

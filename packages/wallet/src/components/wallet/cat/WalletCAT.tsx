@@ -66,7 +66,7 @@ export default function WalletCAT(props: Props) {
     );
   }
 
-  const token = catList.find((item) => item.assetId === wallet.meta?.tail);
+  const token = catList.find((item) => item.assetId === wallet.meta?.assetId);
   const canRename = !token;
 
   return (

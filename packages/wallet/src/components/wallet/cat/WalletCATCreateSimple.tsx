@@ -28,7 +28,7 @@ export default function WalletCATCreateSimple() {
 
   async function handleCreateNewToken(token: CATToken) {
     try {
-      const { name, assetId: tail } = token;
+      const { name, assetId } = token;
 
       if (isAddCATTokenLoading) {
         return;
@@ -42,12 +42,12 @@ export default function WalletCATCreateSimple() {
         throw new Error(t`Token has empty name`);
       }
     
-      if (!tail) {
-        throw new Error(t`Token has empty tail`);
+      if (!assetId) {
+        throw new Error(t`Token has empty asset id`);
       }
 
       const walletId = await addCATToken({
-        tail,
+        assetId,
         name,
         fee: '0',
       }).unwrap();
