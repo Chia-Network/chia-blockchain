@@ -95,6 +95,9 @@ class TestDLWallet:
 
         for i in range(1, num_blocks * 2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
+            if await dl_wallet_0.get_confirmed_balance() == 101:
+                break
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
