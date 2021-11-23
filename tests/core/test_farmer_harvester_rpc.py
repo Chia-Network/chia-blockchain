@@ -24,6 +24,7 @@ from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_pooling_authentication_sk
 from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
+from tests.util.rpc import validate_get_routes
 
 log = logging.getLogger(__name__)
 
@@ -77,6 +78,9 @@ class TestRpc:
         try:
             client = await FarmerRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
             client_2 = await HarvesterRpcClient.create(self_hostname, test_rpc_port_2, bt.root_path, config)
+
+            await validate_get_routes(client, farmer_rpc_api)
+            await validate_get_routes(client_2, harvester_rpc_api)
 
             async def have_connections():
                 return len(await client.get_connections()) > 0

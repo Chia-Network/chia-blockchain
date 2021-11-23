@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from chia.farmer.farmer import Farmer
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -75,8 +75,8 @@ class FarmerRpcApi:
                     }
         raise ValueError(f"Signage point {sp_hash.hex()} not found")
 
-    async def get_signage_points(self, _: Dict) -> Dict:
-        result: List = []
+    async def get_signage_points(self, _: Dict) -> Dict[str, Any]:
+        result: List[Dict[str, Any]] = []
         for _, sps in self.service.sps.items():
             for sp in sps:
                 pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])

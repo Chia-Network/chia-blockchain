@@ -703,12 +703,14 @@ class Timelord:
             icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = (
                 None if icc_ip_vdf is None else InfusedChallengeChainSubSlot(icc_ip_vdf)
             )
+            icc_sub_slot_hash: Optional[bytes32]
             if self.last_state.get_deficit() == 0:
                 assert icc_sub_slot is not None
                 icc_sub_slot_hash = icc_sub_slot.get_hash()
             else:
                 icc_sub_slot_hash = None
             next_ses: Optional[SubEpochSummary] = self.last_state.get_next_sub_epoch_summary()
+            ses_hash: Optional[bytes32]
             if next_ses is not None:
                 log.info(f"Including sub epoch summary{next_ses}")
                 ses_hash = next_ses.get_hash()

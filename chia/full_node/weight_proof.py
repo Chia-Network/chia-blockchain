@@ -1356,7 +1356,7 @@ def __get_rc_sub_slot(
 
     new_diff = None if ses is None else ses.new_difficulty
     new_ssi = None if ses is None else ses.new_sub_slot_iters
-    ses_hash = None if ses is None else ses.get_hash()
+    ses_hash: Optional[bytes32] = None if ses is None else ses.get_hash()
     overflow = is_overflow_block(constants, first.signage_point_index)
     if overflow:
         if idx >= 2 and slots[idx - 2].cc_slot_end is not None and slots[idx - 1].cc_slot_end is not None:
