@@ -148,8 +148,8 @@ class FullNodeSimulator(FullNodeAPI):
             block: FullBlock = await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
             # TODO: why do we need this off by one via `i > 0`?
             if block.is_transaction_block() and i > 0:
-                height = block.height
-                funds += calculate_pool_reward(uint32(height)) + calculate_base_farmer_reward(uint32(height))
+                height = uint32(block.height)
+                funds += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
             await asyncio.sleep(0)
             continue
 
