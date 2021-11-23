@@ -1226,7 +1226,6 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        fee = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
             transaction: TransactionRecord = await wallet.claim_pool_rewards(fee)
