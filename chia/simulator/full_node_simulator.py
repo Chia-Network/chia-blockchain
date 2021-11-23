@@ -1,12 +1,15 @@
+import asyncio
 from typing import List, Optional
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
-from chia.util.ints import uint8
+from chia.util.ints import uint8, uint32
 
 
 class FullNodeSimulator(FullNodeAPI):
@@ -43,7 +46,7 @@ class FullNodeSimulator(FullNodeAPI):
         return blocks
 
     @api_request
-    async def farm_new_transaction_block(self, request: FarmNewBlockProtocol):
+    async def farm_new_transaction_block(self, request: FarmNewBlockProtocol) -> FullBlock:
         async with self.full_node._blockchain_lock_high_priority:
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
@@ -77,6 +80,8 @@ class FullNodeSimulator(FullNodeAPI):
             )
             rr = RespondBlock(more[-1])
         await self.full_node.respond_block(rr)
+        # TODO: is this "the right block"?
+        return more[-1]
 
     @api_request
     async def farm_new_block(self, request: FarmNewBlockProtocol):
@@ -131,3 +136,38 @@ class FullNodeSimulator(FullNodeAPI):
 
         for block in more_blocks:
             await self.full_node.respond_block(RespondBlock(block))
+
+    async def process_blocks(self, count, farm_to=bytes32([0] * 32)) -> int:
+        funds = 0
+
+        # initial_height = self.full_node.blockchain.get_peak_height()
+        # if initial_height is None:
+        #     initial_height = 0
+
+        for i in range(count):
+            block: FullBlock = await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
+            # TODO: why do we need this off by one via `i > 0`?
+            if block.is_transaction_block() and i > 0:
+                height = block.height
+                funds += calculate_pool_reward(uint32(height)) + calculate_base_farmer_reward(uint32(height))
+            await asyncio.sleep(0)
+            continue
+
+            # TODO: seems like something more ought to be done but the peak height seems to be updated immediately
+            # start = time.monotonic()
+            # timeout = 0.2
+            # end = start + timeout
+            # while True:
+            #     await asyncio.sleep(0.010)
+            #     height = self.full_node.blockchain.get_peak_height()
+            #     target_height = initial_height + i + 1
+            #     if height == target_height:
+            #         # TODO: remove debug
+            #         print(f"height {height} reached in {time.monotonic() - start:.3f} seconds")
+            #         break
+            #
+            #     now = time.monotonic()
+            #     if now >= end:
+            #         raise Exception(f"Failed to process block before timeout: actual height {height} != {target_height}, time {now - start:.3f} >= {timeout:.3f}")
+
+        return funds
