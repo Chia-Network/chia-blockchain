@@ -48,6 +48,22 @@ class CoinStore:
             )
         )
 
+        await self.coin_record_db.execute(
+            (
+                "CREATE TEMPORARY TABLE IF NOT EXISTS temp_coin_record("
+                "coin_name text,"
+                " confirmed_index bigint,"
+                " spent_index bigint,"
+                " spent int,"
+                " coinbase int,"
+                " puzzle_hash text,"
+                " coin_parent text,"
+                " amount blob,"
+                " timestamp bigint,"
+                " PRIMARY KEY(coin_name))"
+            )
+        )
+
         # Useful for reorg lookups
         await self.coin_record_db.execute(
             "CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)"
@@ -204,7 +220,7 @@ class CoinStore:
         puzzle_hashes_db = tuple([ph.hex() for ph in puzzle_hashes])
         cursor = await self.coin_record_db.execute(
             f"SELECT * from coin_record INDEXED BY coin_puzzle_hash "
-            f'WHERE puzzle_hash in ({"?," * (len(puzzle_hashes) - 1)}?) '
+            f'WHERE puzzle_hash IN ({"?," * (len(puzzle_hashes) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             puzzle_hashes_db + (start_height, end_height),
@@ -231,7 +247,7 @@ class CoinStore:
         coins = set()
         names_db = tuple([name.hex() for name in names])
         cursor = await self.coin_record_db.execute(
-            f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(names) - 1)}?) '
+            f'SELECT * from coin_record WHERE coin_name IN ({"?," * (len(names) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             names_db + (start_height, end_height),
@@ -268,7 +284,7 @@ class CoinStore:
         coins = set()
         puzzle_hashes_db = tuple([ph.hex() for ph in puzzle_hashes])
         cursor = await self.coin_record_db.execute(
-            f'SELECT * from coin_record WHERE puzzle_hash in ({"?," * (len(puzzle_hashes) - 1)}?) '
+            f'SELECT * from coin_record WHERE puzzle_hash IN ({"?," * (len(puzzle_hashes) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             puzzle_hashes_db + (start_height, end_height),
@@ -295,7 +311,7 @@ class CoinStore:
         coins = set()
         parent_ids_db = tuple([pid.hex() for pid in parent_ids])
         cursor = await self.coin_record_db.execute(
-            f'SELECT * from coin_record WHERE coin_parent in ({"?," * (len(parent_ids) - 1)}?) '
+            f'SELECT * from coin_record WHERE coin_parent IN ({"?," * (len(parent_ids) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             parent_ids_db + (start_height, end_height),
@@ -322,7 +338,7 @@ class CoinStore:
         coins = set()
         coin_ids_db = tuple([pid.hex() for pid in coin_ids])
         cursor = await self.coin_record_db.execute(
-            f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(coin_ids) - 1)}?) '
+            f'SELECT * from coin_record WHERE coin_name IN ({"?," * (len(coin_ids) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             coin_ids_db + (start_height, end_height),
@@ -413,9 +429,20 @@ class CoinStore:
             )
 
         cursor = await self.coin_record_db.executemany(
-            "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO temp_coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
             values,
         )
+
+        cursor = await self.coin_record_db.execute(
+            "INSERT INTO coin_record (coin_name, confirmed_index, spent_index, spent, coinbase, puzzle_hash, coin_parent, amount, timestamp)"
+            "     SELECT coin_name, confirmed_index, spent_index, spent, coinbase, puzzle_hash, coin_parent, amount, timestamp"
+            "       FROM temp_coin_record"
+        )
+
+        await self.coin_record_db.execute(
+            "DELETE FROM temp_coin_record"
+        )
+
         await cursor.close()
 
     # Update coin_record to be spent in DB
@@ -429,8 +456,14 @@ class CoinStore:
                 self.coin_record_cache.put(
                     r.name, CoinRecord(r.coin, r.confirmed_block_index, index, True, r.coinbase, r.timestamp)
                 )
-            updates.append((index, coin_name.hex()))
+            updates.append((coin_name.hex()))
 
-        await self.coin_record_db.executemany(
-            "UPDATE OR FAIL coin_record SET spent=1,spent_index=? WHERE coin_name=?", updates
-        )
+        chunk_size = 500
+        for i in range(0, len(updates), chunk_size):
+            update = updates[i:i + chunk_size]
+            cursor = await self.coin_record_db.execute(
+                f'UPDATE coin_record '
+                f'   SET spent=1, spent_index=? '
+                f' WHERE coin_name IN ({"?," * (len(update) - 1)}?)',
+                (index,) + tuple(update),
+            )
