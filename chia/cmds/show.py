@@ -1,5 +1,6 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
+from chia.types.blockchain_format.sized_bytes import bytes32
 import click
 
 
@@ -218,7 +219,7 @@ async def show_async(
                     )
                     block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
                     cost = str(full_block.transactions_info.cost)
-                    tx_filter_hash = "Not a transaction block"
+                    tx_filter_hash: Union[str, bytes32] = "Not a transaction block"
                     if full_block.foliage_transaction_block:
                         tx_filter_hash = full_block.foliage_transaction_block.filter_hash
                     fees: Any = block.fees
