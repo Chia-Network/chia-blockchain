@@ -11,8 +11,9 @@ class DBWrapper:
     db: aiosqlite.Connection
     lock: asyncio.Lock
 
-    def __init__(self, connection: aiosqlite.Connection):
+    def __init__(self, connection: aiosqlite.Connection, allow_upgrades: bool = False):
         self.db = connection
+        self.allow_upgrades = allow_upgrades
         self.lock = asyncio.Lock()
 
     async def begin_transaction(self):
