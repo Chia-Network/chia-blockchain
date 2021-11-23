@@ -1,6 +1,6 @@
-from typing import List, Tuple
+from typing import Iterable, List, Tuple
 
-from blspy import AugSchemeMPL
+from blspy import AugSchemeMPL, G1Element
 from clvm import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble
 
@@ -77,7 +77,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             print(f"*** error {error}")
         elif conditions is not None:
             for pk, m in pkm_pairs_for_conditions_dict(conditions, coin_name, agg_sig_additional_data):
-                pks.append(pk)
+                pks.append(G1Element.from_bytes(pk))
                 msgs.append(m)
             print()
             cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)  # type: ignore
@@ -191,7 +191,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     print(f"signature: {spend_bundle.aggregated_signature}")
 
 
-def solution_for_pay_to_any(puzzle_hash_amount_pairs: Tuple[bytes32, int]) -> Program:
+def solution_for_pay_to_any(puzzle_hash_amount_pairs: Iterable[Tuple[bytes32, int]]) -> Program:
     output_conditions = [
         [ConditionOpcode.CREATE_COIN, puzzle_hash, amount] for puzzle_hash, amount in puzzle_hash_amount_pairs
     ]

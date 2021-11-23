@@ -201,6 +201,30 @@ class TestSimpleSyncProtocol:
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
+        # Let's make sure the wallet can handle a non ephemeral launcher
+        from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER_HASH
+
+        tx_record = await wallet.generate_signed_transaction(uint64(10), SINGLETON_LAUNCHER_HASH, uint64(0))
+        await wallet.push_transaction(tx_record)
+
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(SINGLETON_LAUNCHER_HASH))
+
+        # Send a transaction to make sure the wallet is still running
+        tx_record = await wallet.generate_signed_transaction(uint64(10), junk_ph, uint64(0))
+        await wallet.push_transaction(tx_record)
+
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
+
         all_messages = await self.get_all_messages_in_queue(incoming_queue)
 
         notified_state = None

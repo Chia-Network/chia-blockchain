@@ -3,6 +3,7 @@ min_mainnet_k_size: 32
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
+prefer_ipv6: False
 daemon_port: 55400
 daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
 inbound_rate_limit_percent: 100
@@ -63,7 +64,7 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
       MIN_PLOT_SIZE: 18
       NETWORK_TYPE: 1
-      MEMPOOL_BLOCK_BUFFER: 10
+      MEMPOOL_BLOCK_BUFFER: 50
       EPOCH_BLOCKS: 768
       DIFFICULTY_STARTING: 30
   config:
@@ -267,11 +268,19 @@ full_node:
   #         the particular system we're running on. Defaults to "full".
   db_sync: auto
 
+  # when this is true, minor data base updates may be performed on startup.
+  # the database upgrades are minor, in that they typically remove unnevessary
+  # indices or re-build certain indices. The intention of these updates is to
+  # improve performance of the node at the expense of a one-time startup cost.
+  # also note that enabling this may prohibit down-grading the node to a
+  # previous version, or may trigger an index rebuild on startup on down-grades.
+  allow_database_upgrades: False
+
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v1_CHALLENGE.sqlite
-  peer_db_path: db/peer_table_node.sqlite
+  peers_file_path: db/peers.dat
   simulator_database_path: sim_db/simulator_blockchain_v1_CHALLENGE.sqlite
-  simulator_peer_db_path: sim_db/peer_table_node.sqlite
+  simulator_peers_file_path: sim_db/peer_table_node.dat
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -408,7 +417,7 @@ wallet:
 
   testing: False
   database_path: wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite
-  wallet_peers_path: wallet/db/wallet_peers.sqlite
+  wallet_peers_file_path: wallet/db/wallet_peers.dat
 
   logging: *logging
   network_overrides: *network_overrides

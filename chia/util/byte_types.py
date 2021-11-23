@@ -24,7 +24,7 @@ class SizedBytes(bytes):
         v = bytes(v)
         if not isinstance(v, bytes) or len(v) != cls._size:
             raise ValueError("bad %s initializer %s" % (cls.__name__, v))
-        return bytes.__new__(cls, v)  # type: ignore
+        return bytes.__new__(cls, v)
 
     @classmethod  # type: ignore
     def parse(cls: Type[_T_SizedBytes], f: BinaryIO) -> _T_SizedBytes:

@@ -20,6 +20,7 @@ from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
+from tests.util.rpc import validate_get_routes
 
 log = logging.getLogger(__name__)
 
@@ -96,6 +97,7 @@ class TestWalletRpc:
         await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
 
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+        await validate_get_routes(client, wallet_rpc_api)
         client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
         try:
             addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")

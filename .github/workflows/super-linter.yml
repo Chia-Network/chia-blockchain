@@ -17,11 +17,13 @@ name: GitHub Super Linter
 #############################
 on:
   push:
-    branches-ignore:
-      - 'main'
+    branches:
+      - main
+    tags:
+        - '**'
   pull_request:
-    branches-ignore:
-      - ''
+    branches:
+      - '**'
 
 ###############
 # Set the Job #
