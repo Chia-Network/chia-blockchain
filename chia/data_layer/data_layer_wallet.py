@@ -38,6 +38,7 @@ from chia.wallet.wallet_info import WalletInfo
 class DataLayerInfo(Streamable):
     origin_coin: Optional[Coin]  # Coin ID of this coin is our Singleton ID
     root_hash: bytes32
+    # TODO: should this be a dict for quick lookup?
     parent_info: List[Tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
     current_inner_inner: Optional[Program]  # represents a Program as bytes
 
@@ -336,10 +337,13 @@ class DataLayerWallet:
     async def get_info_for_offer_claim(
         self,
     ) -> Tuple[Program, Optional[Program], bytes32]:
+        origin_coin = self.dl_info.origin_coin
+        if origin_coin is None:
+            raise ValueError("Non-None origin coin required")
         current_full_puz = create_host_fullpuz(
             self.dl_info.current_inner_inner,
             self.dl_info.root_hash,
-            self.dl_info.origin_coin.name(),
+            origin_coin.name(),
         )
         db_innerpuz_hash = self.dl_info.current_inner_inner
         current_root = self.dl_info.root_hash
@@ -409,12 +413,19 @@ class DataLayerWallet:
             bytes((await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey)
         )
 
-    async def get_parent_for_coin(self, coin: Coin) -> Optional[LineageProof]:
+    async def get_parent_for_coin(self, coin: Coin) -> Optional[List[Any]]:
         parent_info = None
         for name, ccparent in self.dl_info.parent_info:
             if name == coin.parent_coin_info:
                 parent_info = ccparent
-        if parent_info.parent_name == self.dl_info.origin_coin.parent_coin_info:
+
+        if parent_info is None:
+            # TODO: is it ok to log the coin info
+            raise ValueError("Unable to find parent info")
+
+        if self.dl_info.origin_coin is None:
+            ret = parent_info.as_list()
+        elif parent_info.parent_name == self.dl_info.origin_coin.parent_coin_info:
             ret = [parent_info.parent_name, parent_info.amount]
         else:
             ret = parent_info.as_list()
@@ -431,7 +442,6 @@ class DataLayerWallet:
             self.dl_info.current_inner_inner,
         )
         await self.save_info(dl_info, in_transaction)
-        return
 
     async def save_info(self, dl_info: DataLayerInfo, in_transaction: bool) -> None:
         self.dl_info = dl_info

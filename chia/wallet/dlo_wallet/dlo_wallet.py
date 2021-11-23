@@ -1,9 +1,11 @@
+from dataclasses import dataclass
 import logging
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL
-from dataclasses import dataclass
+import pytest
+
 from chia.util.streamable import Streamable, streamable
 from chia.types.blockchain_format.coin import Coin
 from chia.wallet.db_wallet.db_wallet_puzzles import create_offer_fullpuz
@@ -20,6 +22,9 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
 
+pytestmark = pytest.mark.data_layer
+
+
 @dataclass(frozen=True)
 @streamable
 class DLOInfo(Streamable):
@@ -31,13 +36,13 @@ class DLOInfo(Streamable):
     active_offer: Optional[Coin]
 
 
+@dataclass
 class DLOWallet:
     wallet_state_manager: Any
     log: logging.Logger
     wallet_id: uint32
     wallet_info: WalletInfo
-    coin_record: WalletCoinRecord
-    sp_info: DLOInfo
+    dlo_info: DLOInfo
     standard_wallet: Wallet
     base_puzzle_program: Optional[bytes]
     base_inner_puzzle_hash: Optional[bytes32]
@@ -47,26 +52,33 @@ class DLOWallet:
     def type(cls) -> uint8:
         return uint8(WalletType.DATA_LAYER_OFFER)
 
-    @staticmethod
+    @classmethod
     async def create_new_dlo_wallet(
+        cls,
         wallet_state_manager: Any,
         wallet: Wallet,
     ):
-        self = DLOWallet()
-        self.cost_of_single_tx = None
-        self.base_puzzle_program = None
-        self.base_inner_puzzle_hash = None
-        self.standard_wallet = wallet
-        self.log = logging.getLogger(__name__)
-        self.wallet_state_manager = wallet_state_manager
-        self.dlo_info = DLOInfo(None, None, None, None, None, None)
-        info_as_string = bytes(self.dlo_info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+        dlo_info = DLOInfo(None, None, None, None, None, None)
+        info_as_string = bytes(dlo_info).hex()
+        wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DLO Wallet", WalletType.DATA_LAYER_OFFER.value, info_as_string
         )
-        self.wallet_id = self.wallet_info.id
-        if self.wallet_info is None:
+        if wallet_info is None:
+            # TODO: this should be an exception way down at the source, not here
             raise ValueError("Internal Error")
+
+        self = cls(
+            cost_of_single_tx=None,
+            base_puzzle_program=None,
+            base_inner_puzzle_hash=None,
+            standard_wallet=wallet,
+            log=logging.getLogger(__name__),
+            wallet_state_manager=wallet_state_manager,
+            dlo_info=dlo_info,
+            wallet_info=wallet_info,
+            wallet_id=wallet_info.id,
+        )
+
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         return self
 
@@ -108,9 +120,11 @@ class DLOWallet:
         )
 
         active_coin = None
-        for coin in tr.spend_bundle.additions():
-            if coin.puzzle_hash == full_puzzle.get_tree_hash():
-                active_coin = coin
+        spend_bundle = tr.spend_bundle
+        if spend_bundle is not None:
+            for coin in spend_bundle.additions():
+                if coin.puzzle_hash == full_puzzle.get_tree_hash():
+                    active_coin = coin
         if active_coin is None:
             raise ValueError("Unable to find created coin")
 
@@ -168,8 +182,10 @@ class DLOWallet:
         recovery_timelock: uint64 = None,
         fee=uint64(0),
     ):
-
         coin = self.dlo_info.active_offer
+        if coin is None:
+            raise ValueError("Active offer coin unexpectedly None")
+
         solution = Program.to([0, coin.amount])
 
         if leaf_reveal is None:
@@ -204,12 +220,20 @@ class DLOWallet:
         return tr
 
     async def get_coin(self) -> Coin:
-        coins = await self.select_coins(uint64(1))
-        if coins is None or coins == set():
-            coin = self.dlo_info.active_offer
-        else:
-            coin = coins.pop()
-        return coin
+        try:
+            coins = await self.select_coins(uint64(1))
+        except ValueError:
+            # TODO: not really right exactly the same since there are two cases of ValueError...
+            coins = set()
+
+        if len(coins) > 1:
+            return coins.pop()
+
+        if self.dlo_info.active_offer is None:
+            # TODO: is this what we want here?
+            raise ValueError(f"Unable to get a coin, no coins selected and no active offer.")
+
+        return self.dlo_info.active_offer
 
     async def get_confirmed_balance(self, record_list=None) -> uint64:
         if record_list is None:
@@ -232,15 +256,16 @@ class DLOWallet:
         )
         return spendable_am
 
-    async def select_coins(self, amount: uint64, exclude: List[Coin] = []) -> Optional[Set[Coin]]:
+    async def select_coins(self, amount: uint64, exclude: List[Coin] = None) -> Set[Coin]:
         """Returns a set of coins that can be used for generating a new transaction."""
         if exclude is None:
             exclude = []
 
         spendable_amount = await self.get_spendable_balance()
         if amount > spendable_amount:
-            self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
-            return None
+            error_msg = f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}"
+            self.log.warning(error_msg)
+            raise ValueError(error_msg)
 
         self.log.info(f"About to select coins for amount {amount}")
         unspent: List[WalletCoinRecord] = list(
