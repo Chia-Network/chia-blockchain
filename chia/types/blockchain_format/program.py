@@ -51,7 +51,7 @@ class Program(SExp):
     @classmethod
     def from_bytes(cls, blob: bytes) -> "Program":
         f = io.BytesIO(blob)
-        result = cls.parse(f)  # type: ignore # noqa
+        result = cls.parse(f)  # noqa
         assert f.read() == b""
         return result
 
@@ -68,7 +68,7 @@ class Program(SExp):
 
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
-        self.stream(f)  # type: ignore # noqa
+        self.stream(f)  # noqa
         return f.getvalue()
 
     def __str__(self) -> str:
