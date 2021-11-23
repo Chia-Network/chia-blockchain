@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.condition_opcodes import ConditionOpcode
@@ -24,9 +24,9 @@ def trade_status_ui_string(status: TradeStatus):
         return "Pending"
 
 
-def trade_record_to_dict(record: TradeRecord) -> Dict:
+def trade_record_to_dict(record: TradeRecord) -> Dict[str, Any]:
     """Convenience function to return only part of trade record we care about and show correct status to the ui"""
-    result = {}
+    result: Dict[str, Any] = {}
     result["trade_id"] = record.trade_id.hex()
     result["sent"] = record.sent
     result["my_offer"] = record.my_offer

@@ -93,7 +93,7 @@ class Program(SExp):
                 raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
         return v
 
-    def get_tree_hash(self, *args: List[bytes32]) -> bytes32:
+    def get_tree_hash(self, *args: bytes32) -> bytes32:
         """
         Any values in `args` that appear in the tree
         are presumed to have been hashed already.
@@ -229,7 +229,7 @@ class SerializedProgram:
             return True
         return self._buf != other._buf
 
-    def get_tree_hash(self, *args: List[bytes32]) -> bytes32:
+    def get_tree_hash(self, *args: bytes32) -> bytes32:
         """
         Any values in `args` that appear in the tree
         are presumed to have been hashed already.

@@ -114,7 +114,7 @@ class FullNode:
         self.server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
-        self.pow_creation: Dict[uint32, asyncio.Event] = {}
+        self.pow_creation: Dict[bytes32, asyncio.Event] = {}
         self.state_changed_callback: Optional[Callable] = None
         self.full_node_peers = None
         self.sync_store = None
@@ -758,9 +758,10 @@ class FullNode:
                     if self._shut_down:
                         return None
                     await asyncio.sleep(0.1)
+                    continue
+                break
 
             self.log.info(f"Collected a total of {len(peaks)} peaks.")
-            self.sync_peers_handler = None
 
             # Based on responses from peers about the current peaks, see which peak is the heaviest
             # (similar to longest chain rule).
@@ -1136,6 +1137,7 @@ class FullNode:
         )
         self.signage_point_times[request.index_from_challenge] = time.time()
         sub_slot_tuple = self.full_node_store.get_sub_slot(request.challenge_chain_vdf.challenge)
+        prev_challenge: Optional[bytes32]
         if sub_slot_tuple is not None:
             prev_challenge = sub_slot_tuple[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge
         else:

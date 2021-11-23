@@ -371,7 +371,7 @@ class DIDWallet:
                 (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
             )
 
-            all_parents: bytes32 = set()
+            all_parents: Set[bytes32] = set()
             for puzzle_list_coin in additions.coins:
                 puzzle_hash, coins = puzzle_list_coin
                 for coin in coins:
@@ -925,7 +925,7 @@ class DIDWallet:
         did_full_puz = did_wallet_puzzles.create_fullpuz(did_inner, launcher_coin.name())
         did_puzzle_hash = did_full_puz.get_tree_hash()
 
-        announcement_set: Set[Announcement] = set()
+        announcement_set: Set[bytes32] = set()
         announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
 
