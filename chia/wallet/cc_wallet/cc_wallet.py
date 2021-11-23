@@ -390,7 +390,7 @@ class CCWallet:
         origin_id = origin.name()
 
         cc_inner = await self.get_new_inner_hash()
-        cc_puzzle_hash: Program = cc_puzzle_hash_for_inner_puzzle_hash(
+        cc_puzzle_hash: bytes32 = cc_puzzle_hash_for_inner_puzzle_hash(
             CC_MOD, self.cc_info.my_genesis_checker, cc_inner
         )
 

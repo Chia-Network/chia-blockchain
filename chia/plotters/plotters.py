@@ -133,7 +133,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 type=str,
                 dest="tmpdir",
                 help="Temporary directory 1.",
-                default=str(root_path) + "/",
+                required=True,
             )
         if option is Options.TMP_DIR2:
             parser.add_argument(
@@ -142,7 +142,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 type=str,
                 dest="tmpdir2",
                 help="Temporary directory 2.",
-                default=str(root_path) + "/",
+                default="",
             )
         if option is Options.FINAL_DIR:
             parser.add_argument(
@@ -151,7 +151,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 type=str,
                 dest="finaldir",
                 help="Final directory.",
-                default=str(root_path) + "/",
+                required=True,
             )
         if option is Options.BUFF:
             parser.add_argument(

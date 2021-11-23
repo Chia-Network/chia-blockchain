@@ -254,7 +254,7 @@ def create_foliage(
         )
         assert foliage_transaction_block is not None
 
-        foliage_transaction_block_hash: Optional[bytes32] = foliage_transaction_block.get_hash()
+        foliage_transaction_block_hash: bytes32 = foliage_transaction_block.get_hash()
         foliage_transaction_block_signature: Optional[G2Element] = get_plot_signature(
             foliage_transaction_block_hash, reward_block_unfinished.proof_of_space.plot_public_key
         )
@@ -343,7 +343,7 @@ def create_unfinished_block(
 
     new_sub_slot: bool = len(finished_sub_slots) > 0
 
-    cc_sp_hash: Optional[bytes32] = slot_cc_challenge
+    cc_sp_hash: bytes32 = slot_cc_challenge
 
     # Only enters this if statement if we are in testing mode (making VDF proofs here)
     if signage_point.cc_vdf is not None:
