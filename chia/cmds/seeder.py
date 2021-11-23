@@ -8,7 +8,7 @@ import chia.cmds.configure as chia_configure
 from chia import __version__
 from chia.cmds.chia import monkey_patch_click
 from chia.cmds.init_funcs import init
-from chia.seeder.util.config import patch_default_chia_seeder_config
+from chia.seeder.util.config import patch_default_seeder_config
 from chia.seeder.util.service_groups import all_groups, services_for_groups
 from chia.seeder.util.service import launch_service, kill_service
 from chia.util.config import load_config, save_config
@@ -18,8 +18,8 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 
 @click.group(
-    help=f"\n  Manage Chia Seeder ({__version__})\n",
-    epilog="Try 'chia_seeder start crawler' or 'chia_seeder start server'",
+    help=f"\n  Manage the Chia Seeder ({__version__})\n",
+    epilog="Try 'chia seeder start crawler' or 'chia seeder start server'",
     context_settings=CONTEXT_SETTINGS,
 )
 @click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root", type=click.Path(), show_default=True)
@@ -50,10 +50,10 @@ def init_cmd(ctx: click.Context, **kwargs):
     print(f"Chia directory {root_path}")
     if root_path.is_dir() and not Path(root_path / "config" / "config.yaml").exists():
         # This is reached if CHIA_ROOT is set, but there is no config
-        # This really shouuldn't happen, but if we dont have the base chia config, we can't continue
+        # This really shouldn't happen, but if we dont have the base chia config, we can't continue
         print("Config does not exist. Can't continue!")
         return -1
-    patch_default_chia_seeder_config(root_path)
+    patch_default_seeder_config(root_path)
     return 0
 
 

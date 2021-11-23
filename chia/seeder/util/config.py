@@ -5,7 +5,7 @@ import pkg_resources
 from chia.util.config import load_config, save_config
 
 
-def patch_default_chia_seeder_config(root_path: Path, filename="config.yaml") -> None:
+def patch_default_seeder_config(root_path: Path, filename="config.yaml") -> None:
     """
     Checks if the seeder: section exists in the config. If not, the default seeder settings are appended to the file
     """
