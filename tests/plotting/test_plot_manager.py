@@ -91,7 +91,7 @@ def trigger_remove_plot(_: Path, plot_path: str):
 # crashing the refresh thread of the plot manager with invalid assertions.
 
 expected_result: TestRefreshResult = TestRefreshResult()
-expected_result_matched = True
+expected_result_matched = False
 
 
 def refresh_callback(event: PlotRefreshEvents, refresh_result: PlotRefreshResult):
@@ -122,7 +122,7 @@ def validate_values(names: List[str], actual: PlotRefreshResult, expected: TestR
 
 async def run_refresh_test(manager: PlotManager):
     global expected_result_matched
-    expected_result_matched = True
+    expected_result_matched = False
     manager.start_refreshing()
     manager.trigger_refresh()
     await time_out_assert(5, manager.needs_refresh, value=False)
