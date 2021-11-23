@@ -66,7 +66,9 @@ proof_of_space = ProofOfSpace(
     ),
 )
 
-pool_target = PoolTarget(bytes.fromhex("d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"), uint32(421941852))
+pool_target = PoolTarget(
+    bytes.fromhex("d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"), uint32(421941852)
+)
 g2_element = G2Element(
     bytes.fromhex(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
@@ -564,7 +566,13 @@ respond_additions = wallet_protocol.RespondAdditions(
     uint32(1992350400),
     bytes32(bytes.fromhex("449ba349ce403c1acfcd46108758e7ada3a455e7a82dbee90860ec73adb090c9")),
     [(bytes32(bytes.fromhex("ed8daaf9233ed82e773ef4d1e89f2958fec0570137cf2c267ae22099ab43a9a4")), [coin_1, coin_1])],
-    [(bytes32(bytes.fromhex("8bb1381ff8ee01944d6d6c7e2df4b2fc84343a0c6c0fb93e8ef6d75e5c8b3048")), bytes(b"a" * 10), bytes(b"a" * 10))],
+    [
+        (
+            bytes32(bytes.fromhex("8bb1381ff8ee01944d6d6c7e2df4b2fc84343a0c6c0fb93e8ef6d75e5c8b3048")),
+            bytes(b"a" * 10),
+            bytes(b"a" * 10),
+        )
+    ],
 )
 
 reject_additions = wallet_protocol.RejectAdditionsRequest(
@@ -637,7 +645,8 @@ request_ses_info = wallet_protocol.RequestSESInfo(
 )
 
 respond_ses_info = wallet_protocol.RespondSESInfo(
-    [bytes32(bytes.fromhex("b61cb91773995e99cb8259609c0985f915a5734a1706aeab9342a2d1c5abf71b"))], [[uint32(1), uint32(2), uint32(3)], [uint32(4), uint32(606340525)]]
+    [bytes32(bytes.fromhex("b61cb91773995e99cb8259609c0985f915a5734a1706aeab9342a2d1c5abf71b"))],
+    [[uint32(1), uint32(2), uint32(3)], [uint32(4), uint32(606340525)]],
 )
 
 
@@ -860,7 +869,12 @@ new_peak_timelord = timelord_protocol.NewPeakTimelord(
     uint8(202),
     uint64(16623089924886538940),
     sub_epoch_summary,
-    [(bytes32(bytes.fromhex("5bb65d8662d561ed2fc17e4177ba61c43017ee7e5418091d38968e36ce380d11")), uint128(134240022887890669757150210097251845335))],
+    [
+        (
+            bytes32(bytes.fromhex("5bb65d8662d561ed2fc17e4177ba61c43017ee7e5418091d38968e36ce380d11")),
+            uint128(134240022887890669757150210097251845335),
+        )
+    ],
     uint128(42058411995615810488183751196800190575),
     True,
 )
