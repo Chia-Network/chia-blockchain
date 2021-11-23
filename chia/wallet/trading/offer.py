@@ -278,6 +278,9 @@ class Offer:
 
         return cls(requested_payments, SpendBundle(leftover_coin_spends, bundle.aggregated_signature))
 
+    def name(self) -> bytes32:
+        return self.to_spend_bundle().name()
+
     # Methods to make this a valid Streamable member
     # We basically hijack the SpendBundle versions for most of it
     @classmethod

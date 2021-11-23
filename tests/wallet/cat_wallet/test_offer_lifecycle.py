@@ -19,7 +19,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.payment import Payment
-from chia.wallet.puzzles.offer import Offer, NotarizedPayment
+from chia.wallet.trading.offer import Offer, NotarizedPayment
 
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 
