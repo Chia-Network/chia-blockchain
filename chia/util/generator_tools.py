@@ -70,9 +70,8 @@ def list_to_batches(list_to_split: List[Any], batch_size: int) -> Iterator[Tuple
     if batch_size <= 0:
         raise ValueError("list_to_batches: batch_size must be greater than 0.")
     total_size = len(list_to_split)
-    if total_size > 0:
-        for batch_start in range(0, total_size, batch_size):
-            batch_end = min(batch_start + batch_size, total_size)
-            yield total_size - batch_end, list_to_split[batch_start:batch_end]
-    else:
-        yield 0, []
+    if total_size == 0:
+        return iter(())
+    for batch_start in range(0, total_size, batch_size):
+        batch_end = min(batch_start + batch_size, total_size)
+        yield total_size - batch_end, list_to_split[batch_start:batch_end]

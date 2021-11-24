@@ -3,9 +3,9 @@ from chia.util.generator_tools import list_to_batches
 
 
 def test_empty_lists():
-    for remaining, batch in list_to_batches([], 1):
-        assert remaining == 0
-        assert batch == []
+    # An empty list should return an empty iterator and skip the loop's body.
+    for _, _ in list_to_batches([], 1):
+        assert False
 
 
 def test_valid():
