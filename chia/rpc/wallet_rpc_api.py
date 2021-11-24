@@ -86,6 +86,7 @@ class WalletRpcApi:
             "/cc_get_name": self.cc_get_name,
             "/cc_spend": self.cc_spend,
             "/cc_get_colour": self.cc_get_colour,
+            "/cc_get_wallet_id": self.cc_get_wallet_id,
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_discrepancies_for_offer": self.get_discrepancies_for_offer,
             "/respond_to_offer": self.respond_to_offer,
@@ -793,6 +794,21 @@ class WalletRpcApi:
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
         colour: str = wallet.get_colour()
         return {"colour": colour, "wallet_id": wallet_id}
+
+    async def cc_get_wallet_id(self, request):
+        assert self.service.wallet_state_manager is not None
+        cat_asset_id = request['cat_asset_id']
+        wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
+        for wallet in wallets:
+            wallet_type = WalletType(int(wallet.type))
+            if wallet_type != WalletType.COLOURED_COIN:
+                continue
+            wallet_id = wallet.id
+            cc_wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
+            colour: str = cc_wallet.get_colour()
+            if colour == cat_asset_id:
+                return {"cat_asset_id": colour, "wallet_id": wallet_id}
+        raise ValueError("Not existing CAT asset with cat_asset_id: {cat_asset_id}".format(cat_asset_id=cat_asset_id))
 
     async def create_offer_for_ids(self, request):
         assert self.service.wallet_state_manager is not None
