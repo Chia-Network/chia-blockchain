@@ -594,9 +594,7 @@ class WalletStateManager:
                 cat_puzzle = construct_cat_puzzle(CAT_MOD, bytes(tail_hash)[1:], our_inner_puzzle)
                 if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                     return None, None
-                cat_wallet = await CATWallet.create_wallet_for_cat(
-                    self, self.main_wallet, bytes(tail_hash).hex()[2:]
-                )
+                cat_wallet = await CATWallet.create_wallet_for_cat(self, self.main_wallet, bytes(tail_hash).hex()[2:])
                 wallet_id = cat_wallet.id()
                 wallet_type = WalletType(cat_wallet.type())
                 self.state_changed("wallet_created")

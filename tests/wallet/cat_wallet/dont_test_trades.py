@@ -340,7 +340,9 @@ class TestCATTrades:
 
         asset_id = cat_a_4.get_asset_id()
 
-        cat_b_4: CATWallet = await CATWallet.create_wallet_for_cat(wallet_node_b.wallet_state_manager, wallet_b, asset_id)
+        cat_b_4: CATWallet = await CATWallet.create_wallet_for_cat(
+            wallet_node_b.wallet_state_manager, wallet_b, asset_id
+        )
         cat_balance = await cat_a_4.get_confirmed_balance()
         cat_balance_2 = await cat_b_4.get_confirmed_balance()
         offer_dict = {1: -30, cat_a_4.id(): 50}
