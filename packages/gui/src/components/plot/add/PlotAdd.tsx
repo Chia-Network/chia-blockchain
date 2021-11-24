@@ -7,6 +7,7 @@ import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { ButtonLoading, Flex, Form, FormBackButton, Loading } from '@chia/core';
 import { PlotHeaderSource } from '../PlotHeader';
+import PlotAddChoosePlotter from './PlotAddChoosePlotter';
 import PlotAddChooseSize from './PlotAddChooseSize';
 import PlotAddNumberOfPlots from './PlotAddNumberOfPlots';
 import PlotAddSelectTemporaryDirectory from './PlotAddSelectTemporaryDirectory';
@@ -15,13 +16,16 @@ import PlotAddNFT from './PlotAddNFT';
 import { plotQueueAdd } from '../../../modules/plotQueue';
 import { createPlotNFT } from '../../../modules/plotNFT';
 import PlotAddConfig from '../../../types/PlotAdd';
-import plotSizes, { defaultPlotSize } from '../../../constants/plotSizes';
+import plotSizes from '../../../constants/plotSizes';
 import PlotNFTState from '../../../constants/PlotNFTState';
+import PlotterName from '../../../constants/PlotterName';
+import { defaultPlotter } from '../../../modules/plotterConfiguration';
 import useCurrencyCode from '../../../hooks/useCurrencyCode';
 import type { RootState } from '../../../modules/rootReducer';
 import toBech32m from '../../../util/toBech32m';
 import useUnconfirmedPlotNFTs from '../../../hooks/useUnconfirmedPlotNFTs';
 import useOpenDialog from '../../../hooks/useOpenDialog';
+import { getPlotters } from '../../../modules/plotter_messages';
 
 type FormData = PlotAddConfig & {
   p2_singleton_puzzle_hash?: string;
@@ -32,6 +36,7 @@ export default function PlotAdd() {
   const history = useHistory();
   const dispatch = useDispatch();
   const [loading, setLoading] = useState<boolean>(false);
+  const [fetchedPlotters, setFetchedPlotters] = useState<boolean>(false);
   const currencyCode = useCurrencyCode();
   const fingerprint = useSelector(
     (state: RootState) => state.wallet_state.selected_fingerprint,
@@ -40,32 +45,53 @@ export default function PlotAdd() {
   const unconfirmedNFTs = useUnconfirmedPlotNFTs();
   const openDialog = useOpenDialog();
   const state = useSelector((state: RootState) => state.router.location.state);
+  const { availablePlotters } = useSelector((state: RootState) => state.plotter_configuration);
+
+  const otherDefaults = {
+    plotCount: 1,
+    queue: 'default',
+    finalLocation: '',
+    workspaceLocation: '',
+    workspaceLocation2: '',
+    farmerPublicKey: '',
+    poolPublicKey: '',
+    excludeFinalDir: false,
+    p2_singleton_puzzle_hash: state?.p2_singleton_puzzle_hash ?? '',
+    createNFT: false,
+  };
+
+  const defaultsForPlotter = (plotterName: PlotterName) => {
+    const plotterDefaults = availablePlotters[plotterName]?.defaults ?? defaultPlotter().defaults;
+    const plotSize = plotterDefaults.plotSize;
+    const maxRam = plotSizes.find((element) => element.value === plotSize)?.defaultRam;
+    const defaults = {
+      ...plotterDefaults,
+      ...otherDefaults,
+      maxRam: maxRam,
+    };
+
+    return defaults;
+  }
 
   const methods = useForm<FormData>({
     shouldUnregister: false,
-    defaultValues: {
-      plotSize: defaultPlotSize.value,
-      plotCount: 1,
-      maxRam: defaultPlotSize.defaultRam,
-      numThreads: 2,
-      numBuckets: 128,
-      queue: 'default',
-      finalLocation: '',
-      workspaceLocation: '',
-      workspaceLocation2: '',
-      farmerPublicKey: '',
-      poolPublicKey: '',
-      delay: 0,
-      parallel: false,
-      disableBitfieldPlotting: false,
-      excludeFinalDir: false,
-      p2_singleton_puzzle_hash: state?.p2_singleton_puzzle_hash ?? '',
-      createNFT: false,
-    },
+    defaultValues: defaultsForPlotter(PlotterName.CHIAPOS),
   });
 
-  const { watch, setValue } = methods;
+  const { watch, setValue, reset } = methods;
+  const plotterName = watch('plotterName') as PlotterName;
   const plotSize = watch('plotSize');
+
+  useEffect(() => {
+    if (!fetchedPlotters) {
+      dispatch(getPlotters());
+      setFetchedPlotters(true);
+    }
+  }, [fetchedPlotters]);
+
+  let plotter = availablePlotters[plotterName] ?? defaultPlotter();
+  let step: number = 1;
+  const allowTempDirectorySelection: boolean = plotter.options.haveBladebitOutputDir === false;
 
   useEffect(() => {
     const plotSizeConfig = plotSizes.find((item) => item.value === plotSize);
@@ -73,6 +99,11 @@ export default function PlotAdd() {
       setValue('maxRam', plotSizeConfig.defaultRam);
     }
   }, [plotSize, setValue]);
+
+  const handlePlotterChanged = (newPlotterName: PlotterName) => {
+    const defaults = defaultsForPlotter(newPlotterName);
+    reset(defaults);
+  };
 
   const handleSubmit: SubmitHandler<FormData> = async (data) => {
     try {
@@ -161,11 +192,14 @@ export default function PlotAdd() {
         </Flex>
       </PlotHeaderSource>
       <Flex flexDirection="column" gap={3}>
-        <PlotAddChooseSize />
-        <PlotAddNumberOfPlots />
-        <PlotAddSelectTemporaryDirectory />
-        <PlotAddSelectFinalDirectory />
-        <PlotAddNFT ref={addNFTref} />
+        <PlotAddChoosePlotter step={step++} onChange={handlePlotterChanged} />
+        <PlotAddChooseSize step={step++} plotter={plotter} />
+        <PlotAddNumberOfPlots step={step++} plotter={plotter} />
+        {allowTempDirectorySelection && (
+          <PlotAddSelectTemporaryDirectory step={step++} plotter={plotter} />
+        )}
+        <PlotAddSelectFinalDirectory step={step++} plotter={plotter} />
+        <PlotAddNFT ref={addNFTref} step={step++} plotter={plotter} />
         <Flex gap={1}>
           <FormBackButton variant="outlined" />
           <ButtonLoading

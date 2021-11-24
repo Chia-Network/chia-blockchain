@@ -10,7 +10,7 @@ export default function useSelectFile(): () => Promise<string | undefined> {
   async function handleSelect(): Promise<string | undefined> {
     if (isElectron()) {
       // @ts-ignore
-      const result = await window.remote.dialog.showSaveDialog({});
+      const result = await window.ipcRenderer?.send('showSaveDialog',{});
       const { filePath } = result;
 
       return filePath;

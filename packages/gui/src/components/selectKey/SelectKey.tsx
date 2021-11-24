@@ -25,7 +25,8 @@ import {
   delete_key,
   get_private_key,
   delete_all_keys,
-  check_delete_key_action
+  check_delete_key_action,
+  skipKeyringMigration,
 } from '../../modules/message';
 import { resetMnemonic } from '../../modules/mnemonic';
 import type { RootState } from '../../modules/rootReducer';
@@ -45,6 +46,12 @@ export default function SelectKey() {
   );
   const hasFingerprints =
     publicKeyFingerprints && !!publicKeyFingerprints.length;
+  const needsKeyringMigration = useSelector(
+    (state: RootState) => state.keyring_state.needs_migration
+  );
+  const skippedKeyringMigration = useSelector(
+    (state: RootState) => state.keyring_state.migration_skipped
+  );
 
   function handleClick(fingerprint: Fingerprint) {
     dispatch(resetMnemonic());
@@ -55,11 +62,13 @@ export default function SelectKey() {
     dispatch(get_private_key(fingerprint));
   }
 
-  async function handleDeletePrivateKey(fingerprint: Fingerprint) {
+  async function handleDeletePrivateKey(e: React.MouseEvent<HTMLButtonElement>, fingerprint: Fingerprint) {
+    const keyringCanBeModified = await handleKeyringMutator(e);
 
-    dispatch(openProgress());
-    const response: any = await dispatch(check_delete_key_action(fingerprint));
-    dispatch(closeProgress());
+    if (keyringCanBeModified) {
+      dispatch(openProgress());
+      const response: any = await dispatch(check_delete_key_action(fingerprint));
+      dispatch(closeProgress());
 
     const deletePrivateKey = await openDialog(
       <ConfirmDialog
@@ -73,54 +82,87 @@ export default function SelectKey() {
             Warning: This key is used for your farming rewards address.
             By deleting this key you may lose access to any future farming rewards
             </Trans>
-        </Alert>)}
+          </Alert>)}
 
-        {response.used_for_pool_rewards && (<Alert severity="warning">
+          {response.wallet_balance && (<Alert severity="warning">
+            <Trans>
+              Warning: This key is used for a wallet that may have a non-zero balance. 
+              By deleting this key you may lose access to this wallet
+            </Trans>
+          </Alert>)}
+
           <Trans>
             Warning: This key is used for your pool rewards address.
             By deleting this key you may lose access to any future pool rewards
           </Trans>
-        </Alert>)}
+        </ConfirmDialog>,
+      );
 
-        {response.wallet_balance && (<Alert severity="warning">
+      // @ts-ignore
+      if (deletePrivateKey) {
+        dispatch(delete_key(fingerprint));
+      }
+    }
+  }
+
+  async function handleDeleteAllKeys(e: React.MouseEvent<HTMLButtonElement>) {
+    const keyringCanBeModified = await handleKeyringMutator(e);
+
+    if (keyringCanBeModified) {
+      const deleteAllKeys = await openDialog((
+        <ConfirmDialog
+          title={<Trans>Delete all keys</Trans>}
+          confirmTitle={<Trans>Delete</Trans>}
+          cancelTitle={<Trans>Back</Trans>}
+          confirmColor="default"
+        >
           <Trans>
             Warning: This key is used for a wallet that may have a non-zero balance.
             By deleting this key you may lose access to this wallet
           </Trans>
-        </Alert>)}
+        </ConfirmDialog>
+      ));
 
-        <Trans>
-          Deleting the key will permanently remove the key from your computer,
-          make sure you have backups. Are you sure you want to continue?
-        </Trans>
-      </ConfirmDialog>,
-    );
-
-    // @ts-ignore
-    if (deletePrivateKey) {
-      dispatch(delete_key(fingerprint));
+      // @ts-ignore
+      if (deleteAllKeys) {
+        dispatch(delete_all_keys());
+      }
     }
   }
 
-  async function handleDeleteAllKeys() {
-    const deleteAllKeys = await openDialog(
+  async function promptForKeyringMigration() {
+    const beginMigration = await openDialog(
       <ConfirmDialog
-        title={<Trans>Delete all keys</Trans>}
-        confirmTitle={<Trans>Delete</Trans>}
-        cancelTitle={<Trans>Back</Trans>}
-        confirmColor="danger"
+        title={<Trans>Migration required</Trans>}
+        confirmTitle={<Trans>Migrate</Trans>}
+        cancelTitle={<Trans>Cancel</Trans>}
+        confirmColor="default"
       >
         <Trans>
-          Deleting all keys will permanently remove the keys from your computer,
-          make sure you have backups. Are you sure you want to continue?
+          Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?
         </Trans>
       </ConfirmDialog>,
     );
 
     // @ts-ignore
-    if (deleteAllKeys) {
-      dispatch(delete_all_keys());
+    if (beginMigration) {
+      dispatch(skipKeyringMigration(false));
     }
+  }
+
+  async function handleKeyringMutator(e: React.MouseEvent<HTMLButtonElement>): Promise<boolean> {
+    // If the keyring requires migration and the user prevoiusly skipped migration, prompt again
+    if (needsKeyringMigration && skippedKeyringMigration) {
+      // Disable default event handling to avoid navigation updates
+      e.preventDefault();
+      e.stopPropagation();
+
+      promptForKeyringMigration();
+
+      return false;
+    }
+
+    return true;
   }
 
   return (
@@ -190,7 +232,7 @@ export default function SelectKey() {
                           <IconButton
                             edge="end"
                             aria-label="delete"
-                            onClick={() => handleDeletePrivateKey(fingerprint)}
+                            onClick={(e) => handleDeletePrivateKey(e, fingerprint)}
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -202,6 +244,7 @@ export default function SelectKey() {
               </Card>
             )}
             <Button
+              onClick={(e) => handleKeyringMutator(e)}
               to="/wallet/add"
               variant="contained"
               color="primary"
@@ -211,6 +254,7 @@ export default function SelectKey() {
               <Trans>Create a new private key</Trans>
             </Button>
             <Button
+              onClick={(e) => handleKeyringMutator(e)}
               to="/wallet/import"
               type="submit"
               variant="outlined"

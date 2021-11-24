@@ -48,6 +48,6 @@
   "format": "po",
   "sourceLocale": "en-US",
   "fallbackLocales": {
-    "default": "en-US"
+    default: "en-US"
   }
 }

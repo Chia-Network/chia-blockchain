@@ -3,14 +3,14 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const lodash = require('lodash');
+const sleepModule = require('./sleep');
+
+const sleep = lodash.default;
 
 // defaults used in case of error point to the localhost daemon & its certs
 let self_hostname = 'localhost';
-global.daemon_rpc_ws = `wss://${self_hostname}:55401`;
-global.cert_path = 'config/ssl/daemon/private_daemon.crt';
-global.key_path = 'config/ssl/daemon/private_daemon.key';
 
-function loadConfig(net) {
+async function loadConfig(net) {
   try {
     // check if CHIA_ROOT is set. it overrides 'net'
     const config_root_dir =
@@ -22,7 +22,7 @@ function loadConfig(net) {
     );
 
     self_hostname = lodash.get(config, 'ui.daemon_host', 'localhost'); // jshint ignore:line
-    const daemon_port = lodash.get(config, 'ui.daemon_port', 55401); // jshint ignore:line
+    const daemon_port = lodash.get(config, 'ui.daemon_port', 55400); // jshint ignore:line
 
     // store these in the global object so they can be used by both main and renderer processes
     global.daemon_rpc_ws = `wss://${self_hostname}:${daemon_port}`;
@@ -42,8 +42,20 @@ function loadConfig(net) {
         'config/ssl/daemon/private_daemon.key',
       ),
     ); // jshint ignore:line
+
+    return {
+      url: global.daemon_rpc_ws,
+      cert: fs.readFileSync(global.cert_path).toString(),
+      key: fs.readFileSync(global.key_path).toString(),
+    };
   } catch (e) {
-    console.log('Error loading config - using defaults');
+    if (e.code === 'ENOENT') {
+      console.log('Waiting for configuration file');
+      await sleep(1000);
+      return loadConfig(net);
+    } else {
+      throw e;
+    }
   }
 }
 

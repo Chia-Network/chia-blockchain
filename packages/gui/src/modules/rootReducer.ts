@@ -9,9 +9,11 @@ import createWallet from './createWallet';
 import tradeReducer from './trade';
 import dialogReducer from './dialog';
 import daemonReducer from './daemon';
+import keyringReducer from './keyring';
 import { entranceReducer } from './entranceMenu';
 import fullNodeReducer from './fullNode';
 import farmingReducer from './farming';
+import plotterConfigurationReducer from './plotterConfiguration';
 import plotControlReducer from './plotterControl';
 import plotQueueReducer from './plotQueue';
 import plotNFTReducer from './plotNFT';
@@ -21,6 +23,7 @@ import localStorageReducer from './localStorage';
 
 const reducers = {
   daemon_state: daemonReducer,
+  keyring_state: keyringReducer,
   websocket: websocketReducer,
   wallet_state: incomingReducer,
   mnemonic_state: mnemonicReducer,
@@ -31,6 +34,7 @@ const reducers = {
   entrance_menu: entranceReducer,
   full_node_state: fullNodeReducer,
   farming_state: farmingReducer,
+  plotter_configuration: plotterConfigurationReducer,
   plot_control: plotControlReducer,
   progress: progressReducer,
   backup_state: backupReducer,

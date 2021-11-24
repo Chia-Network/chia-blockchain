@@ -237,8 +237,7 @@ export default function incomingReducer(
           public_key_fingerprints: [],
           logged_in_received: true,
         };
-      } 
-      if (command === 'get_public_keys' && success) {
+      } else if (command === 'get_public_keys' && success) {
         const { public_key_fingerprints } = data;
 
         return {

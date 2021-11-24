@@ -1,0 +1,96 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+**/*.o
+**/*.DS_Store
+
+# Database
+nohup.out
+mongod.log*
+fndb_test*
+blockchain_test*
+*.db
+*.db-journal
+
+# Logs
+*.log
+*.out
+
+# Keys and plot files
+config/keys.yaml
+config/plots.yaml
+
+# Bundled code
+chia-blockchain.tar.gz.tar.gz
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+build_scripts/*.dmg
+build_scripts/build
+
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+**/*.egg-info
+
+# Unit test / coverage reports
+.cache
+.pytest_cache/
+
+# PoSpace plots
+**/*.dat
+**/*.dat.tmp
+*.mo
+*.pot
+
+# pyenv
+.python-version
+.eggs
+.venv
+venv
+activate
+
+# mypy
+.mypy_cache/
+
+# Editors
+.vscode
+.idea
+
+# Packaging
+chia-blockchain.tar.gz
+
+# Timelord utilities
+vdf_bench
+
+# Node modules
+**/node_modules
+
+# Offer Files
+*.offer
+
+# Backup Files
+*.backup
+
+# Compiled CLVM
+main.sym
+
+# Dev config react
+# src/dev_config.js
+# React built app
+.eslintcache
+build
+build_scripts/dist
+build_scripts/*.Dmg
+src/locales/_build
+src/locales/**/*.js
+daemon/
+win_code_sign_cert.p12

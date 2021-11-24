@@ -23,13 +23,10 @@ export default function AppTimeBomb() {
     setShowed(true);
 
     // @ts-ignore
-    await window.remote.dialog.showMessageBox(
-      window.remote.getCurrentWindow(),
-      {
-        type: 'warning',
-        message: t`The application will stop working at block height 193536.`,
-      },
-    );
+    await window.ipcRenderer?.send('showMessageBox', {
+      type: 'warning',
+      message: t`The application will stop working at block height 193536.`,
+    });
 
     const newTimeoutId = setTimeout(() => {
       setShowed(false);

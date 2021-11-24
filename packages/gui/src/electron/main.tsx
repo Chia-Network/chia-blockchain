@@ -1,4 +1,5 @@
 import { app, dialog, shell, ipcMain, BrowserWindow, Menu, session } from 'electron';
+require('@electron/remote/main').initialize()
 import path from 'path';
 import React from 'react';
 import url from 'url';
@@ -49,13 +50,9 @@ function openAbout() {
   });
   aboutWindow.loadURL(`data:text/html;charset=utf-8,${about}`);
 
-  aboutWindow.webContents.on('will-navigate', (e, url) => {
-    e.preventDefault();
-    shell.openExternal(url);
-  });
-  aboutWindow.webContents.on('new-window', (e, url) => {
-    e.preventDefault();
-    shell.openExternal(url);
+  aboutWindow.webContents.setWindowOpenHandler((details) => {
+    shell.openExternal(details.url);
+    return { action: 'deny' }
   });
 
   aboutWindow.once('closed', () => {
@@ -110,7 +107,6 @@ if (!handleSquirrelEvent()) {
   // if any of these checks return false, don't do any other initialization since the app is quitting
   if (ensureSingleInstance() && ensureCorrectEnvironment()) {
     // this needs to happen early in startup so all processes share the same global config
-    chiaConfig.loadConfig('standalone_wallet');
     global.sharedObj = { local_test };
 
     const exitPyProc = (e) => {};
@@ -124,6 +120,12 @@ if (!handleSquirrelEvent()) {
     let isClosing = false;
 
     const createWindow = async () => {
+      if (chiaConfig.manageDaemonLifetime()) {
+        chiaEnvironment.startChiaDaemon();
+      }
+
+      ipcMain.handle('getConfig', () => chiaConfig.loadConfig('mainnet'));
+
       decidedToClose = false;
       mainWindow = new BrowserWindow({
         width: 1200,
@@ -135,7 +137,8 @@ if (!handleSquirrelEvent()) {
         webPreferences: {
           preload: `${__dirname}/preload.js`,
           nodeIntegration: true,
-          enableRemoteModule: true,
+          contextIsolation: false,
+          nativeWindowOpen: true
         },
       });
 
@@ -163,6 +166,7 @@ if (!handleSquirrelEvent()) {
       console.log('startUrl', startUrl);
 
       mainWindow.loadURL(startUrl);
+      require("@electron/remote/main").enable(mainWindow.webContents)
 
       mainWindow.once('ready-to-show', () => {
         mainWindow.show();
@@ -214,17 +218,23 @@ if (!handleSquirrelEvent()) {
           });
         }
       });
+      mainWindow.on('showMessageBox' , async (e, a) => {
+        e.reply(await dialog.showMessageBox(mainWindow,a))
+      })
+
+      mainWindow.on('showSaveDialog' , async (e, a) => {
+        e.reply(await dialog.showSaveDialog(a))
+      })
+
     };
+
+
 
     const createMenu = () => Menu.buildFromTemplate(getMenuTemplate());
 
     const appReady = async () => {
       createWindow();
       app.applicationMenu = createMenu();
-      // if the daemon isn't local we aren't going to try to start/stop it
-      if (chiaConfig.manageDaemonLifetime()) {
-        chiaEnvironment.startChiaDaemon();
-      }
     };
 
     app.on('ready', appReady);

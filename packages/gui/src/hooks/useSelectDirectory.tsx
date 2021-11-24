@@ -5,6 +5,7 @@ import { AlertDialog } from '@chia/core';
 import useOpenDialog from './useOpenDialog';
 
 type Options = {
+  defaultPath?: string;
   buttonLabel?: string;
 };
 
@@ -15,8 +16,9 @@ export default function useSelectDirectory(
 
   async function handleSelect(options?: Options): Promise<string | undefined> {
     if (isElectron()) {
+      const {dialog} = window.require('@electron/remote');
       // @ts-ignore
-      const result = await window.remote.dialog.showOpenDialog({
+      const result = await dialog.showOpenDialog({
         properties: ['openDirectory', 'showHiddenFiles'],
         ...defaultOptions,
         ...options,

@@ -1,0 +1,1 @@
+export { default as WalletStandard } from './standard/WalletStandard';

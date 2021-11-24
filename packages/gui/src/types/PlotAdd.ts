@@ -1,24 +1,31 @@
 import Fingerprint from './Fingerprint';
 
 type PlotAdd = {
-  plotSize: number;
-  plotCount: number;
-  maxRam: number;
-  numThreads: number;
-  numBuckets: number;
-  queue: string;
-  finalLocation: string;
-  workspaceLocation: string;
-  workspaceLocation2: string;
-  parallel: boolean;
+  bladebitDisableNUMA?: boolean;
+  bladebitWarmStart?: boolean;
+  c: string;
   delay: number;
-  fingerprint?: Fingerprint;
   disableBitfieldPlotting?: boolean;
   excludeFinalDir?: boolean;
-  overrideK?: boolean;
   farmerPublicKey?: string;
+  finalLocation: string;
+  fingerprint?: Fingerprint;
+  madmaxNumBucketsPhase3?: number;
+  madmaxTempToggle?: boolean;
+  madmaxThreadMultiplier?: number;
+  madmaxWaitForCopy?: boolean
+  maxRam: number;
+  numBuckets: number;
+  numThreads: number;
+  overrideK?: boolean;
+  parallel: boolean;
+  plotCount: number;
+  plotSize: number;
+  plotterName: string;
   poolPublicKey?: string;
-  c: string;
+  queue: string;
+  workspaceLocation: string;
+  workspaceLocation2: string;
 };
 
 export default PlotAdd;

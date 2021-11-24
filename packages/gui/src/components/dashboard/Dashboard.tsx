@@ -16,6 +16,7 @@ import Plot from '../plot/Plot';
 import Farm from '../farm/Farm';
 import Pool from '../pool/Pool';
 import Block from '../block/Block';
+import Settings from '../settings/Settings';
 import DashboardSideBar from './DashboardSideBar';
 import { DashboardTitleTarget } from './DashboardTitle';
 import TradeManager from '../trading/TradeManager';
@@ -101,6 +102,9 @@ export default function Dashboard() {
           </Route>
           <Route path={`${path}/trade`}>
             <TradeManager />
+          </Route>
+          <Route path={`${path}/settings`}>
+            <Settings />
           </Route>
         </Switch>
       </StyledBody>

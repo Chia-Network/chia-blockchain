@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useFormContext } from 'react-hook-form';
@@ -13,6 +13,7 @@ import {
 } from '@material-ui/core';
 import { plotSizeOptions } from '../../../constants/plotSizes';
 import useOpenDialog from '../../../hooks/useOpenDialog';
+import Plotter from '../../../types/Plotter';
 
 const MIN_MAINNET_K_SIZE = 32;
 
@@ -20,13 +21,26 @@ const StyledFormHelperText = styled(FormHelperText)`
   color: ${StateColor.WARNING};
 `;
 
-export default function PlotAddChooseSize() {
+type Props = {
+  step: number;
+  plotter: Plotter;
+};
+
+export default function PlotAddChooseSize(props: Props) {
+  const { step, plotter } = props;
   const { watch, setValue } = useFormContext();
   const openDialog = useOpenDialog();
 
+  const plotterName = watch('plotterName');
   const plotSize = watch('plotSize');
   const overrideK = watch('overrideK');
   const isKLow = plotSize < MIN_MAINNET_K_SIZE;
+
+  const [allowedPlotSizes, setAllowedPlotSizes] = useState(plotSizeOptions.filter((option) => plotter.options.kSizes.includes(option.value)));
+
+  useEffect(() => {
+    setAllowedPlotSizes(plotSizeOptions.filter((option) => plotter.options.kSizes.includes(option.value)));
+  }, [plotterName]);
 
   async function getConfirmation() {
     const canUse = await openDialog(
@@ -58,7 +72,7 @@ export default function PlotAddChooseSize() {
   }, [plotSize, overrideK]); // eslint-disable-line
 
   return (
-    <CardStep step="1" title={<Trans>Choose Plot Size</Trans>}>
+    <CardStep step={step} title={<Trans>Choose Plot Size</Trans>}>
       <Typography variant="subtitle1">
         <Trans>
           {
@@ -80,7 +94,7 @@ export default function PlotAddChooseSize() {
               <Trans>Plot Size</Trans>
             </InputLabel>
             <Select name="plotSize">
-              {plotSizeOptions.map((option) => (
+              {allowedPlotSizes.map((option) => (
                 <MenuItem value={option.value} key={option.value}>
                   {option.label}
                 </MenuItem>

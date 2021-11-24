@@ -1,0 +1,3 @@
+files:
+  - source: /src/locales/en-US/*.po
+    translation: /src/locales/%locale%/messages.po

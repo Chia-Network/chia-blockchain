@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import styled from 'styled-components';
-import { Loading } from '@chia/core';
+import Loading from '../Loading';
 
 const StyledRoot = styled.div`
   position: relative;

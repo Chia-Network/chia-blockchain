@@ -290,11 +290,11 @@ const RecoveryCard = (props) => {
   const id = props.wallet_id;
   const { wallet } = useWallet(id);
 
-  const { 
-    mydid, 
-    didcoin, 
-    did_rec_pubkey, 
-    did_rec_puzhash, 
+  const {
+    mydid,
+    didcoin,
+    did_rec_pubkey,
+    did_rec_puzhash,
     backup_dids: backup_did_list,
     dids_num_req,
   } = wallet;
@@ -751,7 +751,7 @@ const ManageDIDsCard = (props) => {
   var created = useSelector((state) => state.create_options.created);
 
   const { wallet } = useWallet(id);
-  const { 
+  const {
     backup_dids: backup_did_list,
     dids_num_req
   } = wallet;
@@ -821,16 +821,17 @@ const ManageDIDsCard = (props) => {
                 </Tooltip>
               </Flex>
               <Controller
-                as={TextField}
                 name="num_needed"
                 control={control}
-                label="Number of Backup IDs needed for recovery"
-                variant="outlined"
-                fullWidth
-                defaultValue=""
+                render={({ field }) =>
+                  (<TextField
+                    label="Number of Backup IDs needed for recovery"
+                    variant="outlined"
+                    fullWidth
+                    {...field} /> )}
               />
             </Flex>
-              
+
             <Flex flexDirection="column" gap={1}>
               <Flex alignItems="center" gap={1}>
                 <Typography variant="subtitle1">
@@ -844,14 +845,16 @@ const ManageDIDsCard = (props) => {
                 <Flex alignItems="stretch">
                   <Box flexGrow={1}>
                     <Controller
-                      as={TextField}
                       name={`backup_dids[${index}].backupid`}
                       control={control}
                       defaultValue=""
-                      label="Backup ID"
-                      variant="outlined"
-                      fullWidth
-                      color="secondary"
+                      render={({ field }) =>
+                        (<TextField
+                          label="Backup ID"
+                          variant="outlined"
+                          fullWidth
+                          color="secondary"
+                          {...field} /> )}
                     />
                   </Box>
                   <Button

@@ -1,0 +1,24 @@
+{
+  "presets": [
+    "@babel/env",
+    "@babel/typescript",
+    "@babel/react"
+  ],
+  "plugins": [
+    "macros",
+    "@babel/plugin-transform-runtime",
+    "babel-plugin-styled-components",
+    "@babel/plugin-proposal-export-default-from",
+    "@babel/plugin-proposal-class-properties",
+    ["babel-plugin-transform-imports", {
+      "@material-ui/core": {
+        "transform": "@material-ui/core/${member}",
+        "preventFullImport": true
+      },
+      "@material-ui/icons": {
+        "transform": "@material-ui/icons/${member}",
+        "preventFullImport": true
+      }
+    }]
+  ]
+}

@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux';
 import React, { useMemo } from 'react';
-import { Trans } from '@lingui/macro';
+import {Trans} from '@lingui/macro';
 import { useHistory } from 'react-router';
 import {
   Box,
@@ -105,7 +105,7 @@ export default function CreateOffer() {
     }
     if (isElectron()) {
       const dialogOptions = {};
-      const result = await window.remote.dialog.showSaveDialog(dialogOptions);
+      const result = await window.ipcRenderer?.send('showSaveDialog', dialogOptions);
       const { filePath } = result;
       const offer = {};
       for (const trade of trades) {

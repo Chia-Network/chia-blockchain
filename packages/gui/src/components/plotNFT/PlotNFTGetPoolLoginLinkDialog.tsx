@@ -66,13 +66,17 @@ export default function PlotNFTGetPoolLoginLinkDialog(props: Props) {
       setLoading(false);
     }
   }
+  function handleDialogClose(event: any, reason: any) {
+    if (reason !== 'backdropClick' || reason !== 'EscapeKeyDown') {
+      onClose();
+    }}
 
   useEffect(() => {
     updatePoolLoginLink();
   }, [pool_url]); // eslint-disable-line
 
   return (
-    <Dialog disableBackdropClick disableEscapeKeyDown maxWidth="md" open={open}>
+    <Dialog onClose={handleDialogClose} maxWidth="md" open={open}>
       <DialogTitle>
         <Trans>Pool Login Link</Trans>
       </DialogTitle>

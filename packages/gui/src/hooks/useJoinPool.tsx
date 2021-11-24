@@ -20,6 +20,7 @@ export default function usePoolJoin(nft: PlotNFT) {
     poolUrl: string,
     relativeLockHeight: number,
     targetPuzzlehash?: string,
+    fee?: number,
   ) {
     if (!isSynced) {
       await openDialog(
@@ -43,7 +44,7 @@ export default function usePoolJoin(nft: PlotNFT) {
     }
 
     await dispatch(
-      pwJoinPool(walletId, poolUrl, relativeLockHeight, targetPuzzlehash),
+      pwJoinPool(walletId, poolUrl, relativeLockHeight, targetPuzzlehash, fee),
     );
   }
 

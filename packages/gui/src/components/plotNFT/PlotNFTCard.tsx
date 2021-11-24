@@ -31,10 +31,10 @@ import {
   Link as LinkIcon,
   Payment as PaymentIcon,
 } from '@material-ui/icons';
-import { Plot as PlotIcon } from '@chia/icons';
 import type PlotNFT from '../../types/PlotNFT';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTStatus from './PlotNFTState';
+import PlotIcon from '../icons/Plot';
 import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
 import useOpenDialog from '../../hooks/useOpenDialog';
 import PoolJoin from '../pool/PoolJoin';

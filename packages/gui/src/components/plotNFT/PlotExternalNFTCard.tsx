@@ -21,9 +21,9 @@ import {
   ListItemIcon,
 } from '@material-ui/core';
 import { /* Link as LinkIcon, */ Payment as PaymentIcon } from '@material-ui/icons';
-import { Plot as PlotIcon } from '@chia/icons';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTExternalState from './PlotNFTExternalState';
+import PlotIcon from '../icons/Plot';
 import usePlotNFTExternalDetails from '../../hooks/usePlotNFTExternalDetails';
 import PlotNFTExternal from '../../types/PlotNFTExternal';
 import useOpenDialog from '../../hooks/useOpenDialog';
