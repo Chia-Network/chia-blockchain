@@ -147,6 +147,9 @@ class Wallet:
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
 
+    async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
+        return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
+
     async def hack_populate_secret_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> G1Element:
         maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
         if maybe is None:
