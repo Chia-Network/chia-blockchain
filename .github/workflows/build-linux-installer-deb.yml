@@ -14,14 +14,16 @@ on:
 jobs:
   build:
     name: Linux .deb installer on Python 3.8
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.container }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
         python-version: [3.8]
-        os: [ubuntu-18.04]
+        container: [chianetwork/ubuntu-18.04-builder:latest]
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -38,38 +40,6 @@ jobs:
 
     - name: Cleanup any leftovers that exist from previous runs
       run: bash build_scripts/clean-runner.sh || true
-
-    - name: Setup Python environment
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Cache npm
-      uses: actions/cache@v2.1.6
-      env:
-        cache-name: cache-node-modules
-      with:
-        # npm cache files are stored in `~/.npm` on Linux/macOS
-        path: ~/.npm
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-build-${{ env.cache-name }}-
-          ${{ runner.os }}-build-
-          ${{ runner.os }}-
-
-    - name: Get pip cache dir
-      id: pip-cache
-      run: |
-        echo "::set-output name=dir::$(pip cache dir)"
-
-    - name: Cache pip
-      uses: actions/cache@v2.1.6
-      with:
-        # Note that new runners may break this https://github.com/actions/cache/issues/292
-        path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
 
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
     - name: Get version number
@@ -138,15 +108,6 @@ jobs:
         BUILD_VDF_CLIENT: "N"
       run: |
         sh install.sh
-
-    - name: Setup Node 12.x
-      uses: actions/setup-node@v2.4.1
-      with:
-        node-version: '12.x'
-
-    - name: Add jq
-      run: |
-        sudo apt-get install -y jq
 
     - name: Build .deb package
       run: |
