@@ -894,7 +894,12 @@ class WalletNode:
         )
         if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
             raise ValueError(f"Was not able to obtain solution {solution_response}")
-        return CoinSpend(coin, solution_response.response.puzzle, solution_response.response.solution)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+        #       [arg-type]
+        #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+        #       [arg-type]
+        return CoinSpend(coin, solution_response.response.puzzle, solution_response.response.solution)  # type: ignore[arg-type]  # noqa E501
 
     async def get_additional_coin_spends(
         self, peer, block, added_coins: List[Coin], removed_coins: List[Coin]

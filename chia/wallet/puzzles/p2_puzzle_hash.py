@@ -23,4 +23,6 @@ def puzzle_for_inner_puzzle(inner_puzzle: Program) -> Program:
 
 
 def solution_for_inner_puzzle_and_inner_solution(inner_puzzle: Program, inner_puzzle_solution: Program) -> Program:
-    return Program.to([inner_puzzle, inner_puzzle_solution])
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return Program.to([inner_puzzle, inner_puzzle_solution])  # type: ignore[return-value]

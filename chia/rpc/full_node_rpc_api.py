@@ -559,8 +559,14 @@ class FullNodeRpcApi:
         if error is not None:
             raise ValueError(f"Error: {error}")
 
-        puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
-        solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "from_program" of "SerializedProgram" has incompatible type "SExp"; expected
+        #       "Program"  [arg-type]
+        puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))  # type: ignore[arg-type]
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "from_program" of "SerializedProgram" has incompatible type "SExp"; expected
+        #       "Program"  [arg-type]
+        solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))  # type: ignore[arg-type]
         return {"coin_solution": CoinSpend(coin_record.coin, puzzle_ser, solution_ser)}
 
     async def get_additions_and_removals(self, request: Dict) -> Optional[Dict]:

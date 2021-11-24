@@ -28,7 +28,9 @@ def generate_launcher_coin(coin: Coin, amount: uint64) -> Coin:
 # Wrap inner puzzles that are not singleton specific to strip away "truths"
 def adapt_inner_to_singleton(inner_puzzle: Program) -> Program:
     # (a (q . inner_puzzle) (r 1))
-    return Program.to([2, (1, inner_puzzle), [6, 1]])
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return Program.to([2, (1, inner_puzzle), [6, 1]])  # type: ignore[return-value]
 
 
 # Take standard coin and amount -> launch conditions & launcher coin solution
@@ -61,22 +63,30 @@ def launch_conditions_and_coinsol(
             amount,
         ],
     )
+    # TODO: address hint error and remove ignore
+    #       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
     assert_launcher_announcement = Program.to(
         [
             ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
-            std_hash(launcher_coin.name() + launcher_solution.get_tree_hash()),
+            std_hash(launcher_coin.name() + launcher_solution.get_tree_hash()),  # type: ignore[attr-defined]
         ],
     )
 
     conditions = [create_launcher, assert_launcher_announcement]
 
+    # TODO: address hint error and remove ignore
+    #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
+    #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
     launcher_coin_spend = CoinSpend(
         launcher_coin,
-        SINGLETON_LAUNCHER,
-        launcher_solution,
+        SINGLETON_LAUNCHER,  # type: ignore[arg-type]
+        launcher_solution,  # type: ignore[arg-type]
     )
 
-    return conditions, launcher_coin_spend
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "Tuple[List[SExp], CoinSpend]", expected
+    #       "Tuple[List[Program], CoinSpend]")  [return-value]
+    return conditions, launcher_coin_spend  # type: ignore[return-value]
 
 
 # Take a coin solution, return a lineage proof for their child to use in spends
@@ -127,7 +137,9 @@ def solution_for_singleton(
             lineage_proof.amount,
         ]
 
-    return Program.to([parent_info, amount, inner_solution])
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return Program.to([parent_info, amount, inner_solution])  # type: ignore[return-value]
 
 
 # Create a coin that a singleton can claim
@@ -148,12 +160,16 @@ def pay_to_singleton_or_delay_puzzle(launcher_id: bytes32, delay_time: uint64, d
 
 # Solution for EITHER p2_singleton or the claiming spend case for p2_singleton_or_delayed_puzhash
 def solution_for_p2_singleton(p2_singleton_coin: Coin, singleton_inner_puzhash: bytes32) -> Program:
-    return Program.to([singleton_inner_puzhash, p2_singleton_coin.name()])
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return Program.to([singleton_inner_puzhash, p2_singleton_coin.name()])  # type: ignore[return-value]
 
 
 # Solution for the delayed spend case for p2_singleton_or_delayed_puzhash
 def solution_for_p2_delayed_puzzle(output_amount: uint64) -> Program:
-    return Program.to([output_amount, []])
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return Program.to([output_amount, []])  # type: ignore[return-value]
 
 
 # Get announcement conditions for singleton solution and full CoinSpend for the claimed coin
@@ -174,12 +190,18 @@ def claim_p2_singleton(
             delay_time,
             delay_ph,
         )
+    # TODO: address hint error and remove ignore
+    #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
+    #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
     claim_coinsol = CoinSpend(
         p2_singleton_coin,
-        puzzle,
-        solution_for_p2_singleton(p2_singleton_coin, singleton_inner_puzhash),
+        puzzle,  # type: ignore[arg-type]
+        solution_for_p2_singleton(p2_singleton_coin, singleton_inner_puzhash),  # type: ignore[arg-type]
     )
-    return assertion, announcement, claim_coinsol
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "Tuple[SExp, SExp, CoinSpend]", expected
+    #       "Tuple[Program, Program, CoinSpend]")  [return-value]
+    return assertion, announcement, claim_coinsol  # type: ignore[return-value]
 
 
 # Get the CoinSpend for spending to a delayed puzzle
@@ -190,9 +212,12 @@ def spend_to_delayed_puzzle(
     delay_time: uint64,
     delay_ph: bytes32,
 ) -> CoinSpend:
+    # TODO: address hint error and remove ignore
+    #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
+    #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
     claim_coinsol = CoinSpend(
         p2_singleton_coin,
-        pay_to_singleton_or_delay_puzzle(launcher_id, delay_time, delay_ph),
-        solution_for_p2_delayed_puzzle(output_amount),
+        pay_to_singleton_or_delay_puzzle(launcher_id, delay_time, delay_ph),  # type: ignore[arg-type]
+        solution_for_p2_delayed_puzzle(output_amount),  # type: ignore[arg-type]
     )
     return claim_coinsol

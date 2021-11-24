@@ -50,7 +50,12 @@ def get_output_discrepancy_for_puzzle_and_solution(coin, puzzle, solution):
 
 
 def get_output_amount_for_puzzle_and_solution(puzzle: Program, solution: Program) -> int:
-    error, conditions, cost = conditions_dict_for_solution(puzzle, solution, INFINITE_COST)
+    # TODO: address hint error and remove ignore
+    #       error: Argument 1 to "conditions_dict_for_solution" has incompatible type "Program"; expected
+    #       "SerializedProgram"  [arg-type]
+    #       error: Argument 2 to "conditions_dict_for_solution" has incompatible type "Program"; expected
+    #       "SerializedProgram"  [arg-type]
+    error, conditions, cost = conditions_dict_for_solution(puzzle, solution, INFINITE_COST)  # type: ignore[arg-type]
     total = 0
     if conditions:
         for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):

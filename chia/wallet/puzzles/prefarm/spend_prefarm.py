@@ -63,8 +63,14 @@ async def main() -> None:
 
         p_solution = Program.to(binutils.assemble("()"))
 
-        sb_farmer = SpendBundle([CoinSpend(farmer_prefarm, p_farmer_2, p_solution)], G2Element())
-        sb_pool = SpendBundle([CoinSpend(pool_prefarm, p_pool_2, p_solution)], G2Element())
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+        #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+        sb_farmer = SpendBundle([CoinSpend(farmer_prefarm, p_farmer_2, p_solution)], G2Element())  # type: ignore[arg-type]  # noqa E501
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+        #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+        sb_pool = SpendBundle([CoinSpend(pool_prefarm, p_pool_2, p_solution)], G2Element())  # type: ignore[arg-type]
 
         print("\n\n\nConditions")
         print_conditions(sb_pool)

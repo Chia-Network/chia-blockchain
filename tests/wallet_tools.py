@@ -149,9 +149,19 @@ class WalletTool:
                     ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [primary_announcement_hash])
                 )
                 main_solution = self.make_solution(condition_dic)
-                spends.append(CoinSpend(coin, puzzle, main_solution))
+                # TODO: address hint error and remove ignore
+                #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+                #       [arg-type]
+                #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+                #       [arg-type]
+                spends.append(CoinSpend(coin, puzzle, main_solution))  # type: ignore[arg-type]
             else:
-                spends.append(CoinSpend(coin, puzzle, self.make_solution(secondary_coins_cond_dic)))
+                # TODO: address hint error and remove ignore
+                #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+                #       [arg-type]
+                #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+                #       [arg-type]
+                spends.append(CoinSpend(coin, puzzle, self.make_solution(secondary_coins_cond_dic)))  # type: ignore[arg-type]  # noqa E501
         return spends
 
     def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:

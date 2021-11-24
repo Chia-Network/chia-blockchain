@@ -14,7 +14,9 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 
 
-def sha256_treehash(sexp: CLVMObject, precalculated: Optional[Set[bytes32]] = None) -> bytes32:
+# TODO: address hint error and remove ignore
+#       error: Module "clvm.CLVMObject" is not valid as a type  [valid-type]
+def sha256_treehash(sexp: CLVMObject, precalculated: Optional[Set[bytes32]] = None) -> bytes32:  # type: ignore[valid-type]  # noqa E501
     """
     Hash values in `precalculated` are presumed to have been hashed already.
     """

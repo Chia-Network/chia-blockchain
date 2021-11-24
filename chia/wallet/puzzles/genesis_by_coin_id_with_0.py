@@ -33,11 +33,15 @@ def genesis_coin_id_for_genesis_coin_checker(
 
 
 def lineage_proof_for_genesis(parent_coin: Coin) -> Program:
-    return Program.to((0, [parent_coin.as_list(), 0]))
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return Program.to((0, [parent_coin.as_list(), 0]))  # type: ignore[return-value]
 
 
 def lineage_proof_for_zero(parent_coin: Coin) -> Program:
-    return Program.to((0, [parent_coin.as_list(), 1]))
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return Program.to((0, [parent_coin.as_list(), 1]))  # type: ignore[return-value]
 
 
 def lineage_proof_for_coin(parent_coin: Coin) -> Program:

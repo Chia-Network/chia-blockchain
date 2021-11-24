@@ -22,4 +22,6 @@ def puzzle_for_conditions(conditions) -> Program:
 
 
 def solution_for_conditions(conditions) -> Program:
-    return Program.to([puzzle_for_conditions(conditions), 0])
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return Program.to([puzzle_for_conditions(conditions), 0])  # type: ignore[return-value]

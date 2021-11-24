@@ -297,7 +297,10 @@ class CCWallet:
 
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
         lineage_proof = Program.to((1, [coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount]))
-        await self.add_lineage(coin.name(), lineage_proof, True)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "add_lineage" of "CCWallet" has incompatible type "SExp"; expected
+        #       "Optional[Program]"  [arg-type]
+        await self.add_lineage(coin.name(), lineage_proof, True)  # type: ignore[arg-type]
 
         for name, lineage_proofs in self.cc_info.lineage_proofs:
             if coin.parent_coin_info == name:
@@ -406,14 +409,20 @@ class CCWallet:
 
         await self.add_lineage(
             eve_coin.name(),
-            Program.to(
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "add_lineage" of "CCWallet" has incompatible type "SExp"; expected
+            #       "Optional[Program]"  [arg-type]
+            Program.to(  # type: ignore[arg-type]
                 (
                     1,
                     [eve_coin.parent_coin_info, cc_inner, eve_coin.amount],
                 )
             ),
         )
-        await self.add_lineage(eve_coin.parent_coin_info, Program.to((0, [origin.as_list(), 1])))
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "add_lineage" of "CCWallet" has incompatible type "SExp"; expected
+        #       "Optional[Program]"  [arg-type]
+        await self.add_lineage(eve_coin.parent_coin_info, Program.to((0, [origin.as_list(), 1])))  # type: ignore[arg-type]  # noqa E501
 
         if send:
             regular_record = TransactionRecord(
@@ -552,8 +561,13 @@ class CCWallet:
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         sigs: List[G2Element] = []
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "conditions_dict_for_solution" has incompatible type "Program"; expected
+        #       "SerializedProgram"  [arg-type]
+        #       error: Argument 2 to "conditions_dict_for_solution" has incompatible type "Program"; expected
+        #       "SerializedProgram"  [arg-type]
         error, conditions, cost = conditions_dict_for_solution(
-            innerpuz, innersol, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
+            innerpuz, innersol, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM  # type: ignore[arg-type]
         )
         if conditions is not None:
             for _, msg in pkm_pairs_for_conditions_dict(
@@ -685,7 +699,10 @@ class CCWallet:
         origin_id = origin.name()
 
         cc_inner_hash = await self.get_new_inner_hash()
-        await self.add_lineage(origin_id, Program.to((0, [origin.as_list(), 0])))
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "add_lineage" of "CCWallet" has incompatible type "SExp"; expected
+        #       "Optional[Program]"  [arg-type]
+        await self.add_lineage(origin_id, Program.to((0, [origin.as_list(), 0])))  # type: ignore[arg-type]
         genesis_coin_checker = create_genesis_or_zero_coin_checker(origin_id)
 
         minted_cc_puzzle_hash = cc_puzzle_hash_for_inner_puzzle_hash(CC_MOD, genesis_coin_checker, cc_inner_hash)
@@ -747,7 +764,12 @@ class CCWallet:
                 None,
                 None,
             ]
-            list_of_solutions.append(CoinSpend(coin, puzzle_reveal, Program.to(solution)))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+            #       [arg-type]
+            #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"
+            #       [arg-type]
+            list_of_solutions.append(CoinSpend(coin, puzzle_reveal, Program.to(solution)))  # type: ignore[arg-type]
 
         aggsig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle(list_of_solutions, aggsig)

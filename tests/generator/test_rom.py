@@ -43,7 +43,14 @@ COMPILED_GENERATOR_CODE = bytes.fromhex(
     "1380ff02ff05ff2b80ff018080"
 )
 
-COMPILED_GENERATOR_CODE = bytes(Program.to(compile_clvm_text(GENERATOR_CODE, [])))
+# TODO: address hint error and remove ignore
+#       error: No overload variant of "bytes" matches argument type "SExp"  [call-overload]
+#       note: Possible overload variants:
+#       note:     def bytes(cls, ints: Iterable[int]) -> bytes
+#       note:     def bytes(cls, length: int) -> bytes
+#       note:     def bytes(cls, o: SupportsBytes) -> bytes
+#       note:     <2 more non-matching overloads not shown>
+COMPILED_GENERATOR_CODE = bytes(Program.to(compile_clvm_text(GENERATOR_CODE, [])))  # type: ignore[call-overload]
 
 FIRST_GENERATOR = Program.to(
     binutils.assemble('((parent_id (c 1 (q "puzzle blob")) 50000 "solution is here" extra data for coin))')

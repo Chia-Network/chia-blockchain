@@ -37,7 +37,9 @@ def create_generator_args(generator_ref_list: List[SerializedProgram]) -> Progra
     `create_generator_args`: The format and contents of these arguments affect consensus.
     """
     gen_ref_list = [bytes(g) for g in generator_ref_list]
-    return Program.to([gen_ref_list])
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return Program.to([gen_ref_list])  # type: ignore[return-value]
 
 
 def create_compressed_generator(
@@ -54,7 +56,10 @@ def create_compressed_generator(
         DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, Program.to(start), Program.to(end), compressed_cse_list
     )
     generator_arg = GeneratorArg(original_generator.block_height, original_generator.generator)
-    return BlockGenerator(program, [generator_arg])
+    # TODO: address hint error and remove ignore
+    #       error: Argument 1 to "BlockGenerator" has incompatible type "Program"; expected "SerializedProgram"
+    #       [arg-type]
+    return BlockGenerator(program, [generator_arg])  # type: ignore[arg-type]
 
 
 def setup_generator_args(self: BlockGenerator) -> Tuple[SerializedProgram, Program]:

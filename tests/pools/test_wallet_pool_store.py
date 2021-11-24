@@ -31,10 +31,15 @@ def make_child_solution(coin_spend: CoinSpend, new_coin: Optional[Coin] = None) 
     solution_prog = Program.to(binutils.assemble(solution))
     if new_coin is None:
         new_coin = coin_spend.additions()[0]
+    # TODO: address hint error and remove ignore
+    #       error: Argument 1 to "from_program" of "SerializedProgram" has incompatible type "SExp"; expected "Program"
+    #       [arg-type]
+    #       error: Argument 1 to "from_program" of "SerializedProgram" has incompatible type "SExp"; expected "Program"
+    #       [arg-type]
     sol: CoinSpend = CoinSpend(
         new_coin,
-        SerializedProgram.from_program(puzzle_prog),
-        SerializedProgram.from_program(solution_prog),
+        SerializedProgram.from_program(puzzle_prog),  # type: ignore[arg-type]
+        SerializedProgram.from_program(solution_prog),  # type: ignore[arg-type]
     )
     return sol
 

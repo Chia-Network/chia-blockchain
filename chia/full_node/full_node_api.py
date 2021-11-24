@@ -1289,7 +1289,12 @@ class FullNodeAPI:
         pz = Program.to(puzzle)
         sol = Program.to(solution)
 
-        wrapper = PuzzleSolutionResponse(coin_name, height, pz, sol)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 3 to "PuzzleSolutionResponse" has incompatible type "SExp"; expected "Program"
+        #       [arg-type]
+        #       error: Argument 4 to "PuzzleSolutionResponse" has incompatible type "SExp"; expected "Program"
+        #       [arg-type]
+        wrapper = PuzzleSolutionResponse(coin_name, height, pz, sol)  # type: ignore[arg-type]
         response = wallet_protocol.RespondPuzzleSolution(wrapper)
         response_msg = make_msg(ProtocolMessageTypes.respond_puzzle_solution, response)
         return response_msg

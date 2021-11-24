@@ -18,4 +18,6 @@ def puzzle_for_pk(public_key: Program) -> Program:
 
 
 def solution_for_conditions(conditions: Program) -> Program:
-    return conditions.to([conditions])
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return conditions.to([conditions])  # type: ignore[return-value]

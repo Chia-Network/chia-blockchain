@@ -290,8 +290,14 @@ class SimClient:
         if error:
             return None
         else:
-            puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
-            solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "from_program" of "SerializedProgram" has incompatible type "SExp"; expected
+            #       "Program"  [arg-type]
+            puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))  # type: ignore[arg-type]
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "from_program" of "SerializedProgram" has incompatible type "SExp"; expected
+            #       "Program"  [arg-type]
+            solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))  # type: ignore[arg-type]  # noqa E501
             return CoinSpend(coin_record.coin, puzzle_ser, solution_ser)
 
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:

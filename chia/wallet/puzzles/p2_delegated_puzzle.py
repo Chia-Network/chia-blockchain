@@ -26,8 +26,13 @@ def puzzle_for_pk(public_key: bytes) -> Program:
 
 def solution_for_conditions(conditions) -> Program:
     delegated_puzzle = p2_conditions.puzzle_for_conditions(conditions)
-    return solution_for_delegated_puzzle(delegated_puzzle, Program.to(0))
+    # TODO: address hint error and remove ignore
+    #       error: Argument 2 to "solution_for_delegated_puzzle" has incompatible type "SExp"; expected "Program"
+    #       [arg-type]
+    return solution_for_delegated_puzzle(delegated_puzzle, Program.to(0))  # type: ignore[arg-type]
 
 
 def solution_for_delegated_puzzle(delegated_puzzle: Program, delegated_solution: Program) -> Program:
-    return delegated_puzzle.to([delegated_puzzle, delegated_solution])
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return delegated_puzzle.to([delegated_puzzle, delegated_solution])  # type: ignore[return-value]

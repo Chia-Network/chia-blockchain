@@ -49,7 +49,9 @@ log = logging.getLogger(__name__)
 # We call it the `EASY_PUZZLE` because it's pretty easy to solve.
 
 EASY_PUZZLE = Program.to(assemble("1"))
-EASY_PUZZLE_HASH = EASY_PUZZLE.get_tree_hash()
+# TODO: address hint error and remove ignore
+#       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
+EASY_PUZZLE_HASH = EASY_PUZZLE.get_tree_hash()  # type: ignore[attr-defined]
 
 
 def initial_blocks(block_count: int = 4) -> List[FullBlock]:
@@ -121,7 +123,10 @@ async def check_conditions(
     blocks = initial_blocks()
     coin = list(blocks[spend_reward_index].get_included_reward_coins())[0]
 
-    coin_spend = CoinSpend(coin, EASY_PUZZLE, condition_solution)
+    # TODO: address hint error and remove ignore
+    #       error: Argument 2 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+    #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
+    coin_spend = CoinSpend(coin, EASY_PUZZLE, condition_solution)  # type: ignore[arg-type]
     spend_bundle = SpendBundle([coin_spend], G2Element())
 
     # now let's try to create a block with the spend bundle and ensure that it doesn't validate

@@ -43,7 +43,9 @@ def make_fake_coin(index: int, puzzle_hash_db: dict) -> Coin:
 def conditions_for_payment(coin) -> Program:
     d: Dict = {}  # a throwaway db since we don't care
     new_puzzle_hash = puzzle_hash_for_index(int.from_bytes(coin.puzzle_hash, "big"), d)
-    return Program.to([[ConditionOpcode.CREATE_COIN, new_puzzle_hash, coin.amount]])
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return Program.to([[ConditionOpcode.CREATE_COIN, new_puzzle_hash, coin.amount]])  # type: ignore[return-value]
 
 
 def make_spend_bundle(count: int) -> SpendBundle:
@@ -55,7 +57,10 @@ def make_spend_bundle(count: int) -> SpendBundle:
         puzzle_reveal = puzzle_hash_db[coin.puzzle_hash]
         conditions = conditions_for_payment(coin)
         solution = solution_for_conditions(conditions)
-        coin_spend = CoinSpend(coin, puzzle_reveal, solution)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+        #       [arg-type]
+        coin_spend = CoinSpend(coin, puzzle_reveal, solution)  # type: ignore[arg-type]
         coin_spends.append(coin_spend)
 
     spend_bundle = SpendBundle(coin_spends, blspy.G2Element())

@@ -7,7 +7,8 @@ dependencies = [
     "chiavdf==1.0.3",  # timelord and vdf verification
     "chiabip158==1.0",  # bip158-style wallet filters
     "chiapos==1.0.6",  # proof of space
-    "clvm==0.9.7",
+    # TODO: set to the new release version
+    "clvm @ git+https://github.com/Chia-Network/clvm@pep-561",
     "clvm_rs==0.1.15",
     "clvm_tools==0.4.3",
     "aiohttp==3.7.4",  # HTTP server for full node rpc

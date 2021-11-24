@@ -34,7 +34,9 @@ def coin_as_program(coin: Coin) -> Program:
     """
     Convenience function for when putting `coin_info` into a solution.
     """
-    return Program.to([coin.parent_coin_info, coin.puzzle_hash, coin.amount])
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return Program.to([coin.parent_coin_info, coin.puzzle_hash, coin.amount])  # type: ignore[return-value]
 
 
 def dump_coin(coin: Coin) -> str:
@@ -72,7 +74,12 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
         print(f"  with id {coin_name}")
         print()
         print(f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
-        error, conditions, cost = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "conditions_dict_for_solution" has incompatible type "Program"; expected
+        #       "SerializedProgram"  [arg-type]
+        #       error: Argument 2 to "conditions_dict_for_solution" has incompatible type "Program"; expected
+        #       "SerializedProgram"  [arg-type]
+        error, conditions, cost = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)  # type: ignore[arg-type]  # noqa E501
         if error:
             print(f"*** error {error}")
         elif conditions is not None:
@@ -195,4 +202,6 @@ def solution_for_pay_to_any(puzzle_hash_amount_pairs: Iterable[Tuple[bytes32, in
     output_conditions = [
         [ConditionOpcode.CREATE_COIN, puzzle_hash, amount] for puzzle_hash, amount in puzzle_hash_amount_pairs
     ]
-    return Program.to(output_conditions)
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
+    return Program.to(output_conditions)  # type: ignore[return-value]

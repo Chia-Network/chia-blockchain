@@ -126,7 +126,10 @@ if __name__ == "__main__":
     puzzle_start = time.time()
     clvm_cost = 0
     for i in range(0, 1000):
-        cost_run, sexp = puzzles[i].run_with_cost(solutions[i], INFINITE_COST)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "run_with_cost" of "Program" has incompatible type "Program"; expected "int"
+        #       [arg-type]
+        cost_run, sexp = puzzles[i].run_with_cost(solutions[i], INFINITE_COST)  # type: ignore[arg-type]
         clvm_cost += cost_run
 
     puzzle_end = time.time()

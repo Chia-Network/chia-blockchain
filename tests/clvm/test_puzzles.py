@@ -70,7 +70,10 @@ def do_test_spend(
     coin = coin_db.farm_coin(puzzle_hash, farm_time)
 
     # spend it
-    coin_spend = CoinSpend(coin, puzzle_reveal, solution)
+    # TODO: address hint error and remove ignore
+    #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
+    #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
+    coin_spend = CoinSpend(coin, puzzle_reveal, solution)  # type: ignore[arg-type]
 
     spend_bundle = SpendBundle([coin_spend], G2Element())
     coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, MAX_BLOCK_COST_CLVM, COST_PER_BYTE)
@@ -100,7 +103,10 @@ def default_payments_and_conditions(
         (throwaway_puzzle_hash(initial_index + 2, key_lookup), (initial_index + 1) * 1000),
     ]
     conditions = Program.to([make_create_coin_condition(ph, amount) for ph, amount in payments])
-    return payments, conditions
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "Tuple[List[Tuple[Any, int]], SExp]", expected
+    #       "Tuple[List[Tuple[Any, int]], Program]")  [return-value]
+    return payments, conditions  # type: ignore[return-value]
 
 
 def make_create_coin_condition(puzzle_hash, amount):

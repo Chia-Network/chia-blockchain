@@ -463,7 +463,12 @@ class Wallet:
                 primaries = [{"puzzlehash": newpuzhash, "amount": chia_amount}]
                 solution = self.make_solution(primaries=primaries)
                 output_created = coin
-            list_of_solutions.append(CoinSpend(coin, puzzle, solution))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+            #       [arg-type]
+            #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+            #       [arg-type]
+            list_of_solutions.append(CoinSpend(coin, puzzle, solution))  # type: ignore[arg-type]
 
         await self.hack_populate_secret_keys_for_coin_spends(list_of_solutions)
         spend_bundle = await sign_coin_spends(
