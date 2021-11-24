@@ -49,8 +49,7 @@ def make_puzzle(amount: int) -> int:
             #       error: Argument 1 to "encode_puzzle_hash" has incompatible type "bytes"; expected "bytes32"
             #       [arg-type]
             print(
-                f"{ConditionOpcode(cvp.opcode).name}:"
-                f" {encode_puzzle_hash(cvp.vars[0], prefix)},"  # type: ignore[arg-type]
+                f"{ConditionOpcode(cvp.opcode).name}: {encode_puzzle_hash(cvp.vars[0], prefix)},"  # type: ignore[arg-type]  # noqa E501
                 f" amount: {int_from_bytes(cvp.vars[1])}"
             )
     return total_chia
