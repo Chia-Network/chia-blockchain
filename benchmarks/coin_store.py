@@ -53,7 +53,9 @@ async def setup_db(sql_logging: bool) -> DBWrapper:
 
 
 def rand_hash() -> bytes32:
-    return secrets.token_bytes(32)
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
+    return secrets.token_bytes(32)  # type: ignore[return-value]
 
 
 def make_coin() -> Coin:
