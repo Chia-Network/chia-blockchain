@@ -153,6 +153,13 @@ class FullNode:
 
         # These many respond_transaction tasks can be active at any point in time
         self.respond_transaction_semaphore = asyncio.Semaphore(200)
+
+        sqlite_version = aiosqlite.sqlite_version.split(".")
+        if int(sqlite_version[0]) < 3 or (int(sqlite_version[0]) == 3 and int(sqlite_version[1]) < 8):
+            self.log.warning(
+                f"found sqlite version {aiosqlite.sqlite_version}. Upgrading to 3.8 or later will improve performance"
+            )
+
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
