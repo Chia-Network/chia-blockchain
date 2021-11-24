@@ -581,7 +581,7 @@ class ChiaServer:
 
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
-                        await connection.reply_to_request(response_message)
+                        await connection.send_message(response_message)
                 except TimeoutError:
                     connection.log.error(f"Timeout error for: {message_type}")
                 except Exception as e:
