@@ -478,12 +478,12 @@ class TestBlockHeaderValidation:
         assert result == ReceiveBlockResult.INVALID_BLOCK
         assert err == Err.SHOULD_NOT_HAVE_ICC
 
-    async def do_test_invalid_icc_sub_slot_vdf(self, keychain):
+    async def do_test_invalid_icc_sub_slot_vdf(self, keychain, db_version):
         bt_high_iters = await create_block_tools_async(
             constants=test_constants.replace(SUB_SLOT_ITERS_STARTING=(2 ** 12), DIFFICULTY_STARTING=(2 ** 14)),
             keychain=keychain,
         )
-        bc1, connection, db_path = await create_blockchain(bt_high_iters.constants)
+        bc1, connection, db_path = await create_blockchain(bt_high_iters.constants, db_version)
         blocks = bt_high_iters.get_consecutive_blocks(10)
         for block in blocks:
             if len(block.finished_sub_slots) > 0 and block.finished_sub_slots[-1].infused_challenge_chain is not None:
@@ -566,9 +566,10 @@ class TestBlockHeaderValidation:
         db_path.unlink()
 
     @pytest.mark.asyncio
-    async def test_invalid_icc_sub_slot_vdf(self):
+    @pytest.mark.parametrize("db_version", [1, 2])
+    async def test_invalid_icc_sub_slot_vdf(self, db_version):
         with TempKeyring() as keychain:
-            await self.do_test_invalid_icc_sub_slot_vdf(keychain)
+            await self.do_test_invalid_icc_sub_slot_vdf(keychain, db_version)
 
     @pytest.mark.asyncio
     async def test_invalid_icc_into_cc(self, empty_blockchain):
@@ -2158,7 +2159,8 @@ class TestBodyValidation:
         assert err is None
 
     @pytest.mark.asyncio
-    async def test_max_coin_amount(self):
+    @pytest.mark.parametrize("db_version", [1, 2])
+    async def test_max_coin_amount(self, db_version):
         # 10
         # TODO: fix, this is not reaching validation. Because we can't create a block with such amounts due to uint64
         # limit in Coin
@@ -2168,7 +2170,7 @@ class TestBodyValidation:
         #     new_test_constants = test_constants.replace(
         #         **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
         #     )
-        #     b, connection, db_path = await create_blockchain(new_test_constants)
+        #     b, connection, db_path = await create_blockchain(new_test_constants, db_version)
         #     bt_2 = await create_block_tools_async(constants=new_test_constants, keychain=keychain)
         #     bt_2.constants = bt_2.constants.replace(
         #         **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}

@@ -45,18 +45,18 @@ def event_loop():
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="function")
-async def empty_blockchain():
-    bc1, connection, db_path = await create_blockchain(test_constants)
+@pytest.fixture(scope="function", params=[1, 2])
+async def empty_blockchain(request):
+    bc1, connection, db_path = await create_blockchain(test_constants, request.param)
     yield bc1
     await connection.close()
     bc1.shut_down()
     db_path.unlink()
 
 
-@pytest.fixture(scope="function")
-async def empty_blockchain_original():
-    bc1, connection, db_path = await create_blockchain(test_constants_original)
+@pytest.fixture(scope="function", params=[1, 2])
+async def empty_blockchain_original(request):
+    bc1, connection, db_path = await create_blockchain(test_constants_original, request.param)
     yield bc1
     await connection.close()
     bc1.shut_down()

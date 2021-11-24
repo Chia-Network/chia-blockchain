@@ -25,8 +25,9 @@ log = logging.getLogger(__name__)
 
 class TestHintStore:
     @pytest.mark.asyncio
-    async def test_basic_store(self):
-        async with DBConnection() as db_wrapper:
+    @pytest.mark.parametrize("db_version", [1, 2])
+    async def test_basic_store(self, db_version):
+        async with DBConnection(db_version) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
             hint_0 = 32 * b"\0"
             hint_1 = 32 * b"\1"

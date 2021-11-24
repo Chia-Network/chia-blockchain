@@ -71,6 +71,7 @@ from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
 from datetime import datetime
 from chia.util.db_synchronous import db_synchronous_on
+from chia.util.db_version import lookup_db_version
 
 
 class FullNode:
@@ -172,7 +173,12 @@ class FullNode:
                 log.close()
 
             await self.connection.set_trace_callback(sql_trace_callback)
-        self.db_wrapper = DBWrapper(self.connection, self.config.get("allow_database_upgrades", False))
+
+        db_version: int = await lookup_db_version(self.connection)
+
+        self.db_wrapper = DBWrapper(
+            self.connection, self.config.get("allow_database_upgrades", False), db_version=db_version
+        )
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
         self.hint_store = await HintStore.create(self.db_wrapper)
