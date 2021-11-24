@@ -1,7 +1,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { CAT, OfferTradeRecord, Wallet, WalletType } from '@chia/api';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
-import type Transaction from '../@types/Transaction';
+import type { Transaction, WalletConnections } from '@chia/api';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 
 const baseQuery = chiaLazyBaseQuery({
@@ -11,7 +11,7 @@ const baseQuery = chiaLazyBaseQuery({
 export const walletApi = createApi({
   reducerPath: 'walletApi',
   baseQuery,
-  tagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions', 'OfferTradeRecord'],
+  tagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions', 'OfferTradeRecord', 'WalletConnections'],
   endpoints: (build) => ({
     getWallets: build.query<Wallet[], undefined>({
       /*
@@ -627,40 +627,47 @@ export const walletApi = createApi({
       }]),
     }),
 
-    getConnections: build.query<any, undefined>({
+    getConnections: build.query<WalletConnections[], undefined>({
       query: () => ({
         command: 'getConnections',
       }),
       transformResponse: (response: any) => response?.connections,
-      async onCacheEntryAdded(_arg, api) {
-        const { updateCachedData, cacheDataLoaded, cacheEntryRemoved } = api;
-        let unsubscribe;
-        try {
-          await cacheDataLoaded;
+      providesTags: (connections) => connections
+      ? [
+        ...connections.map(({ nodeId }) => ({ type: 'WalletConnections', id: nodeId } as const)),
+        { type: 'WalletConnections', id: 'LIST' },
+      ] 
+      :  [{ type: 'WalletConnections', id: 'LIST' }],
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
+        command: 'onConnections',
+        onUpdate: (draft, data) => {
+          // empty base array
+          draft.splice(0);
 
-          const response = await baseQuery({
-            command: 'onConnections',
-            args: [(data: any) => {
-              updateCachedData((draft) => {
-                // empty base array
-                draft.splice(0);
-
-                // assign new items
-                Object.assign(draft, data.connections);
-              });
-            }],
-          }, api, {});
-
-          unsubscribe = response.data;
-        } finally {
-          await cacheEntryRemoved;
-          if (unsubscribe) {
-            unsubscribe();
-          }
-        }
-      },
+          // assign new items
+          Object.assign(draft, data.connections);
+        },
+      }]),
     }),
-
+    openConnection: build.mutation<WalletConnections, { 
+      host: string;
+      port: number;
+    }>({
+      query: ({ host, port }) => ({
+        command: 'openConnection',
+        args: [host, port],
+      }),
+      invalidatesTags: [{ type: 'WalletConnections', id: 'LIST' }],
+    }),
+    closeConnection: build.mutation<WalletConnections, { 
+      nodeId: number;
+    }>({
+      query: ({ nodeId }) => ({
+        command: 'closeConnection',
+        args: [nodeId],
+      }),
+      invalidatesTags: (_result, _error, { nodeId }) => [{ type: 'WalletConnections', id: 'LIST' }, { type: 'WalletConnections', id: nodeId }],
+    }),
     createBackup: build.mutation<any, {
       filePath: string;
     }>({
@@ -1150,6 +1157,8 @@ export const {
   useGetNetworkInfoQuery,
   useGetSyncStatusQuery,
   useGetConnectionsQuery,
+  useOpenConnectionMutation,
+  useCloseConnectionMutation,
   useCreateBackupMutation,
   useGetAllOffersQuery,
   useCreateOfferForIdsMutation,

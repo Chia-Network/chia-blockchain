@@ -328,8 +328,11 @@ export default class Wallet extends Service {
     return this.onStateChanged('coin_removed', callback);
   }
 
-  onWalletCreated(callback: (data: any, message: Message) => void) {
-    return this.onStateChanged('wallet_created', callback);
+  onWalletCreated(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onStateChanged('wallet_created', callback, processData);
   }
 
   onConnections(
@@ -339,11 +342,17 @@ export default class Wallet extends Service {
     return this.onCommand('get_connections', callback, processData);
   }
 
-  onTransactionUpdate(callback: (data: any, message: Message) => void) {
-    return this.onStateChanged('tx_update', callback);
+  onTransactionUpdate(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onStateChanged('tx_update', callback, processData);
   }
 
-  onPendingTransaction(callback: (data: any, message: Message) => void) {
-    return this.onStateChanged('pending_transaction', callback);
+  onPendingTransaction(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onStateChanged('pending_transaction', callback, processData);
   }
 }

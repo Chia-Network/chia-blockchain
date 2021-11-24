@@ -9,14 +9,6 @@ export default class Farmer extends Service {
     super(ServiceName.FARMER, client, options);
   }
 
-  onNewFarmingInfo(cb: (data: any, message: Message) => void) {
-    return this.onCommand('new_farming_info', cb, (data) => data.farmingInfo);
-  }
-
-  onNewSignagePoint(cb: (data: any, message: Message) => void) {
-    return this.onCommand('new_signage_point', cb, (data) => data.signage_point);
-  }
-
   async getRewardTargets(searchForPrivateKey: boolean) {
     return this.command('get_reward_targets', {
       searchForPrivateKey,
@@ -70,5 +62,29 @@ export default class Farmer extends Service {
     return this.command('get_pool_login_link', {
       launcherId,
     });
+  }
+
+  onNewFarmingInfo(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onCommand('new_farming_info', callback, processData);
+  }
+
+  onNewSignagePoint(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onCommand('new_signage_point', callback, processData);
+  }
+
+  onRefreshPlots(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onCommand('refresh_plots', (...args) => {
+      console.log('refresh_plots in farmer', ...args);
+      return callback(...args);
+    }, processData);
   }
 }

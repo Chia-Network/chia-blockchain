@@ -1,5 +1,7 @@
 import * as client from './client';
+import * as farmer from './farmer';
 import * as fullNode from './fullNode';
+import * as harvester from './harvester';
 import * as wallet from './wallet';
 
 export const {
@@ -9,6 +11,23 @@ export const {
   useGetStateQuery,
 } = client;
 
+// farmer hooks
+export const {
+  farmerApi,
+
+  useGetHarvestersQuery,
+  useGetRewardTargetsQuery,
+  useSetRewardTargetsMutation,
+  useGetConnectionsQuery: useGetFarmerConnectionsQuery,
+  useOpenConnectionMutation: useOpenFarmerConnectionMutation,
+  useCloseConnectionMutation: useCloseFarmerConnectionMutation,
+  useGetPoolLoginLinkQuery,
+  useGetSignagePointsQuery,
+  useGetPoolStateQuery,
+  useSetPayoutInstructionsMutation,
+} = farmer;
+
+// full node hooks
 export const {
   fullNodeApi,
 
@@ -16,12 +35,13 @@ export const {
   useGetUnfinishedBlockHeadersQuery,
   useGetBlockchainStateQuery,
   useGetConnectionsQuery: useGetFullNodeConnectionsQuery,
+  useOpenConnectionMutation: useOpenFullNodeConnectionMutation,
+  useCloseConnectionMutation: useCloseFullNodeConnectionMutation,
   useGetBlockQuery,
   useGetBlockRecordQuery,
-  useOpenConnectionMutation,
-  useCloseConnectionMutation,
 } = fullNode;
 
+// wallet hooks
 export const {
   walletApi,
 
@@ -58,6 +78,8 @@ export const {
   useGetNetworkInfoQuery,
   useGetSyncStatusQuery,
   useGetConnectionsQuery: useGetWalletConnectionsQuery,
+  useOpenConnectionMutation: useOpenWalletConnectionMutation,
+  useCloseConnectionMutation: useCloseWalletConnectionMutation,
   useCreateBackupMutation,
   useGetAllOffersQuery,
   useCreateOfferForIdsMutation,
@@ -68,7 +90,7 @@ export const {
   useGetOfferDataMutation,
   useGetOfferRecordMutation,
 
-  // CAT
+  // CAT wallet hooks
   useCreateNewCATWalletMutation,
   useCreateCATWalletForExistingMutation,
   useGetCATAssetIdQuery,
@@ -78,3 +100,15 @@ export const {
   useSpendCATMutation,
   useAddCATTokenMutation,
 } = wallet;
+
+// harvester hooks
+export const {
+  harvesterApi,
+
+  useGetPlotsQuery,
+  useRefreshPlotsMutation,
+  useDeletePlotMutation,
+  useGetPlotDirectoriesQuery,
+  useAddPlotDirectoryMutation,
+  useRemovePlotDirectoryMutation,
+} = harvester;

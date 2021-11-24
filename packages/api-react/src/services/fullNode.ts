@@ -1,12 +1,8 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { FullNode } from '@chia/api';
+import type { Block, BlockRecord, BlockHeader, BlockchainState, FullNodeConnection } from '@chia/api';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
-import type Block from '../@types/Block';
-import type BlockRecord from '../@types/BlockRecord';
-import type BlockHeader from '../@types/BlockHeader';
-import type BlockchainState from '../@types/BlockchainState';
-import type BlockchainConnection from '../@types/BlockchainConnection';
 
 const baseQuery = chiaLazyBaseQuery({
   service: FullNode,
@@ -46,11 +42,17 @@ export const fullNodeApi = createApi({
         }),
       }]),
     }),
-    getConnections: build.query<BlockchainConnection[], undefined>({
+    getConnections: build.query<FullNodeConnection[], undefined>({
       query: () => ({
         command: 'getConnections',
       }),
       transformResponse: (response: any) => response?.connections,
+      providesTags: (connections) => connections
+      ? [
+        ...connections.map(({ nodeId }) => ({ type: 'FullNodeConnections', id: nodeId } as const)),
+        { type: 'FullNodeConnections', id: 'LIST' },
+      ] 
+      :  [{ type: 'FullNodeConnections', id: 'LIST' }],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onConnections',
         onUpdate: (draft, data) => {
@@ -61,6 +63,25 @@ export const fullNodeApi = createApi({
           Object.assign(draft, data.connections);
         },
       }]),
+    }),
+    openConnection: build.mutation<FullNodeConnection, { 
+      host: string;
+      port: number;
+    }>({
+      query: ({ host, port }) => ({
+        command: 'openConnection',
+        args: [host, port],
+      }),
+      invalidatesTags: [{ type: 'FullNodeConnections', id: 'LIST' }],
+    }),
+    closeConnection: build.mutation<FullNodeConnection, { 
+      nodeId: number;
+    }>({
+      query: ({ nodeId }) => ({
+        command: 'closeConnection',
+        args: [nodeId],
+      }),
+      invalidatesTags: (_result, _error, { nodeId }) => [{ type: 'FullNodeConnections', id: 'LIST' }, { type: 'FullNodeConnections', id: nodeId }],
     }),
     getBlock: build.query<Block, { 
       headerHash: string;
@@ -80,25 +101,6 @@ export const fullNodeApi = createApi({
       }),
       // transformResponse: (response: PostResponse) => response.data.post,
     }),
-    openConnection: build.mutation<BlockchainConnection, { 
-      host: string;
-      port: number;
-    }>({
-      query: ({ host, port }) => ({
-        command: 'openConnection',
-        args: [host, port],
-      }),
-      invalidatesTags: ['FullNodeConnection'],
-    }),
-    closeConnection: build.mutation<BlockchainConnection, { 
-      nodeId: number;
-    }>({
-      query: ({ nodeId }) => ({
-        command: 'closeConnection',
-        args: [nodeId],
-      }),
-      invalidatesTags: ['FullNodeConnection'],
-    }),
   }),
 });
 
@@ -107,8 +109,8 @@ export const {
   useGetUnfinishedBlockHeadersQuery,
   useGetBlockchainStateQuery,
   useGetConnectionsQuery,
-  useGetBlockQuery,
-  useGetBlockRecordQuery,
   useOpenConnectionMutation,
   useCloseConnectionMutation,
+  useGetBlockQuery,
+  useGetBlockRecordQuery,
 } = fullNodeApi;

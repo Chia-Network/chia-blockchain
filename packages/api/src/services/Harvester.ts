@@ -39,4 +39,11 @@ export default class Harvester extends Service {
       dirname,
     });
   }
+
+  onRefreshPlots(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onCommand('refresh_plots', callback, processData);
+  }
 }
