@@ -37,6 +37,8 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
+    - uses: Chia-Network/actions/git-ssh-to-https@main
+
     - name: Cleanup any leftovers that exist from previous runs
       run: bash build_scripts/clean-runner.sh || true
 
