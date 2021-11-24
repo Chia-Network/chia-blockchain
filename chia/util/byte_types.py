@@ -17,6 +17,7 @@ class SizedBytes(bytes):
     """A streamable type that subclasses "bytes" but requires instances
     to be a certain, fixed size specified by the `._size` class attribute.
     """
+
     _size = 0
 
     @staticmethod
@@ -26,7 +27,7 @@ class SizedBytes(bytes):
             raise ValueError("bad %s initializer %s" % (cls.__name__, v))
         return bytes.__new__(cls, v)
 
-    @classmethod  # type: ignore
+    @classmethod
     def parse(cls: Type[_T_SizedBytes], f: BinaryIO) -> _T_SizedBytes:
         b = f.read(cls._size)
         assert len(b) == cls._size
@@ -35,7 +36,7 @@ class SizedBytes(bytes):
     def stream(self, f):
         f.write(self)
 
-    @classmethod  # type: ignore
+    @classmethod
     def from_bytes(cls: Type[_T_SizedBytes], blob: bytes) -> _T_SizedBytes:
         # pylint: disable=no-member
         f = io.BytesIO(blob)

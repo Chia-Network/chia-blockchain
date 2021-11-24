@@ -216,7 +216,10 @@ async def create_plots(
 
         if args.memo is not None:
             log.info(f"Debug memo: {args.memo}")
-            plot_memo = bytes.fromhex(args.memo)
+            # TODO: address hint error and remove ignore
+            #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
+            #       [assignment]
+            plot_memo = bytes.fromhex(args.memo)  # type: ignore[assignment]
 
         # Uncomment next two lines if memo is needed for dev debug
         plot_memo_str: str = plot_memo.hex()

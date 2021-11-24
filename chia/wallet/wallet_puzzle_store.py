@@ -125,9 +125,12 @@ class WalletPuzzleStore:
         await cursor.close()
 
         if row is not None and row[0] is not None:
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "DerivationRecord" has incompatible type "bytes"; expected "bytes32"
+            #       [arg-type]
             return DerivationRecord(
                 uint32(row[0]),
-                bytes32.fromhex(row[2]),
+                bytes32.fromhex(row[2]),  # type: ignore[arg-type]
                 G1Element.from_bytes(bytes.fromhex(row[1])),
                 WalletType(row[3]),
                 uint32(row[4]),
@@ -147,9 +150,12 @@ class WalletPuzzleStore:
         await cursor.close()
 
         if row is not None and row[0] is not None:
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "DerivationRecord" has incompatible type "bytes"; expected "bytes32"
+            #       [arg-type]
             return DerivationRecord(
                 uint32(row[0]),
-                bytes32.fromhex(row[2]),
+                bytes32.fromhex(row[2]),  # type: ignore[arg-type]
                 G1Element.from_bytes(bytes.fromhex(row[1])),
                 WalletType(row[3]),
                 uint32(row[4]),

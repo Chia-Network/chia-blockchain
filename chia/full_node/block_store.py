@@ -220,7 +220,9 @@ class BlockStore:
         for row in rows:
             header_hash = bytes.fromhex(row[0])
             full_block: FullBlock = FullBlock.from_bytes(row[1])
-            all_blocks[header_hash] = full_block
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "bytes" for "Dict[bytes32, FullBlock]"; expected type "bytes32"  [index]
+            all_blocks[header_hash] = full_block  # type: ignore[index]
             self.block_cache.put(header_hash, full_block)
         ret: List[FullBlock] = []
         for hh in header_hashes:
@@ -258,7 +260,9 @@ class BlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
             header_hash = bytes.fromhex(row[0])
-            ret[header_hash] = BlockRecord.from_bytes(row[1])
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "bytes" for "Dict[bytes32, BlockRecord]"; expected type "bytes32"  [index]
+            ret[header_hash] = BlockRecord.from_bytes(row[1])  # type: ignore[index]
 
         return ret
 
@@ -283,8 +287,13 @@ class BlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
             header_hash = bytes.fromhex(row[0])
-            ret[header_hash] = BlockRecord.from_bytes(row[1])
-        return ret, bytes.fromhex(peak_row[0])
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "bytes" for "Dict[bytes32, BlockRecord]"; expected type "bytes32"  [index]
+            ret[header_hash] = BlockRecord.from_bytes(row[1])  # type: ignore[index]
+        # TODO: address hint error and remove ignore
+        #       error: Incompatible return value type (got "Tuple[Dict[bytes32, BlockRecord], bytes]", expected
+        #       "Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]")  [return-value]
+        return ret, bytes.fromhex(peak_row[0])  # type: ignore[return-value]
 
     async def get_peak_height_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:
         """
@@ -298,7 +307,10 @@ class BlockStore:
         if row is None:
             return {}, {}
 
-        peak: bytes32 = bytes.fromhex(row[0])
+        # TODO: address hint error and remove ignore
+        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
+        #       [assignment]
+        peak: bytes32 = bytes.fromhex(row[0])  # type: ignore[assignment]
         cursor = await self.db.execute("SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records")
         rows = await cursor.fetchall()
         await cursor.close()
@@ -307,10 +319,19 @@ class BlockStore:
         hash_to_summary: Dict[bytes32, SubEpochSummary] = {}
 
         for row in rows:
-            hash_to_prev_hash[bytes.fromhex(row[0])] = bytes.fromhex(row[1])
-            hash_to_height[bytes.fromhex(row[0])] = row[2]
+            # TODO: address hint errors and remove ignores
+            #       error: Invalid index type "bytes" for "Dict[bytes32, bytes32]"; expected type "bytes32"  [index]
+            #       error: Incompatible types in assignment (expression has type "bytes", target has type "bytes32")
+            #       [assignment]
+            hash_to_prev_hash[bytes.fromhex(row[0])] = bytes.fromhex(row[1])  # type: ignore[index,assignment]
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "bytes" for "Dict[bytes32, uint32]"; expected type "bytes32"  [index]
+            hash_to_height[bytes.fromhex(row[0])] = row[2]  # type: ignore[index]
             if row[3] is not None:
-                hash_to_summary[bytes.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])
+                # TODO: address hint error and remove ignore
+                #       error: Invalid index type "bytes" for "Dict[bytes32, SubEpochSummary]"; expected type "bytes32"
+                #       [index]
+                hash_to_summary[bytes.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])  # type: ignore[index]
 
         height_to_hash: Dict[uint32, bytes32] = {}
         sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
