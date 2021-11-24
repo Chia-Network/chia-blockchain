@@ -150,6 +150,16 @@ class Offer:
 
         return arbitrage_dict
 
+    # This method returns all of the coins that are being used in the offer (without which it would be invalid)
+    def get_involved_coins(self) -> List[Coin]:
+        additions = self.bundle.additions()
+        return list(filter(lambda c: c not in additions, self.bundle.removals()))
+
+    # This will only return coins that create settlement payments
+    def get_primary_coins(self) -> List[Coin]:
+        primary_ids = [c.parent_coin_info for c in self.get_offered_coins()]
+        return list(filter(lambda cs: cs.coin.name() in primary_ids, self.bundle.coin_spends))
+
     @classmethod
     def aggregate(cls, offers: List["Offer"]) -> "Offer":
         total_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
@@ -178,7 +188,7 @@ class Offer:
 
     # A "valid" spend means that this bundle can be pushed to the network and will succeed
     # This differs from the `to_spend_bundle` method which deliberately creates an invalid SpendBundle
-    def to_valid_spend(self, arbitrage_ph: bytes32) -> SpendBundle:
+    def to_valid_spend(self, arbitrage_ph: Optional[bytes32] = None) -> SpendBundle:
         if not self.is_valid():
             raise ValueError("Offer is currently incomplete")
 
@@ -190,6 +200,7 @@ class Offer:
             arbitrage_amount: int = self.arbitrage()[tail_hash]
             all_payments: List[NotarizedPayment] = payments.copy()
             if arbitrage_amount > 0:
+                assert arbitrage_amount is not None
                 all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount)))
 
             for coin in offered_coins:
