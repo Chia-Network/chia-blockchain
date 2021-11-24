@@ -783,8 +783,8 @@ class WalletRpcApi:
                 await wallet.standard_wallet.push_transaction(tx)
 
         return {
-            "transaction": tx.to_json_dict_convenience(self.service.config),
-            "transaction_id": tx.name,
+            "transaction": txs[0].to_json_dict_convenience(self.service.config),
+            "transaction_id": txs[0].name,
         }
 
     async def cc_get_colour(self, request):
