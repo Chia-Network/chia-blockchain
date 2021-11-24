@@ -20,7 +20,7 @@ class SizedBytes(bytes):
 
     _size = 0
 
-    @classmethod
+    @staticmethod
     def __new__(cls: Type[_T_SizedBytes], v) -> _T_SizedBytes:
         v = bytes(v)
         if not isinstance(v, bytes) or len(v) != cls._size:
