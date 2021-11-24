@@ -315,9 +315,7 @@ class FullNodeAPI:
         # TODO: address hint error and remove ignore
         #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
         #       expected "bytes32"  [arg-type]
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-            header_hash,  # type: ignore[arg-type]
-        )
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
         if block is not None:
             if not request.include_transaction_block and block.transactions_generator is not None:
                 block = dataclasses.replace(block, transactions_generator=None)
@@ -1132,9 +1130,7 @@ class FullNodeAPI:
         # TODO: address hint error and remove ignore
         #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
         #       expected "bytes32"  [arg-type]
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-            request.header_hash,  # type: ignore[arg-type]
-        )
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)  # type: ignore[arg-type]  # noqa: E501
 
         # We lock so that the coin store does not get modified
         if (
@@ -1145,10 +1141,7 @@ class FullNodeAPI:
             # TODO: address hint error and remove ignore
             #       error: Argument 2 to "RejectAdditionsRequest" has incompatible type "Optional[bytes32]"; expected
             #       "bytes32"  [arg-type]
-            reject = wallet_protocol.RejectAdditionsRequest(
-                request.height,
-                request.header_hash,  # type: ignore[arg-type]
-            )
+            reject = wallet_protocol.RejectAdditionsRequest(request.height, request.header_hash)  # type: ignore[arg-type]  # noqa: E501
 
             msg = make_msg(ProtocolMessageTypes.reject_additions_request, reject)
             return msg
@@ -1314,9 +1307,7 @@ class FullNodeAPI:
         # TODO: address hint error and remove ignore
         #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
         #       expected "bytes32"  [arg-type]
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-            header_hash,  # type: ignore[arg-type]
-        )
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
 
         if block is None or block.transactions_generator is None:
             return reject_msg
@@ -1354,9 +1345,7 @@ class FullNodeAPI:
         # TODO: address hint error and remove ignore
         #       error: Argument 1 to "get_blocks_by_hash" of "BlockStore" has incompatible type
         #       "List[Optional[bytes32]]"; expected "List[bytes32]"  [arg-type]
-        blocks: List[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(
-            header_hashes,  # type: ignore[arg-type]
-        )
+        blocks: List[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(header_hashes)  # type: ignore[arg-type]  # noqa: E501
         header_blocks = []
         for block in blocks:
             added_coins_records = await self.full_node.coin_store.get_coins_added_at_height(block.height)

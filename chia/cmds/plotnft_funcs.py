@@ -167,10 +167,7 @@ async def pprint_pool_wallet_state(
             # TODO: address hint error and remove ignore
             #       error: Argument 1 to "encode_puzzle_hash" has incompatible type "bytes"; expected "bytes32"
             #       [arg-type]
-            payout_address = encode_puzzle_hash(
-                bytes32.fromhex(payout_instructions),  # type: ignore[arg-type]
-                address_prefix,
-            )
+            payout_address = encode_puzzle_hash(bytes32.fromhex(payout_instructions), address_prefix)  # type: ignore[arg-type]  # noqa: E501
             print(f"Payout instructions (pool will pay to this address): {payout_address}")
         except Exception:
             print(f"Payout instructions (pool will pay you with this): {payout_instructions}")

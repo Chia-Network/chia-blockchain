@@ -110,9 +110,7 @@ class WeightProofHandler:
         # TODO: address hint error and remove ignore
         #       error: Argument 1 to "get_block_record_from_db" of "BlockchainInterface" has incompatible type
         #       "Optional[bytes32]"; expected "bytes32"  [arg-type]
-        prev_ses_block = await self.blockchain.get_block_record_from_db(
-            self.blockchain.height_to_hash(uint32(0)),  # type: ignore[arg-type]
-        )
+        prev_ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(uint32(0)))  # type: ignore[arg-type]  # noqa: E501
         if prev_ses_block is None:
             return None
         sub_epoch_data = self.get_sub_epoch_data(tip_rec.height, summary_heights)
@@ -145,9 +143,7 @@ class WeightProofHandler:
                 # TODO: address hint error and remove ignore
                 #       error: Argument 1 to "get_sub_epoch_challenge_segments" of "BlockchainInterface" has
                 #       incompatible type "bytes32"; expected "uint32"  [arg-type]
-                segments = await self.blockchain.get_sub_epoch_challenge_segments(
-                    ses_block.header_hash,  # type: ignore[arg-type]
-                )
+                segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.header_hash)  # type: ignore[arg-type]  # noqa: E501
                 if segments is None:
                     segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
                     if segments is None:
@@ -158,10 +154,7 @@ class WeightProofHandler:
                     # TODO: address hint error and remove ignore
                     #       error: Argument 1 to "persist_sub_epoch_challenge_segments" of "BlockchainInterface" has
                     #       incompatible type "bytes32"; expected "uint32"  [arg-type]
-                    await self.blockchain.persist_sub_epoch_challenge_segments(
-                        ses_block.header_hash,  # type: ignore[arg-type]
-                        segments,
-                    )
+                    await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.header_hash, segments)  # type: ignore[arg-type]  # noqa: E501
                 log.debug(f"sub epoch {sub_epoch_n} has {len(segments)} segments")
                 sub_epoch_segments.extend(segments)
             prev_ses_block = ses_block

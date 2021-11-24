@@ -41,10 +41,7 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
     # TODO: address hint error and remove ignore
     #       error: Argument "transaction_id" to "get_transaction" of "WalletRpcClient" has incompatible type "bytes";
     #       expected "bytes32"  [arg-type]
-    tx: TransactionRecord = await wallet_client.get_transaction(
-        wallet_id,
-        transaction_id=transaction_id,  # type: ignore[arg-type]
-    )
+    tx: TransactionRecord = await wallet_client.get_transaction(wallet_id, transaction_id=transaction_id)  # type: ignore[arg-type]  # noqa: E501
     print_transaction(tx, verbose=(args["verbose"] > 0), name=name)
 
 

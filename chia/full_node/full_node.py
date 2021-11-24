@@ -391,13 +391,7 @@ class FullNode:
                             #       "Tuple[List[CoinRecord], Dict[bytes, Dict[bytes, CoinRecord]]]"; expected
                             #       "Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]"  [arg-type]
                             await self.peak_post_processing_2(
-                                peak_fb,
-                                peak,
-                                fork_height,
-                                peer,
-                                coin_changes,  # type: ignore[arg-type]
-                                mempool_new_peak_result,
-                                fns_peak_result,
+                                peak_fb, peak, fork_height, peer, coin_changes, mempool_new_peak_result, fns_peak_result  # type: ignore[arg-type]  # noqa: E501
                             )
                         except asyncio.CancelledError:
                             # Still do post processing after cancel
@@ -1095,12 +1089,7 @@ class FullNode:
         #       expected
         #       "Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes, CoinRecord]]]]")
         #       [return-value]
-        return (
-            True,
-            advanced_peak,
-            fork_height,
-            (list(all_coin_changes.values()), all_hint_changes),
-        )  # type: ignore[return-value]
+        return True, advanced_peak, fork_height, (list(all_coin_changes.values()), all_hint_changes)  # type: ignore[return-value]  # noqa: E501
 
     async def _finish_sync(self):
         """
@@ -1246,9 +1235,7 @@ class FullNode:
             # TODO: address hint error and remove ignore
             #       error: Argument 1 to "block_record" of "Blockchain" has incompatible type "Optional[bytes32]";
             #       expected "bytes32"  [arg-type]
-            fork_block = self.blockchain.block_record(
-                self.blockchain.height_to_hash(fork_height),  # type: ignore[arg-type]
-            )
+            fork_block = self.blockchain.block_record(self.blockchain.height_to_hash(fork_height))  # type: ignore[arg-type]  # noqa: E501
 
         fns_peak_result: FullNodeStorePeakResult = self.full_node_store.new_peak(
             record,

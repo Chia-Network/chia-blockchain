@@ -472,9 +472,7 @@ class TradeManager:
                 # TODO: address hint error and remove ignore
                 #       error: Argument 2 to "SpendableCC" has incompatible type "Optional[bytes32]"; expected "bytes32"
                 #       [arg-type]
-                spendable_cc_list.append(
-                    SpendableCC(coloured_coin, genesis_id, inner_puzzle, lineage_proof),  # type: ignore[arg-type]
-                )
+                spendable_cc_list.append(SpendableCC(coloured_coin, genesis_id, inner_puzzle, lineage_proof))  # type: ignore[arg-type]  # noqa: E501
                 innersol_list.append(inner_solution)
 
             # Create SpendableCC for each of the coloured coins received
@@ -491,9 +489,7 @@ class TradeManager:
                     # TODO: address hint error and remove ignore
                     #       error: Argument 2 to "SpendableCC" has incompatible type "Optional[bytes32]"; expected
                     #       "bytes32"  [arg-type]
-                    spendable_cc_list.append(
-                        SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof),  # type: ignore[arg-type]
-                    )
+                    spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))  # type: ignore[arg-type]  # noqa: E501
                     innersol_list.append(inner_solution)
 
             # Finish the output coin SpendableCC with new information
@@ -509,9 +505,7 @@ class TradeManager:
             # TODO: address hint error and remove ignore
             #       error: Argument 2 to "SpendableCC" has incompatible type "Optional[bytes32]"; expected "bytes32"
             #       [arg-type]
-            spendable_cc_list.append(
-                SpendableCC(my_output_coin, genesis_id, inner_puzzle, lineage_proof),  # type: ignore[arg-type]
-            )
+            spendable_cc_list.append(SpendableCC(my_output_coin, genesis_id, inner_puzzle, lineage_proof))  # type: ignore[arg-type]  # noqa: E501
             innersol_list.append(inner_solution)
 
             sigs = await wallets[colour].get_sigs(inner_puzzle, inner_solution, my_output_coin.name())

@@ -362,9 +362,7 @@ class Wallet:
                 # TODO: address hint error and remove ignore
                 #       error: Argument 1 to <set> has incompatible type "Optional[bytes32]"; expected "bytes32"
                 #       [arg-type]
-                solution = self.make_solution(
-                    coin_announcements_to_assert={primary_announcement_hash},  # type: ignore[arg-type]
-                )
+                solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})  # type: ignore[arg-type]  # noqa: E501
 
             spends.append(
                 CoinSpend(
@@ -409,14 +407,7 @@ class Wallet:
         #       error: Argument 8 to "_generate_unsigned_transaction" of "Wallet" has incompatible type
         #       "Optional[Set[bytes32]]"; expected "Optional[Set[Announcement]]"  [arg-type]
         transaction = await self._generate_unsigned_transaction(
-            amount,
-            puzzle_hash,
-            fee,
-            origin_id,
-            coins,
-            primaries,
-            ignore_max_send_amount,
-            announcements_to_consume,  # type: ignore[arg-type]
+            amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send_amount, announcements_to_consume  # type: ignore[arg-type]  # noqa: E501
         )
         assert len(transaction) > 0
 

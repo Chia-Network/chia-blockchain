@@ -31,10 +31,7 @@ class ProofOfSpace(Streamable):
             # TODO: address hint error and remove ignore
             #       error: Argument 1 to "calculate_plot_id_ph" of "ProofOfSpace" has incompatible type
             #       "Optional[bytes32]"; expected "bytes32"  [arg-type]
-            return self.calculate_plot_id_ph(
-                self.pool_contract_puzzle_hash,  # type: ignore[arg-type]
-                self.plot_public_key,
-            )
+            return self.calculate_plot_id_ph(self.pool_contract_puzzle_hash, self.plot_public_key)  # type: ignore[arg-type]  # noqa: E501
         return self.calculate_plot_id_pk(self.pool_public_key, self.plot_public_key)
 
     def verify_and_get_quality_string(

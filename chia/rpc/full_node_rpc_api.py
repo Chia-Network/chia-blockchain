@@ -276,9 +276,7 @@ class FullNodeRpcApi:
         # TODO: address hint error and remove ignore
         #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "bytes"; expected "bytes32"
         #       [arg-type]
-        block: Optional[FullBlock] = await self.service.block_store.get_full_block(
-            header_hash,  # type: ignore[arg-type]
-        )
+        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
         if block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
@@ -492,9 +490,7 @@ class FullNodeRpcApi:
         # TODO: address hint error and remove ignore
         #       error: Argument 1 to "get_coin_record" of "CoinStore" has incompatible type "bytes"; expected "bytes32"
         #       [arg-type]
-        coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(
-            name,  # type: ignore[arg-type]
-        )
+        coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(name)  # type: ignore[arg-type]  # noqa: E501
         if coin_record is None:
             raise ValueError(f"Coin record 0x{name.hex()} not found")
 
@@ -583,9 +579,7 @@ class FullNodeRpcApi:
         # TODO: address hint error and remove ignore
         #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
         #       expected "bytes32"  [arg-type]
-        block: Optional[FullBlock] = await self.service.block_store.get_full_block(
-            header_hash,  # type: ignore[arg-type]
-        )
+        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
 
         if block is None or block.transactions_generator is None:
             raise ValueError("Invalid block or block generator")
@@ -610,9 +604,7 @@ class FullNodeRpcApi:
         # TODO: address hint error and remove ignore
         #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "bytes"; expected "bytes32"
         #       [arg-type]
-        block: Optional[FullBlock] = await self.service.block_store.get_full_block(
-            header_hash,  # type: ignore[arg-type]
-        )
+        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
         if block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 

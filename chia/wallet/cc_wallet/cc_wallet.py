@@ -646,9 +646,7 @@ class CCWallet:
             # TODO: address hint error and remove ignore
             #       error: Argument 2 to "SpendableCC" has incompatible type "Optional[bytes32]"; expected "bytes32"
             #       [arg-type]
-            spendable_cc_list.append(
-                SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof),  # type: ignore[arg-type]
-            )
+            spendable_cc_list.append(SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof))  # type: ignore[arg-type]  # noqa: E501
             sigs = sigs + await self.get_sigs(coin_inner_puzzle, innersol, coin.name())
 
         spend_bundle = spend_bundle_for_spendable_ccs(
