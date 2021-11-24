@@ -503,6 +503,15 @@ class CCWallet:
         inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(bytes(record.pubkey))
         return inner_puzzle
 
+    async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
+        record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+            puzzle_hash
+        )
+        if record is None:
+            return puzzle_hash
+        else:
+            return (await self.inner_puzzle_for_cat_puzhash(puzzle_hash)).get_tree_hash()
+
     async def get_lineage_proof_for_coin(self, coin) -> Optional[LineageProof]:
         for name, proof in self.cc_info.lineage_proofs:
             if name == coin.parent_coin_info:
