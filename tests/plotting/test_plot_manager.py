@@ -14,6 +14,7 @@ from chia.plotting.util import (
     add_plot_directory,
     remove_plot_directory,
 )
+from chia.util.config import create_default_chia_config
 from chia.util.path import mkdir
 from chia.plotting.manager import PlotManager
 from tests.block_tools import get_plot_dir
@@ -59,23 +60,21 @@ class TestEnvironment:
     dir_2: TestDirectory
 
 
-def create_test_environment(*, dir_1_count: int, dir_2_count: int) -> TestEnvironment:
+@pytest.fixture(scope="function")
+def test_environment(tmp_path) -> TestEnvironment:
+    dir_1_count: int = 7
+    dir_2_count: int = 3
     plots: List[Path] = list(sorted(get_plot_dir().glob("*.plot")))
-    assert dir_1_count > 0
     assert len(plots) >= dir_1_count + dir_2_count
-    dir_1: TestDirectory = TestDirectory(get_plot_dir().resolve() / "1", plots[0:dir_1_count])
-    dir_2: TestDirectory = TestDirectory(get_plot_dir().resolve() / "2", plots[dir_1_count : dir_1_count + dir_2_count])
 
-    bt.refresh_plots()
-    assert len(bt.plot_manager.plots) >= len(dir_1) + len(dir_2)
-    bt.plot_manager.stop_refreshing()
-    for directory in get_plot_directories(bt.root_path):
-        remove_plot_directory(bt.root_path, directory)
+    dir_1: TestDirectory = TestDirectory(tmp_path / "plots" / "1", plots[0:dir_1_count])
+    dir_2: TestDirectory = TestDirectory(tmp_path / "plots" / "2", plots[dir_1_count : dir_1_count + dir_2_count])
+    create_default_chia_config(tmp_path)
 
-    plot_manager = PlotManager(bt.root_path, refresh_callback)
+    plot_manager = PlotManager(tmp_path, refresh_callback)
     plot_manager.set_public_keys(bt.plot_manager.farmer_public_keys, bt.plot_manager.pool_public_keys)
 
-    return TestEnvironment(bt.root_path, plot_manager, dir_1, dir_2)
+    return TestEnvironment(tmp_path, plot_manager, dir_1, dir_2)
 
 
 # Wrap `remove_plot` to give it the same interface as the other triggers, e.g. `add_plot_directory(Path, str)`.
@@ -119,8 +118,8 @@ async def run_refresh_test(manager: PlotManager):
 
 
 @pytest.mark.asyncio
-async def test_plot_refreshing():
-    env: TestEnvironment = create_test_environment(dir_1_count=5, dir_2_count=7)
+async def test_plot_refreshing(test_environment):
+    env: TestEnvironment = test_environment
     dir_duplicates: TestDirectory = TestDirectory(get_plot_dir().resolve() / "duplicates", env.dir_1.plots)
 
     async def run_test_case(
@@ -315,8 +314,8 @@ async def test_plot_refreshing():
 
 
 @pytest.mark.asyncio
-async def test_invalid_plots():
-    env: TestEnvironment = create_test_environment(dir_1_count=3, dir_2_count=0)
+async def test_invalid_plots(test_environment):
+    env: TestEnvironment = test_environment
     # Test re-trying if processing a plot failed
     # First create a backup of the plot
     retry_test_plot = list(env.dir_1.path.iterdir())[0].resolve()
@@ -352,8 +351,8 @@ async def test_invalid_plots():
 
 
 @pytest.mark.asyncio
-async def test_plot_info_caching():
-    env: TestEnvironment = create_test_environment(dir_1_count=5, dir_2_count=0)
+async def test_plot_info_caching(test_environment):
+    env: TestEnvironment = test_environment
     add_plot_directory(env.root_path, str(env.dir_1.path))
     expected_result.loaded = len(env.dir_1)
     expected_result.removed = 0
