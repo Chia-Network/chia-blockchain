@@ -38,6 +38,11 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
+    - name: Reconfigure git to use HTTP authentication
+      run: >
+        git config --global url."https://github.com/".insteadOf
+        ssh://git@github.com/
+
     - name: Cleanup any leftovers that exist from previous runs
       run: bash build_scripts/clean-runner.sh || true
 
