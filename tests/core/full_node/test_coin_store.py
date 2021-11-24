@@ -305,7 +305,7 @@ class TestCoinStoreWithBlocks:
             num_blocks = 20
             farmer_ph = 32 * b"0"
             pool_ph = 32 * b"1"
-            # TODO: address hint errors and remove ignores
+            # TODO: address hint error and remove ignore
             #       error: Argument "farmer_reward_puzzle_hash" to "get_consecutive_blocks" of "BlockTools" has
             #       incompatible type "bytes"; expected "Optional[bytes32]"  [arg-type]
             #       error: Argument "pool_reward_puzzle_hash" to "get_consecutive_blocks" of "BlockTools" has

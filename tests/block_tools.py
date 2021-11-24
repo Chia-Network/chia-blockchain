@@ -690,7 +690,7 @@ class BlockTools:
             if pending_ses:
                 sub_epoch_summary: Optional[SubEpochSummary] = None
             else:
-                # TODO: address hint errors and remove ignore
+                # TODO: address hint error and remove ignore
                 #       error: Argument 1 to "BlockCache" has incompatible type "Dict[uint32, BlockRecord]"; expected
                 #       "Dict[bytes32, BlockRecord]"  [arg-type]
                 #       error: Argument 2 to "BlockCache" has incompatible type "Dict[uint32, bytes32]"; expected
@@ -1507,7 +1507,7 @@ def get_full_block_and_block_record(
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
 
-    # TODO: address hint errors and remove ignores
+    # TODO: address hint error and remove ignore
     #       error: Argument 1 to "BlockCache" has incompatible type "Dict[uint32, BlockRecord]"; expected
     #       "Dict[bytes32, BlockRecord]"  [arg-type]
     #       error: Argument 16 to "create_test_unfinished_block" has incompatible type "bytes"; expected "bytes32"
@@ -1807,7 +1807,7 @@ def create_test_foliage(
             prev_transaction_block_hash = prev_transaction_block.header_hash
 
         assert transactions_info is not None
-        # TODO: address hint errors and remove ignores
+        # TODO: address hint error and remove ignore
         #       error: Argument 4 to "FoliageTransactionBlock" has incompatible type "bytes"; expected "bytes32"
         #       [arg-type]
         #       error: Argument 5 to "FoliageTransactionBlock" has incompatible type "bytes"; expected "bytes32"
