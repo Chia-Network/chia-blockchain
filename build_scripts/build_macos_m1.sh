@@ -20,7 +20,7 @@ npm install electron-installer-dmg -g
 # Current packager uses an old version of osx-sign, so if we install the newer sign package
 # things break
 npm install electron-packager@15.4.0 -g
-npm install electron/electron-osx-sign@v0.5.0 -g
+npm install electron-osx-sign@v0.5.0 -g
 npm install notarize-cli -g
 
 echo "Create dist/"
