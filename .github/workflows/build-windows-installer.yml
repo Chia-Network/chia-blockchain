@@ -31,7 +31,7 @@ jobs:
 
     - name: Set git urls to https instead of ssh
       run: |
-        git config --global url."https://github".insteadOf ssh://git@github.com/
+        git config --global url."https://github.com/".insteadOf ssh://git@github.com/
 
     - name: Get npm cache directory
       id: npm-cache
