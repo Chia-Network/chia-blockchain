@@ -34,9 +34,7 @@ def coin_as_program(coin: Coin) -> Program:
     """
     Convenience function for when putting `coin_info` into a solution.
     """
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-    return Program.to([coin.parent_coin_info, coin.puzzle_hash, coin.amount])  # type: ignore[return-value]
+    return Program.to([coin.parent_coin_info, coin.puzzle_hash, coin.amount])
 
 
 def dump_coin(coin: Coin) -> str:
@@ -202,6 +200,4 @@ def solution_for_pay_to_any(puzzle_hash_amount_pairs: Iterable[Tuple[bytes32, in
     output_conditions = [
         [ConditionOpcode.CREATE_COIN, puzzle_hash, amount] for puzzle_hash, amount in puzzle_hash_amount_pairs
     ]
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-    return Program.to(output_conditions)  # type: ignore[return-value]
+    return Program.to(output_conditions)

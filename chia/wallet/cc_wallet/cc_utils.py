@@ -54,9 +54,7 @@ def cc_puzzle_hash_for_inner_puzzle_hash(mod_code, genesis_coin_checker, inner_p
 
 
 def lineage_proof_for_cc_parent(parent_coin: Coin, parent_inner_puzzle_hash: bytes32) -> Program:
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-    return Program.to(  # type: ignore[return-value]
+    return Program.to(
         (
             1,
             [parent_coin.parent_coin_info, parent_inner_puzzle_hash, parent_coin.amount],
@@ -99,9 +97,7 @@ def coin_spend_for_lock_coin(
 
 def bundle_for_spendable_cc_list(spendable_cc: SpendableCC) -> Program:
     pair = (spendable_cc.coin.as_list(), spendable_cc.lineage_proof)
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-    return Program.to(pair)  # type: ignore[return-value]
+    return Program.to(pair)
 
 
 def spend_bundle_for_spendable_ccs(

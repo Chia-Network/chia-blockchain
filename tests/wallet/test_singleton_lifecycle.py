@@ -40,9 +40,7 @@ def check_coin_spend(coin_spend: CoinSpend):
 
 def adaptor_for_singleton_inner_puzzle(puzzle: Program) -> Program:
     # this is prety slow
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-    return Program.to(binutils.assemble("(a (q . %s) 3)" % binutils.disassemble(puzzle)))  # type: ignore[return-value]
+    return Program.to(binutils.assemble("(a (q . %s) 3)" % binutils.disassemble(puzzle)))
 
 
 def launcher_conditions_and_spend_bundle(
@@ -59,9 +57,7 @@ def launcher_conditions_and_spend_bundle(
     )
     singleton_full_puzzle_hash = singleton_full_puzzle.get_tree_hash()
     message_program = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
-    # TODO: address hint error and remove ignore
-    #       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
-    expected_announcement = Announcement(launcher_coin.name(), message_program.get_tree_hash())  # type: ignore[attr-defined]  # noqa E501
+    expected_announcement = Announcement(launcher_coin.name(), message_program.get_tree_hash())
     expected_conditions = []
     expected_conditions.append(
         Program.to(
@@ -80,10 +76,7 @@ def launcher_conditions_and_spend_bundle(
     coin_spend = CoinSpend(launcher_coin, launcher_puzzle, launcher_solution)  # type: ignore[arg-type]
     spend_bundle = SpendBundle([coin_spend], G2Element())
     lineage_proof = Program.to([parent_coin_id, launcher_amount])
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "Tuple[SExp, Any, List[SExp], SpendBundle]", expected
-    #       "Tuple[Program, Any, List[Program], SpendBundle]")  [return-value]
-    return lineage_proof, launcher_coin.name(), expected_conditions, spend_bundle  # type: ignore[return-value]
+    return lineage_proof, launcher_coin.name(), expected_conditions, spend_bundle
 
 
 def singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
@@ -95,9 +88,7 @@ def singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32, i
 
 
 def solution_for_singleton_puzzle(lineage_proof: Program, my_amount: int, inner_solution: Program) -> Program:
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-    return Program.to([lineage_proof, my_amount, inner_solution])  # type: ignore[return-value]
+    return Program.to([lineage_proof, my_amount, inner_solution])
 
 
 def p2_singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32) -> Program:

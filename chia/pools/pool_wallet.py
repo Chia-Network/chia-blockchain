@@ -628,9 +628,7 @@ class PoolWallet:
         puzzle_hash: bytes32 = full_pooling_puzzle.get_tree_hash()
         pool_state_bytes = Program.to([("p", bytes(initial_target_state)), ("t", delay_time), ("h", delay_ph)])
         announcement_set: Set[bytes32] = set()
-        # TODO: address hint error and remove ignore
-        #       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
-        announcement_message = Program.to([puzzle_hash, amount, pool_state_bytes]).get_tree_hash()  # type: ignore[attr-defined]  # noqa E501
+        announcement_message = Program.to([puzzle_hash, amount, pool_state_bytes]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
 
         create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
@@ -645,10 +643,7 @@ class PoolWallet:
         )
         assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
 
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "SExp", variable has type "Program")
-        #       [assignment]
-        genesis_launcher_solution: Program = Program.to([puzzle_hash, amount, pool_state_bytes])  # type: ignore[assignment]  # noqa E501
+        genesis_launcher_solution: Program = Program.to([puzzle_hash, amount, pool_state_bytes])
 
         launcher_cs: CoinSpend = CoinSpend(
             launcher_coin,

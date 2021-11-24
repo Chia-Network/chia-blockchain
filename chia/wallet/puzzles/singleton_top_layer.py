@@ -28,9 +28,7 @@ def generate_launcher_coin(coin: Coin, amount: uint64) -> Coin:
 # Wrap inner puzzles that are not singleton specific to strip away "truths"
 def adapt_inner_to_singleton(inner_puzzle: Program) -> Program:
     # (a (q . inner_puzzle) (r 1))
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-    return Program.to([2, (1, inner_puzzle), [6, 1]])  # type: ignore[return-value]
+    return Program.to([2, (1, inner_puzzle), [6, 1]])
 
 
 # Take standard coin and amount -> launch conditions & launcher coin solution
@@ -63,12 +61,10 @@ def launch_conditions_and_coinsol(
             amount,
         ],
     )
-    # TODO: address hint error and remove ignore
-    #       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
     assert_launcher_announcement = Program.to(
         [
             ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
-            std_hash(launcher_coin.name() + launcher_solution.get_tree_hash()),  # type: ignore[attr-defined]
+            std_hash(launcher_coin.name() + launcher_solution.get_tree_hash()),
         ],
     )
 
@@ -83,10 +79,7 @@ def launch_conditions_and_coinsol(
         launcher_solution,  # type: ignore[arg-type]
     )
 
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "Tuple[List[SExp], CoinSpend]", expected
-    #       "Tuple[List[Program], CoinSpend]")  [return-value]
-    return conditions, launcher_coin_spend  # type: ignore[return-value]
+    return conditions, launcher_coin_spend
 
 
 # Take a coin solution, return a lineage proof for their child to use in spends
@@ -137,9 +130,7 @@ def solution_for_singleton(
             lineage_proof.amount,
         ]
 
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-    return Program.to([parent_info, amount, inner_solution])  # type: ignore[return-value]
+    return Program.to([parent_info, amount, inner_solution])
 
 
 # Create a coin that a singleton can claim
@@ -160,16 +151,12 @@ def pay_to_singleton_or_delay_puzzle(launcher_id: bytes32, delay_time: uint64, d
 
 # Solution for EITHER p2_singleton or the claiming spend case for p2_singleton_or_delayed_puzhash
 def solution_for_p2_singleton(p2_singleton_coin: Coin, singleton_inner_puzhash: bytes32) -> Program:
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-    return Program.to([singleton_inner_puzhash, p2_singleton_coin.name()])  # type: ignore[return-value]
+    return Program.to([singleton_inner_puzhash, p2_singleton_coin.name()])
 
 
 # Solution for the delayed spend case for p2_singleton_or_delayed_puzhash
 def solution_for_p2_delayed_puzzle(output_amount: uint64) -> Program:
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-    return Program.to([output_amount, []])  # type: ignore[return-value]
+    return Program.to([output_amount, []])
 
 
 # Get announcement conditions for singleton solution and full CoinSpend for the claimed coin
@@ -198,10 +185,7 @@ def claim_p2_singleton(
         puzzle,  # type: ignore[arg-type]
         solution_for_p2_singleton(p2_singleton_coin, singleton_inner_puzhash),  # type: ignore[arg-type]
     )
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "Tuple[SExp, SExp, CoinSpend]", expected
-    #       "Tuple[Program, Program, CoinSpend]")  [return-value]
-    return assertion, announcement, claim_coinsol  # type: ignore[return-value]
+    return assertion, announcement, claim_coinsol
 
 
 # Get the CoinSpend for spending to a delayed puzzle

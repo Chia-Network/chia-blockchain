@@ -522,10 +522,7 @@ class DIDWallet:
         if new_innerpuzhash is None:
             new_innerpuzhash = innerpuz.get_tree_hash()
         # innerpuz solution is (mode amount messages new_puz)
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "SExp", variable has type "Program")
-        #       [assignment]
-        innersol: Program = Program.to([1, coin.amount, messages, new_innerpuzhash])  # type: ignore[assignment]
+        innersol: Program = Program.to([1, coin.amount, messages, new_innerpuzhash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
 
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
@@ -552,10 +549,8 @@ class DIDWallet:
         list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]  # type: ignore[arg-type]
         # sign for AGG_SIG_ME
         # new_inner_puzhash amount message
-        # TODO: address hint error and remove ignore
-        #       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
         message = (
-            Program.to([new_innerpuzhash, coin.amount, messages]).get_tree_hash()  # type: ignore[attr-defined]
+            Program.to([new_innerpuzhash, coin.amount, messages]).get_tree_hash()
             + coin.name()
             + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         )
@@ -597,10 +592,7 @@ class DIDWallet:
         coin = coins.pop()
         amount = coin.amount - 1
         # innerpuz solution is (mode amount new_puzhash)
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "SExp", variable has type "Program")
-        #       [assignment]
-        innersol: Program = Program.to([0, amount, puzhash])  # type: ignore[assignment]
+        innersol: Program = Program.to([0, amount, puzhash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
@@ -627,10 +619,8 @@ class DIDWallet:
         #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
         list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]  # type: ignore[arg-type]
         # sign for AGG_SIG_ME
-        # TODO: address hint error and remove ignore
-        #       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
         message = (
-            Program.to([amount, puzhash]).get_tree_hash()  # type: ignore[attr-defined]
+            Program.to([amount, puzhash]).get_tree_hash()
             + coin.name()
             + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         )
@@ -707,9 +697,7 @@ class DIDWallet:
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
         # sign for AGG_SIG_ME
-        # TODO: address hint error and remove ignore
-        #       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
-        to_sign = Program.to([innerpuz.get_tree_hash(), coin.amount, messages]).get_tree_hash()  # type: ignore[attr-defined]  # noqa E501
+        to_sign = Program.to([innerpuz.get_tree_hash(), coin.amount, messages]).get_tree_hash()
         message = to_sign + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
@@ -809,10 +797,7 @@ class DIDWallet:
         assert self.did_info.origin_coin is not None
 
         # innersol is mode new_amount message new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal)  # noqa
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "SExp", variable has type "Program")
-        #       [assignment]
-        innersol: Program = Program.to(  # type: ignore[assignment]
+        innersol: Program = Program.to(
             [
                 2,
                 coin.amount,
@@ -957,9 +942,7 @@ class DIDWallet:
         did_puzzle_hash = did_full_puz.get_tree_hash()
 
         announcement_set: Set[bytes32] = set()
-        # TODO: address hint error and remove ignore
-        #       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
-        announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()  # type: ignore[attr-defined]  # noqa E501
+        announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
 
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
@@ -1026,10 +1009,8 @@ class DIDWallet:
         #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
         list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]  # type: ignore[arg-type]
         # sign for AGG_SIG_ME
-        # TODO: address hint error and remove ignore
-        #       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
         message = (
-            Program.to([innerpuz.get_tree_hash(), coin.amount, []]).get_tree_hash()  # type: ignore[attr-defined]
+            Program.to([innerpuz.get_tree_hash(), coin.amount, []]).get_tree_hash()
             + coin.name()
             + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         )

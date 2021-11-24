@@ -49,9 +49,7 @@ log = logging.getLogger(__name__)
 # We call it the `EASY_PUZZLE` because it's pretty easy to solve.
 
 EASY_PUZZLE = Program.to(assemble("1"))
-# TODO: address hint error and remove ignore
-#       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
-EASY_PUZZLE_HASH = EASY_PUZZLE.get_tree_hash()  # type: ignore[attr-defined]
+EASY_PUZZLE_HASH = EASY_PUZZLE.get_tree_hash()
 
 
 def initial_blocks(block_count: int = 4) -> List[FullBlock]:

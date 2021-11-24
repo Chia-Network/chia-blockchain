@@ -103,10 +103,7 @@ def default_payments_and_conditions(
         (throwaway_puzzle_hash(initial_index + 2, key_lookup), (initial_index + 1) * 1000),
     ]
     conditions = Program.to([make_create_coin_condition(ph, amount) for ph, amount in payments])
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "Tuple[List[Tuple[Any, int]], SExp]", expected
-    #       "Tuple[List[Tuple[Any, int]], Program]")  [return-value]
-    return payments, conditions  # type: ignore[return-value]
+    return payments, conditions
 
 
 def make_create_coin_condition(puzzle_hash, amount):

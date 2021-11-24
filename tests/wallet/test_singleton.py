@@ -15,9 +15,7 @@ POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clvm")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 
-# TODO: address hint error and remove ignore
-#       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
-LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()  # type: ignore[attr-defined]
+LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
 

@@ -37,9 +37,7 @@ def create_generator_args(generator_ref_list: List[SerializedProgram]) -> Progra
     `create_generator_args`: The format and contents of these arguments affect consensus.
     """
     gen_ref_list = [bytes(g) for g in generator_ref_list]
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-    return Program.to([gen_ref_list])  # type: ignore[return-value]
+    return Program.to([gen_ref_list])
 
 
 def create_compressed_generator(

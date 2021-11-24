@@ -17,6 +17,4 @@ def puzzle_for_m_of_public_key_list(m, public_key_list) -> Program:
 
 
 def solution_for_delegated_puzzle(m, selectors, puzzle, solution) -> Program:
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-    return Program.to([selectors, puzzle, solution])  # type: ignore[return-value]
+    return Program.to([selectors, puzzle, solution])

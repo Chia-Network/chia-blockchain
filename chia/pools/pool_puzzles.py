@@ -33,9 +33,7 @@ POOL_OUTER_MOD_HASH = POOL_OUTER_MOD.get_tree_hash()
 SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
 SINGLETON_MOD_HASH = POOL_OUTER_MOD_HASH
 
-# TODO: address hint error and remove ignore
-#       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
-SINGLETON_MOD_HASH_HASH = Program.to(SINGLETON_MOD_HASH).get_tree_hash()  # type: ignore[attr-defined]
+SINGLETON_MOD_HASH_HASH = Program.to(SINGLETON_MOD_HASH).get_tree_hash()
 
 
 def create_waiting_room_inner_puzzle(
@@ -172,28 +170,20 @@ def create_travel_spend(
         # inner sol is key_value_list ()
         # key_value_list is:
         # "ps" -> poolstate as bytes
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "SExp", variable has type "Program")
-        #       [assignment]
-        inner_sol: Program = Program.to([[("p", bytes(target))], 0])  # type: ignore[assignment]
+        inner_sol: Program = Program.to([[("p", bytes(target))], 0])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, key_value_list, pool_reward_height)
         destination_inner: Program = pool_state_to_inner_puzzle(
             target, launcher_coin.name(), genesis_challenge, delay_time, delay_ph
         )
-        # TODO: address hint error and remove ignore
-        #       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
         log.debug(
             f"create_travel_spend: waitingroom: target PoolState bytes:\n{bytes(target).hex()}\n"
             f"{target}"
-            f"hash:{Program.to(bytes(target)).get_tree_hash()}"  # type: ignore[attr-defined]
+            f"hash:{Program.to(bytes(target)).get_tree_hash()}"
         )
         # key_value_list is:
         # "ps" -> poolstate as bytes
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "SExp", variable has type "Program")
-        #       [assignment]
-        inner_sol = Program.to([1, [("p", bytes(target))], destination_inner.get_tree_hash()])  # type: ignore[assignment]  # noqa E501  # current or target
+        inner_sol = Program.to([1, [("p", bytes(target))], destination_inner.get_tree_hash()])  # current or target
     else:
         raise ValueError
 
@@ -213,10 +203,7 @@ def create_travel_spend(
                 last_coin_spend.coin.amount,
             ]
         )
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible types in assignment (expression has type "SExp", variable has type "Program")
-    #       [assignment]
-    full_solution: Program = Program.to([parent_info_list, current_singleton.amount, inner_sol])  # type: ignore[assignment]  # noqa E501
+    full_solution: Program = Program.to([parent_info_list, current_singleton.amount, inner_sol])
     full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_coin.name())
 
     return (
@@ -244,16 +231,10 @@ def create_absorb_spend(
     reward_amount: uint64 = calculate_pool_reward(height)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "SExp", variable has type "Program")
-        #       [assignment]
-        inner_sol: Program = Program.to([reward_amount, height])  # type: ignore[assignment]
+        inner_sol: Program = Program.to([reward_amount, height])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "SExp", variable has type "Program")
-        #       [assignment]
-        inner_sol = Program.to([0, reward_amount, height])  # type: ignore[assignment]
+        inner_sol = Program.to([0, reward_amount, height])
     else:
         raise ValueError
     # full sol = (parent_info, my_amount, inner_solution)
@@ -261,29 +242,20 @@ def create_absorb_spend(
     assert coin is not None
 
     if coin.parent_coin_info == launcher_coin.name():
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "SExp", variable has type "Program")
-        #       [assignment]
-        parent_info: Program = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])  # type: ignore[assignment]  # noqa E501
+        parent_info: Program = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])
     else:
         p = Program.from_bytes(bytes(last_coin_spend.puzzle_reveal))
         last_coin_spend_inner_puzzle: Optional[Program] = get_inner_puzzle_from_puzzle(p)
         assert last_coin_spend_inner_puzzle is not None
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "SExp", variable has type "Program")
-        #       [assignment]
-        parent_info = Program.to(  # type: ignore[assignment]
+        parent_info = Program.to(
             [
                 last_coin_spend.coin.parent_coin_info,
                 last_coin_spend_inner_puzzle.get_tree_hash(),
                 last_coin_spend.coin.amount,
             ]
         )
-    # TODO: address hint error and remove ignore
-    #       error: Argument 1 to "from_program" of "SerializedProgram" has incompatible type "SExp"; expected "Program"
-    #       [arg-type]
     full_solution: SerializedProgram = SerializedProgram.from_program(
-        Program.to([parent_info, last_coin_spend.coin.amount, inner_sol])  # type: ignore[arg-type]
+        Program.to([parent_info, last_coin_spend.coin.amount, inner_sol])
     )
     full_puzzle: SerializedProgram = SerializedProgram.from_program(
         create_full_puzzle(inner_puzzle, launcher_coin.name())
@@ -295,11 +267,8 @@ def create_absorb_spend(
         create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_coin.name(), delay_time, delay_ph)
     )
     reward_coin: Coin = Coin(reward_parent, p2_singleton_puzzle.get_tree_hash(), reward_amount)
-    # TODO: address hint error and remove ignore
-    #       error: Argument 1 to "from_program" of "SerializedProgram" has incompatible type "SExp"; expected "Program"
-    #       [arg-type]
     p2_singleton_solution: SerializedProgram = SerializedProgram.from_program(
-        Program.to([inner_puzzle.get_tree_hash(), reward_coin.name()])  # type: ignore[arg-type]
+        Program.to([inner_puzzle.get_tree_hash(), reward_coin.name()])
     )
     assert p2_singleton_puzzle.get_tree_hash() == reward_coin.puzzle_hash
     assert full_puzzle.get_tree_hash() == coin.puzzle_hash

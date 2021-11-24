@@ -297,10 +297,7 @@ class CCWallet:
 
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
         lineage_proof = Program.to((1, [coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount]))
-        # TODO: address hint error and remove ignore
-        #       error: Argument 2 to "add_lineage" of "CCWallet" has incompatible type "SExp"; expected
-        #       "Optional[Program]"  [arg-type]
-        await self.add_lineage(coin.name(), lineage_proof, True)  # type: ignore[arg-type]
+        await self.add_lineage(coin.name(), lineage_proof, True)
 
         for name, lineage_proofs in self.cc_info.lineage_proofs:
             if coin.parent_coin_info == name:
@@ -409,20 +406,14 @@ class CCWallet:
 
         await self.add_lineage(
             eve_coin.name(),
-            # TODO: address hint error and remove ignore
-            #       error: Argument 2 to "add_lineage" of "CCWallet" has incompatible type "SExp"; expected
-            #       "Optional[Program]"  [arg-type]
-            Program.to(  # type: ignore[arg-type]
+            Program.to(
                 (
                     1,
                     [eve_coin.parent_coin_info, cc_inner, eve_coin.amount],
                 )
             ),
         )
-        # TODO: address hint error and remove ignore
-        #       error: Argument 2 to "add_lineage" of "CCWallet" has incompatible type "SExp"; expected
-        #       "Optional[Program]"  [arg-type]
-        await self.add_lineage(eve_coin.parent_coin_info, Program.to((0, [origin.as_list(), 1])))  # type: ignore[arg-type]  # noqa E501
+        await self.add_lineage(eve_coin.parent_coin_info, Program.to((0, [origin.as_list(), 1])))
 
         if send:
             regular_record = TransactionRecord(
@@ -699,10 +690,7 @@ class CCWallet:
         origin_id = origin.name()
 
         cc_inner_hash = await self.get_new_inner_hash()
-        # TODO: address hint error and remove ignore
-        #       error: Argument 2 to "add_lineage" of "CCWallet" has incompatible type "SExp"; expected
-        #       "Optional[Program]"  [arg-type]
-        await self.add_lineage(origin_id, Program.to((0, [origin.as_list(), 0])))  # type: ignore[arg-type]
+        await self.add_lineage(origin_id, Program.to((0, [origin.as_list(), 0])))
         genesis_coin_checker = create_genesis_or_zero_coin_checker(origin_id)
 
         minted_cc_puzzle_hash = cc_puzzle_hash_for_inner_puzzle_hash(CC_MOD, genesis_coin_checker, cc_inner_hash)

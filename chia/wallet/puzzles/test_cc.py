@@ -68,9 +68,7 @@ def issue_cc_from_farmed_coin(
     # get a farmed coin
 
     farmed_puzzle = ANYONE_CAN_SPEND_PUZZLE
-    # TODO: address hint error and remove ignore
-    #       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
-    farmed_puzzle_hash = farmed_puzzle.get_tree_hash()  # type: ignore[attr-defined]
+    farmed_puzzle_hash = farmed_puzzle.get_tree_hash()
 
     # mint a cc
 
@@ -97,9 +95,7 @@ def solution_for_pay_to_any(puzzle_hash_amount_pairs: List[Tuple[bytes32, int]])
     output_conditions = [
         [ConditionOpcode.CREATE_COIN, puzzle_hash, amount] for puzzle_hash, amount in puzzle_hash_amount_pairs
     ]
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-    return Program.to(output_conditions)  # type: ignore[return-value]
+    return Program.to(output_conditions)
 
 
 def test_spend_through_n(mod_code, coin_checker_for_farmed_coin, n):
@@ -187,9 +183,7 @@ def test_spend_zero_coin(mod_code: Program, coin_checker_for_farmed_coin):
     """
 
     eve_inner_puzzle = ANYONE_CAN_SPEND_PUZZLE
-    # TODO: address hint error and remove ignore
-    #       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
-    eve_inner_puzzle_hash = eve_inner_puzzle.get_tree_hash()  # type: ignore[attr-defined]
+    eve_inner_puzzle_hash = eve_inner_puzzle.get_tree_hash()
 
     total_minted = 0x111
 

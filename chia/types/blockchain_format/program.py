@@ -103,10 +103,7 @@ class Program(SExp):
     def run_with_cost(self, max_cost: int, args) -> Tuple[int, "Program"]:
         prog_args = Program.to(args)
         cost, r = run_program(self, prog_args, max_cost)
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible return value type (got "Tuple[Any, SExp]", expected "Tuple[int, Program]")
-        #       [return-value]
-        return cost, Program.to(r)  # type: ignore[return-value]
+        return cost, Program.to(r)
 
     def run(self, args) -> "Program":
         cost, r = self.run_with_cost(INFINITE_COST, args)
@@ -114,17 +111,12 @@ class Program(SExp):
 
     def curry(self, *args) -> "Program":
         cost, r = curry(self, list(args))
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible return value type (got "SExp", expected "Program")  [return-value]
-        return Program.to(r)  # type: ignore[return-value]
+        return Program.to(r)
 
     def uncurry(self) -> Tuple["Program", "Program"]:
         r = uncurry(self)
         if r is None:
-            # TODO: address hint error and remove ignore
-            #       error: Incompatible return value type (got "Tuple[Program, SExp]", expected
-            #       "Tuple[Program, Program]")  [return-value]
-            return self, self.to(0)  # type: ignore[return-value]
+            return self, self.to(0)
         return r
 
     def as_int(self) -> int:
@@ -304,10 +296,7 @@ class SerializedProgram:
             max_cost,
             flags,
         )
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible return value type (got "Tuple[Any, SExp]", expected "Tuple[int, Program]")
-        #       [return-value]
-        return cost, Program.to(ret)  # type: ignore[return-value]
+        return cost, Program.to(ret)
 
 
 NIL = Program.from_bytes(b"\x80")

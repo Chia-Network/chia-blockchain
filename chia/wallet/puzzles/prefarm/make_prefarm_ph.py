@@ -27,18 +27,14 @@ def make_puzzle(amount: int) -> int:
 
     puzzle_prog = Program.to(binutils.assemble(puzzle))
     print("Program: ", puzzle_prog)
-    # TODO: address hint error and remove ignore
-    #       error: "SExp" has no attribute "get_tree_hash"  [attr-defined]
-    puzzle_hash = puzzle_prog.get_tree_hash()  # type: ignore[attr-defined]
+    puzzle_hash = puzzle_prog.get_tree_hash()
 
     solution = "()"
     prefix = "xch"
     print("PH", puzzle_hash)
     print(f"Address: {encode_puzzle_hash(puzzle_hash, prefix)}")
 
-    # TODO: address hint error and remove ignore
-    #       error: "SExp" has no attribute "run"  [attr-defined]
-    result = puzzle_prog.run(solution)  # type: ignore[attr-defined]
+    result = puzzle_prog.run(solution)
     error, result_human = parse_sexp_to_conditions(result)
 
     total_chia = 0
