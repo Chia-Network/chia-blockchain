@@ -221,12 +221,7 @@ class SingletonWallet:
         solution = solve_puzzle(
             puzzle_db, puzzle_reveal, lineage_proof=self.lineage_proof, coin_amount=coin.amount, **kwargs
         )
-        # TODO: address hint error and remove ignore
-        #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
-        #       [arg-type]
-        #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
-        #       [arg-type]
-        return CoinSpend(coin, puzzle_reveal, solution)  # type: ignore[arg-type]
+        return CoinSpend(coin, puzzle_reveal.to_serialized_program(), solution.to_serialized_program())
 
     def update_state(self, puzzle_db: PuzzleDB, removals: List[CoinSpend]) -> int:
         state_change_count = 0
@@ -298,9 +293,9 @@ def launcher_conditions_and_spend_bundle(
         launcher_amount=launcher_amount,
         metadata=metadata,
     )
-    # TODO: address hint error and remove ignore
-    #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
-    coin_spend = CoinSpend(launcher_coin, SerializedProgram.from_program(launcher_puzzle), solution)  # type: ignore[arg-type]  # noqa E501
+    coin_spend = CoinSpend(
+        launcher_coin, SerializedProgram.from_program(launcher_puzzle), solution.to_serialized_program()
+    )
     spend_bundle = SpendBundle([coin_spend], G2Element())
     return launcher_coin.name(), expected_conditions, spend_bundle
 
@@ -359,12 +354,10 @@ def claim_p2_singleton(
         singleton_inner_puzzle_hash=inner_puzzle_hash,
         p2_singleton_coin_name=p2_singleton_coin_name,
     )
-    # TODO: address hint error and remove ignore
-    #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
     p2_singleton_coin_spend = CoinSpend(
         p2_singleton_coin,
         p2_singleton_puzzle.to_serialized_program(),
-        p2_singleton_solution,  # type: ignore[arg-type]
+        p2_singleton_solution.to_serialized_program(),
     )
     expected_p2_singleton_announcement = Announcement(p2_singleton_coin_name, bytes(b"$")).name()
     singleton_conditions = [
@@ -424,10 +417,9 @@ def spend_coin_to_singleton(
     )
 
     conditions = Program.to(condition_list)
-    # TODO: address hint error and remove ignore
-    #       error: Argument 2 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
-    #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
-    coin_spend = CoinSpend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, conditions)  # type: ignore[arg-type]
+    coin_spend = CoinSpend(
+        farmed_coin, ANYONE_CAN_SPEND_PUZZLE.to_serialized_program(), conditions.to_serialized_program()
+    )
     spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_spend], G2Element())])
 
     additions, removals = coin_store.update_coin_store_for_spend_bundle(
