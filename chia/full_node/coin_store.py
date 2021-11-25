@@ -136,6 +136,7 @@ class CoinStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
+            assert bool(row[2]) == (row[1] != 0)
             coin = self.row_to_coin(row)
             record = CoinRecord(coin, row[0], row[1], row[2], row[3], row[7])
             self.coin_record_cache.put(record.coin.name(), record)
@@ -152,6 +153,7 @@ class CoinStore:
         await cursor.close()
         coins = []
         for row in rows:
+            assert bool(row[2]) == (row[1] != 0)
             coin = self.row_to_coin(row)
             coins.append(CoinRecord(coin, row[0], row[1], row[2], row[3], row[7]))
         return coins
@@ -170,6 +172,7 @@ class CoinStore:
         coins = []
         for row in rows:
             spent: bool = bool(row[2])
+            assert spent == (row[1] != 0)
             if spent:
                 coin = self.row_to_coin(row)
                 coin_record = CoinRecord(coin, row[0], row[1], spent, row[3], row[7])
@@ -197,6 +200,7 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
+            assert bool(row[2]) == (row[1] != 0)
             coin = self.row_to_coin(row)
             coins.add(CoinRecord(coin, row[0], row[1], row[2], row[3], row[7]))
         return list(coins)
@@ -226,6 +230,7 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
+            assert bool(row[2]) == (row[1] != 0)
             coin = self.row_to_coin(row)
             coins.add(CoinRecord(coin, row[0], row[1], row[2], row[3], row[7]))
         return list(coins)
@@ -253,6 +258,7 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
+            assert bool(row[2]) == (row[1] != 0)
             coin = self.row_to_coin(row)
             coins.add(CoinRecord(coin, row[0], row[1], row[2], row[3], row[7]))
 
@@ -321,6 +327,7 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
+            assert bool(row[2]) == (row[1] != 0)
             coin = self.row_to_coin(row)
             coins.add(CoinRecord(coin, row[0], row[1], row[2], row[3], row[7]))
         return list(coins)
@@ -349,6 +356,7 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
+            assert bool(row[2]) == (row[1] != 0)
             coins.add(self.row_to_coin_state(row))
         return list(coins)
 
@@ -384,6 +392,7 @@ class CoinStore:
         )
         rows = await cursor_deleted.fetchall()
         for row in rows:
+            assert bool(row[2]) == (row[1] != 0)
             coin = self.row_to_coin(row)
             record = CoinRecord(coin, uint32(0), row[1], row[2], row[3], uint64(0))
             coin_changes[record.name] = record
@@ -400,6 +409,7 @@ class CoinStore:
         )
         rows = await cursor_unspent.fetchall()
         for row in rows:
+            assert bool(row[2]) == (row[1] != 0)
             coin = self.row_to_coin(row)
             record = CoinRecord(coin, row[0], uint32(0), False, row[3], row[7])
             if record.name not in coin_changes:
@@ -418,6 +428,7 @@ class CoinStore:
         values = []
         for record in records:
             self.coin_record_cache.put(record.coin.name(), record)
+            assert record.spent == (record.spent_block_index != 0)
             values.append(
                 (
                     record.coin.name().hex(),
@@ -441,6 +452,7 @@ class CoinStore:
     # Update coin_record to be spent in DB
     async def _set_spent(self, coin_names: List[bytes32], index: uint32):
 
+        assert len(coin_names) == 0 or index > 0
         # if this coin is in the cache, mark it as spent in there
         updates = []
         for coin_name in coin_names:
