@@ -72,7 +72,7 @@ def launch_conditions_and_coinsol(
 
     # TODO: address hint error and remove ignore
     #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
-    #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+    #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
     launcher_coin_spend = CoinSpend(
         launcher_coin,
         SINGLETON_LAUNCHER,  # type: ignore[arg-type]
