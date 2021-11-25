@@ -70,10 +70,7 @@ def do_test_spend(
     coin = coin_db.farm_coin(puzzle_hash, farm_time)
 
     # spend it
-    # TODO: address hint error and remove ignore
-    #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
-    #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
-    coin_spend = CoinSpend(coin, puzzle_reveal, solution)  # type: ignore[arg-type]
+    coin_spend = CoinSpend(coin, puzzle_reveal.to_serialized_program(), solution.to_serialized_program())
 
     spend_bundle = SpendBundle([coin_spend], G2Element())
     coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, MAX_BLOCK_COST_CLVM, COST_PER_BYTE)
