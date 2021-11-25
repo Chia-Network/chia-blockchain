@@ -121,7 +121,10 @@ async def check_conditions(
     blocks = initial_blocks()
     coin = list(blocks[spend_reward_index].get_included_reward_coins())[0]
 
-    coin_spend = CoinSpend(coin, EASY_PUZZLE.to_serialized_program(), condition_solution.to_serialized_program())
+    # TODO: address hint error and remove ignore
+    #       error: Argument 2 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+    #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
+    coin_spend = CoinSpend(coin, EASY_PUZZLE, condition_solution)  # type: ignore[arg-type]
     spend_bundle = SpendBundle([coin_spend], G2Element())
 
     # now let's try to create a block with the spend bundle and ensure that it doesn't validate

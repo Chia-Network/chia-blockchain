@@ -70,9 +70,10 @@ def launcher_conditions_and_spend_bundle(
         )
     )
     launcher_solution = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
-    coin_spend = CoinSpend(
-        launcher_coin, launcher_puzzle.to_serialized_program(), launcher_solution.to_serialized_program()
-    )
+    # TODO: address hint error and remove ignore
+    #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
+    #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+    coin_spend = CoinSpend(launcher_coin, launcher_puzzle, launcher_solution)  # type: ignore[arg-type]
     spend_bundle = SpendBundle([coin_spend], G2Element())
     lineage_proof = Program.to([parent_coin_id, launcher_amount])
     return lineage_proof, launcher_coin.name(), expected_conditions, spend_bundle

@@ -55,7 +55,10 @@ def make_spend_bundle(count: int) -> SpendBundle:
         puzzle_reveal = puzzle_hash_db[coin.puzzle_hash]
         conditions = conditions_for_payment(coin)
         solution = solution_for_conditions(conditions)
-        coin_spend = CoinSpend(coin, puzzle_reveal, solution.to_serialized_program())
+        # TODO: address hint error and remove ignore
+        #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+        #       [arg-type]
+        coin_spend = CoinSpend(coin, puzzle_reveal, solution)  # type: ignore[arg-type]
         coin_spends.append(coin_spend)
 
     spend_bundle = SpendBundle(coin_spends, blspy.G2Element())
