@@ -136,9 +136,9 @@ class CoinStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            assert bool(row[2]) == (row[1] != 0)
+            spent: bool = bool(row[1] != 0)
             coin = self.row_to_coin(row)
-            record = CoinRecord(coin, row[0], row[1], row[2], row[3], row[7])
+            record = CoinRecord(coin, row[0], row[1], spent, row[3], row[7])
             self.coin_record_cache.put(record.coin.name(), record)
             return record
         return None
@@ -153,9 +153,9 @@ class CoinStore:
         await cursor.close()
         coins = []
         for row in rows:
-            assert bool(row[2]) == (row[1] != 0)
+            spent: bool = bool(row[1] != 0)
             coin = self.row_to_coin(row)
-            coins.append(CoinRecord(coin, row[0], row[1], row[2], row[3], row[7]))
+            coins.append(CoinRecord(coin, row[0], row[1], spent, row[3], row[7]))
         return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
@@ -171,8 +171,7 @@ class CoinStore:
         await cursor.close()
         coins = []
         for row in rows:
-            spent: bool = bool(row[2])
-            assert spent == (row[1] != 0)
+            spent: bool = bool(row[1] != 0)
             if spent:
                 coin = self.row_to_coin(row)
                 coin_record = CoinRecord(coin, row[0], row[1], spent, row[3], row[7])
@@ -193,16 +192,16 @@ class CoinStore:
             f"SELECT confirmed_index, spent_index, spent, coinbase, puzzle_hash, "
             f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash WHERE puzzle_hash=? "
             f"AND confirmed_index>=? AND confirmed_index<? "
-            f"{'' if include_spent_coins else 'AND spent=0'}",
+            f"{'' if include_spent_coins else 'AND spent_index=0'}",
             (puzzle_hash.hex(), start_height, end_height),
         )
         rows = await cursor.fetchall()
 
         await cursor.close()
         for row in rows:
-            assert bool(row[2]) == (row[1] != 0)
+            spent: bool = bool(row[1] != 0)
             coin = self.row_to_coin(row)
-            coins.add(CoinRecord(coin, row[0], row[1], row[2], row[3], row[7]))
+            coins.add(CoinRecord(coin, row[0], row[1], spent, row[3], row[7]))
         return list(coins)
 
     async def get_coin_records_by_puzzle_hashes(
@@ -222,7 +221,7 @@ class CoinStore:
             f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
             f'WHERE puzzle_hash in ({"?," * (len(puzzle_hashes) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
-            f"{'' if include_spent_coins else 'AND spent=0'}",
+            f"{'' if include_spent_coins else 'AND spent_index=0'}",
             puzzle_hashes_db + (start_height, end_height),
         )
 
@@ -230,9 +229,9 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
-            assert bool(row[2]) == (row[1] != 0)
+            spent: bool = bool(row[1] != 0)
             coin = self.row_to_coin(row)
-            coins.add(CoinRecord(coin, row[0], row[1], row[2], row[3], row[7]))
+            coins.add(CoinRecord(coin, row[0], row[1], spent, row[3], row[7]))
         return list(coins)
 
     async def get_coin_records_by_names(
@@ -251,16 +250,16 @@ class CoinStore:
             f"SELECT confirmed_index, spent_index, spent, coinbase, puzzle_hash, "
             f'coin_parent, amount, timestamp FROM coin_record WHERE coin_name in ({"?," * (len(names) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
-            f"{'' if include_spent_coins else 'AND spent=0'}",
+            f"{'' if include_spent_coins else 'AND spent_index=0'}",
             names_db + (start_height, end_height),
         )
         rows = await cursor.fetchall()
 
         await cursor.close()
         for row in rows:
-            assert bool(row[2]) == (row[1] != 0)
+            spent: bool = bool(row[1] != 0)
             coin = self.row_to_coin(row)
-            coins.add(CoinRecord(coin, row[0], row[1], row[2], row[3], row[7]))
+            coins.add(CoinRecord(coin, row[0], row[1], spent, row[3], row[7]))
 
         return list(coins)
 
@@ -270,7 +269,7 @@ class CoinStore:
     def row_to_coin_state(self, row):
         coin = self.row_to_coin(row)
         spent_h = None
-        if row[2]:
+        if row[1] != 0:
             spent_h = row[1]
         return CoinState(coin, spent_h, row[0])
 
@@ -291,7 +290,7 @@ class CoinStore:
             f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
             f'WHERE puzzle_hash in ({"?," * (len(puzzle_hashes) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
-            f"{'' if include_spent_coins else 'AND spent=0'}",
+            f"{'' if include_spent_coins else 'AND spent_index=0'}",
             puzzle_hashes_db + (start_height, end_height),
         )
 
@@ -319,7 +318,7 @@ class CoinStore:
             f"SELECT confirmed_index, spent_index, spent, coinbase, puzzle_hash, "
             f'coin_parent, amount, timestamp FROM coin_record WHERE coin_parent in ({"?," * (len(parent_ids) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
-            f"{'' if include_spent_coins else 'AND spent=0'}",
+            f"{'' if include_spent_coins else 'AND spent_index=0'}",
             parent_ids_db + (start_height, end_height),
         )
 
@@ -327,9 +326,9 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
-            assert bool(row[2]) == (row[1] != 0)
+            spent: bool = bool(row[1] != 0)
             coin = self.row_to_coin(row)
-            coins.add(CoinRecord(coin, row[0], row[1], row[2], row[3], row[7]))
+            coins.add(CoinRecord(coin, row[0], row[1], spent, row[3], row[7]))
         return list(coins)
 
     async def get_coin_state_by_ids(
@@ -348,7 +347,7 @@ class CoinStore:
             f"SELECT confirmed_index, spent_index, spent, coinbase, puzzle_hash, "
             f'coin_parent, amount, timestamp FROM coin_record WHERE coin_name in ({"?," * (len(coin_ids) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
-            f"{'' if include_spent_coins else 'AND spent=0'}",
+            f"{'' if include_spent_coins else 'AND spent_index=0'}",
             coin_ids_db + (start_height, end_height),
         )
 
@@ -356,7 +355,6 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
-            assert bool(row[2]) == (row[1] != 0)
             coins.add(self.row_to_coin_state(row))
         return list(coins)
 
@@ -392,9 +390,9 @@ class CoinStore:
         )
         rows = await cursor_deleted.fetchall()
         for row in rows:
-            assert bool(row[2]) == (row[1] != 0)
+            spent: bool = bool(row[1] != 0)
             coin = self.row_to_coin(row)
-            record = CoinRecord(coin, uint32(0), row[1], row[2], row[3], uint64(0))
+            record = CoinRecord(coin, uint32(0), row[1], spent, row[3], uint64(0))
             coin_changes[record.name] = record
         await cursor_deleted.close()
 
@@ -409,7 +407,6 @@ class CoinStore:
         )
         rows = await cursor_unspent.fetchall()
         for row in rows:
-            assert bool(row[2]) == (row[1] != 0)
             coin = self.row_to_coin(row)
             record = CoinRecord(coin, row[0], uint32(0), False, row[3], row[7])
             if record.name not in coin_changes:
