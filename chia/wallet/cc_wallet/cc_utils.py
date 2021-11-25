@@ -90,7 +90,7 @@ def coin_spend_for_lock_coin(
     coin = Coin(coin.name(), puzzle_reveal.get_tree_hash(), uint64(0))
     # TODO: address hint error and remove ignore
     #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
-    #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+    #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
     coin_spend = CoinSpend(coin, puzzle_reveal, Program.to(0))  # type: ignore[arg-type]
     return coin_spend
 
@@ -168,7 +168,8 @@ def spend_bundle_for_spendable_ccs(
         # TODO: address hint error and remove ignore
         #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
         #       [arg-type]
-        #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+        #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+        #       [arg-type]
         coin_spend = CoinSpend(input_coins[index], puzzle_reveal, Program.to(solution))  # type: ignore[arg-type]
         coin_spends.append(coin_spend)
 

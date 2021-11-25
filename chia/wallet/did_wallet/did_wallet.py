@@ -545,7 +545,7 @@ class DIDWallet:
         # TODO: address hint error and remove ignore
         #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
         #       [arg-type]
-        #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+        #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
         list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]  # type: ignore[arg-type]
         # sign for AGG_SIG_ME
         # new_inner_puzhash amount message
@@ -616,7 +616,7 @@ class DIDWallet:
         # TODO: address hint error and remove ignore
         #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
         #       [arg-type]
-        #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+        #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
         list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]  # type: ignore[arg-type]
         # sign for AGG_SIG_ME
         message = (
@@ -692,7 +692,7 @@ class DIDWallet:
         # TODO: address hint error and remove ignore
         #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
         #       [arg-type]
-        #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+        #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
         list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]  # type: ignore[arg-type]
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
@@ -831,7 +831,7 @@ class DIDWallet:
         # TODO: address hint error and remove ignore
         #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
         #       [arg-type]
-        #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+        #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
         list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]  # type: ignore[arg-type]
 
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
@@ -954,7 +954,8 @@ class DIDWallet:
         # TODO: address hint error and remove ignore
         #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
         #       [arg-type]
-        #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+        #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+        #       [arg-type]
         launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)  # type: ignore[arg-type]  # noqa E501
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
         eve_coin = Coin(launcher_coin.name(), did_puzzle_hash, amount)
@@ -1006,7 +1007,8 @@ class DIDWallet:
         # TODO: address hint error and remove ignore
         #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
         #       [arg-type]
-        #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+        #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
+        #       [arg-type]
         list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]  # type: ignore[arg-type]
         # sign for AGG_SIG_ME
         message = (

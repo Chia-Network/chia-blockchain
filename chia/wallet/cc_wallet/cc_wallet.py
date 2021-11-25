@@ -755,7 +755,7 @@ class CCWallet:
             # TODO: address hint error and remove ignore
             #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
             #       [arg-type]
-            #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"
+            #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"
             #       [arg-type]
             list_of_solutions.append(CoinSpend(coin, puzzle_reveal, Program.to(solution)))  # type: ignore[arg-type]
 

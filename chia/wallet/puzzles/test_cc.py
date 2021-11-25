@@ -84,8 +84,8 @@ def issue_cc_from_farmed_coin(
 
     solution = Program.to(output_conditions)
     # TODO: address hint error and remove ignore
-    #       error: Argument 2 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
-    #       error: Argument 3 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+    #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
+    #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
     coin_spend = CoinSpend(farmed_coin, farmed_puzzle, solution)  # type: ignore[arg-type]
     spend_bundle = SpendBundle([coin_spend], NULL_SIGNATURE)
     return genesis_coin_checker, spend_bundle
@@ -210,7 +210,7 @@ def test_spend_zero_coin(mod_code: Program, coin_checker_for_farmed_coin):
 
     solution = solution_for_pay_to_any([(wrapped_cc_puzzle_hash, 0)])
     # TODO: address hint error and remove ignore
-    #       error: Argument 2 to "CoinSpend" has incompatible type "SExp"; expected "SerializedProgram"  [arg-type]
+    #       error: Argument 2 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
     #       error: Argument 3 to "CoinSpend" has incompatible type "Program"; expected "SerializedProgram"  [arg-type]
     coin_spend = CoinSpend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, solution)  # type: ignore[arg-type]
     spendable_cc_list = spendable_cc_list_from_coin_spend(coin_spend, hash_to_puzzle_f)
