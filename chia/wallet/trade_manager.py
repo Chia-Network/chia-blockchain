@@ -14,7 +14,7 @@ from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.payment import Payment
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading import Offer, NotarizedPayment
+from chia.wallet.trading.offer import Offer, NotarizedPayment
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
@@ -100,18 +100,17 @@ class TradeManager:
             primary_coin_ids
         )
         our_primary_coins: List[bytes32] = [cr.coin.name() for cr in our_coin_records]
-        our_settlement_payments: List[bytes32] = [
-            c.name()
-            for c in filter(lambda coin: coin.parent_coin_info in our_primary_coins, trade.offer.get_offered_coins())
-        ]
+        all_settlement_payments: List[Coin] = [c for coins in trade.offer.get_offered_coins().values() for c in coins]
+        our_settlement_payments: List[Coin] = list(filter(lambda c: c.parent_coin_info in our_primary_coins, all_settlement_payments))
+        our_settlement_ids: List[bytes32] = [c.name() for c in our_settlement_payments]
 
         # And get all relevant coin states
-        coin_states = await self.wallet_state_manager.get_coin_state(our_settlement_payments)
+        coin_states = await self.wallet_state_manager.get_coin_state(our_settlement_ids)
         assert coin_states is not None
         coin_state_names: List[bytes32] = [cs.coin.name() for cs in coin_states]
 
         # If any of our settlement_payments were spent, this offer was a success!
-        if set(our_settlement_payments) & set(coin_state_names):
+        if set(our_settlement_ids) & set(coin_state_names):
             height = coin_states[0].spent_height
             await self.maybe_create_wallets_for_offer(trade.offer)
             await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, True, height)
@@ -151,7 +150,7 @@ class TradeManager:
         all: List[TradeRecord] = await self.trade_store.get_all_trades()
         return all
 
-    async def get_trade_by_id(self, trade_id: bytes) -> Optional[TradeRecord]:
+    async def get_trade_by_id(self, trade_id: bytes32) -> Optional[TradeRecord]:
         record = await self.trade_store.get_trade_record(trade_id)
         return record
 
@@ -189,10 +188,10 @@ class TradeManager:
     async def save_trade(self, trade: TradeRecord):
         await self.trade_store.add_trade_record(trade, False)
 
-    async def create_offer_for_ids(
-        self, offer: Dict[int, int], file_name: str
-    ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        success, offer, error = await self._create_offer_for_ids(offer)
+    async def create_offer_for_ids(self, offer: Dict[int, int]) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
+        success, created_offer, error = await self._create_offer_for_ids(offer)
+        if not success or created_offer is None:
+            raise Exception(f"Error creating offer: {error}")
 
         now = uint64(int(time.time()))
         trade_offer: TradeRecord = TradeRecord(
@@ -201,9 +200,9 @@ class TradeManager:
             created_at_time=now,
             is_my_offer=True,
             sent=uint32(0),
-            offer=offer,
-            coins_of_interest=offer.get_involved_coins(),
-            trade_id=offer.name(),
+            offer=created_offer,
+            coins_of_interest=created_offer.get_involved_coins(),
+            trade_id=created_offer.name(),
             status=uint32(TradeStatus.PENDING_ACCEPT.value),
             sent_to=[],
         )
@@ -220,7 +219,7 @@ class TradeManager:
         try:
             coins_to_offer: Dict[uint32, List[Coin]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
-            for id, amount in offer_dict:
+            for id, amount in offer_dict.items():
                 wallet_id = uint32(id)
                 wallet = self.wallet_state_manager.wallets[wallet_id]
 
@@ -231,14 +230,14 @@ class TradeManager:
                         key = bytes32(bytes.fromhex(wallet.get_asset_id()))
                     else:
                         raise ValueError(f"Offers are not implemented for {wallet.type()}")
-                    p2_ph: bytes32 = wallet.get_new_puzzlehash()
+                    p2_ph: bytes32 = await wallet.get_new_puzzlehash()
                     memos: Optional[List[Optional[bytes]]] = None if WalletType.STANDARD_WALLET else [p2_ph]
-                    requested_payments[key] = Payment(p2_ph, uint64(amount), memos)
+                    requested_payments[key] = [Payment(p2_ph, uint64(amount), memos)]
                 elif amount < 0:
                     balance = await wallet.get_confirmed_balance()
                     if balance < abs(amount):
                         raise Exception(f"insufficient funds in wallet {wallet_id}")
-                    coins_to_offer[wallet_id] = wallet.select_coins(uint64(abs(amount)))
+                    coins_to_offer[wallet_id] = await wallet.select_coins(uint64(abs(amount)))
 
             all_coins: List[Coin] = [c for coins in coins_to_offer.values() for c in coins]
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
@@ -248,19 +247,19 @@ class TradeManager:
             self.log.warning(f"Announcements are not implemented yet {announcements_to_assert[0].name()}")
 
             all_transactions: List[TransactionRecord] = []
-            for wallet_id, selected_coins in coins_to_offer:
+            for wallet_id, selected_coins in coins_to_offer.items():
                 wallet = self.wallet_state_manager.wallets[wallet_id]
                 # This should probably not switch on whether or not we're spending a CAT but it has to for now
                 # TODO: Add fee support
                 # TODO: ADD ANNOUNCEMENT ASSERTIONS
                 if wallet.type() == WalletType.CAT:
                     txs = await wallet.generate_signed_transaction(
-                        [offer_dict[int(wallet_id)]], [Offer.ph()], 0, coins=set(selected_coins)
+                        [abs(offer_dict[int(wallet_id)])], [Offer.ph()], 0, coins=set(selected_coins)
                     )
                     all_transactions.extend(txs)
                 else:
                     tx = await wallet.generate_signed_transaction(
-                        offer_dict[int(wallet_id)], Offer.ph(), 0, coins=set(selected_coins)
+                        abs(offer_dict[int(wallet_id)]), Offer.ph(), 0, coins=set(selected_coins)
                     )
                     all_transactions.append(tx)
 
@@ -269,38 +268,36 @@ class TradeManager:
             return True, offer, None
 
         except Exception as e:
+            raise e
             tb = traceback.format_exc()
             self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
             return False, None, str(e)
 
-    async def maybe_create_wallets_for_offer(self, offer_bytes: bytes):
-        offer = Offer.from_bytes(offer_bytes)
+    async def maybe_create_wallets_for_offer(self, offer: Offer):
 
         for key in offer.arbitrage():
             wsm = self.wallet_state_manager
             wallet: Wallet = wsm.main_wallet
             if key is None:
                 continue
-            exists: Optional[Wallet] = await wsm.get_wallet_for_asset_id(key)
+            exists: Optional[Wallet] = await wsm.get_wallet_for_asset_id(key.hex())
             if exists is None:
                 self.log.info(f"Creating wallet for asset ID: {key}")
-                await CATWallet.create_wallet_for_cat(wsm, wallet, key)
+                await CATWallet.create_wallet_for_cat(wsm, wallet, key.hex())
 
-    async def respond_to_offer(self, offer: bytes) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        offer = Offer.from_bytes(offer)
-
+    async def respond_to_offer(self, offer: Offer) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         take_offer_dict: Dict[int, int] = {}
         arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
         for asset_id, amount in arbitrage.items():
             if asset_id is None:
                 wallet = self.wallet_state_manager.main_wallet
             else:
-                wallet = self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
+                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                 if wallet is None:
                     return False, None, f"Do not have a CAT of asset ID: {asset_id} to fulfill offer"
             take_offer_dict[int(wallet.id())] = amount
 
-        success, take_offer, error = self._create_offer_for_ids(take_offer_dict)
+        success, take_offer, error = await self._create_offer_for_ids(take_offer_dict)
         if not success:
             return False, None, error
 
@@ -312,15 +309,16 @@ class TradeManager:
         settlement_coins: List[Coin] = [c for coins in complete_offer.get_offered_coins().values() for c in coins]
         settlement_coin_ids: List[bytes32] = [c.name() for c in settlement_coins]
         settlement_parents: List[bytes32] = [c.parent_coin_info for c in settlement_coins]
-        additions: List[Coin] = final_spend_bundle.non_ephemeral_additions()
+        additions: List[Coin] = final_spend_bundle.not_ephemeral_additions()
         removals: List[Coin] = final_spend_bundle.removals()
 
         txs = []
         for addition in additions:
             if addition.parent_coin_info in settlement_coin_ids:
-                wid: uint32 = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(addition.puzzle_hash)
-                if wid is not None:
-                    wallet = self.wallet_state_manager.wallets[wid]
+                wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(addition.puzzle_hash)
+                if wallet_info is not None:
+                    wallet_id, _ = wallet_info
+                    wallet = self.wallet_state_manager.wallets[wallet_id]
                     to_puzzle_hash = await wallet.convert_puzzle_hash(addition.puzzle_hash)
                     txs.append(
                         TransactionRecord(
@@ -332,9 +330,9 @@ class TradeManager:
                             confirmed=False,
                             sent=uint32(10),
                             spend_bundle=None,
-                            additions=[addition],
+                            additions=[],
                             removals=[],
-                            wallet_id=wid,
+                            wallet_id=wallet_id,
                             sent_to=[],
                             trade_id=complete_offer.name(),
                             type=uint32(TransactionType.INCOMING_TRADE.value),
@@ -347,10 +345,11 @@ class TradeManager:
         removal_dict: Dict[uint32, List[Coin]] = {}
         for removal in removals:
             if removal.name() in settlement_parents:
-                wid: uint32 = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(addition.puzzle_hash)
-                if wid is not None:
-                    removal_dict.setdefault(wid, [])
-                    removal_dict[wid].append(removal)
+                wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(removal.puzzle_hash)
+                if wallet_info is not None:
+                    wallet_id, _ = wallet_info
+                    removal_dict.setdefault(wallet_id, [])
+                    removal_dict[wallet_id].append(removal)
 
         for wid, grouped_removals in removal_dict.items():
             wallet = self.wallet_state_manager.wallets[wid]
