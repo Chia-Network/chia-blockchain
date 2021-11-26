@@ -12,7 +12,7 @@ import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
-import { AlertDialog, Card, Flex, Loading, Dropzone } from '@chia/core';
+import { AlertDialog, Card, Flex, Loading, Dropzone, mojoToChiaLocaleString } from '@chia/core';
 import {
   did_generate_backup_file,
   did_spend,
@@ -29,7 +29,6 @@ import {
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import { Tooltip } from '@material-ui/core';
 import HelpIcon from '@material-ui/icons/Help';
-import { mojo_to_chia_string } from '../../../util/chia';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { openDialog } from '../../../modules/dialog';
 import useCurrencyCode from '../../../hooks/useCurrencyCode';
@@ -613,7 +612,7 @@ const BalanceCardSubSection = (props) => {
         </Box>
         <Box>
           <Typography variant="subtitle1">
-            {mojo_to_chia_string(props.balance)} TXCH
+            {mojoToChiaLocaleString(props.balance)} TXCH
           </Typography>
         </Box>
       </Box>

@@ -107,7 +107,7 @@ export const RLListItems = () => {
 };
 */
 
-export function CreateWalletView() {
+export default function WalletCreate() {
   const { path } = useRouteMatch();
 
   return (

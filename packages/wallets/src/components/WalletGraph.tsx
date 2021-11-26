@@ -5,11 +5,10 @@ import { orderBy, groupBy, sumBy, map } from 'lodash';
 import { /* Typography, */ Paper } from '@material-ui/core';
 import styled from 'styled-components';
 import { useGetWalletBalanceQuery } from '@chia/api-react';
-import TransactionType from '../../constants/TransactionType';
-import type Transaction from '../../types/Transaction';
-import { mojo_to_chia } from '../../util/chia';
-import blockHeightToTimestamp from '../../util/blockHeightToTimestamp';
-import useWalletTransactions from '../../hooks/useWalletTransactions';
+import { TransactionType } from '@chia/api';
+import type { Transaction } from '@chia/api';
+import { mojoToChia, blockHeightToTimestamp } from '@chia/core';
+import useWalletTransactions from '../hooks/useWalletTransactions';
 
 /*
 const HOUR_SECONDS = 60 * 60;
@@ -197,8 +196,8 @@ function prepareGraphPoints(
   const points = [
     {
       x: peakTransaction.confirmedAtHeight,
-      y: Math.max(0, mojo_to_chia(start)),
-      tooltip: mojo_to_chia(balance),
+      y: Math.max(0, Number(mojoToChia(start))),
+      tooltip: mojoToChia(balance),
     },
   ];
 
@@ -209,8 +208,8 @@ function prepareGraphPoints(
 
     points.push({
       x: timestamp,
-      y: Math.max(0, mojo_to_chia(start)),
-      tooltip: mojo_to_chia(start),
+      y: Math.max(0, Number(mojoToChia(start))),
+      tooltip: mojoToChia(start),
     });
   });
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import Big from 'big.js';
 import { Trans } from '@lingui/macro';
 import { Box } from '@material-ui/core';
 import styled from 'styled-components';
@@ -19,8 +20,13 @@ export default function Fee(props: FeeProps) {
   return (
     <Amount {...props}>
       {({ value, mojo }) => {
-        const isHigh = mojo >= 1000;
-        const isLow = mojo !== 0 && mojo < 1;
+        const bigMojo = new Big(mojo);
+        const isHigh = bigMojo.gte('1000');
+        const isLow = bigMojo.gt('0') && bigMojo.lt('1');
+
+        if (!value) {
+          return;
+        }
 
         if (isHigh) {
           return (

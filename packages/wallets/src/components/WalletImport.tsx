@@ -10,10 +10,8 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { useAddKeyMutation, useLogInMutation } from '@chia/api-react';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useHistory } from 'react-router';
-import { Autocomplete, ButtonLoading, Form, Flex, Logo, useShowError } from '@chia/core';
-import LayoutHero from '../layout/LayoutHero';
-import english from '../../util/english';
-import useTrans from '../../hooks/useTrans';
+import { Autocomplete, ButtonLoading, Form, Flex, Logo, useShowError, useTrans, LayoutHero } from '@chia/core';
+import { english } from '@chia/api';
 
 /*
 const shuffledEnglish = shuffle(english);
@@ -26,7 +24,7 @@ type FormData = {
   mnemonic: string[];
 };
 
-export default function WalletImport() {
+export default function WalletImport(props) {
   const history = useHistory();
   const [addKey, { isLoading: isAddKeyLoading }] = useAddKeyMutation();
   const [logIn, { isLoading: isLogInLoading }] = useLogInMutation();
@@ -82,6 +80,7 @@ export default function WalletImport() {
           color="secondary"
         />
       }
+      {...props}
     >
       <Form methods={methods} onSubmit={handleSubmit}>
         <Container maxWidth="lg">

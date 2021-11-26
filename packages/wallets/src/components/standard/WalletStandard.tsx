@@ -1,13 +1,12 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Flex } from '@chia/core';
+import { useShowDebugInformation, Flex } from '@chia/core';
 import WalletHistory from '../WalletHistory';
 import WalletStandardCards from './WalletStandardCards';
 import WalletReceiveAddress from '../WalletReceiveAddress';
 import WalletSend from '../WalletSend';
 import WalletHeader from '../WalletHeader';
 import WalletConnections from '../WalletConnections';
-import isDebug from '../../../util/isDebug';
 
 type StandardWalletProps = {
   walletId: number;
@@ -15,6 +14,7 @@ type StandardWalletProps = {
 
 export default function StandardWallet(props: StandardWalletProps) {
   const { walletId } = props;
+  const showDebugInformation = useShowDebugInformation();
 
   return (
     <Flex flexDirection="column" gap={1}>
@@ -28,7 +28,7 @@ export default function StandardWallet(props: StandardWalletProps) {
         <WalletReceiveAddress walletId={walletId} />
         <WalletSend walletId={walletId} />
         <WalletHistory walletId={walletId} />
-        {isDebug && (
+        {showDebugInformation && (
           <WalletConnections walletId={walletId} />
         )}
       </Flex>

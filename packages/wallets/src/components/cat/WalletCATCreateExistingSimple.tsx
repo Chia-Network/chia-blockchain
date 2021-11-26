@@ -5,8 +5,8 @@ import { Box, Grid } from '@material-ui/core';
 import { useAddCATTokenMutation } from '@chia/api-react';
 import { useForm } from 'react-hook-form';
 import { useHistory } from 'react-router';
-import useWalletState from '../../../hooks/useWalletState';
-import SyncingStatus from '../../../constants/SyncingStatus';
+import useWalletState from '../../hooks/useWalletState';
+import { SyncingStatus } from '@chia/api';
 
 type CreateExistingCATWalletData = {
   name: string;

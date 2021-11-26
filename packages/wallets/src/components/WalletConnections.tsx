@@ -7,8 +7,7 @@ import {
   Table,
 } from '@chia/core';
 import { Tooltip } from '@material-ui/core';
-import { service_connection_types } from '../../util/service_names';
-import Connection from '../../types/Connection';
+import { Connection, ServiceConnectionName } from '@chia/api';
 import { useGetWalletConnectionsQuery } from '@chia/api-react';
 
 const cols = [
@@ -58,7 +57,7 @@ const cols = [
   {
     field(row: Connection) {
       // @ts-ignore
-      return service_connection_types[row.type];
+      return ServiceConnectionName[row.type];
     },
     title: <Trans>Connection type</Trans>,
   },

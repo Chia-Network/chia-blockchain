@@ -1,9 +1,9 @@
 import React, { useMemo, ReactElement } from 'react';
 import { Trans } from '@lingui/macro';
 import { useGetWalletBalanceQuery } from '@chia/api-react';
-import FarmCard from '../../farm/card/FarmCard';
-import useWallet from '../../../hooks/useWallet';
-import getWalletHumanValue from '../../../util/getWalletHumanValue';
+import { CardSimple } from '@chia/core';
+import useWallet from '../../hooks/useWallet';
+import getWalletHumanValue from '../../utils/getWalletHumanValue';
 
 type Props = {
   walletId: number;
@@ -32,7 +32,7 @@ export default function WalletCardPendingChange(props: Props) {
   ,[value, wallet, unit]);
 
   return (
-    <FarmCard
+    <CardSimple
       loading={isLoading}
       valueColor="secondary"
       title={<Trans>Pending Change</Trans>}

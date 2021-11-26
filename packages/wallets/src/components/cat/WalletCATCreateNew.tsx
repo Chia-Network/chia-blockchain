@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
-import { AlertDialog, Amount, Fee, Back, ButtonLoading, Card, Flex, Form } from '@chia/core';
+import { chiaToMojo, AlertDialog, Amount, Fee, Back, ButtonLoading, Card, Flex, Form } from '@chia/core';
 import { Box, Grid } from '@material-ui/core';
 import { useForm } from 'react-hook-form';
 import { useHistory } from 'react-router';
-import { chia_to_mojo } from '../../../util/chia';
 
 type CreateCATWalletData = {
   amount: string;
@@ -55,8 +54,8 @@ export default function WalletCATCreateNew() {
       }
       */
 
-      const amountMojos = chia_to_mojo(amount || '0');
-      const feeMojos = chia_to_mojo(fee || '0');
+      const amountMojos = chiaToMojo(amount || '0');
+      const feeMojos = chiaToMojo(fee || '0');
 
 
       /*

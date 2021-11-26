@@ -25,7 +25,6 @@
     "lodash": "^4.17.21",
     "regenerator-runtime": "^0.13.9"
   },
-  "peerDependencies": {},
   "devDependencies": {
     "@babel/core": "7.16.0",
     "@babel/plugin-proposal-class-properties": "^7.16.0",

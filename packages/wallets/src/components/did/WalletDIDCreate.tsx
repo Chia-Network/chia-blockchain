@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
-import { Amount, Form, AlertDialog, Back, Card, Flex, ButtonLoading } from '@chia/core';
+import { Amount, Form, AlertDialog, Back, Card, Flex, ButtonLoading, chiaToMojo } from '@chia/core';
 import {
   Typography,
   Button,
@@ -13,7 +13,6 @@ import {
 } from '../../../modules/createWallet';
 import { useDispatch } from 'react-redux';
 import { create_did_action } from '../../../modules/message';
-import { chia_to_mojo } from '../../../util/chia';
 import { openDialog } from '../../../modules/dialog';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { Help as HelpIcon } from '@material-ui/icons';
@@ -37,7 +36,7 @@ export default function WalletDIDCreate() {
       const didArray = data.backup_dids?.map((item) => item.backupid) ?? [];
       let uniqDidArray = Array.from(new Set(didArray));
       uniqDidArray = uniqDidArray.filter(item => item !== "")
-      const amount_val = chia_to_mojo(data.amount);
+      const amount_val = chiaToMojo(data.amount);
       if (
         amount_val === '' ||
         Number(amount_val) === 0 ||

@@ -12,7 +12,7 @@ import {
 } from '@material-ui/core';
 import { useSetCATNameMutation, useGetCatListQuery } from '@chia/api-react';
 import WalletHistory from '../WalletHistory';
-import useWallet from '../../../hooks/useWallet';
+import useWallet from '../../hooks/useWallet';
 import WalletReceiveAddress from '../WalletReceiveAddress';
 import WalletCards from '../WalletCards';
 import WalletCATSend from './WalletCATSend';

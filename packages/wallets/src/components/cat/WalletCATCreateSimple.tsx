@@ -6,10 +6,10 @@ import { Add as AddIcon } from '@material-ui/icons';
 import { Back, Flex, Loading, useShowError } from '@chia/core';
 import { useGetWalletsQuery, useAddCATTokenMutation, useGetCatListQuery } from '@chia/api-react';
 import WalletCreateCard from '../create/WalletCreateCard';
-import isCATWalletPresent from '../../../util/isCATWalletPresent';
-import type CATToken from '../../../types/CATToken';
-import useWalletState from '../../../hooks/useWalletState';
-import SyncingStatus from '../../../constants/SyncingStatus';
+import isCATWalletPresent from '../../utils/isCATWalletPresent';
+import type { CATToken } from '@chia/api';
+import useWalletState from '../../hooks/useWalletState';
+import { SyncingStatus } from '@chia/api';
 
 export default function WalletCATCreateSimple() {
   const history = useHistory();

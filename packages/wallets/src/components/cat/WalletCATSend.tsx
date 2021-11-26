@@ -11,23 +11,24 @@ import {
   TextFieldNumber,
   TextField,
   useOpenDialog,
+  chiaToMojo,
+  catToMojo,
+  useIsSimulator,
+  useCurrencyCode,
+  toBech32m,
+  getTransactionResult,
 } from '@chia/core';
 import { 
   useSpendCATMutation,
   useGetSyncStatusQuery,
   useFarmBlockMutation,
 } from '@chia/api-react';
+import { SyncingStatus } from '@chia/api';
 import isNumeric from 'validator/es/lib/isNumeric';
 import { useForm, useWatch } from 'react-hook-form';
 import { Button, Grid } from '@material-ui/core';
-import { chia_to_mojo, colouredcoin_to_mojo } from '../../../util/chia';
-import getTransactionResult from '../../../util/getTransactionResult';
-import config from '../../../config/config';
-import useWallet from '../../../hooks/useWallet';
-import useWalletState from '../../../hooks/useWalletState';
-import SyncingStatus from '../../../constants/SyncingStatus';
-import useCurrencyCode from '../../../hooks/useCurrencyCode';
-import toBech32m from '../../../util/toBech32m';
+import useWallet from '../../hooks/useWallet';
+import useWalletState from '../../hooks/useWalletState';
 
 type Props = {
   walletId: number;
@@ -47,6 +48,7 @@ export default function WalletCATSend(props: Props) {
   const [spendCAT, { isLoading: isSpendCatLoading }] = useSpendCATMutation();
   const { state } = useWalletState();
   const currencyCode = useCurrencyCode();
+  const isSimulator = useIsSimulator();
 
   const retireAddress = useMemo(() => {
     if (!currencyCode) {
@@ -135,8 +137,8 @@ export default function WalletCATSend(props: Props) {
       address = address.slice(2);
     }
 
-    const amountValue = Number.parseFloat(colouredcoin_to_mojo(amount));
-    const feeValue = Number.parseFloat(chia_to_mojo(fee));
+    const amountValue = catToMojo(amount);
+    const feeValue = chiaToMojo(fee);
 
     const memo = data.memo.trim();
     const memos = memo ? [memo] : undefined;
@@ -231,7 +233,7 @@ export default function WalletCATSend(props: Props) {
           </Grid>
           <Grid xs={12} item>
             <Flex justifyContent="flex-end" gap={1}>
-              {!!config.local_test && (
+              {isSimulator && (
                 <Button onClick={farm} variant="outlined">
                   <Trans>Farm</Trans>
                 </Button>

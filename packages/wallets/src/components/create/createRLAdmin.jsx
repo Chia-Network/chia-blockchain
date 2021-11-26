@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { AlertDialog } from '@chia/core';
+import { AlertDialog, chiaToMojo } from '@chia/core';
 import {
   Typography,
   Button,
@@ -20,7 +20,6 @@ import {
 } from '../../../modules/createWallet';
 import { useStyles } from './WalletCreate';
 import { create_rl_admin_action } from '../../../modules/message';
-import { chia_to_mojo } from '../../../util/chia';
 import { openDialog } from '../../../modules/dialog';
 
 export const customStyles = makeStyles((theme) => ({
@@ -156,12 +155,12 @@ export const CreateRLAdminWallet = () => {
     dispatch(createState(true, true));
     const interval = interval_input.value;
     const interval_value = Number.parseInt(Number(interval));
-    const chiaper = chia_to_mojo(chiaper_input.value);
+    const chiaper = chiaToMojo(chiaper_input.value);
     const chiaper_value = Number.parseInt(Number(chiaper));
     const userpubkey = userpubkey_input.value;
-    const amount = chia_to_mojo(amount_input.value);
+    const amount = chiaToMojo(amount_input.value);
     const amount_value = Number.parseInt(Number(amount));
-    // var fee = chia_to_mojo(fee_input.value);
+    // var fee = chiaToMojo(fee_input.value);
     // TODO(lipa): send fee to server
     // const fee_value = parseInt(Number(fee));
     dispatch(

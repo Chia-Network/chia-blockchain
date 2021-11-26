@@ -5,6 +5,6 @@ enum TransactionType {
   FEE_REWARD = 3,
   INCOMING_TRADE = 4,
   OUTGOING_TRADE = 5,
-}
+};
 
 export default TransactionType;

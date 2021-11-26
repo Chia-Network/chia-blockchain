@@ -4,8 +4,8 @@ import { Tooltip } from '@chia/core';
 import { useGetCatListQuery } from '@chia/api-react';
 import { VerifiedUser as VerifiedUserIcon, VerifiedUserProps } from '@material-ui/icons';
 import styled from 'styled-components';
-import Wallet from '../../types/Wallet';
-import WalletType from '../../constants/WalletType';
+import type { Wallet } from '@chia/api';
+import { WalletType } from '@chia/api';
 
 const StyledSmallBadge = styled(VerifiedUserIcon)`
   font-size: 1rem;

@@ -31,6 +31,7 @@
     "@chia/icons": "^1.0.0",
     "@chia/api": "^1.0.0",
     "@chia/api-react": "^1.0.0",
+    "@chia/wallets": "^1.0.0",
     "@fontsource/roboto": "^4.5.1",
     "@lingui/core": "^3.12.1",
     "@lingui/macro": "^3.12.1",

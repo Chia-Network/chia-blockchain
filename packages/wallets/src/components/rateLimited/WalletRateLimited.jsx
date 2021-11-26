@@ -13,12 +13,11 @@ import AccordionDetails from '@material-ui/core/AccordionDetails';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import { Tooltip } from '@material-ui/core';
 import HelpIcon from '@material-ui/icons/Help';
-import { AlertDialog, Card, Flex } from '@chia/core';
+import { AlertDialog, Card, Flex, chiaToMojo, mojoToChiaLocaleString } from '@chia/core';
 import {
   send_transaction,
   rl_set_user_info_action,
 } from '../../../modules/message';
-import { mojo_to_chia_string, chia_to_mojo } from '../../../util/chia';
 import { get_transaction_result } from '../../../util/transaction_result';
 import { openDialog } from '../../../modules/dialog';
 import WalletHistory from '../WalletHistory';
@@ -400,7 +399,7 @@ const RLDetailsCard = (props) => {
               <Typography variant="subtitle1">
                 <Trans>
                   Spending Limit (chia per interval):{' '}
-                  {mojo_to_chia_string(limit)}
+                  {mojoToChiaLocaleString(limit)}
                 </Trans>
               </Typography>
             </Box>
@@ -447,7 +446,7 @@ const RLDetailsCard = (props) => {
               <Typography variant="subtitle1">
                 <Trans>
                   Spending Limit (chia per interval):{' '}
-                  {mojo_to_chia_string(limit)}
+                  {mojoToChiaLocaleString(limit)}
                 </Trans>
               </Typography>
             </Box>
@@ -512,7 +511,7 @@ const BalanceCardSubSection = (props) => {
         </Box>
         <Box>
           <Typography variant="subtitle1">
-            {mojo_to_chia_string(props.balance)} {currencyCode}
+            {mojoToChiaLocaleString(props.balance)} {currencyCode}
           </Typography>
         </Box>
       </Box>
@@ -652,8 +651,8 @@ const SendCard = (props) => {
       );
       return;
     }
-    const amount = chia_to_mojo(amount_input.value);
-    const fee = chia_to_mojo(fee_input.value);
+    const amount = chiaToMojo(amount_input.value);
+    const fee = chiaToMojo(fee_input.value);
 
     if (address.startsWith('0x') || address.startsWith('0X')) {
       address = address.slice(2);

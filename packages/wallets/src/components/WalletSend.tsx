@@ -15,6 +15,9 @@ import {
   Flex,
   Card,
   useOpenDialog,
+  chiaToMojo,
+  getTransactionResult,
+  useIsSimulator,
 } from '@chia/core';
 import isNumeric from 'validator/es/lib/isNumeric';
 import { useForm, useWatch } from 'react-hook-form';
@@ -22,10 +25,7 @@ import {
   Button,
   Grid,
 } from '@material-ui/core';
-import { chia_to_mojo } from '../../util/chia';
-import config from '../../config/config';
-import useWallet from '../../hooks/useWallet';
-import getTransactionResult from '../../util/getTransactionResult';
+import useWallet from '../hooks/useWallet';
 
 type SendCardProps = {
   walletId: number;
@@ -40,6 +40,7 @@ type SendTransactionData = {
 export default function WalletSend(props: SendCardProps) {
   const { walletId } = props;
 
+  const isSimulator = useIsSimulator();
   const openDialog = useOpenDialog();
   const [sendTransaction, { isLoading: isSendTransactionLoading }] = useSendTransactionMutation();
   const [farmBlock] = useFarmBlockMutation();
@@ -109,8 +110,8 @@ export default function WalletSend(props: SendCardProps) {
     const response = await sendTransaction({
       walletId,
       address,
-      amount: Number.parseFloat(chia_to_mojo(amount)),
-      fee: Number.parseFloat(chia_to_mojo(fee)),
+      amount: chiaToMojo(amount),
+      fee: chiaToMojo(fee),
       waitForConfirmation: true,
     }).unwrap();
 
@@ -174,7 +175,7 @@ export default function WalletSend(props: SendCardProps) {
           </Grid>
           <Grid xs={12} item>
             <Flex justifyContent="flex-end" gap={1}>
-              {!!config.local_test && (
+              {isSimulator && (
                 <Button onClick={farm} variant="outlined">
                   <Trans>Farm</Trans>
                 </Button>

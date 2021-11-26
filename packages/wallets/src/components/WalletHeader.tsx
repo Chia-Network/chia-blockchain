@@ -5,6 +5,7 @@ import {
   Flex,
   ConfirmDialog,
   useOpenDialog,
+  useShowDebugInformation,
 } from '@chia/core';
 import { useHistory } from 'react-router';
 import {
@@ -20,7 +21,6 @@ import {
 import { useDeleteUnconfirmedTransactionsMutation } from '@chia/api-react';
 import WalletStatus from './WalletStatus';
 import WalletsDropdodown from './WalletsDropdown';
-import isDebug from '../../util/isDebug';
 
 type StandardWalletProps = {
   walletId: number;
@@ -30,6 +30,7 @@ type StandardWalletProps = {
 export default function WalletHeader(props: StandardWalletProps) {
   const { walletId, actions } = props;
   const openDialog = useOpenDialog();
+  const showDebugInformation = useShowDebugInformation();
   const [deleteUnconfirmedTransactions] = useDeleteUnconfirmedTransactionsMutation();
   const history = useHistory();
 
@@ -67,7 +68,7 @@ export default function WalletHeader(props: StandardWalletProps) {
             <Trans>Status:</Trans>
           </Typography>
           &nbsp;
-          <WalletStatus height={isDebug} />
+          <WalletStatus height={showDebugInformation} />
         </Flex>
         <More>
           {({ onClose }) => (

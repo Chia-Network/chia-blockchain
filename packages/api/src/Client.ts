@@ -1,5 +1,6 @@
 import EventEmitter from 'events';
 import debug from 'debug';
+import { t } from '@lingui/macro';
 import ServiceName from './constants/ServiceName';
 import Message from './Message';
 import Daemon from './services/Daemon';
@@ -319,7 +320,15 @@ export default class Client extends EventEmitter {
       this.requests.delete(requestId);
 
       if (message.data?.error) {
-        reject(new ErrorData(message.data?.error, message.data));
+        let errorMessage = message.data;
+
+        if (errorMessage == '13') {
+          errorMessage = '[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue.';
+        } else if (errorMessage == '22') {
+          errorMessage = '[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue.';
+        }
+
+        reject(new ErrorData(errorMessage, message.data));
         return;
       }
 

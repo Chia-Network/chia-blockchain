@@ -10,8 +10,7 @@ import { useGenerateMnemonicMutation, useAddKeyMutation, useLogInMutation } from
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useHistory } from 'react-router';
 import { useEffectOnce } from 'react-use';
-import { ButtonLoading, Flex, Loading, Link, Logo, useShowError } from '@chia/core';
-import LayoutHero from '../layout/LayoutHero';
+import { ButtonLoading, Flex, Loading, Link, Logo, useShowError, LayoutHero } from '@chia/core';
 
 const MnemonicField = (props: any) => (
   <Grid item xs={2}>
@@ -33,7 +32,7 @@ const MnemonicField = (props: any) => (
   </Grid>
 );
 
-export default function WalletAdd() {
+export default function WalletAdd(props) {
   const history = useHistory();
   const [generateMnemonic, { data: words, isLoading }] = useGenerateMnemonicMutation();
   const [addKey, { isLoading: isAddKeyLoading }] = useAddKeyMutation();
@@ -74,6 +73,7 @@ export default function WalletAdd() {
           <ArrowBackIosIcon fontSize="large" color="secondary" />
         </Link>
       }
+      {...props}
     >
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">

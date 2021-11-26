@@ -3,9 +3,9 @@ import { Trans } from '@lingui/macro';
 import { useGetWalletBalanceQuery } from '@chia/api-react';
 import styled from 'styled-components';
 import WalletGraph from '../WalletGraph';
-import FarmCard from '../../farm/card/FarmCard';
-import useWallet from '../../../hooks/useWallet';
-import getWalletHumanValue from '../../../util/getWalletHumanValue';
+import { CardSimple } from '@chia/core';
+import useWallet from '../../hooks/useWallet';
+import getWalletHumanValue from '../../utils/getWalletHumanValue';
 
 const StyledGraphContainer = styled.div`
   margin-left: -1rem;
@@ -41,7 +41,7 @@ export default function WalletCardTotalBalance(props: Props) {
   ,[value, wallet, unit]);
 
   return (
-    <FarmCard
+    <CardSimple
       loading={isLoading}
       title={<Trans>Total Balance</Trans>}
       tooltip={tooltip}

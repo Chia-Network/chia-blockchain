@@ -1,7 +1,7 @@
 enum Unit {
-  CHIA = 'CHIA',
-  MOJO = 'MOJO',
-  COLOURED_COIN = 'COLOUREDCOIN',
+  CHIA = 'chia',
+  MOJO = 'mojo',
+  CAT = 'cat',
 }
 
 export default Unit;

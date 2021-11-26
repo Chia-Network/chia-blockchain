@@ -8,13 +8,13 @@ export function removePrefix(value: string, prefix: string): string {
   return value;
 }
 
-export default function encode(value: string, prefix: string): string {
+export default function toBech32m(value: string, prefix: string): string {
   const pureHash = removePrefix(value, '0x');
   const words = bech32m.toWords(Buffer.from(pureHash, 'hex'));
   return bech32m.encode(prefix, words);
 }
 
-export function decode(value: string): string {
+export function fromBech32m(value: string): string {
   const data = bech32m.decode(value);
   return Buffer.from(bech32m.fromWords(data.words)).toString('hex');
 }

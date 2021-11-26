@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
+import Big from 'big.js';
 // import { Tooltip } from '@material-ui/core';
 import useLocale from '../../hooks/useLocale';
 
 // const LARGE_NUMBER_THRESHOLD = 1000;
 
 type Props = {
-  value?: string | number | BigInt;
+  value?: string | number | BigInt | Big;
   defaultLocale: string;
 };
 
@@ -26,6 +27,8 @@ export default function FormatLargeNumber(props: Props) {
   const formatedValue = useMemo(() => {
     if (typeof value === 'undefined' || value === null) {
       return value;
+    } else if (value instanceof Big) {
+      return value.toNumber().toLocaleString(locale);
     } else if (typeof value === 'bigint') {
       return BigInt(value).toLocaleString(locale);
     }
