@@ -157,8 +157,9 @@ class Offer:
 
     # This will only return coins that create settlement payments
     def get_primary_coins(self) -> List[Coin]:
-        primary_ids = [c.parent_coin_info for c in self.get_offered_coins()]
-        return list(filter(lambda cs: cs.coin.name() in primary_ids, self.bundle.coin_spends))
+        primary_ids = [c.parent_coin_info for coins in self.get_offered_coins().values() for c in coins]
+        primary_spends = list(filter(lambda cs: cs.coin.name() in primary_ids, self.bundle.coin_spends))
+        return [cs.coin for cs in primary_spends]
 
     @classmethod
     def aggregate(cls, offers: List["Offer"]) -> "Offer":

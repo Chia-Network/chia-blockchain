@@ -169,8 +169,10 @@ class WalletCoinStore:
             return list(filter(lambda cr: cr.coin.name() in coin_names, self.coin_record_cache.values()))
         else:
             as_hexes = [cn.hex() for cn in coin_names]
-            as_sql_list = "(" + ",".join(as_hexes) + ")"
-            cursor = await self.db_connection.execute("SELECT * from coin_record WHERE coin_name IN ?", (as_sql_list,))
+            cursor = await self.db_connection.execute(
+                f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(as_hexes) - 1)}?)',
+                tuple(as_hexes)
+            )
             rows = await cursor.fetchall()
             await cursor.close()
 

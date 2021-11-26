@@ -564,6 +564,9 @@ class WalletStateManager:
 
     async def fetch_parent_and_check_for_cat(self, peer, coin_state) -> Tuple[Optional[uint32], Optional[WalletType]]:
         response: List[CoinState] = await self.wallet_node.get_coin_state([coin_state.coin.parent_coin_info])
+        if len(response) == 0:
+            self.log.warning(f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info}")
+            return None, None
         parent_coin_state = response[0]
         assert parent_coin_state.spent_height == coin_state.created_height
         wallet_id = None
@@ -1058,7 +1061,7 @@ class WalletStateManager:
 
         return 0
 
-    async def get_wallet_for_colour(self, colour):
+    async def get_wallet_for_colour(self, colour: str):
         for wallet_id in self.wallets:
             wallet = self.wallets[wallet_id]
             if wallet.type() == WalletType.COLOURED_COIN:
