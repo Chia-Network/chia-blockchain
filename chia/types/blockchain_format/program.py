@@ -4,11 +4,13 @@ from typing import List, Set, Tuple, Optional, Any
 from clvm import KEYWORD_FROM_ATOM, KEYWORD_TO_ATOM, SExp
 from clvm import run_program as default_run_program
 from clvm.casts import int_from_bytes
+from clvm.CLVMObject import CLVMObjectLike
 from clvm.EvalError import EvalError
 from clvm.operators import OP_REWRITE, OPERATOR_LOOKUP
 from clvm.serialize import sexp_from_stream, sexp_to_stream
 from clvm_rs import STRICT_MODE, deserialize_and_run_program2, serialized_length, run_generator
 from clvm_tools.curry import curry, uncurry
+from typing_extensions import Protocol
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
@@ -35,6 +37,9 @@ def run_program(
 
 INFINITE_COST = 0x7FFFFFFFFFFFFFFF
 
+
+# class ProgramLike(Protocol):
+#     def run_with_cost(self):
 
 class Program(SExp):
     """
@@ -132,7 +137,7 @@ class Program(SExp):
         and always return SOMETHING.
         """
         items = []
-        obj = self
+        obj: CLVMObjectLike = self
         while True:
             pair = obj.pair
             if pair is None:

@@ -8,15 +8,13 @@ have to worry about blowing out the python stack.
 
 from typing import Optional, Set
 
-from clvm import CLVMObject
+from clvm.CLVMObject import CLVMObjectLike
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 
 
-# TODO: address hint error and remove ignore
-#       error: Module "clvm.CLVMObject" is not valid as a type  [valid-type]
-def sha256_treehash(sexp: CLVMObject, precalculated: Optional[Set[bytes32]] = None) -> bytes32:  # type: ignore[valid-type]  # noqa E501
+def sha256_treehash(sexp: CLVMObjectLike, precalculated: Optional[Set[bytes32]] = None) -> bytes32:
     """
     Hash values in `precalculated` are presumed to have been hashed already.
     """

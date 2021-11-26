@@ -30,6 +30,7 @@ dependencies = [
     "click==7.1.2",  # For the CLI
     "dnspythonchia==2.2.0",  # Query DNS seeds
     "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
+    "typing-extensions==4.0.0",  # Backports of new typing module features
 ]
 
 upnp_dependencies = [

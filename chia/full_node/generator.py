@@ -54,10 +54,7 @@ def create_compressed_generator(
         DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, Program.to(start), Program.to(end), compressed_cse_list
     )
     generator_arg = GeneratorArg(original_generator.block_height, original_generator.generator)
-    # TODO: address hint error and remove ignore
-    #       error: Argument 1 to "BlockGenerator" has incompatible type "Program"; expected "SerializedProgram"
-    #       [arg-type]
-    return BlockGenerator(program, [generator_arg])  # type: ignore[arg-type]
+    return BlockGenerator(program.to_serialized_program(), [generator_arg])
 
 
 def setup_generator_args(self: BlockGenerator) -> Tuple[SerializedProgram, Program]:
