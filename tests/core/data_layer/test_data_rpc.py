@@ -53,28 +53,27 @@ async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) ->
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
 
     data_layer = DataLayer(root_path=root, wallet_node=wallet_node)
-    connection = await aiosqlite.connect(data_layer.db_path)
-    data_layer.connection = connection
-    data_layer.db_wrapper = DBWrapper(data_layer.connection)
-    data_layer.data_store = await DataStore.create(data_layer.db_wrapper)
-    data_layer.initialized = True
-    rpc_api = DataLayerRpcApi(data_layer)
-    key = b"a"
-    value = b"\x00\x01"
-    changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
-    res = await rpc_api.create_kv_store()
-    store_id = bytes32(hexstr_to_bytes(res["id"]))
-    print(f"store id is {store_id}")
-    spendable = await wallet.get_spendable_balance()
-    print(f"spendable balance is {spendable}")
-    await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
-    res = await rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
-    assert hexstr_to_bytes(res["data"]) == value
-    changelist = [{"action": "delete", "key": key.hex()}]
-    await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
-    with pytest.raises(Exception):
-        await rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
-    await connection.close()
+    async with aiosqlite.connect(data_layer.db_path) as connection:
+        data_layer.connection = connection
+        data_layer.db_wrapper = DBWrapper(data_layer.connection)
+        data_layer.data_store = await DataStore.create(data_layer.db_wrapper)
+        data_layer.initialized = True
+        rpc_api = DataLayerRpcApi(data_layer)
+        key = b"a"
+        value = b"\x00\x01"
+        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        res = await rpc_api.create_kv_store()
+        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        print(f"store id is {store_id}")
+        spendable = await wallet.get_spendable_balance()
+        print(f"spendable balance is {spendable}")
+        await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
+        res = await rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
+        assert hexstr_to_bytes(res["data"]) == value
+        changelist = [{"action": "delete", "key": key.hex()}]
+        await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
+        with pytest.raises(Exception):
+            await rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
 
 
 @pytest.mark.asyncio
@@ -99,33 +98,32 @@ async def test_create_double_insert(chia_root: ChiaRoot, one_wallet_node: nodes)
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
 
     data_layer = DataLayer(root_path=root, wallet_node=wallet_node)
-    connection = await aiosqlite.connect(data_layer.db_path)
-    data_layer.connection = connection
-    data_layer.db_wrapper = DBWrapper(data_layer.connection)
-    data_layer.data_store = await DataStore.create(data_layer.db_wrapper)
-    data_layer.initialized = True
-    rpc_api = DataLayerRpcApi(data_layer)
-    key1 = b"a"
-    value1 = b"\x01\x02"
-    key2 = b"b"
-    value2 = b"\x01\x23"
-    changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
-    res = await rpc_api.create_kv_store()
-    store_id = bytes32(hexstr_to_bytes(res["id"]))
-    await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
-    res = await rpc_api.get_value({"id": store_id.hex(), "key": key1.hex()})
-    assert hexstr_to_bytes(res["data"]) == value1
+    async with aiosqlite.connect(data_layer.db_path) as connection:
+        data_layer.connection = connection
+        data_layer.db_wrapper = DBWrapper(data_layer.connection)
+        data_layer.data_store = await DataStore.create(data_layer.db_wrapper)
+        data_layer.initialized = True
+        rpc_api = DataLayerRpcApi(data_layer)
+        key1 = b"a"
+        value1 = b"\x01\x02"
+        key2 = b"b"
+        value2 = b"\x01\x23"
+        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        res = await rpc_api.create_kv_store()
+        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
+        res = await rpc_api.get_value({"id": store_id.hex(), "key": key1.hex()})
+        assert hexstr_to_bytes(res["data"]) == value1
 
-    changelist = [{"action": "insert", "key": key2.hex(), "value": value2.hex()}]
-    await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
-    res = await rpc_api.get_value({"id": store_id.hex(), "key": key2.hex()})
-    assert hexstr_to_bytes(res["data"]) == value2
+        changelist = [{"action": "insert", "key": key2.hex(), "value": value2.hex()}]
+        await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
+        res = await rpc_api.get_value({"id": store_id.hex(), "key": key2.hex()})
+        assert hexstr_to_bytes(res["data"]) == value2
 
-    changelist = [{"action": "delete", "key": key1.hex()}]
-    await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
-    with pytest.raises(Exception):
-        await rpc_api.get_value({"id": store_id.hex(), "key": key1.hex()})
-    await connection.close()
+        changelist = [{"action": "delete", "key": key1.hex()}]
+        await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
+        with pytest.raises(Exception):
+            await rpc_api.get_value({"id": store_id.hex(), "key": key1.hex()})
 
 
 @pytest.mark.asyncio
@@ -150,33 +148,32 @@ async def test_get_pairs(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
 
     data_layer = DataLayer(root_path=root, wallet_node=wallet_node)
-    connection = await aiosqlite.connect(data_layer.db_path)
-    data_layer.connection = connection
-    data_layer.db_wrapper = DBWrapper(data_layer.connection)
-    data_layer.data_store = await DataStore.create(data_layer.db_wrapper)
-    data_layer.initialized = True
-    rpc_api = DataLayerRpcApi(data_layer)
-    key1 = b"a"
-    value1 = b"\x01\x02"
-    changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
-    key2 = b"b"
-    value2 = b"\x03\x02"
-    changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
-    key3 = b"c"
-    value3 = b"\x04\x05"
-    changelist.append({"action": "insert", "key": key3.hex(), "value": value3.hex()})
-    key4 = b"d"
-    value4 = b"\x06\x03"
-    changelist.append({"action": "insert", "key": key4.hex(), "value": value4.hex()})
-    key5 = b"e"
-    value5 = b"\x07\x01"
-    changelist.append({"action": "insert", "key": key5.hex(), "value": value5.hex()})
-    res = await rpc_api.create_kv_store()
-    tree_id = bytes32(hexstr_to_bytes(res["id"]))
-    await rpc_api.update_kv_store({"id": tree_id.hex(), "changelist": changelist})
-    await rpc_api.get_pairs({"id": tree_id.hex()})
-    # todo check values match
-    await connection.close()
+    async with aiosqlite.connect(data_layer.db_path) as connection:
+        data_layer.connection = connection
+        data_layer.db_wrapper = DBWrapper(data_layer.connection)
+        data_layer.data_store = await DataStore.create(data_layer.db_wrapper)
+        data_layer.initialized = True
+        rpc_api = DataLayerRpcApi(data_layer)
+        key1 = b"a"
+        value1 = b"\x01\x02"
+        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        key2 = b"b"
+        value2 = b"\x03\x02"
+        changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
+        key3 = b"c"
+        value3 = b"\x04\x05"
+        changelist.append({"action": "insert", "key": key3.hex(), "value": value3.hex()})
+        key4 = b"d"
+        value4 = b"\x06\x03"
+        changelist.append({"action": "insert", "key": key4.hex(), "value": value4.hex()})
+        key5 = b"e"
+        value5 = b"\x07\x01"
+        changelist.append({"action": "insert", "key": key5.hex(), "value": value5.hex()})
+        res = await rpc_api.create_kv_store()
+        tree_id = bytes32(hexstr_to_bytes(res["id"]))
+        await rpc_api.update_kv_store({"id": tree_id.hex(), "changelist": changelist})
+        await rpc_api.get_pairs({"id": tree_id.hex()})
+        # todo check values match
 
 
 @pytest.mark.asyncio
@@ -201,30 +198,29 @@ async def test_get_ancestors(chia_root: ChiaRoot, one_wallet_node: nodes) -> Non
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
 
     data_layer = DataLayer(root_path=root, wallet_node=wallet_node)
-    connection = await aiosqlite.connect(data_layer.db_path)
-    data_layer.connection = connection
-    data_layer.db_wrapper = DBWrapper(data_layer.connection)
-    data_layer.data_store = await DataStore.create(data_layer.db_wrapper)
-    data_layer.initialized = True
-    rpc_api = DataLayerRpcApi(data_layer)
-    key1 = b"a"
-    value1 = b"\x01\x02"
-    changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
-    key2 = b"b"
-    value2 = b"\x03\x02"
-    changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
-    key3 = b"c"
-    value3 = b"\x04\x05"
-    changelist.append({"action": "insert", "key": key3.hex(), "value": value3.hex()})
-    key4 = b"d"
-    value4 = b"\x06\x03"
-    changelist.append({"action": "insert", "key": key4.hex(), "value": value4.hex()})
-    key5 = b"e"
-    value5 = b"\x07\x01"
-    changelist.append({"action": "insert", "key": key5.hex(), "value": value5.hex()})
-    res = await rpc_api.create_kv_store()
-    tree_id = bytes32(hexstr_to_bytes(res["id"]))
-    await rpc_api.update_kv_store({"id": tree_id.hex(), "changelist": changelist})
-    await rpc_api.get_ancestors({"id": tree_id.hex(), "key": key1.hex()})
-    # todo assert values
-    await connection.close()
+    async with aiosqlite.connect(data_layer.db_path) as connection:
+        data_layer.connection = connection
+        data_layer.db_wrapper = DBWrapper(data_layer.connection)
+        data_layer.data_store = await DataStore.create(data_layer.db_wrapper)
+        data_layer.initialized = True
+        rpc_api = DataLayerRpcApi(data_layer)
+        key1 = b"a"
+        value1 = b"\x01\x02"
+        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        key2 = b"b"
+        value2 = b"\x03\x02"
+        changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
+        key3 = b"c"
+        value3 = b"\x04\x05"
+        changelist.append({"action": "insert", "key": key3.hex(), "value": value3.hex()})
+        key4 = b"d"
+        value4 = b"\x06\x03"
+        changelist.append({"action": "insert", "key": key4.hex(), "value": value4.hex()})
+        key5 = b"e"
+        value5 = b"\x07\x01"
+        changelist.append({"action": "insert", "key": key5.hex(), "value": value5.hex()})
+        res = await rpc_api.create_kv_store()
+        tree_id = bytes32(hexstr_to_bytes(res["id"]))
+        await rpc_api.update_kv_store({"id": tree_id.hex(), "changelist": changelist})
+        await rpc_api.get_ancestors({"id": tree_id.hex(), "key": key1.hex()})
+        # todo assert values
