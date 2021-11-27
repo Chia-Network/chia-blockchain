@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 from typing import List, Optional
 
 from chia.consensus.block_record import BlockRecord
@@ -137,37 +138,45 @@ class FullNodeSimulator(FullNodeAPI):
         for block in more_blocks:
             await self.full_node.respond_block(RespondBlock(block))
 
-    async def process_blocks(self, count, farm_to=bytes32([0] * 32)) -> int:
-        funds = 0
-
-        # initial_height = self.full_node.blockchain.get_peak_height()
-        # if initial_height is None:
-        #     initial_height = 0
+    async def process_blocks(self, count: int, farm_to: bytes32 = bytes32([0] * 32)) -> int:
+        rewards = 0
 
         for i in range(count):
             block: FullBlock = await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
-            # TODO: why do we need this off by one via `i > 0`?
-            if block.is_transaction_block() and i > 0:
+            if block.is_transaction_block():
                 height = uint32(block.height)
-                funds += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
+                rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
+
+            # TODO: is there a thing we can check to confirm the block has been processed?
             await asyncio.sleep(0)
-            continue
 
-            # TODO: seems like something more ought to be done but the peak height seems to be updated immediately
-            # start = time.monotonic()
-            # timeout = 0.2
-            # end = start + timeout
-            # while True:
-            #     await asyncio.sleep(0.010)
-            #     height = self.full_node.blockchain.get_peak_height()
-            #     target_height = initial_height + i + 1
-            #     if height == target_height:
-            #         # TODO: remove debug
-            #         print(f"height {height} reached in {time.monotonic() - start:.3f} seconds")
-            #         break
-            #
-            #     now = time.monotonic()
-            #     if now >= end:
-            #         raise Exception(f"Failed to process block before timeout: actual height {height} != {target_height}, time {now - start:.3f} >= {timeout:.3f}")
+        return rewards
 
-        return funds
+    async def farm_blocks(self, count: int, farm_to: bytes32):
+        rewards = await self.process_blocks(count=count, farm_to=farm_to)
+        await self.process_blocks(count=1)
+
+        # TODO: handle this more explicitly
+        await asyncio.sleep(0.2)
+
+        return rewards
+
+    async def farm_rewards(self, amount: int, farm_to: bytes32) -> None:
+        rewards = 0
+
+        if amount == 0:
+            return rewards
+
+        height_before = self.full_node.blockchain.get_peak_height()
+        if height_before is None:
+            height_before = 0
+
+        for count in itertools.count(1):
+            height = uint32(height_before + count)
+            rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
+
+            if rewards >= amount:
+                await self.farm_blocks(count=count, farm_to=farm_to)
+                return rewards
+
+        raise Exception("internal error")

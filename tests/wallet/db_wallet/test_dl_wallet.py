@@ -53,7 +53,6 @@ class TestDLWallet:
 
     @pytest.mark.asyncio
     async def test_update_coin(self, three_wallet_nodes):
-        num_blocks = 5
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -68,7 +67,7 @@ class TestDLWallet:
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.process_blocks(count=num_blocks, farm_to=ph)
+        funds = await full_node_api.farm_blocks(count=1, farm_to=ph)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -113,7 +112,6 @@ class TestDLWallet:
 
     @pytest.mark.asyncio
     async def test_announce_coin(self, three_wallet_nodes):
-        num_blocks = 5
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -132,7 +130,7 @@ class TestDLWallet:
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.process_blocks(count=num_blocks, farm_to=ph)
+        funds = await full_node_api.farm_blocks(count=1, farm_to=ph)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -147,7 +145,7 @@ class TestDLWallet:
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
             )
 
-        await full_node_api.process_blocks(count=2, farm_to=ph1)
+        await full_node_api.farm_blocks(count=1, farm_to=ph1)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
@@ -182,7 +180,6 @@ class TestDLWallet:
 
     @pytest.mark.asyncio
     async def test_dlo_wallet(self, three_wallet_nodes):
-        num_blocks = 5
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -201,7 +198,7 @@ class TestDLWallet:
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.process_blocks(count=num_blocks, farm_to=ph)
+        funds = await full_node_api.farm_blocks(count=1, farm_to=ph)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -228,7 +225,7 @@ class TestDLWallet:
                 wallet_1,
             )
 
-        await full_node_api.process_blocks(count=2, farm_to=ph1)
+        await full_node_api.farm_blocks(count=2, farm_to=ph1)
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 0)
@@ -300,7 +297,6 @@ class TestDLWallet:
 
     @pytest.mark.asyncio
     async def test_dlo_wallet_reclaim(self, three_wallet_nodes):
-        num_blocks = 5
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -318,7 +314,7 @@ class TestDLWallet:
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.process_blocks(count=num_blocks, farm_to=ph)
+        funds = await full_node_api.farm_blocks(count=1, farm_to=ph)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -345,7 +341,7 @@ class TestDLWallet:
                 wallet_1,
             )
 
-        await full_node_api.process_blocks(count=2, farm_to=ph1)
+        await full_node_api.farm_blocks(count=1, farm_to=ph1)
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 0)
@@ -364,13 +360,13 @@ class TestDLWallet:
         )
         await wallet_1.push_transaction(tr)
 
-        await full_node_api.process_blocks(count=1)
+        await full_node_api.process_blocks(count=2)
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 201)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 201)
 
-        await time_out_assert(15, wallet_1.get_confirmed_balance, 3999999999799)
-        await time_out_assert(15, wallet_1.get_unconfirmed_balance, 3999999999799)
+        await time_out_assert(15, wallet_1.get_confirmed_balance, 1999999999799)
+        await time_out_assert(15, wallet_1.get_unconfirmed_balance, 1999999999799)
 
         await dlo_wallet_1.create_recover_dl_offer_spend()
 
@@ -378,5 +374,5 @@ class TestDLWallet:
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 0)
-        await time_out_assert(15, wallet_1.get_confirmed_balance, 4000000000000)
-        await time_out_assert(15, wallet_1.get_unconfirmed_balance, 4000000000000)
+        await time_out_assert(15, wallet_1.get_confirmed_balance, 2000000000000)
+        await time_out_assert(15, wallet_1.get_unconfirmed_balance, 2000000000000)
