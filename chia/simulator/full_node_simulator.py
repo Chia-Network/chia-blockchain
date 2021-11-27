@@ -161,7 +161,7 @@ class FullNodeSimulator(FullNodeAPI):
 
         return rewards
 
-    async def farm_rewards(self, amount: int, farm_to: bytes32) -> None:
+    async def farm_rewards(self, amount: int, farm_to: bytes32) -> int:
         rewards = 0
 
         if amount == 0:
@@ -169,7 +169,7 @@ class FullNodeSimulator(FullNodeAPI):
 
         height_before = self.full_node.blockchain.get_peak_height()
         if height_before is None:
-            height_before = 0
+            height_before = uint32(0)
 
         for count in itertools.count(1):
             height = uint32(height_before + count)

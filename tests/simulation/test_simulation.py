@@ -134,6 +134,7 @@ class TestSimulation:
 
         await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
 
+        assert wallet_node.wallet_state_manager is not None
         wallet = wallet_node.wallet_state_manager.main_wallet
         puzzlehash = await wallet.get_new_puzzlehash()
 
@@ -170,6 +171,7 @@ class TestSimulation:
 
         await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
 
+        assert wallet_node.wallet_state_manager is not None
         wallet = wallet_node.wallet_state_manager.main_wallet
         puzzlehash = await wallet.get_new_puzzlehash()
 
