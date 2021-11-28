@@ -187,13 +187,18 @@ class ChiaServer:
         Periodically checks for connections with no activity (have not sent us any data), and removes them,
         to allow room for other peers.
         """
+        is_crawler = getattr(self.node, "crawl", None)
         while True:
-            await asyncio.sleep(600)
+            await asyncio.sleep(600 if is_crawler is None else 2)
             to_remove: List[WSChiaConnection] = []
             for connection in self.all_connections.values():
                 if self._local_type == NodeType.FULL_NODE and connection.connection_type == NodeType.FULL_NODE:
-                    if time.time() - connection.last_message_time > 1800:
-                        to_remove.append(connection)
+                    if is_crawler is not None:
+                        if time.time() - connection.creation_time > 5:
+                            to_remove.append(connection)
+                    else:
+                        if time.time() - connection.last_message_time > 1800:
+                            to_remove.append(connection)
             for connection in to_remove:
                 self.log.debug(f"Garbage collecting connection {connection.peer_host} due to inactivity")
                 await connection.close()
@@ -243,6 +248,9 @@ class ChiaServer:
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
+        if getattr(self.node, "crawl", None) is not None:
+            return
+
         if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:
             self.log.warning(f"Peer {request.remote} is banned, refusing connection")
             return None
