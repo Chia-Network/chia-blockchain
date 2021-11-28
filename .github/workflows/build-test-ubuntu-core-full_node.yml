@@ -94,7 +94,7 @@ jobs:
     - name: Install timelord
       run: |
         . ./activate
-        sh install-timelord.sh
+        sh install-timelord.sh -b
         ./vdf_bench square_asm 400000
 
     - name: Test core-full_node code with pytest

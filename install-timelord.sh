@@ -1,5 +1,29 @@
 #!/bin/bash
 
+USAGE_TEXT="\
+Usage: $0 [-d]
+
+  -b                          allow use of precompiled binary chiavdf
+  -h                          display this help and exit
+"
+
+usage() {
+  echo "${USAGE_TEXT}"
+}
+
+ALLOW_BINARY_CHIAVDF=
+
+while getopts bh flag
+do
+  case "${flag}" in
+    # development
+    b) ALLOW_BINARY_CHIAVDF=1;;
+    h) usage; exit 0;;
+    *) echo; usage; exit 1;;
+  esac
+done
+
+
 if [ -z "$VIRTUAL_ENV" ]; then
   echo "This requires the chia python virtual environment."
   echo "Execute '. ./activate' before running."
@@ -38,6 +62,7 @@ symlink_vdf_bench() {
 	else
 		echo "./vdf_bench link exists."
 	fi
+	echo "To estimate a timelord on this CPU try './vdf_bench square_asm 400000' for an ips estimate."
 }
 
 if [ "$(uname)" = "Linux" ] && type apt-get; then
@@ -54,8 +79,12 @@ fi
 if [ -e "$THE_PATH" ]; then
 	echo "$THE_PATH"
 	echo "vdf_client already exists, no action taken"
-else
-	if [ -e venv/bin/python ] && test $UBUNTU_DEBIAN; then
+elif [ -e venv/bin/python ]; then
+	if [ -n "$ALLOW_BINARY_CHIAVDF" ]; then
+		echo "Installing chiavdf from binary or source"
+		echo venv/bin/python -m pip install "$CHIAVDF_VERSION"
+		venv/bin/python -m pip install "$CHIAVDF_VERSION"
+	elif test $UBUNTU_DEBIAN; then
 		echo "Installing chiavdf from source on Ubuntu/Debian"
 		# If Ubuntu version is older than 20.04LTS then upgrade CMake
 		ubuntu_cmake_install
@@ -65,7 +94,7 @@ else
 		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
-	elif [ -e venv/bin/python ] && test $RHEL_BASED; then
+	elif test $RHEL_BASED; then
 		echo "Installing chiavdf from source on RedHat/CentOS/Fedora"
 		# Install remaining needed development tools - assumes venv and prior run of install.sh
 		echo yum install gcc gcc-c++ gmp-devel python3-devel libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 -y
@@ -73,7 +102,7 @@ else
 		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
-	elif [ -e venv/bin/python ] && test $MACOS && [ "$(brew info boost | grep -c 'Not installed')" -eq 1 ]; then
+	elif test $MACOS && [ "$(brew info boost | grep -c 'Not installed')" -eq 1 ]; then
 		echo "Installing chiavdf requirement boost for MacOS."
 		brew install boost
 		echo "Installing chiavdf from source."
@@ -81,14 +110,13 @@ else
 		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
-	elif [ -e venv/bin/python ]; then
+	else
 		echo "Installing chiavdf from source."
 		# User needs to provide required packages
 		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
-	else
-		echo "No venv created yet, please run install.sh."
-	fi
+    fi
+else
+    echo "No venv created yet, please run install.sh."
 fi
-echo "To estimate a timelord on this CPU try './vdf_bench square_asm 400000' for an ips estimate."
