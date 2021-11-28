@@ -2,7 +2,7 @@ import logging
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
-from typing import Callable, List
+from typing import Callable, List, Optional
 import pytest
 
 from dataclasses import dataclass
@@ -156,13 +156,14 @@ def validate_values(names: List[str], actual: PlotRefreshResult, expected: PlotR
     return True
 
 
-async def run_refresh_test(manager: PlotManager):
+async def run_refresh_test(manager: PlotManager, *, expect_match: bool = True):
     global expected_result_matched
     expected_result_matched = False
     manager.start_refreshing()
     manager.trigger_refresh()
     await time_out_assert(5, manager.needs_refresh, value=False)
-    assert expected_result_matched
+    if expect_match:
+        assert expected_result_matched
 
 
 @pytest.mark.asyncio
@@ -446,3 +447,57 @@ async def test_plot_info_caching(test_environment):
     await run_refresh_test(plot_manager)
     assert len(plot_manager.plots) == len(plot_manager.plots)
     plot_manager.stop_refreshing()
+
+
+@pytest.mark.parametrize(
+    ["event_to_raise"],
+    [
+        pytest.param(PlotRefreshEvents.started, id="started"),
+        pytest.param(PlotRefreshEvents.batch_processed, id="batch_processed"),
+        pytest.param(PlotRefreshEvents.done, id="done"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_callback_event_raises(test_environment, event_to_raise: PlotRefreshEvents):
+    last_event_fired: Optional[PlotRefreshEvents] = None
+
+    def raising_callback(event: PlotRefreshEvents, _: PlotRefreshResult):
+        nonlocal last_event_fired
+        last_event_fired = event
+        if event == event_to_raise:
+            raise Exception(f"run_raise_in_callback {event_to_raise}")
+
+    env: TestEnvironment = test_environment
+    # Load dir_1
+    add_plot_directory(env.root_path, str(env.dir_1.path))
+    expected_result.loaded = env.dir_1.plot_info_list()
+    expected_result.removed = []
+    expected_result.processed = len(env.dir_1)
+    expected_result.remaining = 0
+    await run_refresh_test(env.plot_manager)
+    # Load dir_2
+    add_plot_directory(env.root_path, str(env.dir_2.path))
+    expected_result.loaded = env.dir_2.plot_info_list()
+    expected_result.removed = []
+    expected_result.processed = len(env.dir_1) + len(env.dir_2)
+    expected_result.remaining = 0
+    await run_refresh_test(env.plot_manager)
+    # Now raise the exception in the callback
+    default_callback = env.plot_manager._refresh_callback
+    env.plot_manager.set_refresh_callback(raising_callback)
+    await run_refresh_test(env.plot_manager, expect_match=False)
+    # And make sure the follow-up evens aren't fired
+    assert last_event_fired is not None and last_event_fired.value == event_to_raise.value
+    # The exception should trigger `PlotManager.reset()` and clear the plots
+    assert len(env.plot_manager.plots) == 0
+    assert len(env.plot_manager.plot_filename_paths) == 0
+    assert len(env.plot_manager.failed_to_open_filenames) == 0
+    assert len(env.plot_manager.no_key_filenames) == 0
+    # The next run without the valid callback should lead to re-loading of all plot
+    env.plot_manager.set_refresh_callback(default_callback)
+    expected_result.loaded = env.dir_1.plot_info_list() + env.dir_2.plot_info_list()
+    expected_result.removed = []
+    expected_result.processed = len(env.dir_1) + len(env.dir_2)
+    expected_result.remaining = 0
+    await run_refresh_test(env.plot_manager)
+    env.plot_manager.stop_refreshing()
