@@ -4,7 +4,7 @@ import threading
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Iterator
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 from concurrent.futures.thread import ThreadPoolExecutor
 
 from blspy import G1Element
@@ -21,6 +21,7 @@ from chia.plotting.util import (
     stream_plot_info_pk,
     stream_plot_info_ph,
 )
+from chia.util.generator_tools import list_to_batches
 from chia.util.ints import uint16
 from chia.util.path import mkdir
 from chia.util.streamable import Streamable, streamable
@@ -258,15 +259,7 @@ class PlotManager:
             for filename in filenames_to_remove:
                 del self.plot_filename_paths[filename]
 
-            def batches() -> Iterator[Tuple[int, List[Path]]]:
-                if total_size > 0:
-                    for batch_start in range(0, total_size, self.refresh_parameter.batch_size):
-                        batch_end = min(batch_start + self.refresh_parameter.batch_size, total_size)
-                        yield total_size - batch_end, plot_paths[batch_start:batch_end]
-                else:
-                    yield 0, []
-
-            for remaining, batch in batches():
+            for remaining, batch in list_to_batches(plot_paths, self.refresh_parameter.batch_size):
                 batch_result: PlotRefreshResult = self.refresh_batch(batch, plot_directories)
                 if not self._refreshing_enabled:
                     self.log.debug("refresh_plots: Aborted")

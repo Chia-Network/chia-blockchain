@@ -21,7 +21,7 @@ class StructStream(int):
             raise ValueError(
                 f"Value {value} of size {value.bit_length()} does not fit into " f"{cls.__name__} of size {bits}"
             )
-        return int.__new__(cls, value)  # type: ignore
+        return int.__new__(cls, value)
 
     @classmethod
     def parse(cls: Any, f: BinaryIO) -> Any:
