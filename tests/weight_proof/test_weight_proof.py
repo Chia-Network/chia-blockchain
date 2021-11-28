@@ -31,7 +31,7 @@ except ImportError:
 
 
 from chia.consensus.pot_iterations import calculate_iterations_quality
-from chia.full_node.weight_proof import (  # type: ignore
+from chia.full_node.weight_proof import (
     WeightProofHandler,
     _map_sub_epoch_summaries,
     _validate_sub_epoch_segments,

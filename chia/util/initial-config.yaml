@@ -268,6 +268,14 @@ full_node:
   #         the particular system we're running on. Defaults to "full".
   db_sync: auto
 
+  # when this is true, minor data base updates may be performed on startup.
+  # the database upgrades are minor, in that they typically remove unnevessary
+  # indices or re-build certain indices. The intention of these updates is to
+  # improve performance of the node at the expense of a one-time startup cost.
+  # also note that enabling this may prohibit down-grading the node to a
+  # previous version, or may trigger an index rebuild on startup on down-grades.
+  allow_database_upgrades: False
+
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v1_CHALLENGE.sqlite
   peers_file_path: db/peers.dat

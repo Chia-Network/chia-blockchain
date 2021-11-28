@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Any, Iterator, List, Tuple
 from chiabip158 import PyBIP158
 
 from chia.types.blockchain_format.coin import Coin
@@ -64,3 +64,14 @@ def tx_removals_and_additions(npc_list: List[NPC]) -> Tuple[List[bytes32], List[
     additions.extend(additions_for_npc(npc_list))
 
     return removals, additions
+
+
+def list_to_batches(list_to_split: List[Any], batch_size: int) -> Iterator[Tuple[int, List[Any]]]:
+    if batch_size <= 0:
+        raise ValueError("list_to_batches: batch_size must be greater than 0.")
+    total_size = len(list_to_split)
+    if total_size == 0:
+        return iter(())
+    for batch_start in range(0, total_size, batch_size):
+        batch_end = min(batch_start + batch_size, total_size)
+        yield total_size - batch_end, list_to_split[batch_start:batch_end]
