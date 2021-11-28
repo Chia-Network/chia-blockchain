@@ -302,6 +302,9 @@ class WalletTransactionStore:
 
             await asyncio.sleep(0.050)
 
+        # TODO: this is just random...  let's see if it helps then explore
+        await asyncio.sleep(1)
+
     async def get_farming_rewards(self) -> List[TransactionRecord]:
         """
         Returns the list of all farming rewards.
