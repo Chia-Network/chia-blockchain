@@ -8,3 +8,4 @@ export { default as PlotHero } from './PlotHero';
 export { default as Status } from './Status';
 export { default as Trade } from './Trade';
 export { default as Wallet } from './Wallet';
+export { default as Settings } from './Settings';

@@ -1,27 +1,18 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import FarmCard from '../../farm/card/FarmCard';
+import { CardSimple } from '@chia/core';
+import { useGetLatestPeakTimestampQuery } from '@chia/api-react';
 import { unix_to_short_date } from '../../../util/utils';
 
 export default function FullNodeCardPeakTime() {
-  // const { data, isLoading } = useGetBlockchainStateQuery();
-/*
-  const latestPeakTimestamp = useSelector(
-    (state: RootState) => state.full_node_state?.latest_peak_timestamp,
-  );
+  const { data: timestamp, isLoading } = useGetLatestPeakTimestampQuery();
 
-  const value = latestPeakTimestamp
-    ? unix_to_short_date(latestPeakTimestamp)
+  const value = timestamp
+    ? unix_to_short_date(timestamp)
     : '';
 
-  const loading = latestPeakTimestamp === undefined;
-  */
-
-  const isLoading = true;
-  const value = undefined;
-
   return (
-    <FarmCard
+    <CardSimple
       loading={isLoading}
       valueColor="textPrimary"
       title={<Trans>Peak Time</Trans>}

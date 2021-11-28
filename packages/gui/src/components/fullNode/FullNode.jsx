@@ -11,7 +11,7 @@ import {
   DashboardTitle,
 } from '@chia/core';
 import { Status } from '@chia/icons';
-import { useGetLatestBlocksQuery } from '@chia/api-react';
+import { useGetLatestBlocksQuery, useGetUnfinishedBlockHeadersQuery } from '@chia/api-react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Tooltip, Typography } from '@material-ui/core';
 // import HelpIcon from '@material-ui/icons/Help';
@@ -102,14 +102,12 @@ const cols = [
 const BlocksCard = () => {
   const navigate = useNavigate();
   const { data: latestBlocks = [], isLoading } = useGetLatestBlocksQuery();
+  const { data: unfinishedBlockHeaders = [] } = useGetUnfinishedBlockHeadersQuery();
 
-/*
-  const unfinishedBlockHeaders = useSelector(
-    (state) => state.full_node_state.unfinished_block_headers ?? [],
-  );
-*/
+  console.log('unfinishedBlockHeaders', unfinishedBlockHeaders);
+
   const rows = [
-    // ...unfinishedBlockHeaders,
+    ...unfinishedBlockHeaders,
     ...latestBlocks.map((row) => ({
       ...row,
       isFinished: true,

@@ -21,16 +21,17 @@ export const fullNodeApi = createApi({
         command: 'getBlockRecords',
         args: [start, end],
       }),
-      transformResponse: (response) => {
-        console.log(typeof response?.blockRecords, response);
-        return response?.blockRecords ?? [];
-      },
+      transformResponse: (response: any) => response?.blockRecords,
     }),
     getUnfinishedBlockHeaders: build.query<BlockHeader[], undefined>({
       query: () => ({
         command: 'getUnfinishedBlockHeaders',
       }),
-      // transformResponse: (response: PostResponse) => response.data.post,
+      transformResponse: (response: any) => response?.headers,
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
+        command: 'onBlockchainState',
+        endpoint: () => fullNodeApi.endpoints.getUnfinishedBlockHeaders,
+      }]),
     }),
     getBlockchainState: build.query<BlockchainState, undefined>({
       query: () => ({
