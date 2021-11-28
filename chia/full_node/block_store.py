@@ -50,19 +50,19 @@ class BlockStore:
 
         # Height index so we can look up in order of height for sync purposes
         await self.db.execute("CREATE INDEX IF NOT EXISTS full_block_height on full_blocks(height)")
-        # this index is not used by any queries, don't create it for new
-        # installs, and remove it from existing installs in the future
-        # await self.db.execute("DROP INDEX IF EXISTS is_block on full_blocks(is_block)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS is_fully_compactified on full_blocks(is_fully_compactified)")
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
 
-        await self.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
-        await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
-
-        # this index is not used by any queries, don't create it for new
-        # installs, and remove it from existing installs in the future
-        # await self.db.execute("DROP INDEX IF EXISTS is_block on block_records(is_block)")
+        if self.db_wrapper.allow_upgrades:
+            await self.db.execute("DROP INDEX IF EXISTS hh")
+            await self.db.execute("DROP INDEX IF EXISTS is_block")
+            await self.db.execute("DROP INDEX IF EXISTS peak")
+            await self.db.execute(
+                "CREATE INDEX IF NOT EXISTS is_peak_eq_1_idx on block_records(is_peak) where is_peak = 1"
+            )
+        else:
+            await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak) where is_peak = 1")
 
         await self.db.commit()
         self.block_cache = LRUCache(1000)

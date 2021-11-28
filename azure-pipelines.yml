@@ -29,6 +29,10 @@ steps:
     fetchDepth: 0
     displayName: "Checkout code"
 
+  - script: |
+      git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+    displayName: "Use https for git instead of ssh"
+
   - task: UsePythonVersion@0
     inputs:
       versionSpec: "$(python.version)"

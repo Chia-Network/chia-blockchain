@@ -38,13 +38,18 @@ upnp_dependencies = [
 dev_dependencies = [
     "pytest",
     "pytest-asyncio",
+    "pytest-monitor; sys_platform == 'linux'",
+    "pytest-xdist",
     "flake8",
     "mypy",
     "black",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
     "types-aiofiles",
-    "types-PyYAML",
+    "types-click",
+    "types-cryptography",
+    "types-pkg_resources",
+    "types-pyyaml",
     "types-setuptools",
 ]
 

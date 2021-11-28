@@ -172,7 +172,7 @@ class FullNode:
                 log.close()
 
             await self.connection.set_trace_callback(sql_trace_callback)
-        self.db_wrapper = DBWrapper(self.connection)
+        self.db_wrapper = DBWrapper(self.connection, self.config.get("allow_database_upgrades", False))
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
         self.hint_store = await HintStore.create(self.db_wrapper)
