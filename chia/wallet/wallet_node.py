@@ -992,7 +992,9 @@ class WalletNode:
                 else:
                     to_check.append(ph)
                     already_checked.add(ph)
-            msg = wallet_protocol.RegisterForPhUpdates(all_puzzle_hashes, uint32(0))
+                    if len(to_check) == 1000:
+                        break
+            msg = wallet_protocol.RegisterForPhUpdates(to_check, uint32(0))
             all_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
             assert all_state is not None
 
