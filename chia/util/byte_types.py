@@ -22,7 +22,7 @@ def make_sized_bytes(size: int):
         v = bytes(v)
         if not isinstance(v, bytes) or len(v) != size:
             raise ValueError("bad %s initializer %s" % (name, v))
-        return bytes.__new__(cls, v)  # type: ignore
+        return bytes.__new__(cls, v)
 
     @classmethod  # type: ignore
     def parse(cls, f: BinaryIO) -> Any:

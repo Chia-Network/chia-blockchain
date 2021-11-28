@@ -76,14 +76,9 @@ CHECKOUT_TEST_BLOCKS_AND_PLOTS
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        sh install.sh
+        sh install.sh -d
 
 INSTALL_TIMELORD
-
-    - name: Install developer requirements
-      run: |
-        . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
 
     - name: Test TEST_NAME code with pytest
       run: |

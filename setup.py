@@ -2,6 +2,7 @@ from setuptools import setup
 
 dependencies = [
     "multidict==5.1.0",  # Avoid 5.2.0 due to Avast
+    "aiofiles==0.7.0",  # Async IO for files
     "blspy==1.0.7",  # Signature library
     "chiavdf==1.0.3",  # timelord and vdf verification
     "chiabip158==1.0",  # bip158-style wallet filters
@@ -37,11 +38,18 @@ upnp_dependencies = [
 dev_dependencies = [
     "pytest",
     "pytest-asyncio",
+    "pytest-monitor; sys_platform == 'linux'",
+    "pytest-xdist",
     "flake8",
     "mypy",
     "black",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
+    "types-aiofiles",
+    "types-click",
+    "types-cryptography",
+    "types-pkg_resources",
+    "types-pyyaml",
     "types-setuptools",
 ]
 

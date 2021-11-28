@@ -3,7 +3,7 @@ import atexit
 import signal
 
 from secrets import token_bytes
-from typing import AsyncIterator, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, create_server_for_daemon, daemon_launch_lock_path, singleton
@@ -268,7 +268,7 @@ async def setup_introducer(port):
 
 
 async def setup_vdf_client(port):
-    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1))
+    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, bt.config.get("prefer_ipv6")))
 
     def stop():
         asyncio.create_task(kill_processes())
@@ -281,9 +281,9 @@ async def setup_vdf_client(port):
 
 
 async def setup_vdf_clients(port):
-    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1))
-    vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2))
-    vdf_task_3 = asyncio.create_task(spawn_process(self_hostname, port, 3))
+    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, bt.config.get("prefer_ipv6")))
+    vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2, bt.config.get("prefer_ipv6")))
+    vdf_task_3 = asyncio.create_task(spawn_process(self_hostname, port, 3, bt.config.get("prefer_ipv6")))
 
     def stop():
         asyncio.create_task(kill_processes())

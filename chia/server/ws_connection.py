@@ -274,11 +274,12 @@ class WSChiaConnection:
             self.log.error(f"Exception: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    async def send_message(self, message: Message):
+    async def send_message(self, message: Message) -> bool:
         """Send message sends a message with no tracking / callback."""
         if self.closed:
-            return None
+            return False
         await self.outgoing_queue.put(message)
+        return True
 
     def __getattr__(self, attr_name: str):
         # TODO KWARGS
@@ -368,11 +369,6 @@ class WSChiaConnection:
             self.request_results.pop(result.id)
 
         return result
-
-    async def reply_to_request(self, response: Message):
-        if self.closed:
-            return None
-        await self.outgoing_queue.put(response)
 
     async def send_messages(self, messages: List[Message]):
         if self.closed:

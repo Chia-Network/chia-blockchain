@@ -42,6 +42,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
+from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.pool_target import PoolTarget
@@ -61,6 +62,7 @@ from chia.util import cached_bls
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
+from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -97,6 +99,7 @@ class FullNode:
     _blockchain_lock_ultra_priority: LockClient
     _blockchain_lock_high_priority: LockClient
     _blockchain_lock_low_priority: LockClient
+    _transaction_queue_task: Optional[asyncio.Task]
 
     def __init__(
         self,
@@ -111,7 +114,7 @@ class FullNode:
         self.server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
-        self.pow_creation: Dict[uint32, asyncio.Event] = {}
+        self.pow_creation: Dict[bytes32, asyncio.Event] = {}
         self.state_changed_callback: Optional[Callable] = None
         self.full_node_peers = None
         self.sync_store = None
@@ -135,6 +138,7 @@ class FullNode:
         self.peer_puzzle_hash: Dict[bytes32, Set[bytes32]] = {}  # Peer ID: Set[puzzle_hash]
         self.peer_sub_counter: Dict[bytes32, int] = {}  # Peer ID: int (subscription count)
         mkdir(self.db_path.parent)
+        self._transaction_queue_task = None
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -168,7 +172,7 @@ class FullNode:
                 log.close()
 
             await self.connection.set_trace_callback(sql_trace_callback)
-        self.db_wrapper = DBWrapper(self.connection)
+        self.db_wrapper = DBWrapper(self.connection, self.config.get("allow_database_upgrades", False))
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
         self.hint_store = await HintStore.create(self.db_wrapper)
@@ -288,10 +292,16 @@ class FullNode:
         try:
             self.full_node_peers = FullNodePeers(
                 self.server,
-                self.root_path,
                 self.config["target_peer_count"] - self.config["target_outbound_peer_count"],
                 self.config["target_outbound_peer_count"],
-                self.config["peer_db_path"],
+                PeerStoreResolver(
+                    self.root_path,
+                    self.config,
+                    selected_network=network_name,
+                    peers_file_path_key="peers_file_path",
+                    legacy_peer_db_path_key=PEER_DB_PATH_KEY_DEPRECATED,
+                    default_peers_file_path="db/peers.dat",
+                ),
                 self.config["introducer_peer"],
                 dns_servers,
                 self.config["peer_connect_interval"],
@@ -701,7 +711,8 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.close())
         if self.uncompact_task is not None:
             self.uncompact_task.cancel()
-        self._transaction_queue_task.cancel()
+        if self._transaction_queue_task is not None:
+            self._transaction_queue_task.cancel()
         self._blockchain_lock_queue.close()
 
     async def _await_closed(self):
@@ -747,9 +758,10 @@ class FullNode:
                     if self._shut_down:
                         return None
                     await asyncio.sleep(0.1)
+                    continue
+                break
 
             self.log.info(f"Collected a total of {len(peaks)} peaks.")
-            self.sync_peers_handler = None
 
             # Based on responses from peers about the current peaks, see which peak is the heaviest
             # (similar to longest chain rule).
@@ -1125,6 +1137,7 @@ class FullNode:
         )
         self.signage_point_times[request.index_from_challenge] = time.time()
         sub_slot_tuple = self.full_node_store.get_sub_slot(request.challenge_chain_vdf.challenge)
+        prev_challenge: Optional[bytes32]
         if sub_slot_tuple is not None:
             prev_challenge = sub_slot_tuple[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge
         else:

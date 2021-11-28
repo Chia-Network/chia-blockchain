@@ -2,17 +2,15 @@ import asyncio
 import logging
 import pathlib
 import signal
-import socket
 import time
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import pkg_resources
 
-from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16
+from chia.util.network import get_host_addr
 from chia.util.setproctitle import setproctitle
 
 active_processes: List = []
@@ -41,7 +39,7 @@ def find_vdf_client() -> pathlib.Path:
     raise FileNotFoundError("can't find vdf_client binary")
 
 
-async def spawn_process(host: str, port: int, counter: int):
+async def spawn_process(host: str, port: int, counter: int, prefer_ipv6: Optional[bool]):
     global stopped
     global active_processes
     path_to_vdf_client = find_vdf_client()
@@ -51,11 +49,7 @@ async def spawn_process(host: str, port: int, counter: int):
         try:
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
-            check_addr = PeerInfo(host, uint16(port))
-            if check_addr.is_valid():
-                resolved = host
-            else:
-                resolved = socket.gethostbyname(host)
+            resolved = get_host_addr(host, prefer_ipv6)
             proc = await asyncio.create_subprocess_shell(
                 f"{basename} {resolved} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,
@@ -88,7 +82,7 @@ async def spawn_all_processes(config: Dict, net_config: Dict):
     hostname = net_config["self_hostname"] if "host" not in config else config["host"]
     port = config["port"]
     process_count = config["process_count"]
-    awaitables = [spawn_process(hostname, port, i) for i in range(process_count)]
+    awaitables = [spawn_process(hostname, port, i, net_config.get("prefer_ipv6")) for i in range(process_count)]
     await asyncio.gather(*awaitables)
 
 
