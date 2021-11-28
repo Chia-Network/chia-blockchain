@@ -4,6 +4,7 @@ import { SelectKey, LayoutHero, LayoutDashboard } from '@chia/core';
 import { WalletAdd, WalletImport, Wallets  } from '@chia/wallets';
 import App from './App';
 import FullNode from '../fullNode/FullNode';
+import Block from '../block/Block';
 import DashboardSideBar from '../dashboard/DashboardSideBar';
 
 export default function AppRouter() {
@@ -19,7 +20,8 @@ export default function AppRouter() {
             <Route path="wallet/import" element={<WalletImport />} />
           </Route>
           <Route element={<LayoutDashboard sidebar={<DashboardSideBar />} />}>
-            <Route path="dashboard" element={<FullNode />} />
+            <Route path="dashboard/" element={<FullNode />} />
+            <Route path="dashboard/block/:headerHash" element={<Block />} />
             <Route path="dashboard/wallets/*" element={<Wallets />} />
           </Route>
         </Route>

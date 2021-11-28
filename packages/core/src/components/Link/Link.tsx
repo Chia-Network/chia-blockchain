@@ -8,7 +8,7 @@ import {
   Link as RouterLink,
   LinkProps as RouterLinkProps,
 } from 'react-router-dom';
-// import useOpenExternal from '../../../../hooks/useOpenExternal';
+import useOpenExternal from '../../hooks/useOpenExternal';
 
 type Props = BaseLinkProps &
   (
@@ -28,23 +28,33 @@ const StyledBaseLink = styled(({ fullWidth, noWrap, ...rest }) => (
 `;
 
 export default function Link(props: Props) {
-  const { target, href } = props;
-  // const openExternal = useOpenExternal();
+  const { target, href, to, onClick } = props;
+  const openExternal = useOpenExternal();
   const newProps = {
     ...props,
   };
 
-  function handleOpenExternal(event: SyntheticEvent) {
-    if (href) {
+  function handleClick(event: SyntheticEvent) {
+    if (onClick) {
       event.preventDefault();
       event.stopPropagation();
-      // openExternal(href);
+      onClick(event);
+      return;
+    }
+
+    if (href && target === '_blank') {
+      event.preventDefault();
+      event.stopPropagation();
+      openExternal(href);
+      return;
     }
   }
 
-  if (target === '_blank') {
-    newProps.onClick = handleOpenExternal;
-  }
-
-  return <StyledBaseLink component={RouterLink} {...newProps} />;
+  return (
+    <StyledBaseLink
+      component={to ? RouterLink : BaseLink}
+      {...newProps}
+      onClick={handleClick}
+    />
+  );
 }

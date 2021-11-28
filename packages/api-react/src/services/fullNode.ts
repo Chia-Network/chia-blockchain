@@ -94,7 +94,7 @@ export const fullNodeApi = createApi({
         command: 'getBlock',
         args: [headerHash],
       }),
-      // transformResponse: (response: PostResponse) => response.data.post,
+      transformResponse: (response: any) => response?.block,
     }),
     getBlockRecord: build.query<BlockRecord, { 
       headerHash: string;
@@ -103,7 +103,7 @@ export const fullNodeApi = createApi({
         command: 'getBlockRecord',
         args: [headerHash],
       }),
-      // transformResponse: (response: PostResponse) => response.data.post,
+      transformResponse: (response: any) => response?.blockRecord,
     }),
   }),
 });

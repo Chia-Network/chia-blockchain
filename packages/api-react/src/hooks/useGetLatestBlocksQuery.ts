@@ -15,8 +15,6 @@ export default function useGetLatestBlocksQuery(count?: number = 10) {
 
   const isLoading = isLoadingBlockchainState || isLoadingBlocks;
 
-  console.log('blocks', blocks, typeof blocks);
-
   return {
     isLoading,
     data: blocks ? [...blocks].reverse() : blocks,
