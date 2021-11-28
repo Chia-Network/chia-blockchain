@@ -36,7 +36,7 @@ const cols = [
     title: <Trans>Node ID</Trans>,
   },
   {
-    field: 'peer_host',
+    field: 'peerHost',
     title: <Trans>IP address</Trans>,
   },
   {
