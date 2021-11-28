@@ -1,3 +1,4 @@
+export { default as activateLocale } from './activateLocale';
 export { default as blockHeightToTimestamp } from './blockHeightToTimestamp';
 export { calculatePoolReward, calculateBaseFarmerReward } from './blockRewards';
 export { default as catToMojo } from './catToMojo';

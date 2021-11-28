@@ -1,17 +1,14 @@
-import { useLocalStorage, writeStorage } from '@rehooks/local-storage';
+import { useContext } from 'react';
+import { LocaleContext } from '../components/LocaleProvider';
 
-export default function useLocale(
-  defaultLocale: string,
-): [string, (locale: string) => void] {
-  let [locale] = useLocalStorage<string>('locale', defaultLocale);
+export default function useLocale(): [string, (locale: string) => void] {
+  const localeContext = useContext(LocaleContext);
 
-  if (locale && locale.length === 2) {
-    locale = defaultLocale;
+  if (!localeContext) {
+    throw new Error('You need to use LocaleProvider.');
   }
 
-  function handleSetLocale(locale: string) {
-    writeStorage('locale', locale);
-  }
+  const { locale, setLocale } = localeContext;
 
-  return [locale, handleSetLocale];
+  return [locale, setLocale];
 }

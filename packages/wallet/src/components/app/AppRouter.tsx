@@ -1,7 +1,6 @@
 import React from 'react';
 import { Switch, Route, Redirect } from 'react-router-dom';
-import { PrivateRoute } from '@chia/core';
-import SelectKey from '../selectKey/SelectKey';
+import { PrivateRoute, SelectKey } from '@chia/core';
 import { WalletAdd, WalletImport } from '@chia/wallets';
 import Dashboard from '../dashboard/Dashboard';
 import { defaultLocale, locales } from '../../config/locales';
@@ -13,10 +12,10 @@ export default function AppRouter() {
         <SelectKey />
       </Route>
       <Route path="/wallet/add" exact>
-        <WalletAdd locales={locales} defaultLocale={defaultLocale} />
+        <WalletAdd />
       </Route>
       <Route path="/wallet/import" exact>
-        <WalletImport locales={locales} defaultLocale={defaultLocale} />
+        <WalletImport />
       </Route>
       {/*
       <Route path="/wallet/restore" exact>

@@ -12,7 +12,6 @@ import {
 import { useAppDispatch, walletApi } from '@chia/api-react';
 import { t } from '@lingui/macro';
 import { ExitToApp as ExitToAppIcon } from '@material-ui/icons';
-import { defaultLocale, locales } from '../../config/locales';
 import Wallets from '../wallet/Wallets';
 
 const StyledRoot = styled(Flex)`
@@ -59,7 +58,7 @@ export default function Dashboard() {
                 <Logo height={1} />
               </StyledBrandWrapper>
               <Flex flexGrow={1} alignItems="flex-end" gap={1} />
-              <LocaleToggle locales={locales} defaultLocale={defaultLocale} />
+              <LocaleToggle />
               <DarkModeToggle />
               <IconButton color="inherit" onClick={handleLogout} title={t`Log Out`}>
                 <ExitToAppIcon />

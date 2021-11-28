@@ -25,12 +25,10 @@ const StyledBody = styled(Box)`
 type Props = {
   children?: ReactNode;
   header?: ReactNode;
-  locales: Object;
-  defaultLocale: string;
 };
 
 export default function LayoutHero(props: Props) {
-  const { children, header, locales, defaultLocale } = props;
+  const { children, header } = props;
 
   return (
     <StyledWrapper>
@@ -38,7 +36,7 @@ export default function LayoutHero(props: Props) {
         <Toolbar>
           {header}
           <Flex flexGrow={1} />
-          <LocaleToggle locales={locales} defaultLocale={defaultLocale} />
+          <LocaleToggle />
           <DarkModeToggle />
         </Toolbar>
       </AppBar>

@@ -7,7 +7,6 @@ import useLocale from '../../hooks/useLocale';
 
 type Props = {
   value?: string | number | BigInt | Big;
-  defaultLocale: string;
 };
 
 // TODO add ability to use it in new settings page
@@ -20,8 +19,8 @@ const compactConfig = {
 */
 
 export default function FormatLargeNumber(props: Props) {
-  const { value, defaultLocale } = props;
-  const [locale] = useLocale(defaultLocale);
+  const { value } = props;
+  const [locale] = useLocale();
 
   const numberFormat = useMemo(() => new Intl.NumberFormat(locale), [locale]);
   const formatedValue = useMemo(() => {
