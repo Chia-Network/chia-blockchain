@@ -1,5 +1,6 @@
 import asyncio
 import itertools
+import sys
 from typing import List, Optional
 
 from chia.consensus.block_record import BlockRecord

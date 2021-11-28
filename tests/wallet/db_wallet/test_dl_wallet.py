@@ -1,5 +1,6 @@
 import asyncio
 import pytest
+import sys
 import time
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
