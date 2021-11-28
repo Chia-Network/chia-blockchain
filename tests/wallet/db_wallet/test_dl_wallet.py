@@ -255,7 +255,8 @@ class TestDLWallet:
         await wallet_1.push_transaction(tr)
         await wallet_1.wallet_state_manager.tx_store.wait_all_sent()
 
-        await full_node_api.process_blocks(count=1)
+        # TODO: only need one for linux...
+        await full_node_api.process_blocks(count=3)
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 201)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 201)
