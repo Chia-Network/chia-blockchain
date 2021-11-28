@@ -82,23 +82,14 @@ class TestDLWallet:
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
             )
 
-        not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
-        print(f"---- {len(not_sent)} 0.0")
-        await asyncio.sleep(0.1)
-        not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
-        print(f"---- {len(not_sent)} 0.1")
-        await asyncio.sleep(0.1)
-        not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
-        print(f"---- {len(not_sent)} 0.2")
-        await asyncio.sleep(0.1)
-        not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
-        print(f"---- {len(not_sent)} 0.3")
-        await asyncio.sleep(0.1)
-        not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
-        print(f"---- {len(not_sent)} 0.4")
-        await asyncio.sleep(0.1)
-        not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
-        print(f"---- {len(not_sent)} 0.5")
+        await dl_wallet_0.wallet_state_manager.tx_store.wait_all_sent()
+
+        for i in range(5):
+            not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+            print(f"---- {len(not_sent)} {i}")
+            if len(not_sent) == 0:
+                break
+            await asyncio.sleep(0.1)
 
         await full_node_api.process_blocks(count=1)
 
@@ -110,6 +101,7 @@ class TestDLWallet:
         nodes.append(Program.to("beep").get_tree_hash())
         new_merkle_tree = MerkleTree(nodes)
         await dl_wallet_0.create_update_state_spend(new_merkle_tree.calculate_root())
+        await dl_wallet_0.wallet_state_manager.tx_store.wait_all_sent()
 
         await full_node_api.process_blocks(count=2)
 
@@ -163,6 +155,8 @@ class TestDLWallet:
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
             )
 
+        await dl_wallet_0.wallet_state_manager.tx_store.wait_all_sent()
+
         await full_node_api.farm_blocks(count=1, farm_to=ph1)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
@@ -190,6 +184,7 @@ class TestDLWallet:
             name=sb.name(),
         )
         await wallet_1.push_transaction(tr)
+        await wallet_1.wallet_state_manager.tx_store.wait_all_sent()
 
         await full_node_api.process_blocks(count=2)
 
@@ -231,6 +226,8 @@ class TestDLWallet:
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
             )
 
+        await dl_wallet_0.wallet_state_manager.tx_store.wait_all_sent()
+
         await full_node_api.process_blocks(count=1)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
@@ -242,6 +239,8 @@ class TestDLWallet:
                 wallet_node_1.wallet_state_manager,
                 wallet_1,
             )
+
+        await dlo_wallet_1.wallet_state_manager.tx_store.wait_all_sent()
 
         await full_node_api.farm_blocks(count=2, farm_to=ph1)
 
@@ -261,6 +260,7 @@ class TestDLWallet:
             10,
         )
         await wallet_1.push_transaction(tr)
+        await wallet_1.wallet_state_manager.tx_store.wait_all_sent()
 
         await full_node_api.process_blocks(count=1)
 
@@ -273,6 +273,9 @@ class TestDLWallet:
                 wallet_node_2.wallet_state_manager,
                 wallet_2,
             )
+
+        await dlo_wallet_2.wallet_state_manager.tx_store.wait_all_sent()
+
         offer_coin = await dlo_wallet_1.get_coin()
         offer_full_puzzle = dlo_wallet_1.puzzle_for_pk(0x00)
         db_puzzle, db_innerpuz, current_root = await dl_wallet_0.get_info_for_offer_claim()
@@ -307,6 +310,7 @@ class TestDLWallet:
             name=sb.name(),
         )
         await wallet_2.push_transaction(tr)
+        await wallet_2.wallet_state_manager.tx_store.wait_all_sent()
 
         await full_node_api.process_blocks(count=2)
 
@@ -347,6 +351,8 @@ class TestDLWallet:
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
             )
 
+        await dl_wallet_0.wallet_state_manager.tx_store.wait_all_sent()
+
         await full_node_api.process_blocks(count=1)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
@@ -358,6 +364,8 @@ class TestDLWallet:
                 wallet_node_1.wallet_state_manager,
                 wallet_1,
             )
+
+        await dlo_wallet_1.wallet_state_manager.tx_store.wait_all_sent()
 
         await full_node_api.farm_blocks(count=1, farm_to=ph1)
 
@@ -377,6 +385,7 @@ class TestDLWallet:
             10,
         )
         await wallet_1.push_transaction(tr)
+        await wallet_1.wallet_state_manager.tx_store.wait_all_sent()
 
         await full_node_api.process_blocks(count=2)
 
@@ -387,6 +396,7 @@ class TestDLWallet:
         await time_out_assert(15, wallet_1.get_unconfirmed_balance, 1999999999799)
 
         await dlo_wallet_1.create_recover_dl_offer_spend()
+        await dlo_wallet_1.wallet_state_manager.tx_store.wait_all_sent()
 
         await full_node_api.process_blocks(count=2)
 
