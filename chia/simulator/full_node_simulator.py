@@ -161,6 +161,9 @@ class FullNodeSimulator(FullNodeAPI):
             # TODO: is there a thing we can check to confirm the block has been processed?
             await asyncio.sleep(0)
 
+        # TODO: this is just random...  let's see if it helps then explore
+        await asyncio.sleep(1)
+
         return rewards
 
     async def farm_blocks(self, count: int, farm_to: bytes32):
