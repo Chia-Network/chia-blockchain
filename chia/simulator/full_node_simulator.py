@@ -152,6 +152,9 @@ class FullNodeSimulator(FullNodeAPI):
         """
         rewards = 0
 
+        # TODO: just debugging
+        count *= 2
+
         for i in range(count):
             block: FullBlock = await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
             if block.is_transaction_block():

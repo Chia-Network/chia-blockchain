@@ -84,13 +84,6 @@ class TestDLWallet:
 
         await dl_wallet_0.wallet_state_manager.tx_store.wait_all_sent()
 
-        for i in range(5):
-            not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
-            print(f"---- {len(not_sent)} {i}")
-            if len(not_sent) == 0:
-                break
-            await asyncio.sleep(0.1)
-
         await full_node_api.process_blocks(count=1)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
