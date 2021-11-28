@@ -361,7 +361,8 @@ class TestDLWallet:
 
         await dlo_wallet_1.wallet_state_manager.tx_store.wait_all_sent()
 
-        await full_node_api.farm_blocks(count=1, farm_to=ph1)
+        wallet_1_funds = await full_node_api.farm_blocks(count=1, farm_to=ph1)
+        offer_amount = 201
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 0)
@@ -371,7 +372,7 @@ class TestDLWallet:
         # recovery_target: bytes32,
         # recovery_timelock: uint64,
         tr = await dlo_wallet_1.generate_datalayer_offer_spend(
-            uint64(201),
+            uint64(offer_amount),
             Program.to("thing").get_tree_hash(),
             dl_wallet_0.dl_info.origin_coin.name(),
             await wallet_2.get_new_puzzlehash(),
@@ -383,18 +384,20 @@ class TestDLWallet:
 
         await full_node_api.process_blocks(count=2)
 
-        await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 201)
-        await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 201)
+        await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, offer_amount)
+        await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, offer_amount)
+        wallet_1_funds -= offer_amount
 
-        await time_out_assert(15, wallet_1.get_confirmed_balance, 1999999999799)
-        await time_out_assert(15, wallet_1.get_unconfirmed_balance, 1999999999799)
+        await time_out_assert(15, wallet_1.get_confirmed_balance, wallet_1_funds)
+        await time_out_assert(15, wallet_1.get_unconfirmed_balance, wallet_1_funds)
 
         await dlo_wallet_1.create_recover_dl_offer_spend()
         await dlo_wallet_1.wallet_state_manager.tx_store.wait_all_sent()
 
         await full_node_api.process_blocks(count=2)
+        wallet_1_funds += offer_amount
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 0)
-        await time_out_assert(15, wallet_1.get_confirmed_balance, 2000000000000)
-        await time_out_assert(15, wallet_1.get_unconfirmed_balance, 2000000000000)
+        await time_out_assert(15, wallet_1.get_confirmed_balance, wallet_1_funds)
+        await time_out_assert(15, wallet_1.get_unconfirmed_balance, wallet_1_funds)
