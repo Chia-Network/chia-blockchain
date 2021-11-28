@@ -118,8 +118,12 @@ class TestSimulation:
     ):
         [[full_node_api], _] = one_wallet_node
 
+        # Starting at the beginning.
         assert full_node_api.full_node.blockchain.get_peak_height() is None
+
         await full_node_api.process_blocks(count=count)
+
+        # The requested number of blocks had been processed.
         expected_height = None if count == 0 else count
         assert full_node_api.full_node.blockchain.get_peak_height() == expected_height
 
@@ -134,16 +138,23 @@ class TestSimulation:
 
         await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
 
+        # Avoiding an attribute error below.
         assert wallet_node.wallet_state_manager is not None
+
         wallet = wallet_node.wallet_state_manager.main_wallet
         puzzlehash = await wallet.get_new_puzzlehash()
 
+        # Starting at the beginning.
         assert full_node_api.full_node.blockchain.get_peak_height() is None
+
         rewards = await full_node_api.farm_blocks(count=count, farm_to=puzzlehash)
 
+        # The requested number of blocks had been processed plus 1 to handle the final reward
+        # transactions.
         expected_height = count + 1
         assert full_node_api.full_node.blockchain.get_peak_height() == expected_height
 
+        # The expected rewards have been received and confirmed.
         unconfirmed_balance = await wallet.get_unconfirmed_balance()
         confirmed_balance = await wallet.get_confirmed_balance()
         assert [unconfirmed_balance, confirmed_balance] == [rewards, rewards]
@@ -171,20 +182,24 @@ class TestSimulation:
 
         await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
 
+        # Avoiding an attribute error below.
         assert wallet_node.wallet_state_manager is not None
+
         wallet = wallet_node.wallet_state_manager.main_wallet
         puzzlehash = await wallet.get_new_puzzlehash()
 
         rewards = await full_node_api.farm_rewards(amount=amount, farm_to=puzzlehash)
 
+        # At least the requested amount was farmed.
         assert rewards >= amount
 
+        # The rewards amount is both received and confirmed.
         unconfirmed_balance = await wallet.get_unconfirmed_balance()
         confirmed_balance = await wallet.get_confirmed_balance()
         assert [unconfirmed_balance, confirmed_balance] == [rewards, rewards]
 
+        # The expected number of coins were received.
         # TODO: pick a better way to check coin count
         spendable_amount = await wallet.get_spendable_balance()
         all_coins = await wallet.select_coins(amount=spendable_amount)
-
         assert len(all_coins) == coin_count

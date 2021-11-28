@@ -139,6 +139,18 @@ class FullNodeSimulator(FullNodeAPI):
             await self.full_node.respond_block(RespondBlock(block))
 
     async def process_blocks(self, count: int, farm_to: bytes32 = bytes32([0] * 32)) -> int:
+        """Process the requested number of blocks including farming to the passed puzzle
+        hash. Note that the rewards for the last block will not have been processed.
+        Consider `.farm_blocks()` or `.farm_rewards()` if the goal is to receive XCH at
+        an address.
+
+        Arguments:
+            count: The number of blocks to process.
+            farm_to: The puzzle hash to farm the block rewards to.
+
+        Returns:
+            The total number of reward mojos for the processed blocks.
+        """
         rewards = 0
 
         for i in range(count):
@@ -153,6 +165,16 @@ class FullNodeSimulator(FullNodeAPI):
         return rewards
 
     async def farm_blocks(self, count: int, farm_to: bytes32):
+        """Farm the requested number of blocks to the passed puzzle hash. This will
+        process additional blocks as needed to process the reward transactions.
+
+        Arguments:
+            count: The number of blocks to farm.
+            farm_to: The puzzle hash to farm the block rewards to.
+
+        Returns:
+            The total number of reward mojos farmed to the requested address.
+        """
         rewards = await self.process_blocks(count=count, farm_to=farm_to)
         await self.process_blocks(count=1)
 
@@ -162,6 +184,16 @@ class FullNodeSimulator(FullNodeAPI):
         return rewards
 
     async def farm_rewards(self, amount: int, farm_to: bytes32) -> int:
+        """Farm at least the request amount of mojos to the passed puzzle hash. Extra
+        mojos will be received based on the block rewards at the present block height.
+
+        Arguments:
+            amount: The minimum number of mojos to farm.
+            farm_to: The puzzle hash to farm the block rewards to.
+
+        Returns:
+            The total number of reward mojos farmed to the requested address.
+        """
         rewards = 0
 
         if amount == 0:
