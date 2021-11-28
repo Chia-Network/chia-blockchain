@@ -1,21 +1,15 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useSelector } from 'react-redux';
-import FarmCard from '../../farm/card/FarmCard';
-import { FormatLargeNumber } from '@chia/core';
-import { RootState } from '../../../modules/rootReducer';
+import { FormatLargeNumber, CardSimple } from '@chia/core';
+import { useGetBlockchainStateQuery } from '@chia/api-react';
 
 export default function FullNodeCardPeakHeight() {
-  const state = useSelector(
-    (state: RootState) => state.full_node_state.blockchain_state,
-  );
-
-  const loading = !state;
-  const value = state?.peak?.height ?? 0;
+  const { data, isLoading } = useGetBlockchainStateQuery();
+  const value = data?.peak?.height ?? 0;
 
   return (
-    <FarmCard
-      loading={loading}
+    <CardSimple
+      loading={isLoading}
       valueColor="textPrimary"
       title={<Trans>Peak Height</Trans>}
       value={<FormatLargeNumber value={value} />}

@@ -1,21 +1,15 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useSelector } from 'react-redux';
-import FarmCard from '../../farm/card/FarmCard';
-import { FormatBytes } from '@chia/core';
-import { RootState } from '../../../modules/rootReducer';
+import { FormatBytes, CardSimple } from '@chia/core';
+import { useGetBlockchainStateQuery } from '@chia/api-react';
 
 export default function FullNodeEstimatedNetworkSpace() {
-  const state = useSelector(
-    (state: RootState) => state.full_node_state.blockchain_state,
-  );
-
-  const loading = state?.space === undefined;
-  const value = state?.space;
+  const { data, isLoading } = useGetBlockchainStateQuery();
+  const value = data?.space;
 
   return (
-    <FarmCard
-      loading={loading}
+    <CardSimple
+      loading={isLoading}
       valueColor="textPrimary"
       title={<Trans>Estimated Network Space</Trans>}
       tooltip={

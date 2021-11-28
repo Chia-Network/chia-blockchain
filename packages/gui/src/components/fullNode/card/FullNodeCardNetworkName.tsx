@@ -1,23 +1,18 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useSelector } from 'react-redux';
-import FarmCard from '../../farm/card/FarmCard';
-import type { RootState } from '../../../modules/rootReducer';
+import { useGetNetworkInfoQuery } from '@chia/api-react';
+import { CardSimple } from '@chia/core';
 
 export default function FullNodeCardNetworkName() {
-  const networkInfo = useSelector(
-    (state: RootState) => state.wallet_state.network_info,
-  );
-
-  const loading = !networkInfo;
-  const networkName = networkInfo?.network_name;
+  const { data: networkInfo, isLoading } = useGetNetworkInfoQuery(); 
+  const value = networkInfo?.networkName;
 
   return (
-    <FarmCard
-      loading={loading}
+    <CardSimple
+      loading={isLoading}
       valueColor="textPrimary"
       title={<Trans>Network Name</Trans>}
-      value={networkName}
+      value={value}
     />
   );
 }

@@ -1,20 +1,23 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useSelector } from 'react-redux';
-import FarmCard from '../../farm/card/FarmCard';
-import type { RootState } from '../../../modules/rootReducer';
+import { CardSimple } from '@chia/core';
+import { ServiceName } from '@chia/api';
+import { useIsServiceRunningQuery } from '@chia/api-react';
 
 export default function FullNodeCardConnectionStatus() {
-  const connected = useSelector(
-    (state: RootState) => state.daemon_state.full_node_connected,
-  );
+  const { data: isRunning, isLoading } = useIsServiceRunningQuery({
+    service: ServiceName.FULL_NODE,
+  }, {
+    pollingInterval: 1000,
+  });
 
   return (
-    <FarmCard
-      valueColor={connected ? 'primary' : 'textPrimary'}
+    <CardSimple
+      loading={isLoading}
+      valueColor={isRunning ? 'primary' : 'textPrimary'}
       title={<Trans>Connection Status</Trans>}
       value={
-        connected ? <Trans>Connected</Trans> : <Trans>Not connected</Trans>
+        isRunning ? <Trans>Connected</Trans> : <Trans>Not connected</Trans>
       }
     />
   );

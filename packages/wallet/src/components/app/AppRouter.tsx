@@ -16,6 +16,7 @@ export default function AppRouter() {
         <Route path="wallet/import" element={<WalletImport />} />
       </Route>
       <Route element={<LayoutMain />}>
+        <Route path="dashboard" element={<Navigate to="dashboard/wallets" />} />
         <Route path="dashboard/wallets/:walletId?" element={<Wallets />} />
       </Route>
     </Route>

@@ -1,6 +1,6 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { Daemon } from '@chia/api';
-import type { KeyringStatus } from '@chia/api';
+import type { KeyringStatus, ServiceName } from '@chia/api';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 
@@ -11,7 +11,7 @@ const baseQuery = chiaLazyBaseQuery({
 export const daemonApi = createApi({
   reducerPath: 'daemonApi',
   baseQuery,
-  tagTypes: ['KeyringStatus'],
+  tagTypes: ['KeyringStatus', 'ServiceRunning'],
   endpoints: (build) => ({
     getKeyringStatus: build.query<KeyringStatus, {
     }>({
@@ -40,6 +40,17 @@ export const daemonApi = createApi({
         },
       }]),
     }),
+
+    isServiceRunning: build.query<KeyringStatus, {
+      service: ServiceName;
+    }>({
+      query: ({ service }) => ({
+        command: 'isRunning',
+        args: [service],
+      }),
+      transformResponse: (response: any) => response?.isRunning,
+      providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
+    }),
   
     setKeyringPassphrase: build.mutation<Object, {
       newPassphrase: string;
@@ -55,5 +66,6 @@ export const daemonApi = createApi({
 
 export const { 
   useGetKeyringStatusQuery,
+  useIsServiceRunningQuery,
   useSetKeyringPassphraseMutation,
 } = daemonApi;

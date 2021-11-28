@@ -21,7 +21,10 @@ export const fullNodeApi = createApi({
         command: 'getBlockRecords',
         args: [start, end],
       }),
-      // transformResponse: (response: PostResponse) => response.data.post,
+      transformResponse: (response) => {
+        console.log(typeof response?.blockRecords, response);
+        return response?.blockRecords ?? [];
+      },
     }),
     getUnfinishedBlockHeaders: build.query<BlockHeader[], undefined>({
       query: () => ({

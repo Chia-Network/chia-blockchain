@@ -1,6 +1,5 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useSelector } from 'react-redux';
 import { Delete as DeleteIcon } from '@material-ui/icons';
 import styled from 'styled-components';
 import {
@@ -11,6 +10,7 @@ import {
   Table,
   IconButton,
 } from '@chia/core';
+import { useGetFullNodeConnectionsQuery } from '@chia/api-react';
 import { Button, Tooltip } from '@material-ui/core';
 import { service_connection_types } from '../../util/service_names';
 import Connection from '../../types/Connection';
@@ -28,8 +28,8 @@ const cols = [
     minWidth: '200px',
     field(row: Connection) {
       return (
-        <Tooltip title={row.node_id}>
-          <span>{row.node_id}</span>
+        <Tooltip title={row.nodeId}>
+          <span>{row.nodeId}</span>
         </Tooltip>
       );
     },
@@ -41,7 +41,7 @@ const cols = [
   },
   {
     field(row: Connection) {
-      return `${row.peer_port}/${row.peer_server_port}`;
+      return `${row.peerPort}/${row.peerServerPort}`;
     },
     title: <Trans>Port</Trans>,
   },
@@ -50,14 +50,14 @@ const cols = [
       return (
         <>
           <FormatBytes
-            value={row.bytes_written}
+            value={row.bytesWritten}
             unit="MiB"
             removeUnit
             fixedDecimals
           />
           /
           <FormatBytes
-            value={row.bytes_read}
+            value={row.bytesRead}
             unit="MiB"
             removeUnit
             fixedDecimals
@@ -75,14 +75,14 @@ const cols = [
     title: <Trans>Connection type</Trans>,
   },
   {
-    field: (row: Connection) => <FormatLargeNumber value={row.peak_height} />,
+    field: (row: Connection) => <FormatLargeNumber value={row.peakHeight} />,
     title: <Trans>Height</Trans>,
   },
   {
     title: <Trans>Actions</Trans>,
     field(row: Connection) {
       return (
-        <FullNodeCloseConnection nodeId={row.node_id}>
+        <FullNodeCloseConnection nodeId={row.nodeId}>
           {({ onClose }) => (
             <StyledIconButton onClick={onClose}>
               <DeleteIcon />
@@ -96,9 +96,7 @@ const cols = [
 
 export default function Connections() {
   const openDialog = useOpenDialog();
-  const connections = useSelector(
-    (state: RootState) => state.full_node_state.connections,
-  );
+  const { data: connections, isLoading } = useGetFullNodeConnectionsQuery();
 
   function handleAddPeer() {
     openDialog(<FullNodeAddConnection />);
@@ -113,7 +111,7 @@ export default function Connections() {
         </Button>
       }
     >
-      {connections ? (
+      {!isLoading ? (
         <Table cols={cols} rows={connections} />
       ) : (
         <Loading center />

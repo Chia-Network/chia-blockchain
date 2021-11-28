@@ -1,21 +1,15 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useSelector } from 'react-redux';
-import FarmCard from '../../farm/card/FarmCard';
-import { FormatLargeNumber } from '@chia/core';
-import type { RootState } from '../../../modules/rootReducer';
+import { FormatLargeNumber, CardSimple } from '@chia/core';
+import { useGetBlockchainStateQuery } from '@chia/api-react';
 
 export default function FullNodeCardTotalIterations() {
-  const state = useSelector(
-    (state: RootState) => state.full_node_state.blockchain_state,
-  );
-
-  const loading = !state?.peak;
-  const value = state?.peak?.total_iters ?? 0;
+  const { data, isLoading } = useGetBlockchainStateQuery();
+  const value = data?.peak?.totalIters ?? 0;
 
   return (
-    <FarmCard
-      loading={loading}
+    <CardSimple
+      loading={isLoading}
       valueColor="textPrimary"
       title={<Trans>Total Iterations</Trans>}
       tooltip={

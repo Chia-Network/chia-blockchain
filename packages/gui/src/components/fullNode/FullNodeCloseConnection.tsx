@@ -2,7 +2,6 @@ import React from 'react';
 import { useDispatch } from 'react-redux';
 import { Trans } from '@lingui/macro';
 import { ConfirmDialog } from '@chia/core';
-import { closeConnection } from '../../modules/fullnodeMessages';
 import useOpenDialog from '../../hooks/useOpenDialog';
 
 type Props = {
@@ -13,7 +12,7 @@ type Props = {
 export default function FullNodeCloseConnection(props: Props): JSX.Element {
   const { nodeId, children } = props;
   const openDialog = useOpenDialog();
-  const dispatch = useDispatch();
+  // const dispatch = useDispatch();
 
   async function handleClose() {
     const canDisconnect = await openDialog(
@@ -28,7 +27,7 @@ export default function FullNodeCloseConnection(props: Props): JSX.Element {
 
     // @ts-ignore
     if (canDisconnect) {
-      dispatch(closeConnection(nodeId));
+      // dispatch(closeConnection(nodeId));
     }
   }
 

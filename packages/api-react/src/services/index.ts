@@ -18,6 +18,7 @@ export const {
   daemonApi,
 
   useGetKeyringStatusQuery,
+  useIsServiceRunningQuery,
   useSetKeyringPassphraseMutation,
 } = daemon;
 

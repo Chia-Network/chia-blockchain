@@ -7,7 +7,7 @@ import WalletCAT from './cat/WalletCAT';
 // import DistributedWallet from './did/WalletDID';
 import { WalletType } from '@chia/api';
 import { Suspender } from '@chia/core';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 // import WalletsList from './WalletsList';
 
 // <Trans>Loading list of wallets</Trans>}
@@ -26,6 +26,9 @@ export default function Wallets() {
       <Route element={<WalletsList />} index />
       */}
       <Route path="create/*" element={<WalletCreate />} />
+      {!!wallets && (
+        <Route path="*" element={<Navigate to="1" />} />
+      )}
       {wallets?.map((wallet) => (
         <Route path={wallet.id.toString()} key={wallet.id} element={(
           <>

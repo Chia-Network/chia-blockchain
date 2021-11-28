@@ -47,7 +47,7 @@ export default function SelectKeyItem(props: Props) {
         fingerprint,
       }).unwrap();
   
-      navigate('/dashboard/wallets/1');
+      navigate('/dashboard');
     } catch (error) {
       showError(error)
     } finally {

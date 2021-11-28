@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { Alert } from '@material-ui/lab';
-import { useDispatch } from 'react-redux';
 import { DialogActions, Flex, Form, TextField } from '@chia/core';
 import { useForm } from 'react-hook-form';
 import { Button, Dialog, DialogTitle, DialogContent } from '@material-ui/core';
-import { openConnection } from '../../modules/fullnodeMessages';
 
 type Props = {
   open: boolean;
@@ -19,7 +17,6 @@ type FormData = {
 
 export default function FullNodeAddConnection(props: Props) {
   const { onClose, open } = props;
-  const dispatch = useDispatch();
   const methods = useForm<FormData>({
     shouldUnregister: false,
     defaultValues: {
@@ -41,7 +38,7 @@ export default function FullNodeAddConnection(props: Props) {
     setError(null);
 
     try {
-      await dispatch(openConnection(host, port));
+      // await dispatch(openConnection(host, port));
       handleClose();
     } catch (error) {
       setError(error);
