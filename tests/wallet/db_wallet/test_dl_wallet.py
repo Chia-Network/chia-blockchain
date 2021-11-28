@@ -82,6 +82,24 @@ class TestDLWallet:
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
             )
 
+        not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+        print(f"---- {len(not_sent)} 0.0")
+        await asyncio.sleep(0.1)
+        not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+        print(f"---- {len(not_sent)} 0.1")
+        await asyncio.sleep(0.1)
+        not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+        print(f"---- {len(not_sent)} 0.2")
+        await asyncio.sleep(0.1)
+        not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+        print(f"---- {len(not_sent)} 0.3")
+        await asyncio.sleep(0.1)
+        not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+        print(f"---- {len(not_sent)} 0.4")
+        await asyncio.sleep(0.1)
+        not_sent = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+        print(f"---- {len(not_sent)} 0.5")
+
         await full_node_api.process_blocks(count=1)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
