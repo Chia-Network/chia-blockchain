@@ -295,6 +295,7 @@ class WalletTransactionStore:
         # TODO: can we avoid polling
         while True:
             not_sent = await self.get_not_sent()
+            # TODO: debugging
             print(f"==== WalletTransactionStore.wait_all_sent() {len(not_sent)} not sent")
 
             if len(not_sent) == 0:
@@ -303,7 +304,8 @@ class WalletTransactionStore:
             await asyncio.sleep(0.050)
 
         # TODO: this is just random...  let's see if it helps then explore
-        await asyncio.sleep(1)
+        if sys.platform == "darwin":
+            await asyncio.sleep(1)
 
     async def get_farming_rewards(self) -> List[TransactionRecord]:
         """

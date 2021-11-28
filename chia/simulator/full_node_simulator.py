@@ -153,7 +153,8 @@ class FullNodeSimulator(FullNodeAPI):
         rewards = 0
 
         # TODO: just debugging
-        count *= 2
+        if sys.platform == "darwin":
+            count *= 2
 
         for i in range(count):
             block: FullBlock = await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
@@ -165,7 +166,8 @@ class FullNodeSimulator(FullNodeAPI):
             await asyncio.sleep(0)
 
         # TODO: this is just random...  let's see if it helps then explore
-        await asyncio.sleep(1)
+        if sys.platform == "darwin":
+            await asyncio.sleep(1)
 
         return rewards
 
