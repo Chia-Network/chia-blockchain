@@ -4,7 +4,7 @@ import {
   Route,
   Switch,
   useLocation,
-  useHistory,
+  useNavigate,
   useRouteMatch,
 } from 'react-router';
 import { Grid, List, Divider, ListItem, ListItemText } from '@material-ui/core';
@@ -15,7 +15,7 @@ import LayoutSidebar from '../layout/LayoutSidebar';
 
 export default function TradeManager() {
   const { path, url } = useRouteMatch();
-  const history = useHistory();
+  const navigate = useNavigate();
   const { pathname } = useLocation();
 
   return (
@@ -26,7 +26,7 @@ export default function TradeManager() {
           <Divider />
           <span key="trade_overview">
             <ListItem
-              onClick={() => history.push(url)}
+              onClick={() => navigate(url)}
               selected={pathname === '/dashboard/trade'}
               button
             >
@@ -39,7 +39,7 @@ export default function TradeManager() {
           <Divider />
           <ListItem
             selected={pathname === '/dashboard/trade/create'}
-            onClick={() => history.push(`${url}/create`)}
+            onClick={() => navigate(`${url}/create`)}
             button
           >
             <ListItemText primary={<Trans>Create Offer</Trans>} secondary="" />
@@ -47,7 +47,7 @@ export default function TradeManager() {
           <Divider />
 
           <ListItem
-            onClick={() => history.push(`${url}/offer`)}
+            onClick={() => navigate(`${url}/offer`)}
             selected={pathname === '/dashboard/trade/offer'}
             button
           >

@@ -8,9 +8,8 @@ import {
 // import { shuffle } from 'lodash';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useAddKeyMutation, useLogInMutation } from '@chia/api-react';
-import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
-import { useHistory } from 'react-router';
-import { Autocomplete, ButtonLoading, Form, Flex, Logo, useShowError, useTrans, LayoutHero } from '@chia/core';
+import { useNavigate } from 'react-router';
+import { Autocomplete, ButtonLoading, Form, Flex, Logo, useShowError, useTrans } from '@chia/core';
 import { english } from '@chia/api';
 
 /*
@@ -24,8 +23,8 @@ type FormData = {
   mnemonic: string[];
 };
 
-export default function WalletImport(props) {
-  const history = useHistory();
+export default function WalletImport() {
+  const navigate = useNavigate();
   const [addKey, { isLoading: isAddKeyLoading }] = useAddKeyMutation();
   const [logIn, { isLoading: isLogInLoading }] = useLogInMutation();
   const trans = useTrans();
@@ -45,7 +44,7 @@ export default function WalletImport(props) {
   });
 
   function handleBack() {
-    history.push('/');
+    navigate('/');
   }
 
   async function handleSubmit(values: FormData) {
@@ -68,61 +67,50 @@ export default function WalletImport(props) {
       fingerprint,
     }).unwrap();
 
-    history.push('/dashboard/wallets/1');
+    navigate('/dashboard/wallets/1');
   }
 
   return (
-    <LayoutHero
-      header={
-        <ArrowBackIosIcon
-          onClick={handleBack}
-          fontSize="large"
-          color="secondary"
-        />
-      }
-      {...props}
-    >
-      <Form methods={methods} onSubmit={handleSubmit}>
-        <Container maxWidth="lg">
-          <Flex flexDirection="column" gap={3} alignItems="center">
-            <Logo />
-            <Typography variant="h4" component="h1" gutterBottom>
-              <Trans>Import Wallet from Mnemonics</Trans>
-            </Typography>
-            <Typography variant="subtitle1" align="center">
-              <Trans>
-                Enter the 24 word mnemonic that you have saved in order to restore
-                your Chia wallet.
-              </Trans>
-            </Typography>
-            <Grid container spacing={2}>
-              {fields.map((field, index) => (
-                <Grid key={field.id} xs={2} item>
-                  <Autocomplete
-                    options={options}
-                    name={`mnemonic.${index}`}
-                    label={index + 1}
-                    autoFocus={index === 0}
-                    variant="filled"
-                    disableClearable
-                  />
-                </Grid>
-              ))}
-            </Grid>
-            <Container maxWidth="xs">
-              <ButtonLoading
-                type="submit"
-                variant="contained"
-                color="primary"
-                loading={isProcessing}
-                fullWidth
-              >
-                <Trans>Next</Trans>
-              </ButtonLoading>
-            </Container>
-          </Flex>
-        </Container>
-      </Form>
-    </LayoutHero>
+    <Form methods={methods} onSubmit={handleSubmit}>
+      <Container maxWidth="lg">
+        <Flex flexDirection="column" gap={3} alignItems="center">
+          <Logo />
+          <Typography variant="h4" component="h1" gutterBottom>
+            <Trans>Import Wallet from Mnemonics</Trans>
+          </Typography>
+          <Typography variant="subtitle1" align="center">
+            <Trans>
+              Enter the 24 word mnemonic that you have saved in order to restore
+              your Chia wallet.
+            </Trans>
+          </Typography>
+          <Grid container spacing={2}>
+            {fields.map((field, index) => (
+              <Grid key={field.id} xs={2} item>
+                <Autocomplete
+                  options={options}
+                  name={`mnemonic.${index}`}
+                  label={index + 1}
+                  autoFocus={index === 0}
+                  variant="filled"
+                  disableClearable
+                />
+              </Grid>
+            ))}
+          </Grid>
+          <Container maxWidth="xs">
+            <ButtonLoading
+              type="submit"
+              variant="contained"
+              color="primary"
+              loading={isProcessing}
+              fullWidth
+            >
+              <Trans>Next</Trans>
+            </ButtonLoading>
+          </Container>
+        </Flex>
+      </Container>
+    </Form>
   );
 }

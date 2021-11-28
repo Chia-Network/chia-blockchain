@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useFormContext } from 'react-hook-form';
 import useOpenDialog from '../../hooks/useOpenDialog';
 import Button from '../Button';
@@ -14,7 +14,7 @@ export default function FormBackButton(props: Props) {
   const { children, ...rest } = props;
   const openDialog = useOpenDialog();
   const { formState } = useFormContext();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const { isDirty } = formState;
 
@@ -32,7 +32,7 @@ export default function FormBackButton(props: Props) {
       ));
 
     if (canGoBack) {
-      history.goBack();
+      navigate(-1);
     }
   }
 

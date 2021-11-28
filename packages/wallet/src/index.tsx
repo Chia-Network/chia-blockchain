@@ -3,6 +3,6 @@ import './config/env';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './config/env';
-import App from './components/app/App';
+import AppRouter from './components/app/AppRouter';
 
-ReactDOM.render(<App />, document.querySelector('#root'));
+ReactDOM.render(<AppRouter />, document.querySelector('#root'));

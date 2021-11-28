@@ -1,7 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
-import { useDispatch, useSelector } from 'react-redux';
 import { List } from '@material-ui/core';
 import {
   Wallet as WalletIcon,
@@ -12,9 +11,9 @@ import {
   Pool as PoolIcon,
   Settings as SettingsIcon,
 } from '@chia/icons';
-import { Flex, SideBarItem } from '@chia/core';
-import { logOut } from '../../modules/message';
-import { RootState } from '../../modules/rootReducer';
+import { Flex, SideBarItem, Suspender } from '@chia/core';
+import { useGetKeyringStatusQuery, useLogout } from '@chia/api-react';
+import { useNavigate } from 'react-router';
 
 const StyledRoot = styled(Flex)`
   height: 100%;
@@ -26,11 +25,21 @@ const StyledList = styled(List)`
 `;
 
 export default function DashboardSideBar() {
-  const dispatch = useDispatch();
-  const { passphrase_support_enabled: passphraseSupportEnabled } = useSelector((state: RootState) => state.keyring_state);
+  const logout = useLogout();
+  const navigate = useNavigate();
+  const { data, isLoading, error } = useGetKeyringStatusQuery();
+
+  if (isLoading) {
+    return (
+      <Suspender />
+    );
+  }
+
+  const { passphraseSupportEnabled } = data;
 
   function handleLogOut() {
-    dispatch(logOut('log_out', {}));
+    logout();
+    navigate('/');
   }
 
   return (
@@ -40,7 +49,7 @@ export default function DashboardSideBar() {
           to="/dashboard"
           icon={<HomeIcon fontSize="large" />}
           title={<Trans>Full Node</Trans>}
-          exact
+          end
         />
         <SideBarItem
           to="/dashboard/wallets"
@@ -67,15 +76,15 @@ export default function DashboardSideBar() {
           icon={<KeysIcon fontSize="large" />}
           onSelect={handleLogOut}
           title={<Trans>Keys</Trans>}
-          exact
+          end
         />
-        { passphraseSupportEnabled &&
+        {/* passphraseSupportEnabled && (
           <SideBarItem
             to="/dashboard/settings"
             icon={<SettingsIcon fontSize="large" />}
             title={<Trans>Settings</Trans>}
           />
-        }
+        ) */}
       </StyledList>
     </StyledRoot>
   );

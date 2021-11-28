@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useDispatch } from 'react-redux';
 import { Trans } from '@lingui/macro';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
@@ -16,7 +16,7 @@ type Props = {
 export default function PlotNFTAdd(props: Props) {
   const { headerTag: HeaderTag } = props;
   const dispatch = useDispatch();
-  const history = useHistory();
+  const navigate = useNavigate();
   const unconfirmedNFTs = useUnconfirmedPlotNFTs();
 
   async function handleSubmit(data: SubmitData) {
@@ -38,7 +38,7 @@ export default function PlotNFTAdd(props: Props) {
         poolUrl: initialTargetState.pool_url,
       });
 
-      history.push('/dashboard/pool');
+      navigate('/dashboard/pool');
     }
   }
 

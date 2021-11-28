@@ -1,5 +1,5 @@
 import React from 'react';
-import { Switch, Route, useRouteMatch } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import WalletCreateList from './WalletCreateList';
 // import WalletDIDList from '../did/WalletDIDList';
 import WalletCATList from '../cat/WalletCATList';
@@ -108,24 +108,14 @@ export const RLListItems = () => {
 */
 
 export default function WalletCreate() {
-  const { path } = useRouteMatch();
-
   return (
-    <Switch>
-      <Route path={path} exact>
-        <WalletCreateList />
-      </Route>
-      {/* 
-      <Route path={`${path}/did`}>
-        <WalletDIDList />
-      </Route>
+    <Routes>
+      <Route element={<WalletCreateList />} index />
+      {/*  
+      <Route path="did" element={<WalletDIDList />} />
       */}
-      <Route path={`${path}/cat`}>
-        <WalletCATList />
-      </Route>
-      <Route path={`${path}/simple`}>
-        <WalletCATCreateSimple />
-      </Route>
-    </Switch>
+      <Route path="cat/*" element={<WalletCATList />} />
+      <Route path="simple" element={<WalletCATCreateSimple />} />
+    </Routes>
   );
 }

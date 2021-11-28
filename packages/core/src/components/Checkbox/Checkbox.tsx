@@ -32,7 +32,7 @@ export default function Checkbox(props: Props): JSX.Element {
 
   return (
     // @ts-ignore
-    <Controller as={<ParseBoolean />} name={name} control={control} {...rest} />
+    <Controller name={name} control={control} render={({ field }) => (<ParseBoolean {...field} {...rest} /> )} />
   );
 }
 

@@ -7,7 +7,7 @@ import {
   useOpenDialog,
   useShowDebugInformation,
 } from '@chia/core';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import {
   Box,
   Typography,
@@ -32,7 +32,7 @@ export default function WalletHeader(props: StandardWalletProps) {
   const openDialog = useOpenDialog();
   const showDebugInformation = useShowDebugInformation();
   const [deleteUnconfirmedTransactions] = useDeleteUnconfirmedTransactionsMutation();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   async function handleDeleteUnconfirmedTransactions() {
     await openDialog(
@@ -48,7 +48,7 @@ export default function WalletHeader(props: StandardWalletProps) {
   }
 
   function handleAddToken() {
-    history.push('/dashboard/wallets/create/simple');
+    navigate('/dashboard/wallets/create/simple');
   }
 
   return (

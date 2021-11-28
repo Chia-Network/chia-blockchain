@@ -81,7 +81,7 @@ export function create_trade_action(trades, filepath, history) {
     return async_api(dispatch, create_trade_offer(trades, filepath), true).then(
       (response) => {
         dispatch(get_all_trades());
-        history.push('/dashboard/trade');
+        navigate('/dashboard/trade');
       },
     );
   };

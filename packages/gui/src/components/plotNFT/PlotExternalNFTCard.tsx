@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import {
   TooltipTypography,
   Flex,
@@ -80,7 +80,7 @@ export default function PlotExternalNFTCard(props: Props) {
     points_found_24h,
   );
 
-  const history = useHistory();
+  const navigate = useNavigate();
   const openDialog = useOpenDialog();
   const { plots, isSelfPooling } = usePlotNFTExternalDetails(nft);
   const totalPointsFound24 = points_found_24h.reduce(
@@ -89,8 +89,7 @@ export default function PlotExternalNFTCard(props: Props) {
   );
 
   function handleAddPlot() {
-    history.push({
-      pathname: '/dashboard/plot/add',
+    navigate('/dashboard/plot/add', {
       state: {
         p2_singleton_puzzle_hash,
       },

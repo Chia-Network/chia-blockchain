@@ -1,0 +1,1 @@
+export { default, DashboardTitleTarget } from './DashboardTitle';

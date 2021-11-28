@@ -11,7 +11,7 @@ import {
 } from '@material-ui/core';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import { Flex, Link } from '@chia/core';
 import {
   add_new_key_action,
@@ -193,7 +193,7 @@ function UIPart() {
 }
 
 function BackupDetails() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const classes = myStyle();
   const dispatch = useDispatch();
   const file_path = useSelector(
@@ -233,7 +233,7 @@ function BackupDetails() {
 
   function handleGoBack() {
     dispatch(changeBackupView(presentMain));
-    history.push('/');
+    navigate('/');
   }
 
   function goBackBackup() {

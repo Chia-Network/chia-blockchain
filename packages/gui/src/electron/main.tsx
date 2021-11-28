@@ -253,7 +253,7 @@ if (!handleSquirrelEvent()) {
       );
     });
 
-    ipcMain.on('set-locale', (_, locale = 'en-US') => {
+    ipcMain.handle('setLocale', (_event, locale: string) => {
       i18n.activate(locale);
       app.applicationMenu = createMenu();
     });

@@ -3,7 +3,7 @@ import { Trans } from '@lingui/macro';
 import { Flex, More } from '@chia/core';
 import { createTeleporter } from 'react-teleporter';
 import { useDispatch } from 'react-redux';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Button,
   MenuItem,
@@ -33,7 +33,7 @@ export const PlotHeaderTarget = PlotHeaderTeleporter.Target;
 export default function PlotHeader(props: Props) {
   const { children } = props;
 
-  const history = useHistory();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const openDialog = useOpenDialog();
 
@@ -42,7 +42,7 @@ export default function PlotHeader(props: Props) {
   }
 
   function handleAddPlot() {
-    history.push('/dashboard/plot/add');
+    navigate('/dashboard/plot/add');
   }
 
   function handleAddPlotDirectory() {

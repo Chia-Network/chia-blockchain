@@ -52,19 +52,34 @@ export type TextFieldProps = MaterialTextFieldProps & {
 };
 
 export default function TextField(props: TextFieldProps): JSX.Element {
-  const { name, ...rest } = props;
+  const { name, onChange: baseOnChange, ...rest } = props;
   const { control, errors } = useFormContext();
   const errorMessage = get(errors, name);
 
   return (
     // @ts-ignore
     <Controller
-      as={MaterialTextField}
       name={name}
       control={control}
-      error={!!errorMessage}
-      helperText={errorMessage?.message}
-      {...rest}
+      render={({ field: { onChange, value } }) => {
+        function handleChange(...args) {
+          onChange(...args);
+
+          if (baseOnChange) {
+            baseOnChange(...args);
+          }
+        }
+
+        return (
+          <MaterialTextField
+            value={value}
+            onChange={handleChange}
+            error={!!errorMessage}
+            helperText={errorMessage?.message}
+            {...rest} 
+          />
+        );
+      }}
     />
   );
 }

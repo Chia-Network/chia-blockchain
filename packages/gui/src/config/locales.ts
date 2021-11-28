@@ -1,5 +1,4 @@
 import { i18n } from '@lingui/core';
-import moment from 'moment';
 import {
   ar,
   be,
@@ -35,7 +34,6 @@ import {
   vi,
   zh,
 } from 'make-plural/plurals';
-import * as materialLocales from '@material-ui/core/locale';
 
 const catalogArSA = require('../locales/ar-SA/messages');
 const catalogBeBY = require('../locales/be-BY/messages');
@@ -326,21 +324,4 @@ i18n.load('uk-UA', catalogUkUA.messages);
 i18n.load('zh-TW', catalogZh.messages);
 i18n.load('zh-CN', catalogZhCN.messages);
 
-export function getMaterialLocale(locale: string) {
-  const materialLocale = locale.replace('-', '');
-  return materialLocales[materialLocale] ?? materialLocales.enUS;
-}
-
-export function activateLocale(locale: string) {
-  i18n.activate(locale);
-  moment.locale([locale, 'en']);
-
-  // @ts-ignore
-  if (typeof window !== 'undefined') {
-    window.ipcRenderer?.send('set-locale', locale);
-  }
-}
-
 export { i18n };
-
-activateLocale(defaultLocale);

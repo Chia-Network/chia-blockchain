@@ -2,7 +2,7 @@ import React from 'react';
 import { t } from '@lingui/macro';
 import { Box, IconButton, Paper } from '@material-ui/core';
 import { Search as SearchIcon } from '@material-ui/icons';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { Flex, Form, InputBase } from '@chia/core';
 import { useForm } from 'react-hook-form';
@@ -16,7 +16,7 @@ type FormData = {
 };
 
 export default function FullNodeBlockSearch() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const methods = useForm<FormData>({
     shouldUnregister: false,
     defaultValues: {
@@ -27,7 +27,7 @@ export default function FullNodeBlockSearch() {
   function handleSubmit(values: FormData) {
     const { hash } = values;
     if (hash) {
-      history.push(`/dashboard/block/${hash}`);
+      navigate(`/dashboard/block/${hash}`);
     }
   }
 

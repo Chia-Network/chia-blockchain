@@ -45,12 +45,11 @@ type ReactRules<T> =
           };
     };
 
-type Props = {
+type Props = InputBaseProps & {
   hideError?: boolean;
   name: string;
   rules?: ReactRules<typeof MaterialInputBase>;
-  children?: ReactNode;
-} & InputBaseProps;
+};
 
 export default function InputBase(props: Props): JSX.Element {
   const { name, ...rest } = props;
@@ -60,11 +59,9 @@ export default function InputBase(props: Props): JSX.Element {
   return (
     // @ts-ignore
     <Controller
-      as={MaterialInputBase}
       name={name}
       control={control}
-      error={!!errorMessage}
-      {...rest}
+      render={({ field }) => (< MaterialInputBase error={!!errorMessage} {...rest} {...field} /> )}
     />
   );
 }

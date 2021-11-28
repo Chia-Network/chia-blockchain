@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button, Grid, Typography } from '@material-ui/core';
 import { CardHero } from '@chia/core';
 import { Pool as PoolIcon } from '@chia/icons';
@@ -11,10 +11,10 @@ const StyledPoolIcon = styled(PoolIcon)`
 `;
 
 export default function PoolHero() {
-  const history = useHistory();
+  const navigate = useNavigate();
 
   function handleJoinPool() {
-    history.push('/dashboard/pool/add');
+    navigate('/dashboard/pool/add');
   }
 
   return (

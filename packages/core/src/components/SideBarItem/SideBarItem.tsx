@@ -1,6 +1,6 @@
 import React, { ReactNode, cloneElement } from 'react';
 import styled from 'styled-components';
-import { useHistory, useRouteMatch } from 'react-router-dom';
+import { useNavigate, useMatch } from 'react-router-dom';
 import { ListItem, ListItemIcon, ListItemText } from '@material-ui/core';
 
 const StyledListItem = styled(ListItem)`
@@ -21,7 +21,7 @@ const StyledListItemText = styled(ListItemText)`
   text-align: center;
 `;
 
-type Props = {
+export type SideBarItemProps = {
   to: string;
   title: ReactNode;
   icon: ReactNode;
@@ -29,18 +29,21 @@ type Props = {
   onSelect?: () => void;
 };
 
-export default function SideBarItem(props: Props) {
-  const { to, title, icon, exact, onSelect } = props;
-  const history = useHistory();
-  const match = useRouteMatch(to);
+export default function SideBarItem(props: SideBarItemProps) {
+  const { to, title, icon, end, onSelect } = props;
+  const navigate = useNavigate();
+  const match = useMatch({
+    path: to,
+    end,
+  });
 
-  const isSelected = exact ? !!match && match.isExact : !!match;
+  const isSelected = !!match;
 
   async function handleClick() {
     if (onSelect) {
       await onSelect();
     }
-    history.push(to);
+    navigate(to);
   }
 
   return (
@@ -56,6 +59,6 @@ export default function SideBarItem(props: Props) {
 }
 
 SideBarItem.defaultProps = {
-  exact: false,
+  end: false,
   onSelect: undefined,
 };

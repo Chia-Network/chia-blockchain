@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useDispatch } from 'react-redux';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import {
   TooltipTypography,
   Flex,
@@ -97,7 +97,7 @@ export default function PlotNFTCard(props: Props) {
     points_found_24h,
   );
 
-  const history = useHistory();
+  const navigate = useNavigate();
   const openDialog = useOpenDialog();
   const dispatch = useDispatch();
   const { isSelfPooling, isSynced, plots, balance } = usePlotNFTDetails(nft);
@@ -107,7 +107,7 @@ export default function PlotNFTCard(props: Props) {
   );
 
   function handleAddPlot() {
-    history.push({
+    navigate({
       pathname: '/dashboard/plot/add',
       state: {
         p2_singleton_puzzle_hash,

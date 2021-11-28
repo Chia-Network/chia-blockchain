@@ -2,13 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
 import useDarkMode from 'use-dark-mode';
 import { createHashHistory } from 'history';
-import { Router } from 'react-router-dom';
+import { Outlet, Router } from 'react-router-dom';
 import { Loading, LocaleProvider, ThemeProvider, ModalDialogsProvider, ModalDialogs, useLocale } from '@chia/core';
 import { store, api } from '@chia/api-react';
 import { ServiceName } from '@chia/api';
 import { Trans } from '@lingui/macro';
 import LayoutHero from '../layout/LayoutHero';
-import AppRouter from './AppRouter';
 import darkTheme from '../../theme/dark';
 import lightTheme from '../../theme/light';
 import { i18n, defaultLocale, locales } from '../../config/locales';
@@ -78,7 +77,7 @@ export default function App() {
             {isReady ? (
               <AppState>
                 <ModalDialogsProvider>
-                  <AppRouter />
+                  <Outlet />
                   <ModalDialogs />
                 </ModalDialogsProvider>
               </AppState>

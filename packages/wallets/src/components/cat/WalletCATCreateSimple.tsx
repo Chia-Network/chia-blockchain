@@ -1,5 +1,5 @@
 import React from 'react';
-import { useRouteMatch, useHistory } from 'react-router-dom';
+import { useRouteMatch, useNavigate } from 'react-router-dom';
 import { Trans, t } from '@lingui/macro';
 import { Grid } from '@material-ui/core';
 import { Add as AddIcon } from '@material-ui/icons';
@@ -12,8 +12,7 @@ import useWalletState from '../../hooks/useWalletState';
 import { SyncingStatus } from '@chia/api';
 
 export default function WalletCATCreateSimple() {
-  const history = useHistory();
-  const { url } = useRouteMatch();
+  const navigate = useNavigate();
   const showError = useShowError();
   const { data: wallets, isWalletsLoading } = useGetWalletsQuery();
   const [addCATToken, { isLoading: isAddCATTokenLoading }] = useAddCATTokenMutation();
@@ -23,7 +22,7 @@ export default function WalletCATCreateSimple() {
   const isLoading = isWalletsLoading || isCatListLoading;
   
   function handleCreateExisting() {
-    history.push(`/dashboard/wallets/create/cat/existing`);
+    navigate(`/dashboard/wallets/create/cat/existing`);
   }
 
   async function handleCreateNewToken(token: CATToken) {
@@ -52,7 +51,7 @@ export default function WalletCATCreateSimple() {
         fee: '0',
       }).unwrap();
 
-      history.push(`/dashboard/wallets/${walletId}`);
+      navigate(`/dashboard/wallets/${walletId}`);
     } catch(error: any) {
       showError(error);
     }

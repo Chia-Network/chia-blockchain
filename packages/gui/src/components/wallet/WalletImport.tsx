@@ -11,7 +11,7 @@ import {
 import { Autocomplete } from '@material-ui/lab';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import { Flex, Logo } from '@chia/core';
 import { matchSorter } from 'match-sorter';
 import LayoutHero from '../layout/LayoutHero';
@@ -105,7 +105,7 @@ function Iterator(props: any) {
 
 export default function WalletImport() {
   const dispatch = useDispatch();
-  const history = useHistory();
+  const navigate = useNavigate();
   const [submitted, setSubmitted] = useState<boolean>(false);
   const mnemonic = useSelector(
     (state: RootState) => state.mnemonic_state.mnemonic_input,
@@ -114,7 +114,7 @@ export default function WalletImport() {
   function handleBack() {
     dispatch(resetMnemonic());
 
-    history.push('/');
+    navigate('/');
   }
 
   function handleSubmit() {
@@ -122,7 +122,7 @@ export default function WalletImport() {
     const hasEmptyElement = mnemonic.find((element) => element === '');
     if (!hasEmptyElement) {
       dispatch(unselectFingerprint());
-      history.push('/wallet/restore');
+      navigate('/wallet/restore');
     }
   }
 

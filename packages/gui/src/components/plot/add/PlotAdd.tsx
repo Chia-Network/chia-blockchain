@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { t, Trans } from '@lingui/macro';
 import { AlertDialog } from '@chia/core';
@@ -33,7 +33,7 @@ type FormData = PlotAddConfig & {
 };
 
 export default function PlotAdd() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchedPlotters, setFetchedPlotters] = useState<boolean>(false);
@@ -171,7 +171,7 @@ export default function PlotAdd() {
 
       await dispatch(plotQueueAdd(plotAddConfig));
 
-      history.push('/dashboard/plot');
+      navigate('/dashboard/plot');
     } catch (error) {
       await openDialog(<AlertDialog>{error.message}</AlertDialog>);
     } finally {

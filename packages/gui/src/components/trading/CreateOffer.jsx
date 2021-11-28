@@ -1,7 +1,7 @@
 import { useDispatch, useSelector } from 'react-redux';
 import React, { useMemo } from 'react';
 import {Trans} from '@lingui/macro';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import {
   Box,
   Grid,
@@ -42,7 +42,7 @@ const TradeList = () => {
 export default function CreateOffer() {
   const wallets = useSelector((state) => state.wallet_state.wallets);
   const dispatch = useDispatch();
-  const history = useHistory();
+  const navigate = useNavigate();
   let amount_input = null;
   let buy_or_sell = null;
   let wallet_id = null;

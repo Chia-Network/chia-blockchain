@@ -18,11 +18,11 @@ import { openDialog } from '../../../modules/dialog';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { Help as HelpIcon } from '@material-ui/icons';
 import { divide } from 'lodash';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 
 export default function WalletDIDCreate() {
   const dispatch = useDispatch();
-  const history = useHistory();
+  const navigate = useNavigate();
   const methods = useForm();
   const [loading, setLoading] = useState<boolean>(false);
   const { control } = methods;
@@ -96,7 +96,7 @@ export default function WalletDIDCreate() {
       await dispatch(createState(true, true));
       const response = await dispatch(create_did_action(amount_plus, uniqDidArray, num_of_backup_ids_needed));
       if (response && response.data && response.data.success === true) {
-        history.push(`/dashboard/wallets/${response.data.wallet_id}`);
+        navigate(`/dashboard/wallets/${response.data.wallet_id}`);
       }
     } finally {
       setLoading(false);

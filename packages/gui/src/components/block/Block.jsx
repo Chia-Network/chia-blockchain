@@ -10,7 +10,7 @@ import {
 } from '@material-ui/core';
 import { Alert } from '@material-ui/lab';
 import { Trans } from '@lingui/macro';
-import { useParams, useHistory } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import {
   Back,
@@ -20,6 +20,8 @@ import {
   Loading,
   TooltipIcon,
   Flex,
+  calculatePoolReward,
+  calculateBaseFarmerReward,
 } from '@chia/core';
 import {
   unix_to_short_date,
@@ -29,10 +31,6 @@ import {
 } from '../../util/utils';
 import { getBlockRecord, getBlock } from '../../modules/fullnodeMessages';
 import { mojo_to_chia } from '../../util/chia';
-import {
-  calculatePoolReward,
-  calculateBaseFarmerReward,
-} from '../../util/blockRewards';
 import LayoutMain from '../layout/LayoutMain';
 import toBech32m from '../../util/toBech32m';
 import BlockTitle from './BlockTitle';
@@ -54,7 +52,7 @@ async function computeNewPlotId(block) {
 
 export default function Block() {
   const { headerHash } = useParams();
-  const history = useHistory();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const [block, setBlock] = useState();
   const [blockRecord, setBlockRecord] = useState();
@@ -112,7 +110,7 @@ export default function Block() {
       // save current hash
       setNextSubBlocks([headerHash, ...nextSubBlocks]);
 
-      history.push(`/dashboard/block/${prevHash}`);
+      navigate(`/dashboard/block/${prevHash}`);
     }
   }
 
@@ -121,7 +119,7 @@ export default function Block() {
     if (nextSubBlock) {
       setNextSubBlocks(rest);
 
-      history.push(`/dashboard/block/${nextSubBlock}`);
+      navigate(`/dashboard/block/${nextSubBlock}`);
     }
   }
 

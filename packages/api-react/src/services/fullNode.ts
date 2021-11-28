@@ -14,12 +14,12 @@ export const fullNodeApi = createApi({
   tagTypes: ['BlockchainState', 'FullNodeConnections'],
   endpoints: (build) => ({
     getBlockRecords: build.query<BlockRecord[], { 
-      end: number; 
-      count?: number;
+      start?: number;
+      end?: number;
     }>({
-      query: ({ end, count }) => ({
+      query: ({ start, end }) => ({
         command: 'getBlockRecords',
-        args: [end, count],
+        args: [start, end],
       }),
       // transformResponse: (response: PostResponse) => response.data.post,
     }),

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useHistory, useRouteMatch } from "react-router";
+import { useNavigate, useRouteMatch } from "react-router";
 import { Trans } from '@lingui/macro';
 import { Grid, Typography } from '@material-ui/core';
 import { Share as ShareIcon, Speed as SpeedIcon, HomeWork as HomeWorkIcon } from '@material-ui/icons';
@@ -7,11 +7,11 @@ import { Flex } from '@chia/core';
 import WalletCreateCard from './WalletCreateCard';
 
 export default function WalletCreateList() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const { url } = useRouteMatch();
 
   function handleCreateDistributedIdentity() {
-    history.push(`${url}/did`);
+    navigate(`${url}/did`);
   }
 
   return (

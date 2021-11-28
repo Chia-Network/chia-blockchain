@@ -3,7 +3,7 @@ import { Trans } from '@lingui/macro';
 import { chiaToMojo, AlertDialog, Amount, Fee, Back, ButtonLoading, Card, Flex, Form } from '@chia/core';
 import { Box, Grid } from '@material-ui/core';
 import { useForm } from 'react-hook-form';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 
 type CreateCATWalletData = {
   amount: string;
@@ -11,7 +11,7 @@ type CreateCATWalletData = {
 };
 
 export default function WalletCATCreateNew() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const methods = useForm<CreateCATWalletData>({
     shouldUnregister: false,
     defaultValues: {

@@ -1,6 +1,6 @@
 import React, { useMemo, ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useDispatch } from 'react-redux';
 import { Flex, State, Loading, StateTypography } from '@chia/core';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
@@ -23,7 +23,7 @@ export default function PlotNFTChangePool(props: Props) {
   }>();
   const { nfts, loading } = usePlotNFTs();
   const dispatch = useDispatch();
-  const history = useHistory();
+  const navigate = useNavigate();
   const nft = useMemo(() => {
     return nfts?.find(
       (nft) => nft.pool_state.p2_singleton_puzzle_hash === plotNFTId,
@@ -68,11 +68,14 @@ export default function PlotNFTChangePool(props: Props) {
       );
     }
 
+    navigate(-1);
+    /*
     if (history.length) {
       history.goBack();
     } else {
-      history.push('/dashboard/pool');
+      navigate('/dashboard/pool');
     }
+    */
   }
 
   if (loading) {

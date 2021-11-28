@@ -11,7 +11,7 @@ import {
   Table,
 } from '@chia/core';
 import { Status } from '@chia/icons';
-import { useRouteMatch, useHistory } from 'react-router-dom';
+import { useRouteMatch, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Box, Tooltip, Typography } from '@material-ui/core';
 // import HelpIcon from '@material-ui/icons/Help';
@@ -283,7 +283,7 @@ const FullNodeStatus = (props) => {
 
 const BlocksCard = () => {
   const { url } = useRouteMatch();
-  const history = useHistory();
+  const navigate = useNavigate();
   const latestBlocks = useSelector(
     (state) => state.full_node_state.latest_blocks ?? [],
   );
@@ -303,7 +303,7 @@ const BlocksCard = () => {
     const { isFinished, header_hash } = row;
 
     if (isFinished && header_hash) {
-      history.push(`${url}/block/${header_hash}`);
+      navigate(`${url}/block/${header_hash}`);
     }
   }
 

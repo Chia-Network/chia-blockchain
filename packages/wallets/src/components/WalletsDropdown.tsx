@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { ListItemIcon, ListItemText, Typography } from '@material-ui/core';
 import { Dropdown, Flex, Loading, useTrans } from '@chia/core';
 import { useGetWalletsQuery } from '@chia/api-react';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import WalletName from '../constants/WalletName';
 import WalletIcon from './WalletIcon';
 import WalletBadge from './WalletBadge';
@@ -13,7 +13,7 @@ type Props = {
 
 export default function WalletsDropdown(props: Props) {
   const { walletId } = props;
-  const history = useHistory();
+  const navigate = useNavigate();
   const trans = useTrans();
   const { data: wallets, isLoading } = useGetWalletsQuery();
 
@@ -54,7 +54,7 @@ export default function WalletsDropdown(props: Props) {
   }, [wallets, walletId, isLoading]);
 
   function handleSelectWallet(walletId: number) {
-    history.push(`/dashboard/wallets/${walletId}`);
+    navigate(`/dashboard/wallets/${walletId}`);
   }
 
   if (isLoading) {

@@ -2,7 +2,7 @@ import React, { ReactNode } from 'react';
 import Flex from '../Flex';
 import { Typography } from '@material-ui/core';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 
 const BackIcon = styled(ArrowBackIosIcon)`
@@ -19,16 +19,16 @@ type Props = {
 
 export default function Back(props: Props) {
   const { children, variant, to, goBack, fontSize } = props;
-  const history = useHistory();
+  const navigate = useNavigate();
 
   function handleGoBack() {
-    if (goBack && history.length) {
-      history.goBack();
+    if (goBack) {
+      navigate(-1);
       return;
     }
   
     if (to) {
-      history.push(to);
+      navigate(to);
     }
   }
 

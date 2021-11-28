@@ -2,7 +2,7 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useToggle } from 'react-use';
 import { Flex, UnitFormat, More, Table } from '@chia/core';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import {
   ViewList as ViewListIcon,
   ViewModule as ViewModuleIcon,
@@ -127,7 +127,7 @@ const groupsCols = [
 ];
 
 export default function PoolOverview() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const [showTable, toggleShowTable] = useToggle(false);
   const { nfts, external, loading } = usePlotNFTs();
   const { unconfirmed } = useUnconfirmedPlotNFTs();
@@ -136,7 +136,7 @@ export default function PoolOverview() {
     (!!nfts && !!nfts?.length) || !!external?.length || unconfirmed.length;
 
   function handleAddPool() {
-    history.push('/dashboard/pool/add');
+    navigate('/dashboard/pool/add');
   }
 
   function handleToggleView() {

@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Button as BaseButton,
   ButtonProps as BaseButtonProps,
@@ -46,11 +46,11 @@ export type ButtonProps = Omit<BaseButtonProps, 'color'> & {
 export default function Button(props: ButtonProps) {
   const { color, to, onClick, ...rest } = props;
 
-  const history = useHistory();
+  const navigate = useNavigate();
 
   function handleClick(...args) {
     if (to) {
-      history.push(to);
+      navigate(to);
     }
 
     if (onClick) {

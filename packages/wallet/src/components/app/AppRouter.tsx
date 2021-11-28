@@ -1,33 +1,25 @@
 import React from 'react';
-import { Switch, Route, Redirect } from 'react-router-dom';
-import { PrivateRoute, SelectKey } from '@chia/core';
-import { WalletAdd, WalletImport } from '@chia/wallets';
-import Dashboard from '../dashboard/Dashboard';
-import { defaultLocale, locales } from '../../config/locales';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { SelectKey, LayoutHero, LayoutMain } from '@chia/core';
+import { WalletAdd, WalletImport, Wallets  } from '@chia/wallets';
+import App from './App';
 
 export default function AppRouter() {
   return (
-    <Switch>
-      <Route path="/" exact>
-        <SelectKey />
+    <Routes>
+    <Route path="/" element={<App />}>
+      <Route element={<LayoutHero />}>
+        <Route index element={<SelectKey />} />
       </Route>
-      <Route path="/wallet/add" exact>
-        <WalletAdd />
+      <Route element={<LayoutHero back />}>
+        <Route path="wallet/add" element={<WalletAdd />} />
+        <Route path="wallet/import" element={<WalletImport />} />
       </Route>
-      <Route path="/wallet/import" exact>
-        <WalletImport />
+      <Route element={<LayoutMain />}>
+        <Route path="dashboard/wallets/:walletId?" element={<Wallets />} />
       </Route>
-      {/*
-      <Route path="/wallet/restore" exact>
-        <BackupRestore />
-      </Route>
-      */}
-      <PrivateRoute path="/dashboard">
-        <Dashboard />
-      </PrivateRoute>
-      <Route path="*">
-        <Redirect to="/" />
-      </Route>
-    </Switch>
+    </Route>
+    <Route path="*" element={<Navigate to="/" />} />
+  </Routes>
   );
 }

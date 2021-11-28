@@ -8,7 +8,7 @@ import {
   Container,
 } from '@material-ui/core';
 import styled from 'styled-components';
-// import { useRouteMatch, useHistory } from 'react-router';
+// import { useRouteMatch, useNavigate } from 'react-router';
 import { /*useDispatch, */ useSelector } from 'react-redux';
 import { FormatLargeNumber } from '@chia/core';
 import StandardWallet from './standard/WalletStandard';
@@ -20,7 +20,7 @@ import type { RootState } from '../../modules/rootReducer';
 import WalletType from '../../constants/WalletType';
 import LayoutMain from '../layout/LayoutMain';
 import config from '../../config/config';
-import { Switch, Route, useHistory, useRouteMatch, useParams } from 'react-router-dom';
+import { Switch, Route, useNavigate, useRouteMatch, useParams } from 'react-router-dom';
 
 const { multipleWallets } = config;
 
@@ -94,20 +94,20 @@ function TabPanel(props) {
 }
 
 export default function Wallets() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const { walletId } = useParams();
   const { path } = useRouteMatch();
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
   const loading = !wallets;
 
   function handleChange(_, newValue) {
-    history.push(`/dashboard/wallets/${newValue}`);
+    navigate(`/dashboard/wallets/${newValue}`);
   }
 
   // redirect to default "standard wallet" when no wallet was selected
   useEffect(() => {
     if (!walletId && wallets) {
-      history.push('/dashboard/wallets/1');
+      navigate('/dashboard/wallets/1');
     }
   }, [wallets, walletId]);
 

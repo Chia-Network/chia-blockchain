@@ -1,5 +1,5 @@
 import React from 'react';
-import { useRouteMatch, useHistory } from 'react-router-dom';
+import { useRouteMatch, useNavigate } from 'react-router-dom';
 import { Trans } from '@lingui/macro';
 import { Grid } from '@material-ui/core';
 import { Restore as RestoreIcon, Add as AddIcon } from '@material-ui/icons';
@@ -7,15 +7,15 @@ import { Back, Flex } from '@chia/core';
 import WalletCreateCard from '../create/WalletCreateCard';
 
 export default function WalletDIDSelect() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const { url } = useRouteMatch();
 
   function handleCreateDIDWallet() {
-    history.push(`${url}/create`);
+    navigate(`${url}/create`);
   }
 
   function handleRecoveryDIDWallet() {
-    history.push(`${url}/recovery`);
+    navigate(`${url}/recovery`);
   }
 
   return (

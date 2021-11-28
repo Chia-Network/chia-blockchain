@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useWatch } from 'react-hook-form';
 import { t, Trans } from '@lingui/macro';
-import { CardStep, Select } from '@chia/core';
+import { CardStep, Select, StateColor } from '@chia/core';
 import {
   FormControl,
   FormHelperText,
@@ -14,7 +14,6 @@ import {
 import { RootState } from '../../../modules/rootReducer';
 import PlotterName from '../../../constants/PlotterName';
 import Plotter, { PlotterMap } from '../../../types/Plotter';
-import StateColor from '../../core/constants/StateColor';
 import styled from 'styled-components';
 import { defaultPlotter } from '../../../modules/plotterConfiguration';
 

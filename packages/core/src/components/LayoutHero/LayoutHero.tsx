@@ -1,7 +1,9 @@
 import React, { ReactNode } from 'react';
 import { AppBar, Toolbar, Box } from '@material-ui/core';
 import styled from 'styled-components';
+import { Outlet, Link } from 'react-router-dom';
 import { Flex, DarkModeToggle, LocaleToggle } from '@chia/core';
+import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 
 const StyledWrapper = styled(Box)`
   padding-top: ${({ theme }) => `${theme.spacing(3)}px`};
@@ -25,16 +27,22 @@ const StyledBody = styled(Box)`
 type Props = {
   children?: ReactNode;
   header?: ReactNode;
+  back?: boolean;
 };
 
 export default function LayoutHero(props: Props) {
-  const { children, header } = props;
+  const { children, header, back, } = props;
 
   return (
     <StyledWrapper>
       <AppBar color="transparent" elevation={0}>
         <Toolbar>
           {header}
+          {back && (
+            <Link to="-1">
+              <ArrowBackIosIcon fontSize="large" color="secondary" />
+            </Link>
+          )}
           <Flex flexGrow={1} />
           <LocaleToggle />
           <DarkModeToggle />
@@ -42,6 +50,7 @@ export default function LayoutHero(props: Props) {
       </AppBar>
       <StyledBody>
         <Flex flexDirection="column" gap={2} alignItems="center">
+          <Outlet />
           {children}
         </Flex>
       </StyledBody>
@@ -52,4 +61,5 @@ export default function LayoutHero(props: Props) {
 LayoutHero.defaultProps = {
   header: undefined,
   children: undefined,
+  back: false,
 };

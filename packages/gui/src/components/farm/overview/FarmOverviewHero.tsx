@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button, Divider, Grid, Typography } from '@material-ui/core';
 import styled from 'styled-components';
 import { CardHero, Link } from '@chia/core';
@@ -13,11 +13,11 @@ const StyledImage = styled('img')`
 `;
 
 export default function FarmOverviewHero() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const openDialog = useOpenDialog();
 
   function handleAddPlot() {
-    history.push('/dashboard/plot/add');
+    navigate('/dashboard/plot/add');
   }
 
   function handleAddPlotDirectory() {

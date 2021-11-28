@@ -9,9 +9,7 @@ export default class FullNode extends Service {
     super(ServiceName.FULL_NODE, client, options);
   }
 
-  async getBlockRecords(end: number, count: number = 10) {
-    const start = Math.max(0, end - count);
-
+  async getBlockRecords(start?: number, end?: number) {
     return this.command('get_block_records', {
       start,
       end,

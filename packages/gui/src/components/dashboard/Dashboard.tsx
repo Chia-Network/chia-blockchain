@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import styled from 'styled-components';
 import { Route, Switch, useRouteMatch } from 'react-router';
+import { Wallets } from '@chia/wallets';
 import { AppBar, Toolbar, Drawer, Divider } from '@material-ui/core';
 import {
   DarkModeToggle,
@@ -8,9 +9,9 @@ import {
   Flex,
   Logo,
   ToolbarSpacing,
+  Loading,
 } from '@chia/core';
 import { defaultLocale, locales } from '../../config/locales';
-import Wallets from '../wallet/Wallets';
 import FullNode from '../fullNode/FullNode';
 import Plot from '../plot/Plot';
 import Farm from '../farm/Farm';
@@ -63,51 +64,60 @@ export default function Dashboard() {
 
   return (
     <StyledRoot>
-      <BackupCreate />
-      <StyledAppBar position="fixed" color="transparent" elevation={0}>
-        <Toolbar>
-          <DashboardTitleTarget />
-          <Flex flexGrow={1} />
-          <LocaleToggle locales={locales} defaultLocale={defaultLocale} />
-          <DarkModeToggle />
-        </Toolbar>
-      </StyledAppBar>
-      <StyledDrawer variant="permanent">
-        <StyledBrandWrapper>
-          <Logo width={2 / 3} />
-        </StyledBrandWrapper>
-        <Divider />
-        <DashboardSideBar />
-      </StyledDrawer>
-      <StyledBody flexDirection="column" flexGrow={1}>
-        <ToolbarSpacing />
-        <Switch>
-          <Route path={`${path}`} exact>
-            <FullNode />
-          </Route>
-          <Route path={`${path}/block/:headerHash`} exact>
-            <Block />
-          </Route>
-          <Route path={`${path}/wallets/:walletId?`}>
-            <Wallets />
-          </Route>
-          <Route path={`${path}/plot`}>
-            <Plot />
-          </Route>
-          <Route path={`${path}/farm`}>
-            <Farm />
-          </Route>
-          <Route path={`${path}/pool`}>
-            <Pool />
-          </Route>
-          <Route path={`${path}/trade`}>
-            <TradeManager />
-          </Route>
-          <Route path={`${path}/settings`}>
-            <Settings />
-          </Route>
-        </Switch>
-      </StyledBody>
+      <Suspense fallback={<Loading center />}>
+        {/* 
+        <BackupCreate />
+        */}
+        <StyledAppBar position="fixed" color="transparent" elevation={0}>
+          <Toolbar>
+            <DashboardTitleTarget />
+            <Flex flexGrow={1} />
+            <LocaleToggle locales={locales} defaultLocale={defaultLocale} />
+            <DarkModeToggle />
+          </Toolbar>
+        </StyledAppBar>
+        <StyledDrawer variant="permanent">
+          <StyledBrandWrapper>
+            <Logo width={2 / 3} />
+          </StyledBrandWrapper>
+          <Divider />
+          <DashboardSideBar />
+        </StyledDrawer>
+        <StyledBody flexDirection="column" flexGrow={1}>
+          <ToolbarSpacing />
+          <Suspense fallback={<Loading center />}>
+            <Switch>
+              <Route path={`${path}/wallets/:walletId?`}>
+                <Wallets />
+              </Route>
+              {/* 
+              <Route path={`${path}`} exact>
+                <FullNode />
+              </Route>
+              <Route path={`${path}/block/:headerHash`} exact>
+                <Block />
+              </Route>
+              
+              <Route path={`${path}/plot`}>
+                <Plot />
+              </Route>
+              <Route path={`${path}/farm`}>
+                <Farm />
+              </Route>
+              <Route path={`${path}/pool`}>
+                <Pool />
+              </Route>
+              <Route path={`${path}/trade`}>
+                <TradeManager />
+              </Route>
+              <Route path={`${path}/settings`}>
+                <Settings />
+              </Route>
+              */}
+            </Switch>
+          </Suspense>
+        </StyledBody>
+      </Suspense>
     </StyledRoot>
   );
 }

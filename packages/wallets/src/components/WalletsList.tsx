@@ -5,7 +5,7 @@ import {
 } from '@material-ui/core';
 import { useGetWalletsQuery } from '@chia/api-react';
 import { Flex, Loading } from '@chia/core';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import { Eco as HomeWorkIcon, Add as AddIcon } from '@material-ui/icons';
 import Wallet from '../../types/Wallet';
 import WalletCreateCard from './create/WalletCreateCard';
@@ -13,16 +13,16 @@ import WalletName from '../../constants/WalletName';
 import useTrans from '../../hooks/useTrans';
 
 export default function WalletsList() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const trans = useTrans();
   const { data: wallets, isLoading } = useGetWalletsQuery();
 
   function handleSelectWallet(wallet: Wallet) {
-    history.push(`/dashboard/wallets/${wallet.id}`);
+    navigate(`/dashboard/wallets/${wallet.id}`);
   }
 
   function handleAddToken() {
-    history.push(`/dashboard/wallets/create/simple`);
+    navigate(`/dashboard/wallets/create/simple`);
   }
 
   return (

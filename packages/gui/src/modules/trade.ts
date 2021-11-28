@@ -89,7 +89,7 @@ export default function tradeReducer(
           if (my_trade === true && confirmed_at_index === 0) {
             pending_trades.push(trade);
           } else {
-            trade_history.push(trade);
+            trade_navigate(trade);
           }
         });
 

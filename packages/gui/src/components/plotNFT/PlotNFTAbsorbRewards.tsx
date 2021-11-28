@@ -1,6 +1,6 @@
 import React, { useMemo, useState, ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useDispatch } from 'react-redux';
 import {
   UnitFormat,
@@ -42,7 +42,7 @@ export default function PlotNFTAbsorbRewards(props: Props) {
   const { nfts, loading } = usePlotNFTs();
   const { wallet, loading: loadingWallet } = useStandardWallet();
   const dispatch = useDispatch();
-  const history = useHistory();
+  const navigate = useNavigate();
   const nft = useMemo(() => {
     return nfts?.find(
       (nft) => nft.pool_state.p2_singleton_puzzle_hash === plotNFTId,
@@ -72,11 +72,14 @@ export default function PlotNFTAbsorbRewards(props: Props) {
 
       await dispatch(pwAbsorbRewards(walletId, feeMojos));
 
+      navigate(-1);
+      /*
       if (history.length) {
-        history.goBack();
+        navigate(-1);
       } else {
-        history.push('/dashboard/pool');
+        navigate('/dashboard/pool');
       }
+      */
     } finally {
       setWorking(false);
     }

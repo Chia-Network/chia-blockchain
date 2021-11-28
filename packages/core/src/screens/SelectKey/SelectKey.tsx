@@ -14,7 +14,6 @@ import {
   useDeleteAllKeysMutation,
   useGetStateQuery,
 } from '@chia/api-react';
-import LayoutHero from '../../components/LayoutHero';
 import SelectKeyItem from './SelectKeyItem';
 
 const StyledContainer = styled(Container)`
@@ -45,94 +44,92 @@ export default function SelectKey() {
   }
 
   return (
-    <LayoutHero>
-      <StyledContainer maxWidth="xs">
-        <Flex flexDirection="column" alignItems="center" gap={3}>
-          <Logo width={130} />
-          {isLoading ? (
-            <Loading center>
-              <Trans>Loading list of the keys</Trans>
-            </Loading>
-          ) : error ? (
-            <Alert 
-              severity="error"
-              action={
-                <Button onClick={refetch} color="inherit" size="small">
-                  <Trans>Try Again</Trans>
-                </Button>
-              }
-            >
-              <Trans>Unable to load the list of the keys</Trans>
-              &nbsp;
-              <TooltipIcon>
-                {error.message}
-              </TooltipIcon>
-            </Alert>
-          ) : hasFingerprints ? (
-            <Typography variant="h5" component="h1">
-              <Trans>Select Key</Trans>
-            </Typography>
-          ) : (
-            <>
-              <Typography variant="h5" component="h1">
-                <Trans>Sign In</Trans>
-              </Typography>
-              <Typography variant="subtitle1">
-                <Trans>
-                  Welcome to Chia. Please log in with an existing key, or create
-                  a new key.
-                </Trans>
-              </Typography>
-            </>
-          )}
-          <Flex
-            flexDirection="column"
-            gap={3}
-            alignItems="stretch"
-            alignSelf="stretch"
+    <StyledContainer maxWidth="xs">
+      <Flex flexDirection="column" alignItems="center" gap={3}>
+        <Logo width={130} />
+        {isLoading ? (
+          <Loading center>
+            <Trans>Loading list of the keys</Trans>
+          </Loading>
+        ) : error ? (
+          <Alert 
+            severity="error"
+            action={
+              <Button onClick={refetch} color="inherit" size="small">
+                <Trans>Try Again</Trans>
+              </Button>
+            }
           >
-            {hasFingerprints && (
-              <Card>
-                <List>
-                  {publicKeyFingerprints.map((fingerprint: number) => (
-                    <SelectKeyItem
-                      key={fingerprint}
-                      fingerprint={fingerprint} 
-                    />
-                  ))}
-                </List>
-              </Card>
-            )}
-            <Button
-              to="/wallet/add"
-              variant="contained"
-              color="primary"
-              size="large"
-              fullWidth
-            >
-              <Trans>Create a new private key</Trans>
-            </Button>
-            <Button
-              to="/wallet/import"
-              type="submit"
-              variant="outlined"
-              size="large"
-              fullWidth
-            >
-              <Trans>Import from Mnemonics (24 words)</Trans>
-            </Button>
-            <Button
-              onClick={handleDeleteAllKeys}
-              variant="outlined"
-              color="danger"
-              size="large"
-              fullWidth
-            >
-              <Trans>Delete all keys</Trans>
-            </Button>
-          </Flex>
+            <Trans>Unable to load the list of the keys</Trans>
+            &nbsp;
+            <TooltipIcon>
+              {error.message}
+            </TooltipIcon>
+          </Alert>
+        ) : hasFingerprints ? (
+          <Typography variant="h5" component="h1">
+            <Trans>Select Key</Trans>
+          </Typography>
+        ) : (
+          <>
+            <Typography variant="h5" component="h1">
+              <Trans>Sign In</Trans>
+            </Typography>
+            <Typography variant="subtitle1">
+              <Trans>
+                Welcome to Chia. Please log in with an existing key, or create
+                a new key.
+              </Trans>
+            </Typography>
+          </>
+        )}
+        <Flex
+          flexDirection="column"
+          gap={3}
+          alignItems="stretch"
+          alignSelf="stretch"
+        >
+          {hasFingerprints && (
+            <Card>
+              <List>
+                {publicKeyFingerprints.map((fingerprint: number) => (
+                  <SelectKeyItem
+                    key={fingerprint}
+                    fingerprint={fingerprint} 
+                  />
+                ))}
+              </List>
+            </Card>
+          )}
+          <Button
+            to="/wallet/add"
+            variant="contained"
+            color="primary"
+            size="large"
+            fullWidth
+          >
+            <Trans>Create a new private key</Trans>
+          </Button>
+          <Button
+            to="/wallet/import"
+            type="submit"
+            variant="outlined"
+            size="large"
+            fullWidth
+          >
+            <Trans>Import from Mnemonics (24 words)</Trans>
+          </Button>
+          <Button
+            onClick={handleDeleteAllKeys}
+            variant="outlined"
+            color="danger"
+            size="large"
+            fullWidth
+          >
+            <Trans>Delete all keys</Trans>
+          </Button>
         </Flex>
-      </StyledContainer>
-    </LayoutHero>
+      </Flex>
+    </StyledContainer>
   );
 }

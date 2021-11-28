@@ -10,7 +10,7 @@ import {
   ListItemSecondaryAction,
   IconButton,
 } from '@material-ui/core';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
@@ -32,7 +32,7 @@ type Props = {
 
 export default function SelectKeyItem(props: Props) {
   const { fingerprint } = props;
-  const history = useHistory();
+  const navigate = useNavigate();
   const openDialog = useOpenDialog();
   const [deleteKey] = useDeleteKeyMutation();
   const [checkDeleteKey] = useCheckDeleteKeyMutation();
@@ -47,7 +47,7 @@ export default function SelectKeyItem(props: Props) {
         fingerprint,
       }).unwrap();
   
-      history.push('/dashboard/wallets/1');
+      navigate('/dashboard/wallets/1');
     } catch (error) {
       showError(error)
     } finally {

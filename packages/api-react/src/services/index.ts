@@ -1,4 +1,5 @@
 import * as client from './client';
+import * as daemon from './daemon';
 import * as farmer from './farmer';
 import * as fullNode from './fullNode';
 import * as harvester from './harvester';
@@ -10,6 +11,15 @@ export const {
   useCloseMutation,
   useGetStateQuery,
 } = client;
+
+
+// daemon hooks
+export const {
+  daemonApi,
+
+  useGetKeyringStatusQuery,
+  useSetKeyringPassphraseMutation,
+} = daemon;
 
 // farmer hooks
 export const {

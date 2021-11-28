@@ -4,7 +4,7 @@ import { AlertDialog, Fee, Back, ButtonLoading, Card, Flex, Form, TextField } fr
 import { Box, Grid } from '@material-ui/core';
 import { useDispatch } from 'react-redux';
 import { useForm } from 'react-hook-form';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import { create_cc_for_colour_action } from '../../../modules/message';
 import { chiaToMojo } from '@chia/core';
 import { openDialog } from '../../../modules/dialog';
@@ -27,7 +27,7 @@ export default function WalletCATCreateExisting() {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const dispatch = useDispatch();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   async function handleSubmit(values: CreateExistingCATWalletData) {
     try {
@@ -61,7 +61,7 @@ export default function WalletCATCreateExisting() {
 
       const response = await dispatch(create_cc_for_colour_action(name, feeMojos));
       if (response && response.data && response.data.success === true) {
-        history.push(`/dashboard/wallets/${response.data.wallet_id}`);
+        navigate(`/dashboard/wallets/${response.data.wallet_id}`);
       }
     } finally {
       setLoading(false);

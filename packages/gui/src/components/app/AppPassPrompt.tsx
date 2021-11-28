@@ -10,12 +10,12 @@ import {
   Button,
 } from '@material-ui/core';
 import { Plural, Trans } from '@lingui/macro';
+import { PassphrasePromptReason } from '@chia/api';
 import { AlertDialog, ConfirmDialog, Flex, TooltipIcon } from '@chia/core';
 import { openDialog } from '../../modules/dialog';
 import { unlock_keyring_action } from '../../modules/message';
 import { RootState } from 'modules/rootReducer';
 import { KeyringState } from 'modules/keyring';
-import PassphrasePromptReason from '../core/constants/PassphrasePromptReason';
 
 type Props = {
   reason: PassphrasePromptReason;
