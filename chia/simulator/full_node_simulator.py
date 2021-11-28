@@ -81,7 +81,6 @@ class FullNodeSimulator(FullNodeAPI):
             )
             rr = RespondBlock(more[-1])
         await self.full_node.respond_block(rr)
-        # TODO: is this "the right block"?
         return more[-1]
 
     @api_request
