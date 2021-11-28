@@ -295,6 +295,8 @@ class WalletTransactionStore:
         # TODO: can we avoid polling
         while True:
             not_sent = await self.get_not_sent()
+            print(f"==== WalletTransactionStore.wait_all_sent() {len(not_sent)} not sent")
+
             if len(not_sent) == 0:
                 return
 
