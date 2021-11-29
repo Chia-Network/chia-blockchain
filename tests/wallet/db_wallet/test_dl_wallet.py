@@ -260,11 +260,7 @@ class TestDLWallet:
         await wallet_1.push_transaction(tr)
         await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=[tr.spend_bundle.name()])
 
-        # TODO: ugh
-        if sys.platform == "darwin":
-            await full_node_api.process_blocks(count=3)
-        else:
-            await full_node_api.process_blocks(count=1)
+        await full_node_api.process_blocks(count=1)
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 201)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 201)
