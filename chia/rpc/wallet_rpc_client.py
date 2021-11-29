@@ -260,6 +260,39 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("cat_spend", send_dict)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
 
+    # Offers
+    async def create_offer_for_ids(self, offer_dict: Dict[uint32, int]) -> Tuple[Offer, TradeRecord]:
+        send_dict: Dict[str, int] = {}
+        for key in offer_dict:
+            send_dict[str(key)] = offer_dict[key]
+
+        res = await self.fetch("create_offer_for_ids", {"offer": send_dict})
+        offer_bytes = hexstr_to_bytes(res["offer"])
+        return Offer.from_bytes(offer_bytes), TradeRecord.from_json_dict_convenience(res["trade_record"])
+
+    async def get_offer_summary(self, offer: Offer) -> Dict[str, Dict[str, int]]:
+        res = await self.fetch("get_offer_summary", {"offer": bytes(offer).hex()})
+        return res["summary"]
+
+    async def take_offer(self, offer: Offer) -> TradeRecord:
+        res = await self.fetch("take_offer", {"offer": bytes(offer).hex()})
+        return TradeRecord.from_json_dict_convenience(res["trade_record"])
+
+    async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord, Optional[Offer]:
+        res = await self.fetch("get_offer", {"trade_id": trade_id.hex(), "file_contents": file_contents})
+        optional_offer = Offer.from_bytes(hexstr_to_bytes(res["offer"])) if res["offer"] else None
+        return TradeRecord.from_json_dict_convenience(res["trade_record"]), optional_offer
+
+    async def get_all_offers(self, file_contents: bool = False) -> List[TradeRecord], Optional[List[Offer]]:
+        res = await self.fetch("get_all_offers", {"file_contents": file_contents})
+
+        records = [TradeRecord.from_json_dict_convenience(tr) for tr in res["trade_records"]]
+        optional_offers = [Offer.from_bytes(hexstr_to_bytes(off)) for off in res["offers"]] if res["offers"] else None
+        return records, optional_offers
+
+    async def cancel_offer(self, trade_id: bytes32, secure: bool = True):
+        await self.fetch("cancel_offer", {"trade_id": trade_id, "secure": secure})
+
     # DID wallet
     async def create_new_did_wallet(self, amount):
         request: Dict[str, Any] = {
