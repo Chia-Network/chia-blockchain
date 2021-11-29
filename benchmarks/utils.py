@@ -44,7 +44,7 @@ def rand_g2() -> G2Element:
     return AugSchemeMPL.sign(sk, b"foobar")
 
 
-async def setup_db(name: str) -> DBWrapper:
+async def setup_db(name: str, db_version: int) -> DBWrapper:
     db_filename = Path(name)
     try:
         os.unlink(db_filename)
@@ -65,4 +65,4 @@ async def setup_db(name: str) -> DBWrapper:
     await connection.execute("pragma journal_mode=wal")
     await connection.execute("pragma synchronous=full")
 
-    return DBWrapper(connection)
+    return DBWrapper(connection, False, db_version)

@@ -10,7 +10,7 @@ import sys
 from chia.util.db_wrapper import DBWrapper
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
-from chia.util.ints import uint64
+from chia.util.ints import uint64, uint32
 from utils import rewards, rand_hash, setup_db
 
 NUM_ITERS = 200
@@ -34,13 +34,13 @@ def make_coins(num: int) -> Tuple[List[Coin], List[bytes32]]:
     return additions, hashes
 
 
-async def run_new_block_benchmark():
+async def run_new_block_benchmark(version: int):
 
     verbose: bool = "--verbose" in sys.argv
-    db_wrapper: DBWrapper = await setup_db("coin-store-benchmark.db")
+    db_wrapper: DBWrapper = await setup_db("coin-store-benchmark.db", version)
 
     # keep track of benchmark total time
-    all_test_time = 0
+    all_test_time = 0.0
 
     try:
         coin_store = await CoinStore.create(db_wrapper)
@@ -58,7 +58,7 @@ async def run_new_block_benchmark():
             additions, hashes = make_coins(2000)
 
             # farm rewards
-            farmer_coin, pool_coin = rewards(height)
+            farmer_coin, pool_coin = rewards(uint32(height))
             all_coins += hashes
             all_unspent += hashes
             all_unspent += [pool_coin.name(), farmer_coin.name()]
@@ -85,9 +85,9 @@ async def run_new_block_benchmark():
                 sys.stdout.flush()
         block_height += NUM_ITERS
 
-        total_time = 0
-        total_add = 0
-        total_remove = 0
+        total_time = 0.0
+        total_add = 0.0
+        total_remove = 0.0
         print("")
         if verbose:
             print("Profiling mostly additions ", end="")
@@ -97,7 +97,7 @@ async def run_new_block_benchmark():
             additions, hashes = make_coins(2000)
             total_add += 2000
 
-            farmer_coin, pool_coin = rewards(height)
+            farmer_coin, pool_coin = rewards(uint32(height))
             all_coins += hashes
             all_unspent += hashes
             all_unspent += [pool_coin.name(), farmer_coin.name()]
@@ -148,7 +148,7 @@ async def run_new_block_benchmark():
             additions.append(c)
             total_add += 1
 
-            farmer_coin, pool_coin = rewards(height)
+            farmer_coin, pool_coin = rewards(uint32(height))
             all_coins += [c.get_hash()]
             all_unspent += [c.get_hash()]
             all_unspent += [pool_coin.name(), farmer_coin.name()]
@@ -198,7 +198,7 @@ async def run_new_block_benchmark():
             additions, hashes = make_coins(2000)
             total_add += 2000
 
-            farmer_coin, pool_coin = rewards(height)
+            farmer_coin, pool_coin = rewards(uint32(height))
             all_coins += hashes
             all_unspent += hashes
             all_unspent += [pool_coin.name(), farmer_coin.name()]
@@ -312,4 +312,7 @@ async def run_new_block_benchmark():
 
 
 if __name__ == "__main__":
-    asyncio.run(run_new_block_benchmark())
+    print("version 1")
+    asyncio.run(run_new_block_benchmark(1))
+    print("version 2")
+    asyncio.run(run_new_block_benchmark(2))

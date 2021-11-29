@@ -46,10 +46,10 @@ with open("clvm_generator.bin", "rb") as f:
     clvm_generator = f.read()
 
 
-async def run_add_block_benchmark():
+async def run_add_block_benchmark(version: int):
 
     verbose: bool = "--verbose" in sys.argv
-    db_wrapper: DBWrapper = await setup_db("block-store-benchmark.db")
+    db_wrapper: DBWrapper = await setup_db("block-store-benchmark.db", version)
 
     # keep track of benchmark total time
     all_test_time = 0.0
@@ -254,4 +254,7 @@ async def run_add_block_benchmark():
 
 
 if __name__ == "__main__":
-    asyncio.run(run_add_block_benchmark())
+    print("version 1")
+    asyncio.run(run_add_block_benchmark(1))
+    print("version 2")
+    asyncio.run(run_add_block_benchmark(2))
