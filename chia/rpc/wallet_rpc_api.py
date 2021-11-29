@@ -86,13 +86,13 @@ class WalletRpcApi:
             "/cat_get_name": self.cat_get_name,
             "/cat_spend": self.cat_spend,
             "/cat_get_asset_id": self.cat_get_asset_id,
-            "/create_offer_for_ids": self.create_offer_for_ids,
-            "/get_discrepancies_for_offer": self.get_discrepancies_for_offer,
-            "/respond_to_offer": self.respond_to_offer,
-            "/get_trade": self.get_trade,
-            "/get_all_trades": self.get_all_trades,
-            "/cancel_trade": self.cancel_trade,
             "/get_cat_list": self.get_cat_list,
+            "/create_offer_for_ids": self.create_offer_for_ids,
+            "/get_offer_summary": self.get_offer_summary,
+            "/take_offer": self.take_offer,
+            "/get_offer": self.get_offer,
+            "/get_all_offers": self.get_all_offers,
+            "/cancel_offer": self.cancel_offer,
             # DID Wallet
             "/did_update_recovery_ids": self.did_update_recovery_ids,
             "/did_get_pubkey": self.did_get_pubkey,
@@ -826,7 +826,7 @@ class WalletRpcApi:
             return {}
         raise ValueError(error)
 
-    async def get_discrepancies_for_offer(self, request):
+    async def get_offer_summary(self, request):
         assert self.service.wallet_state_manager is not None
         file_name = request["filename"]
         file_path = Path(file_name)
@@ -841,7 +841,7 @@ class WalletRpcApi:
             return {"discrepancies": discrepancies}
         raise ValueError(error)
 
-    async def respond_to_offer(self, request):
+    async def take_offer(self, request):
         assert self.service.wallet_state_manager is not None
         file_path = Path(request["filename"])
         async with self.service.wallet_state_manager.lock:
@@ -854,7 +854,7 @@ class WalletRpcApi:
             raise ValueError(error)
         return {}
 
-    async def get_trade(self, request: Dict):
+    async def get_offer(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
@@ -867,7 +867,7 @@ class WalletRpcApi:
         result = trade_record_to_dict(trade)
         return {"trade": result}
 
-    async def get_all_trades(self, request: Dict):
+    async def get_all_offers(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
@@ -879,7 +879,7 @@ class WalletRpcApi:
 
         return {"trades": result}
 
-    async def cancel_trade(self, request: Dict):
+    async def cancel_offer(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
         wsm = self.service.wallet_state_manager
