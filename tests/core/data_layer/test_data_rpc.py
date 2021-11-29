@@ -1,3 +1,4 @@
+import asyncio
 from typing import AsyncIterator, Dict, List, Tuple
 import pytest
 
@@ -17,7 +18,8 @@ from tests.setup_nodes import setup_simulators_and_wallets, self_hostname
 
 
 pytestmark = pytest.mark.data_layer
-
+# assert await is_transaction_confirmed(user_wallet_id, api_user, val["transaction_id"])
+# await time_out_assert(15, is_transaction_in_mempool, True, user_wallet_id, api_user, val["transaction_id"])
 nodes = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]
 
 @pytest.fixture(scope="function")
@@ -45,11 +47,13 @@ async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) ->
     print(f"main wallet unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
     rpc_api = WalletRpcApi(wallet_node)
     res = await rpc_api.create_data_layer({"amount": 1001, "fee": 1})
+    await asyncio.sleep(1)
     dl_wallet = wallet_node.data_layer.wallet
     print(f"dl wallet unconfirmed balance is {await dl_wallet.get_unconfirmed_balance()}")
     print(f"dl wallet confirmed balance is {await dl_wallet.get_confirmed_balance()}")
     print(f"farm blocks")
     for i in range(0, num_blocks):
+        await asyncio.sleep(1)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     print(f"dl wallet unconfirmed balance is {await dl_wallet.get_unconfirmed_balance()}")
     print(f"dl wallet confirmed balance is {await dl_wallet.get_confirmed_balance()}")
@@ -58,28 +62,32 @@ async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) ->
     value = b"\x00\x01"
     changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
     res = await rpc_api.create_kv_store()
+    await asyncio.sleep(1)
     assert res is not None
     store_id = bytes32(hexstr_to_bytes(res["id"]))
     print(f"store id is {store_id}")
     print(f"farm blocks")
     for i in range(0, num_blocks):
+        await asyncio.sleep(1)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     print(f"dl wallet unconfirmed balance is {await dl_wallet.get_unconfirmed_balance()}")
     print(f"dl wallet confirmed balance is {await dl_wallet.get_confirmed_balance()}")
     await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
+    await asyncio.sleep(1)
     print(f"farm blocks")
     for i in range(0, num_blocks):
+        await asyncio.sleep(1)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     print(f"dl wallet unconfirmed balance is {await dl_wallet.get_unconfirmed_balance()}")
     print(f"dl wallet confirmed balance is {await dl_wallet.get_confirmed_balance()}")
     res = await rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
     assert hexstr_to_bytes(res["data"]) == value
     changelist = [{"action": "delete", "key": key.hex()}]
-    spendable = await dl_wallet.get_spendable_balance()
-    print(f"spendable balance is {spendable}")
     await rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
+    await asyncio.sleep(1)
     print(f"farm blocks")
     for i in range(0, num_blocks):
+        await asyncio.sleep(1)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     print(f"dl wallet unconfirmed balance is {await dl_wallet.get_unconfirmed_balance()}")
     print(f"dl wallet confirmed balance is {await dl_wallet.get_confirmed_balance()}")

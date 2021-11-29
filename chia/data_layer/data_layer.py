@@ -8,7 +8,7 @@ from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint64
+from chia.util.ints import uint64, uint32
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -103,7 +103,7 @@ class DataLayer:
         if root.node_hash is not None:
             node_hash = root.node_hash
         else:
-            node_hash = b""
+            node_hash = uint32(0).to_bytes(32, "big") # todo change
         res = await self.wallet.create_update_state_spend(node_hash)
         assert res
         # todo register callback to change status in data store
