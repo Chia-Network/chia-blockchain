@@ -862,23 +862,30 @@ class WalletRpcApi:
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
         trade_id = hexstr_to_bytes(request["trade_id"])
+        file_contents: bool = request.get("file_contents", False)
         trade_record: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
         if trade_record is None:
             raise ValueError(f"No trade with trade id: {trade_id.hex()}")
 
-        return {"trade_record": trade_record.to_json_dict_convenience()}
+        offer_value: Optional[str] = trade_record.offer.hex() if file_contents else None
+        return {"trade_record": trade_record.to_json_dict_convenience(), "offer": offer_value}
 
     async def get_all_offers(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
+        file_contents: bool = request.get("file_contents", False)
+
         all_trades = await trade_mgr.get_all_trades()
         result = []
+        offer_values = []
         for trade in all_trades:
             result.append(trade.to_json_dict_convenience())
+            if file_contents:
+                offer_values.append(trade.offer.hex())
 
-        return {"trade_records": result}
+        return {"trade_records": result, "offers": offer_values}
 
     async def cancel_offer(self, request: Dict):
         assert self.service.wallet_state_manager is not None
