@@ -213,7 +213,7 @@ class TerminalNode(Node):
         if cbits[0] != cbits[1]:
             return MiddleNode(children)
         nextvals: List[Node] = [_empty, _empty]
-        nextvals[cbits[0] ^ 1] = _empty  # type: ignore
+        nextvals[cbits[0] ^ 1] = _empty
         nextvals[cbits[0]] = self._make_middle(children, depth + 1)
         return MiddleNode(nextvals)
 

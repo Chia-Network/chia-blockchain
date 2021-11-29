@@ -286,7 +286,7 @@ class WalletBlockchain(BlockchainInterface):
                 assert block is not None
                 replaced = None
                 if uint32(0) in self.__height_to_hash:
-                    replaced = (self.__height_to_hash[uint32(0)],)
+                    replaced = self.__height_to_hash[uint32(0)]
                 self.__height_to_hash[uint32(0)] = block.header_hash
                 heights_changed.add((uint32(0), replaced))
                 assert len(block.additions) == 0 and len(block.removals) == 0

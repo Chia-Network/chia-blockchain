@@ -51,7 +51,7 @@ class Program(SExp):
     @classmethod
     def from_bytes(cls, blob: bytes) -> "Program":
         f = io.BytesIO(blob)
-        result = cls.parse(f)  # type: ignore # noqa
+        result = cls.parse(f)  # noqa
         assert f.read() == b""
         return result
 
@@ -68,13 +68,32 @@ class Program(SExp):
 
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
-        self.stream(f)  # type: ignore # noqa
+        self.stream(f)  # noqa
         return f.getvalue()
 
     def __str__(self) -> str:
         return bytes(self).hex()
 
-    def get_tree_hash(self, *args: List[bytes32]) -> bytes32:
+    def at(self, position: str) -> "Program":
+        """
+        Take a string of only `f` and `r` characters and follow the corresponding path.
+
+        Example:
+
+        `assert Program.to(17) == Program.to([10, 20, 30, [15, 17], 40, 50]).at("rrrfrf")`
+
+        """
+        v = self
+        for c in position.lower():
+            if c == "f":
+                v = v.first()
+            elif c == "r":
+                v = v.rest()
+            else:
+                raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
+        return v
+
+    def get_tree_hash(self, *args: bytes32) -> bytes32:
         """
         Any values in `args` that appear in the tree
         are presumed to have been hashed already.
@@ -210,7 +229,7 @@ class SerializedProgram:
             return True
         return self._buf != other._buf
 
-    def get_tree_hash(self, *args: List[bytes32]) -> bytes32:
+    def get_tree_hash(self, *args: bytes32) -> bytes32:
         """
         Any values in `args` that appear in the tree
         are presumed to have been hashed already.

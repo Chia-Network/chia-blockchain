@@ -28,7 +28,7 @@ jobs:
     steps:
     - name: Cancel previous runs on the same branch
       if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.9.0
+      uses: styfle/cancel-workflow-action@0.9.1
       with:
         access_token: ${{ github.token }}
 
@@ -65,13 +65,6 @@ jobs:
 
 CHECKOUT_TEST_BLOCKS_AND_PLOTS
 
-    - name: Link home directory
-      run: |
-        cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
-
     - name: Install ubuntu dependencies
       run: |
         sudo apt-get install software-properties-common
@@ -83,14 +76,9 @@ CHECKOUT_TEST_BLOCKS_AND_PLOTS
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        sh install.sh
+        sh install.sh -d
 
 INSTALL_TIMELORD
-
-    - name: Install developer requirements
-      run: |
-        . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
 
     - name: Test TEST_NAME code with pytest
       run: |

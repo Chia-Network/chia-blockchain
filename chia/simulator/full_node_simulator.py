@@ -44,7 +44,7 @@ class FullNodeSimulator(FullNodeAPI):
 
     @api_request
     async def farm_new_transaction_block(self, request: FarmNewBlockProtocol):
-        async with self.full_node.blockchain.lock:
+        async with self.full_node._blockchain_lock_high_priority:
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
@@ -80,7 +80,7 @@ class FullNodeSimulator(FullNodeAPI):
 
     @api_request
     async def farm_new_block(self, request: FarmNewBlockProtocol):
-        async with self.full_node.blockchain.lock:
+        async with self.full_node._blockchain_lock_high_priority:
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:

@@ -1,4 +1,5 @@
 import colorama
+import os
 import pkg_resources
 import sys
 import unicodedata
@@ -7,7 +8,6 @@ from bitstring import BitArray  # pyright: reportMissingImports=false
 from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from chia.util.hash import std_hash
 from chia.util.keyring_wrapper import KeyringWrapper
-from getpass import getpass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
@@ -44,15 +44,12 @@ class KeyringMaxUnlockAttempts(Exception):
 
 
 def supports_keyring_passphrase() -> bool:
-    # TODO: Enable for Linux once GUI work is finalized (including migration)
-    return False
-    # from sys import platform
-
-    # return platform == "linux"
+    # Support can be disabled by setting CHIA_PASSPHRASE_SUPPORT to 0/false
+    return os.environ.get("CHIA_PASSPHRASE_SUPPORT", "true").lower() in ["1", "true"]
 
 
 def supports_os_passphrase_storage() -> bool:
-    return sys.platform in ["darwin"]
+    return sys.platform in ["darwin", "win32", "cygwin"]
 
 
 def passphrase_requirements() -> Dict[str, Any]:
@@ -79,6 +76,8 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
     prompted interactively to enter their passphrase a max of MAX_RETRIES times
     before failing.
     """
+    from chia.cmds.passphrase_funcs import prompt_for_passphrase
+
     if use_passphrase_cache:
         passphrase, validated = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()
         if passphrase:
@@ -98,7 +97,7 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
     for i in range(MAX_RETRIES):
         colorama.init()
 
-        passphrase = getpass(prompt)
+        passphrase = prompt_for_passphrase(prompt)
 
         if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
             # If using the passphrase cache, and the user inputted a passphrase, update the cache
@@ -473,13 +472,23 @@ class Keychain:
         KeyringWrapper.get_shared_instance().refresh_keyrings()
 
     @staticmethod
-    def migrate_legacy_keyring(passphrase: Optional[str] = None, cleanup_legacy_keyring: bool = False) -> None:
+    def migrate_legacy_keyring(
+        passphrase: Optional[str] = None,
+        passphrase_hint: Optional[str] = None,
+        save_passphrase: bool = False,
+        cleanup_legacy_keyring: bool = False,
+    ) -> None:
         """
         Begins legacy keyring migration in a non-interactive manner
         """
         if passphrase is not None and passphrase != "":
             KeyringWrapper.get_shared_instance().set_master_passphrase(
-                current_passphrase=None, new_passphrase=passphrase, write_to_keyring=False, allow_migration=False
+                current_passphrase=None,
+                new_passphrase=passphrase,
+                write_to_keyring=False,
+                allow_migration=False,
+                passphrase_hint=passphrase_hint,
+                save_passphrase=save_passphrase,
             )
 
         KeyringWrapper.get_shared_instance().migrate_legacy_keyring(cleanup_legacy_keyring=cleanup_legacy_keyring)
@@ -558,6 +567,7 @@ class Keychain:
         new_passphrase: str,
         *,
         allow_migration: bool = True,
+        passphrase_hint: Optional[str] = None,
         save_passphrase: bool = False,
     ) -> None:
         """
@@ -565,7 +575,11 @@ class Keychain:
         passphrase can decrypt the contents
         """
         KeyringWrapper.get_shared_instance().set_master_passphrase(
-            current_passphrase, new_passphrase, allow_migration=allow_migration, save_passphrase=save_passphrase
+            current_passphrase,
+            new_passphrase,
+            allow_migration=allow_migration,
+            passphrase_hint=passphrase_hint,
+            save_passphrase=save_passphrase,
         )
 
     @staticmethod
@@ -576,3 +590,18 @@ class Keychain:
         default passphrase.
         """
         KeyringWrapper.get_shared_instance().remove_master_passphrase(current_passphrase)
+
+    @staticmethod
+    def get_master_passphrase_hint() -> Optional[str]:
+        """
+        Returns the passphrase hint from the keyring
+        """
+        return KeyringWrapper.get_shared_instance().get_master_passphrase_hint()
+
+    @staticmethod
+    def set_master_passphrase_hint(current_passphrase: str, passphrase_hint: Optional[str]) -> None:
+        """
+        Convenience method for setting/removing the passphrase hint. Requires the current
+        passphrase, as the passphrase hint is written as part of a passphrase update.
+        """
+        Keychain.set_master_passphrase(current_passphrase, current_passphrase, passphrase_hint=passphrase_hint)

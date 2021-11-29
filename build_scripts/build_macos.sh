@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -euo pipefail
+
 pip install setuptools_scm
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined.
 # If the env variable NOTARIZE and the username and password variables are
@@ -13,8 +16,11 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
 npm install electron-installer-dmg -g
-npm install electron-packager -g
-npm install electron/electron-osx-sign -g
+# Pinning electron-packager and electron-osx-sign to known working versions
+# Current packager uses an old version of osx-sign, so if we install the newer sign package
+# things break
+npm install electron-packager@15.4.0 -g
+npm install electron-osx-sign@v0.5.0 -g
 npm install notarize-cli -g
 
 echo "Create dist/"
@@ -62,7 +68,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-if [ "$NOTARIZE" ]; then
+if [ "$NOTARIZE" == true ]; then
   electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin \
   --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile \
   --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist \
@@ -88,7 +94,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-if [ "$NOTARIZE" ]; then
+if [ "$NOTARIZE" == true ]; then
 	echo "Notarize $DMG_NAME on ci"
 	cd final_installer || exit
   notarize-cli --file=$DMG_NAME --bundle-id net.chia.blockchain \

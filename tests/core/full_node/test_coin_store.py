@@ -1,11 +1,8 @@
 import asyncio
 import logging
-from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
-import aiosqlite
 import pytest
-import tempfile
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
@@ -21,9 +18,9 @@ from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.ints import uint64, uint32
 from tests.wallet_tools import WalletTool
-from chia.util.db_wrapper import DBWrapper
 from tests.setup_nodes import bt, test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
+from tests.util.db_connection import DBConnection
 
 
 @pytest.fixture(scope="module")
@@ -55,19 +52,6 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
         constants.GENESIS_CHALLENGE,
     )
     return pool_coin, farmer_coin
-
-
-class DBConnection:
-    async def __aenter__(self) -> DBWrapper:
-        self.db_path = Path(tempfile.NamedTemporaryFile().name)
-        if self.db_path.exists():
-            self.db_path.unlink()
-        self.connection = await aiosqlite.connect(self.db_path)
-        return DBWrapper(self.connection)
-
-    async def __aexit__(self, exc_t, exc_v, exc_tb):
-        await self.connection.close()
-        self.db_path.unlink()
 
 
 class TestCoinStoreWithBlocks:

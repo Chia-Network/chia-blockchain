@@ -390,7 +390,7 @@ class CCWallet:
         origin_id = origin.name()
 
         cc_inner = await self.get_new_inner_hash()
-        cc_puzzle_hash: Program = cc_puzzle_hash_for_inner_puzzle_hash(
+        cc_puzzle_hash: bytes32 = cc_puzzle_hash_for_inner_puzzle_hash(
             CC_MOD, self.cc_info.my_genesis_checker, cc_inner
         )
 
@@ -565,7 +565,7 @@ class CCWallet:
 
     async def inner_puzzle_for_cc_puzhash(self, cc_hash: bytes32) -> Program:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            cc_hash.hex()
+            cc_hash
         )
         inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(bytes(record.pubkey))
         return inner_puzzle
