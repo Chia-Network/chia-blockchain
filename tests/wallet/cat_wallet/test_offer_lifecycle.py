@@ -257,6 +257,12 @@ class TestOfferLifecycle:
                 str_to_tail_hash("blue"): 2000,
             }
             assert new_offer.get_requested_amounts() == {None: 900, str_to_tail_hash("red"): 350}
+            assert new_offer.summary() == ({
+                "xch": 1000,
+                str_to_tail_hash("red").hex(): 350,
+                str_to_tail_hash("blue").hex(): 2000,
+            }, {"xch": 900, str_to_tail_hash("red").hex(): 350})
+            {None: 900, str_to_tail_hash("red"): 350}
             assert new_offer.is_valid()
 
             # Test (de)serialization
