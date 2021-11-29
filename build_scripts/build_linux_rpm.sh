@@ -50,6 +50,7 @@ echo "npm build"
 npm install
 npm audit fix
 npm run build
+chmod 4755 node_modules/electron/dist/chrome-sandbox
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "npm run build failed!"
