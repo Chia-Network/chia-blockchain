@@ -836,10 +836,9 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         offer_hex: str = request["offer"]
         offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+        offered, requested = offer.summary()
 
-        if success:
-            return {"summary": offer.summary()}
-        raise ValueError(error)
+        return {"summary": {"offered": offered, "requested": requested}}
 
     async def take_offer(self, request):
         assert self.service.wallet_state_manager is not None

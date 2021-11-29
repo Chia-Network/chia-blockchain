@@ -5,7 +5,10 @@ from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
+from chia.wallet.trading.offer import Offer
+from chia.wallet.trade_record import TradeRecord
 from chia.wallet.transaction_record import TransactionRecord
 
 
@@ -268,7 +271,7 @@ class WalletRpcClient(RpcClient):
 
         res = await self.fetch("create_offer_for_ids", {"offer": send_dict})
         offer_bytes = hexstr_to_bytes(res["offer"])
-        return Offer.from_bytes(offer_bytes), TradeRecord.from_json_dict_convenience(res["trade_record"])
+        return Offer.from_bytes(offer_bytes), TradeRecord.from_json_dict_convenience(res["trade_record"], res["offer"])
 
     async def get_offer_summary(self, offer: Offer) -> Dict[str, Dict[str, int]]:
         res = await self.fetch("get_offer_summary", {"offer": bytes(offer).hex()})
@@ -278,20 +281,23 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("take_offer", {"offer": bytes(offer).hex()})
         return TradeRecord.from_json_dict_convenience(res["trade_record"])
 
-    async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord, Optional[Offer]:
+    async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:
         res = await self.fetch("get_offer", {"trade_id": trade_id.hex(), "file_contents": file_contents})
-        optional_offer = Offer.from_bytes(hexstr_to_bytes(res["offer"])) if res["offer"] else None
-        return TradeRecord.from_json_dict_convenience(res["trade_record"]), optional_offer
+        offer_str = res["offer"] if file_contents else ""
+        return TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
-    async def get_all_offers(self, file_contents: bool = False) -> List[TradeRecord], Optional[List[Offer]]:
+    async def get_all_offers(self, file_contents: bool = False) -> List[TradeRecord]:
         res = await self.fetch("get_all_offers", {"file_contents": file_contents})
 
-        records = [TradeRecord.from_json_dict_convenience(tr) for tr in res["trade_records"]]
-        optional_offers = [Offer.from_bytes(hexstr_to_bytes(off)) for off in res["offers"]] if res["offers"] else None
-        return records, optional_offers
+        records = []
+        optional_offers = res["offers"] if file_contents else ([""] * len(res["trade_records"]))
+        for record, offer in zip(res["trade_records"], optional_offers):
+            records.append(TradeRecord.from_json_dict_convenience(record, offer))
+
+        return records
 
     async def cancel_offer(self, trade_id: bytes32, secure: bool = True):
-        await self.fetch("cancel_offer", {"trade_id": trade_id, "secure": secure})
+        await self.fetch("cancel_offer", {"trade_id": trade_id.hex(), "secure": secure})
 
     # DID wallet
     async def create_new_did_wallet(self, amount):

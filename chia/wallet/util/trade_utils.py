@@ -10,7 +10,7 @@ from chia.wallet.trading.trade_status import TradeStatus
 def trade_status_ui_string(status: TradeStatus):
     if status is TradeStatus.PENDING_CONFIRM:
         return "Pending Confirmation"
-    elif status is TradeStatus.CANCELED:
+    elif status is TradeStatus.CANCELLED:
         return "Canceled"
     elif status is TradeStatus.CONFIRMED:
         return "Confirmed"
