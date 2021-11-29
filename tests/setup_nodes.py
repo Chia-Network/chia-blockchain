@@ -296,15 +296,24 @@ async def setup_vdf_clients(port):
     await kill_processes()
 
 
-async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: ConsensusConstants, b_tools):
+async def setup_timelord(
+    port,
+    full_node_port,
+    sanitizer,
+    consensus_constants: ConsensusConstants,
+    b_tools,
+    vdf_server_port=None,
+    fast_algorithm=False,
+):
     config = b_tools.config["timelord"]
     config["port"] = port
     config["full_node_peer"]["port"] = full_node_port
     config["sanitizer_mode"] = sanitizer
-    config["fast_algorithm"] = False
+    config["fast_algorithm"] = fast_algorithm
     if sanitizer:
         config["vdf_server"]["port"] = 7999
-
+    if vdf_server_port is not None:
+        config["vdf_server"]["port"] = vdf_server_port
     kwargs = service_kwargs_for_timelord(b_tools.root_path, config, consensus_constants)
     kwargs.update(
         parse_cli_args=False,
@@ -524,4 +533,38 @@ async def setup_full_system(
             node_api_1.full_node.server,
         )
 
+        await _teardown_nodes(node_iters)
+
+
+async def setup_timelord_and_node(override_dict: Dict, b_tools=None, connect_to_daemon=False):
+    consensus_constants = constants_for_dic(override_dict)
+    with TempKeyring() as keychain1:
+        if b_tools is None:
+            b_tools = await create_block_tools_async(constants=test_constants, keychain=keychain1)
+        node_iters = [
+            setup_vdf_clients(8000),
+            setup_timelord(21236, 21237, False, consensus_constants, b_tools, 8000, fast_algorithm=True),
+            setup_full_node(
+                consensus_constants,
+                "blockchain_test.db",
+                21237,
+                b_tools,
+                21233,
+                False,
+                10,
+                True,
+                connect_to_daemon,
+            ),
+        ]
+        vdf_clients = await node_iters[0].__anext__()
+        timelord, timelord_server = await node_iters[1].__anext__()
+        node = await node_iters[2].__anext__()
+        yield (
+            vdf_clients,
+            timelord,
+            timelord_server,
+            node,
+            node.full_node.server,
+            keychain1,
+        )
         await _teardown_nodes(node_iters)

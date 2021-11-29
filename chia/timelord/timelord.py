@@ -112,6 +112,8 @@ class Timelord:
             task.cancel()
         if self.main_loop is not None:
             self.main_loop.cancel()
+        if self.vdf_server is not None:
+            self.vdf_server.close()
 
     async def _await_closed(self):
         pass

@@ -42,6 +42,7 @@ def find_vdf_client() -> pathlib.Path:
 async def spawn_process(host: str, port: int, counter: int, prefer_ipv6: Optional[bool]):
     global stopped
     global active_processes
+    stopped = False
     path_to_vdf_client = find_vdf_client()
     first_10_seconds = True
     start_time = time.time()
