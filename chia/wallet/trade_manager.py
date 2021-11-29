@@ -95,12 +95,13 @@ class TradeManager:
             self.log.error(f"Coin: {coin_state.coin}, has not been spent so trade can remain valid")
 
         # Then let's filter the offer into coins that WE offered
-        primary_coin_ids = [c.name() for c in trade.offer.get_primary_coins()]
+        offer = Offer.from_bytes(trade.offer)
+        primary_coin_ids = [c.name() for c in offer.get_primary_coins()]
         our_coin_records: List[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_multiple_coin_records(
             primary_coin_ids
         )
         our_primary_coins: List[bytes32] = [cr.coin.name() for cr in our_coin_records]
-        all_settlement_payments: List[Coin] = [c for coins in trade.offer.get_offered_coins().values() for c in coins]
+        all_settlement_payments: List[Coin] = [c for coins in offer.get_offered_coins().values() for c in coins]
         our_settlement_payments: List[Coin] = list(filter(lambda c: c.parent_coin_info in our_primary_coins, all_settlement_payments))
         our_settlement_ids: List[bytes32] = [c.name() for c in our_settlement_payments]
 
@@ -112,7 +113,7 @@ class TradeManager:
         # If any of our settlement_payments were spent, this offer was a success!
         if set(our_settlement_ids) & set(coin_state_names):
             height = coin_states[0].spent_height
-            await self.maybe_create_wallets_for_offer(trade.offer)
+            await self.maybe_create_wallets_for_offer(offer)
             await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, True, height)
             self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
         else:
@@ -164,7 +165,7 @@ class TradeManager:
         if trade is None:
             return None
 
-        for coin in trade.offer.get_primary_coins():
+        for coin in Offer.from_bytes(trade.offer).get_primary_coins():
             wallet = await self.wallet_state_manager.get_wallet_for_coin(coin.name())
 
             if wallet is None:
@@ -200,7 +201,7 @@ class TradeManager:
             created_at_time=now,
             is_my_offer=True,
             sent=uint32(0),
-            offer=created_offer,
+            offer=bytes(created_offer),
             coins_of_interest=created_offer.get_involved_coins(),
             trade_id=created_offer.name(),
             status=uint32(TradeStatus.PENDING_ACCEPT.value),
@@ -382,7 +383,7 @@ class TradeManager:
             created_at_time=uint64(int(time.time())),
             is_my_offer=False,
             sent=uint32(0),
-            offer=complete_offer,
+            offer=bytes(complete_offer),
             coins_of_interest=complete_offer.get_involved_coins(),
             trade_id=complete_offer.name(),
             status=uint32(TradeStatus.PENDING_CONFIRM.value),

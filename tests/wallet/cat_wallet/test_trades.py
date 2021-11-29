@@ -9,6 +9,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.trade_manager import TradeManager
+from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
@@ -142,7 +143,7 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(trade_make.offer)
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
         await asyncio.sleep(1)
         assert error is None
         assert success is True

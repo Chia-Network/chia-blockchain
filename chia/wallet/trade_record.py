@@ -20,7 +20,7 @@ class TradeRecord(Streamable):
     created_at_time: uint64
     is_my_offer: bool
     sent: uint32
-    offer: Offer
+    offer: bytes
     coins_of_interest: List[Coin]
     trade_id: bytes32
     status: uint32  # TradeStatus, enum not streamable
