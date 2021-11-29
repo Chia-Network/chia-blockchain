@@ -48,7 +48,7 @@ class DataLayer:
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
 
-    async def start(self) -> bool:
+    async def create(self, amount: uint64, fee: uint64) -> bool:
         # create the store (db) and data store instance
         assert self.wallet_state_manager
         self.connection = await aiosqlite.connect(self.db_path)
@@ -56,9 +56,10 @@ class DataLayer:
         self.data_store = await DataStore.create(self.db_wrapper)
         assert self.wallet_state_manager
         main_wallet = self.wallet_state_manager.main_wallet
-        amount = uint64(1)  # todo what should amount be ?
         async with self.wallet_state_manager.lock:
-            self.wallet = await DataLayerWallet.create_new_dl_wallet(self.wallet_state_manager, main_wallet, amount, None)
+            self.wallet = await DataLayerWallet.create_new_dl_wallet(
+                self.wallet_state_manager, main_wallet, amount, None, fee
+            )
         self.initialized = True
         return True
 
@@ -98,8 +99,12 @@ class DataLayer:
                 await self.data_store.delete(key, tree_id)
 
         root = await self.data_store.get_tree_root(tree_id)
-        assert root.node_hash
-        res = await self.wallet.create_update_state_spend(root.node_hash)
+        # todo return empty node hash from get_tree_root
+        if root.node_hash is not None:
+            node_hash = root.node_hash
+        else:
+            node_hash = b""
+        res = await self.wallet.create_update_state_spend(node_hash)
         assert res
         # todo register callback to change status in data store
         # await self.data_store.change_root_status(root, Status.COMMITTED)

@@ -49,7 +49,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, load_config
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint32, uint128
+from chia.util.ints import uint32, uint128, uint64
 from chia.util.keychain import Keychain
 from chia.util.lru_cache import LRUCache
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
@@ -1031,8 +1031,8 @@ class WalletNode:
         else:
             return []
 
-    async def start_data_layer(self) -> bool:
-        return await self.data_layer.start()
+    async def create_data_layer(self, amount: uint64, fee: uint64) -> bool:
+        return await self.data_layer.create(amount, fee)
 
 
 async def wallet_next_block_check(
