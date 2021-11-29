@@ -1117,7 +1117,7 @@ class Timelord:
                     proof = await asyncio.get_running_loop().run_in_executor(
                         pool,
                         prove_bluebox_slow,
-                        bluebox_process_data.__bytes__(),
+                        bytes(bluebox_process_data),
                     )
                     t2 = time.time()
                     delta = t2 - t1
