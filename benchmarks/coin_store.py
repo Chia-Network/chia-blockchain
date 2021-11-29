@@ -351,6 +351,9 @@ async def run_new_block_benchmark():
     finally:
         await db_wrapper.db.close()
 
+    db_size = os.path.getsize(Path("coin-store-benchmark.db"))
+    print(f"database size: {db_size/1000000:.3} MB")
+
 
 if __name__ == "__main__":
     asyncio.run(run_new_block_benchmark())
