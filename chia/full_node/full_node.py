@@ -713,7 +713,8 @@ class FullNode:
             self.uncompact_task.cancel()
         if self._transaction_queue_task is not None:
             self._transaction_queue_task.cancel()
-        self._blockchain_lock_queue.close()
+        if hasattr(self, "_blockchain_lock_queue"):
+            self._blockchain_lock_queue.close()
 
     async def _await_closed(self):
         cancel_task_safe(self._sync_task, self.log)
@@ -722,7 +723,8 @@ class FullNode:
         await self.connection.close()
         if self._init_weight_proof is not None:
             await asyncio.wait([self._init_weight_proof])
-        await self._blockchain_lock_queue.await_closed()
+        if hasattr(self, "_blockchain_lock_queue"):
+            await self._blockchain_lock_queue.await_closed()
 
     async def _sync(self):
         """
