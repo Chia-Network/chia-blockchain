@@ -3,7 +3,7 @@ import os
 import json
 import time
 from dataclasses import dataclass
-from typing import Any, Optional, Tuple, Set, List, Dict, Type, TypeVar
+from typing import Any, Generic, Optional, Tuple, Set, List, Dict, Type, TypeVar
 
 from blspy import G2Element, AugSchemeMPL
 
@@ -19,7 +19,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import ItemAndSpendBundleNames, SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from secrets import token_bytes
 from chia.util.streamable import Streamable, streamable
@@ -80,7 +80,7 @@ class DataLayerWallet:
         root_hash: bytes32,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
-    ) -> _T_DataLayerWallet:
+    ) -> ItemAndSpendBundleNames[_T_DataLayerWallet]:
         """
         This must be called under the wallet state manager lock
         """
@@ -167,7 +167,7 @@ class DataLayerWallet:
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(dl_record)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
-        return self
+        return ItemAndSpendBundleNames(item=self, spend_bundle_names={spend_bundle.name()})
 
     async def generate_launcher_spend(
         self,

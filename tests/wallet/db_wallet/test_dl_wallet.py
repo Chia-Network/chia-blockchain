@@ -10,7 +10,7 @@ from chia.wallet.dlo_wallet.dlo_wallet import DLOWallet
 from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 from chia.types.blockchain_format.program import Program
 from chia.types.announcement import Announcement
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import ItemAndSpendBundleNames, SpendBundle
 from tests.time_out_assert import time_out_assert
 from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.transaction_record import TransactionRecord
@@ -79,11 +79,13 @@ class TestDLWallet:
 
         # Wallet1 sets up DLWallet1 without any backup set
         async with wallet_node_0.wallet_state_manager.lock:
-            dl_wallet_0: DataLayerWallet = await DataLayerWallet.create_new_dl_wallet(
+            creation_record = await DataLayerWallet.create_new_dl_wallet(
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
             )
 
-        await dl_wallet_0.wallet_state_manager.tx_store.wait_all_sent()
+        dl_wallet_0: DataLayerWallet = creation_record.item
+
+        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=creation_record.spend_bundle_names)
 
         await full_node_api.process_blocks(count=1)
 
@@ -94,8 +96,8 @@ class TestDLWallet:
 
         nodes.append(Program.to("beep").get_tree_hash())
         new_merkle_tree = MerkleTree(nodes)
-        await dl_wallet_0.create_update_state_spend(new_merkle_tree.calculate_root())
-        await dl_wallet_0.wallet_state_manager.tx_store.wait_all_sent()
+        spend_bundle = await dl_wallet_0.create_update_state_spend(new_merkle_tree.calculate_root())
+        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=[spend_bundle.name()])
 
         await full_node_api.process_blocks(count=2)
 
@@ -145,11 +147,13 @@ class TestDLWallet:
 
         # Wallet1 sets up DLWallet1 without any backup set
         async with wallet_node_0.wallet_state_manager.lock:
-            dl_wallet_0: DataLayerWallet = await DataLayerWallet.create_new_dl_wallet(
+            creation_record = await DataLayerWallet.create_new_dl_wallet(
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
             )
 
-        await dl_wallet_0.wallet_state_manager.tx_store.wait_all_sent()
+        dl_wallet_0: DataLayerWallet = creation_record.item
+
+        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=creation_record.spend_bundle_names)
 
         await full_node_api.farm_blocks(count=1, farm_to=ph1)
 
@@ -178,7 +182,7 @@ class TestDLWallet:
             name=sb.name(),
         )
         await wallet_1.push_transaction(tr)
-        await wallet_1.wallet_state_manager.tx_store.wait_all_sent()
+        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=[sb.name()])
 
         await full_node_api.process_blocks(count=2)
 
@@ -216,11 +220,13 @@ class TestDLWallet:
 
         # Wallet1 sets up DLWallet1
         async with wallet_node_0.wallet_state_manager.lock:
-            dl_wallet_0: DataLayerWallet = await DataLayerWallet.create_new_dl_wallet(
+            creation_record = await DataLayerWallet.create_new_dl_wallet(
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
             )
 
-        await dl_wallet_0.wallet_state_manager.tx_store.wait_all_sent()
+        dl_wallet_0: DataLayerWallet = creation_record.item
+
+        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=creation_record.spend_bundle_names)
 
         await full_node_api.process_blocks(count=1)
 
@@ -233,8 +239,6 @@ class TestDLWallet:
                 wallet_node_1.wallet_state_manager,
                 wallet_1,
             )
-
-        await dlo_wallet_1.wallet_state_manager.tx_store.wait_all_sent()
 
         await full_node_api.farm_blocks(count=2, farm_to=ph1)
 
@@ -254,7 +258,7 @@ class TestDLWallet:
             10,
         )
         await wallet_1.push_transaction(tr)
-        await wallet_1.wallet_state_manager.tx_store.wait_all_sent()
+        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=[tr.spend_bundle.name()])
 
         # TODO: ugh
         if sys.platform == "darwin":
@@ -271,8 +275,6 @@ class TestDLWallet:
                 wallet_node_2.wallet_state_manager,
                 wallet_2,
             )
-
-        await dlo_wallet_2.wallet_state_manager.tx_store.wait_all_sent()
 
         offer_coin = await dlo_wallet_1.get_coin()
         offer_full_puzzle = dlo_wallet_1.puzzle_for_pk(0x00)
@@ -308,7 +310,7 @@ class TestDLWallet:
             name=sb.name(),
         )
         await wallet_2.push_transaction(tr)
-        await wallet_2.wallet_state_manager.tx_store.wait_all_sent()
+        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=[sb.name()])
 
         await full_node_api.process_blocks(count=2)
 
@@ -345,11 +347,13 @@ class TestDLWallet:
 
         # Wallet1 sets up DLWallet1
         async with wallet_node_0.wallet_state_manager.lock:
-            dl_wallet_0: DataLayerWallet = await DataLayerWallet.create_new_dl_wallet(
+            creation_record = await DataLayerWallet.create_new_dl_wallet(
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101), current_root
             )
 
-        await dl_wallet_0.wallet_state_manager.tx_store.wait_all_sent()
+        dl_wallet_0: DataLayerWallet = creation_record.item
+
+        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=creation_record.spend_bundle_names)
 
         await full_node_api.process_blocks(count=1)
 
@@ -362,8 +366,6 @@ class TestDLWallet:
                 wallet_node_1.wallet_state_manager,
                 wallet_1,
             )
-
-        await dlo_wallet_1.wallet_state_manager.tx_store.wait_all_sent()
 
         wallet_1_funds = await full_node_api.farm_blocks(count=1, farm_to=ph1)
         offer_amount = 201
@@ -384,7 +386,7 @@ class TestDLWallet:
             10,
         )
         await wallet_1.push_transaction(tr)
-        await wallet_1.wallet_state_manager.tx_store.wait_all_sent()
+        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=[tr.spend_bundle.name()])
 
         await full_node_api.process_blocks(count=2)
 
@@ -395,7 +397,10 @@ class TestDLWallet:
         await time_out_assert(15, wallet_1.get_confirmed_balance, wallet_1_funds)
         await time_out_assert(15, wallet_1.get_unconfirmed_balance, wallet_1_funds)
 
-        await dlo_wallet_1.create_recover_dl_offer_spend()
+        transaction_record = await dlo_wallet_1.create_recover_dl_offer_spend()
+        await full_node_api.wait_spend_bundle_entered_mempool(
+            spend_bundle_names=[transaction_record.spend_bundle.name()]
+        )
         await dlo_wallet_1.wallet_state_manager.tx_store.wait_all_sent()
 
         await full_node_api.process_blocks(count=2)

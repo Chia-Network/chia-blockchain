@@ -71,9 +71,10 @@ class DataLayer:
         main_wallet = self.wallet_node.wallet_state_manager.main_wallet
         amount = uint64(1)  # todo what should amount be ?
         async with self.wallet_node.wallet_state_manager.lock:
-            self.wallet = await self.wallet.create_new_dl_wallet(
+            creation_record = await self.wallet.create_new_dl_wallet(
                 self.wallet_node.wallet_state_manager, main_wallet, amount, None
             )
+            self.wallet = creation_record.wallet
         self.initialized = True
         return True
 

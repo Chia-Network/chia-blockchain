@@ -1,7 +1,7 @@
 import asyncio
 import itertools
 import sys
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
@@ -220,3 +220,20 @@ class FullNodeSimulator(FullNodeAPI):
                 return rewards
 
         raise Exception("internal error")
+
+    async def wait_spend_bundle_entered_mempool(self, spend_bundle_names: Iterable[bytes32]) -> None:
+        ids_to_check = set(spend_bundle_names)
+        # TODO: add a timeout
+        # TODO: can we avoid polling
+        while True:
+            found = set()
+            for spend_bundle_name in ids_to_check:
+                tx = self.full_node.mempool_manager.get_spendbundle(spend_bundle_name)
+                if tx is not None:
+                    found.add(spend_bundle_name)
+            ids_to_check = ids_to_check.difference(found)
+
+            if len(ids_to_check) == 0:
+                return
+
+            await asyncio.sleep(0.050)
