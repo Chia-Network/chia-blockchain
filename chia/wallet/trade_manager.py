@@ -74,7 +74,7 @@ class TradeManager:
     async def get_trade_by_coin(self, coin: Coin) -> Optional[TradeRecord]:
         all_trades = await self.get_all_trades()
         for trade in all_trades:
-            if trade.status == TradeStatus.CANCELED.value:
+            if trade.status == TradeStatus.CANCELLED.value:
                 continue
             if coin in trade.coins_of_interest:
                 return trade
@@ -119,7 +119,7 @@ class TradeManager:
         else:
             # In any other scenario this trade failed
             if trade.status == TradeStatus.PENDING_CANCEL.value:
-                await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELED, True)
+                await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED, True)
                 self.log.info(f"Trade with id: {trade.trade_id} canceled")
             elif trade.status == TradeStatus.PENDING_CONFIRM.value:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED, True)
@@ -137,7 +137,7 @@ class TradeManager:
 
         coins_of_interest = []
         for trade_offer in all_pending:
-            coins_of_interest.extend([c.name() for c in trade_offer.get_involved_coins()])
+            coins_of_interest.extend([c.name() for c in Offer.from_bytes(trade_offer.offer).get_involved_coins()])
 
         result = {}
         coin_records = await self.wallet_state_manager.coin_store.get_multiple_coin_records(coins_of_interest)
@@ -156,7 +156,7 @@ class TradeManager:
         return record
 
     async def cancel_pending_offer(self, trade_id: bytes32):
-        await self.trade_store.set_status(trade_id, TradeStatus.CANCELED, False)
+        await self.trade_store.set_status(trade_id, TradeStatus.CANCELLED, False)
 
     async def cancel_pending_offer_safely(self, trade_id: bytes32):
         """This will create a transaction that includes coins that were offered"""

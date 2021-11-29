@@ -305,7 +305,7 @@ class TestCCTrades:
 
         trade_a = await trade_manager_a.get_trade_by_id(trade_offer.trade_id)
         assert trade_a is not None
-        assert trade_a.status == TradeStatus.CANCELED.value
+        assert trade_a.status == TradeStatus.CANCELLED.value
 
     @pytest.mark.asyncio
     async def test_cc_trade_cancel_secure(self, wallets_prefarm):
@@ -358,4 +358,4 @@ class TestCCTrades:
             assert trade_a is not None
             return trade_a.status
 
-        await time_out_assert(15, get_status, TradeStatus.CANCELED.value)
+        await time_out_assert(15, get_status, TradeStatus.CANCELLED.value)
