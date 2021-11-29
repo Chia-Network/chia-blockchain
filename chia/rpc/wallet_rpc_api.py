@@ -880,7 +880,7 @@ class WalletRpcApi:
 
         all_trades = await trade_mgr.get_all_trades()
         result = []
-        offer_values = []
+        offer_values = [] if file_contents else None
         for trade in all_trades:
             result.append(trade.to_json_dict_convenience())
             if file_contents:
