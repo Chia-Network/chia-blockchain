@@ -1133,7 +1133,7 @@ class Timelord:
                         return
                     vdf_proof = VDFProof(uint8(0), proof_part, True)
                     initial_form = ClassgroupElement.get_default_element()
-                    if not vdf_proof.is_valid(self.constants, initial_form, picked_info):
+                    if not vdf_proof.is_valid(self.constants, initial_form, picked_info.new_proof_of_time):
                         log.error("Invalid compact proof of time!")
                         return
                     response = timelord_protocol.RespondCompactProofOfTime(
