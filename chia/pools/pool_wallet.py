@@ -624,6 +624,7 @@ class PoolWallet:
         genesis_challenge: bytes32,
         delay_time: uint64,
         delay_ph: bytes32,
+        fee_rate: float = 0.0,
     ) -> Tuple[SpendBundle, bytes32, bytes32]:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
@@ -672,6 +673,7 @@ class PoolWallet:
         announcement_message = Program.to([puzzle_hash, amount, pool_state_bytes]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
+        new_coin = [{"puzzlehash": genesis_launcher_puz.get_tree_hash(), "amount": amount}]
         create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),

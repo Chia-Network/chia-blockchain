@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64
+from chia.util.ints import uint64, uint32
 from chia.util.streamable import Streamable, streamable
 
 
@@ -21,6 +21,7 @@ class MempoolItem(Streamable):
     additions: List[Coin]
     removals: List[Coin]
     program: SerializedProgram
+    height_added: Optional[uint32]
 
     def __lt__(self, other):
         return self.fee_per_cost < other.fee_per_cost
@@ -32,3 +33,7 @@ class MempoolItem(Streamable):
     @property
     def name(self) -> bytes32:
         return self.spend_bundle_name
+
+    @property
+    def fee_per_k_cost(self) -> float:
+        return 1000 * (int(self.fee) / int(self.cost))

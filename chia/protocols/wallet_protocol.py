@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
+from chia.full_node.fee_estimate import FeeEstimate
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -226,3 +227,15 @@ class RequestSESInfo(Streamable):
 class RespondSESInfo(Streamable):
     reward_chain_hash: List[bytes32]
     heights: List[List[uint32]]
+
+
+@dataclass(frozen=True)
+@streamable
+class RequestFeeEstimates(Streamable):
+    nonce: uint32
+
+
+@dataclass(frozen=True)
+@streamable
+class RespondFeeEstimates(Streamable):
+    estimates: FeeEstimate

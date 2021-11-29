@@ -126,9 +126,9 @@ class TestFullNodeBlockCompression:
         await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_1)
 
         # Send a transaction to mempool
+        new_coins = [{"puzzlehash": ph, "amount": tx_size}]
         tr: TransactionRecord = await wallet.generate_signed_transaction(
-            tx_size,
-            ph,
+            new_coins,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -158,9 +158,9 @@ class TestFullNodeBlockCompression:
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
         # Send another tx
+        new_coins = [{"puzzlehash": ph, "amount": 20000}]
         tr: TransactionRecord = await wallet.generate_signed_transaction(
-            20000,
-            ph,
+            new_coins,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -194,9 +194,9 @@ class TestFullNodeBlockCompression:
         await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_1)
 
         # Send another 2 tx
+        new_coins = [{"puzzlehash": ph, "amount": 30000}]
         tr: TransactionRecord = await wallet.generate_signed_transaction(
-            30000,
-            ph,
+            new_coins,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -205,9 +205,9 @@ class TestFullNodeBlockCompression:
             tr.spend_bundle,
             tr.name,
         )
+        new_coins = [{"puzzlehash": ph, "amount": 40000}]
         tr: TransactionRecord = await wallet.generate_signed_transaction(
-            40000,
-            ph,
+            new_coins,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -216,10 +216,9 @@ class TestFullNodeBlockCompression:
             tr.spend_bundle,
             tr.name,
         )
-
+        new_coins = [{"puzzlehash": ph, "amount": 50000}]
         tr: TransactionRecord = await wallet.generate_signed_transaction(
-            50000,
-            ph,
+            new_coins,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -228,10 +227,9 @@ class TestFullNodeBlockCompression:
             tr.spend_bundle,
             tr.name,
         )
-
+        new_coins = [{"puzzlehash": ph, "amount": 3000000000000}]
         tr: TransactionRecord = await wallet.generate_signed_transaction(
-            3000000000000,
-            ph,
+            new_coins,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(

@@ -47,6 +47,10 @@ class FullNodeRpcClient(RpcClient):
         )
         return [FullBlock.from_json_dict(block) for block in response["blocks"]]
 
+    async def get_fee_estimates(self) -> Dict:
+        response = await self.fetch("get_fee_estimates", {})
+        return response["fee_estimate"]
+
     async def get_block_record_by_height(self, height) -> Optional[BlockRecord]:
         try:
             response = await self.fetch("get_block_record_by_height", {"height": height})

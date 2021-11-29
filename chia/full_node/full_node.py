@@ -31,6 +31,9 @@ from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult
 from chia.full_node.hint_store import HintStore
+from chia.full_node.fee_estimate_store import FeeStore
+from chia.full_node.fee_estimator import SmartFeeEstimator
+from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import SyncStore
@@ -212,6 +215,8 @@ class FullNode:
         self.sync_store = await SyncStore.create()
         self.hint_store = await HintStore.create(self.db_wrapper)
         self.coin_store = await CoinStore.create(self.db_wrapper)
+        self.fee_store = await FeeStore.create(self.db_wrapper)
+        self.fee_tracker = await FeeTracker.create(self.log, self.fee_store)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
         reserved_cores = self.config.get("reserved_cores", 0)
@@ -246,6 +251,10 @@ class FullNode:
         self.transaction_queue = asyncio.PriorityQueue(10000)
         self._transaction_queue_task = asyncio.create_task(self._handle_transactions())
         self.transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = []
+
+        self.fee_tracker = await FeeTracker.create(self.log, self.fee_store)
+        self.mempool_manager = MempoolManager(self.coin_store, self.constants, self.config, self.fee_tracker)
+        self.fee_estimator = SmartFeeEstimator(self.mempool_manager, self.log)
 
         self.weight_proof_handler = None
         self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
@@ -782,6 +791,11 @@ class FullNode:
         cancel_task_safe(task=self._sync_task, log=self.log)
 
     async def _await_closed(self):
+        try:
+            await self.fee_tracker.shutdown()
+        except Exception as e:
+            self.log.warning(f"{e}")
+        cancel_task_safe(self._sync_task, self.log)
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
             cancel_task_safe(task, self.log)
         await self.db_wrapper.close()

@@ -13,6 +13,7 @@ from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
+from chia.full_node.fee_estimate import FeeEstimate
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
@@ -25,6 +26,7 @@ from chia.protocols.wallet_protocol import (
     RejectHeaderRequest,
     CoinState,
     RespondSESInfo,
+    RespondFeeEstimates,
 )
 from chia.server.outbound_message import Message, make_msg
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
@@ -1508,4 +1510,11 @@ class FullNodeAPI:
 
         response = RespondSESInfo(ses_reward_hashes, ses_hash_heights)
         msg = make_msg(ProtocolMessageTypes.respond_ses_hashes, response)
+        return msg
+
+    @api_request
+    async def request_fee_estimates(self, request: wallet_protocol.RequestFeeEstimates):
+        estimate: FeeEstimate = self.full_node.fee_estimator.get_estimates()
+        response = RespondFeeEstimates(estimate)
+        msg = make_msg(ProtocolMessageTypes.respond_fee_estimates, response)
         return msg
