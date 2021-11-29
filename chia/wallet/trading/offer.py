@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Set
+from typing import List, Optional, Dict, Set, Tuple
 from blspy import G2Element
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -149,6 +149,23 @@ class Offer:
             arbitrage_dict[asset_id] = offered_amounts.get(asset_id, 0) - requested_amounts.get(asset_id, 0)
 
         return arbitrage_dict
+
+    # This is a method mostly for the UI that creates a JSON summary of the offer
+    def summary(self) -> Tuple[Dict[str, int], Dict[str, int]]:
+        offered_amounts: Dict[Optional[bytes32], int] = self.get_offered_amounts()
+        requested_amounts: Dict[Optional[bytes32], int] = self.get_requested_amounts()
+
+        def keys_to_strings(dic: Dict[Optional[bytes32], int]) -> Dict[str, int]:
+            new_dic: Dict[str, int] = {}
+            for key in dic:
+                if key is None:
+                    new_dic["xch"] = dic[key]
+                else:
+                    new_dic[key.hex()] = dic[key]
+            return new_dic
+
+        return keys_to_strings(offered_amounts), keys_to_strings(requested_amounts)
+
 
     # This method returns all of the coins that are being used in the offer (without which it would be invalid)
     def get_involved_coins(self) -> List[Coin]:
