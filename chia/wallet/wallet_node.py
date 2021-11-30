@@ -404,11 +404,18 @@ class WalletNode:
                 else:
                     to_check.append(ph)
                     already_checked.add(ph)
+                    if len(to_check) == 1000:
+                        break
 
-            await self.subscribe_to_phs(to_check, full_node, request_height)
+            await self.subscribe_to_phs(to_check, full_node, 0)
 
             # Check if new puzzle hashed have been created
             check_again = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+            self.log.debug(f"already_checked {len(already_checked)}")
+            self.log.debug(f"check_again {len(check_again)}")
+            self.log.debug(f"all_puzzle_hashes {len(all_puzzle_hashes)}")
+            await self.wallet_state_manager.create_more_puzzle_hashes()
+
             continue_while = False
             for ph in check_again:
                 if ph not in already_checked:
