@@ -102,7 +102,9 @@ class TradeManager:
         )
         our_primary_coins: List[bytes32] = [cr.coin.name() for cr in our_coin_records]
         all_settlement_payments: List[Coin] = [c for coins in offer.get_offered_coins().values() for c in coins]
-        our_settlement_payments: List[Coin] = list(filter(lambda c: c.parent_coin_info in our_primary_coins, all_settlement_payments))
+        our_settlement_payments: List[Coin] = list(
+            filter(lambda c: c.parent_coin_info in our_primary_coins, all_settlement_payments)
+        )
         our_settlement_ids: List[bytes32] = [c.name() for c in our_settlement_payments]
 
         # And get all relevant coin states
@@ -189,7 +191,9 @@ class TradeManager:
     async def save_trade(self, trade: TradeRecord):
         await self.trade_store.add_trade_record(trade, False)
 
-    async def create_offer_for_ids(self, offer: Dict[int, int]) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
+    async def create_offer_for_ids(
+        self, offer: Dict[int, int], validate_only: bool = False
+    ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         success, created_offer, error = await self._create_offer_for_ids(offer)
         if not success or created_offer is None:
             raise Exception(f"Error creating offer: {error}")
@@ -208,7 +212,7 @@ class TradeManager:
             sent_to=[],
         )
 
-        if success is True and trade_offer is not None:
+        if success is True and trade_offer is not None and not validate_only:
             await self.save_trade(trade_offer)
 
         return success, trade_offer, error

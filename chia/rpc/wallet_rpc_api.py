@@ -815,6 +815,8 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
 
         offer: Dict[str, int] = request["offer"]
+        validate_only: bool = request.get("validate_only", False)
+
         modified_offer = {}
         for key in offer:
             modified_offer[int(key)] = offer[key]
@@ -824,7 +826,9 @@ class WalletRpcApi:
                 success,
                 trade_record,
                 error,
-            ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(modified_offer)
+            ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
+                modified_offer, validate_only
+            )
         if success:
             return {
                 "offer": trade_record.offer.hex(),
