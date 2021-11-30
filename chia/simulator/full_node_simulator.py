@@ -155,9 +155,8 @@ class FullNodeSimulator(FullNodeAPI):
 
         for i in range(count):
             block: FullBlock = await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
-            if block.is_transaction_block():
-                height = uint32(block.height)
-                rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
+            height = uint32(block.height)
+            rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
 
             # TODO: is there a thing we can check to confirm the block has been processed?
             await asyncio.sleep(0)
