@@ -296,12 +296,7 @@ class TestDLWallet:
             name=sb.name(),
         )
         await wallet_2.push_transaction(tr)
-        # TODO: remove?
-        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=[sb.name()])
-        # await full_node_api.process_spend_bundles(spend_bundle_names=[sb.name()])
-
-        # TODO: remove?
-        await full_node_api.process_blocks(count=2)
+        await full_node_api.process_spend_bundles(spend_bundle_names=[sb.name()])
 
         await time_out_assert(15, wallet_2.get_confirmed_balance, 201)
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 201)
