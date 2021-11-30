@@ -85,7 +85,7 @@ if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
 	# Disables build links from the generated rpm so that we dont conflict with other packages. See https://github.com/Chia-Network/chia-blockchain/issues/3846
 	# shellcheck disable=SC2086
 	sed -i '1s/^/%define _build_id_links none\n%global _enable_debug_package 0\n%global debug_package %{nil}\n%global __os_install_post \/usr\/lib\/rpm\/brp-compress %{nil}\n/' "$NODE_ROOT/lib/node_modules/electron-installer-redhat/resources/spec.ejs"
-	
+
 	# Use attr feature of RPM to set the chrome-sandbox permissions
 	# adds a %attr line after the %files line
 	# The location is based on the existing location inside spec.ej
