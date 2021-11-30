@@ -293,6 +293,11 @@ class TestWalletRpc:
             assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"
             await client.set_cat_name(cat_0_id, "My cat")
             assert (await client.get_cat_name(cat_0_id)) == "My cat"
+            wid, name = await client.cat_asset_id_to_name(col)
+            assert wid == cat_0_id
+            assert name == "My cat"
+            should_be_none = await client.cat_asset_id_to_name(bytes([0] * 32))
+            assert should_be_none is None
 
             await asyncio.sleep(1)
             for i in range(0, 5):
