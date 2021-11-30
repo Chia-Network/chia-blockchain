@@ -564,7 +564,8 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         # If syncing return the last available info or 0s
-        if self.service.syncing:
+        syncing = self.service.wallet_state_manager.sync_mode
+        if syncing:
             if wallet_id in self.balance_cache:
                 wallet_balance = self.balance_cache[wallet_id]
             else:
