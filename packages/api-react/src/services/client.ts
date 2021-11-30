@@ -17,6 +17,7 @@ export const clientApi = createApi({
         args: [force]
       }),
     }),
+
     getState: build.query<{
       state: ConnectionState;
       attempt: number;
@@ -53,10 +54,22 @@ export const clientApi = createApi({
         }
       },
     }),
+
+
+    startService: build.mutation<boolean, {
+      service?: ServiceName;
+    }>({
+      query: ({ service }) => ({
+        command: 'startService',
+        args: [service],
+        client: true,
+      }),
+    }),
   }),
 });
 
 export const { 
   useCloseMutation,
   useGetStateQuery,
+  useStartServiceMutation,
 } = clientApi;

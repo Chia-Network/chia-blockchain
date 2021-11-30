@@ -2,6 +2,7 @@ import React, { ReactElement, ReactNode } from 'react';
 import { Container } from '@material-ui/core';
 import styled from 'styled-components';
 import { Flex, Loading } from '@chia/core';
+import { Outlet } from 'react-router-dom';
 import DashboardTitle from '../DashboardTitle';
 import LayoutFooter from './LayoutFooter';
 
@@ -27,10 +28,11 @@ type Props = {
   loading?: boolean;
   loadingTitle?: ReactNode;
   bodyHeader?: ReactNode;
+  outlet?: boolean;
 };
 
 export default function LayoutMain(props: Props) {
-  const { children, title, loading, loadingTitle, bodyHeader } = props;
+  const { children, title, loading, loadingTitle, bodyHeader, outlet } = props;
 
   return (
     <>
@@ -49,9 +51,7 @@ export default function LayoutMain(props: Props) {
               >
                 <Loading>{loadingTitle}</Loading>
               </Flex>
-            ) : (
-              children
-            )}
+            ) : outlet ? <Outlet /> : children}
           </StyledBody>
         </StyledContainer>
       </StyledInnerContainer>
@@ -63,4 +63,5 @@ export default function LayoutMain(props: Props) {
 LayoutMain.defaultProps = {
   children: undefined,
   bodyHeader: undefined,
+  outlet: false,
 };

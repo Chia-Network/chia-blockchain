@@ -1,6 +1,5 @@
 import EventEmitter from 'events';
 import debug from 'debug';
-import { t } from '@lingui/macro';
 import ServiceName from './constants/ServiceName';
 import Message from './Message';
 import Daemon from './services/Daemon';
@@ -39,7 +38,6 @@ export default class Client extends EventEmitter {
 
   private daemon: Daemon;
 
-  private startingServices: boolean = false;
   private closed: boolean = false;
   private state: ConnectionState = ConnectionState.DISCONNECTED;
   private reconnectAttempt: number = 0;
@@ -129,8 +127,6 @@ export default class Client extends EventEmitter {
   addService(service: Service) {
     if (!this.services.has(service.name)) {
       this.services.add(service.name);
-
-      this.startServices();
     }
   }
 
@@ -194,79 +190,49 @@ export default class Client extends EventEmitter {
     return this.connectedPromise;
   }
 
-  private async startServices() {
-    if (!this.connected || this.startingServices) {
+  async startService(serviceName: ServiceName) {
+    if (this.started.has(serviceName)) {
       return;
     }
 
-    this.startingServices = true;
+    const response = await this.daemon.isRunning(serviceName);
+    if (!response.isRunning) {
+      console.log(`Starting service: ${serviceName}`);
+      await this.daemon.startService(serviceName);
+    }
 
-    const services = Array.from(this.services);
-
-    for (const serviceName of services) {
-      if (!this.started.has(serviceName)) {
-        this.startingService = serviceName;
-        this.emit('state', this.getState());
-
-        const response = await this.daemon.isRunning(serviceName);
-        if (!response.isRunning) {
-          log(`Starting service: ${serviceName}`);
-          await this.daemon.startService(serviceName);
+    // wait for service initialisation
+    console.log(`Waiting for ping from service: ${serviceName}`);
+    while(true) {
+      try {
+        const { data: pingResponse } = await this.send(new Message({
+          command: 'ping',
+          origin: this.origin,
+          destination: serviceName,
+        }), 1000);
+        
+        if (pingResponse.success) {
+          break;
         }
-
-        // wait for service initialisation
-        log(`Waiting for ping from service: ${serviceName}`);
-        while(true) {
-          try {
-            const { data: pingResponse } = await this.send(new Message({
-              command: 'ping',
-              origin: this.origin,
-              destination: serviceName,
-            }), 1000);
-            
-            if (pingResponse.success) {
-              break;
-            }
-          } catch (error) {
-            await sleep(1000);
-          }
-        }
-
-        log(`Service: ${serviceName} started`);
-        this.started.add(serviceName);
+      } catch (error) {
+        await sleep(1000);
       }
     }
 
-    /*
-    await Promise.all(Array.from(this.services).map(async (serviceName) => {
-      if (!this.started.has(serviceName)) {
-        const response = await this.daemon.isRunning(serviceName);
-        if (!response.isRunning) {
-          await this.daemon.startService(serviceName);
-        }
+    console.log(`Service: ${serviceName} started`);
+    this.started.add(serviceName);
+  }
 
-        // wait for service initialisation
-        while(true) {
-          try {
-            const { data: pingResponse } = await this.send(new Message({
-              command: 'ping',
-              origin: this.origin,
-              destination: serviceName,
-            }), 1000);
-            
-            if (pingResponse.success) {
-              break;
-            }
-          } catch (error) {
-            await sleep(1000);
-          }
-        }
+  private async startServices() {
+    if (!this.connected) {
+      return;
+    }
 
-        this.started.add(serviceName);
-      }
+    const services = Array.from(this.services);
+
+    await Promise.all(services.map(async (serviceName) => {
+      return this.startService(serviceName);
     }));
-    */
-    this.startingServices = false;
   }
 
   private handleOpen = async () => {
@@ -274,13 +240,10 @@ export default class Client extends EventEmitter {
 
     this.started.clear();
 
-    this.startingServices = true;
-    await this.daemon.registerService(ServiceName.EVENTS);
-    this.startingServices = false;
-
-    await this.startServices();
-
     this.changeState(ConnectionState.CONNECTED);
+
+    await this.daemon.registerService(ServiceName.EVENTS);
+    await this.startServices();
 
     if (this.connectedPromiseResponse) {
       this.connectedPromiseResponse.resolve();
@@ -348,7 +311,6 @@ export default class Client extends EventEmitter {
 
   async send(message: Message, timeout?: number): Promise<Response> {
     const { 
-      startingServices,
       connected,
       options: {
         timeout: defaultTimeout,
@@ -361,10 +323,6 @@ export default class Client extends EventEmitter {
     if (!connected) {
       log('API is not connected trying to connect');
       await this.connect();
-    }
-
-    if (!startingServices) {
-      await this.startServices();
     }
 
     return new Promise((resolve, reject) => {
@@ -397,15 +355,11 @@ export default class Client extends EventEmitter {
       return;
     }
 
-    this.startingServices = true;
-
     await Promise.all(Array.from(this.started).map(async (serviceName) => {
       return await this.daemon.stopService(serviceName);
     }));
 
     await this.daemon.exit();
-
-    this.startingServices = false;
 
     this.ws.close();
     // this.changeState(ConnectionState.DISCONNECTED);

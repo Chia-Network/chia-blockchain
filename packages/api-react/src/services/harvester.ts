@@ -13,6 +13,14 @@ export const harvesterApi = createApi({
   baseQuery,
   tagTypes: ['Plots', 'PlotDirectories'],
   endpoints: (build) => ({
+    ping: build.query<boolean, {
+    }>({
+      query: () => ({
+        command: 'ping',
+      }),
+      transformResponse: (response: any) => response?.success,
+    }),
+
     getPlots: build.query<Plot[], {
     }>({
       query: () => ({
@@ -80,6 +88,7 @@ export const harvesterApi = createApi({
 });
 
 export const { 
+  usePingQuery,
   useGetPlotsQuery,
   useRefreshPlotsMutation,
   useDeletePlotMutation,

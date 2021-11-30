@@ -55,6 +55,20 @@ export default class Daemon extends Service {
     });
   }
 
+  migrateKeyring(passphrase: string, passphraseHint: string, savePassphrase: boolean, cleanupLegacyKeyring: boolean) {
+    return this.command('migrate_keyring', {
+      passphrase,
+      passphraseHint,
+      savePassphrase,
+      cleanupLegacyKeyring,
+    });
+  }
+
+  unlockKeyring(key: string) {
+    return this.command('unlock_keyring', {
+      key,
+    });
+  }
 
   exit() {
     return this.command('exit');

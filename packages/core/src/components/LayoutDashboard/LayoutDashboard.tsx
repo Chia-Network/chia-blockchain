@@ -64,10 +64,11 @@ const StyledToolbar = styled(Toolbar)`
 export type LayoutDashboardProps = {
   children?: ReactNode;
   sidebar?: ReactNode;
+  outlet?: boolean;
 };
 
 export default function LayoutDashboard(props: LayoutDashboardProps) {
-  const { children, sidebar } = props;
+  const { children, sidebar, outlet } = props;
 
   const navigate = useNavigate();
   const logout = useLogout();
@@ -126,8 +127,7 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
           <StyledContainer maxWidth="lg">
             <Flex flexDirection="column" gap={2}>
               <Suspense fallback={<Loading center />}>
-                <Outlet />
-                {children}
+                {outlet ? <Outlet /> : children}
               </Suspense>
             </Flex>
           </StyledContainer>
@@ -139,4 +139,5 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
 
 LayoutDashboard.defaultProps = {
   children: undefined,
+  outlet: false,
 };

@@ -13,6 +13,14 @@ export const daemonApi = createApi({
   baseQuery,
   tagTypes: ['KeyringStatus', 'ServiceRunning'],
   endpoints: (build) => ({
+    ping: build.query<boolean, {
+    }>({
+      query: () => ({
+        command: 'ping',
+      }),
+      transformResponse: (response: any) => response?.success,
+    }),
+
     getKeyringStatus: build.query<KeyringStatus, {
     }>({
       query: () => ({
@@ -32,13 +40,31 @@ export const daemonApi = createApi({
           // empty base array
           draft.splice(0);
 
-          console.log('onKeyringStatusChanged get', data);
           const { status, ...rest } = data;
 
           // assign new items
           Object.assign(draft, rest);
         },
       }]),
+    }),
+    
+    startService: build.mutation<boolean, {
+      service: ServiceName;
+      testing?: boolean,
+    }>({
+      query: ({ service, testing }) => ({
+        command: 'startService',
+        args: [service, testing],
+      }),
+    }),
+
+    stopService: build.mutation<boolean, {
+      service: ServiceName;
+    }>({
+      query: ({ service }) => ({
+        command: 'stopService',
+        args: [service],
+      }),
     }),
 
     isServiceRunning: build.query<KeyringStatus, {
@@ -76,12 +102,42 @@ export const daemonApi = createApi({
       invalidatesTags: () => ['KeyringStatus'],
       transformResponse: (response: any) => response?.success,
     }),
+
+    migrateKeyring: build.mutation<boolean, {
+      passphrase: string,
+      passphraseHint: string,
+      savePassphrase: boolean,
+      cleanupLegacyKeyring: boolean,
+    }>({
+      query: ({ passphrase, passphraseHint, savePassphrase, cleanupLegacyKeyring }) => ({
+        command: 'migrateKeyring',
+        args: [passphrase, passphraseHint, savePassphrase, cleanupLegacyKeyring],
+      }),
+      invalidatesTags: () => ['KeyringStatus'],
+      transformResponse: (response: any) => response?.success,
+    }),
+
+    unlockKeyring: build.mutation<boolean, {
+      key: string,
+    }>({
+      query: ({ key }) => ({
+        command: 'unlockKeyring',
+        args: [key],
+      }),
+      invalidatesTags: () => ['KeyringStatus'],
+      transformResponse: (response: any) => response?.success,
+    }),
   }),
 });
 
 export const { 
+  usePingQuery,
   useGetKeyringStatusQuery,
+  useStartServiceMutation,
+  useStopServiceMutation,
   useIsServiceRunningQuery,
   useSetKeyringPassphraseMutation,
   useRemoveKeyringPassphraseMutation,
+  useMigrateKeyringMutation,
+  useUnlockKeyringMutation,
 } = daemonApi;

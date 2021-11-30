@@ -10,6 +10,7 @@ export const {
 
   useCloseMutation,
   useGetStateQuery,
+  useStartServiceMutation: useClientStartServiceMutation,
 } = client;
 
 
@@ -17,16 +18,22 @@ export const {
 export const {
   daemonApi,
 
+  usePingQuery: useDaemonPingQuery,
   useGetKeyringStatusQuery,
+  useStartServiceMutation,
+  useStopServiceMutation,
   useIsServiceRunningQuery,
   useSetKeyringPassphraseMutation,
   useRemoveKeyringPassphraseMutation,
+  useMigrateKeyringMutation,
+  useUnlockKeyringMutation,
 } = daemon;
 
 // farmer hooks
 export const {
   farmerApi,
 
+  usePingQuery: useFarmerPingQuery,
   useGetHarvestersQuery,
   useGetRewardTargetsQuery,
   useSetRewardTargetsMutation,
@@ -43,6 +50,7 @@ export const {
 export const {
   fullNodeApi,
 
+  usePingQuery: useFullNodePingQuery,
   useGetBlockRecordsQuery,
   useGetUnfinishedBlockHeadersQuery,
   useGetBlockchainStateQuery,
@@ -57,6 +65,7 @@ export const {
 export const {
   walletApi,
 
+  usePingQuery: useWalletPingQuery,
   useGetWalletsQuery,
   useGetTransactionQuery,
   useGetPwStatusQuery,
@@ -117,6 +126,7 @@ export const {
 export const {
   harvesterApi,
 
+  usePingQuery: useHarvesterPingQuery,
   useGetPlotsQuery,
   useRefreshPlotsMutation,
   useDeletePlotMutation,

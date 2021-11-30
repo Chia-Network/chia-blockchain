@@ -12,15 +12,15 @@ export default function AppRouter() {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/" element={<App />}>
-          <Route element={<LayoutHero />}>
+        <Route path="/" element={<App outlet />}>
+          <Route element={<LayoutHero outlet />}>
             <Route index element={<SelectKey />} />
           </Route>
-          <Route element={<LayoutHero back />}>
+          <Route element={<LayoutHero back outlet />}>
             <Route path="wallet/add" element={<WalletAdd />} />
             <Route path="wallet/import" element={<WalletImport />} />
           </Route>
-          <Route element={<LayoutDashboard sidebar={<DashboardSideBar />} />}>
+          <Route element={<LayoutDashboard sidebar={<DashboardSideBar />} outlet />}>
             <Route path="dashboard/" element={<FullNode />} />
             <Route path="dashboard/block/:headerHash" element={<Block />} />
             <Route path="dashboard/wallets/*" element={<Wallets />} />

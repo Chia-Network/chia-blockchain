@@ -13,6 +13,14 @@ export const fullNodeApi = createApi({
   baseQuery,
   tagTypes: ['BlockchainState', 'FullNodeConnections'],
   endpoints: (build) => ({
+    ping: build.query<boolean, {
+    }>({
+      query: () => ({
+        command: 'ping',
+      }),
+      transformResponse: (response: any) => response?.success,
+    }),
+
     getBlockRecords: build.query<BlockRecord[], { 
       start?: number;
       end?: number;
@@ -109,6 +117,7 @@ export const fullNodeApi = createApi({
 });
 
 export const { 
+  usePingQuery,
   useGetBlockRecordsQuery,
   useGetUnfinishedBlockHeadersQuery,
   useGetBlockchainStateQuery,

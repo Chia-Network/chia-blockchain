@@ -28,10 +28,11 @@ type Props = {
   children?: ReactNode;
   header?: ReactNode;
   back?: boolean;
+  outlet?: boolean;
 };
 
 export default function LayoutHero(props: Props) {
-  const { children, header, back, } = props;
+  const { children, header, back, outlet } = props;
 
   return (
     <StyledWrapper>
@@ -50,8 +51,7 @@ export default function LayoutHero(props: Props) {
       </AppBar>
       <StyledBody>
         <Flex flexDirection="column" gap={2} alignItems="center">
-          <Outlet />
-          {children}
+          {outlet ? <Outlet /> : children}
         </Flex>
       </StyledBody>
     </StyledWrapper>
@@ -62,4 +62,5 @@ LayoutHero.defaultProps = {
   header: undefined,
   children: undefined,
   back: false,
+  outlet: false,
 };

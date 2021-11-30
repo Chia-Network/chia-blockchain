@@ -37,6 +37,7 @@ export { default as Indicator } from './Indicator';
 export { default as InputBase } from './InputBase';
 export { default as LayoutDashboard } from './LayoutDashboard';
 export { default as LayoutHero } from './LayoutHero';
+export { default as LayoutLoading } from './LayoutLoading';
 export { default as LayoutMain } from './LayoutMain';
 export { default as Link } from './Link';
 export { default as Loading } from './Loading';

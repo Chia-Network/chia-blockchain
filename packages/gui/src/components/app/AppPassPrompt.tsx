@@ -1,5 +1,4 @@
 import React, { useEffect, KeyboardEvent } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import {
   Dialog,
   DialogTitle,
@@ -9,25 +8,21 @@ import {
   Typography,
   Button,
 } from '@material-ui/core';
-import { Trans } from '@lingui/macro';
+import { Trans, t } from '@lingui/macro';
 import { PassphrasePromptReason } from '@chia/api';
-import { AlertDialog, Flex, TooltipIcon } from '@chia/core';
-import { openDialog } from '../../modules/dialog';
-import { unlock_keyring_action } from '../../modules/message';
-import { RootState } from 'modules/rootReducer';
+import { useUnlockKeyringMutation, useGetKeyringStatusQuery } from '@chia/api-react';
+import { Flex, TooltipIcon, useShowError, Suspender } from '@chia/core';
 
 type Props = {
   reason: PassphrasePromptReason;
 };
 
 export default function AppPassPrompt(props: Props) {
-  const dispatch = useDispatch();
   const { reason } = props;
-  const {
-    user_passphrase_set: userPassphraseIsSet,
-    passphrase_hint: passphraseHint,
-  } = useSelector((state: RootState) => state.keyring_state);
-  const [actionInProgress, setActionInProgress] = React.useState(false);
+  const showError = useShowError();
+  const { data: keyringState, isLoading } = useGetKeyringStatusQuery();
+  const [unlockKeyring, { isLoading: isLoadingUnlockKeyring }] = useUnlockKeyringMutation();
+
   let passphraseInput: HTMLInputElement | null = null;
 
   const [needsFocusAndSelect, setNeedsFocusAndSelect] = React.useState(false);
@@ -39,47 +34,31 @@ export default function AppPassPrompt(props: Props) {
     }
   });
 
+  if (isLoading) {
+    return (
+      <Suspender />
+    );
+  }
+
+  const {
+    userPassphraseIsSet,
+    passphraseHint,
+  } = keyringState;
+
   async function handleSubmit(): Promise<void> {
     const passphrase: string | undefined = passphraseInput?.value;
 
-    setActionInProgress(true);
-
     try {
-      if (!passphrase || passphrase.length == 0) {
-        await dispatch(
-          openDialog(
-            <AlertDialog>
-              <Trans>
-                Please enter a passphrase
-              </Trans>
-            </AlertDialog>
-          ),
-        );
-        setActionInProgress(false);
-        setNeedsFocusAndSelect(true);
-      } else {
-        await dispatch(
-          unlock_keyring_action(
-            passphrase,
-            async () => {
-              await dispatch(
-                openDialog(
-                  <AlertDialog>
-                    <Trans>
-                      Passphrase is incorrect
-                    </Trans>
-                  </AlertDialog>
-                ),
-              );
-              setActionInProgress(false);
-              setNeedsFocusAndSelect(true);
-            }
-          )
-        );
+      if (!passphrase) {
+        throw new Error(t`Please enter a passphrase`);
       }
-    }
-    catch (e) {
-      setActionInProgress(false);
+
+      await unlockKeyring({
+        key: passphrase,
+      }).unwrap();
+    } catch (error: any) {
+      showError(error);
+      setNeedsFocusAndSelect(true);
     }
   }
 
@@ -135,7 +114,7 @@ export default function AppPassPrompt(props: Props) {
               <TextField
                 autoFocus
                 color="secondary"
-                disabled={actionInProgress}
+                disabled={isLoadingUnlockKeyring}
                 margin="dense"
                 id="passphraseInput"
                 label={<Trans>Passphrase</Trans>}
@@ -161,13 +140,13 @@ export default function AppPassPrompt(props: Props) {
             <Button
               onClick={handleSubmit}
               color="primary"
-              disabled={actionInProgress}
+              disabled={isLoadingUnlockKeyring}
               variant="contained"
               style={{ marginBottom: '8px', marginRight: '8px' }}
             >
               {submitButtonTitle}
             </Button>
-            { cancellable && (
+            {cancellable && (
               <Button>
                 <Trans>
                   Cancel

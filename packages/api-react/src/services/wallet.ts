@@ -13,6 +13,14 @@ export const walletApi = createApi({
   baseQuery,
   tagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions', 'OfferTradeRecord', 'WalletConnections'],
   endpoints: (build) => ({
+    ping: build.query<boolean, {
+    }>({
+      query: () => ({
+        command: 'ping',
+      }),
+      transformResponse: (response: any) => response?.success,
+    }),
+
     getWallets: build.query<Wallet[], undefined>({
       /*
       query: () => ({
@@ -1124,6 +1132,7 @@ export const walletApi = createApi({
 });
 
 export const {
+  usePingQuery,
   useGetWalletsQuery,
   useGetTransactionQuery,
   useGetPwStatusQuery,

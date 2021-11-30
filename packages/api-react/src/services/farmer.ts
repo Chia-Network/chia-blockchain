@@ -13,6 +13,14 @@ export const farmerApi = createApi({
   baseQuery,
   tagTypes: ['Harvesters', 'RewardTargets', 'FarmerConnections', 'SignagePoints', 'PoolLoginLinks', 'Pools', 'PayoutInstructions'],
   endpoints: (build) => ({
+    ping: build.query<boolean, {
+    }>({
+      query: () => ({
+        command: 'ping',
+      }),
+      transformResponse: (response: any) => response?.success,
+    }),
+
     getHarvesters: build.query<Plot[], {
     }>({
       query: () => ({
@@ -158,6 +166,7 @@ export const farmerApi = createApi({
 // TODO add new farming info query and event for last_attepmtp_proofs
 
 export const { 
+  usePingQuery,
   useGetHarvestersQuery,
   useGetRewardTargetsQuery,
   useSetRewardTargetsMutation,
