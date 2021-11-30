@@ -10,7 +10,7 @@ from datetime import datetime
 import aiosqlite
 import os
 import sys
-import secrets
+import random
 from blspy import G2Element, G1Element, AugSchemeMPL
 
 # farmer puzzle hash
@@ -23,17 +23,24 @@ def rewards(height: uint32) -> Tuple[Coin, Coin]:
     return farmer_coin, pool_coin
 
 
+def rand_bytes(num) -> bytes:
+    ret = bytearray(num)
+    for i in range(num):
+        ret[i] = random.getrandbits(8)
+    return bytes(ret)
+
+
 def rand_hash() -> bytes32:
-    return secrets.token_bytes(32)
+    return rand_bytes(32)
 
 
 def rand_g1() -> G1Element:
-    sk = AugSchemeMPL.key_gen(secrets.token_bytes(96))
+    sk = AugSchemeMPL.key_gen(rand_bytes(96))
     return sk.get_g1()
 
 
 def rand_g2() -> G2Element:
-    sk = AugSchemeMPL.key_gen(secrets.token_bytes(96))
+    sk = AugSchemeMPL.key_gen(rand_bytes(96))
     return AugSchemeMPL.sign(sk, b"foobar")
 
 

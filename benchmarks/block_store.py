@@ -1,6 +1,5 @@
 import asyncio
 import random
-import secrets
 from time import time
 from pathlib import Path
 from chia.full_node.block_store import BlockStore
@@ -10,7 +9,7 @@ import sys
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64, uint8
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from utils import rewards, rand_hash, setup_db, rand_g1, rand_g2
+from utils import rewards, rand_hash, setup_db, rand_g1, rand_g2, rand_bytes
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.full_block import FullBlock
 from chia.consensus.block_record import BlockRecord
@@ -28,7 +27,7 @@ random.seed(123456789)
 
 
 def rand_class_group_element() -> ClassgroupElement:
-    return ClassgroupElement(secrets.token_bytes(100))
+    return ClassgroupElement(rand_bytes(100))
 
 
 def rand_vdf() -> VDFInfo:
@@ -126,7 +125,7 @@ async def run_add_block_benchmark():
                 rand_hash() if not has_pool_pk else None,
                 rand_g1(),  # plot_public_key
                 32,
-                secrets.token_bytes(8 * 32),
+                rand_bytes(8 * 32),
             )
 
             reward_chain_block = RewardChainBlock(
