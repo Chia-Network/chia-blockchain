@@ -87,6 +87,7 @@ class WalletRpcApi:
             "/cc_get_name": self.cc_get_name,
             "/cc_spend": self.cc_spend,
             "/cc_get_colour": self.cc_get_colour,
+            "/cat_asset_id_to_name": self.cat_asset_id_to_name,
             "/get_cat_list": self.get_cat_list,
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_offer_summary": self.get_offer_summary,
@@ -811,6 +812,14 @@ class WalletRpcApi:
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
         colour: str = wallet.get_colour()
         return {"colour": colour, "wallet_id": wallet_id}
+
+    async def cat_asset_id_to_name(self, request):
+        assert self.service.wallet_state_manager is not None
+        wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request["asset_id"])
+        if wallet is None:
+            raise ValueError("The asset ID specified does not belong to a wallet")
+        else:
+            return {"wallet_id": wallet.id(), "name": (await wallet.get_name())}
 
     async def create_offer_for_ids(self, request):
         assert self.service.wallet_state_manager is not None
