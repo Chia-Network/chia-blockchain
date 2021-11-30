@@ -1,9 +1,9 @@
 import React, { useState, useEffect, ReactNode } from 'react';
 import isElectron from 'is-electron';
 import { Trans } from '@lingui/macro';
-import { ConnectionState } from '@chia/api';
+import { ConnectionState, ServiceHumanName } from '@chia/api';
 import { useCloseMutation, useGetStateQuery } from '@chia/api-react';
-import { Flex, Loading, ServiceHumanName } from '@chia/core';
+import { Flex, Loading } from '@chia/core';
 import LayoutHero from '../layout/LayoutHero';
 import { Typography } from '@material-ui/core';
 
@@ -55,7 +55,7 @@ export default function AppState(props: Props) {
       <LayoutHero>
         <Loading center>
           {startingService ? (
-            <Trans>Starting service {startingService}</Trans>
+            <Trans>Starting service {ServiceHumanName[startingService] ?? startingService}</Trans>
           ) : isClientStateLoading || !attempt ? (
             <Trans>Connecting to daemon</Trans>
           ) : (

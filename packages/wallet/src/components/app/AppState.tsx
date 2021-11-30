@@ -56,7 +56,7 @@ export default function AppState(props: Props) {
       <LayoutHero>
         <Loading center>
           {startingService ? (
-            <Trans>Starting service {ServiceHumanName[startingService]}</Trans>
+            <Trans>Starting {ServiceHumanName[startingService]}</Trans>
           ) : isClientStateLoading || !attempt ? (
             <Trans>Connecting to daemon</Trans>
           ) : (
