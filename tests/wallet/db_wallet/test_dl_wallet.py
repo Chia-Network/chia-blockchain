@@ -52,7 +52,7 @@ class TestDLWallet:
             yield _
 
     @pytest.mark.asyncio
-    async def _test_update_coin(self, three_wallet_nodes):
+    async def test_update_coin(self, three_wallet_nodes):
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -112,7 +112,7 @@ class TestDLWallet:
         )
 
     @pytest.mark.asyncio
-    async def _test_announce_coin(self, three_wallet_nodes):
+    async def test_announce_coin(self, three_wallet_nodes):
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -183,7 +183,7 @@ class TestDLWallet:
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 200)
 
     @pytest.mark.asyncio
-    async def _test_dlo_wallet(self, three_wallet_nodes):
+    async def test_dlo_wallet(self, three_wallet_nodes):
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
