@@ -74,7 +74,7 @@ class DataLayer:
             creation_record = await self.wallet.create_new_dl_wallet(
                 self.wallet_node.wallet_state_manager, main_wallet, amount, None
             )
-            self.wallet = creation_record.wallet
+            self.wallet = creation_record.item
         self.initialized = True
         return True
 

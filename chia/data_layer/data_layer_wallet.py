@@ -3,7 +3,7 @@ import os
 import json
 import time
 from dataclasses import dataclass
-from typing import Any, Generic, Optional, Tuple, Set, List, Dict, Type, TypeVar
+from typing import Any, Optional, Tuple, Set, List, Dict, Type, TypeVar
 
 from blspy import G2Element, AugSchemeMPL
 

@@ -1,6 +1,5 @@
 import asyncio
 import pytest
-import sys
 import time
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
@@ -10,7 +9,7 @@ from chia.wallet.dlo_wallet.dlo_wallet import DLOWallet
 from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 from chia.types.blockchain_format.program import Program
 from chia.types.announcement import Announcement
-from chia.types.spend_bundle import ItemAndSpendBundleNames, SpendBundle
+from chia.types.spend_bundle import SpendBundle
 from tests.time_out_assert import time_out_assert
 from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.transaction_record import TransactionRecord

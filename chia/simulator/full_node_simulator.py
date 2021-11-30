@@ -1,6 +1,5 @@
 import asyncio
 import itertools
-import sys
 from typing import Iterable, List, Optional
 
 from chia.consensus.block_record import BlockRecord
@@ -212,7 +211,9 @@ class FullNodeSimulator(FullNodeAPI):
 
         raise Exception("internal error")
 
-    async def wait_spend_bundle_entered_mempool(self, spend_bundle_names: Iterable[bytes32], timeout: float = 15) -> None:
+    async def wait_spend_bundle_entered_mempool(
+        self, spend_bundle_names: Iterable[bytes32], timeout: float = 15
+    ) -> None:
         clock = asyncio.get_event_loop().time
         end = clock() + timeout
 
