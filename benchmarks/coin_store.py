@@ -1,59 +1,22 @@
 import asyncio
 import random
-import secrets
 from time import time
-from datetime import datetime
 from pathlib import Path
 from chia.full_node.coin_store import CoinStore
 from typing import List, Tuple
 import os
 import sys
 
-import aiosqlite
 from chia.util.db_wrapper import DBWrapper
-from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
-from chia.util.ints import uint64, uint32
-
+from chia.util.ints import uint64
+from utils import rewards, rand_hash, setup_db
 
 NUM_ITERS = 200
 
-# farmer puzzle hash
-ph = bytes32(b"a" * 32)
-
 # we need seeded random, to have reproducible benchmark runs
 random.seed(123456789)
-
-
-async def setup_db(sql_logging: bool) -> DBWrapper:
-    db_filename = Path("coin-store-benchmark.db")
-    try:
-        os.unlink(db_filename)
-    except FileNotFoundError:
-        pass
-    connection = await aiosqlite.connect(db_filename)
-
-    def sql_trace_callback(req: str):
-        sql_log_path = "sql.log"
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")
-        log = open(sql_log_path, "a")
-        log.write(timestamp + " " + req + "\n")
-        log.close()
-
-    if sql_logging:
-        await connection.set_trace_callback(sql_trace_callback)
-
-    await connection.execute("pragma journal_mode=wal")
-    await connection.execute("pragma synchronous=full")
-    await connection.execute("pragma temp_store=memory")
-
-    return DBWrapper(connection)
-
-
-def rand_hash() -> bytes32:
-    return secrets.token_bytes(32)
 
 
 def make_coin() -> Coin:
@@ -71,17 +34,10 @@ def make_coins(num: int) -> Tuple[List[Coin], List[bytes32]]:
     return additions, hashes
 
 
-def rewards(height: uint32) -> Tuple[Coin, Coin]:
-    farmer_coin = create_farmer_coin(height, ph, uint64(250000000), DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
-    pool_coin = create_pool_coin(height, ph, uint64(1750000000), DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
-    return farmer_coin, pool_coin
-
-
 async def run_new_block_benchmark():
 
     verbose: bool = "--verbose" in sys.argv
-    sql_logging: bool = "--sql-logging" in sys.argv
-    db_wrapper: DBWrapper = await setup_db(sql_logging)
+    db_wrapper: DBWrapper = await setup_db("coin-store-benchmark.db")
 
     # keep track of benchmark total time
     all_test_time = 0
