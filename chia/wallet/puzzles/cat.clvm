@@ -170,12 +170,15 @@
         cat_mod_struct
       )
         (c (if (r amount_and_memo)
-               (if (= puzzlehash_from_inner_puzzle (cat_puzzle_hash cat_mod_struct (f (f (r amount_and_memo)))))
-                   puzzlehash_from_inner_puzzle         ; inner identical CAT has already morphed the hash, don't morph
-                   morphed_puzzlehash_from_inner_puzzle ; proof not valid, morph
+               (if (l (f (r amount_and_memo)))
+                   (if (= puzzlehash_from_inner_puzzle (cat_puzzle_hash cat_mod_struct (f (f (r amount_and_memo)))))
+                       puzzlehash_from_inner_puzzle         ; inner identical CAT has already morphed the hash, don't morph
+                       morphed_puzzlehash_from_inner_puzzle ; proof not valid, morph
+                   )
+                   morphed_puzzlehash_from_inner_puzzle     ; memo format not valid (not a list), morph
                )
-               morphed_puzzlehash_from_inner_puzzle     ; no proof provided, morph
-            )
+               morphed_puzzlehash_from_inner_puzzle         ; no proof provided, morph
+           )
            amount_and_memo
         )
       )
