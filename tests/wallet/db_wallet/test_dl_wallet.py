@@ -53,7 +53,7 @@ class TestDLWallet:
             yield _
 
     @pytest.mark.asyncio
-    async def test_update_coin(self, three_wallet_nodes):
+    async def _test_update_coin(self, three_wallet_nodes):
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -113,7 +113,7 @@ class TestDLWallet:
         )
 
     @pytest.mark.asyncio
-    async def test_announce_coin(self, three_wallet_nodes):
+    async def _test_announce_coin(self, three_wallet_nodes):
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -184,7 +184,7 @@ class TestDLWallet:
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 200)
 
     @pytest.mark.asyncio
-    async def test_dlo_wallet(self, three_wallet_nodes):
+    async def _test_dlo_wallet(self, three_wallet_nodes):
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -303,8 +303,11 @@ class TestDLWallet:
 
     @pytest.mark.asyncio
     async def test_dlo_wallet_reclaim(self, three_wallet_nodes):
+        time_lock = 10
+
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
+        full_node_api.time_per_block = 2 * time_lock
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
         wallet_node_1, server_1 = wallets[1]
@@ -365,7 +368,7 @@ class TestDLWallet:
             dl_wallet_0.dl_info.origin_coin.name(),
             await wallet_2.get_new_puzzlehash(),
             await wallet_1.get_new_puzzlehash(),
-            10,
+            time_lock,
         )
         await wallet_1.push_transaction(tr)
         await full_node_api.process_spend_bundles(spend_bundle_names=[tr.spend_bundle.name()])
@@ -378,7 +381,7 @@ class TestDLWallet:
         await time_out_assert(15, wallet_1.get_unconfirmed_balance, wallet_1_funds)
 
         transaction_record = await dlo_wallet_1.create_recover_dl_offer_spend()
-        # TODO: review why this is needed
+        # Process a block to make sure the time lock for the offer has passed
         await full_node_api.process_blocks(count=1)
 
         await full_node_api.process_spend_bundles(spend_bundle_names=[transaction_record.spend_bundle.name()])
