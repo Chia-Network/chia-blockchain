@@ -160,14 +160,37 @@
        )
      )
 
+     ;; if the `CREATE_COIN` target puzzlehash has already been morphed by an inner identical CAT, skip morphing.
+     ;; this can be used to salvage (unwrap) a coin accidentally sent to a CAT puzzlehash instead of to a standard
+     ;; wallet puzzlehash; the proof of the original unmorphed standard wallet puzzlehash is usually stored in the memo.
+     (defun-inline morph_unless_already_morphed (
+        morphed_puzzlehash_from_inner_puzzle
+        puzzlehash_from_inner_puzzle
+        amount_and_memo ;; memo optionally contains the standard wallet puzzlehash which serves as proof of morphing
+        cat_mod_struct
+      )
+        (c (if (r amount_and_memo)
+               (if (= puzzlehash_from_inner_puzzle (cat_puzzle_hash cat_mod_struct (f (f (r amount_and_memo)))))
+                   puzzlehash_from_inner_puzzle         ; inner identical CAT has already morphed the hash, don't morph
+                   morphed_puzzlehash_from_inner_puzzle ; proof not valid, morph
+               )
+               morphed_puzzlehash_from_inner_puzzle     ; no proof provided, morph
+            )
+           amount_and_memo
+        )
+      )
+
      ;; tweak `CREATE_COIN` condition by wrapping the puzzle hash, forcing it to be a cat
      ;; prepend `CREATE_COIN_ANNOUNCEMENT` with 0xca as bytes so it cannot be used to cheat the coin ring
 
      (defun-inline morph_condition (condition cat_mod_struct)
        (if (= (f condition) CREATE_COIN)
          (c CREATE_COIN
-               (c (cat_puzzle_hash cat_mod_struct (f (r condition)))
-                    (r (r condition)))
+           (morph_unless_already_morphed
+             (cat_puzzle_hash cat_mod_struct (f (r condition)))
+             (f (r condition))
+             (r (r condition))
+             cat_mod_struct)
          )
          (if (= (f condition) CREATE_COIN_ANNOUNCEMENT)
            (c CREATE_COIN_ANNOUNCEMENT
