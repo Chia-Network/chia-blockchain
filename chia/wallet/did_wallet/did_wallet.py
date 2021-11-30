@@ -375,7 +375,7 @@ class DIDWallet:
             parent_info = None
 
             node = self.wallet_state_manager.wallet_node.get_full_node_peer()
-            children = await self.wallet_state_manager.wallet_node.fetch_children(node, origin.name())
+            children = await self.wallet_state_manager.wallet_node.fetch_children(node, origin.name(), None)
             while True:
                 if len(children) == 0:
                     break
@@ -383,7 +383,7 @@ class DIDWallet:
                 children_state: CoinState = children[0]
                 coin = children_state.coin
                 name = coin.name()
-                children = await self.wallet_state_manager.wallet_node.fetch_children(node, name)
+                children = await self.wallet_state_manager.wallet_node.fetch_children(node, name, None)
                 future_parent = LineageProof(
                     coin.parent_coin_info,
                     innerpuz.get_tree_hash(),
@@ -932,7 +932,7 @@ class DIDWallet:
 
         announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
-        announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
+        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             amount, genesis_launcher_puz.get_tree_hash(), uint64(0), origin.name(), coins, None, False, announcement_set
