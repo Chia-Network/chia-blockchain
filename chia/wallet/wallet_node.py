@@ -1031,7 +1031,7 @@ class WalletNode:
         else:
             return []
 
-    async def create_data_layer(self, amount: uint64, fee: uint64) -> bool:
+    async def create_data_layer(self, amount: uint64, fee: uint64) -> Tuple[TransactionRecord, TransactionRecord]:
         return await self.data_layer.create(amount, fee)
 
 

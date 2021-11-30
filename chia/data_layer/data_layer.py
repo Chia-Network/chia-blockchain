@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import aiosqlite
 from chia.data_layer.data_layer_wallet import DataLayerWallet
@@ -10,6 +10,7 @@ from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64, uint32
 from chia.util.path import mkdir, path_from_root
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -48,7 +49,7 @@ class DataLayer:
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
 
-    async def create(self, amount: uint64, fee: uint64) -> bool:
+    async def create(self, amount: uint64, fee: uint64) -> Tuple[TransactionRecord, TransactionRecord]:
         # create the store (db) and data store instance
         assert self.wallet_state_manager
         self.connection = await aiosqlite.connect(self.db_path)
@@ -57,11 +58,12 @@ class DataLayer:
         assert self.wallet_state_manager
         main_wallet = self.wallet_state_manager.main_wallet
         async with self.wallet_state_manager.lock:
-            self.wallet = await DataLayerWallet.create_new_dl_wallet(
+            wallet, regular_spend, dl_spend = await DataLayerWallet.create_new_dl_wallet(
                 self.wallet_state_manager, main_wallet, amount, None, fee
             )
-        self.initialized = True
-        return True
+            self.wallet = wallet
+        self.initialized = True  # todo do this on the callback after tx is buried
+        return regular_spend, dl_spend
 
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
@@ -103,7 +105,7 @@ class DataLayer:
         if root.node_hash is not None:
             node_hash = root.node_hash
         else:
-            node_hash = uint32(0).to_bytes(32, "big") # todo change
+            node_hash = uint32(0).to_bytes(32, "big")  # todo change
         res = await self.wallet.create_update_state_spend(node_hash)
         assert res
         # todo register callback to change status in data store

@@ -80,7 +80,7 @@ class DataLayerWallet:
         root_hash: bytes32,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
-    ) -> _T_DataLayerWallet:
+    ) -> Tuple[_T_DataLayerWallet, TransactionRecord, TransactionRecord]:
         """
         This must be called under the wallet state manager lock
         """
@@ -167,7 +167,7 @@ class DataLayerWallet:
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(dl_record)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
-        return self
+        return self, dl_record, regular_record
 
     async def generate_launcher_spend(
         self,

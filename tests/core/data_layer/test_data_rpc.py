@@ -22,10 +22,12 @@ pytestmark = pytest.mark.data_layer
 # await time_out_assert(15, is_transaction_in_mempool, True, user_wallet_id, api_user, val["transaction_id"])
 nodes = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]
 
+
 @pytest.fixture(scope="function")
 async def one_wallet_node() -> AsyncIterator[nodes]:
     async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
+
 
 @pytest.mark.asyncio
 async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
