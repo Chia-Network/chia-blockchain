@@ -85,9 +85,7 @@ class TestDLWallet:
 
         dl_wallet_0: DataLayerWallet = creation_record.item
 
-        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=creation_record.spend_bundle_names)
-
-        await full_node_api.process_blocks(count=1)
+        await full_node_api.process_spend_bundles(spend_bundle_names=creation_record.spend_bundle_names)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
@@ -97,9 +95,7 @@ class TestDLWallet:
         nodes.append(Program.to("beep").get_tree_hash())
         new_merkle_tree = MerkleTree(nodes)
         spend_bundle = await dl_wallet_0.create_update_state_spend(new_merkle_tree.calculate_root())
-        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=[spend_bundle.name()])
-
-        await full_node_api.process_blocks(count=2)
+        await full_node_api.process_spend_bundles(spend_bundle_names=[spend_bundle.name()])
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
@@ -153,7 +149,7 @@ class TestDLWallet:
 
         dl_wallet_0: DataLayerWallet = creation_record.item
 
-        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=creation_record.spend_bundle_names)
+        await full_node_api.process_spend_bundles(spend_bundle_names=creation_record.spend_bundle_names)
 
         await full_node_api.farm_blocks(count=1, farm_to=ph1)
 
@@ -182,9 +178,7 @@ class TestDLWallet:
             name=sb.name(),
         )
         await wallet_1.push_transaction(tr)
-        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=[sb.name()])
-
-        await full_node_api.process_blocks(count=2)
+        await full_node_api.process_spend_bundles(spend_bundle_names=[sb.name()])
 
         await time_out_assert(15, wallet_2.get_confirmed_balance, 200)
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 200)
@@ -226,9 +220,7 @@ class TestDLWallet:
 
         dl_wallet_0: DataLayerWallet = creation_record.item
 
-        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=creation_record.spend_bundle_names)
-
-        await full_node_api.process_blocks(count=1)
+        await full_node_api.process_spend_bundles(spend_bundle_names=creation_record.spend_bundle_names)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
@@ -258,9 +250,7 @@ class TestDLWallet:
             10,
         )
         await wallet_1.push_transaction(tr)
-        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=[tr.spend_bundle.name()])
-
-        await full_node_api.process_blocks(count=1)
+        await full_node_api.process_spend_bundles(spend_bundle_names=[tr.spend_bundle.name()])
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 201)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 201)
@@ -306,8 +296,11 @@ class TestDLWallet:
             name=sb.name(),
         )
         await wallet_2.push_transaction(tr)
+        # TODO: remove?
         await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=[sb.name()])
+        # await full_node_api.process_spend_bundles(spend_bundle_names=[sb.name()])
 
+        # TODO: remove?
         await full_node_api.process_blocks(count=2)
 
         await time_out_assert(15, wallet_2.get_confirmed_balance, 201)
@@ -349,9 +342,7 @@ class TestDLWallet:
 
         dl_wallet_0: DataLayerWallet = creation_record.item
 
-        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=creation_record.spend_bundle_names)
-
-        await full_node_api.process_blocks(count=1)
+        await full_node_api.process_spend_bundles(spend_bundle_names=creation_record.spend_bundle_names)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
@@ -382,9 +373,7 @@ class TestDLWallet:
             10,
         )
         await wallet_1.push_transaction(tr)
-        await full_node_api.wait_spend_bundle_entered_mempool(spend_bundle_names=[tr.spend_bundle.name()])
-
-        await full_node_api.process_blocks(count=2)
+        await full_node_api.process_spend_bundles(spend_bundle_names=[tr.spend_bundle.name()])
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, offer_amount)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, offer_amount)
@@ -394,12 +383,11 @@ class TestDLWallet:
         await time_out_assert(15, wallet_1.get_unconfirmed_balance, wallet_1_funds)
 
         transaction_record = await dlo_wallet_1.create_recover_dl_offer_spend()
-        await full_node_api.wait_spend_bundle_entered_mempool(
-            spend_bundle_names=[transaction_record.spend_bundle.name()]
-        )
-        await dlo_wallet_1.wallet_state_manager.tx_store.wait_all_sent()
+        # TODO: review why this is needed
+        await full_node_api.process_blocks(count=1)
 
-        await full_node_api.process_blocks(count=2)
+        await full_node_api.process_spend_bundles(spend_bundle_names=[transaction_record.spend_bundle.name()])
+
         wallet_1_funds += offer_amount
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)

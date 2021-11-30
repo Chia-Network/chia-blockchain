@@ -213,9 +213,12 @@ class FullNodeSimulator(FullNodeAPI):
 
         raise Exception("internal error")
 
-    async def wait_spend_bundle_entered_mempool(self, spend_bundle_names: Iterable[bytes32]) -> None:
+    async def wait_spend_bundle_entered_mempool(self, spend_bundle_names: Iterable[bytes32], timeout: float = 15) -> None:
+        clock = asyncio.get_event_loop().time
+        end = clock() + timeout
+
         ids_to_check = set(spend_bundle_names)
-        # TODO: add a timeout
+
         # TODO: can we avoid polling
         while True:
             found = set()
@@ -228,4 +231,35 @@ class FullNodeSimulator(FullNodeAPI):
             if len(ids_to_check) == 0:
                 return
 
+            now = clock()
+            if now >= end:
+                # TODO: real error
+                raise TimeoutError("abc")
+
             await asyncio.sleep(0.050)
+
+    async def process_spend_bundles(self, spend_bundle_names: Iterable[bytes32], timeout: float = 15) -> None:
+        clock = asyncio.get_event_loop().time
+        end = clock() + timeout
+
+        ids_to_check = set(spend_bundle_names)
+
+        await self.wait_spend_bundle_entered_mempool(spend_bundle_names=spend_bundle_names, timeout=end - clock())
+
+        while True:
+            now = clock()
+            if now >= end:
+                # TODO: real error
+                raise TimeoutError("abc")
+
+            await self.process_blocks(count=1)
+
+            found = set()
+            for spend_bundle_name in ids_to_check:
+                in_block = True  # TODO: how do i confirm the spend bundle was actually processed?
+                if in_block:
+                    found.add(spend_bundle_name)
+            ids_to_check = ids_to_check.difference(found)
+
+            if len(ids_to_check) == 0:
+                return
