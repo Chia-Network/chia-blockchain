@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Any
 
 from blspy import PrivateKey, G1Element
 
@@ -46,6 +46,7 @@ class WalletRpcApi:
         assert wallet_node is not None
         self.service = wallet_node
         self.service_name = "chia_wallet"
+        self.balance_cache: Dict[int, Any] = {}
 
     def get_routes(self) -> Dict[str, Callable]:
         return {
@@ -561,26 +562,45 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
-        balance = await wallet.get_confirmed_balance(unspent_records)
-        pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
-        spendable_balance = await wallet.get_spendable_balance(unspent_records)
-        pending_change = await wallet.get_pending_change_balance()
-        max_send_amount = await wallet.get_max_send_amount(unspent_records)
 
-        unconfirmed_removals: Dict[bytes32, Coin] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(
-            wallet_id
-        )
-        wallet_balance = {
-            "wallet_id": wallet_id,
-            "confirmed_wallet_balance": balance,
-            "unconfirmed_wallet_balance": pending_balance,
-            "spendable_balance": spendable_balance,
-            "pending_change": pending_change,
-            "max_send_amount": max_send_amount,
-            "unspent_coin_count": len(unspent_records),
-            "pending_coin_removal_count": len(unconfirmed_removals),
-        }
+        # If syncing return the last available info or 0s
+        if self.service.syncing:
+            if wallet_id in self.balance_cache:
+                wallet_balance = self.balance_cache[wallet_id]
+            else:
+                wallet_balance = {
+                    "wallet_id": wallet_id,
+                    "confirmed_wallet_balance": 0,
+                    "unconfirmed_wallet_balance": 0,
+                    "spendable_balance": 0,
+                    "pending_change": 0,
+                    "max_send_amount": 0,
+                    "unspent_coin_count": 0,
+                    "pending_coin_removal_count": 0,
+                }
+        else:
+            async with self.service.wallet_state_manager.lock:
+                unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
+                balance = await wallet.get_confirmed_balance(unspent_records)
+                pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
+                spendable_balance = await wallet.get_spendable_balance(unspent_records)
+                pending_change = await wallet.get_pending_change_balance()
+                max_send_amount = await wallet.get_max_send_amount(unspent_records)
+
+                unconfirmed_removals: Dict[bytes32, Coin] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(
+                    wallet_id
+                )
+                wallet_balance = {
+                    "wallet_id": wallet_id,
+                    "confirmed_wallet_balance": balance,
+                    "unconfirmed_wallet_balance": pending_balance,
+                    "spendable_balance": spendable_balance,
+                    "pending_change": pending_change,
+                    "max_send_amount": max_send_amount,
+                    "unspent_coin_count": len(unspent_records),
+                    "pending_coin_removal_count": len(unconfirmed_removals),
+                }
+                self.balance_cache[wallet_id] = wallet_balance
 
         return {"wallet_balance": wallet_balance}
 

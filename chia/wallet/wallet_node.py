@@ -139,6 +139,7 @@ class WalletNode:
         self.wallet_peers = None
         self.wallet_peers_initialized = False
         self.valid_wp_cache: Dict[bytes32, Any] = {}
+        self.untrusted_caches: Dict[bytes32, Any] = {}
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
@@ -348,6 +349,10 @@ class WalletNode:
                 self.log,
             )
             asyncio.create_task(self.wallet_peers.start())
+
+    def on_disconnect(self, peer: WSChiaConnection):
+        if peer.peer_node_id in self.untrusted_caches:
+            self.untrusted_caches.pop(peer.peer_node_id)
 
     async def on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None:
@@ -641,6 +646,8 @@ class WalletNode:
                 peak_block = response.header_block
                 current_peak: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
                 if current_peak is not None and peak_block.weight < current_peak.weight:
+                    if peak_block.height < current_peak.height - 20:
+                        await peer.close(120)
                     return
 
                 # don't sync if full node is not synced it self, since we want to fully sync to a few peers
@@ -1008,6 +1015,9 @@ class WalletNode:
 
             # Check if new puzzle hashed have been created
             check_again = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+            self.log.debug(f"Check_again len: {len(check_again)}")
+            self.log.debug(f"Already_checked len: {len(already_checked)}")
+
             continue_while = False
             for ph in check_again:
                 if ph not in already_checked:
@@ -1032,9 +1042,12 @@ class WalletNode:
 
         start_time: float = time.time()
         peer_request_cache: PeerRequestCache = PeerRequestCache()
+        self.untrusted_caches[peer.peer_node_id] = peer_request_cache
         # Always sync fully from untrusted
         # Get state for puzzle hashes
+        self.log.debug(f"Start untrusted_subscribe_to_puzzle_hashes  ")
         await self.untrusted_subscribe_to_puzzle_hashes(peer, True, peer_request_cache, weight_proof)
+        self.log.debug(f"End untrusted_subscribe_to_puzzle_hashes  ")
 
         # Get state for coins ids
         all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(uint32(0))
@@ -1360,7 +1373,10 @@ class WalletNode:
         if response is None or not isinstance(response, wallet_protocol.RespondChildren):
             raise ValueError(f"Was not able to obtain children {response}")
         if not self.is_trusted(peer):
-            request_cache = PeerRequestCache()
+            if peer.peer_node_id in self.untrusted_caches:
+                request_cache = self.untrusted_caches[peer.peer_node_id]
+            else:
+                request_cache = PeerRequestCache()
             assert weight_proof is not None
             validated_states = await self.validate_received_state_from_peer(
                 response.coin_states, peer, weight_proof, request_cache, True
