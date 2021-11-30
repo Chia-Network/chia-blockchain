@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Alert } from '@material-ui/lab';
 import { DialogActions, Flex, Form, TextField } from '@chia/core';
+import { useOpenFullNodeConnectionMutation } from '@chia/api-react';
 import { useForm } from 'react-hook-form';
 import { Button, Dialog, DialogTitle, DialogContent } from '@material-ui/core';
 
@@ -17,6 +18,8 @@ type FormData = {
 
 export default function FullNodeAddConnection(props: Props) {
   const { onClose, open } = props;
+  const [openConnection, { error }] = useOpenFullNodeConnectionMutation();
+
   const methods = useForm<FormData>({
     shouldUnregister: false,
     defaultValues: {
@@ -24,8 +27,6 @@ export default function FullNodeAddConnection(props: Props) {
       port: '',
     },
   });
-
-  const [error, setError] = useState<Error | null>(null);
 
   function handleClose() {
     if (onClose) {
@@ -35,14 +36,13 @@ export default function FullNodeAddConnection(props: Props) {
 
   async function handleSubmit(values: FormData) {
     const { host, port } = values;
-    setError(null);
 
-    try {
-      // await dispatch(openConnection(host, port));
-      handleClose();
-    } catch (error) {
-      setError(error);
-    }
+    await openConnection({
+      host, 
+      port: Number.parseInt(port, 10),
+    }).unwrap();
+
+    handleClose();
   }
 
   function handleHide() {

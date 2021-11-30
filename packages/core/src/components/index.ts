@@ -52,6 +52,7 @@ export { default as PrivateRoute } from './PrivateRoute';
 export { default as RadioGroup } from './RadioGroup';
 export { default as Select } from './Select';
 export { default as SideBarItem } from './SideBarItem';
+export { default as Spacer } from './Spacer';
 export { default as Spinner } from './Spinner';
 export { default as StateIndicator } from './StateIndicator';
 export { default as StateTypography } from './StateTypography';

@@ -24,7 +24,7 @@ export default function AppState(props: Props) {
 
     await close({
       force: true,
-    });
+    }).unwrap();
 
     event.sender.send('daemon-exited');
   }

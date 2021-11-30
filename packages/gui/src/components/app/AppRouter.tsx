@@ -5,6 +5,7 @@ import { WalletAdd, WalletImport, Wallets  } from '@chia/wallets';
 import App from './App';
 import FullNode from '../fullNode/FullNode';
 import Block from '../block/Block';
+import Settings from '../settings/Settings';
 import DashboardSideBar from '../dashboard/DashboardSideBar';
 
 export default function AppRouter() {
@@ -23,6 +24,7 @@ export default function AppRouter() {
             <Route path="dashboard/" element={<FullNode />} />
             <Route path="dashboard/block/:headerHash" element={<Block />} />
             <Route path="dashboard/wallets/*" element={<Wallets />} />
+            <Route path="dashboard/settings/*" element={<Settings />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" />} />

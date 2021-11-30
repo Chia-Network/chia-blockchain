@@ -9,14 +9,13 @@ import {
   Loading,
   Table,
   IconButton,
+  useOpenDialog,
 } from '@chia/core';
 import { useGetFullNodeConnectionsQuery } from '@chia/api-react';
 import { Button, Tooltip } from '@material-ui/core';
 import { service_connection_types } from '../../util/service_names';
 import Connection from '../../types/Connection';
 import FullNodeCloseConnection from './FullNodeCloseConnection';
-import type { RootState } from '../../modules/rootReducer';
-import useOpenDialog from '../../hooks/useOpenDialog';
 import FullNodeAddConnection from './FullNodeAddConnection';
 
 const StyledIconButton = styled(IconButton)`

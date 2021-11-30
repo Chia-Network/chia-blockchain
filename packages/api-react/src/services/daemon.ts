@@ -52,15 +52,30 @@ export const daemonApi = createApi({
       providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
     }),
   
-    setKeyringPassphrase: build.mutation<Object, {
-      newPassphrase: string;
+    setKeyringPassphrase: build.mutation<boolean, {
+      currentPassphrase?: string, 
+      newPassphrase?: string;
+      passphraseHint?: string, 
+      savePassphrase?: boolean,
     }>({
-      query: ({ newPassphrase }) => ({
+      query: ({ currentPassphrase, newPassphrase, passphraseHint, savePassphrase }) => ({
         command: 'setKeyringPassphrase',
-        args: [newPassphrase],
+        args: [currentPassphrase, newPassphrase, passphraseHint, savePassphrase],
       }),
       invalidatesTags: () => ['KeyringStatus'],
+      transformResponse: (response: any) => response?.success,
     }), 
+
+    removeKeyringPassphrase: build.mutation<boolean, {
+      currentPassphrase: string;
+    }>({
+      query: ({ currentPassphrase }) => ({
+        command: 'removeKeyringPassphrase',
+        args: [currentPassphrase],
+      }),
+      invalidatesTags: () => ['KeyringStatus'],
+      transformResponse: (response: any) => response?.success,
+    }),
   }),
 });
 
@@ -68,4 +83,5 @@ export const {
   useGetKeyringStatusQuery,
   useIsServiceRunningQuery,
   useSetKeyringPassphraseMutation,
+  useRemoveKeyringPassphraseMutation,
 } = daemonApi;

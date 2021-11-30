@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Button,
@@ -17,11 +16,8 @@ import {
   Help as HelpIcon,
 } from '@material-ui/icons';
 import { t, Trans } from '@lingui/macro';
-import { AlertDialog } from '@chia/core';
-import { openDialog } from '../../modules/dialog';
-import { change_keyring_passphrase_action } from '../../modules/message';
-import { validateChangePassphraseParams } from '../app/AppPassPrompt';
-import { RootState } from '../../modules/rootReducer';
+import { AlertDialog, useValidateChangePassphraseParams, useOpenDialog, Suspender } from '@chia/core';
+import { useGetKeyringStatusQuery, useSetKeyringPassphraseMutation } from '@chia/api-react';
 
 type Props = {
   onSuccess: () => void;
@@ -29,10 +25,11 @@ type Props = {
 };
 
 export default function SetPassphrasePrompt(props: Props) {
-  const dispatch = useDispatch();
   const { onSuccess, onCancel } = props;
-  const keyring_state = useSelector((state: RootState) => state.keyring_state);
-  const [actionInProgress, setActionInProgress] = React.useState(false);
+  const openDialog = useOpenDialog();
+  const { data: keyringState, isLoading } = useGetKeyringStatusQuery();
+  const [setKeyringPassphrase, { isLoading: isLoadingSetKeyringPassphrase }] = useSetKeyringPassphraseMutation();
+  const [validateChangePassphraseParams] = useValidateChangePassphraseParams();
   let passphraseInput: HTMLInputElement | null;
   let confirmationInput: HTMLInputElement | null;
   let passphraseHintInput: HTMLInputElement | null;
@@ -51,17 +48,15 @@ export default function SetPassphrasePrompt(props: Props) {
     let isValid: boolean = false;
 
     if (passphrase === "" && confirmation === "") {
-      await dispatch(
-        openDialog(
-          <AlertDialog>
-            <Trans>
-              Please enter a passphrase
-            </Trans>
-          </AlertDialog>
-        )
+      await openDialog(
+        <AlertDialog>
+          <Trans>
+            Please enter a passphrase
+          </Trans>
+        </AlertDialog>
       );
     } else {
-      isValid = await validateChangePassphraseParams(dispatch, keyring_state, null, passphrase, confirmation);
+      isValid = await validateChangePassphraseParams(null, passphrase, confirmation);
     }
 
     return isValid;
@@ -75,34 +70,24 @@ export default function SetPassphrasePrompt(props: Props) {
     const isValid = await validateDialog(passphrase, confirmation);
 
     if (isValid) {
-      setActionInProgress(true);
-
       try {
-        await dispatch(
-          change_keyring_passphrase_action(
-            null,
-            passphrase,
-            passphraseHint,
-            savePassphrase,
-            () => { onSuccess() }, // success
-            async (error: string) => { // failure
-              await dispatch(
-                openDialog(
-                  <AlertDialog>
-                    <Trans>
-                      Failed to set passphrase: {error}
-                    </Trans>
-                  </AlertDialog>
-                )
-              );
-              setActionInProgress(false);
-              setNeedsFocusAndSelect(true);
-            }
-          )
+        await setKeyringPassphrase({
+          // currentPassphrase: null,
+          newPassphrase: passphrase,
+          passphraseHint,
+          savePassphrase,
+        }).unwrap();
+
+        onSuccess();
+      } catch (error: any) {
+        await openDialog(
+          <AlertDialog>
+            <Trans>
+              Failed to set passphrase: {error.message}
+            </Trans>
+          </AlertDialog>
         );
-      }
-      catch (e) {
-        setActionInProgress(false);
+        setNeedsFocusAndSelect(true);
       }
     } else {
       setNeedsFocusAndSelect(true);
@@ -129,6 +114,17 @@ export default function SetPassphrasePrompt(props: Props) {
     }
   }
 
+  if (isLoading) {
+    return (
+      <Suspender />
+    );
+  }
+
+  const {
+    canSavePassphrase,
+    canSetPassphraseHint,
+  } = keyringState;
+
   return (
     <Dialog
       open={true}
@@ -148,7 +144,7 @@ export default function SetPassphrasePrompt(props: Props) {
         </DialogContentText>
         <TextField
           autoFocus
-          disabled={actionInProgress}
+          disabled={isLoadingSetKeyringPassphrase}
           color="secondary"
           margin="dense"
           id="passphraseInput"
@@ -159,7 +155,7 @@ export default function SetPassphrasePrompt(props: Props) {
           fullWidth
         />
         <TextField
-          disabled={actionInProgress}
+          disabled={isLoadingSetKeyringPassphrase}
           color="secondary"
           margin="dense"
           id="confirmationInput"
@@ -169,9 +165,9 @@ export default function SetPassphrasePrompt(props: Props) {
           type="password"
           fullWidth
         />
-        {keyring_state.can_set_passphrase_hint && (
+        {!!canSetPassphraseHint && (
           <TextField
-            disabled={actionInProgress}
+            disabled={isLoadingSetKeyringPassphrase}
             color="secondary"
             margin="dense"
             id="passphraseHintInput"
@@ -181,12 +177,12 @@ export default function SetPassphrasePrompt(props: Props) {
             fullWidth
           />
         )}
-        {keyring_state.can_save_passphrase && (
+        {!!canSavePassphrase && (
           <Box display="flex" alignItems="center">
             <FormControlLabel
               control={(
                 <Checkbox
-                  disabled={actionInProgress}
+                  disabled={isLoadingSetKeyringPassphrase}
                   name="cleanupKeyringPostMigration"
                   inputRef={(input) => savePassphraseCheckbox = input}
                 />
@@ -202,7 +198,7 @@ export default function SetPassphrasePrompt(props: Props) {
       </DialogContent>
       <DialogActions>
         <Button
-          disabled={actionInProgress}
+          disabled={isLoadingSetKeyringPassphrase}
           onClick={handleCancel}
           color="secondary"
           variant="contained"
@@ -211,7 +207,7 @@ export default function SetPassphrasePrompt(props: Props) {
           <Trans>Cancel</Trans>
         </Button>
         <Button
-          disabled={actionInProgress}
+          disabled={isLoadingSetKeyringPassphrase}
           onClick={handleSubmit}
           color="primary"
           variant="contained"

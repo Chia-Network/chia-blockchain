@@ -20,6 +20,7 @@ export const {
   useGetKeyringStatusQuery,
   useIsServiceRunningQuery,
   useSetKeyringPassphraseMutation,
+  useRemoveKeyringPassphraseMutation,
 } = daemon;
 
 // farmer hooks

@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import {
   Button,
   Dialog,
@@ -10,11 +9,9 @@ import {
   TextField,
   Typography,
 } from '@material-ui/core';
-import { Trans } from '@lingui/macro';
-import { AlertDialog, Flex, TooltipIcon } from '@chia/core';
-import { openDialog } from '../../modules/dialog';
-import { RootState } from 'modules/rootReducer';
-import { remove_keyring_passphrase_action } from '../../modules/message';
+import { Trans, t } from '@lingui/macro';
+import { AlertDialog, Flex, TooltipIcon, useOpenDialog, Suspender } from '@chia/core';
+import { useRemoveKeyringPassphraseMutation, useGetKeyringStatusQuery } from '@chia/api-react';
 
 type Props = {
   onSuccess: () => void;
@@ -22,10 +19,10 @@ type Props = {
 };
 
 export default function RemovePassphrasePrompt(props: Props) {
-  const dispatch = useDispatch();
   const { onSuccess, onCancel } = props;
-  const { passphrase_hint: passphraseHint } = useSelector((state: RootState) => state.keyring_state);
-  const [actionInProgress, setActionInProgress] = React.useState(false);
+  const openDialog = useOpenDialog();
+  const { data: keyringState, isLoading } = useGetKeyringStatusQuery();
+  const [removeKeyringPassphrase, { isLoading: isLoadingRemoveKeyringPassphrase}] = useRemoveKeyringPassphraseMutation();
   let passphraseInput: HTMLInputElement | null;
 
   const [needsFocusAndSelect, setNeedsFocusAndSelect] = React.useState(false);
@@ -37,52 +34,41 @@ export default function RemovePassphrasePrompt(props: Props) {
     }
   });
 
+  if (isLoading) {
+    return (
+      <Suspender />
+    );
+  }
+
+  const {
+    passphraseHint,
+  } = keyringState;
+
   async function handleSubmit() {
     const passphrase: string | undefined = passphraseInput?.value;
 
-    setActionInProgress(true);
-
     try {
-      if (!passphrase || passphrase.length == 0) {
-        await dispatch(
-          openDialog(
-            <AlertDialog>
-              <Trans>
-                Please enter your passphrase
-              </Trans>
-            </AlertDialog>
-          ),
-        );
-        setActionInProgress(false);
-        setNeedsFocusAndSelect(true);
-      } else {
-        await dispatch(
-          remove_keyring_passphrase_action(
-            passphrase,
-            () => { onSuccess() }, // success
-            async (error: string) => { // failure
-              await dispatch(
-                openDialog(
-                  <AlertDialog>
-                    <Trans>
-                      Passphrase is incorrect
-                    </Trans>
-                  </AlertDialog>
-                ),
-              );
-              setActionInProgress(false);
-              setNeedsFocusAndSelect(true);
-            }
-          )
-        );
+      if (!passphrase) {
+        throw new Error(t`Please enter your passphrase`);
       }
+
+      await removeKeyringPassphrase({
+        currentPassphrase: passphrase,
+      }).unwrap();
+
+      onSuccess();
     }
-    catch (e) {
-      setActionInProgress(false);
+    catch (error: any) {
+      await openDialog(
+        <AlertDialog>
+          {error.message}
+        </AlertDialog>
+      );
+      setNeedsFocusAndSelect(true);
     }
   }
   
-  async function handleCancel() {
+  function handleCancel() {
     onCancel();
   }
 
@@ -119,7 +105,7 @@ export default function RemovePassphrasePrompt(props: Props) {
         </DialogContentText>
         <TextField
           autoFocus
-          disabled={actionInProgress}
+          disabled={isLoadingRemoveKeyringPassphrase}
           color="secondary"
           margin="dense"
           id="passphraseInput"
@@ -128,7 +114,7 @@ export default function RemovePassphrasePrompt(props: Props) {
           type="password"
           fullWidth
         />
-        {passphraseHint && passphraseHint.length > 0 && (
+        {!!passphraseHint && (
           <Flex gap={1} alignItems="center" style={{ marginTop: '8px' }}>
             <Typography variant="body2" color="textSecondary">
               <Trans>Hint</Trans>
@@ -143,7 +129,7 @@ export default function RemovePassphrasePrompt(props: Props) {
       </DialogContent>
       <DialogActions>
         <Button
-          disabled={actionInProgress}
+          disabled={isLoadingRemoveKeyringPassphrase}
           onClick={handleCancel}
           color="secondary"
           variant="contained"
@@ -152,7 +138,7 @@ export default function RemovePassphrasePrompt(props: Props) {
           <Trans>Cancel</Trans>
         </Button>
         <Button
-          disabled={actionInProgress}
+          disabled={isLoadingRemoveKeyringPassphrase}
           onClick={handleSubmit}
           color="primary"
           variant="contained"

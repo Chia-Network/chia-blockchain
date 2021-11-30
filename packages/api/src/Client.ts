@@ -320,7 +320,7 @@ export default class Client extends EventEmitter {
       this.requests.delete(requestId);
 
       if (message.data?.error) {
-        let errorMessage = message.data;
+        let errorMessage = message.data.error;
 
         if (errorMessage == '13') {
           errorMessage = '[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue.';
@@ -328,11 +328,14 @@ export default class Client extends EventEmitter {
           errorMessage = '[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue.';
         }
 
+        log(`Request ${requestId} rejected`, errorMessage);
+
         reject(new ErrorData(errorMessage, message.data));
         return;
       }
 
       if (message.data?.success === false) {
+        log(`Request ${requestId} rejected`, 'Unknown error message');
         reject(new ErrorData(`Request ${requestId} failed: ${JSON.stringify(message.data)}`, message.data));
         return;
       }

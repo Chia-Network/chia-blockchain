@@ -1,8 +1,7 @@
 import React from 'react';
-import { useDispatch } from 'react-redux';
 import { Trans } from '@lingui/macro';
-import { ConfirmDialog } from '@chia/core';
-import useOpenDialog from '../../hooks/useOpenDialog';
+import { ConfirmDialog, useOpenDialog } from '@chia/core';
+import { useCloseFullNodeConnectionMutation } from '@chia/api-react';
 
 type Props = {
   nodeId: string;
@@ -12,23 +11,21 @@ type Props = {
 export default function FullNodeCloseConnection(props: Props): JSX.Element {
   const { nodeId, children } = props;
   const openDialog = useOpenDialog();
-  // const dispatch = useDispatch();
+  const [closeConnection] = useCloseFullNodeConnectionMutation();
 
   async function handleClose() {
-    const canDisconnect = await openDialog(
+    await openDialog(
       <ConfirmDialog
         title={<Trans>Confirm Disconnect</Trans>}
         confirmTitle={<Trans>Disconnect</Trans>}
         confirmColor="danger"
+        onConfirm={() => closeConnection({
+          nodeId,
+        }).unwrap()}
       >
         <Trans>Are you sure you want to disconnect?</Trans>
       </ConfirmDialog>,
     );
-
-    // @ts-ignore
-    if (canDisconnect) {
-      // dispatch(closeConnection(nodeId));
-    }
   }
 
   return children({

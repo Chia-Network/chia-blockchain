@@ -40,11 +40,21 @@ export default class Daemon extends Service {
     return this.command('keyring_status');
   }
 
-  setKeyringPassphrase(newPassphrase: string) {
+  setKeyringPassphrase(currentPassphrase?: string | null, newPassphrase?: string, passphraseHint?: string, savePassphrase?: boolean) {
     return this.command('set_keyring_passphrase', {
+      currentPassphrase,
       newPassphrase,
+      passphraseHint,
+      savePassphrase,
     });
   }
+
+  removeKeyringPassphrase(currentPassphrase: string) {
+    return this.command('remove_keyring_passphrase', {
+      currentPassphrase,
+    });
+  }
+
 
   exit() {
     return this.command('exit');
@@ -56,5 +66,4 @@ export default class Daemon extends Service {
   ) {
     return this.onStateChanged('keyring_status_changed', callback, processData);
   }
-  
 }

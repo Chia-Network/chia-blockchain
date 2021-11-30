@@ -1,13 +1,15 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import LayoutMain from '../layout/LayoutMain';
 import { makeStyles } from '@material-ui/core/styles';
-import { useDispatch, useSelector } from 'react-redux';
 import {
   AlertDialog,
-  Flex,
+  DashboardTitle,
   Card,
+  Suspender,
+  useOpenDialog,
+  useSkipMigration,
 } from '@chia/core';
+import { useGetKeyringStatusQuery } from '@chia/api-react';
 import {
   Grid,
   Typography,
@@ -20,9 +22,6 @@ import {
   Lock as LockIcon,
   NoEncryption as NoEncryptionIcon,
 } from '@material-ui/icons';
-import { openDialog } from '../../modules/dialog';
-import { RootState } from '../../modules/rootReducer';
-import { skipKeyringMigration } from '../../modules/message';
 import ChangePassphrasePrompt from './ChangePassphrasePrompt';
 import RemovePassphrasePrompt from './RemovePassphrasePrompt';
 import SetPassphrasePrompt from './SetPassphrasePrompt';
@@ -50,63 +49,66 @@ const useStyles = makeStyles((theme) => ({
 
 const SecurityCard = () => {
   const classes = useStyles();
-  const dispatch = useDispatch();
-  const { user_passphrase_set: userPassphraseIsSet, needs_migration: needsMigration } = useSelector(
-    (state: RootState) => state.keyring_state
-  );
-
+  const openDialog = useOpenDialog();
+  const [_skipMigration, setSkipMigration] = useSkipMigration();
+  const { data: keyringStatus, isLoading } = useGetKeyringStatusQuery();
   const [changePassphraseOpen, setChangePassphraseOpen] = React.useState(false);
   const [removePassphraseOpen, setRemovePassphraseOpen] = React.useState(false);
   const [addPassphraseOpen, setAddPassphraseOpen] = React.useState(false);
 
+  if (isLoading) {
+    return (
+      <Suspender />
+    );
+  }
+
+  const {
+    userPassphraseIsSet,
+    needsMigration,
+  } = keyringStatus;
+
   async function changePassphraseSucceeded() {
     closeChangePassphrase();
-    dispatch(
-      openDialog(
-        <AlertDialog>
-          <Trans>
+    await openDialog(
+      <AlertDialog>
+        <Trans>
           Your passphrase has been updated
-          </Trans>
-        </AlertDialog>
-      )
+        </Trans>
+      </AlertDialog>
     );
   }
 
   async function setPassphraseSucceeded() {
     closeSetPassphrase();
-    dispatch(
-      openDialog(
-        <AlertDialog>
-          <Trans>
-            Your passphrase has been set
-          </Trans>
-        </AlertDialog>
-      )
+    await openDialog(
+      <AlertDialog>
+        <Trans>
+          Your passphrase has been set
+        </Trans>
+      </AlertDialog>
     );
   }
 
   async function removePassphraseSucceeded() {
     closeRemovePassphrase();
-    dispatch(
-      openDialog(
-        <AlertDialog>
-          <Trans>
-            Passphrase protection has been disabled
-          </Trans>
-        </AlertDialog>
-      )
+    await openDialog(
+      <AlertDialog>
+        <Trans>
+          Passphrase protection has been disabled
+        </Trans>
+      </AlertDialog>
     );
   }
 
-  async function closeChangePassphrase() {
+  function closeChangePassphrase() {
     setChangePassphraseOpen(false);
   }
 
-  async function closeSetPassphrase() {
+  function closeSetPassphrase() {
     setAddPassphraseOpen(false);
   }
 
-  async function closeRemovePassphrase() {
+  function closeRemovePassphrase() {
     setRemovePassphraseOpen(false);
   }
 
@@ -145,7 +147,7 @@ const SecurityCard = () => {
     );
   }
 
-  function DisplayChangePassphrase(): JSX.Element | null {
+  function DisplayChangePassphrase() {
     if (needsMigration === false && userPassphraseIsSet) {
       return (
         <Box display="flex" className={classes.passChangeBox}>
@@ -165,16 +167,14 @@ const SecurityCard = () => {
         </Box>
       )
     }
-    else {
-      return (null);
-    }
+    return null;
   }
 
-  function ActionButtons(): JSX.Element | null {
+  function ActionButtons() {
     if (needsMigration) {
       return (
         <Button
-          onClick={() => dispatch(skipKeyringMigration(false))}
+          onClick={() => setSkipMigration(false)}
           className={classes.togglePassButton}
           variant="contained"
           disableElevation
@@ -236,10 +236,11 @@ const SecurityCard = () => {
 
 export default function Settings() {
   return (
-    <LayoutMain title={<Trans>Settings</Trans>}>
-      <Flex flexDirection="column" gap={3}>
-        <SecurityCard />
-      </Flex>
-    </LayoutMain>
+    <>
+      <DashboardTitle>
+        <Trans>Settings</Trans>
+      </DashboardTitle>
+      <SecurityCard />
+    </>
   );
 }
