@@ -2231,7 +2231,7 @@ class FullNode:
     ):
         try:
             while not self._shut_down:
-                while self.sync_store.get_sync_mode():
+                while self.sync_store.get_sync_mode() or self.sync_store.get_long_sync():
                     if self._shut_down:
                         return None
                     await asyncio.sleep(30)
@@ -2315,7 +2315,7 @@ class FullNode:
 
                 if len(broadcast_list) > target_uncompact_proofs:
                     broadcast_list = broadcast_list[:target_uncompact_proofs]
-                if self.sync_store.get_sync_mode():
+                if self.sync_store.get_sync_mode() or self.sync_store.get_long_sync():
                     continue
                 if self.server is not None:
                     self.log.info(f"Broadcasting {len(broadcast_list)} items to the bluebox")
