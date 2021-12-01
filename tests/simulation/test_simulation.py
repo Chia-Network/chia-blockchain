@@ -7,7 +7,7 @@ from chia.types.peer_info import PeerInfo
 from tests.block_tools import create_block_tools_async
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.util.ints import uint16
+from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_node import WalletNode
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import (
@@ -142,17 +142,23 @@ class TestSimulation:
         assert wallet_node.wallet_state_manager is not None
 
         wallet = wallet_node.wallet_state_manager.main_wallet
-        puzzlehash = await wallet.get_new_puzzlehash()
 
         # Starting at the beginning.
         assert full_node_api.full_node.blockchain.get_peak_height() is None
 
-        rewards = await full_node_api.farm_blocks(count=count, farm_to=puzzlehash)
+        rewards = await full_node_api.farm_blocks(count=count, wallet=wallet)
 
         # The requested number of blocks had been processed plus 1 to handle the final reward
-        # transactions.
-        expected_height = count + 1
-        assert full_node_api.full_node.blockchain.get_peak_height() == expected_height
+        # transactions in the case of a non-zero count.
+        expected_height = count
+        if count > 0:
+            expected_height += 1
+
+        peak_height = full_node_api.full_node.blockchain.get_peak_height()
+        if peak_height is None:
+            peak_height = uint32(0)
+
+        assert peak_height == expected_height
 
         # The expected rewards have been received and confirmed.
         unconfirmed_balance = await wallet.get_unconfirmed_balance()
@@ -186,9 +192,8 @@ class TestSimulation:
         assert wallet_node.wallet_state_manager is not None
 
         wallet = wallet_node.wallet_state_manager.main_wallet
-        puzzlehash = await wallet.get_new_puzzlehash()
 
-        rewards = await full_node_api.farm_rewards(amount=amount, farm_to=puzzlehash)
+        rewards = await full_node_api.farm_rewards(amount=amount, wallet=wallet)
 
         # At least the requested amount was farmed.
         assert rewards >= amount

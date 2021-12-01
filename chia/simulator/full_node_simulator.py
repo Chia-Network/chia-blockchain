@@ -1,6 +1,6 @@
 import asyncio
 import itertools
-from typing import List, Optional
+from typing import Collection, List, Optional, Set
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
@@ -11,6 +11,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.wallet import Wallet
 
 
 class FullNodeSimulator(FullNodeAPI):
@@ -154,41 +156,59 @@ class FullNodeSimulator(FullNodeAPI):
 
         for i in range(count):
             block: FullBlock = await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
-            if block.is_transaction_block():
-                height = uint32(block.height)
-                rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
+            height = uint32(block.height)
+            rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
 
             # TODO: is there a thing we can check to confirm the block has been processed?
             await asyncio.sleep(0)
 
         return rewards
 
-    async def farm_blocks(self, count: int, farm_to: bytes32):
+    async def farm_blocks(self, count: int, wallet: Wallet):
         """Farm the requested number of blocks to the passed puzzle hash. This will
         process additional blocks as needed to process the reward transactions.
 
         Arguments:
             count: The number of blocks to farm.
-            farm_to: The puzzle hash to farm the block rewards to.
+            wallet: The puzzle hash to farm the block rewards to.
 
         Returns:
             The total number of reward mojos farmed to the requested address.
         """
-        rewards = await self.process_blocks(count=count, farm_to=farm_to)
+        if count == 0:
+            return 0
+
+        rewards = await self.process_blocks(count=count, farm_to=await wallet.get_new_puzzlehash())
         await self.process_blocks(count=1)
 
-        # TODO: handle this more explicitly
-        await asyncio.sleep(0.2)
+        peak_height = self.full_node.blockchain.get_peak_height()
+        if peak_height is None:
+            raise RuntimeError("Peak height still None after processing at least one block")
+
+        coin_records = await self.full_node.coin_store.get_coins_added_at_height(height=peak_height)
+
+        # TODO: handle timeouts
+        while True:
+            # TODO: is there a better way to get all coins from a wallet?
+            confirmed_balance = await wallet.get_confirmed_balance()
+            wallet_coins = await wallet.select_coins(confirmed_balance)
+
+            block_reward_coins = {record.coin for record in coin_records}
+
+            if block_reward_coins.issubset(wallet_coins):
+                break
+
+            await asyncio.sleep(0.050)
 
         return rewards
 
-    async def farm_rewards(self, amount: int, farm_to: bytes32) -> int:
+    async def farm_rewards(self, amount: int, wallet: Wallet) -> int:
         """Farm at least the request amount of mojos to the passed puzzle hash. Extra
         mojos will be received based on the block rewards at the present block height.
 
         Arguments:
             amount: The minimum number of mojos to farm.
-            farm_to: The puzzle hash to farm the block rewards to.
+            wallet: The puzzle hash to farm the block rewards to.
 
         Returns:
             The total number of reward mojos farmed to the requested address.
@@ -207,7 +227,70 @@ class FullNodeSimulator(FullNodeAPI):
             rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
 
             if rewards >= amount:
-                await self.farm_blocks(count=count, farm_to=farm_to)
+                await self.farm_blocks(count=count, wallet=wallet)
                 return rewards
 
         raise Exception("internal error")
+
+    async def wait_transaction_records_entered_mempool(
+        self, records: Collection[TransactionRecord], timeout: float = 15
+    ) -> None:
+        clock = asyncio.get_event_loop().time
+        end = clock() + timeout
+
+        ids_to_check: Set[bytes32] = set()
+        for record in records:
+            if record.spend_bundle is None:
+                raise ValueError(f"Transaction record has no spend bundle: {record!r}")
+
+            ids_to_check.add(record.spend_bundle.name())
+
+        # TODO: can we avoid polling
+        while True:
+            found = set()
+            for spend_bundle_name in ids_to_check:
+                tx = self.full_node.mempool_manager.get_spendbundle(spend_bundle_name)
+                if tx is not None:
+                    found.add(spend_bundle_name)
+            ids_to_check = ids_to_check.difference(found)
+
+            if len(ids_to_check) == 0:
+                return
+
+            now = clock()
+            if now >= end:
+                # TODO: real error
+                raise TimeoutError("abc")
+
+            await asyncio.sleep(0.050)
+
+    async def process_transaction_records(self, records: Collection[TransactionRecord], timeout: float = 15) -> None:
+        clock = asyncio.get_event_loop().time
+        end = clock() + timeout
+
+        ids_to_check: Set[bytes32] = set()
+        for record in records:
+            if record.spend_bundle is None:
+                raise ValueError(f"Transaction record has no spend bundle: {record!r}")
+
+            ids_to_check.add(record.spend_bundle.name())
+
+        await self.wait_transaction_records_entered_mempool(records=records, timeout=end - clock())
+
+        while True:
+            now = clock()
+            if now >= end:
+                # TODO: real error
+                raise TimeoutError("abc")
+
+            await self.process_blocks(count=1)
+
+            found = set()
+            for spend_bundle_name in ids_to_check:
+                in_block = True  # TODO: how do i confirm the spend bundle was actually processed?
+                if in_block:
+                    found.add(spend_bundle_name)
+            ids_to_check = ids_to_check.difference(found)
+
+            if len(ids_to_check) == 0:
+                return

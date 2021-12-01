@@ -1,3 +1,4 @@
+import asyncio
 import time
 from typing import Dict, List, Optional, Tuple
 
@@ -288,6 +289,19 @@ class WalletTransactionStore:
                 self.tx_submitted[record.name] = current_time, 1
 
         return records
+
+    async def wait_all_sent(self) -> None:
+        # TODO: add a timeout
+        # TODO: can we avoid polling
+        while True:
+            not_sent = await self.get_not_sent()
+            # TODO: debugging
+            print(f"==== WalletTransactionStore.wait_all_sent() {len(not_sent)} not sent")
+
+            if len(not_sent) == 0:
+                return
+
+            await asyncio.sleep(0.050)
 
     async def get_farming_rewards(self) -> List[TransactionRecord]:
         """
