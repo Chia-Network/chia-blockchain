@@ -25,7 +25,7 @@ def event_loop():
 
 class TestBlockStore:
     @pytest.mark.asyncio
-    async def test_block_store(self):
+    async def test_block_store(self, tmp_dir):
         assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(10)
 
@@ -46,7 +46,7 @@ class TestBlockStore:
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)
         hint_store = await HintStore.create(db_wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store)
+        bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir)
 
         store = await BlockStore.create(db_wrapper)
         await BlockStore.create(db_wrapper_2)
@@ -85,7 +85,7 @@ class TestBlockStore:
         db_filename_2.unlink()
 
     @pytest.mark.asyncio
-    async def test_deadlock(self):
+    async def test_deadlock(self, tmp_dir):
         """
         This test was added because the store was deadlocking in certain situations, when fetching and
         adding blocks repeatedly. The issue was patched.
@@ -108,7 +108,7 @@ class TestBlockStore:
         coin_store_2 = await CoinStore.create(wrapper_2)
         store_2 = await BlockStore.create(wrapper_2)
         hint_store = await HintStore.create(wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store)
+        bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir)
         block_records = []
         for block in blocks:
             await bc.receive_block(block)

@@ -29,6 +29,7 @@ dependencies = [
     "click==7.1.2",  # For the CLI
     "dnspythonchia==2.2.0",  # Query DNS seeds
     "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
+    "dnslib==0.9.14",  # dns lib
 ]
 
 upnp_dependencies = [
@@ -86,6 +87,8 @@ kwargs = dict(
         "chia.pools",
         "chia.protocols",
         "chia.rpc",
+        "chia.seeder",
+        "chia.seeder.util",
         "chia.server",
         "chia.simulator",
         "chia.types.blockchain_format",
@@ -110,6 +113,9 @@ kwargs = dict(
             "chia_harvester = chia.server.start_harvester:main",
             "chia_farmer = chia.server.start_farmer:main",
             "chia_introducer = chia.server.start_introducer:main",
+            "chia_seeder = chia.cmds.seeder:main",
+            "chia_seeder_crawler = chia.seeder.start_crawler:main",
+            "chia_seeder_server = chia.seeder.dns_server:main",
             "chia_timelord = chia.server.start_timelord:main",
             "chia_timelord_launcher = chia.timelord.timelord_launcher:main",
             "chia_full_node_simulator = chia.simulator.start_simulator:main",

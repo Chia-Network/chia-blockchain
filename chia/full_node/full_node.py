@@ -179,7 +179,9 @@ class FullNode:
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
-        self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants, self.hint_store)
+        self.blockchain = await Blockchain.create(
+            self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent
+        )
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
 
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
@@ -717,7 +719,8 @@ class FullNode:
             self.uncompact_task.cancel()
         if self._transaction_queue_task is not None:
             self._transaction_queue_task.cancel()
-        self._blockchain_lock_queue.close()
+        if hasattr(self, "_blockchain_lock_queue"):
+            self._blockchain_lock_queue.close()
 
     async def _await_closed(self):
         cancel_task_safe(self._sync_task, self.log)
@@ -726,7 +729,8 @@ class FullNode:
         await self.connection.close()
         if self._init_weight_proof is not None:
             await asyncio.wait([self._init_weight_proof])
-        await self._blockchain_lock_queue.await_closed()
+        if hasattr(self, "_blockchain_lock_queue"):
+            await self._blockchain_lock_queue.await_closed()
 
     async def _sync(self):
         """
@@ -1312,7 +1316,7 @@ class FullNode:
             new_tx = full_node_protocol.NewTransaction(
                 spend_name,
                 mempool_item.cost,
-                uint64(bundle.fees()),
+                fees,
             )
             msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
             await self.server.send_to_all([msg], NodeType.FULL_NODE)

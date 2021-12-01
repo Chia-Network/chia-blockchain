@@ -5,7 +5,6 @@ import aiosqlite
 
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.db_wrapper import DBWrapper
@@ -294,59 +293,6 @@ class BlockStore:
         #       error: Incompatible return value type (got "Tuple[Dict[bytes32, BlockRecord], bytes]", expected
         #       "Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]")  [return-value]
         return ret, bytes.fromhex(peak_row[0])  # type: ignore[return-value]
-
-    async def get_peak_height_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:
-        """
-        Returns a dictionary with all blocks, as well as the header hash of the peak,
-        if present.
-        """
-
-        res = await self.db.execute("SELECT * from block_records WHERE is_peak = 1")
-        row = await res.fetchone()
-        await res.close()
-        if row is None:
-            return {}, {}
-
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        peak: bytes32 = bytes.fromhex(row[0])  # type: ignore[assignment]
-        cursor = await self.db.execute("SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records")
-        rows = await cursor.fetchall()
-        await cursor.close()
-        hash_to_prev_hash: Dict[bytes32, bytes32] = {}
-        hash_to_height: Dict[bytes32, uint32] = {}
-        hash_to_summary: Dict[bytes32, SubEpochSummary] = {}
-
-        for row in rows:
-            # TODO: address hint errors and remove ignores
-            #       error: Invalid index type "bytes" for "Dict[bytes32, bytes32]"; expected type "bytes32"  [index]
-            #       error: Incompatible types in assignment (expression has type "bytes", target has type "bytes32")
-            #       [assignment]
-            hash_to_prev_hash[bytes.fromhex(row[0])] = bytes.fromhex(row[1])  # type: ignore[index,assignment]
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, uint32]"; expected type "bytes32"  [index]
-            hash_to_height[bytes.fromhex(row[0])] = row[2]  # type: ignore[index]
-            if row[3] is not None:
-                # TODO: address hint error and remove ignore
-                #       error: Invalid index type "bytes" for "Dict[bytes32, SubEpochSummary]"; expected type "bytes32"
-                #       [index]
-                hash_to_summary[bytes.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])  # type: ignore[index]
-
-        height_to_hash: Dict[uint32, bytes32] = {}
-        sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
-
-        curr_header_hash = peak
-        curr_height = hash_to_height[curr_header_hash]
-        while True:
-            height_to_hash[curr_height] = curr_header_hash
-            if curr_header_hash in hash_to_summary:
-                sub_epoch_summaries[curr_height] = hash_to_summary[curr_header_hash]
-            if curr_height == 0:
-                break
-            curr_header_hash = hash_to_prev_hash[curr_header_hash]
-            curr_height = hash_to_height[curr_header_hash]
-        return height_to_hash, sub_epoch_summaries
 
     async def set_peak(self, header_hash: bytes32) -> None:
         # We need to be in a sqlite transaction here.
