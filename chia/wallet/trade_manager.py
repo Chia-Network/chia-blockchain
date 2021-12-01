@@ -302,6 +302,15 @@ class TradeManager:
                     return False, None, f"Do not have a CAT of asset ID: {asset_id} to fulfill offer"
             take_offer_dict[int(wallet.id())] = amount
 
+        # First we validate that all of the coins in this offer exist
+        all_removals: List[Coin] = offer.bundle.removals()
+        all_removal_names: List[bytes32] = [c.name() for c in all_removals]
+        non_ephemeral_removals: List[Coin] = list(filter(lambda c: c.parent_coin_info not in all_removal_names, all_removals))
+        coin_states = await self.wallet_state_manager.get_coin_state([c.name() for c in non_ephemeral_removals])
+        assert coin_states is not None
+        if any([cs.spent_height is not None for cs in coin_states]):
+            return False, None, "This offer is no longer valid"
+
         success, take_offer, error = await self._create_offer_for_ids(take_offer_dict)
         if not success:
             return False, None, error
