@@ -22,7 +22,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from chia.util.ints import uint16, uint32
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
@@ -351,7 +351,7 @@ class TestWalletRpc:
             assert len(all_offers) == 0
             assert offer is None
 
-            offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1})
+            offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, fee=uint64(1))
 
             summary = await client.get_offer_summary(offer)
             assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}}
@@ -361,7 +361,7 @@ class TestWalletRpc:
             assert TradeStatus(all_offers[0].status) == TradeStatus.PENDING_ACCEPT
             assert all_offers[0].offer == bytes(offer)
 
-            trade_record = await client_2.take_offer(offer)
+            trade_record = await client_2.take_offer(offer, fee=uint64(1))
             assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CONFIRM
 
             await client.cancel_offer(offer.name(), secure=False)
@@ -370,7 +370,7 @@ class TestWalletRpc:
             assert trade_record.offer == bytes(offer)
             assert TradeStatus(trade_record.status) == TradeStatus.CANCELLED
 
-            await client.cancel_offer(offer.name(), secure=True)
+            await client.cancel_offer(offer.name(), fee=uint64(1), secure=True)
 
             trade_record = await client.get_offer(offer.name())
             assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL

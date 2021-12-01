@@ -275,13 +275,13 @@ class WalletRpcClient(RpcClient):
 
     # Offers
     async def create_offer_for_ids(
-        self, offer_dict: Dict[uint32, int], validate_only: bool = False
+        self, offer_dict: Dict[uint32, int], fee=uint64(0), validate_only: bool = False
     ) -> Tuple[Optional[Offer], TradeRecord]:
         send_dict: Dict[str, int] = {}
         for key in offer_dict:
             send_dict[str(key)] = offer_dict[key]
 
-        res = await self.fetch("create_offer_for_ids", {"offer": send_dict, "validate_only": validate_only})
+        res = await self.fetch("create_offer_for_ids", {"offer": send_dict, "validate_only": validate_only, "fee": fee})
         offer: Optional[Offer] = None if validate_only else Offer.from_bytes(hexstr_to_bytes(res["offer"]))
         return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], res["offer"])
 
@@ -289,8 +289,8 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("get_offer_summary", {"offer": bytes(offer).hex()})
         return res["summary"]
 
-    async def take_offer(self, offer: Offer) -> TradeRecord:
-        res = await self.fetch("take_offer", {"offer": bytes(offer).hex()})
+    async def take_offer(self, offer: Offer, fee=uint64(0)) -> TradeRecord:
+        res = await self.fetch("take_offer", {"offer": bytes(offer).hex(), "fee": fee})
         return TradeRecord.from_json_dict_convenience(res["trade_record"])
 
     async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:
@@ -308,8 +308,8 @@ class WalletRpcClient(RpcClient):
 
         return records
 
-    async def cancel_offer(self, trade_id: bytes32, secure: bool = True):
-        await self.fetch("cancel_offer", {"trade_id": trade_id.hex(), "secure": secure})
+    async def cancel_offer(self, trade_id: bytes32, fee=uint64(0), secure: bool = True):
+        await self.fetch("cancel_offer", {"trade_id": trade_id.hex(), "secure": secure, "fee": fee})
 
     # DID wallet
     async def create_new_did_wallet(self, amount):

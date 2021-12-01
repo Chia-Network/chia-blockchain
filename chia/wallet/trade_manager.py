@@ -160,13 +160,14 @@ class TradeManager:
     async def cancel_pending_offer(self, trade_id: bytes32):
         await self.trade_store.set_status(trade_id, TradeStatus.CANCELLED, False)
 
-    async def cancel_pending_offer_safely(self, trade_id: bytes32):
+    async def cancel_pending_offer_safely(self, trade_id: bytes32, fee: uint64 = uint64(0)):
         """This will create a transaction that includes coins that were offered"""
         self.log.info(f"Secure-Cancel pending offer with id trade_id {trade_id.hex()}")
         trade = await self.trade_store.get_trade_record(trade_id)
         if trade is None:
             return None
 
+        fee_to_pay: uint64 = fee
         for coin in Offer.from_bytes(trade.offer).get_primary_coins():
             wallet = await self.wallet_state_manager.get_wallet_for_coin(coin.name())
 
@@ -174,17 +175,17 @@ class TradeManager:
                 continue
             new_ph = await wallet.get_new_puzzlehash()
             # This should probably not switch on whether or not we're spending a CAT but it has to for now
-            # TODO: Add fee support
             if wallet.type() == WalletType.CAT:
                 txs = await wallet.generate_signed_transaction(
-                    [coin.amount], [new_ph], 0, coins={coin}, ignore_max_send_amount=True
+                    [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
                 )
                 tx = txs[0]
             else:
                 tx = await wallet.generate_signed_transaction(
-                    coin.amount, new_ph, 0, coins={coin}, ignore_max_send_amount=True
+                    uint64(coin.amount - fee_to_pay), new_ph, fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
                 )
             await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
+            fee_to_pay = uint64(0)
 
         await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL, False)
 
@@ -192,9 +193,9 @@ class TradeManager:
         await self.trade_store.add_trade_record(trade, False)
 
     async def create_offer_for_ids(
-        self, offer: Dict[int, int], validate_only: bool = False
+        self, offer: Dict[int, int], fee: uint64 = uint64(0), validate_only: bool = False
     ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        success, created_offer, error = await self._create_offer_for_ids(offer)
+        success, created_offer, error = await self._create_offer_for_ids(offer, fee=fee)
         if not success or created_offer is None:
             raise Exception(f"Error creating offer: {error}")
 
@@ -217,7 +218,9 @@ class TradeManager:
 
         return success, trade_offer, error
 
-    async def _create_offer_for_ids(self, offer_dict: Dict[int, int]) -> Tuple[bool, Optional[Offer], Optional[str]]:
+    async def _create_offer_for_ids(
+        self, offer_dict: Dict[int, int], fee: uint64 = uint64(0)
+    ) -> Tuple[bool, Optional[Offer], Optional[str]]:
         """
         Offer is dictionary of wallet ids and amount
         """
@@ -251,15 +254,15 @@ class TradeManager:
             announcements_to_assert = Offer.calculate_announcements(notarized_payments)
 
             all_transactions: List[TransactionRecord] = []
+            fee_left_to_pay: uint64 = fee
             for wallet_id, selected_coins in coins_to_offer.items():
                 wallet = self.wallet_state_manager.wallets[wallet_id]
                 # This should probably not switch on whether or not we're spending a CAT but it has to for now
-                # TODO: Add fee support
                 if wallet.type() == WalletType.CAT:
                     txs = await wallet.generate_signed_transaction(
                         [abs(offer_dict[int(wallet_id)])],
                         [Offer.ph()],
-                        0,
+                        fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
                     )
@@ -268,17 +271,21 @@ class TradeManager:
                     tx = await wallet.generate_signed_transaction(
                         abs(offer_dict[int(wallet_id)]),
                         Offer.ph(),
-                        0,
+                        fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
                     )
                     all_transactions.append(tx)
 
-            total_spend_bundle = SpendBundle.aggregate([tx.spend_bundle for tx in all_transactions])
+                fee_left_to_pay = uint64(0)
+
+            transaction_bundles: List[Optional[SpendBundle]] = [tx.spend_bundle for tx in all_transactions]
+            total_spend_bundle = SpendBundle.aggregate(list(filter(lambda b: b is not None, transaction_bundles)))
             offer = Offer(notarized_payments, total_spend_bundle)
             return True, offer, None
 
         except Exception as e:
+            breakpoint()
             raise e
             tb = traceback.format_exc()
             self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
@@ -296,7 +303,7 @@ class TradeManager:
                 self.log.info(f"Creating wallet for asset ID: {key}")
                 await CATWallet.create_wallet_for_cat(wsm, wallet, key.hex())
 
-    async def respond_to_offer(self, offer: Offer) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
+    async def respond_to_offer(self, offer: Offer, fee: uint64) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         take_offer_dict: Dict[int, int] = {}
         arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
         for asset_id, amount in arbitrage.items():
@@ -319,7 +326,7 @@ class TradeManager:
         if any([cs.spent_height is not None for cs in coin_states]):
             return False, None, "This offer is no longer valid"
 
-        success, take_offer, error = await self._create_offer_for_ids(take_offer_dict)
+        success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, fee=fee)
         if not success:
             return False, None, error
 
@@ -333,6 +340,7 @@ class TradeManager:
         settlement_parents: List[bytes32] = [c.parent_coin_info for c in settlement_coins]
         additions: List[Coin] = final_spend_bundle.not_ephemeral_additions()
         removals: List[Coin] = final_spend_bundle.removals()
+        all_fees = uint64(final_spend_bundle.fees())
 
         txs = []
         for addition in additions:
@@ -383,7 +391,7 @@ class TradeManager:
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=to_puzzle_hash,
                     amount=uint64(sum([c.amount for c in grouped_removals])),
-                    fee_amount=uint64(0),  # TODO: Add fee support
+                    fee_amount=all_fees,
                     confirmed=False,
                     sent=uint32(10),
                     spend_bundle=None,

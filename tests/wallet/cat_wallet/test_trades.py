@@ -138,20 +138,22 @@ class TestCATTrades:
         trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
 
         # Execute all of the trades
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, fee=uint64(1))
         await asyncio.sleep(1)
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), fee=uint64(1)
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
         assert trade_take is not None
 
-        MAKER_CHIA_BALANCE -= 1
+        MAKER_CHIA_BALANCE -= 2  # -1 and -1 for fee
         MAKER_NEW_CAT_BALANCE += 2
-        TAKER_CHIA_BALANCE += 1
+        TAKER_CHIA_BALANCE += 0  # +1 and -1 for fee
         TAKER_NEW_CAT_BALANCE -= 2
 
         for i in range(0, buffer_blocks):
@@ -169,6 +171,7 @@ class TestCATTrades:
         async def get_trade_and_status(trade_manager, trade) -> TradeStatus:
             trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
             return TradeStatus(trade_rec.status)
+
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
