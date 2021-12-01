@@ -84,7 +84,7 @@ class TestDLWallet:
 
         dl_wallet_0: DataLayerWallet = creation_record.item
 
-        await full_node_api.process_spend_bundles(spend_bundle_names=creation_record.spend_bundle_names)
+        await full_node_api.process_transaction_records(records=creation_record.transaction_records)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
@@ -93,8 +93,8 @@ class TestDLWallet:
 
         nodes.append(Program.to("beep").get_tree_hash())
         new_merkle_tree = MerkleTree(nodes)
-        spend_bundle = await dl_wallet_0.create_update_state_spend(new_merkle_tree.calculate_root())
-        await full_node_api.process_spend_bundles(spend_bundle_names=[spend_bundle.name()])
+        transaction_record = await dl_wallet_0.create_update_state_spend(new_merkle_tree.calculate_root())
+        await full_node_api.process_transaction_records(records=[transaction_record])
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
@@ -112,7 +112,7 @@ class TestDLWallet:
         )
 
     @pytest.mark.asyncio
-    async def test_announce_coin(self, three_wallet_nodes):
+    async def test_announce_coin(self, three_wallet_nodes) -> None:
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -148,7 +148,7 @@ class TestDLWallet:
 
         dl_wallet_0: DataLayerWallet = creation_record.item
 
-        await full_node_api.process_spend_bundles(spend_bundle_names=creation_record.spend_bundle_names)
+        await full_node_api.process_transaction_records(records=creation_record.transaction_records)
 
         await full_node_api.farm_blocks(count=1, farm_to=ph1)
 
@@ -177,13 +177,13 @@ class TestDLWallet:
             name=sb.name(),
         )
         await wallet_1.push_transaction(tr)
-        await full_node_api.process_spend_bundles(spend_bundle_names=[sb.name()])
+        await full_node_api.process_transaction_records(records=[tr])
 
         await time_out_assert(15, wallet_2.get_confirmed_balance, 200)
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 200)
 
     @pytest.mark.asyncio
-    async def test_dlo_wallet(self, three_wallet_nodes):
+    async def test_dlo_wallet(self, three_wallet_nodes) -> None:
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -219,7 +219,7 @@ class TestDLWallet:
 
         dl_wallet_0: DataLayerWallet = creation_record.item
 
-        await full_node_api.process_spend_bundles(spend_bundle_names=creation_record.spend_bundle_names)
+        await full_node_api.process_transaction_records(records=creation_record.transaction_records)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
@@ -249,7 +249,7 @@ class TestDLWallet:
             10,
         )
         await wallet_1.push_transaction(tr)
-        await full_node_api.process_spend_bundles(spend_bundle_names=[tr.spend_bundle.name()])
+        await full_node_api.process_transaction_records(records=[tr])
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 201)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 201)
@@ -295,13 +295,13 @@ class TestDLWallet:
             name=sb.name(),
         )
         await wallet_2.push_transaction(tr)
-        await full_node_api.process_spend_bundles(spend_bundle_names=[sb.name()])
+        await full_node_api.process_transaction_records(records=[tr])
 
         await time_out_assert(15, wallet_2.get_confirmed_balance, 201)
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 201)
 
     @pytest.mark.asyncio
-    async def test_dlo_wallet_reclaim(self, three_wallet_nodes):
+    async def test_dlo_wallet_reclaim(self, three_wallet_nodes) -> None:
         time_lock = 10
 
         full_nodes, wallets = three_wallet_nodes
@@ -339,7 +339,7 @@ class TestDLWallet:
 
         dl_wallet_0: DataLayerWallet = creation_record.item
 
-        await full_node_api.process_spend_bundles(spend_bundle_names=creation_record.spend_bundle_names)
+        await full_node_api.process_transaction_records(records=creation_record.transaction_records)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
@@ -370,7 +370,7 @@ class TestDLWallet:
             time_lock,
         )
         await wallet_1.push_transaction(tr)
-        await full_node_api.process_spend_bundles(spend_bundle_names=[tr.spend_bundle.name()])
+        await full_node_api.process_transaction_records(records=[tr])
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, offer_amount)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, offer_amount)
@@ -383,7 +383,7 @@ class TestDLWallet:
         # Process a block to make sure the time lock for the offer has passed
         await full_node_api.process_blocks(count=1)
 
-        await full_node_api.process_spend_bundles(spend_bundle_names=[transaction_record.spend_bundle.name()])
+        await full_node_api.process_transaction_records(records=[transaction_record])
 
         wallet_1_funds += offer_amount
 

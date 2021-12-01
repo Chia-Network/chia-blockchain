@@ -1,6 +1,6 @@
 import asyncio
 import itertools
-from typing import Iterable, List, Optional
+from typing import Collection, List, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
@@ -11,6 +11,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32
+from chia.wallet.transaction_record import TransactionRecord
 
 
 class FullNodeSimulator(FullNodeAPI):
@@ -211,13 +212,13 @@ class FullNodeSimulator(FullNodeAPI):
 
         raise Exception("internal error")
 
-    async def wait_spend_bundle_entered_mempool(
-        self, spend_bundle_names: Iterable[bytes32], timeout: float = 15
+    async def wait_transaction_records_entered_mempool(
+        self, records: Collection[TransactionRecord], timeout: float = 15
     ) -> None:
         clock = asyncio.get_event_loop().time
         end = clock() + timeout
 
-        ids_to_check = set(spend_bundle_names)
+        ids_to_check = set(record.spend_bundle.name() for record in records)
 
         # TODO: can we avoid polling
         while True:
@@ -238,13 +239,13 @@ class FullNodeSimulator(FullNodeAPI):
 
             await asyncio.sleep(0.050)
 
-    async def process_spend_bundles(self, spend_bundle_names: Iterable[bytes32], timeout: float = 15) -> None:
+    async def process_transaction_records(self, records: Collection[TransactionRecord], timeout: float = 15) -> None:
         clock = asyncio.get_event_loop().time
         end = clock() + timeout
 
-        ids_to_check = set(spend_bundle_names)
+        ids_to_check = set(record.spend_bundle.name() for record in records)
 
-        await self.wait_spend_bundle_entered_mempool(spend_bundle_names=spend_bundle_names, timeout=end - clock())
+        await self.wait_transaction_records_entered_mempool(records=records, timeout=end - clock())
 
         while True:
             now = clock()

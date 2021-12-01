@@ -2,7 +2,7 @@ import dataclasses
 import warnings
 
 from dataclasses import dataclass
-from typing import Generic, List, Set, TypeVar
+from typing import List
 
 from blspy import AugSchemeMPL, G2Element
 
@@ -13,15 +13,6 @@ from chia.util.streamable import Streamable, dataclass_from_dict, recurse_jsonif
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
 from .coin_spend import CoinSpend
-
-
-T = TypeVar("T")
-
-
-@dataclass
-class ItemAndSpendBundleNames(Generic[T]):
-    item: T
-    spend_bundle_names: Set[bytes32]
 
 
 @dataclass(frozen=True)
