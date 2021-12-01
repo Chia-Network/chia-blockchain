@@ -126,10 +126,9 @@ class Timelord:
         )
         self.last_state: LastState = LastState(self.constants)
         slow_bluebox = self.config.get("slow_bluebox", False)
-        if not self.bluebox_mode and not slow_bluebox:
+        if not self.bluebox_mode:
             self.main_loop = asyncio.create_task(self._manage_chains())
         else:
-            self.bluebox_mode = True
             if os.name == "nt" or slow_bluebox:
                 # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
                 workers = self.config.get("slow_bluebox_process_count", 1)

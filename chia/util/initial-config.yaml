@@ -275,6 +275,7 @@ timelord:
   bluebox_mode: False
   # This runs a less CPU intensive bluebox. Runs for windows. Settings apply as for `bluebox_mode`.
   # Optionally set `process_count` in `timelord_launcher` to 0, since timelord launcher won't be used in this case.
+  # IMPORTANT! `bluebox_mode` must also be set to True for this option to work.
   slow_bluebox: False
   # If `slow_bluebox` is True, launches `slow_bluebox_process_count` processes.
   slow_bluebox_process_count: 1
