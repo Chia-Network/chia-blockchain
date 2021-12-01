@@ -475,7 +475,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
         message = (
             Program.to([new_puzhash, coin.amount, []]).get_tree_hash()
@@ -489,7 +489,7 @@ class DIDWallet:
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
-        spend_bundle = SpendBundle(list_of_solutions, aggsig)
+        spend_bundle = SpendBundle(list_of_coinspends, aggsig)
 
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -543,7 +543,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
         # new_inner_puzhash amount message
         message = (
@@ -558,7 +558,7 @@ class DIDWallet:
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
-        spend_bundle = SpendBundle(list_of_solutions, aggsig)
+        spend_bundle = SpendBundle(list_of_coinspends, aggsig)
 
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -611,7 +611,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
         message = (
             Program.to([amount, puzhash]).get_tree_hash()
@@ -625,7 +625,7 @@ class DIDWallet:
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
-        spend_bundle = SpendBundle(list_of_solutions, aggsig)
+        spend_bundle = SpendBundle(list_of_coinspends, aggsig)
 
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -684,7 +684,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
         # sign for AGG_SIG_ME
@@ -695,7 +695,7 @@ class DIDWallet:
         private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, index)
         signature = AugSchemeMPL.sign(private, message)
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
-        spend_bundle = SpendBundle(list_of_solutions, signature)
+        spend_bundle = SpendBundle(list_of_coinspends, signature)
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -820,7 +820,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
 
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         if index is None:
@@ -833,9 +833,9 @@ class DIDWallet:
         aggsig = AugSchemeMPL.aggregate(sigs)
         # assert AugSchemeMPL.verify(pubkey, message, aggsig)
         if spend_bundle is None:
-            spend_bundle = SpendBundle(list_of_solutions, aggsig)
+            spend_bundle = SpendBundle(list_of_coinspends, aggsig)
         else:
-            spend_bundle = spend_bundle.aggregate([spend_bundle, SpendBundle(list_of_solutions, aggsig)])
+            spend_bundle = spend_bundle.aggregate([spend_bundle, SpendBundle(list_of_coinspends, aggsig)])
 
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -853,7 +853,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=token_bytes(),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(),
         )
         await self.standard_wallet.push_transaction(did_record)
         new_did_info = DIDInfo(
@@ -988,7 +988,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
         message = (
             Program.to([innerpuz.get_tree_hash(), coin.amount, []]).get_tree_hash()
@@ -1002,7 +1002,7 @@ class DIDWallet:
         signature = AugSchemeMPL.sign(private, message)
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
-        spend_bundle = SpendBundle(list_of_solutions, aggsig)
+        spend_bundle = SpendBundle(list_of_coinspends, aggsig)
         return spend_bundle
 
     async def get_frozen_amount(self) -> uint64:
