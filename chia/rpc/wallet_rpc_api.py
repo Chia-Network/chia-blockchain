@@ -78,7 +78,6 @@ class WalletRpcApi:
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
             "/send_transaction_multi": self.send_transaction_multi,
-            "/get_transaction_count": self.get_transaction_count,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
@@ -581,16 +580,18 @@ class WalletRpcApi:
                 }
         else:
             async with self.service.wallet_state_manager.lock:
-                unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
+                unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
+                    wallet_id
+                )
                 balance = await wallet.get_confirmed_balance(unspent_records)
                 pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
                 spendable_balance = await wallet.get_spendable_balance(unspent_records)
                 pending_change = await wallet.get_pending_change_balance()
                 max_send_amount = await wallet.get_max_send_amount(unspent_records)
 
-                unconfirmed_removals: Dict[bytes32, Coin] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(
-                    wallet_id
-                )
+                unconfirmed_removals: Dict[
+                    bytes32, Coin
+                ] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(wallet_id)
                 wallet_balance = {
                     "wallet_id": wallet_id,
                     "confirmed_wallet_balance": balance,
@@ -749,11 +750,6 @@ class WalletRpcApi:
                 # Update the cache
                 await self.service.wallet_state_manager.tx_store.rebuild_tx_cache()
                 return {}
-
-    async def get_transaction_count(self, request):
-        wallet_id = int(request["wallet_id"])
-        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(wallet_id)
-        return {"wallet_id": wallet_id, "count": count}
 
     ##########################################################################################
     # Coloured Coins and Trading
