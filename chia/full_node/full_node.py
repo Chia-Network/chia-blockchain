@@ -179,7 +179,9 @@ class FullNode:
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
-        self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants, self.hint_store)
+        self.blockchain = await Blockchain.create(
+            self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent
+        )
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
 
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
