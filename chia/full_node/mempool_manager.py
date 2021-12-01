@@ -595,8 +595,6 @@ class MempoolManager:
                     # Item is most likely included in the block.
                     included_items.append(item)
 
-        self.fee_tracker.process_block(new_peak.height, included_items)
-
         potential_txs = self.potential_cache.drain()
         txs_added = []
         for item in potential_txs.values():
@@ -605,8 +603,10 @@ class MempoolManager:
             )
             if status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
-            if status == MempoolInclusionStatus.FAILED and err == Err.DOUBLE_SPEND:
+            if status == MempoolInclusionStatus.FAILED and error == Err.DOUBLE_SPEND:
                 included_items.append(item)
+
+        self.fee_tracker.process_block(new_peak.height, included_items)
 
         log.info(
             f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
