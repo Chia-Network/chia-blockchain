@@ -96,8 +96,8 @@ class Offer:
                 raise ValueError("Bundle has duplicate requested payments")
 
     # This method does not get every coin that is being offered, only the `settlement_payment` children
-    def get_offered_coins(self) -> Dict[bytes32, List[Coin]]:
-        offered_coins: Dict[bytes32, List[Coin]] = {}
+    def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
+        offered_coins: Dict[Optional[bytes32], List[Coin]] = {}
 
         for addition in self.bundle.additions():
             # Get the parent puzzle
@@ -166,6 +166,39 @@ class Offer:
 
         return keys_to_strings(offered_amounts), keys_to_strings(requested_amounts)
 
+    # Also mostly for the UI, returns a dictionary of assets and how much of them is pended for this offer
+    # This method is also imperfect for sufficiently complex spends
+    def get_pending_amounts(self) -> Dict[str, int]:
+        offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
+        all_additions: List[Coin] = self.bundle.additions()
+        all_removals: List[Coin] = self.bundle.removals()
+        non_ephemeral_removals: List[Coin] = list(filter(lambda c: c not in all_additions, all_removals))
+
+        pending_dict: Dict[str, int] = {}
+        # First we add up the amounts of all coins that share an ancestor with the offered coins (i.e. a primary coin)
+        for asset_id, coins in offered_coins.items():
+            name = "xch" if asset_id is None else asset_id.hex()
+            pending_dict[name] = 0
+            for coin in coins:
+                root_removal: Coin = coin
+                while True:
+                    if root_removal in non_ephemeral_removals:
+                        break
+                    else:
+                        root_removal = list(
+                            filter(lambda c: c.name() == root_removal.parent_coin_info, non_ephemeral_removals)
+                        )[0]
+
+                for addition in filter(lambda c: c.parent_coin_info == root_removal.name(), all_additions):
+                    pending_dict[name] += addition.amount
+
+        sum_of_additions_so_far: int = sum(pending_dict.values())
+        fee: int = sum([c.amount for c in all_removals]) - sum([c.amount for c in all_additions])
+        unknown: int = sum([c.amount for c in non_ephemeral_removals]) - sum_of_additions_so_far + fee
+        if unknown > 0:
+            pending_dict["unknown"] = unknown
+
+        return pending_dict
 
     # This method returns all of the coins that are being used in the offer (without which it would be invalid)
     def get_involved_coins(self) -> List[Coin]:

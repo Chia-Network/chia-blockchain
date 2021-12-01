@@ -223,8 +223,10 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                 print(f"Created offer with ID {trade_record.trade_id}")
                 print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view its status")
 
+
 def timestamp_to_time(timestamp):
-    return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+
 
 async def print_offer_summary(wallet_client: WalletRpcClient, sum_dict: dict):
     for asset_id, amount in sum_dict.items():
@@ -253,12 +255,16 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
     print(f"Status: {TradeStatus(record.status).name}")
     if summaries:
         print(f"Summary:")
-        offered, requested = Offer.from_bytes(record.offer).summary()
+        offer = Offer.from_bytes(record.offer)
+        offered, requested = offer.summary()
         print("  OFFERED:")
         await print_offer_summary(wallet_client, offered)
         print("  REQUESTED:")
         await print_offer_summary(wallet_client, requested)
+        print("Pending Balances:")
+        await print_offer_summary(wallet_client, offer.get_pending_amounts())
     print("---------------")
+
 
 async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     id, filepath, all, summaries = tuple(list(args.values())[0:4])
