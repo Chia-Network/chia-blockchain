@@ -187,7 +187,6 @@ class FullNodeSimulator(FullNodeAPI):
 
         coin_records = await self.full_node.coin_store.get_coins_added_at_height(height=peak_height)
 
-        # TODO: handle timeouts
         while True:
             # TODO: is there a better way to get all coins from a wallet?
             confirmed_balance = await wallet.get_confirmed_balance()
@@ -232,12 +231,7 @@ class FullNodeSimulator(FullNodeAPI):
 
         raise Exception("internal error")
 
-    async def wait_transaction_records_entered_mempool(
-        self, records: Collection[TransactionRecord], timeout: float = 15
-    ) -> None:
-        clock = asyncio.get_event_loop().time
-        end = clock() + timeout
-
+    async def wait_transaction_records_entered_mempool(self, records: Collection[TransactionRecord]) -> None:
         ids_to_check: Set[bytes32] = set()
         for record in records:
             if record.spend_bundle is None:
@@ -257,17 +251,9 @@ class FullNodeSimulator(FullNodeAPI):
             if len(ids_to_check) == 0:
                 return
 
-            now = clock()
-            if now >= end:
-                # TODO: real error
-                raise TimeoutError("abc")
-
             await asyncio.sleep(0.050)
 
-    async def process_transaction_records(self, records: Collection[TransactionRecord], timeout: float = 15) -> None:
-        clock = asyncio.get_event_loop().time
-        end = clock() + timeout
-
+    async def process_transaction_records(self, records: Collection[TransactionRecord]) -> None:
         ids_to_check: Set[bytes32] = set()
         for record in records:
             if record.spend_bundle is None:
@@ -275,14 +261,9 @@ class FullNodeSimulator(FullNodeAPI):
 
             ids_to_check.add(record.spend_bundle.name())
 
-        await self.wait_transaction_records_entered_mempool(records=records, timeout=end - clock())
+        await self.wait_transaction_records_entered_mempool(records=records)
 
         while True:
-            now = clock()
-            if now >= end:
-                # TODO: real error
-                raise TimeoutError("abc")
-
             await self.process_blocks(count=1)
 
             found = set()
