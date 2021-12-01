@@ -1,10 +1,8 @@
-import { useSelector } from 'react-redux';
-import type { RootState } from '../modules/rootReducer';
+import { useGetNetworkInfoQuery } from '@chia/api-react';
 
 export default function useIsMainnet(): boolean | undefined {
-  const networkPrefix = useSelector(
-    (state: RootState) => state.wallet_state.network_info?.network_prefix,
-  );
+  const { data: networkInfo, isLoading } = useGetNetworkInfoQuery(); 
+  const networkPrefix = networkInfo?.networkPrefix;
 
   if (!networkPrefix) {
     return undefined;

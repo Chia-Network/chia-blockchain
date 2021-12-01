@@ -197,12 +197,12 @@ export default class Client extends EventEmitter {
 
     const response = await this.daemon.isRunning(serviceName);
     if (!response.isRunning) {
-      console.log(`Starting service: ${serviceName}`);
+      log(`Starting service: ${serviceName}`);
       await this.daemon.startService(serviceName);
     }
 
     // wait for service initialisation
-    console.log(`Waiting for ping from service: ${serviceName}`);
+    log(`Waiting for ping from service: ${serviceName}`);
     while(true) {
       try {
         const { data: pingResponse } = await this.send(new Message({
@@ -219,7 +219,7 @@ export default class Client extends EventEmitter {
       }
     }
 
-    console.log(`Service: ${serviceName} started`);
+    log(`Service: ${serviceName} started`);
     this.started.add(serviceName);
   }
 

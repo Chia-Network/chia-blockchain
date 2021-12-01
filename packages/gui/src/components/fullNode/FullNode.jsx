@@ -83,7 +83,7 @@ const cols = [
 
       const timestamp = isFinished 
         ? row.timestamp
-        : get(row, 'foliageTransactionBlock.timestamp', row.timestamp);
+        : get(row, 'foliageTransactionBlock.timestamp');
 
       return timestamp ? unix_to_short_date(Number.parseInt(timestamp)) : '';
     },
@@ -103,8 +103,6 @@ const BlocksCard = () => {
   const navigate = useNavigate();
   const { data: latestBlocks = [], isLoading } = useGetLatestBlocksQuery();
   const { data: unfinishedBlockHeaders = [] } = useGetUnfinishedBlockHeadersQuery();
-
-  console.log('unfinishedBlockHeaders', unfinishedBlockHeaders);
 
   const rows = [
     ...unfinishedBlockHeaders,

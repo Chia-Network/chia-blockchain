@@ -1,29 +1,27 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useDispatch } from 'react-redux';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useRefreshPlotsMutation } from '@chia/api-react';
 import { Button, Grid, Typography, Divider } from '@material-ui/core';
-import { CardHero, Flex, Link } from '@chia/core';
+import { CardHero, Flex, Link, useOpenDialog } from '@chia/core';
 import { PlotHero as PlotHeroIcon } from '@chia/icons';
 import PlotAddDirectoryDialog from '../PlotAddDirectoryDialog';
-import { refreshPlots } from '../../../modules/harvesterMessages';
-import useOpenDialog from '../../../hooks/useOpenDialog';
 
 export default function PlotOverviewHero() {
-  const history = useHistory();
-  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const openDialog = useOpenDialog();
+  const [refreshPlots] = useRefreshPlotsMutation();
 
   function handleAddPlot() {
-    history.push('/dashboard/plot/add');
+    navigate('/dashboard/plot/add');
   }
 
   function handleAddPlotDirectory() {
     openDialog(<PlotAddDirectoryDialog />);
   }
 
-  function handleRefreshPlots() {
-    dispatch(refreshPlots());
+  async function handleRefreshPlots() {
+    await refreshPlots().unwrap();
   }
 
   return (

@@ -40,6 +40,8 @@
         "@material-ui/icons": "^4.11.2",
         "@material-ui/lab": "4.0.0-alpha.60",
         "@material-ui/styles": "^4.11.4",
+        "@nivo/core": "^0.74.0",
+        "@nivo/line": "^0.74.0",
         "@rehooks/local-storage": "2.4.0",
         "bech32": "^2.0.0",
         "big.js": "^6.1.1",

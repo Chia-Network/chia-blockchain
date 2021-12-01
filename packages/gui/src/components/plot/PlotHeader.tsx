@@ -1,9 +1,8 @@
 import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { Flex, More } from '@chia/core';
+import { Flex, More, useOpenDialog } from '@chia/core';
 import { createTeleporter } from 'react-teleporter';
-import { useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Button,
   MenuItem,
@@ -16,9 +15,8 @@ import {
   Folder as FolderIcon,
   Add as AddIcon,
 } from '@material-ui/icons';
-import { refreshPlots } from '../../modules/harvesterMessages';
+import { useRefreshPlotsMutation } from '@chia/api-react';
 import PlotAddDirectoryDialog from './PlotAddDirectoryDialog';
-import useOpenDialog from '../../hooks/useOpenDialog';
 
 type Props = {
   children?: ReactNode;
@@ -34,11 +32,11 @@ export default function PlotHeader(props: Props) {
   const { children } = props;
 
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const openDialog = useOpenDialog();
+  const [refreshPlots] = useRefreshPlotsMutation();
 
-  function handleRefreshPlots() {
-    dispatch(refreshPlots());
+  async function handleRefreshPlots() {
+    await refreshPlots().unwrap();
   }
 
   function handleAddPlot() {

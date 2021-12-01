@@ -73,7 +73,10 @@ export const harvesterApi = createApi({
         command: 'addPlotDirectory',
         args: [dirname],
       }),
-      invalidatesTags: (_result, _error, { dirname }) => [{ type: 'PlotDirectories', id: 'LIST'}, { type: 'PlotDirectories', id: dirname }],
+      invalidatesTags: (_result, _error, { dirname }) => [
+        { type: 'PlotDirectories', id: 'LIST'}, 
+        { type: 'PlotDirectories', id: dirname },
+      ],
     }),
     removePlotDirectory: build.mutation<Object, {
       dirname: string;

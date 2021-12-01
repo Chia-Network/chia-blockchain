@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Flex, More } from '@chia/core';
+import { Flex, More, useOpenDialog } from '@chia/core';
 import { useSelector } from 'react-redux';
 import {
   Box,
@@ -14,7 +14,6 @@ import type { RootState } from '../../../modules/rootReducer';
 import FarmOverviewHero from './FarmOverviewHero';
 import FarmOverviewCards from './FarmOverviewCards';
 import FarmManageFarmingRewards from '../FarmManageFarmingRewards';
-import useOpenDialog from '../../../hooks/useOpenDialog';
 
 export default function FarmOverview() {
   const openDialog = useOpenDialog();

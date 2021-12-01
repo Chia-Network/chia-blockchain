@@ -1,8 +1,9 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
-import { CAT, OfferTradeRecord, Wallet, WalletType } from '@chia/api';
+import { Wallet, CAT, Pool, Farmer, WalletType, OfferTradeRecord } from '@chia/api';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import type { Transaction, WalletConnections } from '@chia/api';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
+import normalizePoolState from '../utils/normalizePoolState';
 
 const baseQuery = chiaLazyBaseQuery({
   service: Wallet,
@@ -19,6 +20,15 @@ export const walletApi = createApi({
         command: 'ping',
       }),
       transformResponse: (response: any) => response?.success,
+    }),
+
+    getFingerprint: build.query<string | undefined, {
+    }>({
+      query: () => ({
+        command: 'getFingerprint',
+        mockResponse: '3125625846',
+      }),
+      transformResponse: (response: any) => response?.fingerprint,
     }),
 
     getWallets: build.query<Wallet[], undefined>({
@@ -668,7 +678,7 @@ export const walletApi = createApi({
       invalidatesTags: [{ type: 'WalletConnections', id: 'LIST' }],
     }),
     closeConnection: build.mutation<WalletConnections, { 
-      nodeId: number;
+      nodeId: string;
     }>({
       query: ({ nodeId }) => ({
         command: 'closeConnection',
@@ -788,6 +798,27 @@ export const walletApi = createApi({
         command: 'getOfferRecord',
         args: [offerId],
       }),
+    }),
+
+    // Pool
+    createNewPoolWallet: build.mutation<{
+      transaction: Transaction;
+      p2SingletonPuzzleHash: string;
+    }, {
+      initialTargetState: Object,
+      fee?: string,
+      host?: string;
+    }>({
+      query: ({
+        initialTargetState,
+        fee,
+        host
+      }) => ({
+        command: 'createNewWallet',
+        service: Pool,
+        args: [initialTargetState, fee, host],
+      }),
+      invalidatesTags: [{ type: 'Wallets', id: 'LIST' }, { type: 'Transactions', id: 'LIST' }],
     }),
 
     // CAT
@@ -1128,11 +1159,144 @@ export const walletApi = createApi({
       },
       invalidatesTags: [{ type: 'Wallets', id: 'LIST' }, { type: 'Transactions', id: 'LIST' }],
     }),
+
+    // PlotNFTs
+    getPlotNFTs: build.query<Object, undefined>({
+      async queryFn(_args, { signal }, _extraOptions, fetchWithBQ) {
+        try {
+          const [wallets, poolStates] = await Promise.all<Wallet[], PoolState[]>([
+            async () => {
+              const { data, error } = await fetchWithBQ({
+                command: 'getWallets',
+              });
+    
+              if (error) {
+                throw error;
+              }
+              
+              const wallets = data?.wallets;
+              if (!wallets) {
+                throw new Error('List of the wallets is not defined');
+              }
+
+              return wallets;
+            },
+            async () => {
+              const { data, error } = await fetchWithBQ({
+                command: 'getPoolState',
+                service: Farmer,
+              });
+    
+              if (error) {
+                throw error;
+              }
+              
+              const poolState = data?.poolState;
+              if (!poolState) {
+                throw new Error('Pool state is not defined');
+              }
+
+              return poolState;
+            },
+          ]);
+
+          if (signal.aborted) {
+            throw new Error('Query was aborted');
+          }
+    
+          // filter pool wallets
+          const poolWallets =
+            wallets?.filter(
+              (wallet) => wallet.type === WalletType.POOLING_WALLET,
+            ) ?? [];
+    
+          const [poolWalletStates, walletBalances] = await Promise.all([
+            await Promise.all<PoolWalletStatus>(poolWallets.map(async (wallet) => {
+              const { data, error } = await fetchWithBQ({
+                command: 'getPwStatus',
+                args: [wallet.id],
+              });
+    
+              if (error) {
+                throw error;
+              }
+
+              console.log('pw state', wallet.id, data);
+
+              return data?.state;
+            })),
+            await Promise.all<WalletBalance>(poolWallets.map(async (wallet) => {
+                const { data, error } = await fetchWithBQ({
+                  command: 'getWalletBalance',
+                  args: [wallet.id],
+                });
+      
+                if (error) {
+                  throw error;
+                }
+
+                console.log('wallet balance', wallet.id, data);
+
+                return data?.walletBalance;
+              })),
+            ]);
+
+          if (signal.aborted) {
+            throw new Error('Query was aborted');
+          }
+    
+          // combine poolState and poolWalletState
+          const nfts: PlotNFT[] = [];
+          const external: PlotNFTExternal[] = [];
+    
+          poolStates.forEach((poolStateItem) => {
+            const poolWalletStatus = poolWalletStates.find(
+              (item) => item.launcherId === poolStateItem.poolConfig.launcherId,
+            );
+            if (!poolWalletStatus) {
+              external.push({
+                pool_state: normalizePoolState(poolStateItem),
+              });
+              return;
+            }
+    
+            const walletBalance = walletBalances.find(
+              (item) => item?.walletId === poolWalletStatus.walletId,
+            );
+    
+            if (!walletBalance) {
+              external.push({
+                poolState: normalizePoolState(poolStateItem),
+              });
+              return;
+            }
+    
+            nfts.push({
+              poolState: normalizePoolState(poolStateItem),
+              poolWalletStatus,
+              walletBalance,
+            });
+          });
+
+          return {
+            data: {
+              nfts,
+              external,
+            },
+          };
+        } catch (error) {
+          return {
+            error,
+          };
+        }
+      },
+    }),
   }),
 });
 
 export const {
   usePingQuery,
+  useGetFingerprintQuery,
   useGetWalletsQuery,
   useGetTransactionQuery,
   useGetPwStatusQuery,
@@ -1178,6 +1342,9 @@ export const {
   useGetOfferDataMutation,
   useGetOfferRecordMutation,
 
+  // Pool
+  useCreateNewPoolWalletMutation,
+
   // CAT
   useCreateNewCATWalletMutation,
   useCreateCATWalletForExistingMutation,
@@ -1187,4 +1354,7 @@ export const {
   useSetCATNameMutation,
   useSpendCATMutation,
   useAddCATTokenMutation,
+
+  // NFTS
+  useGetPlotNFTsQuery,
 } = walletApi;

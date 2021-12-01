@@ -1,12 +1,10 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useDispatch } from 'react-redux';
-import { ConfirmDialog, More } from '@chia/core';
+import { ConfirmDialog, More, useOpenDialog } from '@chia/core';
 import { Box, ListItemIcon, MenuItem, Typography } from '@material-ui/core';
 import { DeleteForever as DeleteForeverIcon } from '@material-ui/icons';
-import { deletePlot } from '../../modules/harvesterMessages';
-import type Plot from '../../types/Plot';
-import useOpenDialog from '../../hooks/useOpenDialog';
+import { useDeletePlotMutation } from '@chia/api-react';
+import type { Plot } from '@chia/api';
 
 type Props = {
   plot: Plot;
@@ -17,15 +15,16 @@ export default function PlotAction(props: Props) {
     plot: { filename },
   } = props;
 
-  const dispatch = useDispatch();
   const openDialog = useOpenDialog();
+  const [deletePlot] = useDeletePlotMutation();
 
   async function handleDeletePlot() {
-    const deleteConfirmed = await openDialog(
+    await openDialog(
       <ConfirmDialog
         title={<Trans>Delete Plot</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
         confirmColor="danger"
+        onConfirm={() => deletePlot({ filename }).unwrap()}
       >
         <Trans>
           Are you sure you want to delete the plot? The plot cannot be
@@ -33,11 +32,6 @@ export default function PlotAction(props: Props) {
         </Trans>
       </ConfirmDialog>,
     );
-
-    // @ts-ignore
-    if (deleteConfirmed) {
-      dispatch(deletePlot(filename));
-    }
   }
 
   return (

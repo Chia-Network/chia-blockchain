@@ -1,6 +1,6 @@
-import { useSelector } from 'react-redux';
-import Wallet from '../types/Wallet';
-import type { RootState } from '../modules/rootReducer';
+import { useMemo } from 'react';
+import type { Wallet } from '@chia/api';
+import { useGetWalletsQuery, useGetWalletBalanceQuery } from '@chia/api-react';
 import WalletType from '../constants/WalletType';
 
 export default function useStandardWallet(): {
@@ -8,17 +8,22 @@ export default function useStandardWallet(): {
   wallet?: Wallet;
   balance?: number;
 } {
-  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
+  const { data: wallets, isLoading: isLoadingGetWallets } = useGetWalletsQuery();
+  const { data: balance, isLoading: isLoadingWalletBalance } = useGetWalletBalanceQuery({
+    walletId: 1,
+  });
 
-  const wallet = wallets?.find(
-    (wallet) => wallet?.type === WalletType.STANDARD_WALLET,
-  );
+  const isLoading = isLoadingGetWallets || isLoadingWalletBalance;
 
-  const balance = wallet?.wallet_balance?.confirmed_wallet_balance;
+  const wallet = useMemo(() => {
+    return wallets?.find(
+      (item) => item?.type === WalletType.STANDARD_WALLET,
+    );
+  }, [wallets]);
 
   return {
-    loading: !wallets,
+    loading: isLoading,
     wallet,
-    balance,
+    balance: balance?.confirmedWalletBalance,
   };
 }

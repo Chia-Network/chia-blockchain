@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
 import { sumBy, uniqBy } from 'lodash';
-import { useSelector } from 'react-redux';
-import Plot from 'types/Plot';
+import type { Plot } from '@chia/api';
 import PlotQueueItem from 'types/PlotQueueItem';
-import type { RootState } from '../modules/rootReducer';
-import useThrottleSelector from './useThrottleSelector';
+import { useGetCombinedPlotsQuery } from '@chia/api-react';
+// import useThrottleSelector from './useThrottleSelector';
 
 export default function usePlots(): {
   loading: boolean;
@@ -15,11 +14,9 @@ export default function usePlots(): {
   hasQueue: boolean;
   size: number;
 } {
-  const plots = useSelector(
-    (state: RootState) => state.farming_state.harvester.plots,
-  );
+  const { data: plots, isLoading } = useGetCombinedPlotsQuery();
 
-  const queue = useThrottleSelector(
+  const queue = []; /*useThrottleSelector(
     (state: RootState) => state.plot_queue.queue,
     {
       wait: 5000,
@@ -28,14 +25,14 @@ export default function usePlots(): {
         return event === 'state_changed';
       },
     },
-  );
+  );*/
 
   const uniquePlots = useMemo(() => {
     if (!plots) {
       return plots;
     }
 
-    return uniqBy(plots, (plot) => plot['plot_id']);
+    return uniqBy(plots, (plot) => plot.plotId);
   }, [plots]);
 
   const updatedPlots = useMemo(() => {
@@ -45,7 +42,7 @@ export default function usePlots(): {
 
     return plots.map((plot) => {
       const duplicates = plots.filter(
-        (item) => plot['plot_id'] === item['plot_id'] && item !== plot,
+        (item) => plot.plotId === item.plotId && item !== plot,
       );
 
       return {
@@ -57,7 +54,7 @@ export default function usePlots(): {
 
   const size = useMemo(() => {
     if (uniquePlots && uniquePlots.length) {
-      return sumBy(uniquePlots, (plot) => plot.file_size);
+      return sumBy(uniquePlots, (plot) => plot.fileSize);
     }
 
     return 0;
@@ -68,7 +65,7 @@ export default function usePlots(): {
     uniquePlots,
     size,
     queue,
-    loading: !plots,
+    loading: isLoading,
     hasPlots: !!plots && plots.length > 0,
     hasQueue: !!queue.length,
   };

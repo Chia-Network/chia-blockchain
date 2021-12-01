@@ -1,10 +1,9 @@
 import React, { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { useDispatch } from 'react-redux';
 import { Trans } from '@lingui/macro';
+import { useCreateNewPoolWalletMutation } from '@chia/api-react';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { Flex } from '@chia/core';
-import { createPlotNFT } from '../../modules/plotNFT';
 import PlotNFTState from '../../constants/PlotNFTState';
 import useUnconfirmedPlotNFTs from '../../hooks/useUnconfirmedPlotNFTs';
 import PlotNFTSelectPool, { SubmitData } from './select/PlotNFTSelectPool';
@@ -15,9 +14,9 @@ type Props = {
 
 export default function PlotNFTAdd(props: Props) {
   const { headerTag: HeaderTag } = props;
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   const unconfirmedNFTs = useUnconfirmedPlotNFTs();
+  const [createNewPoolWallet] = useCreateNewPoolWalletMutation();
 
   async function handleSubmit(data: SubmitData) {
     const {
@@ -25,21 +24,19 @@ export default function PlotNFTAdd(props: Props) {
       initialTargetState,
       initialTargetState: { state },
     } = data;
-    const { success, transaction } = await dispatch(
-      createPlotNFT(initialTargetState, fee),
-    );
-    if (success) {
-      unconfirmedNFTs.add({
-        transactionId: transaction.name,
-        state:
-          state === 'SELF_POOLING'
-            ? PlotNFTState.SELF_POOLING
-            : PlotNFTState.FARMING_TO_POOL,
-        poolUrl: initialTargetState.pool_url,
-      });
 
-      navigate('/dashboard/pool');
-    }
+    const { transaction } = await createNewPoolWallet(initialTargetState, fee).unwrap();
+
+    unconfirmedNFTs.add({
+      transactionId: transaction.name,
+      state:
+        state === 'SELF_POOLING'
+          ? PlotNFTState.SELF_POOLING
+          : PlotNFTState.FARMING_TO_POOL,
+      poolUrl: initialTargetState.pool_url,
+    });
+
+    navigate('/dashboard/pool');
   }
 
   return (

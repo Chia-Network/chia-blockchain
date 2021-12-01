@@ -78,7 +78,7 @@ export default function DashboardSideBar() {
           title={<Trans>Keys</Trans>}
           end
         />
-        {!!passphraseSupportEnabled && (
+        {passphraseSupportEnabled && (
           <SideBarItem
             to="/dashboard/settings"
             icon={<SettingsIcon fontSize="large" />}

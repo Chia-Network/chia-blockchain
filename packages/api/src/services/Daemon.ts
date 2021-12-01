@@ -70,6 +70,101 @@ export default class Daemon extends Service {
     });
   }
 
+  getPlotters() {
+    return this.command('get_plotters');
+  }
+
+  stopPlotting(id: string) {
+    return this.command('stop_plotting', {
+      id,
+      service: ServiceName.PLOTTER,
+    });
+  }
+
+  startPlotting(
+    plotterName, // plotterName
+    k, // plotSize
+    n, // plotCount
+    t, // workspaceLocation
+    t2, // workspaceLocation2
+    d, // finalLocation
+    b, // maxRam
+    u, // numBuckets
+    r, // numThreads,
+    queue, // queue
+    a, // fingerprint
+    parallel, // parallel
+    delay, // delay
+    e, // disableBitfieldPlotting
+    x, // excludeFinalDir
+    overrideK, //overrideK
+    f, // farmerPublicKey
+    p, // poolPublicKey
+    c, // poolContractAddress
+    m, // bladebitDisableNUMA,
+    w, // bladebitWarmStart,
+    v, // madmaxNumBucketsPhase3,
+    G, // madmaxTempToggle,
+    K, // madmaxThreadMultiplier,
+  ) {
+    const args = {
+      service: ServiceName.PLOTTER,
+      plotter: plotterName,
+      k,
+      n,
+      t,
+      t2,
+      d,
+      b,
+      u,
+      r,
+      queue,
+      parallel,
+      delay,
+      e,
+      x,
+      overrideK,
+    };
+  
+    if (a) {
+      args.a = a;
+    }
+  
+    if (f) {
+      args.f = f;
+    }
+  
+    if (p) {
+      args.p = p;
+    }
+  
+    if (c) {
+      args.c = c;
+    }
+  
+    if (m) { // bladebitDisableNUMA
+      args.m = m;
+    }
+  
+    if (w) { // bladebitWarmStart
+      args.w = w;
+    }
+  
+    if (v) { // madmaxNumBucketsPhase3
+      args.v = v;
+    }
+  
+    if (G) { // madmaxTempToggle
+      args.G = G;
+    }
+  
+    if (K) { // madmaxThreadMultiplier
+      args.K = K;
+    }
+
+    return this.command('start_plotting', args);  
+  }
+
   exit() {
     return this.command('exit');
   }

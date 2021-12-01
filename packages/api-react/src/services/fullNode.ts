@@ -87,7 +87,7 @@ export const fullNodeApi = createApi({
       invalidatesTags: [{ type: 'FullNodeConnections', id: 'LIST' }],
     }),
     closeConnection: build.mutation<FullNodeConnection, { 
-      nodeId: number;
+      nodeId: string;
     }>({
       query: ({ nodeId }) => ({
         command: 'closeConnection',

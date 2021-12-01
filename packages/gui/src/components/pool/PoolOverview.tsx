@@ -32,7 +32,7 @@ import PlotNFTUnconfirmedCard from '../plotNFT/PlotNFTUnconfirmedCard';
 import PlotNFTState from '../plotNFT/PlotNFTState';
 import useUnconfirmedPlotNFTs from '../../hooks/useUnconfirmedPlotNFTs';
 import { mojo_to_chia } from '../../util/chia';
-import WalletStatus from '../wallet/WalletStatus';
+import { WalletStatus } from '@chia/wallets';
 
 const groupsCols = [
   {

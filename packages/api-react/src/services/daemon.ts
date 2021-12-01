@@ -1,5 +1,5 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
-import { Daemon } from '@chia/api';
+import { Daemon, optionsForPlotter, defaultsForPlotter } from '@chia/api';
 import type { KeyringStatus, ServiceName } from '@chia/api';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
@@ -127,6 +127,112 @@ export const daemonApi = createApi({
       invalidatesTags: () => ['KeyringStatus'],
       transformResponse: (response: any) => response?.success,
     }),
+
+    getPlotters: build.query<Object, undefined>({
+      query: () => ({
+        command: 'getPlotters',
+      }),
+      transformResponse: (response: any) => {
+        const { plotters } = response;
+        const plotterNames = Object.keys(plotters) as PlotterName[];
+        const availablePlotters: PlotterMap<PlotterName, Plotter> = {};
+
+        plotterNames.forEach((plotterName) => {
+          const { 
+            displayName = plotterName,
+            version,
+            installed,
+            canInstall,
+            bladebitMemoryWarning,
+          } = plotters[plotterName];
+
+          availablePlotters[plotterName] = {
+            displayName,
+            version,
+            options: optionsForPlotter(plotterName),
+            defaults: defaultsForPlotter(plotterName),
+            installInfo: {
+              installed,
+              canInstall,
+              bladebitMemoryWarning,
+            },
+          };
+        });
+        
+        return availablePlotters;
+      },
+      // providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
+    }),
+
+    stopPlotting: build.mutation<boolean, {
+      id: string;
+    }>({
+      query: ({ id }) => ({
+        command: 'stopPlotting',
+        args: [id],
+      }),
+      transformResponse: (response: any) => response?.success,
+      // providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
+    }),
+    
+    startPlotting: build.mutation<boolean, PlotAdd>({
+      query: ({ 
+        bladebitDisableNUMA,
+        bladebitWarmStart,
+        c,
+        delay,
+        disableBitfieldPlotting,
+        excludeFinalDir,
+        farmerPublicKey,
+        finalLocation,
+        fingerprint,
+        madmaxNumBucketsPhase3,
+        madmaxTempToggle,
+        madmaxThreadMultiplier,
+        maxRam,
+        numBuckets,
+        numThreads,
+        overrideK,
+        parallel,
+        plotCount,
+        plotSize,
+        plotterName,
+        poolPublicKey,
+        queue,
+        workspaceLocation,
+        workspaceLocation2,
+       }) => ({
+        command: 'startPlotting',
+        args: [
+          plotterName,
+          plotSize,
+          plotCount,
+          workspaceLocation,
+          workspaceLocation2 || workspaceLocation,
+          finalLocation,
+          maxRam,
+          numBuckets,
+          numThreads,
+          queue,
+          fingerprint,
+          parallel,
+          delay,
+          disableBitfieldPlotting,
+          excludeFinalDir,
+          overrideK,
+          farmerPublicKey,
+          poolPublicKey,
+          c,
+          bladebitDisableNUMA,
+          bladebitWarmStart,
+          madmaxNumBucketsPhase3,
+          madmaxTempToggle,
+          madmaxThreadMultiplier,
+        ],
+      }),
+      transformResponse: (response: any) => response?.success,
+      // providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
+    }),
   }),
 });
 
@@ -140,4 +246,8 @@ export const {
   useRemoveKeyringPassphraseMutation,
   useMigrateKeyringMutation,
   useUnlockKeyringMutation,
+
+  useGetPlottersQuery,
+  useStopPlottingMutation,
+  useStartPlottingMutation,
 } = daemonApi;

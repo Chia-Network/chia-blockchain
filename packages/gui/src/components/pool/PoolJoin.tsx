@@ -1,10 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router';
 import { Trans } from '@lingui/macro';
-import { AlertDialog } from '@chia/core';
+import { AlertDialog, useOpenDialog } from '@chia/core';
 import type PlotNFT from '../../types/PlotNFT';
 import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
-import useOpenDialog from '../../hooks/useOpenDialog';
 
 type Props = {
   nft: PlotNFT;

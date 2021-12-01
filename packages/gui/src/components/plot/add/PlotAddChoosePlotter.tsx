@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import React, { useMemo } from 'react';
 import { useWatch } from 'react-hook-form';
 import { t, Trans } from '@lingui/macro';
 import { CardStep, Select, StateColor } from '@chia/core';
+import { useGetPlottersQuery } from '@chia/api-react';
 import {
   FormControl,
   FormHelperText,
@@ -11,7 +11,6 @@ import {
   MenuItem,
   Typography,
 } from '@material-ui/core';
-import { RootState } from '../../../modules/rootReducer';
 import PlotterName from '../../../constants/PlotterName';
 import Plotter, { PlotterMap } from '../../../types/Plotter';
 import styled from 'styled-components';
@@ -29,7 +28,7 @@ const StyledFormHelperText = styled(FormHelperText)`
 export default function PlotAddChoosePlotter(props: Props) {
   const { step, onChange } = props;
   const plotterName: PlotterName | undefined = useWatch<PlotterName>({name: 'plotterName'});
-  const { availablePlotters } = useSelector((state: RootState) => state.plotter_configuration);
+  const { data: plotters } = useGetPlottersQuery();
 
   function displayablePlotters(plotters: PlotterMap<PlotterName, Plotter>): PlotterName[] {
     const displayablePlotters = Object.keys(plotters) as PlotterName[];
@@ -38,11 +37,10 @@ export default function PlotAddChoosePlotter(props: Props) {
     return displayablePlotters;
   }
 
-  const [displayedPlotters, setDisplayedPlotters] = useState(displayablePlotters(availablePlotters));
+  const displayedPlotters = useMemo(() => {
+    return plotters ? displayablePlotters(plotters) : [];
+  }, [plotters]);
 
-  useEffect(() => {
-    setDisplayedPlotters(displayablePlotters(availablePlotters));
-  }, [availablePlotters]);
 
   const handleChange = async (event: any) => {
     const selectedPlotterName: PlotterName = event.target.value as PlotterName;
@@ -50,18 +48,18 @@ export default function PlotAddChoosePlotter(props: Props) {
   };
 
   const isPlotterInstalled = (plotterName: PlotterName): boolean => {
-    const installed = availablePlotters[plotterName]?.installInfo?.installed ?? false;
+    const installed = plotters[plotterName]?.installInfo?.installed ?? false;
     return installed;
   }
 
   const isPlotterSupported = (plotterName: PlotterName): boolean => {
-    const installed = availablePlotters[plotterName]?.installInfo?.installed ?? false;
-    const supported = installed || (availablePlotters[plotterName]?.installInfo?.canInstall ?? false);
+    const installed = plotters[plotterName]?.installInfo?.installed ?? false;
+    const supported = installed || (plotters[plotterName]?.installInfo?.canInstall ?? false);
     return supported;
   }
 
   function plotterDisplayName(plotterName: PlotterName): string {
-    const plotter = availablePlotters[plotterName] ?? defaultPlotter();
+    const plotter = plotters[plotterName] ?? defaultPlotter();
     const { version } = plotter;
     const installed = plotter.installInfo?.installed ?? false;
     let displayName = plotter.displayName;
@@ -82,7 +80,7 @@ export default function PlotAddChoosePlotter(props: Props) {
 
   const plotterWarningString = (plotterName: PlotterName | undefined): string | undefined => {
     if (plotterName === PlotterName.BLADEBIT) {
-      return availablePlotters[PlotterName.BLADEBIT]?.installInfo?.bladebitMemoryWarning;
+      return plotters[PlotterName.BLADEBIT]?.installInfo?.bladebitMemoryWarning;
     }
     return undefined;
   };

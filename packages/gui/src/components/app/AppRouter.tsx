@@ -6,6 +6,8 @@ import App from './App';
 import FullNode from '../fullNode/FullNode';
 import Block from '../block/Block';
 import Settings from '../settings/Settings';
+import Plot from '../plot/Plot';
+import Pool from '../pool/Pool';
 import DashboardSideBar from '../dashboard/DashboardSideBar';
 
 export default function AppRouter() {
@@ -21,10 +23,12 @@ export default function AppRouter() {
             <Route path="wallet/import" element={<WalletImport />} />
           </Route>
           <Route element={<LayoutDashboard sidebar={<DashboardSideBar />} outlet />}>
-            <Route path="dashboard/" element={<FullNode />} />
+            <Route path="dashboard" element={<FullNode />} />
             <Route path="dashboard/block/:headerHash" element={<Block />} />
             <Route path="dashboard/wallets/*" element={<Wallets />} />
             <Route path="dashboard/settings/*" element={<Settings />} />
+            <Route path="dashboard/plot/*" element={<Plot />} />
+            <Route path="dashboard/pool/*" element={<Pool />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" />} />

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useFormContext } from 'react-hook-form';
-import { CardStep, ConfirmDialog, Link, Select, StateColor } from '@chia/core';
+import { CardStep, ConfirmDialog, Link, Select, StateColor, useOpenDialog } from '@chia/core';
 import {
   Grid,
   FormControl,
@@ -12,7 +12,6 @@ import {
   FormHelperText,
 } from '@material-ui/core';
 import { plotSizeOptions } from '../../../constants/plotSizes';
-import useOpenDialog from '../../../hooks/useOpenDialog';
 import Plotter from '../../../types/Plotter';
 
 const MIN_MAINNET_K_SIZE = 32;

@@ -1,11 +1,10 @@
 import React from 'react';
-import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
 import { Card, Table } from '@chia/core';
+import { useGetCombinedFailedToOpenFilenamesQuery } from '@chia/api-react';
 import { Typography } from '@material-ui/core';
-import type { RootState } from '../../modules/rootReducer';
 import PlotAction from './PlotAction';
-import type Plot from '../../types/Plot';
+import type { Plot } from '@chia/api';
 
 const cols = [
   {
@@ -21,10 +20,7 @@ const cols = [
 ];
 
 export default function PlotsFailed() {
-  const filenames = useSelector(
-    (state: RootState) =>
-      state.farming_state.harvester.failed_to_open_filenames,
-  );
+  const { data: filenames, isLoading } = useGetCombinedFailedToOpenFilenamesQuery();
 
   if (!filenames || !filenames.length) {
     return null;

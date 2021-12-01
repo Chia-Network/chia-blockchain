@@ -197,7 +197,7 @@ export default function WalletHistory(props: Props) {
           uniqueField="name"
           expandedField={(row) => {
             const { confirmedAtHeight, memos } = row;
-            const memoValues = Object.values(memos);
+            const memoValues = memos ? Object.values(memos) : [];
             const memoValuesDecoded = memoValues.map((memoHex) => {
               try {
                 const buf = new Buffer(memoHex, 'hex');

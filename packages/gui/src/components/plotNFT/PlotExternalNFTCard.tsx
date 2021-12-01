@@ -11,6 +11,7 @@ import {
   Loading,
   FormatLargeNumber,
   Link,
+  useOpenDialog,
 } from '@chia/core';
 import {
   Box,
@@ -26,7 +27,6 @@ import PlotNFTExternalState from './PlotNFTExternalState';
 import PlotIcon from '../icons/Plot';
 import usePlotNFTExternalDetails from '../../hooks/usePlotNFTExternalDetails';
 import PlotNFTExternal from '../../types/PlotNFTExternal';
-import useOpenDialog from '../../hooks/useOpenDialog';
 import PlotNFTGraph from './PlotNFTGraph';
 // import PlotNFTGetPoolLoginLinkDialog from './PlotNFTGetPoolLoginLinkDialog';
 import PlotNFTPayoutInstructionsDialog from './PlotNFTPayoutInstructionsDialog';

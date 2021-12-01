@@ -15,6 +15,7 @@ import {
   FormatLargeNumber,
   Link,
   ConfirmDialog,
+  useOpenDialog,
 } from '@chia/core';
 import {
   Box,
@@ -36,7 +37,6 @@ import PlotNFTName from './PlotNFTName';
 import PlotNFTStatus from './PlotNFTState';
 import PlotIcon from '../icons/Plot';
 import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
-import useOpenDialog from '../../hooks/useOpenDialog';
 import PoolJoin from '../pool/PoolJoin';
 import PoolAbsorbRewards from '../pool/PoolAbsorbRewards';
 import { mojo_to_chia } from '../../util/chia';

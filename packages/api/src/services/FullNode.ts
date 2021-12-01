@@ -35,7 +35,7 @@ export default class FullNode extends Service {
     });
   }
 
-  async closeConnection(nodeId: number) {
+  async closeConnection(nodeId: string) {
     return this.command('close_connection', {
       nodeId,
     });

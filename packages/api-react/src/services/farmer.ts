@@ -94,7 +94,7 @@ export const farmerApi = createApi({
       invalidatesTags: [{ type: 'FarmerConnections', id: 'LIST' }],
     }),
     closeConnection: build.mutation<FarmerConnection, { 
-      nodeId: number;
+      nodeId: string;
     }>({
       query: ({ nodeId }) => ({
         command: 'closeConnection',

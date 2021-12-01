@@ -33,7 +33,7 @@ function getLatestTimestamp(
 
 export default function useGetLatestPeakTimestampQuery() {
   const latestPeakTimestamp = useRef<number|undefined>();
-  const { data: blocks, isLoading, error } = useGetLatestBlocksQuery(10);
+  const { data: blocks, isLoading, ...rest } = useGetLatestBlocksQuery(10);
 
   const newPeakTimestamp = useMemo(
     () => getLatestTimestamp(blocks, latestPeakTimestamp.current),
@@ -44,7 +44,7 @@ export default function useGetLatestPeakTimestampQuery() {
 
   return {
     isLoading,
-    error,
     data: newPeakTimestamp,
+    ...rest,
   };
 }

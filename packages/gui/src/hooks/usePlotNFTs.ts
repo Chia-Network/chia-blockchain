@@ -1,9 +1,5 @@
-import { useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useInterval } from 'react-use';
-import type { RootState } from '../modules/rootReducer';
-import type PlotNFT from '../types/PlotNFT';
-import { getPlotNFTs } from '../modules/plotNFT';
+import type { PlotNFT } from '@chia/api';
+import { useGetPlotNFTsQuery } from '@chia/api-react';
 import PlotNFTExternal from 'types/PlotNFTExternal';
 
 export default function usePlotNFTs(): {
@@ -11,22 +7,13 @@ export default function usePlotNFTs(): {
   nfts?: PlotNFT[];
   external?: PlotNFTExternal[];
 } {
-  const dispatch = useDispatch();
-  const nfts = useSelector((state: RootState) => state.plot_nft.items);
-  const external = useSelector((state: RootState) => state.plot_nft.external);
-  const loading = !nfts || !external;
-
-  useInterval(() => {
-    dispatch(getPlotNFTs());
-  }, 10000);
-
-  useEffect(() => {
-    dispatch(getPlotNFTs());
-  }, []);
+  const { data, isLoading } = useGetPlotNFTsQuery(undefined, {
+    pollingInterval: 10000,
+  });
 
   return {
-    loading,
-    nfts,
-    external,
+    loading: isLoading,
+    nfts: data?.nfts,
+    external: data?.external,
   };
 }

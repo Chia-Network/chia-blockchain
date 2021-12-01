@@ -9,6 +9,10 @@ export default class Wallet extends Service {
     super(ServiceName.WALLET, client, options);
   }
 
+  async getFingerprint() {
+    return this.command('get_fingerprint');
+  }
+
   async getWallets() {
     return this.command('get_wallets');
   }

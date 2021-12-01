@@ -5,7 +5,7 @@ enum ServiceName {
   HARVESTER = 'chia_harvester',
   SIMULATOR = 'chia_full_node_simulator',
   DAEMON = 'daemon',
-  PLOTTER = 'chia plots create',
+  PLOTTER = 'chia_plotter',
   TIMELORD = 'chia_timelord',
   INTRODUCER = 'chia_introducer',
   EVENTS = 'wallet_ui',

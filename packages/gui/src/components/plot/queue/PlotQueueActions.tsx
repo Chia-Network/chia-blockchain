@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useDispatch } from 'react-redux';
-import { ConfirmDialog, More } from '@chia/core';
+import { ConfirmDialog, More, useOpenDialog } from '@chia/core';
 import {
   Box,
   Divider,
@@ -13,7 +13,6 @@ import {
   DeleteForever as DeleteForeverIcon,
   Info as InfoIcon,
 } from '@material-ui/icons';
-import useOpenDialog from '../../../hooks/useOpenDialog';
 import type PlotQueueItem from '../../../types/PlotQueueItem';
 import PlotStatus from '../../../constants/PlotStatus';
 import { stopPlotting } from '../../../modules/plotter_messages';

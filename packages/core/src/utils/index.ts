@@ -12,7 +12,5 @@ export { default as mojoToCAT } from './mojoToCAT';
 export { default as mojoToCATLocaleString } from './mojoToCATLocaleString';
 export { default as mojoToChia } from './mojoToChia';
 export { default as mojoToChiaLocaleString } from './mojoToChiaLocaleString';
-export { default as normalizePoolState } from './normalizePoolState';
-export { default as removeOldPoints } from './removeOldPoints';
 export { default as sleep } from './sleep';
 export { default as toBech32m, fromBech32m } from './toBech32m';

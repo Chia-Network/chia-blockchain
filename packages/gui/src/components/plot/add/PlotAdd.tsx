@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router';
-import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate, useLocation } from 'react-router';
 import { t, Trans } from '@lingui/macro';
-import { AlertDialog } from '@chia/core';
+import { useGetFingerprintQuery, useGetPlottersQuery, useStartPlottingMutation, useCreateNewPoolWalletMutation } from '@chia/api-react';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { ButtonLoading, Flex, Form, FormBackButton, Loading } from '@chia/core';
+import { useCurrencyCode, useShowError, ButtonLoading, Flex, Form, FormBackButton, Loading, Suspender } from '@chia/core';
 import { PlotHeaderSource } from '../PlotHeader';
 import PlotAddChoosePlotter from './PlotAddChoosePlotter';
 import PlotAddChooseSize from './PlotAddChooseSize';
@@ -13,19 +12,13 @@ import PlotAddNumberOfPlots from './PlotAddNumberOfPlots';
 import PlotAddSelectTemporaryDirectory from './PlotAddSelectTemporaryDirectory';
 import PlotAddSelectFinalDirectory from './PlotAddSelectFinalDirectory';
 import PlotAddNFT from './PlotAddNFT';
-import { plotQueueAdd } from '../../../modules/plotQueue';
-import { createPlotNFT } from '../../../modules/plotNFT';
 import PlotAddConfig from '../../../types/PlotAdd';
 import plotSizes from '../../../constants/plotSizes';
 import PlotNFTState from '../../../constants/PlotNFTState';
 import PlotterName from '../../../constants/PlotterName';
 import { defaultPlotter } from '../../../modules/plotterConfiguration';
-import useCurrencyCode from '../../../hooks/useCurrencyCode';
-import type { RootState } from '../../../modules/rootReducer';
 import toBech32m from '../../../util/toBech32m';
 import useUnconfirmedPlotNFTs from '../../../hooks/useUnconfirmedPlotNFTs';
-import useOpenDialog from '../../../hooks/useOpenDialog';
-import { getPlotters } from '../../../modules/plotter_messages';
 
 type FormData = PlotAddConfig & {
   p2_singleton_puzzle_hash?: string;
@@ -34,18 +27,17 @@ type FormData = PlotAddConfig & {
 
 export default function PlotAdd() {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const [loading, setLoading] = useState<boolean>(false);
-  const [fetchedPlotters, setFetchedPlotters] = useState<boolean>(false);
   const currencyCode = useCurrencyCode();
-  const fingerprint = useSelector(
-    (state: RootState) => state.wallet_state.selected_fingerprint,
-  );
+  const showError = useShowError();
+
+  const { data: fingerprint, isLoadingFingerprint } = useGetFingerprintQuery();
+  const { data: plotters, isLoadingPlotters } = useGetPlottersQuery();
+  const [startPlotting] = useStartPlottingMutation();
+  const [createNewPoolWallet] = useCreateNewPoolWalletMutation();
   const addNFTref = useRef();
+  const { state } = useLocation();
   const unconfirmedNFTs = useUnconfirmedPlotNFTs();
-  const openDialog = useOpenDialog();
-  const state = useSelector((state: RootState) => state.router.location.state);
-  const { availablePlotters } = useSelector((state: RootState) => state.plotter_configuration);
 
   const otherDefaults = {
     plotCount: 1,
@@ -60,8 +52,10 @@ export default function PlotAdd() {
     createNFT: false,
   };
 
+  const isLoading = isLoadingFingerprint || isLoadingPlotters || !currencyCode;
+
   const defaultsForPlotter = (plotterName: PlotterName) => {
-    const plotterDefaults = availablePlotters[plotterName]?.defaults ?? defaultPlotter().defaults;
+    const plotterDefaults = plotters[plotterName]?.defaults ?? defaultPlotter().defaults;
     const plotSize = plotterDefaults.plotSize;
     const maxRam = plotSizes.find((element) => element.value === plotSize)?.defaultRam;
     const defaults = {
@@ -75,7 +69,7 @@ export default function PlotAdd() {
 
   const methods = useForm<FormData>({
     shouldUnregister: false,
-    defaultValues: defaultsForPlotter(PlotterName.CHIAPOS),
+    defaultValues: isLoading ? {} : defaultsForPlotter(PlotterName.CHIAPOS),
   });
 
   const { watch, setValue, reset } = methods;
@@ -83,22 +77,22 @@ export default function PlotAdd() {
   const plotSize = watch('plotSize');
 
   useEffect(() => {
-    if (!fetchedPlotters) {
-      dispatch(getPlotters());
-      setFetchedPlotters(true);
-    }
-  }, [fetchedPlotters]);
-
-  let plotter = availablePlotters[plotterName] ?? defaultPlotter();
-  let step: number = 1;
-  const allowTempDirectorySelection: boolean = plotter.options.haveBladebitOutputDir === false;
-
-  useEffect(() => {
     const plotSizeConfig = plotSizes.find((item) => item.value === plotSize);
     if (plotSizeConfig) {
       setValue('maxRam', plotSizeConfig.defaultRam);
     }
   }, [plotSize, setValue]);
+
+  if (isLoading) {
+    return <Suspender />;
+  }
+
+
+  let plotter = plotters[plotterName] ?? defaultPlotter();
+  let step: number = 1;
+  const allowTempDirectorySelection: boolean = plotter.options.haveBladebitOutputDir === false;
+
+
 
   const handlePlotterChanged = (newPlotterName: PlotterName) => {
     const defaults = defaultsForPlotter(newPlotterName);
@@ -126,14 +120,10 @@ export default function PlotAdd() {
           initialTargetState,
           initialTargetState: { state },
         } = nftData;
-        const { success, error, transaction, p2_singleton_puzzle_hash } =
-          await dispatch(createPlotNFT(initialTargetState, fee));
-        if (!success) {
-          throw new Error(error ?? t`Unable to create plot NFT`);
-        }
+        const { transaction, p2SingletonPuzzleHash } = await createNewPoolWallet(initialTargetState, fee).unwrap();
 
-        if (!p2_singleton_puzzle_hash) {
-          throw new Error(t`p2_singleton_puzzle_hash is not defined`);
+        if (!p2SingletonPuzzleHash) {
+          throw new Error(t`p2SingletonPuzzleHash is not defined`);
         }
 
         unconfirmedNFTs.add({
@@ -145,7 +135,7 @@ export default function PlotAdd() {
           poolUrl: initialTargetState.pool_url,
         });
 
-        selectedP2SingletonPuzzleHash = p2_singleton_puzzle_hash;
+        selectedP2SingletonPuzzleHash = p2SingletonPuzzleHash;
       }
 
       const plotAddConfig = {
@@ -169,18 +159,18 @@ export default function PlotAdd() {
         plotAddConfig.fingerprint = fingerprint;
       }
 
-      await dispatch(plotQueueAdd(plotAddConfig));
+      await startPlotting(plotAddConfig).unwrap();
 
       navigate('/dashboard/plot');
     } catch (error) {
-      await openDialog(<AlertDialog>{error.message}</AlertDialog>);
+      await showError(error);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!currencyCode) {
-    return <Loading center />;
+  if (isLoading) {
+    return <Suspender />;
   }
 
   return (

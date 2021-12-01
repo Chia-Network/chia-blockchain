@@ -1,11 +1,10 @@
 import React from 'react';
-import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
 import { Card, Table } from '@chia/core';
 import { Typography } from '@material-ui/core';
-import type { RootState } from '../../modules/rootReducer';
+import { useGetCombinedNotFoundFilenamesQuery } from '@chia/api-react';
 import PlotAction from './PlotAction';
-import type Plot from '../../types/Plot';
+import type { Plot } from '@chia/api';
 
 const cols = [
   {
@@ -21,9 +20,7 @@ const cols = [
 ];
 
 export default function PlotsNotFound() {
-  const filenames = useSelector(
-    (state: RootState) => state.farming_state.harvester.not_found_filenames,
-  );
+  const { data: filenames, isLoading } = useGetCombinedNotFoundFilenamesQuery();
 
   if (!filenames || !filenames.length) {
     return null;

@@ -17,12 +17,8 @@ import {
   ListItemText,
   Typography,
 } from '@material-ui/core';
-import { useSelector, useDispatch } from 'react-redux';
-import {
-  add_plot_directory_and_refresh,
-  remove_plot_directory_and_refresh,
-} from '../../modules/message';
-import type { RootState } from '../../modules/rootReducer';
+import { useShowError, Suspender } from '@chia/core';
+import { useAddPlotDirectoryMutation, useRemovePlotDirectoryMutation, useGetPlotDirectoriesQuery } from '@chia/api-react';
 import useSelectDirectory from '../../hooks/useSelectDirectory';
 
 type Props = {
@@ -32,14 +28,19 @@ type Props = {
 
 export default function PlotAddDirectoryDialog(props: Props) {
   const { onClose, open } = props;
-  const dispatch = useDispatch();
+  const [addPlotDirectory] = useAddPlotDirectoryMutation();
+  const [removePlotDirectory] = useRemovePlotDirectoryMutation();
+  const { data: directories, isLoading } = useGetPlotDirectoriesQuery();
+  const showError = useShowError();
   const selectDirectory = useSelectDirectory({
     buttonLabel: 'Select Plot Directory',
   });
 
-  const directories = useSelector(
-    (state: RootState) => state.farming_state.harvester.plot_directories ?? [],
-  );
+  if (isLoading) {
+    return (
+      <Suspender />
+    );
+  }
 
   function handleClose() {
     onClose();
@@ -50,14 +51,26 @@ export default function PlotAddDirectoryDialog(props: Props) {
       onClose();
     }}
 
-  function removePlotDir(dir: string) {
-    dispatch(remove_plot_directory_and_refresh(dir));
+  async function removePlotDir(dirname: string) {
+    try {
+      await removePlotDirectory({
+        dirname,
+      }).unwrap();
+    } catch (error: any) {
+      showError(error);
+    }
   }
 
   async function handleSelectDirectory() {
-    const directory = await selectDirectory();
-    if (directory) {
-      dispatch(add_plot_directory_and_refresh(directory));
+    const dirname = await selectDirectory();
+    if (dirname) {
+      try {
+        await addPlotDirectory({
+          dirname,
+        }).unwrap();
+      } catch (error: any) {
+        showError(error);
+      }
     }
   }
 

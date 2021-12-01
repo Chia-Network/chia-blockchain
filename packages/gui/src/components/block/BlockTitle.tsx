@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Flex } from '@chia/core';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 
 const BackIcon = styled(ArrowBackIosIcon)`
