@@ -677,6 +677,9 @@ class WalletStateManager:
                 if info is None:
                     continue
                 record = await self.coin_store.get_coin_record(coin_state.coin.name())
+                derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin_state.coin.puzzle_hash)
+                if derivation_index is not None:
+                    await self.puzzle_store.set_used_up_to(derivation_index, True)
                 if coin_state.coin.name() in trade_removals:
                     trade_coin_removed.append(coin_state)
                 if record is None:
