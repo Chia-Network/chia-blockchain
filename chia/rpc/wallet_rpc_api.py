@@ -825,6 +825,7 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
 
         offer: Dict[str, int] = request["offer"]
+        fee: uint64 = uint64(request.get("fee", 0))
         validate_only: bool = request.get("validate_only", False)
 
         modified_offer = {}
@@ -837,7 +838,7 @@ class WalletRpcApi:
                 trade_record,
                 error,
             ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer, validate_only
+                modified_offer, fee=fee, validate_only=validate_only
             )
         if success:
             return {
@@ -858,13 +859,14 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         offer_hex = request["offer"]
         offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+        fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
             (
                 success,
                 trade_record,
                 error,
-            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer)
+            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer, fee=fee)
         if not success:
             raise ValueError(error)
         return {"trade_record": trade_record.to_json_dict_convenience()}
@@ -906,10 +908,11 @@ class WalletRpcApi:
         wsm = self.service.wallet_state_manager
         secure = request["secure"]
         trade_id = hexstr_to_bytes(request["trade_id"])
+        fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
             if secure:
-                await wsm.trade_manager.cancel_pending_offer_safely(trade_id)
+                await wsm.trade_manager.cancel_pending_offer_safely(trade_id, fee=fee)
             else:
                 await wsm.trade_manager.cancel_pending_offer(trade_id)
         return {}
