@@ -249,22 +249,28 @@ class TradeManager:
                 requested_payments, all_coins
             )
             announcements_to_assert = Offer.calculate_announcements(notarized_payments)
-            self.log.warning(f"Announcements are not implemented yet {announcements_to_assert[0].name()}")
 
             all_transactions: List[TransactionRecord] = []
             for wallet_id, selected_coins in coins_to_offer.items():
                 wallet = self.wallet_state_manager.wallets[wallet_id]
                 # This should probably not switch on whether or not we're spending a CAT but it has to for now
                 # TODO: Add fee support
-                # TODO: ADD ANNOUNCEMENT ASSERTIONS
                 if wallet.type() == WalletType.CAT:
                     txs = await wallet.generate_signed_transaction(
-                        [abs(offer_dict[int(wallet_id)])], [Offer.ph()], 0, coins=set(selected_coins)
+                        [abs(offer_dict[int(wallet_id)])],
+                        [Offer.ph()],
+                        0,
+                        coins=set(selected_coins),
+                        puzzle_announcements_to_consume=announcements_to_assert,
                     )
                     all_transactions.extend(txs)
                 else:
                     tx = await wallet.generate_signed_transaction(
-                        abs(offer_dict[int(wallet_id)]), Offer.ph(), 0, coins=set(selected_coins)
+                        abs(offer_dict[int(wallet_id)]),
+                        Offer.ph(),
+                        0,
+                        coins=set(selected_coins),
+                        puzzle_announcements_to_consume=announcements_to_assert,
                     )
                     all_transactions.append(tx)
 
@@ -305,7 +311,9 @@ class TradeManager:
         # First we validate that all of the coins in this offer exist
         all_removals: List[Coin] = offer.bundle.removals()
         all_removal_names: List[bytes32] = [c.name() for c in all_removals]
-        non_ephemeral_removals: List[Coin] = list(filter(lambda c: c.parent_coin_info not in all_removal_names, all_removals))
+        non_ephemeral_removals: List[Coin] = list(
+            filter(lambda c: c.parent_coin_info not in all_removal_names, all_removals)
+        )
         coin_states = await self.wallet_state_manager.get_coin_state([c.name() for c in non_ephemeral_removals])
         assert coin_states is not None
         if any([cs.spent_height is not None for cs in coin_states]):

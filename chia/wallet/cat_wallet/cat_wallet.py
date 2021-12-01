@@ -540,7 +540,9 @@ class CATWallet:
                 coins=chia_coins,
                 origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
                 negative_change_allowed=False,
-                announcements_to_consume=set([announcement_to_assert]) if announcement_to_assert is not None else None,
+                coin_announcements_to_consume=set([announcement_to_assert])
+                if announcement_to_assert is not None
+                else None,
             )
             assert chia_tx.spend_bundle is not None
 
@@ -562,7 +564,9 @@ class CATWallet:
                 (await self.standard_wallet.get_new_puzzlehash()),
                 coins=chia_coins,
                 negative_change_allowed=True,
-                announcements_to_consume=set([announcement_to_assert]) if announcement_to_assert is not None else None,
+                coin_announcements_to_consume=set([announcement_to_assert])
+                if announcement_to_assert is not None
+                else None,
             )
             assert chia_tx.spend_bundle is not None
 
@@ -574,7 +578,14 @@ class CATWallet:
         fee: uint64 = uint64(0),
         cat_discrepancy: Optional[Tuple[int, Program]] = None,  # (extra_delta, limitations_solution)
         coins: Set[Coin] = None,
+        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
+        if coin_announcements_to_consume is not None:
+            coin_announcements_to_consume = {a.name() for a in coin_announcements_to_consume}
+        if puzzle_announcements_to_consume is not None:
+            puzzle_announcements_to_consume = {a.name() for a in puzzle_announcements_to_consume}
+
         if cat_discrepancy is not None:
             extra_delta, limitations_solution = cat_discrepancy
         else:
@@ -629,7 +640,10 @@ class CATWallet:
                             fee, uint64(regular_chia_to_claim), announcement_to_assert=announcement
                         )
                         innersol = self.standard_wallet.make_solution(
-                            primaries=primaries, coin_announcements={announcement.message}
+                            primaries=primaries,
+                            coin_announcements={announcement.message},
+                            coin_announcements_to_assert=coin_announcements_to_consume,
+                            puzzle_announcements_to_assert=puzzle_announcements_to_consume,
                         )
                     elif regular_chia_to_claim > fee:
                         chia_tx, _ = await self.create_tandem_xch_tx(fee, uint64(regular_chia_to_claim))
@@ -637,7 +651,11 @@ class CATWallet:
                             primaries=primaries, coin_announcements_to_assert={announcement.name()}
                         )
                 else:
-                    innersol = self.standard_wallet.make_solution(primaries=primaries)
+                    innersol = self.standard_wallet.make_solution(
+                        primaries=primaries,
+                        coin_announcements_to_assert=coin_announcements_to_consume,
+                        puzzle_announcements_to_assert=puzzle_announcements_to_consume,
+                    )
             else:
                 innersol = self.standard_wallet.make_solution()
             inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
@@ -678,6 +696,8 @@ class CATWallet:
         coins: Set[Coin] = None,
         ignore_max_send_amount: bool = False,
         memos: Optional[List[List[bytes]]] = None,
+        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
     ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
@@ -697,7 +717,13 @@ class CATWallet:
             if payment_sum > max_send:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
 
-        unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(payments, fee, coins=coins)
+        unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
+            payments,
+            fee,
+            coins=coins,
+            coin_announcements_to_consume=coin_announcements_to_consume,
+            puzzle_announcements_to_consume=puzzle_announcements_to_consume,
+        )
         spend_bundle = await self.sign(unsigned_spend_bundle)
 
         # TODO add support for array in stored records
