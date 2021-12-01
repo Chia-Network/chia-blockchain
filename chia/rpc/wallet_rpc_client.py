@@ -54,7 +54,7 @@ class WalletRpcClient(RpcClient):
             return e.args[0]
 
     async def get_fingerprint(self) -> int:
-        return (await self.fetch("get_fingerprint", {}))
+        return (await self.fetch("get_fingerprint", {}))["fingerprint"]
 
     async def get_public_keys(self) -> List[int]:
         return (await self.fetch("get_public_keys", {}))["public_key_fingerprints"]
