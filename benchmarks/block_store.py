@@ -27,7 +27,9 @@ random.seed(123456789)
 
 
 def rand_class_group_element() -> ClassgroupElement:
-    return ClassgroupElement(rand_bytes(100))
+    # TODO: address hint errors and remove ignores
+    #       error: Argument 1 to "ClassgroupElement" has incompatible type "bytes"; expected "bytes100"  [arg-type]
+    return ClassgroupElement(rand_bytes(100))  # type: ignore[arg-type]
 
 
 def rand_vdf() -> VDFInfo:

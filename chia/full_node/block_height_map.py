@@ -80,8 +80,14 @@ class BlockHeightMap:
             # it's OK if this file doesn't exist, we can rebuild it
             pass
 
-        peak: bytes32 = bytes.fromhex(row[0])
-        prev_hash: bytes32 = bytes.fromhex(row[1])
+        # TODO: address hint errors and remove ignores
+        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
+        #       [assignment]
+        peak: bytes32 = bytes.fromhex(row[0])  # type: ignore[assignment]
+        # TODO: address hint errors and remove ignores
+        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
+        #       [assignment]
+        prev_hash: bytes32 = bytes.fromhex(row[1])  # type: ignore[assignment]
         height = row[2]
 
         # allocate memory for height to hash map
@@ -151,7 +157,12 @@ class BlockHeightMap:
             # maps block-hash -> (height, prev-hash, sub-epoch-summary)
             ordered: Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]] = {}
             for r in rows:
-                ordered[bytes.fromhex(r[0])] = (r[2], bytes.fromhex(r[1]), r[3])
+                # TODO: address hint errors and remove ignores
+                #       error: Invalid index type "bytes" for "Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]]";
+                #       expected type "bytes32"  [index]
+                #       error: Incompatible types in assignment (expression has type "Tuple[Any, bytes, Any]", target
+                #       has type "Tuple[uint32, bytes32, Optional[bytes]]")  [assignment]
+                ordered[bytes.fromhex(r[0])] = (r[2], bytes.fromhex(r[1]), r[3])  # type: ignore[index,assignment]
 
             while height > window_end:
                 entry = ordered[prev_hash]
@@ -177,7 +188,9 @@ class BlockHeightMap:
     def get_hash(self, height: uint32) -> bytes32:
         idx = height * 32
         assert idx + 32 <= len(self.__height_to_hash)
-        return bytes(self.__height_to_hash[idx : idx + 32])
+        # TODO: address hint errors and remove ignores
+        #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
+        return bytes(self.__height_to_hash[idx : idx + 32])  # type: ignore[return-value]
 
     def contains_height(self, height: uint32) -> bool:
         return height * 32 < len(self.__height_to_hash)
