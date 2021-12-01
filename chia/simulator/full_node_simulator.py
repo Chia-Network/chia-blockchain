@@ -1,6 +1,6 @@
 import asyncio
 import itertools
-from typing import Collection, List, Optional
+from typing import Collection, List, Optional, Set
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
@@ -182,6 +182,9 @@ class FullNodeSimulator(FullNodeAPI):
         await self.process_blocks(count=1)
 
         peak_height = self.full_node.blockchain.get_peak_height()
+        if peak_height is None:
+            raise RuntimeError("Peak height still None after processing at least one block")
+
         coin_records = await self.full_node.coin_store.get_coins_added_at_height(height=peak_height)
 
         # TODO: handle timeouts
@@ -235,7 +238,12 @@ class FullNodeSimulator(FullNodeAPI):
         clock = asyncio.get_event_loop().time
         end = clock() + timeout
 
-        ids_to_check = set(record.spend_bundle.name() for record in records)
+        ids_to_check: Set[bytes32] = set()
+        for record in records:
+            if record.spend_bundle is None:
+                raise ValueError(f"Transaction record has no spend bundle: {record!r}")
+
+            ids_to_check.add(record.spend_bundle.name())
 
         # TODO: can we avoid polling
         while True:
@@ -260,7 +268,12 @@ class FullNodeSimulator(FullNodeAPI):
         clock = asyncio.get_event_loop().time
         end = clock() + timeout
 
-        ids_to_check = set(record.spend_bundle.name() for record in records)
+        ids_to_check: Set[bytes32] = set()
+        for record in records:
+            if record.spend_bundle is None:
+                raise ValueError(f"Transaction record has no spend bundle: {record!r}")
+
+            ids_to_check.add(record.spend_bundle.name())
 
         await self.wait_transaction_records_entered_mempool(records=records, timeout=end - clock())
 

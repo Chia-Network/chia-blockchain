@@ -7,7 +7,7 @@ from chia.types.peer_info import PeerInfo
 from tests.block_tools import create_block_tools_async
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.util.ints import uint16
+from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_node import WalletNode
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import (
@@ -156,7 +156,7 @@ class TestSimulation:
 
         peak_height = full_node_api.full_node.blockchain.get_peak_height()
         if peak_height is None:
-            peak_height = 0
+            peak_height = uint32(0)
 
         assert peak_height == expected_height
 

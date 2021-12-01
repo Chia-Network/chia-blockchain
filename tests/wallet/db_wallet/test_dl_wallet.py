@@ -180,8 +180,10 @@ class TestDLWallet:
 
     @pytest.mark.asyncio
     async def test_dlo_wallet(self, three_wallet_nodes) -> None:
+        time_lock = 10
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
+        full_node_api.time_per_block = 2 * time_lock
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
         wallet_node_1, server_1 = wallets[1]
@@ -229,18 +231,14 @@ class TestDLWallet:
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 0)
-        # leaf_reveal: bytes,
-        # host_genesis_id: bytes32,
-        # claim_target: bytes32,
-        # recovery_target: bytes32,
-        # recovery_timelock: uint64,
+        assert dl_wallet_0.dl_info.origin_coin is not None
         tr = await dlo_wallet_1.generate_datalayer_offer_spend(
-            uint64(201),
-            Program.to("thing").get_tree_hash(),
-            dl_wallet_0.dl_info.origin_coin.name(),
-            await wallet_2.get_new_puzzlehash(),
-            await wallet_1.get_new_puzzlehash(),
-            10,
+            amount=uint64(201),
+            leaf_reveal=Program.to("thing").get_tree_hash(),
+            host_genesis_id=dl_wallet_0.dl_info.origin_coin.name(),
+            claim_target=await wallet_2.get_new_puzzlehash(),
+            recovery_target=await wallet_1.get_new_puzzlehash(),
+            recovery_timelock=time_lock,
         )
         await wallet_1.push_transaction(tr)
         await full_node_api.process_transaction_records(records=[tr])
@@ -262,6 +260,7 @@ class TestDLWallet:
         if len(inclusion_proof) == 1:
             inclusion_proof = inclusion_proof[0]
             # breakpoint()
+        assert db_innerpuz is not None
         sb2 = await dlo_wallet_2.claim_dl_offer(
             offer_coin,
             offer_full_puzzle,
@@ -347,18 +346,14 @@ class TestDLWallet:
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 0)
-        # leaf_reveal: bytes,
-        # host_genesis_id: bytes32,
-        # claim_target: bytes32,
-        # recovery_target: bytes32,
-        # recovery_timelock: uint64,
+        assert dl_wallet_0.dl_info.origin_coin is not None
         tr = await dlo_wallet_1.generate_datalayer_offer_spend(
-            uint64(offer_amount),
-            Program.to("thing").get_tree_hash(),
-            dl_wallet_0.dl_info.origin_coin.name(),
-            await wallet_2.get_new_puzzlehash(),
-            await wallet_1.get_new_puzzlehash(),
-            time_lock,
+            amount=uint64(offer_amount),
+            leaf_reveal=Program.to("thing").get_tree_hash(),
+            host_genesis_id=dl_wallet_0.dl_info.origin_coin.name(),
+            claim_target=await wallet_2.get_new_puzzlehash(),
+            recovery_target=await wallet_1.get_new_puzzlehash(),
+            recovery_timelock=time_lock,
         )
         await wallet_1.push_transaction(tr)
         await full_node_api.process_transaction_records(records=[tr])
