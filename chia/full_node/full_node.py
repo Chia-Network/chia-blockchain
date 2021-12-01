@@ -1298,7 +1298,7 @@ class FullNode:
             new_tx = full_node_protocol.NewTransaction(
                 spend_name,
                 mempool_item.cost,
-                uint64(bundle.fees()),
+                fees,
             )
             msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
