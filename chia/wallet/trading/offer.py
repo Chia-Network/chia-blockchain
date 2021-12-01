@@ -28,15 +28,12 @@ ZERO_32 = bytes32([0] * 32)
 class NotarizedPayment(Payment):
     nonce: bytes32 = ZERO_32
 
-    def as_condition(self) -> Program:
-        return Program.to([self.nonce, *self.as_condition_args()])
-
     @classmethod
-    def from_condition(cls, condition: Program) -> "NotarizedPayment":
-        p = Payment.from_condition(condition)
+    def from_condition(cls, condition: Program, nonce: bytes32) -> "NotarizedPayment":
+        with_opcode: Program = Program.to((51, condition))  # Gotta do this because the super class is expecting it
+        p = Payment.from_condition(with_opcode)
         puzzle_hash, amount, memos = tuple(p.as_condition_args())
-        return cls(puzzle_hash, amount, memos, bytes32(next(condition.as_iter()).as_python()))
-
+        return cls(puzzle_hash, amount, memos, nonce)
 
 @dataclass(frozen=True)
 class Offer:
@@ -78,8 +75,8 @@ class Offer:
             else:
                 settlement_ph = OFFER_MOD.get_tree_hash()
 
-            messages: List[bytes32] = [p.as_condition().get_tree_hash() for p in payments]
-            announcements.extend([Announcement(settlement_ph, msg) for msg in messages])
+            msg: List[bytes32] = Program.to((payments[0].nonce, [p.as_condition_args() for p in payments])).get_tree_hash()
+            announcements.append(Announcement(settlement_ph, msg))
 
         return announcements
 
@@ -261,9 +258,13 @@ class Offer:
                 all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount)))
 
             for coin in offered_coins:
-                inner_solution = Program.to(
-                    [np.as_condition() for np in all_payments] if coin == offered_coins[0] else []
-                )
+                inner_solutions = []
+                if coin == offered_coins[0]:
+                    nonces: List[bytes32] = [p.nonce for p in all_payments]
+                    for nonce in list(dict.fromkeys(nonces)):  # dedup without messing with order
+                        nonce_payments: List[NotarizedPayment] = list(filter(lambda p: p.nonce == nonce, all_payments))
+                        inner_solutions.append((nonce, [np.as_condition_args() for np in nonce_payments]))
+
                 if tail_hash:
                     # CATs have a special way to be solved so we have to do some calculation before getting the solution
                     parent_spend: CoinSpend = list(
@@ -277,7 +278,7 @@ class Offer:
                         coin,
                         tail_hash,
                         OFFER_MOD,
-                        inner_solution,
+                        Program.to(inner_solutions),
                         lineage_proof=LineageProof(
                             parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount
                         ),
@@ -288,7 +289,7 @@ class Offer:
                         .solution.to_program()
                     )
                 else:
-                    solution = inner_solution
+                    solution = Program.to(inner_solutions)
 
                 completion_spends.append(
                     CoinSpend(
@@ -305,6 +306,12 @@ class Offer:
         additional_coin_spends: List[CoinSpend] = []
         for tail_hash, payments in self.requested_payments.items():
             puzzle_reveal: Program = construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD) if tail_hash else OFFER_MOD
+            inner_solutions = []
+            nonces: List[bytes32] = [p.nonce for p in payments]
+            for nonce in list(dict.fromkeys(nonces)):  # dedup without messing with order
+                nonce_payments: List[NotarizedPayment] = list(filter(lambda p: p.nonce == nonce, payments))
+                inner_solutions.append((nonce, [np.as_condition_args() for np in nonce_payments]))
+
             additional_coin_spends.append(
                 CoinSpend(
                     Coin(
@@ -313,7 +320,7 @@ class Offer:
                         uint64(0),
                     ),
                     puzzle_reveal,
-                    Program.to([np.as_condition() for np in payments]),
+                    Program.to(inner_solutions),
                 )
             )
 
@@ -337,10 +344,15 @@ class Offer:
                     tail_hash: Optional[bytes32] = bytes32(tail_hash_program.as_python())
                 else:
                     tail_hash = None
-                requested_payments[tail_hash] = [
-                    NotarizedPayment.from_condition(condition)
-                    for condition in coin_spend.solution.to_program().as_iter()
-                ]
+
+                notarized_payments: List[NotarizedPayment] = []
+                for payment_group in coin_spend.solution.to_program().as_iter():
+                    nonce = bytes32(payment_group.first().as_python())
+                    payment_args_list: List[Program] = payment_group.rest().as_iter()
+                    notarized_payments.extend([NotarizedPayment.from_condition(condition, nonce) for condition in payment_args_list])
+
+                requested_payments[tail_hash] = notarized_payments
+
             else:
                 leftover_coin_spends.append(coin_spend)
 
