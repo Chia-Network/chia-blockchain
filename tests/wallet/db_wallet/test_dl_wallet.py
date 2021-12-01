@@ -61,13 +61,11 @@ class TestDLWallet:
         wallet_node_2, server_2 = wallets[2]
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
 
-        ph = await wallet_0.get_new_puzzlehash()
-
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.farm_blocks(count=1, farm_to=ph)
+        funds = await full_node_api.farm_blocks(count=1, wallet=wallet_0)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -123,15 +121,13 @@ class TestDLWallet:
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
 
-        ph = await wallet_0.get_new_puzzlehash()
-        ph1 = await wallet_1.get_new_puzzlehash()
         ph2 = await wallet_2.get_new_puzzlehash()
 
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.farm_blocks(count=1, farm_to=ph)
+        funds = await full_node_api.farm_blocks(count=1, wallet=wallet_0)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -150,7 +146,7 @@ class TestDLWallet:
 
         await full_node_api.process_transaction_records(records=creation_record.transaction_records)
 
-        await full_node_api.farm_blocks(count=1, farm_to=ph1)
+        await full_node_api.farm_blocks(count=1, wallet=wallet_1)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
@@ -194,15 +190,13 @@ class TestDLWallet:
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
 
-        ph = await wallet_0.get_new_puzzlehash()
-        ph1 = await wallet_1.get_new_puzzlehash()
         ph2 = await wallet_2.get_new_puzzlehash()
 
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.farm_blocks(count=1, farm_to=ph)
+        funds = await full_node_api.farm_blocks(count=1, wallet=wallet_0)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -231,7 +225,7 @@ class TestDLWallet:
                 wallet_1,
             )
 
-        await full_node_api.farm_blocks(count=2, farm_to=ph1)
+        await full_node_api.farm_blocks(count=2, wallet=wallet_1)
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)
         await time_out_assert(15, dlo_wallet_1.get_unconfirmed_balance, 0)
@@ -315,14 +309,11 @@ class TestDLWallet:
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
 
-        ph = await wallet_0.get_new_puzzlehash()
-        ph1 = await wallet_1.get_new_puzzlehash()
-
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.farm_blocks(count=1, farm_to=ph)
+        funds = await full_node_api.farm_blocks(count=1, wallet=wallet_0)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -351,7 +342,7 @@ class TestDLWallet:
                 wallet_1,
             )
 
-        wallet_1_funds = await full_node_api.farm_blocks(count=1, farm_to=ph1)
+        wallet_1_funds = await full_node_api.farm_blocks(count=1, wallet=wallet_1)
         offer_amount = 201
 
         await time_out_assert(15, dlo_wallet_1.get_confirmed_balance, 0)

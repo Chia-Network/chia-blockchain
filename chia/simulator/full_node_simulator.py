@@ -12,6 +12,7 @@ from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.wallet import Wallet
 
 
 class FullNodeSimulator(FullNodeAPI):
@@ -163,32 +164,48 @@ class FullNodeSimulator(FullNodeAPI):
 
         return rewards
 
-    async def farm_blocks(self, count: int, farm_to: bytes32):
+    async def farm_blocks(self, count: int, wallet: Wallet):
         """Farm the requested number of blocks to the passed puzzle hash. This will
         process additional blocks as needed to process the reward transactions.
 
         Arguments:
             count: The number of blocks to farm.
-            farm_to: The puzzle hash to farm the block rewards to.
+            wallet: The puzzle hash to farm the block rewards to.
 
         Returns:
             The total number of reward mojos farmed to the requested address.
         """
-        rewards = await self.process_blocks(count=count, farm_to=farm_to)
+        if count == 0:
+            return 0
+
+        rewards = await self.process_blocks(count=count, farm_to=await wallet.get_new_puzzlehash())
         await self.process_blocks(count=1)
 
-        # TODO: handle this more explicitly
-        await asyncio.sleep(0.2)
+        peak_height = self.full_node.blockchain.get_peak_height()
+        coin_records = await self.full_node.coin_store.get_coins_added_at_height(height=peak_height)
+
+        # TODO: handle timeouts
+        while True:
+            # TODO: is there a better way to get all coins from a wallet?
+            confirmed_balance = await wallet.get_confirmed_balance()
+            wallet_coins = await wallet.select_coins(confirmed_balance)
+
+            block_reward_coins = {record.coin for record in coin_records}
+
+            if block_reward_coins.issubset(wallet_coins):
+                break
+
+            await asyncio.sleep(0.050)
 
         return rewards
 
-    async def farm_rewards(self, amount: int, farm_to: bytes32) -> int:
+    async def farm_rewards(self, amount: int, wallet: Wallet) -> int:
         """Farm at least the request amount of mojos to the passed puzzle hash. Extra
         mojos will be received based on the block rewards at the present block height.
 
         Arguments:
             amount: The minimum number of mojos to farm.
-            farm_to: The puzzle hash to farm the block rewards to.
+            wallet: The puzzle hash to farm the block rewards to.
 
         Returns:
             The total number of reward mojos farmed to the requested address.
@@ -207,7 +224,7 @@ class FullNodeSimulator(FullNodeAPI):
             rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
 
             if rewards >= amount:
-                await self.farm_blocks(count=count, farm_to=farm_to)
+                await self.farm_blocks(count=count, wallet=wallet)
                 return rewards
 
         raise Exception("internal error")
