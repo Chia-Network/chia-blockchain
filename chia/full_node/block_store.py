@@ -34,7 +34,6 @@ class BlockStore:
                 "CREATE TABLE IF NOT EXISTS full_blocks("
                 "header_hash blob PRIMARY KEY,"
                 "height bigint,"
-                "is_block tinyint,"
                 "is_fully_compactified tinyint,"
                 "block blob)"
             )
@@ -47,8 +46,7 @@ class BlockStore:
                 "height bigint,"
                 "block blob,"
                 "sub_epoch_summary blob,"
-                "is_peak tinyint,"
-                "is_block tinyint)"
+                "is_peak tinyint)"
             )
 
             # Sub epoch segments for weight proofs
@@ -123,34 +121,61 @@ class BlockStore:
 
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
         self.block_cache.put(header_hash, block)
-        cursor_1 = await self.db.execute(
-            "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
-            (
-                self.maybe_to_hex(header_hash),
-                block.height,
-                int(block.is_transaction_block()),
-                int(block.is_fully_compactified()),
-                bytes(block),
-            ),
-        )
 
-        await cursor_1.close()
+        if self.db_wrapper.db_version == 2:
+            cursor_1 = await self.db.execute(
+                "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?)",
+                (
+                    header_hash,
+                    block.height,
+                    int(block.is_fully_compactified()),
+                    bytes(block),
+                ),
+            )
+            await cursor_1.close()
 
-        cursor_2 = await self.db.execute(
-            "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?,?, ?, ?)",
-            (
-                self.maybe_to_hex(header_hash),
-                self.maybe_to_hex(block.prev_header_hash),
-                block.height,
-                bytes(block_record),
-                None
-                if block_record.sub_epoch_summary_included is None
-                else bytes(block_record.sub_epoch_summary_included),
-                False,
-                block.is_transaction_block(),
-            ),
-        )
-        await cursor_2.close()
+            cursor_2 = await self.db.execute(
+                "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?,?, ?)",
+                (
+                    header_hash,
+                    block.prev_header_hash,
+                    block.height,
+                    bytes(block_record),
+                    None
+                    if block_record.sub_epoch_summary_included is None
+                    else bytes(block_record.sub_epoch_summary_included),
+                    False,
+                ),
+            )
+            await cursor_2.close()
+        else:
+            cursor_1 = await self.db.execute(
+                "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
+                (
+                    header_hash.hex(),
+                    block.height,
+                    int(block.is_transaction_block()),
+                    int(block.is_fully_compactified()),
+                    bytes(block),
+                ),
+            )
+            await cursor_1.close()
+
+            cursor_2 = await self.db.execute(
+                "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?,?, ?, ?)",
+                (
+                    header_hash.hex(),
+                    block.prev_header_hash.hex(),
+                    block.height,
+                    bytes(block_record),
+                    None
+                    if block_record.sub_epoch_summary_included is None
+                    else bytes(block_record.sub_epoch_summary_included),
+                    False,
+                    block.is_transaction_block(),
+                ),
+            )
+            await cursor_2.close()
 
     async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
