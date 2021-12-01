@@ -30,11 +30,13 @@ class TradeRecord(Streamable):
     def to_json_dict_convenience(self) -> Dict[str, Any]:
         formatted = self.to_json_dict()
         formatted["status"] = TradeStatus(self.status).name
-        offered, requested = Offer.from_bytes(self.offer).summary()
+        offer = Offer.from_bytes(self.offer)
+        offered, requested = offer.summary()
         formatted["summary"] = {
             "offered": offered,
             "requested": requested,
         }
+        formatted["pending"] = offer.get_pending_amounts()
         del formatted["offer"]
         return formatted
 
@@ -43,6 +45,6 @@ class TradeRecord(Streamable):
         new_record = record.copy()
         new_record["status"] = TradeStatus[record["status"]].value
         del new_record["summary"]
+        del new_record["pending"]
         new_record["offer"] = offer
         return cls.from_json_dict(new_record)
-
