@@ -74,7 +74,7 @@ class TestSimClient:
 
             # get_coin_record_by_name
             assert await sim_client.get_coin_record_by_name(coin_record_name)
-            
+
             # get_block_records
             block_records = await sim_client.get_block_records(0, 5)
             assert len(block_records) == 5
@@ -139,10 +139,9 @@ class TestSimClient:
             assert coin_solution
 
             # get_coin_records_by_parent_ids
-            new_coin = next(x.coin for x in additions if x.coin.puzzle_hash==puzzle_hash)
+            new_coin = next(x.coin for x in additions if x.coin.puzzle_hash == puzzle_hash)
             coin_records = await sim_client.get_coin_records_by_parent_ids([spendable_coin.name()])
             assert coin_records[0].coin.name() == new_coin.name()
-     
-            
+
         finally:
             await sim.close()

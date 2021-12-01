@@ -225,8 +225,7 @@ class SimClient:
         end_height: Optional[int] = None,
         include_spent_coins: bool = False,
     ) -> List[CoinRecord]:
-
-        kwargs: Dict[str, Any] = {"include_spent_coins": include_spent_coins, "parent_ids": parent_ids, }
+        kwargs: Dict[str, Any] = {"include_spent_coins": include_spent_coins, "parent_ids": parent_ids}
         if start_height is not None:
             kwargs["start_height"] = start_height
         if end_height is not None:
