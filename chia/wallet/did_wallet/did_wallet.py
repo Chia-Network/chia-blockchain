@@ -853,7 +853,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=token_bytes(),
-            memos=list(),
+            memos=list(spend_bundle.get_memos().items()),
         )
         await self.standard_wallet.push_transaction(did_record)
         new_did_info = DIDInfo(

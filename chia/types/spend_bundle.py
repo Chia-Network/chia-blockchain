@@ -88,9 +88,12 @@ class SpendBundle(Streamable):
         """
         memos: Dict[bytes32, List[bytes]] = {}
         for coin_spend in self.coin_spends:
-            result = Program.from_bytes(bytes(coin_spend.puzzle_reveal)).run(
-                Program.from_bytes(bytes(coin_spend.solution))
-            )
+            try:
+                result = Program.from_bytes(bytes(coin_spend.puzzle_reveal)).run(
+                    Program.from_bytes(bytes(coin_spend.solution))
+                )
+            except Exception:
+                continue
             for condition in result.as_python():
                 if condition[0] == ConditionOpcode.CREATE_COIN and len(condition) >= 4:
                     # If only 3 elements (opcode + 2 args), there is no memo, this is ph, amount
