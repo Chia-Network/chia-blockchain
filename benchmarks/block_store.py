@@ -44,7 +44,7 @@ def rand_vdf_proof() -> VDFProof:
     )
 
 
-with open("clvm_generator.bin", "wb+") as f:
+with open("clvm_generator.bin", "rb+") as f:
     clvm_generator = f.read()
 
 
