@@ -57,14 +57,31 @@ class BlockHeightMap:
         self.__height_to_hash_filename = blockchain_dir / "height-to-hash"
         self.__ses_filename = blockchain_dir / "sub-epoch-summaries"
 
-        res = await self.db.db.execute(
-            "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records WHERE is_peak=1"
-        )
-        row = await res.fetchone()
-        await res.close()
+        if db.db_version == 2:
+            cursor = await self.db.db.execute("SELECT hash FROM current_peak WHERE key = 0")
+            peak_row = await cursor.fetchone()
+            await cursor.close()
+            if peak_row is None:
+                return self
 
-        if row is None:
-            return self
+            cursor_2 = await db.db.execute(
+                "SELECT header_hash,prev_hash,height,sub_epoch_summary FROM block_records WHERE header_hash=?",
+                (peak_row[0],),
+            )
+            row = await cursor_2.fetchone()
+            await cursor_2.close()
+
+            if row is None:
+                return self
+        else:
+            res = await db.db.execute(
+                "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records WHERE is_peak=1"
+            )
+            row = await res.fetchone()
+            await res.close()
+
+            if row is None:
+                return self
 
         try:
             async with aiofiles.open(self.__height_to_hash_filename, "rb") as f:
