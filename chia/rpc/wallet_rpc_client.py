@@ -53,6 +53,9 @@ class WalletRpcClient(RpcClient):
         except ValueError as e:
             return e.args[0]
 
+    async def get_fingerprint(self) -> int:
+        return (await self.fetch("get_fingerprint", {}))
+
     async def get_public_keys(self) -> List[int]:
         return (await self.fetch("get_public_keys", {}))["public_key_fingerprints"]
 
