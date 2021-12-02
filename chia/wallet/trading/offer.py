@@ -35,6 +35,7 @@ class NotarizedPayment(Payment):
         puzzle_hash, amount, memos = tuple(p.as_condition_args())
         return cls(puzzle_hash, amount, memos, nonce)
 
+
 @dataclass(frozen=True)
 class Offer:
     requested_payments: Dict[bytes32, List[NotarizedPayment]]  # The key is the asset id of the asset being requested
@@ -75,7 +76,9 @@ class Offer:
             else:
                 settlement_ph = OFFER_MOD.get_tree_hash()
 
-            msg: List[bytes32] = Program.to((payments[0].nonce, [p.as_condition_args() for p in payments])).get_tree_hash()
+            msg: List[bytes32] = Program.to(
+                (payments[0].nonce, [p.as_condition_args() for p in payments])
+            ).get_tree_hash()
             announcements.append(Announcement(settlement_ph, msg))
 
         return announcements
@@ -349,7 +352,9 @@ class Offer:
                 for payment_group in coin_spend.solution.to_program().as_iter():
                     nonce = bytes32(payment_group.first().as_python())
                     payment_args_list: List[Program] = payment_group.rest().as_iter()
-                    notarized_payments.extend([NotarizedPayment.from_condition(condition, nonce) for condition in payment_args_list])
+                    notarized_payments.extend(
+                        [NotarizedPayment.from_condition(condition, nonce) for condition in payment_args_list]
+                    )
 
                 requested_payments[tail_hash] = notarized_payments
 

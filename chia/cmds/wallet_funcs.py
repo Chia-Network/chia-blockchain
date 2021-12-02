@@ -255,7 +255,7 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
     print(f"Accepted at: {timestamp_to_time(record.accepted_at_time) if record.accepted_at_time else 'N/A'}")
     print(f"Status: {TradeStatus(record.status).name}")
     if summaries:
-        print(f"Summary:")
+        print("Summary:")
         offer = Offer.from_bytes(record.offer)
         offered, requested = offer.summary()
         print("  OFFERED:")
@@ -312,7 +312,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
 
 async def cancel_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    id: bytes32 = hexstr_to_bytes(args["id"])
+    id = hexstr_to_bytes(args["id"])
     secure: bool = not args["insecure"]
     fee: int = int(Decimal(args["fee"]) * units["chia"])
 

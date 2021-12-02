@@ -170,8 +170,7 @@ class WalletCoinStore:
         else:
             as_hexes = [cn.hex() for cn in coin_names]
             cursor = await self.db_connection.execute(
-                f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(as_hexes) - 1)}?)',
-                tuple(as_hexes)
+                f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(as_hexes) - 1)}?)', tuple(as_hexes)
             )
             rows = await cursor.fetchall()
             await cursor.close()

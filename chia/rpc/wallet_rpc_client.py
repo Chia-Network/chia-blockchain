@@ -239,7 +239,7 @@ class WalletRpcClient(RpcClient):
         try:
             res = await self.fetch("cat_asset_id_to_name", request)
             return uint32(int(res["wallet_id"])), res["name"]
-        except:
+        except Exception:
             return None
 
     async def get_cat_name(self, wallet_id: str) -> str:
