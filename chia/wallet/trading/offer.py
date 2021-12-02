@@ -197,7 +197,7 @@ class Offer:
 
         # Then we gather anything else as unknown
         sum_of_additions_so_far: int = sum(pending_dict.values())
-        unknown: int = sum([c.amount for c in non_ephemeral_removals]) - sum_of_additions_so_far + fee
+        unknown: int = sum([c.amount for c in non_ephemeral_removals]) - sum_of_additions_so_far
         if unknown > 0:
             pending_dict["unknown"] = unknown
 
