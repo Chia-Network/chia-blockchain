@@ -45,7 +45,7 @@ export default function FarmManageFarmingRewards(props: Props) {
   });
 
   const showWarning = useMemo(() => {
-    return !data.haveFarmerSk || !data?.havePoolSk;
+    return !data?.haveFarmerSk || !data?.havePoolSk;
   }, [data?.haveFarmerSk, data?.havePoolSk]);
 
   const {

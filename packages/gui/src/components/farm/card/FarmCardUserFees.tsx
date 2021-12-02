@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
-import { useCurrencyCode } from '@chia/core';
+import { useCurrencyCode, mojoToChia } from '@chia/core';
 import { useGetFarmedAmountQuery } from '@chia/api-react';
 import FarmCard from './FarmCard';
 import { mojo_to_chia } from '../../../util/chia';
@@ -14,7 +14,7 @@ export default function FarmCardUserFees() {
   const userTransactionFees = useMemo(() => {
     if (feeAmount !== undefined) {
       const val = BigInt(feeAmount.toString());
-      return mojo_to_chia(val);
+      return mojoToChia(val);
     }
   }, [feeAmount]);
 

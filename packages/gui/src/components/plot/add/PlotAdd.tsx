@@ -69,7 +69,7 @@ export default function PlotAdd() {
 
   const methods = useForm<FormData>({
     shouldUnregister: false,
-    defaultValues: isLoading ? {} : defaultsForPlotter(PlotterName.CHIAPOS),
+    defaultValues: isLoading || !plotters ? {} : defaultsForPlotter(PlotterName.CHIAPOS),
   });
 
   const { watch, setValue, reset } = methods;
@@ -83,7 +83,7 @@ export default function PlotAdd() {
     }
   }, [plotSize, setValue]);
 
-  if (isLoading) {
+  if (isLoading || !plotters) {
     return <Suspender />;
   }
 

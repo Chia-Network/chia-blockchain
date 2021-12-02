@@ -1,12 +1,10 @@
 import React from 'react';
-import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
 import { Link, Table, Card, FormatBytes } from '@chia/core';
 import { Typography } from '@material-ui/core';
 import moment from 'moment';
 import type { Row } from '../core/components/Table/Table';
 import usePlots from '../../hooks/usePlots';
-import { RootState } from '../../modules/rootReducer';
 
 const cols = [
   {
@@ -36,9 +34,10 @@ const cols = [
 export default function FarmLastAttemptedProof() {
   const { size } = usePlots();
 
-  const lastAttemptedProof = useSelector(
+  const lastAttemptedProof = [];
+  /*useSelector(
     (state: RootState) => state.farming_state.farmer.last_farming_info ?? [],
-  );
+  );*/
   const reducedLastAttemptedProof = lastAttemptedProof.slice(0, 5).sort((a,b) => a.timestamp-b.timestamp);
   const isEmpty = !reducedLastAttemptedProof.length;
 

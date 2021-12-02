@@ -82,14 +82,14 @@ const cols = [
   },
   {
     minWidth: '100px',
-    field: 'harvester.node_id',
-    tooltip: 'harvester.node_id',
+    field: 'harvester.nodeId',
+    tooltip: 'harvester.nodeId',
     title: <Trans>Node Id</Trans>,
   },
   {
     minWidth: '100px',
-    field: ({ pool_contract_puzzle_hash }: Plot) => (
-      <Address value={pool_contract_puzzle_hash} tooltip copyToClipboard>
+    field: ({ poolContractPuzzleHash }: Plot) => (
+      <Address value={poolContractPuzzleHash} tooltip copyToClipboard>
         {(address) => (
           <Typography variant="body2" noWrap>
             {address}
@@ -124,6 +124,8 @@ export default function PlotOverviewPlots() {
   const queuePlots = queue?.filter(
     (item) => item.state !== PlotStatusEnum.FINISHED,
   );
+
+  console.log('plots', plots);
 
   return (
     <>

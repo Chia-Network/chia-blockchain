@@ -1,25 +1,20 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { FormatLargeNumber } from '@chia/core';
-import { useSelector } from 'react-redux';
-import type { RootState } from '../../../modules/rootReducer';
+import { useGetFarmedAmountQuery } from '@chia/api-react';
 import FarmCard from './FarmCard';
 
 export default function FarmCardLastHeightFarmed() {
-  const loading = useSelector(
-    (state: RootState) => !state.wallet_state.farmed_amount,
-  );
+  const { data, isLoading } = useGetFarmedAmountQuery();
 
-  const lastHeightFarmed = useSelector(
-    (state: RootState) => state.wallet_state.farmed_amount?.last_height_farmed,
-  );
+  const lastHeightFarmed = data?.lastHeightFarmed;
 
   return (
     <FarmCard
       title={<Trans>Last Height Farmed</Trans>}
       value={<FormatLargeNumber value={lastHeightFarmed} />}
       description={!lastHeightFarmed && <Trans>No blocks farmed yet</Trans>}
-      loading={loading}
+      loading={isLoading}
     />
   );
 }

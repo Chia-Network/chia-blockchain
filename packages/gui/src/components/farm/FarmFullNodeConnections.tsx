@@ -9,6 +9,7 @@ import {
   Card,
   FormatBytes,
   FormatConnectionStatus,
+  Loading,
 } from '@chia/core';
 import { useGetFarmerFullNodeConnectionsQuery, useIsServiceRunningQuery } from '@chia/api-react';
 import type { Connection } from '@chia/api';
@@ -109,7 +110,11 @@ export default function FarmFullNodeConnections() {
         </Typography>
         <FormatConnectionStatus connected={isRunning} />
       </Flex>
-      <Table cols={cols} rows={connections} />
+      {isLoading ? (
+        <Loading center />
+      ) : (
+        <Table cols={cols} rows={connections} />
+      )}
     </Card>
   );
 }
