@@ -593,9 +593,10 @@ class FullNodeRpcApi:
     async def get_mempool_item_by_tx_id(self, request: Dict) -> Optional[Dict]:
         if "tx_id" not in request:
             raise ValueError("No tx_id in request")
+        include_pending: bool = request.get("include_pending", False)
         tx_id: bytes32 = hexstr_to_bytes(request["tx_id"])
 
-        item = self.service.mempool_manager.get_mempool_item(tx_id)
+        item = self.service.mempool_manager.get_mempool_item(tx_id, include_pending)
         if item is None:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 
