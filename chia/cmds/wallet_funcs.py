@@ -189,15 +189,15 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                 name: str = "XCH"
                 unit: int = units["chia"]
             else:
-                name: str = await wallet_client.get_cat_name(wallet_id)
-                unit: int = units["cat"]
+                name = await wallet_client.get_cat_name(wallet_id)
+                unit = units["cat"]
             multiplier: int = -1 if item in offers else 1
             printable_dict[name] = (amount, unit, multiplier)
-            if uint32(wallet_id) in offer_dict:
+            if uint32(int(wallet_id)) in offer_dict:
                 print("Not creating offer: Cannot offer and request the same asset in a trade")
                 break
             else:
-                offer_dict[uint32(wallet_id)] = int(Decimal(amount) * unit) * multiplier
+                offer_dict[uint32(int(wallet_id))] = int(Decimal(amount) * unit) * multiplier
         else:
             print("Creating Offer")
             print("--------------")
@@ -218,11 +218,14 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                 print("Not creating offer...")
             else:
                 offer, trade_record = await wallet_client.create_offer_for_ids(offer_dict, fee=fee)
-                with open(pathlib.Path(filepath), "w") as file:
-                    file.write(bytes(offer).hex())
-                    file.close()
-                print(f"Created offer with ID {trade_record.trade_id}")
-                print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view its status")
+                if offer is not None:
+                    with open(pathlib.Path(filepath), "w") as file:
+                        file.write(bytes(offer).hex())
+                        file.close()
+                    print(f"Created offer with ID {trade_record.trade_id}")
+                    print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view status")
+                else:
+                    print("Error creating offer")
 
 
 def timestamp_to_time(timestamp):
