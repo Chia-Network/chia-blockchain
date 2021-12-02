@@ -857,9 +857,9 @@ class WalletNode:
                     if record is not None:
                         await self.wallet_state_manager.coin_store.set_spent(removed_coin.name(), block.height)
                     if removed_coin.name() in trade_removals:
-                        await self.wallet_state_manager.trade_manager.coins_of_interest_farmed(CoinState(
-                            removed_coin, block.height, None  # `None` is a lie but it shouldn't matter
-                        ))
+                        await self.wallet_state_manager.trade_manager.coins_of_interest_farmed(
+                            CoinState(removed_coin, block.height, None)  # `None` is a lie but it shouldn't matter
+                        )
 
         await self.update_ui()
         return header_block_records

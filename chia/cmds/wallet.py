@@ -253,12 +253,8 @@ def make_offer_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-id", "--id", help="The ID of the offer that you wish to examine")
 @click.option("-p", "--filepath", help="The path to rewrite the offer file to (must be used in conjunction with --id)")
-@click.option(
-    "-ia", "--include-all", help="Include offers that have already been confirmed/cancelled", is_flag=True
-)
-@click.option(
-    "-s", "--summaries", help="Show the assets being offered and requested for each offer", is_flag=True
-)
+@click.option("-ia", "--include-all", help="Include offers that have already been confirmed/cancelled", is_flag=True)
+@click.option("-s", "--summaries", help="Show the assets being offered and requested for each offer", is_flag=True)
 def get_offers_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -286,7 +282,9 @@ def get_offers_cmd(
 @click.option("-p", "--filepath", help="The offer file you wish to examine/take")
 @click.option("-e", "--examine-only", help="Print the summary of the offer file but do not take it", is_flag=True)
 @click.option("-m", "--fee", help="The fee to use when pushing the completed offer", default="0")
-def take_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, filepath: str, examine_only: bool, fee: str) -> None:
+def take_offer_cmd(
+    wallet_rpc_port: Optional[int], fingerprint: int, filepath: str, examine_only: bool, fee: str
+) -> None:
     extra_params = {"filepath": filepath, "examine_only": examine_only, "fee": fee}
     import asyncio
     from .wallet_funcs import execute_with_wallet, take_offer
@@ -312,4 +310,3 @@ def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, 
     from .wallet_funcs import execute_with_wallet, cancel_offer
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, cancel_offer))
-
