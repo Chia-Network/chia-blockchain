@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
 import { Alert } from '@material-ui/lab';
 import styled from 'styled-components';
 import { Flex, Form, TextField, Loading } from '@chia/core';
-import { useSetRewardTargetsMutation, useGetRewardTargetsMutation } from '@chia/api-react';
+import { useSetRewardTargetsMutation, useGetRewardTargetsQuery } from '@chia/api-react';
 import {
   Button,
   Dialog,
@@ -32,19 +32,21 @@ type Props = {
 export default function FarmManageFarmingRewards(props: Props) {
   const { onClose, open } = props;
   const [setRewardTargets] = useSetRewardTargetsMutation();
-  const [getRewardTargets] = useGetRewardTargetsMutation();
+  const { data, isLoading } = useGetRewardTargetsQuery();
   
-  const [showWarning, setShowWarning] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const methods = useForm<FormData>({
     mode: 'onChange',
     shouldUnregister: false,
     defaultValues: {
-      farmerTarget: '',
-      poolTarget: '',
+      farmerTarget: data?.farmerTarget ?? '',
+      poolTarget: data?.poolTarget ?? '',
     },
   });
+
+  const showWarning = useMemo(() => {
+    return !data.haveFarmerSk || !data?.havePoolSk;
+  }, [data?.haveFarmerSk, data?.havePoolSk]);
 
   const {
     register,
@@ -69,35 +71,6 @@ export default function FarmManageFarmingRewards(props: Props) {
     }
   }
 
-  async function getCurrentValues() {
-    const { setValue } = methods;
-    setLoading(true);
-    setShowWarning(false);
-    setError(null);
-
-    try {
-      const response = await getRewardTargets({
-        searchForPrivateKey: true,
-      }).unwrap();
-      // @ts-ignore
-      setValue('farmerTarget', response.farmerTarget || '');
-      // @ts-ignore
-      setValue('poolTarget', response.poolTarget || '');
-
-      // @ts-ignore
-      if (!response.haveFarmerSk || !response.havePoolSk) {
-        setShowWarning(true);
-      }
-    } catch (error) {
-      setError(error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    getCurrentValues();
-  }, []); // eslint-disable-line
 
   async function handleSubmit(values: FormData) {
     const { farmerTarget, poolTarget } = values;
@@ -127,7 +100,7 @@ export default function FarmManageFarmingRewards(props: Props) {
         </DialogTitle>
         <DialogContent dividers>
           <Flex gap={2} flexDirection="column">
-            {loading ? (
+            {isLoading ? (
               <Loading center />
             ) : (
               <>

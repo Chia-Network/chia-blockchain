@@ -70,14 +70,14 @@ const cols = [
   },
   {
     minWidth: '100px',
-    field: 'plot_public_key',
-    tooltip: 'plot_public_key',
+    field: 'plotPublicKey',
+    tooltip: 'plotPublicKey',
     title: <Trans>Plot Key</Trans>,
   },
   {
     minWidth: '100px',
-    field: 'pool_public_key',
-    tooltip: 'pool_public_key',
+    field: 'poolPublicKey',
+    tooltip: 'poolPublicKey',
     title: <Trans>Pool Key</Trans>,
   },
   {

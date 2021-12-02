@@ -159,6 +159,8 @@ export default function PlotAdd() {
         plotAddConfig.fingerprint = fingerprint;
       }
 
+      console.log('plotAddConfig', plotAddConfig);
+
       await startPlotting(plotAddConfig).unwrap();
 
       navigate('/dashboard/plot');

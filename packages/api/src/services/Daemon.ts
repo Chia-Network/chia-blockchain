@@ -162,7 +162,9 @@ export default class Daemon extends Service {
       args.K = K;
     }
 
-    return this.command('start_plotting', args);  
+    console.log('start plotting api', args);
+
+    return this.command('start_plotting', args, undefined, undefined, true);  
   }
 
   exit() {

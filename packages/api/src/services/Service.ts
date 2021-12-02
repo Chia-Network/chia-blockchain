@@ -60,7 +60,7 @@ export default class Service extends EventEmitter {
     }    
   }
 
-  async command(command: string, data: Object = {}, ack: boolean = false, timeout?: number): Promise<any> {
+  async command(command: string, data: Object = {}, ack: boolean = false, timeout?: number, disableFormat?: boolean): Promise<any> {
     const { client, origin, name } = this;
 
     if (!command) {
@@ -76,7 +76,7 @@ export default class Service extends EventEmitter {
       command,
       data: updatedData,
       ack,
-    }), timeout);
+    }), timeout, disableFormat);
 
     return response?.data;
   }

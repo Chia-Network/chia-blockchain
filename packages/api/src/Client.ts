@@ -309,7 +309,7 @@ export default class Client extends EventEmitter {
     this.emit('message', message);
   }
 
-  async send(message: Message, timeout?: number): Promise<Response> {
+  async send(message: Message, timeout?: number, disableFormat?: boolean): Promise<Response> {
     const { 
       connected,
       options: {
@@ -329,7 +329,7 @@ export default class Client extends EventEmitter {
       const { requestId } = message;
 
       this.requests.set(requestId, { resolve, reject });
-      const value = message.toJSON(camelCase);
+      const value = message.toJSON(camelCase && !disableFormat);
       log('Sending message', value);
 
       this.ws.send(value);
