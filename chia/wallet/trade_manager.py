@@ -285,7 +285,6 @@ class TradeManager:
             return True, offer, None
 
         except Exception as e:
-            breakpoint()
             raise e
             tb = traceback.format_exc()
             self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
