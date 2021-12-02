@@ -326,7 +326,7 @@ class TradeManager:
             return False, None, "This offer is no longer valid"
 
         success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, fee=fee)
-        if not success:
+        if not success or take_offer is None:
             return False, None, error
 
         complete_offer = Offer.aggregate([offer, take_offer])

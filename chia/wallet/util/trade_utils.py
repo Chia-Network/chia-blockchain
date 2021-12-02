@@ -32,7 +32,6 @@ def trade_record_to_dict(record: TradeRecord) -> Dict:
     result["accepted_at_time"] = record.accepted_at_time
     result["confirmed_at_index"] = record.confirmed_at_index
     result["status"] = trade_status_ui_string(TradeStatus(record.status))
-    result["offer_dict"] = record.offer.arbitrage()
     return result
 
 

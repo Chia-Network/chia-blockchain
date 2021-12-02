@@ -29,7 +29,7 @@ class NotarizedPayment(Payment):
     nonce: bytes32 = ZERO_32
 
     @classmethod
-    def from_condition(cls, condition: Program, nonce: bytes32) -> "NotarizedPayment":
+    def from_condition_and_nonce(cls, condition: Program, nonce: bytes32) -> "NotarizedPayment":
         with_opcode: Program = Program.to((51, condition))  # Gotta do this because the super class is expecting it
         p = Payment.from_condition(with_opcode)
         puzzle_hash, amount, memos = tuple(p.as_condition_args())
@@ -76,7 +76,7 @@ class Offer:
             else:
                 settlement_ph = OFFER_MOD.get_tree_hash()
 
-            msg: List[bytes32] = Program.to(
+            msg: bytes32 = Program.to(
                 (payments[0].nonce, [p.as_condition_args() for p in payments])
             ).get_tree_hash()
             announcements.append(Announcement(settlement_ph, msg))
@@ -353,7 +353,7 @@ class Offer:
                     nonce = bytes32(payment_group.first().as_python())
                     payment_args_list: List[Program] = payment_group.rest().as_iter()
                     notarized_payments.extend(
-                        [NotarizedPayment.from_condition(condition, nonce) for condition in payment_args_list]
+                        [NotarizedPayment.from_condition_and_nonce(condition, nonce) for condition in payment_args_list]
                     )
 
                 requested_payments[tail_hash] = notarized_payments
