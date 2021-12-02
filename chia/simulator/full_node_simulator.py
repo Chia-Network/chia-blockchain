@@ -154,7 +154,7 @@ class FullNodeSimulator(FullNodeAPI):
             The total number of reward mojos for the processed blocks.
         """
         rewards = 0
-        height = 0
+        height = uint32(0)
 
         if count == 0:
             return rewards
@@ -166,6 +166,9 @@ class FullNodeSimulator(FullNodeAPI):
 
         while True:
             peak_height = self.full_node.blockchain.get_peak_height()
+            if peak_height is None:
+                raise RuntimeError("Peak height still None after processing at least one block")
+
             if peak_height >= height:
                 break
 
