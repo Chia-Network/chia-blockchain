@@ -21,7 +21,7 @@ import toBech32m from '../../../util/toBech32m';
 import useUnconfirmedPlotNFTs from '../../../hooks/useUnconfirmedPlotNFTs';
 
 type FormData = PlotAddConfig & {
-  p2_singleton_puzzle_hash?: string;
+  p2SingletonPuzzleHash?: string;
   createNFT?: boolean;
 };
 
@@ -48,7 +48,7 @@ export default function PlotAdd() {
     farmerPublicKey: '',
     poolPublicKey: '',
     excludeFinalDir: false,
-    p2_singleton_puzzle_hash: state?.p2_singleton_puzzle_hash ?? '',
+    p2SingletonPuzzleHash: state?.p2SingletonPuzzleHash ?? '',
     createNFT: false,
   };
 
@@ -102,10 +102,10 @@ export default function PlotAdd() {
   const handleSubmit: SubmitHandler<FormData> = async (data) => {
     try {
       setLoading(true);
-      const { p2_singleton_puzzle_hash, delay, createNFT, ...rest } = data;
+      const { p2SingletonPuzzleHash, delay, createNFT, ...rest } = data;
       const { farmerPublicKey, poolPublicKey } = rest;
 
-      let selectedP2SingletonPuzzleHash = p2_singleton_puzzle_hash;
+      let selectedP2SingletonPuzzleHash = p2SingletonPuzzleHash;
 
       if (!currencyCode) {
         throw new Error(t`Currency code is not defined`);
@@ -132,7 +132,7 @@ export default function PlotAdd() {
             state === 'SELF_POOLING'
               ? PlotNFTState.SELF_POOLING
               : PlotNFTState.FARMING_TO_POOL,
-          poolUrl: initialTargetState.pool_url,
+          poolUrl: initialTargetState.poolUrl,
         });
 
         selectedP2SingletonPuzzleHash = p2SingletonPuzzleHash;

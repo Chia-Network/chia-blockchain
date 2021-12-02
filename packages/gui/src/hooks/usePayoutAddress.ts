@@ -1,6 +1,5 @@
-import { useSelector, useDispatch } from 'react-redux';
-import PlotNFT from '../types/PlotNFT';
-import { setPayoutInstructions } from '../modules/farmerMessages';
+import type { PlotNFT } from '@chia/api';
+import { useSetPayoutInstructionsMutation, useGetNetworkInfoQuery } from '@chia/api-react';
 import toBech32m, { decode } from '../util/toBech32m';
 
 export default function usePayoutAddress(nft: PlotNFT): {
@@ -9,21 +8,19 @@ export default function usePayoutAddress(nft: PlotNFT): {
   payoutAddress?: string;
 } {
   const {
-    pool_state: {
-      pool_config: { launcher_id, payout_instructions },
+    poolState: {
+      poolConfig: { launcherId, payoutInstructions },
     },
   } = nft;
 
-  const dispatch = useDispatch();
-  const networkPrefix = useSelector(
-    (state: RootState) => state.wallet_state.network_info?.network_prefix,
-  );
+  const [setPayoutInstructions] = useSetPayoutInstructionsMutation();
+  const { data: networkInfo, isLoading } = useGetNetworkInfoQuery(); 
+  const networkPrefix = networkInfo?.networkPrefix;
 
   async function handleSetPayoutAddress(newPayoutAddress: string) {
     if (!networkPrefix) {
       throw new Error('Please wait for network prefix');
     }
-
 
     let newPayoutInstructions: string;
 
@@ -33,10 +30,13 @@ export default function usePayoutAddress(nft: PlotNFT): {
       newPayoutInstructions = newPayoutAddress;
     }
 
-    await dispatch(setPayoutInstructions(launcher_id, newPayoutInstructions));
+    await setPayoutInstructions({
+      launcherId, 
+      payoutInstructions: newPayoutInstructions,
+    }).unwrap();
   }
 
-  if (!networkPrefix) {
+  if (isLoading) {
     return {
       loading: true,
       payoutAddress: '',
@@ -47,9 +47,9 @@ export default function usePayoutAddress(nft: PlotNFT): {
   let payoutAddress: string;
 
   try {
-    payoutAddress = toBech32m(payout_instructions, networkPrefix)
+    payoutAddress = toBech32m(payoutInstructions, networkPrefix)
   } catch {
-    payoutAddress = payout_instructions;
+    payoutAddress = payoutInstructions;
   }
 
   return {

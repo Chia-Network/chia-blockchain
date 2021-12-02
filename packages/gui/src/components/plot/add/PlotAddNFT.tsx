@@ -85,7 +85,7 @@ const PlotAddNFT = forwardRef((props: Props, ref) => {
                 <InputLabel required>
                   <Trans>Select your Plot NFT</Trans>
                 </InputLabel>
-                <Select name="p2_singleton_puzzle_hash">
+                <Select name="p2SingletonPuzzleHash">
                   <MenuItem value="">
                     <em>
                       <Trans>None</Trans>
@@ -93,13 +93,13 @@ const PlotAddNFT = forwardRef((props: Props, ref) => {
                   </MenuItem>
                   {nfts?.map((nft) => {
                     const {
-                      pool_state: { p2_singleton_puzzle_hash },
+                      poolState: { p2SingletonPuzzleHash },
                     } = nft;
 
                     return (
                       <MenuItem
-                        value={p2_singleton_puzzle_hash}
-                        key={p2_singleton_puzzle_hash}
+                        value={p2SingletonPuzzleHash}
+                        key={p2SingletonPuzzleHash}
                       >
                         <PlotNFTName nft={nft} />
                       </MenuItem>
@@ -107,13 +107,13 @@ const PlotAddNFT = forwardRef((props: Props, ref) => {
                   })}
                   {external?.map((nft) => {
                     const {
-                      pool_state: { p2_singleton_puzzle_hash },
+                      poolState: { p2SingletonPuzzleHash },
                     } = nft;
 
                     return (
                       <MenuItem
-                        value={p2_singleton_puzzle_hash}
-                        key={p2_singleton_puzzle_hash}
+                        value={p2SingletonPuzzleHash}
+                        key={p2SingletonPuzzleHash}
                       >
                         <PlotNFTName nft={nft} />
                       </MenuItem>

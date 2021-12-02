@@ -29,7 +29,7 @@ export default class Wallet extends Service {
     });
   }
 
-  async pwAbsorbRewards(walletId: number, fee: string) {
+  async pwAbsorbRewards(walletId: number, fee?: string) {
     return this.command('pw_absorb_rewards', {
       walletId,
       fee,
@@ -41,18 +41,21 @@ export default class Wallet extends Service {
     poolUrl: string,
     relativeLockHeight: number,
     targetPuzzlehash?: string,
+    fee?: string,
   ) {
     return this.command('pw_join_pool', {
       walletId,
       poolUrl,
       relativeLockHeight,
       targetPuzzlehash,
+      fee,
     });
   }
 
-  async pwSelfPool(walletId: number) {
+  async pwSelfPool(walletId: number, fee?: string) {
     return this.command('pw_self_pool', {
       walletId,
+      fee,
     });
   }
 

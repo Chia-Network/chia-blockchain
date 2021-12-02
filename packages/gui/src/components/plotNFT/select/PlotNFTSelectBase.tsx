@@ -59,8 +59,8 @@ export default function PlotNFTSelectBase(props: Props) {
     }
 
     const urls = nfts
-      .filter((nft) => !!nft.pool_state.pool_config.pool_url)
-      .map((nft) => nft.pool_state.pool_config.pool_url);
+      .filter((nft) => !!nft.poolState.poolConfig.poolUrl)
+      .map((nft) => nft.poolState.poolConfig.poolUrl);
 
     return uniq(urls);
   }, [nfts]);

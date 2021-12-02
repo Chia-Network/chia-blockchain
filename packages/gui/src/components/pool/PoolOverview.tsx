@@ -46,7 +46,7 @@ const groupsCols = [
   {
     field: (nft: PlotNFT) => {
       const {
-        pool_wallet_status: {
+        poolWalletStatus: {
           current: { state },
         },
       } = nft;
@@ -55,7 +55,7 @@ const groupsCols = [
         return (
           <UnitFormat
             value={mojo_to_chia(
-              BigInt(nft.wallet_balance.confirmed_wallet_balance ?? 0),
+              BigInt(nft.walletBalance.confirmedWalletBalance ?? 0),
             )}
           />
         );
@@ -69,7 +69,7 @@ const groupsCols = [
     title: <Trans>Actions</Trans>,
     field(nft: PlotNFT) {
       const isSelfPooling =
-        nft.pool_wallet_status.current.state === PlotNFTStateEnum.SELF_POOLING;
+        nft.poolWalletStatus.current.state === PlotNFTStateEnum.SELF_POOLING;
 
       return (
         <More>
@@ -189,7 +189,7 @@ export default function PoolOverview() {
         </Flex>
         {showTable ? (
           <Table
-            uniqueField="p2_singleton_puzzle_hash"
+            uniqueField="p2SingletonPuzzleHash"
             rows={nfts}
             cols={groupsCols}
           />
@@ -204,7 +204,7 @@ export default function PoolOverview() {
             ))}
             {nfts.map((item) => (
               <Grid
-                key={item.pool_state.p2_singleton_puzzle_hash}
+                key={item.poolState.p2SingletonPuzzleHash}
                 xs={12}
                 md={6}
                 item
@@ -214,7 +214,7 @@ export default function PoolOverview() {
             ))}
             {external.map((item) => (
               <Grid
-                key={item.pool_state.p2_singleton_puzzle_hash}
+                key={item.poolState.p2SingletonPuzzleHash}
                 xs={12}
                 md={6}
                 item

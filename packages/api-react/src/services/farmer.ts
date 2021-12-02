@@ -129,10 +129,7 @@ export const farmerApi = createApi({
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onNewSignagePoint',
         onUpdate: (draft, data) => {
-          const { signagePoint } = data;
-
-          console.log('onNewSignagePoint', data, draft);
-          draft.unshift(signagePoint);
+          draft.unshift(data);
         },
       }]),
     }),

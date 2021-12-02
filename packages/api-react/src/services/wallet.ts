@@ -122,10 +122,14 @@ export const walletApi = createApi({
       },
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onTransactionUpdate',
-        onUpdate: (draft, data) => {
+        onUpdate: (draft, data, { transactionId }) => {
           const { additionalData: { transaction } } = data;
 
-          Object.assign(draft, transaction);
+          console.log('on tx update', transaction.name, transactionId, transaction.name === transactionId, transaction);
+
+          if (transaction.name === transactionId) {
+            Object.assign(draft, transaction);
+          }
         },
       }]),
     }),
@@ -155,24 +159,27 @@ export const walletApi = createApi({
       poolUrl: string;
       relativeLockHeight: number;
       targetPuzzlehash?: string;
+      fee?: string;
     }>({
-      query: ({ walletId, poolUrl, relativeLockHeight, targetPuzzlehash  }) => ({
+      query: ({ walletId, poolUrl, relativeLockHeight, targetPuzzlehash, fee }) => ({
         command: 'pwJoinPool',
         args: [
           walletId,
           poolUrl,
           relativeLockHeight,
           targetPuzzlehash,
+          fee,
         ],
       }),
     }),
 
     pwSelfPool: build.mutation<any, { 
       walletId: number;
+      fee?: string;
     }>({
-      query: ({ walletId }) => ({
+      query: ({ walletId, fee }) => ({
         command: 'pwSelfPool',
-        args: [walletId],
+        args: [walletId, fee],
       }),
     }),
 

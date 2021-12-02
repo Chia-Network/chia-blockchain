@@ -11,13 +11,13 @@ import { RootState } from '../../modules/rootReducer';
 const cols = [
   {
     minWidth: '200px',
-    field: 'challenge_hash',
+    field: 'challengeHash',
     tooltip: true,
     title: <Trans>Challenge</Trans>,
   },
   {
     field(row: Row) {
-      return `${row.passed_filter} / ${row.total_plots}`;
+      return `${row.passedFilter} / ${row.totalPlots}`;
     },
     title: <Trans>Plots Passed Filter</Trans>,
   },

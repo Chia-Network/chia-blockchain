@@ -1,7 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { useSelector } from 'react-redux';
 import { Link, Typography, Tooltip, IconButton } from '@material-ui/core';
 import { Delete as DeleteIcon } from '@material-ui/icons';
 import {
@@ -11,8 +10,9 @@ import {
   FormatBytes,
   FormatConnectionStatus,
 } from '@chia/core';
-import Connection from '../../types/Connection';
-import type { RootState } from '../../modules/rootReducer';
+import { useGetFarmerFullNodeConnectionsQuery, useIsServiceRunningQuery } from '@chia/api-react';
+import type { Connection } from '@chia/api';
+import { ServiceName } from '@chia/api';
 import FarmCloseConnection from './FarmCloseConnection';
 
 const StyledIconButton = styled(IconButton)`
@@ -24,20 +24,20 @@ const cols = [
     minWidth: '200px',
     field(row: Connection) {
       return (
-        <Tooltip title={row.node_id}>
-          <span>{row.node_id}</span>
+        <Tooltip title={row.nodeId}>
+          <span>{row.nodeId}</span>
         </Tooltip>
       );
     },
     title: <Trans>Node ID</Trans>,
   },
   {
-    field: 'peer_host',
+    field: 'peerHost',
     title: <Trans>Host Name</Trans>,
   },
   {
     field(row: Connection) {
-      return `${row.peer_port}/${row.peer_server_port}`;
+      return `${row.peerPort}/${row.peerServerPort}`;
     },
     title: <Trans>Port</Trans>,
   },
@@ -46,14 +46,14 @@ const cols = [
       return (
         <>
           <FormatBytes
-            value={row.bytes_written}
+            value={row.bytesWritten}
             unit="kiB"
             removeUnit
             fixedDecimals
           />
           /
           <FormatBytes
-            value={row.bytes_read}
+            value={row.bytesRead}
             unit="kiB"
             removeUnit
             fixedDecimals
@@ -67,7 +67,7 @@ const cols = [
     title: <Trans>Actions</Trans>,
     field(row: Connection) {
       return (
-        <FarmCloseConnection nodeId={row.node_id}>
+        <FarmCloseConnection nodeId={row.nodeId}>
           {({ onClose }) => (
             <StyledIconButton onClick={() => onClose()}>
               <DeleteIcon />
@@ -80,15 +80,12 @@ const cols = [
 ];
 
 export default function FarmFullNodeConnections() {
-  const connections = useSelector((state: RootState) =>
-    state.farming_state.farmer.connections.filter(
-      (connection) => connection.type === 1,
-    ),
-  );
-
-  const connected = useSelector(
-    (state: RootState) => state.daemon_state.farmer_connected,
-  );
+  const { data: connections } = useGetFarmerFullNodeConnectionsQuery();
+  const { data: isRunning, isLoading } = useIsServiceRunningQuery({
+    service: ServiceName.FARMER,
+  }, {
+    pollingInterval: 1000,
+  });
 
   return (
     <Card
@@ -110,7 +107,7 @@ export default function FarmFullNodeConnections() {
         <Typography variant="caption" color="textSecondary">
           <Trans>Connection Status:</Trans>
         </Typography>
-        <FormatConnectionStatus connected={connected} />
+        <FormatConnectionStatus connected={isRunning} />
       </Flex>
       <Table cols={cols} rows={connections} />
     </Card>

@@ -1,9 +1,7 @@
 import { useMemo } from 'react';
-import { useSelector } from 'react-redux';
-import type PlotNFT from '../types/PlotNFT';
-import type Plot from '../types/Plot';
+import type { PlotNFT, Plot } from '@chia/api';
+import { useIsWalletSynced } from '@chia/wallets';
 import PlotNFTState from '../constants/PlotNFTState';
-import type { RootState } from '../modules/rootReducer';
 import usePlots from './usePlots';
 import usePlotNFTName from './usePlotNFTName';
 
@@ -18,25 +16,23 @@ export default function usePlotNFTDetails(nft: PlotNFT): {
   canEdit: boolean;
   isSelfPooling: boolean;
 } {
-  const isWalletSynced = useSelector(
-    (state: RootState) => state.wallet_state.status.synced,
-  );
+  const isWalletSynced = useIsWalletSynced();
 
   const { plots } = usePlots();
   const humanName = usePlotNFTName(nft);
 
   const details = useMemo(() => {
     const {
-      pool_state: { p2_singleton_puzzle_hash },
-      pool_wallet_status: {
+      poolState: { p2SingletonPuzzleHash },
+      poolWalletStatus: {
         current: { state },
         target,
-        wallet_id,
+        walletId,
       },
-      wallet_balance: { confirmed_wallet_balance },
+      walletBalance: { confirmedWalletBalance },
     } = nft;
 
-    const poolContractPuzzleHash = `0x${p2_singleton_puzzle_hash}`;
+    const poolContractPuzzleHash = `0x${p2SingletonPuzzleHash}`;
     const isPending = !!target && target.state !== state;
     const isLeavingPool = state === PlotNFTState.LEAVING_POOL;
     const isSelfPooling = state === PlotNFTState.SELF_POOLING;
@@ -44,16 +40,16 @@ export default function usePlotNFTDetails(nft: PlotNFT): {
     return {
       isPending,
       state,
-      walletId: wallet_id,
+      walletId,
       isSynced: isWalletSynced,
-      balance: confirmed_wallet_balance,
+      balance: confirmedWalletBalance,
       canEdit: isWalletSynced && (!isPending || isLeavingPool),
       humanName,
       isSelfPooling,
       plots:
         plots &&
         plots.filter(
-          (plot) => plot.pool_contract_puzzle_hash === poolContractPuzzleHash,
+          (plot) => plot.poolContractPuzzleHash === poolContractPuzzleHash,
         ),
     };
   }, [nft, isWalletSynced, plots, humanName]);

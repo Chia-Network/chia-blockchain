@@ -28,19 +28,19 @@ async function prepareSubmitData(data: FormData): SubmitData {
 
   if (!self && poolUrl) {
     const normalizedPoolUrl = normalizeUrl(poolUrl);
-    const { target_puzzle_hash, relative_lock_height } = await getPoolInfo(
+    const { targetPuzzleHash, relativeLockHeight } = await getPoolInfo(
       normalizedPoolUrl,
     );
-    if (!target_puzzle_hash) {
-      throw new Error(t`Pool does not provide target_puzzle_hash.`);
+    if (!targetPuzzleHash) {
+      throw new Error(t`Pool does not provide targetPuzzleHash.`);
     }
-    if (relative_lock_height === undefined) {
-      throw new Error(t`Pool does not provide relative_lock_height.`);
+    if (relativeLockHeight === undefined) {
+      throw new Error(t`Pool does not provide relativeLockHeight.`);
     }
 
-    initialTargetState.pool_url = normalizedPoolUrl;
-    initialTargetState.target_puzzle_hash = target_puzzle_hash;
-    initialTargetState.relative_lock_height = relative_lock_height;
+    initialTargetState.poolUrl = normalizedPoolUrl;
+    initialTargetState.targetPuzzleHash = targetPuzzleHash;
+    initialTargetState.relativeLockHeight = relativeLockHeight;
   }
 
   const feeMojos = chia_to_mojo(fee || '0');

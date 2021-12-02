@@ -12,7 +12,7 @@ type Props = {
 export default function PlotNFTState(props: Props) {
   const {
     nft: {
-      pool_wallet_status: {
+      poolWalletStatus: {
         current: { state },
         target,
       },

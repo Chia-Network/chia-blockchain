@@ -18,24 +18,24 @@ export default function PoolInfo(props: Props) {
       value: poolInfo.fee,
     },
     {
-      key: 'protocol_version',
+      key: 'protocolVersion',
       label: <Trans>Protocol Version</Trans>,
-      value: poolInfo.protocol_version,
+      value: poolInfo.protocolVersion,
     },
     {
-      key: 'minimum_difficulty',
+      key: 'minimumDifficulty',
       label: <Trans>Minimum Difficulty</Trans>,
-      value: poolInfo.minimum_difficulty,
+      value: poolInfo.minimumDifficulty,
     },
     {
-      key: 'relative_lock_height',
+      key: 'relativeLockHeight',
       label: <Trans>Relative Lock Height</Trans>,
-      value: poolInfo.relative_lock_height,
+      value: poolInfo.relativeLockHeight,
     },
     {
-      key: 'target_puzzle_hash',
+      key: 'targetPuzzleHash',
       label: <Trans>Target Puzzle Hash</Trans>,
-      value: poolInfo.target_puzzle_hash,
+      value: poolInfo.targetPuzzleHash,
     },
   ].filter((row) => row.value !== undefined);
 
@@ -43,7 +43,7 @@ export default function PoolInfo(props: Props) {
     <Flex flexDirection="column" gap={2}>
       {/*
       <Box>
-        <StyledLogo src={poolInfo.logo_url} alt={t`Pool logo`} />
+        <StyledLogo src={poolInfo.logoUrl} alt={t`Pool logo`} />
       </Box>
       */}
       <Flex flexDirection="column" gap={1}>
@@ -56,8 +56,8 @@ export default function PoolInfo(props: Props) {
           color="textSecondary"
           component="p"
         >
-          <Link href={poolInfo.pool_url} target="_blank">
-            {poolInfo.pool_url}
+          <Link href={poolInfo.poolUrl} target="_blank">
+            {poolInfo.poolUrl}
           </Link>
         </Typography>
         <Typography variant="body2" color="textSecondary" component="p">

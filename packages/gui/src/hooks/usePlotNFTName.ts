@@ -6,8 +6,7 @@ import {
   colors,
   animals,
 } from 'unique-names-generator';
-import type PlotNFTExternal from '../types/PlotNFTExternal';
-import type PlotNFT from '../types/PlotNFT';
+import type { PlotNFTExternal, PlotNFT } from '@chia/api';
 
 const uniqueNames: {
   [key: string]: string;
@@ -39,10 +38,10 @@ function getUniqueName(seed: string, iteration: number = 0): string {
 }
 
 export default function usePlotNFTName(nft: PlotNFT | PlotNFTExternal): string {
-  const p2_singleton_puzzle_hash = nft?.pool_state?.p2_singleton_puzzle_hash;
+  const p2SingletonPuzzleHash = nft?.poolState?.p2SingletonPuzzleHash;
   const name = useMemo(
-    () => getUniqueName(p2_singleton_puzzle_hash), 
-    [p2_singleton_puzzle_hash],
+    () => getUniqueName(p2SingletonPuzzleHash), 
+    [p2SingletonPuzzleHash],
   );
 
   return name;

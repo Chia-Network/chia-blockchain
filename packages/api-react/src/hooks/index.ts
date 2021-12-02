@@ -4,4 +4,6 @@ export { default as useGetLatestBlocksQuery } from './useGetLatestBlocksQuery';
 export { default as useGetLatestPeakTimestampQuery } from './useGetLatestPeakTimestampQuery';
 export { default as useGetCombinedNotFoundFilenamesQuery } from './useGetCombinedNotFoundFilenamesQuery';
 export { default as useGetCombinedPlotsQuery } from './useGetCombinedPlotsQuery';
+export { default as useGetFarmerFullNodeConnectionsQuery } from './useGetFarmerFullNodeConnectionsQuery';
+export { default as useGetHarvesterConnectionsQuery} from './useGetHarvesterConnectionsQuery';
 export { default as useLogout } from './useLogout';

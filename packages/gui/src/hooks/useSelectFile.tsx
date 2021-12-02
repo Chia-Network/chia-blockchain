@@ -1,8 +1,7 @@
 import React from 'react';
 import isElectron from 'is-electron';
 import { Trans } from '@lingui/macro';
-import { AlertDialog } from '@chia/core';
-import useOpenDialog from './useOpenDialog';
+import { AlertDialog, useOpenDialog } from '@chia/core';
 
 export default function useSelectFile(): () => Promise<string | undefined> {
   const openDialog = useOpenDialog();

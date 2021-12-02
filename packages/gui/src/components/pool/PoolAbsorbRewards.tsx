@@ -15,7 +15,7 @@ export default function PoolAbsorbRewards(props: Props) {
     children,
     nft,
     nft: {
-      pool_state: { p2_singleton_puzzle_hash },
+      poolState: { p2SingletonPuzzleHash },
     },
   } = props;
   const { canEdit } = usePlotNFTDetails(nft);
@@ -26,7 +26,7 @@ export default function PoolAbsorbRewards(props: Props) {
       return;
     }
 
-    navigate(`/dashboard/pool/${p2_singleton_puzzle_hash}/absorb-rewards`);
+    navigate(`/dashboard/pool/${p2SingletonPuzzleHash}/absorb-rewards`);
   }
 
   return children({

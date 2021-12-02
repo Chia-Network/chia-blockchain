@@ -1,34 +1,30 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useSelector } from 'react-redux';
 import { Typography } from '@material-ui/core';
 import { Link, Table, Card } from '@chia/core';
-import type { RootState } from '../../modules/rootReducer';
+import { useGetSignagePointsQuery, useGetCombinedPlotsQuery } from '@chia/api-react';
 import type { Row } from '../core/components/Table/Table';
 
 const cols = [
   {
     minWidth: '200px',
     tooltip: true,
-    field: 'signage_point.challenge_hash',
+    field: 'signagePoint.challengeHash',
     title: <Trans>Challenge Hash</Trans>,
   },
   {
-    field: (row: Row) => row.signage_point.signage_point_index,
+    field: (row: Row) => row.signagePoint.signagePointIndex,
     title: <Trans>Index</Trans>,
   },
 ];
 
 export default function FarmLatestBlockChallenges() {
-  const signagePoints = useSelector(
-    (state: RootState) => state.farming_state.farmer.signage_points ?? [],
-  );
+  const { data: signagePoints = [], isLoading } = useGetSignagePointsQuery();
+  const { data: plots, isLoading: isLoadingPlots } = useGetCombinedPlotsQuery();
 
-  const plots = useSelector(
-    (state: RootState) => state.farming_state.harvester.plots,
-  );
+  console.log('signagePoints', signagePoints);
 
-  const hasPlots = !!plots && plots.length > 0;
+  const hasPlots = plots?.length > 0;
   const reducedSignagePoints = signagePoints;
 
   return (

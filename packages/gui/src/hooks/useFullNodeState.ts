@@ -1,16 +1,10 @@
-import { useSelector } from 'react-redux';
-import type { RootState } from '../modules/rootReducer';
+import { useGetBlockchainStateQuery } from '@chia/api-react';
 import FullNodeState from '../constants/FullNodeState';
 
 export default function useFullNodeState(): FullNodeState {
-  const blockchainSynced = useSelector(
-    (state: RootState) =>
-      !!state.full_node_state.blockchain_state?.sync?.synced,
-  );
-  const blockchainSynching = useSelector(
-    (state: RootState) =>
-      !!state.full_node_state.blockchain_state?.sync?.sync_mode,
-  );
+  const { data: blockchainState, isLoading } = useGetBlockchainStateQuery();
+  const blockchainSynced = blockchainState?.sync?.synced;
+  const blockchainSynching = blockchainState?.sync?.syncMode;
 
   if (blockchainSynching) {
     return FullNodeState.SYNCHING;

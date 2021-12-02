@@ -10,11 +10,7 @@ import FullNodeCardVDFSubSlotIterations from './FullNodeCardVDFSubSlotIterations
 import FullNodeCardTotalIterations from './FullNodeCardTotalIterations';
 import FullNodeEstimatedNetworkSpace from './FullNodeEstimatedNetworkSpace';
 
-type Props = {
-  wallet_id: number;
-};
-
-export default function FullNodeCards(props: Props) {
+export default function FullNodeCards() {
   return (
     <div>
       <Grid spacing={3} alignItems="stretch" container>

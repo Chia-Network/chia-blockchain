@@ -1,5 +1,4 @@
-import { useDispatch } from 'react-redux';
-import { closeConnection } from '../../modules/farmerMessages';
+import { useCloseFarmerConnectionMutation } from '@chia/api-react';
 
 type Props = {
   nodeId: string;
@@ -8,10 +7,10 @@ type Props = {
 
 export default function FarmCloseConnection(props: Props): JSX.Element {
   const { nodeId, children } = props;
-  const dispatch = useDispatch();
+  const [closeFarmerConnection] = useCloseFarmerConnectionMutation();
 
-  function handleClose() {
-    dispatch(closeConnection(nodeId));
+  async function handleClose() {
+    await closeFarmerConnection(nodeId).unwrap();
   }
 
   return children({

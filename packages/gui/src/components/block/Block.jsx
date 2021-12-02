@@ -33,7 +33,6 @@ import {
   arr_to_hex,
   sha256,
 } from '../../util/utils';
-import LayoutMain from '../layout/LayoutMain';
 import toBech32m from '../../util/toBech32m';
 import BlockTitle from './BlockTitle';
 

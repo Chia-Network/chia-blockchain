@@ -33,7 +33,7 @@ export default function PlotNFTAdd(props: Props) {
         state === 'SELF_POOLING'
           ? PlotNFTState.SELF_POOLING
           : PlotNFTState.FARMING_TO_POOL,
-      poolUrl: initialTargetState.pool_url,
+      poolUrl: initialTargetState.poolUrl,
     });
 
     navigate('/dashboard/pool');

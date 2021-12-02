@@ -18,7 +18,7 @@ export default function PoolJoin(props: Props) {
     children,
     nft,
     nft: {
-      pool_state: { p2_singleton_puzzle_hash },
+      poolState: { p2SingletonPuzzleHash },
     },
   } = props;
   const { canEdit, balance, isSelfPooling } = usePlotNFTDetails(nft);
@@ -39,7 +39,7 @@ export default function PoolJoin(props: Props) {
       return;
     }
 
-    navigate(`/dashboard/pool/${p2_singleton_puzzle_hash}/change-pool`);
+    navigate(`/dashboard/pool/${p2SingletonPuzzleHash}/change-pool`);
   }
 
   return children({

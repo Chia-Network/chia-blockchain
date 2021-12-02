@@ -1,7 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Flex, More, useOpenDialog } from '@chia/core';
-import { useSelector } from 'react-redux';
 import {
   Box,
   MenuItem,
@@ -9,19 +8,17 @@ import {
   ListItemIcon,
   Typography,
 } from '@material-ui/core';
+import { useGetCombinedPlotsQuery } from '@chia/api-react';
 import { Settings as SettingsIcon } from '@material-ui/icons';
-import type { RootState } from '../../../modules/rootReducer';
 import FarmOverviewHero from './FarmOverviewHero';
 import FarmOverviewCards from './FarmOverviewCards';
 import FarmManageFarmingRewards from '../FarmManageFarmingRewards';
 
 export default function FarmOverview() {
   const openDialog = useOpenDialog();
-  const plots = useSelector(
-    (state: RootState) => state.farming_state.harvester.plots,
-  );
-  const loading = !plots;
-  const hasPlots = !!plots && plots.length > 0;
+  const { data: plots, isLoading } = useGetCombinedPlotsQuery();
+
+  const hasPlots = plots?.length > 0;
 
   function handleManageFarmingRewards() {
     // @ts-ignore
@@ -57,7 +54,7 @@ export default function FarmOverview() {
         </More>
       </Flex>
 
-      {loading ? (
+      {isLoading ? (
         <CircularProgress />
       ) : hasPlots ? (
         <FarmOverviewCards />

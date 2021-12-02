@@ -7,6 +7,7 @@ import FullNode from '../fullNode/FullNode';
 import Block from '../block/Block';
 import Settings from '../settings/Settings';
 import Plot from '../plot/Plot';
+import Farm from '../farm/Farm';
 import Pool from '../pool/Pool';
 import DashboardSideBar from '../dashboard/DashboardSideBar';
 
@@ -28,6 +29,7 @@ export default function AppRouter() {
             <Route path="dashboard/wallets/*" element={<Wallets />} />
             <Route path="dashboard/settings/*" element={<Settings />} />
             <Route path="dashboard/plot/*" element={<Plot />} />
+            <Route path="dashboard/farm/*" element={<Farm />} />
             <Route path="dashboard/pool/*" element={<Pool />} />
           </Route>
         </Route>

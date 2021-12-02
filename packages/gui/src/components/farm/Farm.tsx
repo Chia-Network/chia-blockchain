@@ -1,26 +1,23 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useSelector } from 'react-redux';
-import { AdvancedOptions, Flex } from '@chia/core';
-import LayoutMain from '../layout/LayoutMain';
+import { AdvancedOptions, Flex, DashboardTitle } from '@chia/core';
+import { useGetHarvesterConnectionsQuery } from '@chia/api-react';
 import FarmOverview from './overview/FarmOverview';
 import FarmLatestBlockChallenges from './FarmLatestBlockChallenges';
 import FarmFullNodeConnections from './FarmFullNodeConnections';
 import FarmYourHarvesterNetwork from './FarmYourHarvesterNetwork';
 import FarmLastAttemptedProof from './FarmLastAttemptedProof';
 import usePlots from '../../hooks/usePlots';
-import type { RootState } from '../../modules/rootReducer';
 
 export default function Farm() {
   const { hasPlots } = usePlots();
-  const hasHarvesterConnections = !!useSelector((state: RootState) =>
-    state.farming_state.farmer.connections.find(
-      (connection) => connection.type === 2,
-    ),
-  );
+  const { data: connections, isLoading } = useGetHarvesterConnectionsQuery();
 
   return (
-    <LayoutMain title={<Trans>Farming</Trans>}>
+    <> 
+      <DashboardTitle>
+        <Trans>Farming</Trans>
+      </DashboardTitle>
       <Flex flexDirection="column" gap={3}>
         <FarmOverview />
 
@@ -38,7 +35,7 @@ export default function Farm() {
         ) : (
           <>
             <FarmLatestBlockChallenges />
-            {hasHarvesterConnections && (
+            {!!connections && (
               <AdvancedOptions>
                 <Flex flexDirection="column" gap={3}>
                   <FarmYourHarvesterNetwork />
@@ -48,6 +45,6 @@ export default function Farm() {
           </>
         )}
       </Flex>
-    </LayoutMain>
+    </>
   );
 }

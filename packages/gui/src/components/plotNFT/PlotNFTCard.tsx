@@ -1,7 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
-import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router';
 import {
   TooltipTypography,
@@ -32,15 +31,15 @@ import {
   Link as LinkIcon,
   Payment as PaymentIcon,
 } from '@material-ui/icons';
+import { Plot as PlotIcon } from '@chia/icons';
+import { useDeleteUnconfirmedTransactionsMutation } from '@chia/api-react';
 import type PlotNFT from '../../types/PlotNFT';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTStatus from './PlotNFTState';
-import PlotIcon from '../icons/Plot';
 import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
 import PoolJoin from '../pool/PoolJoin';
 import PoolAbsorbRewards from '../pool/PoolAbsorbRewards';
 import { mojo_to_chia } from '../../util/chia';
-import { deleteUnconfirmedTransactions } from '../../modules/incoming';
 import PlotNFTGraph from './PlotNFTGraph';
 import PlotNFTGetPoolLoginLinkDialog from './PlotNFTGetPoolLoginLinkDialog';
 import PlotNFTPayoutInstructionsDialog from './PlotNFTPayoutInstructionsDialog';
@@ -80,37 +79,36 @@ export default function PlotNFTCard(props: Props) {
   const {
     nft,
     nft: {
-      pool_state: {
-        p2_singleton_puzzle_hash,
-        pool_config: { launcher_id, pool_url },
-        points_found_24h,
-        points_acknowledged_24h,
+      poolState: {
+        p2SingletonPuzzleHash,
+        poolConfig: { launcherId, poolUrl },
+        pointsFound24h,
+        pointsAcknowledged24h,
       },
-      pool_wallet_status: { wallet_id },
+      poolWalletStatus: { walletId },
     },
   } = props;
 
   const { loading, payoutAddress } = usePayoutAddress(nft);
+  const [deleteUnconfirmedTransactions] = useDeleteUnconfirmedTransactionsMutation();
 
   const percentPointsSuccessful24 = getPercentPointsSuccessfull(
-    points_acknowledged_24h,
-    points_found_24h,
+    pointsAcknowledged24h,
+    pointsFound24h,
   );
 
   const navigate = useNavigate();
   const openDialog = useOpenDialog();
-  const dispatch = useDispatch();
   const { isSelfPooling, isSynced, plots, balance } = usePlotNFTDetails(nft);
-  const totalPointsFound24 = points_found_24h.reduce(
+  const totalPointsFound24 = pointsFound24h.reduce(
     (accumulator, item) => accumulator + item[1],
     0,
   );
 
   function handleAddPlot() {
-    navigate({
-      pathname: '/dashboard/plot/add',
+    navigate('/dashboard/plot/add', {
       state: {
-        p2_singleton_puzzle_hash,
+        p2SingletonPuzzleHash,
       },
     });
   }
@@ -121,14 +119,13 @@ export default function PlotNFTCard(props: Props) {
         title={<Trans>Confirmation</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
         confirmColor="danger"
+        onConfirm={() => deleteUnconfirmedTransactions({
+          walletId,
+        }).unwrap()}
       >
         <Trans>Are you sure you want to delete unconfirmed transactions?</Trans>
       </ConfirmDialog>,
     );
-
-    if (deleteConfirmed) {
-      dispatch(deleteUnconfirmedTransactions(wallet_id));
-    }
   }
 
   function handleGetPoolLoginLink() {
@@ -156,7 +153,7 @@ export default function PlotNFTCard(props: Props) {
       ),
     },
     {
-      key: 'plots_count',
+      key: 'plotsCount',
       label: <Trans>Number of Plots</Trans>,
       value: plots ? (
         <FormatLargeNumber value={plots.length} />
@@ -165,7 +162,7 @@ export default function PlotNFTCard(props: Props) {
       ),
     },
     !isSelfPooling && {
-      key: 'current_difficulty',
+      key: 'currentDifficulty',
       label: (
         <TooltipTypography
           title={
@@ -181,10 +178,10 @@ export default function PlotNFTCard(props: Props) {
           <Trans>Current Difficulty</Trans>
         </TooltipTypography>
       ),
-      value: <FormatLargeNumber value={nft.pool_state.current_difficulty} />,
+      value: <FormatLargeNumber value={nft.poolState.currentDifficulty} />,
     },
     !isSelfPooling && {
-      key: 'current_points',
+      key: 'currentPoints',
       label: (
         <TooltipTypography
           title={
@@ -198,10 +195,10 @@ export default function PlotNFTCard(props: Props) {
           <Trans>Current Points Balance</Trans>
         </TooltipTypography>
       ),
-      value: <FormatLargeNumber value={nft.pool_state.current_points} />,
+      value: <FormatLargeNumber value={nft.poolState.currentPoints} />,
     },
     !isSelfPooling && {
-      key: 'points_found_since_start',
+      key: 'pointsFoundSinceStart',
       label: (
         <TooltipTypography
           title={
@@ -217,11 +214,11 @@ export default function PlotNFTCard(props: Props) {
         </TooltipTypography>
       ),
       value: (
-        <FormatLargeNumber value={nft.pool_state.points_found_since_start} />
+        <FormatLargeNumber value={nft.poolState.pointsFoundSinceStart} />
       ),
     },
     !isSelfPooling && {
-      key: 'points_found_24',
+      key: 'pointsFound24',
       label: (
         <Typography>
           <Trans>Points Found in Last 24 Hours</Trans>
@@ -230,7 +227,7 @@ export default function PlotNFTCard(props: Props) {
       value: <FormatLargeNumber value={totalPointsFound24} />,
     },
     !isSelfPooling && {
-      key: 'points_successful_24',
+      key: 'pointsSuccessful24',
       label: (
         <Typography>
           <Trans>Points Successful in Last 24 Hours</Trans>
@@ -321,13 +318,13 @@ export default function PlotNFTCard(props: Props) {
             </Flex>
             <StyledInvisibleContainer>
               <Typography component='div' variant="body2" noWrap>
-                {!!pool_url && (
+                {!!poolUrl && (
                   <Flex alignItems="center" gap={1}>
                     <Typography variant="body2" color="textSecondary">
                       <Trans>Pool:</Trans>
                     </Typography>
-                    <Link target="_blank" href={pool_url}>
-                      {pool_url}
+                    <Link target="_blank" href={poolUrl}>
+                      {poolUrl}
                     </Link>
                   </Flex>
                 )}
@@ -341,7 +338,7 @@ export default function PlotNFTCard(props: Props) {
             </Flex>
 
             {!isSelfPooling && !!totalPointsFound24 && (
-              <PlotNFTGraph points={points_found_24h} />
+              <PlotNFTGraph points={pointsFound24h} />
             )}
           </Flex>
 
@@ -349,9 +346,9 @@ export default function PlotNFTCard(props: Props) {
             <Typography variant="body1" color="textSecondary" noWrap>
               <Trans>Launcher Id</Trans>
             </Typography>
-            <Tooltip title={launcher_id} copyToClipboard>
+            <Tooltip title={launcherId} copyToClipboard>
               <Typography variant="body2" noWrap>
-                {launcher_id}
+                {launcherId}
               </Typography>
             </Tooltip>
           </Flex>

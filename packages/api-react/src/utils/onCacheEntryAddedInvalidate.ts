@@ -4,7 +4,7 @@ type Invalidate = {
   skip?: (data: any, args: any) => boolean;
 } | {
   command: string;
-  onUpdate: (draft, data) => void;
+  onUpdate: (draft, data, args: any) => void;
   skip?: (data: any, args: any) => boolean;
 };
 
