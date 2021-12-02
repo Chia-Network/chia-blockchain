@@ -7,6 +7,7 @@ from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_f
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
@@ -153,24 +154,33 @@ class FullNodeSimulator(FullNodeAPI):
             The total number of reward mojos for the processed blocks.
         """
         rewards = 0
+        height = 0
 
-        for i in range(count):
+        if count == 0:
+            return rewards
+
+        for _ in range(count):
             block: FullBlock = await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
             height = uint32(block.height)
             rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
 
-            # TODO: is there a thing we can check to confirm the block has been processed?
-            await asyncio.sleep(0)
+        while True:
+            peak_height = self.full_node.blockchain.get_peak_height()
+            if peak_height >= height:
+                break
+
+            await asyncio.sleep(0.050)
 
         return rewards
 
-    async def farm_blocks(self, count: int, wallet: Wallet):
-        """Farm the requested number of blocks to the passed puzzle hash. This will
-        process additional blocks as needed to process the reward transactions.
+    async def farm_blocks(self, count: int, wallet: Wallet) -> int:
+        """Farm the requested number of blocks to the passed wallet. This will
+        process additional blocks as needed to process the reward transactions
+        and also wait for the rewards to be present in the wallet.
 
         Arguments:
             count: The number of blocks to farm.
-            wallet: The puzzle hash to farm the block rewards to.
+            wallet: The wallet to farm the block rewards to.
 
         Returns:
             The total number of reward mojos farmed to the requested address.
@@ -187,7 +197,6 @@ class FullNodeSimulator(FullNodeAPI):
 
         coin_records = await self.full_node.coin_store.get_coins_added_at_height(height=peak_height)
 
-        # TODO: handle timeouts
         while True:
             # TODO: is there a better way to get all coins from a wallet?
             confirmed_balance = await wallet.get_confirmed_balance()
@@ -203,15 +212,16 @@ class FullNodeSimulator(FullNodeAPI):
         return rewards
 
     async def farm_rewards(self, amount: int, wallet: Wallet) -> int:
-        """Farm at least the request amount of mojos to the passed puzzle hash. Extra
+        """Farm at least the requested amount of mojos to the passed wallet. Extra
         mojos will be received based on the block rewards at the present block height.
+        The rewards will be present in the wall before returning.
 
         Arguments:
             amount: The minimum number of mojos to farm.
-            wallet: The puzzle hash to farm the block rewards to.
+            wallet: The wallet to farm the block rewards to.
 
         Returns:
-            The total number of reward mojos farmed to the requested address.
+            The total number of reward mojos farmed to the requested wallet.
         """
         rewards = 0
 
@@ -232,12 +242,13 @@ class FullNodeSimulator(FullNodeAPI):
 
         raise Exception("internal error")
 
-    async def wait_transaction_records_entered_mempool(
-        self, records: Collection[TransactionRecord], timeout: float = 15
-    ) -> None:
-        clock = asyncio.get_event_loop().time
-        end = clock() + timeout
+    async def wait_transaction_records_entered_mempool(self, records: Collection[TransactionRecord]) -> None:
+        """Wait until the transaction records have entered the mempool.  Transaction
+        records with no spend bundle are ignored.
 
+        Arguments:
+            records: The transaction records to wait for.
+        """
         ids_to_check: Set[bytes32] = set()
         for record in records:
             if record.spend_bundle is None:
@@ -245,7 +256,6 @@ class FullNodeSimulator(FullNodeAPI):
 
             ids_to_check.add(record.spend_bundle.name())
 
-        # TODO: can we avoid polling
         while True:
             found = set()
             for spend_bundle_name in ids_to_check:
@@ -257,40 +267,35 @@ class FullNodeSimulator(FullNodeAPI):
             if len(ids_to_check) == 0:
                 return
 
-            now = clock()
-            if now >= end:
-                # TODO: real error
-                raise TimeoutError("abc")
-
             await asyncio.sleep(0.050)
 
-    async def process_transaction_records(self, records: Collection[TransactionRecord], timeout: float = 15) -> None:
-        clock = asyncio.get_event_loop().time
-        end = clock() + timeout
+    async def process_transaction_records(self, records: Collection[TransactionRecord]) -> None:
+        """Process the specified transaction records and wait until they have been
+        included in a block.
 
-        ids_to_check: Set[bytes32] = set()
+        Arguments:
+            records: The transaction records to process.
+        """
+        coin_names_to_wait_for: Set[bytes32] = set()
         for record in records:
             if record.spend_bundle is None:
-                raise ValueError(f"Transaction record has no spend bundle: {record!r}")
+                continue
 
-            ids_to_check.add(record.spend_bundle.name())
+            coin_names_to_wait_for.update(record.spend_bundle.additions())
 
-        await self.wait_transaction_records_entered_mempool(records=records, timeout=end - clock())
+        coin_store = self.full_node.coin_store
+
+        await self.wait_transaction_records_entered_mempool(records=records)
 
         while True:
-            now = clock()
-            if now >= end:
-                # TODO: real error
-                raise TimeoutError("abc")
-
             await self.process_blocks(count=1)
 
-            found = set()
-            for spend_bundle_name in ids_to_check:
-                in_block = True  # TODO: how do i confirm the spend bundle was actually processed?
-                if in_block:
-                    found.add(spend_bundle_name)
-            ids_to_check = ids_to_check.difference(found)
+            found: Set[Coin] = set()
+            for coin_name in coin_names_to_wait_for:
+                if coin_store.get_coin_record(coin_name) is not None:
+                    found.add(coin_name)
 
-            if len(ids_to_check) == 0:
+            coin_names_to_wait_for = coin_names_to_wait_for.difference(found)
+
+            if len(coin_names_to_wait_for) == 0:
                 return
