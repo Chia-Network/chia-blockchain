@@ -154,14 +154,22 @@ class FullNodeSimulator(FullNodeAPI):
             The total number of reward mojos for the processed blocks.
         """
         rewards = 0
+        height = 0
 
-        for i in range(count):
+        if count == 0:
+            return rewards
+
+        for _ in range(count):
             block: FullBlock = await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
             height = uint32(block.height)
             rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
 
-            # TODO: is there a thing we can check to confirm the block has been processed?
-            await asyncio.sleep(0)
+        while True:
+            peak_height = self.full_node.blockchain.get_peak_height()
+            if peak_height >= height:
+                break
+
+            await asyncio.sleep(0.050)
 
         return rewards
 
