@@ -231,10 +231,11 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     multiple=True,
 )
 @click.option("-p", "--filepath", help="The path to write the genrated offer file to", required=True)
+@click.option("-m", "--fee", help="A fee to add to the offer when it gets taken", default="0")
 def make_offer_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, offer: Tuple[str], request: Tuple[str], filepath: str
+    wallet_rpc_port: Optional[int], fingerprint: int, offer: Tuple[str], request: Tuple[str], filepath: str, fee: str
 ) -> None:
-    extra_params = {"offers": offer, "requests": request, "filepath": filepath}
+    extra_params = {"offers": offer, "requests": request, "filepath": filepath, "fee": fee}
     import asyncio
     from .wallet_funcs import execute_with_wallet, make_offer
 
@@ -284,8 +285,9 @@ def get_offers_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-p", "--filepath", help="The offer file you wish to examine/take")
 @click.option("-e", "--examine-only", help="Print the summary of the offer file but do not take it", is_flag=True)
-def take_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, filepath: str, examine_only: bool) -> None:
-    extra_params = {"filepath": filepath, "examine_only": examine_only}
+@click.option("-m", "--fee", help="The fee to use when pushing the completed offer", default="0")
+def take_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, filepath: str, examine_only: bool, fee: str) -> None:
+    extra_params = {"filepath": filepath, "examine_only": examine_only, "fee": fee}
     import asyncio
     from .wallet_funcs import execute_with_wallet, take_offer
 
@@ -303,8 +305,9 @@ def take_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, filepath: s
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-id", "--id", help="The offer ID that you wish to cancel")
 @click.option("--insecure", help="Don't make an on-chain transaction, simply mark the offer as cancelled", is_flag=True)
-def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool) -> None:
-    extra_params = {"id": id, "insecure": insecure}
+@click.option("-m", "--fee", help="The fee to use when cancelling the offer securely", default="0")
+def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str) -> None:
+    extra_params = {"id": id, "insecure": insecure, "fee": fee}
     import asyncio
     from .wallet_funcs import execute_with_wallet, cancel_offer
 

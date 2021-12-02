@@ -176,6 +176,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     offers: List[str] = args["offers"]
     requests: List[str] = args["requests"]
     filepath: str = args["filepath"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
 
     if [] in [offers, requests]:
         print("Not creating offer: Must be offering and requesting at least one asset")
@@ -216,7 +217,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
             if confirmation not in ["y", "yes"]:
                 print("Not creating offer...")
             else:
-                offer, trade_record = await wallet_client.create_offer_for_ids(offer_dict)
+                offer, trade_record = await wallet_client.create_offer_for_ids(offer_dict, fee=fee)
                 with open(pathlib.Path(filepath), "w") as file:
                     file.write(bytes(offer).hex())
                     file.close()
@@ -263,6 +264,7 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
         await print_offer_summary(wallet_client, requested)
         print("Pending Balances:")
         await print_offer_summary(wallet_client, offer.get_pending_amounts())
+        print(f"Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
     print("---------------")
 
 
@@ -286,6 +288,8 @@ async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     filepath = pathlib.Path(args["filepath"])
     examine_only: bool = args["examine_only"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
+
     with open(filepath, "r") as file:
         offer_hex = file.read()
         file.close()
@@ -297,11 +301,12 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     await print_offer_summary(wallet_client, offered)
     print("  REQUESTED:")
     await print_offer_summary(wallet_client, requested)
+    print(f"Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
 
     if not examine_only:
         confirmation = input("Would you like to take this offer? (y/n): ")
         if confirmation in ["y", "yes"]:
-            trade_record = await wallet_client.take_offer(offer)
+            trade_record = await wallet_client.take_offer(offer, fee=fee)
             print(f"Created offer with ID {trade_record.trade_id}")
             print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view its status")
 
@@ -309,13 +314,14 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 async def cancel_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     id: bytes32 = hexstr_to_bytes(args["id"])
     secure: bool = not args["insecure"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
 
     trade_record = await wallet_client.get_offer(id, file_contents=True)
     await print_trade_record(trade_record, wallet_client, summaries=True)
 
     confirmation = input(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")
     if confirmation in ["y", "yes"]:
-        await wallet_client.cancel_offer(id, secure=secure)
+        await wallet_client.cancel_offer(id, secure=secure, fee=fee)
         print(f"Cancelled offer with ID {trade_record.trade_id}")
         if secure:
             print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view cancel status")
