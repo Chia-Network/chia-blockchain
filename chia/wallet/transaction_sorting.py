@@ -2,10 +2,10 @@ import enum
 
 
 class SortKey(str, enum.Enum):
-    # "?" will be mapped to either ASC or DESC (when reverse is set to true)
     CONFIRMED_AT_HEIGHT = "order by confirmed_at_height ASC"
     RELEVANCE = "order by confirmed ASC, confirmed_at_height DESC, created_at_time DESC"
 
+    # This is only supposed to run on one of the enum values above
     @staticmethod
     def reverse(query: str) -> str:
         reversed_query = query.replace("ASC", "TEMP")
