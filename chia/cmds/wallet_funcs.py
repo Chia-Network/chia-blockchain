@@ -48,15 +48,25 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
     if paginate is None:
         paginate = sys.stdout.isatty()
 
-    txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id, all=args["all"])
+    starttx = args["offset"]
+    if starttx is None:
+        starttx = 0
+
+    numtx = args["num"]
+    if numtx is None:
+        numtx = 50
+
+    endtx = starttx + numtx
+    txs: List[TransactionRecord] = await wallet_client.get_transactions(
+        wallet_id, all=args["all"], start=starttx, end=endtx
+    )
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     if len(txs) == 0:
         print("There are no transactions to this address")
 
-    offset = args["offset"]
     num_per_screen = 5 if paginate else len(txs)
-    for i in range(offset, len(txs), num_per_screen):
+    for i in range(0, len(txs), num_per_screen):
         for j in range(0, num_per_screen):
             if i + j >= len(txs):
                 break

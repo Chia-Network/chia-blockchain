@@ -55,10 +55,20 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     help="Prompt for each page of data.  Defaults to true for interactive consoles, otherwise false.",
 )
 @click.option(
-    "--all/--recent",
-    "-a/-r",
+    "--all",
+    "-a",
     default=False,
-    help="Get all transactions or get the last 50 (recent). Default is recent",
+    is_flag=True,
+    help="Get all transactions from offset to end, overrides num option",
+)
+@click.option(
+    "--num",
+    "-n",
+    default=50,
+    type=int,
+    show_default=True,
+    required=True,
+    help="Number of transactions starting at offset to return",
 )
 def get_transactions_cmd(
     wallet_rpc_port: Optional[int],
@@ -68,8 +78,9 @@ def get_transactions_cmd(
     verbose: bool,
     paginate: Optional[bool],
     all: bool,
+    num: int,
 ) -> None:
-    extra_params = {"id": id, "verbose": verbose, "offset": offset, "paginate": paginate, "all": all}
+    extra_params = {"id": id, "verbose": verbose, "offset": offset, "num": num, "paginate": paginate, "all": all}
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_transactions
 
