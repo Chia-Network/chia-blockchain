@@ -165,13 +165,14 @@ class FullNodeSimulator(FullNodeAPI):
 
         return rewards
 
-    async def farm_blocks(self, count: int, wallet: Wallet):
-        """Farm the requested number of blocks to the passed puzzle hash. This will
-        process additional blocks as needed to process the reward transactions.
+    async def farm_blocks(self, count: int, wallet: Wallet) -> int:
+        """Farm the requested number of blocks to the passed wallet. This will
+        process additional blocks as needed to process the reward transactions
+        and also wait for the rewards to be present in the wallet.
 
         Arguments:
             count: The number of blocks to farm.
-            wallet: The puzzle hash to farm the block rewards to.
+            wallet: The wallet to farm the block rewards to.
 
         Returns:
             The total number of reward mojos farmed to the requested address.
@@ -203,15 +204,16 @@ class FullNodeSimulator(FullNodeAPI):
         return rewards
 
     async def farm_rewards(self, amount: int, wallet: Wallet) -> int:
-        """Farm at least the request amount of mojos to the passed puzzle hash. Extra
+        """Farm at least the requested amount of mojos to the passed wallet. Extra
         mojos will be received based on the block rewards at the present block height.
+        The rewards will be present in the wall before returning.
 
         Arguments:
             amount: The minimum number of mojos to farm.
-            wallet: The puzzle hash to farm the block rewards to.
+            wallet: The wallet to farm the block rewards to.
 
         Returns:
-            The total number of reward mojos farmed to the requested address.
+            The total number of reward mojos farmed to the requested wallet.
         """
         rewards = 0
 
@@ -233,6 +235,12 @@ class FullNodeSimulator(FullNodeAPI):
         raise Exception("internal error")
 
     async def wait_transaction_records_entered_mempool(self, records: Collection[TransactionRecord]) -> None:
+        """Wait until the transaction records have entered the mempool.  Transaction
+        records with no spend bundle are ignored.
+
+        Arguments:
+            records: The transaction records to wait for.
+        """
         ids_to_check: Set[bytes32] = set()
         for record in records:
             if record.spend_bundle is None:
@@ -254,6 +262,12 @@ class FullNodeSimulator(FullNodeAPI):
             await asyncio.sleep(0.050)
 
     async def process_transaction_records(self, records: Collection[TransactionRecord]) -> None:
+        """Process the specified transaction records and wait until they have been
+        included in a block.
+
+        Arguments:
+            records: The transaction records to process.
+        """
         coin_names_to_wait_for: Set[bytes32] = set()
         for record in records:
             if record.spend_bundle is None:
