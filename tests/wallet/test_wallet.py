@@ -462,7 +462,7 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_wallet_tx_reorg(self, two_wallet_nodes):
-        num_blocks = 5
+        reorg_transaction_mojos = 1000
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
         fn_server = full_node_api.full_node.server
@@ -476,47 +476,41 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        funds = await full_node_api.farm_blocks(count=num_blocks, wallet=wallet)
-        # Waits a few seconds to receive rewards
+        pre_funds = await full_node_api.farm_blocks(count=5, wallet=wallet)
+        old_reorg_height = full_node_api.full_node.blockchain.get_peak_height()
+        post_funds = await full_node_api.farm_blocks(count=3, wallet=wallet)
+        total_funds = pre_funds + post_funds
         all_blocks = await full_node_api.get_all_full_blocks()
 
         # Ensure that we use a coin that we will not reorg out
-        coin = list(all_blocks[-3].get_included_reward_coins())[0]
-        await asyncio.sleep(5)
+        coin = list(all_blocks[2].get_included_reward_coins())[0]
 
-        tx = await wallet.generate_signed_transaction(1000, ph2, coins={coin})
+        tx = await wallet.generate_signed_transaction(reorg_transaction_mojos, ph2, coins={coin})
         await wallet.push_transaction(tx)
         await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
         await time_out_assert(5, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
-        await full_node_api.process_blocks(count=2)
-        await time_out_assert(5, wallet_2.get_confirmed_balance, 1000)
+        await time_out_assert(5, wallet.get_confirmed_balance, total_funds)
+        await full_node_api.process_transaction_records(records=[tx])
+        await time_out_assert(5, wallet_2.get_confirmed_balance, reorg_transaction_mojos)
 
-        await time_out_assert(5, wallet_node.wallet_state_manager.blockchain.get_peak_height, 8)
-        peak_height = full_node_api.full_node.blockchain.get_peak().height
+        peak_height = full_node_api.full_node.blockchain.get_peak_height()
         print(peak_height)
 
+        new_reorg_height = old_reorg_height + 6
         # Perform a reorg, which will revert the transaction in the full node and wallet, and cause wallet to resubmit
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(peak_height - 3), uint32(peak_height + 3), 32 * b"0")
+            ReorgProtocol(uint32(old_reorg_height), uint32(new_reorg_height), 32 * b"0")
         )
 
-        funds = sum(
-            [
-                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-                for i in range(1, peak_height - 2)
-            ]
-        )
-
-        await time_out_assert(7, full_node_api.full_node.blockchain.get_peak_height, peak_height + 3)
-        await time_out_assert(7, wallet_node.wallet_state_manager.blockchain.get_peak_height, peak_height + 3)
+        await time_out_assert(7, full_node_api.full_node.blockchain.get_peak_height, new_reorg_height)
+        await time_out_assert(7, wallet_node.wallet_state_manager.blockchain.get_peak_height, new_reorg_height)
 
         # Farm a few blocks so we can confirm the resubmitted transaction
         await full_node_api.process_blocks(count=2)
 
         # By this point, the transaction should be confirmed
         print(await wallet.get_confirmed_balance())
-        await time_out_assert(15, wallet.get_confirmed_balance, funds - 1000)
+        await time_out_assert(15, wallet.get_confirmed_balance, pre_funds - reorg_transaction_mojos)
         unconfirmed = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
         assert len(unconfirmed) == 0
         tx_record = await wallet_node.wallet_state_manager.tx_store.get_transaction_record(tx.name)
