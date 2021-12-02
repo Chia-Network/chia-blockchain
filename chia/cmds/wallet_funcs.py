@@ -47,7 +47,8 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
     paginate = args["paginate"]
     if paginate is None:
         paginate = sys.stdout.isatty()
-    txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id, all=True)
+
+    txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id, all=args["all"])
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     if len(txs) == 0:

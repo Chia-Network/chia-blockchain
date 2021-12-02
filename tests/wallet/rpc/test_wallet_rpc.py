@@ -252,8 +252,14 @@ class TestWalletRpc:
                     coins=[additions[amount]],
                 )
 
+            # should get all transactions
             all_transactions = await client.get_transactions(wallet_id="1", all=True)
             assert len(all_transactions) == len(transactions) + len(amounts)
+
+            # should get 50 transactions
+            all_transactions = await client.get_transactions(wallet_id="1")
+            assert len(all_transactions) == 50
+
             # test is complete, just throw out the transactions instead of waiting for them to process
             await client.delete_unconfirmed_transactions("1")
 
