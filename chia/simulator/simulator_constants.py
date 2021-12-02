@@ -6,6 +6,9 @@ if __name__ == "__main__":
     with TempKeyring() as keychain:
         # TODO: mariano: fix this with new consensus
         bt = create_block_tools(root_path=DEFAULT_ROOT_PATH, keychain=keychain)
-        new_genesis_block = bt.create_genesis_block(test_constants, b"0")
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "create_genesis_block" of "BlockTools" has incompatible type "bytes"; expected
+        #       "bytes32"  [arg-type]
+        new_genesis_block = bt.create_genesis_block(test_constants, b"0")  # type: ignore[arg-type]
 
         print(bytes(new_genesis_block))

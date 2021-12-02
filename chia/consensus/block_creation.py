@@ -35,6 +35,9 @@ from chia.util.recursive_replace import recursive_replace
 log = logging.getLogger(__name__)
 
 
+# TODO: address hint error and remove ignore
+#       error: Incompatible default for argument "seed" (default has type "bytes", argument has type "bytes32")
+#       [assignment]
 def create_foliage(
     constants: ConsensusConstants,
     reward_block_unfinished: RewardChainBlockUnfinished,
@@ -50,7 +53,7 @@ def create_foliage(
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
-    seed: bytes32 = b"",
+    seed: bytes32 = b"",  # type: ignore[assignment]
 ) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo]]:
     """
     Creates a foliage for a given reward chain block. This may or may not be a tx block. In the case of a tx block,
@@ -85,7 +88,10 @@ def create_foliage(
 
     random.seed(seed)
     # Use the extension data to create different blocks based on header hash
-    extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
+    #       [assignment]
+    extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")  # type: ignore[assignment]
     if prev_block is None:
         height: uint32 = uint32(0)
     else:
@@ -187,10 +193,16 @@ def create_foliage(
         additions.extend(reward_claims_incorporated.copy())
         for coin in additions:
             tx_additions.append(coin)
-            byte_array_tx.append(bytearray(coin.puzzle_hash))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
+            #       [arg-type]
+            byte_array_tx.append(bytearray(coin.puzzle_hash))  # type: ignore[arg-type]
         for coin in removals:
             tx_removals.append(coin.name())
-            byte_array_tx.append(bytearray(coin.name()))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
+            #       [arg-type]
+            byte_array_tx.append(bytearray(coin.name()))  # type: ignore[arg-type]
 
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded = bytes(bip158.GetEncoded())
@@ -244,12 +256,17 @@ def create_foliage(
             prev_transaction_block_hash = prev_transaction_block.header_hash
 
         assert transactions_info is not None
+        # TODO: address hint error and remove ignore
+        #       error: Argument 4 to "FoliageTransactionBlock" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
+        #       error: Argument 5 to "FoliageTransactionBlock" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
         foliage_transaction_block: Optional[FoliageTransactionBlock] = FoliageTransactionBlock(
             prev_transaction_block_hash,
             timestamp,
             filter_hash,
-            additions_root,
-            removals_root,
+            additions_root,  # type: ignore[arg-type]
+            removals_root,  # type: ignore[arg-type]
             transactions_info.get_hash(),
         )
         assert foliage_transaction_block is not None
@@ -260,7 +277,10 @@ def create_foliage(
         )
         assert foliage_transaction_block_signature is not None
     else:
-        foliage_transaction_block_hash = None
+        # TODO: address hint error and remove ignore
+        #       error: Incompatible types in assignment (expression has type "None", variable has type "bytes32")
+        #       [assignment]
+        foliage_transaction_block_hash = None  # type: ignore[assignment]
         foliage_transaction_block_signature = None
         foliage_transaction_block = None
         transactions_info = None
@@ -278,6 +298,9 @@ def create_foliage(
     return foliage, foliage_transaction_block, transactions_info
 
 
+# TODO: address hint error and remove ignore
+#       error: Incompatible default for argument "seed" (default has type "bytes", argument has type "bytes32")
+#       [assignment]
 def create_unfinished_block(
     constants: ConsensusConstants,
     sub_slot_start_total_iters: uint128,
@@ -294,7 +317,7 @@ def create_unfinished_block(
     signage_point: SignagePoint,
     timestamp: uint64,
     blocks: BlockchainInterface,
-    seed: bytes32 = b"",
+    seed: bytes32 = b"",  # type: ignore[assignment]
     block_generator: Optional[BlockGenerator] = None,
     aggregate_sig: G2Element = G2Element(),
     additions: Optional[List[Coin]] = None,

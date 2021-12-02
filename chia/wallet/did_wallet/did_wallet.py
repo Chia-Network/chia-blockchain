@@ -97,6 +97,9 @@ class DIDWallet:
             self.did_info.current_inner, self.did_info.origin_coin.name()
         ).get_tree_hash()
 
+        # TODO: address hint error and remove ignore
+        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -112,8 +115,11 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),
+            name=token_bytes(),  # type: ignore[arg-type]
         )
+        # TODO: address hint error and remove ignore
+        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
         regular_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -129,7 +135,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=token_bytes(),  # type: ignore[arg-type]
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(did_record)
@@ -323,7 +329,14 @@ class DIDWallet:
             f = open(filename, "r")
             details = f.readline().split(":")
             f.close()
-            origin = Coin(bytes.fromhex(details[0]), bytes.fromhex(details[1]), uint64(int(details[2])))
+            # TODO: address hint errors and remove ignores
+            #       error: Argument 1 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+            #       error: Argument 2 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+            origin = Coin(
+                bytes.fromhex(details[0]),  # type: ignore[arg-type]
+                bytes.fromhex(details[1]),  # type: ignore[arg-type]
+                uint64(int(details[2])),
+            )
             backup_ids = []
             for d in details[3].split(","):
                 backup_ids.append(bytes.fromhex(d))
@@ -433,7 +446,9 @@ class DIDWallet:
         if self.did_info.origin_coin is not None:
             return did_wallet_puzzles.create_fullpuz(innerpuz, self.did_info.origin_coin.name())
         else:
-            return did_wallet_puzzles.create_fullpuz(innerpuz, 0x00)
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "create_fullpuz" has incompatible type "int"; expected "bytes32"  [arg-type]
+            return did_wallet_puzzles.create_fullpuz(innerpuz, 0x00)  # type: ignore[arg-type]
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
@@ -559,6 +574,9 @@ class DIDWallet:
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
 
+        # TODO: address hint error and remove ignore
+        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -574,7 +592,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=token_bytes(),  # type: ignore[arg-type]
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -625,6 +643,9 @@ class DIDWallet:
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
 
+        # TODO: address hint error and remove ignore
+        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -640,7 +661,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=token_bytes(),  # type: ignore[arg-type]
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -693,6 +714,9 @@ class DIDWallet:
         signature = AugSchemeMPL.sign(private, message)
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
         spend_bundle = SpendBundle(list_of_solutions, signature)
+        # TODO: address hint error and remove ignore
+        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -708,7 +732,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),
+            name=token_bytes(),  # type: ignore[arg-type]
         )
         await self.standard_wallet.push_transaction(did_record)
         if filename is not None:
@@ -833,6 +857,9 @@ class DIDWallet:
         else:
             spend_bundle = spend_bundle.aggregate([spend_bundle, SpendBundle(list_of_solutions, aggsig)])
 
+        # TODO: address hint error and remove ignore
+        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -848,7 +875,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=token_bytes(),  # type: ignore[arg-type]
         )
         await self.standard_wallet.push_transaction(did_record)
         new_did_info = DIDInfo(

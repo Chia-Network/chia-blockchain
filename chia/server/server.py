@@ -613,10 +613,14 @@ class ChiaServer:
 
             task_id = token_bytes()
             api_task = asyncio.create_task(api_call(payload_inc, connection_inc, task_id))
-            self.api_tasks[task_id] = api_task
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "bytes" for "Dict[bytes32, Task[Any]]"; expected type "bytes32"  [index]
+            self.api_tasks[task_id] = api_task  # type: ignore[index]
             if connection_inc.peer_node_id not in self.tasks_from_peer:
                 self.tasks_from_peer[connection_inc.peer_node_id] = set()
-            self.tasks_from_peer[connection_inc.peer_node_id].add(task_id)
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "add" of "set" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+            self.tasks_from_peer[connection_inc.peer_node_id].add(task_id)  # type: ignore[arg-type]
 
     async def send_to_others(
         self,

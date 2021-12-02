@@ -135,8 +135,11 @@ async def show_async(
                         peak_hash = "No Info"
                     if peak_height is None:
                         peak_height = 0
+                    # TODO: address hint error and remove ignore
+                    #       error: On Python 3 '{}'.format(b'abc') produces "b'abc'", not 'abc'; use
+                    #       '{!r}'.format(b'abc') if this is desired behavior  [str-bytes-safe]
                     con_str = (
-                        f"{NodeType(con['type']).name:9} {host:38} "
+                        f"{NodeType(con['type']).name:9} {host:38} "  # type: ignore[str-bytes-safe]
                         f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
                         f" {con['node_id'].hex()[:8]}... "
                         f"{last_connect}  "

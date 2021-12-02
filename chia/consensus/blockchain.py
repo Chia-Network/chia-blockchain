@@ -163,7 +163,10 @@ class Blockchain(BlockchainInterface):
         if self._peak_height is None:
             return None
         """ Return list of FullBlocks that are peaks"""
-        block = await self.block_store.get_full_block(self.height_to_hash(self._peak_height))
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
+        #       expected "bytes32"  [arg-type]
+        block = await self.block_store.get_full_block(self.height_to_hash(self._peak_height))  # type: ignore[arg-type]
         assert block is not None
         return block
 
@@ -311,7 +314,10 @@ class Blockchain(BlockchainInterface):
                         if len(condition.vars) > 2 and condition.vars[2] != b"":
                             puzzle_hash, amount_bin = condition.vars[0], condition.vars[1]
                             amount = int_from_bytes(amount_bin)
-                            coin_id = Coin(npc.coin_name, puzzle_hash, amount).name()
+                            # TODO: address hint error and remove ignore
+                            #       error: Argument 2 to "Coin" has incompatible type "bytes"; expected "bytes32"
+                            #       [arg-type]
+                            coin_id = Coin(npc.coin_name, puzzle_hash, amount).name()  # type: ignore[arg-type]
                             h_list.append((coin_id, condition.vars[2]))
         return h_list
 
@@ -437,17 +443,29 @@ class Blockchain(BlockchainInterface):
                         for coin_id, hint in hint_list:
                             key = hint
                             if key not in hint_coin_state:
-                                hint_coin_state[key] = {}
-                            hint_coin_state[key][coin_id] = lastest_coin_state[coin_id]
+                                # TODO: address hint error and remove ignore
+                                #       error: Invalid index type "bytes" for
+                                #       "Dict[bytes32, Dict[bytes32, CoinRecord]]"; expected type "bytes32"  [index]
+                                hint_coin_state[key] = {}  # type: ignore[index]
+                            # TODO: address hint error and remove ignore
+                            #       error: Invalid index type "bytes" for "Dict[bytes32, Dict[bytes32, CoinRecord]]";
+                            #       expected type "bytes32"  [index]
+                            hint_coin_state[key][coin_id] = lastest_coin_state[coin_id]  # type: ignore[index]
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
+            # TODO: address hint error and remove ignore
+            #       error: Incompatible return value type (got
+            #       "Tuple[uint32, uint32, List[BlockRecord], Tuple[List[CoinRecord], Dict[bytes32, Dict[bytes32, CoinRecord]]]]",  # noqa: E501
+            #       expected
+            #       "Tuple[Optional[uint32], Optional[uint32], List[BlockRecord], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]]"  # noqa: E501
+            #       )  [return-value]
             return (
                 uint32(max(fork_height, 0)),
                 block_record.height,
                 records_to_add,
                 (list(lastest_coin_state.values()), hint_coin_state),
-            )
+            )  # type: ignore[return-value]
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
         return None, None, [], ([], {})
@@ -669,7 +687,10 @@ class Blockchain(BlockchainInterface):
 
     def height_to_block_record(self, height: uint32) -> BlockRecord:
         header_hash = self.height_to_hash(height)
-        return self.block_record(header_hash)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "block_record" of "Blockchain" has incompatible type "Optional[bytes32]"; expected
+        #       "bytes32"  [arg-type]
+        return self.block_record(header_hash)  # type: ignore[arg-type]
 
     def get_ses_heights(self) -> List[uint32]:
         return self.__height_map.get_ses_heights()
@@ -746,7 +767,10 @@ class Blockchain(BlockchainInterface):
         hashes = []
         for height in range(start, stop + 1):
             if self.contains_height(uint32(height)):
-                header_hash: bytes32 = self.height_to_hash(uint32(height))
+                # TODO: address hint error and remove ignore
+                #       error: Incompatible types in assignment (expression has type "Optional[bytes32]", variable has
+                #       type "bytes32")  [assignment]
+                header_hash: bytes32 = self.height_to_hash(uint32(height))  # type: ignore[assignment]
                 hashes.append(header_hash)
 
         blocks: List[FullBlock] = []
@@ -796,12 +820,18 @@ class Blockchain(BlockchainInterface):
         for height in heights:
             hashes.append(self.height_to_hash(height))
             if len(hashes) > batch_size:
-                res = await self.block_store.get_block_records_by_hash(hashes)
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to "get_block_records_by_hash" of "BlockStore" has incompatible type
+                #       "List[Optional[bytes32]]"; expected "List[bytes32]"  [arg-type]
+                res = await self.block_store.get_block_records_by_hash(hashes)  # type: ignore[arg-type]
                 records.extend(res)
                 hashes = []
 
         if len(hashes) > 0:
-            res = await self.block_store.get_block_records_by_hash(hashes)
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "get_block_records_by_hash" of "BlockStore" has incompatible type
+            #       "List[Optional[bytes32]]"; expected "List[bytes32]"  [arg-type]
+            res = await self.block_store.get_block_records_by_hash(hashes)  # type: ignore[arg-type]
             records.extend(res)
         return records
 
@@ -825,12 +855,22 @@ class Blockchain(BlockchainInterface):
             self.__heights_in_cache[block_record.height] = set()
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
 
-    async def persist_sub_epoch_challenge_segments(
+    # TODO: address hint error and remove ignore
+    #       error: Argument 1 of "persist_sub_epoch_challenge_segments" is incompatible with supertype
+    #       "BlockchainInterface"; supertype defines the argument type as "uint32"  [override]
+    #       note: This violates the Liskov substitution principle
+    #       note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+    async def persist_sub_epoch_challenge_segments(  # type: ignore[override]
         self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ):
         return await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
-    async def get_sub_epoch_challenge_segments(
+    # TODO: address hint error and remove ignore
+    #       error: Argument 1 of "get_sub_epoch_challenge_segments" is incompatible with supertype
+    #       "BlockchainInterface"; supertype defines the argument type as "uint32"  [override]
+    #       note: This violates the Liskov substitution principle
+    #       note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+    async def get_sub_epoch_challenge_segments(  # type: ignore[override]
         self,
         ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
@@ -873,7 +913,10 @@ class Blockchain(BlockchainInterface):
             # We are not in a reorg, no need to look up alternate header hashes (we can get them from height_to_hash)
             for ref_height in block.transactions_generator_ref_list:
                 header_hash = self.height_to_hash(ref_height)
-                ref_block = await self.get_full_block(header_hash)
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to "get_full_block" of "Blockchain" has incompatible type "Optional[bytes32]";
+                #       expected "bytes32"  [arg-type]
+                ref_block = await self.get_full_block(header_hash)  # type: ignore[arg-type]
                 assert ref_block is not None
                 if ref_block.transactions_generator is None:
                     raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
@@ -920,7 +963,10 @@ class Blockchain(BlockchainInterface):
                         ref_block = additional_height_dict[ref_height]
                     else:
                         header_hash = self.height_to_hash(ref_height)
-                        ref_block = await self.get_full_block(header_hash)
+                        # TODO: address hint error and remove ignore
+                        #       error: Argument 1 to "get_full_block" of "Blockchain" has incompatible type
+                        #       "Optional[bytes32]"; expected "bytes32"  [arg-type]
+                        ref_block = await self.get_full_block(header_hash)  # type: ignore[arg-type]
                     assert ref_block is not None
                     if ref_block.transactions_generator is None:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)

@@ -246,7 +246,10 @@ def spendable_cc_list_from_coin_spend(coin_spend: CoinSpend, hash_to_puzzle_f) -
 
         genesis_coin_id = genesis_coin_id_for_genesis_coin_checker(genesis_coin_checker)
 
-        cc_spend_info = SpendableCC(new_coin, genesis_coin_id, inner_puzzle, lineage_proof)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "SpendableCC" has incompatible type "Optional[bytes32]"; expected "bytes32"
+        #       [arg-type]
+        cc_spend_info = SpendableCC(new_coin, genesis_coin_id, inner_puzzle, lineage_proof)  # type: ignore[arg-type]
         spendable_cc_list.append(cc_spend_info)
 
     return spendable_cc_list

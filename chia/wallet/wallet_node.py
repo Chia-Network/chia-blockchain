@@ -348,7 +348,10 @@ class WalletNode:
             for peer, status, _ in record.sent_to:
                 if status == MempoolInclusionStatus.SUCCESS.value:
                     already_sent.add(hexstr_to_bytes(peer))
-            messages.append((msg, already_sent))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "append" of "list" has incompatible type "Tuple[Message, Set[bytes]]"; expected
+            #       "Tuple[Message, Set[bytes32]]"  [arg-type]
+            messages.append((msg, already_sent))  # type: ignore[arg-type]
 
         return messages
 
@@ -804,8 +807,14 @@ class WalletNode:
             for i in range(len(coins)):
                 assert coins[i][0] == proofs[i][0]
                 coin_list_1: List[Coin] = coins[i][1]
-                puzzle_hash_proof: bytes32 = proofs[i][1]
-                coin_list_proof: Optional[bytes32] = proofs[i][2]
+                # TODO: address hint error and remove ignore
+                #       error: Incompatible types in assignment (expression has type "bytes", variable has type
+                #       "bytes32")  [assignment]
+                puzzle_hash_proof: bytes32 = proofs[i][1]  # type: ignore[assignment]
+                # TODO: address hint error and remove ignore
+                #       error: Incompatible types in assignment (expression has type "Optional[bytes]", variable has
+                #       type "Optional[bytes32]")  [assignment]
+                coin_list_proof: Optional[bytes32] = proofs[i][2]  # type: ignore[assignment]
                 if len(coin_list_1) == 0:
                     # Verify exclusion proof for puzzle hash
                     not_included = confirm_not_included_already_hashed(
@@ -818,10 +827,13 @@ class WalletNode:
                 else:
                     try:
                         # Verify inclusion proof for coin list
+                        # TODO: address hint error and remove ignore
+                        #       error: Argument 3 to "confirm_included_already_hashed" has incompatible type
+                        #       "Optional[bytes32]"; expected "bytes32"  [arg-type]
                         included = confirm_included_already_hashed(
                             root,
                             hash_coin_list(coin_list_1),
-                            coin_list_proof,
+                            coin_list_proof,  # type: ignore[arg-type]
                         )
                         if included is False:
                             return False

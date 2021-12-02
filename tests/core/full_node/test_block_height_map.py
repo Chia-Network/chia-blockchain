@@ -13,7 +13,9 @@ from chia.util.ints import uint8
 
 
 def gen_block_hash(height: int) -> bytes32:
-    return struct.pack(">I", height + 1) * (32 // 4)
+    # TODO: address hint errors and remove ignores
+    #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
+    return struct.pack(">I", height + 1) * (32 // 4)  # type: ignore[return-value]
 
 
 def gen_ses(height: int) -> SubEpochSummary:

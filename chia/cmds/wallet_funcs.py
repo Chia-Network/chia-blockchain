@@ -38,7 +38,10 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
     transaction_id = hexstr_to_bytes(args["tx_id"])
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-    tx: TransactionRecord = await wallet_client.get_transaction(wallet_id, transaction_id=transaction_id)
+    # TODO: address hint error and remove ignore
+    #       error: Argument "transaction_id" to "get_transaction" of "WalletRpcClient" has incompatible type "bytes";
+    #       expected "bytes32"  [arg-type]
+    tx: TransactionRecord = await wallet_client.get_transaction(wallet_id, transaction_id=transaction_id)  # type: ignore[arg-type]  # noqa: E501
     print_transaction(tx, verbose=(args["verbose"] > 0), name=name)
 
 

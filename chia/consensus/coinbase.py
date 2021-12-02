@@ -15,7 +15,9 @@ def pool_parent_id(block_height: uint32, genesis_challenge: bytes32) -> bytes32:
 
 
 def farmer_parent_id(block_height: uint32, genesis_challenge: bytes32) -> uint32:
-    return bytes32(genesis_challenge[16:] + block_height.to_bytes(16, "big"))
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible return value type (got "bytes32", expected "uint32")  [return-value]
+    return bytes32(genesis_challenge[16:] + block_height.to_bytes(16, "big"))  # type: ignore[return-value]
 
 
 def create_pool_coin(block_height: uint32, puzzle_hash: bytes32, reward: uint64, genesis_challenge: bytes32):
@@ -25,4 +27,6 @@ def create_pool_coin(block_height: uint32, puzzle_hash: bytes32, reward: uint64,
 
 def create_farmer_coin(block_height: uint32, puzzle_hash: bytes32, reward: uint64, genesis_challenge: bytes32):
     parent_id = farmer_parent_id(block_height, genesis_challenge)
-    return Coin(parent_id, puzzle_hash, reward)
+    # TODO: address hint error and remove ignore
+    #       error: Argument 1 to "Coin" has incompatible type "uint32"; expected "bytes32"  [arg-type]
+    return Coin(parent_id, puzzle_hash, reward)  # type: ignore[arg-type]

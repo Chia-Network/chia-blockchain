@@ -388,8 +388,12 @@ class FullNode:
                             mempool_new_peak_result, fns_peak_result = await self.peak_post_processing(
                                 peak_fb, peak, fork_height, peer, coin_changes[0]
                             )
+                            # TODO: address hint error and remove ignore
+                            #       error: Argument 5 to "peak_post_processing_2" of "FullNode" has incompatible type
+                            #       "Tuple[List[CoinRecord], Dict[bytes, Dict[bytes, CoinRecord]]]"; expected
+                            #       "Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]"  [arg-type]
                             await self.peak_post_processing_2(
-                                peak_fb, peak, fork_height, peer, coin_changes, mempool_new_peak_result, fns_peak_result
+                                peak_fb, peak, fork_height, peer, coin_changes, mempool_new_peak_result, fns_peak_result  # type: ignore[arg-type]  # noqa: E501
                             )
                         except asyncio.CancelledError:
                             # Still do post processing after cancel
@@ -993,7 +997,10 @@ class FullNode:
 
         for hint, records in hint_state.items():
             if hint in self.ph_subscriptions:
-                subscribed_peers = self.ph_subscriptions[hint]
+                # TODO: address hint error and remove ignore
+                #       error: Invalid index type "bytes" for "Dict[bytes32, Set[bytes32]]"; expected type "bytes32"
+                #       [index]
+                subscribed_peers = self.ph_subscriptions[hint]  # type: ignore[index]
                 for peer in subscribed_peers:
                     if peer not in changes_for_peer:
                         changes_for_peer[peer] = set()
@@ -1080,7 +1087,13 @@ class FullNode:
                 f"Total time for {len(blocks_to_validate)} blocks: {time.time() - pre_validate_start}, "
                 f"advanced: {advanced_peak}"
             )
-        return True, advanced_peak, fork_height, (list(all_coin_changes.values()), all_hint_changes)
+        # TODO: address hint error and remove ignore
+        #       error: Incompatible return value type (got
+        #       "Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]]",
+        #       expected
+        #       "Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes, CoinRecord]]]]")
+        #       [return-value]
+        return True, advanced_peak, fork_height, (list(all_coin_changes.values()), all_hint_changes)  # type: ignore[return-value]  # noqa: E501
 
     async def _finish_sync(self):
         """
@@ -1223,7 +1236,10 @@ class FullNode:
         fork_block: Optional[BlockRecord] = None
         if fork_height != block.height - 1 and block.height != 0:
             # This is a reorg
-            fork_block = self.blockchain.block_record(self.blockchain.height_to_hash(fork_height))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "block_record" of "Blockchain" has incompatible type "Optional[bytes32]";
+            #       expected "bytes32"  [arg-type]
+            fork_block = self.blockchain.block_record(self.blockchain.height_to_hash(fork_height))  # type: ignore[arg-type]  # noqa: E501
 
         fns_peak_result: FullNodeStorePeakResult = self.full_node_store.new_peak(
             record,
@@ -1858,10 +1874,13 @@ class FullNode:
                 != self.constants.GENESIS_CHALLENGE
             ):
                 # If we don't have the prev, request the prev instead
+                # TODO: address hint error and remove ignore
+                #       error: Argument 3 to "RequestSignagePointOrEndOfSubSlot" has incompatible type "bytes"; expected
+                #       "bytes32"  [arg-type]
                 full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
                     request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
                     uint8(0),
-                    bytes([0] * 32),
+                    bytes([0] * 32),  # type: ignore[arg-type]
                 )
                 return (
                     make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request),

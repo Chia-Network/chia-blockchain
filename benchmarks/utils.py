@@ -31,7 +31,9 @@ def rand_bytes(num) -> bytes:
 
 
 def rand_hash() -> bytes32:
-    return rand_bytes(32)
+    # TODO: address hint errors and remove ignores
+    #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
+    return rand_bytes(32)  # type: ignore[return-value]
 
 
 def rand_g1() -> G1Element:
