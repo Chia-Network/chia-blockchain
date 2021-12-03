@@ -80,6 +80,8 @@ class WSChiaConnection:
         # Messaging
         self.incoming_queue: asyncio.Queue = incoming_queue
         self.outgoing_queue: asyncio.Queue = asyncio.Queue()
+        self.outgoing_queue_ping: asyncio.Queue = asyncio.Queue()
+        self.writer_lock: asyncio.Lock = asyncio.Lock()
 
         self.inbound_task: Optional[asyncio.Task] = None
         self.outbound_task: Optional[asyncio.Task] = None
@@ -107,6 +109,16 @@ class WSChiaConnection:
 
         # Used by the Chia Seeder.
         self.version = None
+
+        # Latency measurements.
+        self.total_latency_time: float = 0
+        self.total_latency_messages: int = 0
+        self.last_ping_time: float = 0
+        self.last_pong_time: float = 0
+
+        # Ping task.
+        self.ping_task = asyncio.create_task(self._periodically_ping())
+        self.process_ping_task = asyncio.create_task(self._process_ping_pong())
 
     async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
         if self.is_outbound:
@@ -185,7 +197,13 @@ class WSChiaConnection:
         self.inbound_task = asyncio.create_task(self.inbound_handler())
         return True
 
-    async def close(self, ban_time: int = 0, ws_close_code: WSCloseCode = WSCloseCode.OK, error: Optional[Err] = None):
+    async def close(
+        self,
+        ban_time: int = 0,
+        ws_close_code: WSCloseCode = WSCloseCode.OK,
+        error: Optional[Err] = None,
+        cancel_ping_task: bool = True,
+    ):
         """
         Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
         from the global list.
@@ -212,6 +230,9 @@ class WSChiaConnection:
             if self.close_event is not None:
                 self.close_event.set()
             self.cancel_pending_timeouts()
+            if cancel_ping_task:
+                self.ping_task.cancel()
+            self.process_ping_task.cancel()
         except Exception:
             error_stack = traceback.format_exc()
             self.log.warning(f"Exception closing socket: {error_stack}")
@@ -237,12 +258,76 @@ class WSChiaConnection:
         for _, task in self.pending_timeouts.items():
             task.cancel()
 
+    def get_avg_latency_time(self) -> Optional[float]:
+        if self.total_latency_messages == 0:
+            return None
+        return self.total_latency_time / self.total_latency_messages
+
+    async def _periodically_ping(self):
+        missed_pings = 0
+        last_unique_ping_time = 0
+        try:
+            while not self.closed:
+                await asyncio.sleep(60)
+                if self.last_ping_time > last_unique_ping_time:
+                    last_unique_ping_time = self.last_ping_time
+                    if self.last_pong_time < self.last_ping_time:
+                        # Didn't receive a PONG after we sended the PING. Disconnect after 5 consecutive failures.
+                        missed_pings += 1
+                        if missed_pings >= 5:
+                            await self.close(cancel_ping_task=False)
+                            self.log.info(f"No pong response in 5 tries, closing connection with {self.peer_host}.")
+                            return
+                    else:
+                        missed_pings = 0
+                        latency = self.last_pong_time - self.last_ping_time
+                        self.total_latency_messages += 1
+                        self.total_latency_time += latency
+                await self.outgoing_queue_ping.put(WSMessage(WSMsgType.PING, None, None))
+        except Exception as e:
+            error_stack = traceback.format_exc()
+            self.log.error(f"Exception while pinging: {e} with {self.peer_host}")
+            self.log.error(f"Exception Stack: {error_stack}")
+
+    async def _process_ping_pong(self):
+        try:
+            while not self.closed:
+                msg = await self.outgoing_queue_ping.get()
+                if msg.type == WSMsgType.PING:
+                    try:
+                        async with self.writer_lock:
+                            await self.ws.ping()
+                        self.last_ping_time = time.time()
+                    except Exception as e:
+                        error_stack = traceback.format_exc()
+                        self.log.error(f"Exception while pinging: {e} with {self.peer_host}")
+                        self.log.error(f"Exception Stack: {error_stack}")
+                elif msg.type == WSMsgType.PONG:
+                    try:
+                        async with self.writer_lock:
+                            await self.ws.pong(msg.data)
+                    except Exception as e:
+                        error_stack = traceback.format_exc()
+                        self.log.error(f"Exception while ponging: {e} with {self.peer_host}")
+                        self.log.error(f"Exception Stack: {error_stack}")
+        except asyncio.CancelledError:
+            pass
+        except BrokenPipeError as e:
+            self.log.warning(f"{e} {self.peer_host}")
+        except ConnectionResetError as e:
+            self.log.warning(f"{e} {self.peer_host}")
+        except Exception as e:
+            error_stack = traceback.format_exc()
+            self.log.error(f"Exception: {e} with {self.peer_host}")
+            self.log.error(f"Exception Stack: {error_stack}")
+
     async def outbound_handler(self):
         try:
             while not self.closed:
                 msg = await self.outgoing_queue.get()
                 if msg is not None:
-                    await self._send_message(msg)
+                    async with self.writer_lock:
+                        await self._send_message(msg)
         except asyncio.CancelledError:
             pass
         except BrokenPipeError as e:
@@ -479,7 +564,10 @@ class WSChiaConnection:
             else:
                 asyncio.create_task(self.close())
             await asyncio.sleep(3)
-
+        elif message.type == WSMsgType.PING:
+            await self.outgoing_queue_ping.put(WSMessage(WSMsgType.PONG, message.data, message.extra))
+        elif message.type == WSMsgType.PONG:
+            self.last_pong_time = time.time()
         else:
             self.log.error(f"Unexpected WebSocket message type: {message}")
             asyncio.create_task(self.close())

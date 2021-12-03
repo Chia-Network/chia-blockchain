@@ -168,6 +168,7 @@ class ChiaServer:
         self.exempt_peer_networks: List[Union[IPv4Network, IPv6Network]] = [
             ip_network(net, strict=False) for net in config.get("exempt_peer_networks", [])
         ]
+        self.last_inbound_disconnection = time.time() - 300
 
     def my_id(self) -> bytes32:
         """If node has public cert use that one for id, if not use private."""
@@ -247,6 +248,69 @@ class ChiaServer:
         await self.site.start()
         self.log.info(f"Started listening on port: {self._port}")
 
+    async def disconnect_other_full_node(self) -> bool:
+        try:
+            # Don't disconnect our "worst" connection unless 5 minutes have passed since the last disconnect.
+            # This guarantees we did some useful work for them.
+            if time.time() - self.last_inbound_disconnection <= 300:
+                return False
+            node_type = NodeType.FULL_NODE
+            all_inbounds = [conn for _, conn in self.connection_by_type[node_type].items() if not conn.is_outbound]
+            # Keep 50% of the oldest inbound connections and also 25% of the best ping connections.
+            connection_times = [
+                (peer_id, connection.creation_time) for peer_id, connection in all_inbounds.items()
+            ]
+            connection_times = sorted(connection_times, key=lambda x: x[1]))
+            keep_nodes_by_time = [peer_id for peer_id, _ in connection_times]
+            keep_nodes_by_time = keep_nodes_by_time[:(len(keep_nodes_by_time) // 2)]
+            ping_times = [
+                (peer_id, connection.get_avg_latency_time())
+                for peer_id, connection in all_inbounds.items()
+                if connection.get_avg_latency_time() is not None
+            ]
+            ping_times = sorted(ping_times, key=lambda x: x[1]))
+            keep_nodes_by_ping = [peer_id for peer_id, _ in ping_times]
+            keep_nodes_by_ping = keep_nodes_by_ping[:(len(keep_nodes_by_ping) // 4)]
+            all_inbounds = [
+                connection
+                for peer_id, connection in all_inbounds.items()
+                if peer_id not in keep_nodes_by_time and peer_id not in keep_nodes_by_ping
+            ]
+            # Select most frequent group(s) and within it, the most recent connection.
+            groups = {}
+            for connection in all_inbounds:
+                peer_info = connection.get_peer_info()
+                if peer_info is None:
+                    continue
+                group = peer_info.get_group()
+                if group not in groups:
+                    groups[group] = 0
+                groups[group] += 1
+            most_frequent_group = max(groups.values(), default=None)
+            if most_frequent_group is None:
+                return False
+            connection_to_disconnect = None
+            for connection in all_inbounds:
+                peer_info = connection.get_peer_info()
+                if peer_info is None:
+                    continue
+                group = peer_info.get_group()
+                if groups[group] == most_frequent_group and (
+                    connection_to_disconnect is None
+                    or connection.creation_time > connection_to_disconnect.creation_time
+                ):
+                    connection_to_disconnect = connection
+            # Disconnect it.
+            if connection_to_disconnect is None:
+                return False
+            self.last_inbound_disconnection = time.time()
+            await connection_to_disconnect.close()
+            close_event.set()
+            return True
+        except Exception as e:
+            self.log.error(f"Exception trying to disconnect node: {type(e)} {e}.")
+            return False
+
     async def incoming_connection(self, request):
         if getattr(self.node, "crawl", None) is not None:
             return
@@ -288,15 +352,33 @@ class ChiaServer:
 
             assert handshake is True
             # Limit inbound connections to config's specifications.
+            have_added_connection = True
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
                 connection.peer_host, self.exempt_peer_networks
             ):
-                self.log.info(
-                    f"Not accepting inbound connection: {connection.get_peer_logging()}.Inbound limit reached."
-                )
-                await connection.close()
-                close_event.set()
-            else:
+                have_added_connection = False
+                disconnect_other_node = False
+                if connection.connection_type == NodeType.FULL_NODE:
+                    # Try to disconnect node.
+                    disconnect_other_node = await self.disconnect_other_full_node()
+                if not disconnect_other_node:
+                    self.log.info(
+                        f"Not accepting inbound connection: {connection.get_peer_logging()}. Inbound limit reached."
+                    )
+                    await connection.close()
+                    close_event.set()
+                else:
+                    # We succesfully disconnect one inbound connection, yet we still don't have a free slot.
+                    if not self.accept_inbound_connections(connection.connection_type):
+                        self.log.error(
+                            "Tried disconnecting inbound connection, yet still no empty slot. "
+                            f"Rejecting new inbound connection: {connection.get_peer_logging()}"
+                        )
+                        await connection.close()
+                        close_event.set()
+                    else:
+                        have_added_connection = True
+            if have_added_connection:
                 await self.connection_added(connection, self.on_connect)
                 if self._local_type is NodeType.INTRODUCER and connection.connection_type is NodeType.FULL_NODE:
                     self.introducer_peers.add(connection.get_peer_info())
@@ -401,7 +483,7 @@ class ChiaServer:
             self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(
-                    url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
+                    url, autoclose=True, autoping=False, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
                 )
             except ServerDisconnectedError:
                 self.log.debug(f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")
