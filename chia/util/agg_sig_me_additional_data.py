@@ -61,7 +61,7 @@ def get_agg_sig_me_additional_data(
                 "AGG_SIG_ME_ADDITIONAL_DATA"
             ]
         )
-    except Exception as _:
+    except Exception:
         # We can't get additional data, so we'll go with the mainnet genesis
         # challenge.
         agg_sig_me_additional_data = plunge_path_in_config_(
@@ -77,4 +77,3 @@ def get_agg_sig_me_additional_data(
         )
 
     return bytes(binascii.unhexlify(agg_sig_me_additional_data))
-
