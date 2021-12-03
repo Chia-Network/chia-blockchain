@@ -8,10 +8,10 @@
   my_amount  ; this becomes my_did's amount in case of TRANSFER
   my_did_parent
   new_did
-  current_did_innerpuz_or_my_amount
   new_did_parent
   new_did_inner
   new_did_amount
+  trade_price
 )
 
   (include condition_codes.clvm)
@@ -24,12 +24,12 @@
             (sha256 ONE TREE)))
 
   (defun-inline nft_puzzle_hash (NFT_MOD_HASH SINGLETON_STRUCT OPTIONAL_CREATOR_FEE_PUZHASH OPTIONAL_CREATOR_FEE_CALCULATOR next_owner_did)
-    (puzzle-hash-of-curried-function nft_mod_hash
+    (puzzle-hash-of-curried-function NFT_MOD_HASH
                                      (sha256tree1 OPTIONAL_CREATOR_FEE_CALCULATOR)
                                      (sha256 ONE OPTIONAL_CREATOR_FEE_PUZHASH)
                                      (sha256 ONE next_owner_did)
                                      (sha256tree1 SINGLETON_STRUCT)
-                                     nft_mod_hash
+                                     NFT_MOD_HASH
     )
   )
 
