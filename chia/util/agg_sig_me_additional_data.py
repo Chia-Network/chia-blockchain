@@ -24,9 +24,7 @@ def plunge_path_in_config_(fname: Path, config: Dict, path: List[str]):
             index += 1
 
 
-def get_agg_sig_me_additional_data(
-    root_path: Union[str, Path] = None
-) -> bytes:
+def get_agg_sig_me_additional_data(root_path: Union[str, Path] = None) -> bytes:
     """
     Loads the correct value for the AGG_SIG_ME_ADDITIONAL_DATA constant
     and returns it so it can be used conveniently by API consumers.
@@ -53,27 +51,13 @@ def get_agg_sig_me_additional_data(
         agg_sig_me_additional_data = plunge_path_in_config_(
             want_file,
             config,
-            [
-                "farmer",
-                "network_overrides",
-                "constants",
-                selected_network,
-                "AGG_SIG_ME_ADDITIONAL_DATA"
-            ]
+            ["farmer", "network_overrides", "constants", selected_network, "AGG_SIG_ME_ADDITIONAL_DATA"],
         )
     except Exception:
         # We can't get additional data, so we'll go with the mainnet genesis
         # challenge.
         agg_sig_me_additional_data = plunge_path_in_config_(
-            want_file,
-            config,
-            [
-                "farmer",
-                "network_overrides",
-                "constants",
-                "mainnet",
-                "GENESIS_CHALLENGE"
-            ]
+            want_file, config, ["farmer", "network_overrides", "constants", "mainnet", "GENESIS_CHALLENGE"]
         )
 
     return bytes(binascii.unhexlify(agg_sig_me_additional_data))
