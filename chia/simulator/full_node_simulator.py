@@ -315,9 +315,28 @@ class FullNodeSimulator(FullNodeAPI):
             if len(coin_names_to_wait_for) == 0:
                 return
 
-    async def create_coins_with_amounts(self, amounts: List[int], wallet: Wallet) -> None:
-        # 110 is more than the hard coded limit which is 50 as of the writing of this
-        # amounts = [500 + i for i in range(110)]
+    async def create_coins_with_amounts(
+        self,
+        amounts: List[int],
+        wallet: Wallet,
+        per_transaction_record_group: int = 50,
+    ) -> Set[Coin]:
+        """Create coins with the requested amount.  This is useful when you need a
+        bunch of coins for a test and don't need to farm that many.
+
+        Arguments:
+            amounts: A list with entries of mojo amounts corresponding to each
+                coin to create.
+            wallet: The wallet to send the new coins to.
+            per_transaction_record_group: The maximum number of coins to create in each
+                transaction record.
+
+        Returns:
+            A set of the generated coins.  Note that this does not include any change
+            coins that were created.
+        """
+        if len(amounts) == 0:
+            return set()
 
         # TODO: This is a poor duplication of code in
         #       WalletRpcApi.create_signed_transaction().  Perhaps it should be moved
@@ -330,9 +349,10 @@ class FullNodeSimulator(FullNodeAPI):
 
         transaction_records: List[TransactionRecord] = []
         outputs_iterator = iter(outputs)
-        per_transaction_record_group = 50
         while True:
-            outputs_group = [output for output, _ in zip(outputs_iterator, range(per_transaction_record_group))]
+            # The outputs iterator must be second in the zip() call otherwise we lose
+            # an element when reaching the end of the range object.
+            outputs_group = [output for _, output in zip(range(per_transaction_record_group), outputs_iterator)]
 
             if len(outputs_group) > 0:
                 # TODO: this must be called under a wallet state manager lock
@@ -341,12 +361,10 @@ class FullNodeSimulator(FullNodeAPI):
                     puzzle_hash=outputs_group[0]["puzzlehash"],
                     primaries=outputs_group[1:],
                 )
+                await wallet.push_transaction(tx=tx)
                 transaction_records.append(tx)
             else:
                 break
-
-        for transaction_record in transaction_records:
-            await wallet.push_transaction(tx=transaction_record)
 
         await self.process_transaction_records(records=transaction_records)
 
