@@ -108,6 +108,7 @@ class WalletRpcClient(RpcClient):
         all: Optional[bool] = None,
         start: Optional[int] = None,
         end: Optional[int] = None,
+        version: Optional[int] = None,
     ) -> List[TransactionRecord]:
         request: Dict[str, Any] = {"wallet_id": wallet_id}
         if all is not None:
@@ -116,6 +117,9 @@ class WalletRpcClient(RpcClient):
             request["start"] = start
         if end is not None:
             request["end"] = end
+        if version is not None:
+            request["version"] = version
+
         res = await self.fetch(
             "get_transactions",
             request,

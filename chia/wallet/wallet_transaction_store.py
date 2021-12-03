@@ -333,18 +333,31 @@ class WalletTransactionStore:
         else:
             return []
 
-    async def get_transactions_between(self, wallet_id: int, start, end) -> List[TransactionRecord]:
+    async def get_transactions_between(self, wallet_id: int, start, end, version: int) -> List[TransactionRecord]:
         """Return a list of transaction between start and end index. List is in reverse chronological order.
         start = 0 is most recent transaction
         """
         limit = end - start
-        cursor = await self.db_connection.execute(
-            f"SELECT * from transaction_record where wallet_id=? and confirmed_at_height not in"
-            f" (select confirmed_at_height from transaction_record order by confirmed_at_height"
-            f" ASC LIMIT {start})"
-            f" order by confirmed_at_height DESC LIMIT {limit}",
-            (wallet_id,),
-        )
+
+        # use rowid as additional order by ensures that the returned list is deterministic
+        # otherwise rows with the same height could be returned in a different order
+
+        # Version 1 and Version 2 queries return the same data if and only if start = 0
+        if version == 1:
+            cursor = await self.db_connection.execute(
+                f"SELECT * from transaction_record where wallet_id=? and confirmed_at_height not in"
+                f" (select confirmed_at_height from transaction_record order by confirmed_at_height"
+                f" ASC LIMIT {start})"
+                f" order by rowid, confirmed_at_height DESC LIMIT {limit}",
+                (wallet_id,),
+            )
+        else:
+            cursor = await self.db_connection.execute(
+                f"SELECT * from transaction_record where wallet_id=? order by rowid, confirmed_at_height"
+                f" DESC LIMIT {start}, {limit}",
+                (wallet_id,),
+            )
+
         rows = await cursor.fetchall()
         await cursor.close()
         records = []

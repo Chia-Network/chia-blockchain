@@ -80,7 +80,15 @@ def get_transactions_cmd(
     all: bool,
     num: int,
 ) -> None:
-    extra_params = {"id": id, "verbose": verbose, "offset": offset, "num": num, "paginate": paginate, "all": all}
+    extra_params = {
+        "id": id,
+        "verbose": verbose,
+        "offset": offset,
+        "num": num,
+        "paginate": paginate,
+        "all": all,
+        "version": 2,
+    }
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_transactions
 

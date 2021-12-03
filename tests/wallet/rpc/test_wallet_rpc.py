@@ -100,11 +100,8 @@ class TestWalletRpc:
         try:
             addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")
             tx_amount = 15600000
-            try:
+            with pytest.raises(ValueError):
                 await client.send_transaction("1", 100000000000000001, addr)
-                raise Exception("Should not create high value tx")
-            except ValueError:
-                pass
 
             # Tests sending a basic transaction
             tx = await client.send_transaction("1", tx_amount, addr)
@@ -256,9 +253,28 @@ class TestWalletRpc:
             all_transactions = await client.get_transactions(wallet_id="1", all=True)
             assert len(all_transactions) == len(transactions) + len(amounts)
 
-            # should get 50 transactions
+            # should get 50 transactions using v1 query by default
             all_transactions = await client.get_transactions(wallet_id="1")
             assert len(all_transactions) == 50
+
+            # Test that v1 query and v2 query return the same data whenever start=0
+            all_v2 = await client.get_transactions(wallet_id="1", version=2)
+            assert len(all_transactions) == len(all_v2)
+            assert all_transactions == all_v2
+
+            all_transactions = await client.get_transactions(wallet_id="1", end=89)
+            all_v2 = await client.get_transactions(wallet_id="1", end=89, version=2)
+            assert len(all_transactions) == len(all_v2)
+            assert all_transactions == all_v2
+
+            # should get skip the first 100 transactions with v2 query
+            all_transactions = await client.get_transactions(wallet_id="1", start=100, end=300, version=2)
+            assert len(all_transactions) == len(transactions) + len(amounts) - 100
+
+            # Test the broken v1 query
+            all_transactions = await client.get_transactions(wallet_id="1", start=100, end=300, version=1)
+            # why 15? I dunno, this query doesn't work like you expect, so returns are curious
+            assert len(all_transactions) == 15
 
             # test is complete, just throw out the transactions instead of waiting for them to process
             await client.delete_unconfirmed_transactions("1")
