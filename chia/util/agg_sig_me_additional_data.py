@@ -6,7 +6,7 @@ from pathlib import Path
 from chia.util.config import load_config
 
 
-def plunge_path_in_config_(fname: str, config: Dict, path: List[str]):
+def plunge_path_in_config_(fname: Path, config: Dict, path: List[str]):
     """
     Simple conveniece for finding a path in a config and reporting precisely what
     was expected that is missing.
