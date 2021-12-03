@@ -355,12 +355,12 @@ class FullNodeSimulator(FullNodeAPI):
             outputs_group = [output for _, output in zip(range(per_transaction_record_group), outputs_iterator)]
 
             if len(outputs_group) > 0:
-                # TODO: this must be called under a wallet state manager lock
-                tx = await wallet.generate_signed_transaction(
-                    amount=outputs_group[0]["amount"],
-                    puzzle_hash=outputs_group[0]["puzzlehash"],
-                    primaries=outputs_group[1:],
-                )
+                async with wallet.wallet_state_manager.lock:
+                    tx = await wallet.generate_signed_transaction(
+                        amount=outputs_group[0]["amount"],
+                        puzzle_hash=outputs_group[0]["puzzlehash"],
+                        primaries=outputs_group[1:],
+                    )
                 await wallet.push_transaction(tx=tx)
                 transaction_records.append(tx)
             else:
