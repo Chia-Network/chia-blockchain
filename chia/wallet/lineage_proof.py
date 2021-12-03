@@ -16,13 +16,13 @@ class LineageProof(Streamable):
 
     def to_program(self) -> Program:
         final_list = []
-        if self.parent_name:
+        if self.parent_name is not None:
             final_list.append(self.parent_name)
-        if self.inner_puzzle_hash:
+        if self.inner_puzzle_hash is not None:
             final_list.append(self.inner_puzzle_hash)
-        if self.amount:
+        if self.amount is not None:
             final_list.append(self.amount)
         return Program.to(final_list)
 
     def is_none(self) -> bool:
-        return not (self.parent_name or self.inner_puzzle_hash or self.amount)
+        return all([self.parent_name is None, self.inner_puzzle_hash is None, self.amount is None])
