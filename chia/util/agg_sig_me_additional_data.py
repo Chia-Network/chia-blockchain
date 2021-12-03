@@ -26,7 +26,7 @@ def plunge_path_in_config_(fname: Path, config: Dict, path: List[str]):
 
 def get_agg_sig_me_additional_data(
     root_path: Union[str, Path] = None
-) -> Dict:
+) -> bytes:
     """
     Loads the correct value for the AGG_SIG_ME_ADDITIONAL_DATA constant
     and returns it so it can be used conveniently by API consumers.
