@@ -7,7 +7,7 @@ import os
 import sys
 
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint64, uint8
+from chia.util.ints import uint128, uint64, uint32, uint8
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from utils import rewards, rand_hash, setup_db, rand_g1, rand_g2, rand_bytes
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -44,17 +44,17 @@ def rand_vdf_proof() -> VDFProof:
     )
 
 
-with open("clvm_generator.bin", "rb+") as f:
+with open("clvm_generator.bin", "rb") as f:
     clvm_generator = f.read()
 
 
-async def run_add_block_benchmark():
+async def run_add_block_benchmark(version: int):
 
     verbose: bool = "--verbose" in sys.argv
-    db_wrapper: DBWrapper = await setup_db("block-store-benchmark.db")
+    db_wrapper: DBWrapper = await setup_db("block-store-benchmark.db", version)
 
     # keep track of benchmark total time
-    all_test_time = 0
+    all_test_time = 0.0
 
     prev_block = bytes([0] * 32)
 
@@ -62,16 +62,16 @@ async def run_add_block_benchmark():
         block_store = await BlockStore.create(db_wrapper)
 
         block_height = 1
-        timestamp = 1631794488
-        weight = 10
-        iters = 123456
-        sp_index = 0
-        deficit = 0
-        sub_slot_iters = 10
-        required_iters = 100
+        timestamp = uint64(1631794488)
+        weight = uint128(10)
+        iters = uint128(123456)
+        sp_index = uint8(0)
+        deficit = uint8(0)
+        sub_slot_iters = uint64(10)
+        required_iters = uint64(100)
         transaction_block_counter = 0
         prev_transaction_block = bytes([0] * 32)
-        prev_transaction_height = 0
+        prev_transaction_height = uint32(0)
         total_time = 0.0
 
         if verbose:
@@ -81,8 +81,8 @@ async def run_add_block_benchmark():
 
             header_hash = rand_hash()
             is_transaction = transaction_block_counter == 0
-            fees = random.randint(0, 150000)
-            farmer_coin, pool_coin = rewards(height)
+            fees = uint64(random.randint(0, 150000))
+            farmer_coin, pool_coin = rewards(uint32(height))
             reward_claims_incorporated = [farmer_coin, pool_coin]
 
             # TODO: increase fidelity by setting these as well
@@ -94,7 +94,7 @@ async def run_add_block_benchmark():
             record = BlockRecord(
                 header_hash,
                 prev_block,
-                height,
+                uint32(height),
                 weight,
                 iters,
                 sp_index,
@@ -126,13 +126,13 @@ async def run_add_block_benchmark():
                 rand_g1() if has_pool_pk else None,
                 rand_hash() if not has_pool_pk else None,
                 rand_g1(),  # plot_public_key
-                32,
+                uint8(32),
                 rand_bytes(8 * 32),
             )
 
             reward_chain_block = RewardChainBlock(
                 weight,
-                height,
+                uint32(height),
                 iters,
                 sp_index,
                 rand_hash(),  # pos_ss_cc_challenge_hash
@@ -149,7 +149,7 @@ async def run_add_block_benchmark():
 
             pool_target = PoolTarget(
                 rand_hash(),  # puzzle_hash
-                0,  # max_height
+                uint32(0),  # max_height
             )
 
             foliage_block_data = FoliageBlockData(
@@ -190,7 +190,7 @@ async def run_add_block_benchmark():
                     rand_hash(),  # generator_refs_root
                     rand_g2(),  # aggregated_signature
                     fees,
-                    random.randint(0, 12000000000),  # cost
+                    uint64(random.randint(0, 12000000000)),  # cost
                     reward_claims_incorporated,
                 )
             )
@@ -222,11 +222,11 @@ async def run_add_block_benchmark():
             total_time += stop - start
 
             # 19 seconds per block
-            timestamp += 19
-            weight += 10
-            iters += 123456
-            sp_index = (sp_index + 1) % 64
-            deficit = (deficit + 3) % 17
+            timestamp = uint64(timestamp + 19)
+            weight = uint128(weight + 10)
+            iters = uint128(iters + 123456)
+            sp_index = uint8((sp_index + 1) % 64)
+            deficit = uint8((deficit + 3) % 17)
             prev_block = header_hash
 
             # every 33 blocks is a transaction block
@@ -234,7 +234,7 @@ async def run_add_block_benchmark():
 
             if is_transaction:
                 prev_transaction_block = header_hash
-                prev_transaction_height = height
+                prev_transaction_height = uint32(height)
 
             if verbose:
                 print(".", end="")
@@ -256,4 +256,7 @@ async def run_add_block_benchmark():
 
 
 if __name__ == "__main__":
-    asyncio.run(run_add_block_benchmark())
+    print("version 1")
+    asyncio.run(run_add_block_benchmark(1))
+    print("version 2")
+    asyncio.run(run_add_block_benchmark(2))

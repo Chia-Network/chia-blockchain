@@ -1,4 +1,3 @@
-import aiosqlite
 import logging
 from typing import Dict, List, Optional, Tuple
 from chia.util.ints import uint32
@@ -9,6 +8,7 @@ import aiofiles
 from dataclasses import dataclass
 from chia.util.streamable import Streamable, streamable
 from chia.util.files import write_file_async
+from chia.util.db_wrapper import DBWrapper
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class SesCache(Streamable):
 
 
 class BlockHeightMap:
-    db: aiosqlite.Connection
+    db: DBWrapper
 
     # the below dictionaries are loaded from the database, from the peak
     # and back in time on startup.
@@ -47,7 +47,7 @@ class BlockHeightMap:
     __ses_filename: Path
 
     @classmethod
-    async def create(cls, blockchain_dir: Path, db: aiosqlite.Connection) -> "BlockHeightMap":
+    async def create(cls, blockchain_dir: Path, db: DBWrapper) -> "BlockHeightMap":
         self = BlockHeightMap()
         self.db = db
 
@@ -57,7 +57,7 @@ class BlockHeightMap:
         self.__height_to_hash_filename = blockchain_dir / "height-to-hash"
         self.__ses_filename = blockchain_dir / "sub-epoch-summaries"
 
-        res = await self.db.execute(
+        res = await self.db.db.execute(
             "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records WHERE is_peak=1"
         )
         row = await res.fetchone()
@@ -145,7 +145,7 @@ class BlockHeightMap:
         while height > 0:
             # load 5000 blocks at a time
             window_end = max(0, height - 5000)
-            cursor = await self.db.execute(
+            cursor = await self.db.db.execute(
                 "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records "
                 "INDEXED BY height WHERE height>=? AND height <?",
                 (window_end, height),
