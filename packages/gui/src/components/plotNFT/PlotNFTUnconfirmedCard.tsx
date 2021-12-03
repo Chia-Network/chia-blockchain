@@ -33,13 +33,21 @@ export default function PlotNFTUnconfirmedCard(props: Props) {
   const { remove } = useUnconfirmedPlotNFTs();
   const { data: transaction, isLoading } = useGetTransactionQuery({
     transactionId,
+  }, {
+    pollingInterval: 5000,
   }); 
+
+  console.log('transaction', transaction);
 
   useEffect(() => {
     if (transaction?.confirmed) {
       remove(transaction.name);
     }
   }, [transaction?.confirmed]);
+
+  if (isLoading || transaction?.confirmed) {
+    return null;
+  }
 
   return (
     <StyledCard>

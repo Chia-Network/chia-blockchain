@@ -26,7 +26,7 @@ export const walletApi = createApi({
     }>({
       query: () => ({
         command: 'getLoggedInFingerprint',
-        mockResponse: '3125625846',
+        mockResponse: { fingerprint: '3125625846' },
       }),
       transformResponse: (response: any) => response?.fingerprint,
       providesTags: [{ type: 'LoggedInFingerprint' }],
