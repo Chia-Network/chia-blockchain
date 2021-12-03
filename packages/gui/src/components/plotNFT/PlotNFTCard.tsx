@@ -15,6 +15,7 @@ import {
   Link,
   ConfirmDialog,
   useOpenDialog,
+  mojoToChiaLocaleString,
 } from '@chia/core';
 import {
   Box,
@@ -39,7 +40,6 @@ import PlotNFTStatus from './PlotNFTState';
 import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
 import PoolJoin from '../pool/PoolJoin';
 import PoolAbsorbRewards from '../pool/PoolAbsorbRewards';
-import { mojo_to_chia } from '../../util/chia';
 import PlotNFTGraph from './PlotNFTGraph';
 import PlotNFTGetPoolLoginLinkDialog from './PlotNFTGetPoolLoginLinkDialog';
 import PlotNFTPayoutInstructionsDialog from './PlotNFTPayoutInstructionsDialog';
@@ -82,8 +82,8 @@ export default function PlotNFTCard(props: Props) {
       poolState: {
         p2SingletonPuzzleHash,
         poolConfig: { launcherId, poolUrl },
-        pointsFound24h,
-        pointsAcknowledged24h,
+        pointsFound24H,
+        pointsAcknowledged24H,
       },
       poolWalletStatus: { walletId },
     },
@@ -93,14 +93,14 @@ export default function PlotNFTCard(props: Props) {
   const [deleteUnconfirmedTransactions] = useDeleteUnconfirmedTransactionsMutation();
 
   const percentPointsSuccessful24 = getPercentPointsSuccessfull(
-    pointsAcknowledged24h,
-    pointsFound24h,
+    pointsAcknowledged24H,
+    pointsFound24H,
   );
 
   const navigate = useNavigate();
   const openDialog = useOpenDialog();
   const { isSelfPooling, isSynced, plots, balance } = usePlotNFTDetails(nft);
-  const totalPointsFound24 = pointsFound24h.reduce(
+  const totalPointsFound24 = pointsFound24H.reduce(
     (accumulator, item) => accumulator + item[1],
     0,
   );
@@ -147,7 +147,7 @@ export default function PlotNFTCard(props: Props) {
       label: <Trans>Unclaimed Rewards</Trans>,
       value: (
         <UnitFormat
-          value={mojo_to_chia(BigInt(balance))}
+          value={mojoToChiaLocaleString(balance)}
           state={State.SUCCESS}
         />
       ),
@@ -338,7 +338,7 @@ export default function PlotNFTCard(props: Props) {
             </Flex>
 
             {!isSelfPooling && !!totalPointsFound24 && (
-              <PlotNFTGraph points={pointsFound24h} />
+              <PlotNFTGraph points={pointsFound24H} />
             )}
           </Flex>
 

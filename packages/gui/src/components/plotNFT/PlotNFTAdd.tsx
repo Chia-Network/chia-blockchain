@@ -25,7 +25,10 @@ export default function PlotNFTAdd(props: Props) {
       initialTargetState: { state },
     } = data;
 
-    const { transaction } = await createNewPoolWallet(initialTargetState, fee).unwrap();
+    const { transaction, ...rest } = await createNewPoolWallet({
+      initialTargetState, 
+      fee,
+    }).unwrap();
 
     unconfirmedNFTs.add({
       transactionId: transaction.name,

@@ -6,8 +6,9 @@ export default function usePlotNFTs(): {
   loading: boolean;
   nfts?: PlotNFT[];
   external?: PlotNFTExternal[];
+  error?: Error;
 } {
-  const { data, isLoading } = useGetPlotNFTsQuery(undefined, {
+  const { data, isLoading, error } = useGetPlotNFTsQuery(undefined, {
     pollingInterval: 10000,
   });
 
@@ -15,5 +16,6 @@ export default function usePlotNFTs(): {
     loading: isLoading,
     nfts: data?.nfts,
     external: data?.external,
+    error,
   };
 }

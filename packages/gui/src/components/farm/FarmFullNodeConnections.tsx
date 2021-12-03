@@ -81,7 +81,7 @@ const cols = [
 ];
 
 export default function FarmFullNodeConnections() {
-  const { data: connections } = useGetFarmerFullNodeConnectionsQuery();
+  const { data: connections = [] } = useGetFarmerFullNodeConnectionsQuery();
   const { data: isRunning, isLoading } = useIsServiceRunningQuery({
     service: ServiceName.FARMER,
   }, {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { t, Trans } from '@lingui/macro';
-import { useGetFingerprintQuery, useGetPlottersQuery, useStartPlottingMutation, useCreateNewPoolWalletMutation } from '@chia/api-react';
+import { useGetLoggedInFingerprintQuery, useGetPlottersQuery, useStartPlottingMutation, useCreateNewPoolWalletMutation } from '@chia/api-react';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useCurrencyCode, useShowError, ButtonLoading, Flex, Form, FormBackButton, Loading, Suspender } from '@chia/core';
@@ -31,7 +31,7 @@ export default function PlotAdd() {
   const currencyCode = useCurrencyCode();
   const showError = useShowError();
 
-  const { data: fingerprint, isLoadingFingerprint } = useGetFingerprintQuery();
+  const { data: fingerprint, isLoadingFingerprint } = useGetLoggedInFingerprintQuery();
   const { data: plotters, isLoadingPlotters } = useGetPlottersQuery();
   const [startPlotting] = useStartPlottingMutation();
   const [createNewPoolWallet] = useCreateNewPoolWalletMutation();

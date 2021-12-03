@@ -4,6 +4,7 @@ import { t } from '@lingui/macro';
 import normalizeUrl from '../util/normalizeUrl';
 import type PoolInfo from '../types/PoolInfo';
 import useIsMainnet from './useIsMainnet';
+import getPoolInfo from '../util/getPoolInfo';
 
 export default function usePoolInfo(poolUrl?: string): {
   error?: Error;
@@ -44,15 +45,16 @@ export default function usePoolInfo(poolUrl?: string): {
     }
 
     try {
-      const url = `${normalizedUrl}/pool_info`;
-      const response = await fetch(url);
-      const data = await response.json();
+      const data = await getPoolInfo(normalizedUrl);
+
+      console.log('data', data);
 
       return {
-        pool_url: normalizedUrl,
+        poolUrl: normalizedUrl,
         ...data,
       };
     } catch (e) {
+      console.log(e);
       throw new Error(
         t`The pool URL "${normalizedUrl}" is not working. Is it pool? Error: ${e.message}`,
       );

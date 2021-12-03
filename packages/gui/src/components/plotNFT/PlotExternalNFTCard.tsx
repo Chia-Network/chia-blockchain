@@ -69,21 +69,23 @@ export default function PlotExternalNFTCard(props: Props) {
       poolState: {
         p2SingletonPuzzleHash,
         poolConfig: { launcherId, poolUrl },
-        pointsFound24h,
-        pointsAcknowledged24h,
+        pointsFound24H,
+        pointsAcknowledged24H,
       },
     },
   } = props;
 
+  console.log('nft', nft);
+
   const percentPointsSuccessful24 = getPercentPointsSuccessfull(
-    pointsAcknowledged24h,
-    pointsFound24h,
+    pointsAcknowledged24H,
+    pointsFound24H,
   );
 
   const navigate = useNavigate();
   const openDialog = useOpenDialog();
   const { plots, isSelfPooling } = usePlotNFTExternalDetails(nft);
-  const totalPointsFound24 = pointsFound24h.reduce(
+  const totalPointsFound24 = pointsFound24H.reduce(
     (accumulator, item) => accumulator + item[1],
     0,
   );
@@ -285,7 +287,7 @@ export default function PlotExternalNFTCard(props: Props) {
             </Flex>
 
             {!isSelfPooling && !!totalPointsFound24 && (
-              <PlotNFTGraph points={pointsFound24h} />
+              <PlotNFTGraph points={pointsFound24H} />
             )}
           </Flex>
 

@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
-import { useCurrencyCode, mojoToChia } from '@chia/core';
+import { useCurrencyCode, mojoToChiaLocaleString } from '@chia/core';
 import { useGetFarmedAmountQuery } from '@chia/api-react';
 import FarmCard from './FarmCard';
-import { mojo_to_chia } from '../../../util/chia';
 
 export default function FarmCardBlockRewards() {
   const currencyCode = useCurrencyCode();
@@ -17,13 +16,19 @@ export default function FarmCardBlockRewards() {
       const val =
         BigInt(farmerRewardAmount.toString()) +
         BigInt(poolRewardAmount.toString());
-      return mojoToChia(val);
+      return (
+        <>
+          {mojoToChiaLocaleString(val)}
+          &nbsp;
+          {currencyCode}
+        </>
+      );
     }
   }, [farmerRewardAmount, poolRewardAmount]);
 
   return (
     <FarmCard
-      title={<Trans>{currencyCode} Block Rewards</Trans>}
+      title={<Trans>Block Rewards</Trans>}
       description={<Trans>Without fees</Trans>}
       value={blockRewards}
       loading={isLoading}

@@ -1,9 +1,7 @@
 import { useMemo } from 'react';
-import { useSelector } from 'react-redux';
-import type PlotNFTExternal from '../types/PlotNFTExternal';
-import type Plot from '../types/Plot';
-import type { RootState } from '../modules/rootReducer';
+import type { Plot, PlotNFTExternal } from '@chia/api';
 import usePlots from './usePlots';
+import { useIsWalletSynced } from '@chia/wallets';
 import usePlotNFTName from './usePlotNFTName';
 
 export default function usePlotNFTExternalDetails(nft: PlotNFTExternal): {
@@ -12,22 +10,20 @@ export default function usePlotNFTExternalDetails(nft: PlotNFTExternal): {
   plots?: Plot[];
   isSelfPooling: boolean;
 } {
-  const isWalletSynced = useSelector(
-    (state: RootState) => state.wallet_state.status.synced,
-  );
+  const isWalletSynced = useIsWalletSynced()
 
   const { plots } = usePlots();
   const humanName = usePlotNFTName(nft);
   const details = useMemo(() => {
     const {
-      pool_state: {
-        p2_singleton_puzzle_hash,
-        pool_config: { pool_url },
+      poolState: {
+        p2SingletonPuzzleHash,
+        poolConfig: { poolUrl },
       },
     } = nft;
 
-    const isSelfPooling = !pool_url;
-    const poolContractPuzzleHash = `0x${p2_singleton_puzzle_hash}`;
+    const isSelfPooling = !poolUrl;
+    const poolContractPuzzleHash = `0x${p2SingletonPuzzleHash}`;
 
     return {
       isSelfPooling,
@@ -36,7 +32,7 @@ export default function usePlotNFTExternalDetails(nft: PlotNFTExternal): {
       plots:
         plots &&
         plots.filter(
-          (plot) => plot.pool_contract_puzzle_hash === poolContractPuzzleHash,
+          (plot) => plot.poolContractPuzzleHash === poolContractPuzzleHash,
         ),
     };
   }, [nft, isWalletSynced, plots, humanName]);

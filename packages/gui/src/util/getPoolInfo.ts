@@ -1,7 +1,10 @@
-import type PoolInfo from '../types/PoolInfo';
+import type { PoolInfo } from '@chia/api';
+import { toCamelCase } from '@chia/api';
 
 export default async function getPoolInfo(poolUrl: string): PoolInfo {
   const url = `${poolUrl}/pool_info`;
   const response = await fetch(url);
-  return response.json();
+  const data = await response.json();
+
+  return toCamelCase(data);
 }

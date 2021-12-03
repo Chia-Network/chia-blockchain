@@ -1,6 +1,6 @@
 type WalletBalance = {
-  wallet_id: number;
-  confirmed_wallet_balance: number;
+  walletId: number;
+  confirmedWalletBalance: number;
   max_send_amount: number;
   pending_change: number;
   pending_coin_removal_count: number;

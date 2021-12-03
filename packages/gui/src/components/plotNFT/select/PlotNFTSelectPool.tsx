@@ -6,12 +6,11 @@ import React, {
 } from 'react';
 import { t, Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
-import { ButtonLoading, Loading, Flex, Form, FormBackButton } from '@chia/core';
+import { ButtonLoading, Loading, Flex, Form, FormBackButton, chiaToMojo } from '@chia/core';
 import PlotNFTSelectBase from './PlotNFTSelectBase';
 import normalizeUrl from '../../../util/normalizeUrl';
 import getPoolInfo from '../../../util/getPoolInfo';
 import InitialTargetState from '../../../types/InitialTargetState';
-import { chia_to_mojo } from '../../../util/chia';
 import useStandardWallet from '../../../hooks/useStandardWallet';
 import PlotNFTSelectFaucet from './PlotNFTSelectFaucet';
 
@@ -43,7 +42,7 @@ async function prepareSubmitData(data: FormData): SubmitData {
     initialTargetState.relativeLockHeight = relativeLockHeight;
   }
 
-  const feeMojos = chia_to_mojo(fee || '0');
+  const feeMojos = chiaToMojo(fee || '0');
 
   return {
     fee: feeMojos,

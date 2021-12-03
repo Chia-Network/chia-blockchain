@@ -59,26 +59,30 @@ class Chia {
     const withDecimal = this.toFixed(maximumFractionDigits);
     const [left, right] = withDecimal.split('.');
 
-    const rightFormated = trimEnd(right, '0');
-    if (!rightFormated.length) {
-      return formatter.format(BigInt(left));
+    const decimalNumber = Number.parseFloat(`0.${right}`);
+    if (isNaN(decimalNumber)) {
+      throw new Error('Decimal part is not compatible with number type');
     }
-
-    const separatorPart = formatter.formatToParts(1.1).find((part) => part.type === 'decimal');
-    if (!separatorPart) {
-      throw new Error(`Separator is not supported for ${locale}`);
-    }
-    
-    const separator = separatorPart.value;
 
     const decimalFormatter = new Intl.NumberFormat(locale, {
-      useGrouping: false
+      maximumFractionDigits,
     });
     if (!decimalFormatter) {
       throw new Error(`Decimal formater for ${locale} is not supported`);
     }
 
-    return `${formatter.format(BigInt(left))}${separator}${decimalFormatter.format(BigInt(right))}`;
+    const parts = decimalFormatter.formatToParts(decimalNumber);
+
+    const fractionPart = parts.find((part) => part.type === 'fraction');
+    if (!fractionPart) {
+      return formatter.format(BigInt(left));
+    }
+
+    const separatorPart = parts.find((part) => part.type === 'decimal');
+    if (!separatorPart) {
+      throw new Error(`Separator is not supported for ${locale}`);
+    }
+    return `${formatter.format(BigInt(left))}${separatorPart.value}${fractionPart.value}`;
   }
 }
 

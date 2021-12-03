@@ -69,7 +69,7 @@ export const {
   walletApi,
 
   usePingQuery: useWalletPingQuery,
-  useGetFingerprintQuery,
+  useGetLoggedInFingerprintQuery,
   useGetWalletsQuery,
   useGetTransactionQuery,
   useGetPwStatusQuery,
