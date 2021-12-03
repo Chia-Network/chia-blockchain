@@ -250,9 +250,9 @@ class ChiaServer:
 
     async def disconnect_other_full_node(self) -> bool:
         try:
-            # Don't disconnect our "worst" connection unless 5 minutes have passed since the last disconnect.
+            # Don't disconnect our "worst" connection unless 6 minutes have passed since the last disconnect.
             # This guarantees we did some useful work for them.
-            if time.time() - self.last_inbound_disconnection <= 300:
+            if time.time() - self.last_inbound_disconnection <= 360:
                 return False
             node_type = NodeType.FULL_NODE
             all_inbounds = [conn for _, conn in self.connection_by_type[node_type].items() if not conn.is_outbound]
