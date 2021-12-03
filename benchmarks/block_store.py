@@ -18,6 +18,7 @@ from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo, FoliageBlockData
 from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 NUM_ITERS = 20000
@@ -56,7 +57,7 @@ async def run_add_block_benchmark(version: int):
     # keep track of benchmark total time
     all_test_time = 0.0
 
-    prev_block = bytes([0] * 32)
+    prev_block = bytes32([0] * 32)
 
     try:
         block_store = await BlockStore.create(db_wrapper)
@@ -70,7 +71,7 @@ async def run_add_block_benchmark(version: int):
         sub_slot_iters = uint64(10)
         required_iters = uint64(100)
         transaction_block_counter = 0
-        prev_transaction_block = bytes([0] * 32)
+        prev_transaction_block = bytes32([0] * 32)
         prev_transaction_height = uint32(0)
         total_time = 0.0
 
@@ -110,7 +111,7 @@ async def run_add_block_benchmark(version: int):
                 deficit == 16,
                 prev_transaction_height,
                 timestamp if is_transaction else None,
-                prev_transaction_block if prev_transaction_block != bytes([0] * 32) else None,
+                prev_transaction_block if prev_transaction_block != bytes32([0] * 32) else None,
                 None if fees == 0 else fees,
                 reward_claims_incorporated,
                 finished_challenge_slot_hashes,
@@ -157,7 +158,7 @@ async def run_add_block_benchmark(version: int):
                 pool_target,
                 rand_g2() if has_pool_pk else None,  # pool_signature
                 rand_hash(),  # farmer_reward_puzzle_hash
-                bytes([0] * 32),  # extension_data
+                bytes32([0] * 32),  # extension_data
             )
 
             foliage = Foliage(
