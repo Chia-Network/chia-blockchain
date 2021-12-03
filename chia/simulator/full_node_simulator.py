@@ -11,9 +11,29 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
-from chia.util.ints import uint8, uint32
+from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
+
+
+async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet):
+    """Wait until all of the specified coins are simultaneously reported as spendable
+    in by the wallet.
+
+    Arguments:
+        coins: The coins expected to be received.
+        wallet: The wallet expected to receive the coins.
+    """
+    while True:
+        spendable_wallet_coin_records = await wallet.wallet_state_manager.get_spendable_coins_for_wallet(
+            wallet_id=wallet.id()
+        )
+        spendable_wallet_coins = {record.coin for record in spendable_wallet_coin_records}
+
+        if coins.issubset(spendable_wallet_coins):
+            return
+
+        await asyncio.sleep(0.050)
 
 
 class FullNodeSimulator(FullNodeAPI):
@@ -199,18 +219,9 @@ class FullNodeSimulator(FullNodeAPI):
             raise RuntimeError("Peak height still None after processing at least one block")
 
         coin_records = await self.full_node.coin_store.get_coins_added_at_height(height=peak_height)
+        block_reward_coins = {record.coin for record in coin_records}
 
-        while True:
-            # TODO: is there a better way to get all coins from a wallet?
-            confirmed_balance = await wallet.get_confirmed_balance()
-            wallet_coins = await wallet.select_coins(confirmed_balance)
-
-            block_reward_coins = {record.coin for record in coin_records}
-
-            if block_reward_coins.issubset(wallet_coins):
-                break
-
-            await asyncio.sleep(0.050)
+        await wait_for_coins_in_wallet(coins=block_reward_coins, wallet=wallet)
 
         return rewards
 
@@ -302,3 +313,41 @@ class FullNodeSimulator(FullNodeAPI):
 
             if len(coin_names_to_wait_for) == 0:
                 return
+
+    async def create_coins_with_amounts(self, amounts: List[int], wallet: Wallet) -> None:
+        # 110 is more than the hard coded limit which is 50 as of the writing of this
+        # amounts = [500 + i for i in range(110)]
+
+        # TODO: This is a poor duplication of code in
+        #       WalletRpcApi.create_signed_transaction().  Perhaps it should be moved
+        #       somewhere more reusable.
+
+        outputs = []
+        for amount in amounts:
+            puzzle_hash = await wallet.get_new_puzzlehash()
+            outputs.append({"puzzlehash": puzzle_hash, "amount": uint64(amount)})
+
+        transaction_records: List[TransactionRecord] = []
+        outputs_iterator = iter(outputs)
+        per_transaction_record_group = 50
+        while True:
+            outputs_group = [output for output, _ in zip(outputs_iterator, range(per_transaction_record_group))]
+
+            if len(outputs_group) > 0:
+                # TODO: this must be called under a wallet state manager lock
+                tx = await wallet.generate_signed_transaction(
+                    amount=outputs_group[0]["amount"],
+                    puzzle_hash=outputs_group[0]["puzzlehash"],
+                    primaries=outputs_group[1:],
+                )
+                transaction_records.append(tx)
+            else:
+                break
+
+        for transaction_record in transaction_records:
+            await wallet.push_transaction(tx=transaction_record)
+
+        await self.process_transaction_records(records=transaction_records)
+
+        coins_to_receive = {coin for transaction_record in transaction_records for coin in transaction_record.additions}
+        await wait_for_coins_in_wallet(coins=coins_to_receive, wallet=wallet)

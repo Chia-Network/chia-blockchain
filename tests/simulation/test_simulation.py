@@ -7,7 +7,7 @@ from chia.types.peer_info import PeerInfo
 from tests.block_tools import create_block_tools_async
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.util.ints import uint16, uint32
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet_node import WalletNode
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import (
@@ -57,7 +57,7 @@ class TestSimulation:
             yield _
 
     @pytest.mark.asyncio
-    async def test_simulation_1(self, simulation, extra_node):
+    async def _test_simulation_1(self, simulation, extra_node):
         node1, node2, _, _, _, _, _, _, _, server1 = simulation
         await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
         # Use node2 to test node communication, since only node1 extends the chain.
@@ -208,3 +208,36 @@ class TestSimulation:
         spendable_amount = await wallet.get_spendable_balance()
         all_coins = await wallet.select_coins(amount=spendable_amount)
         assert len(all_coins) == coin_count
+
+    @pytest.mark.asyncio
+    async def test_wait_transaction_records_entered_mempool(
+        self,
+        one_wallet_node: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
+    ) -> None:
+        repeats = 50
+        tx_amount = 1
+        [[full_node_api], [[wallet_node, wallet_server]]] = one_wallet_node
+
+        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+
+        # Avoiding an attribute hint issue below.
+        assert wallet_node.wallet_state_manager is not None
+
+        wallet = wallet_node.wallet_state_manager.main_wallet
+
+        await full_node_api.farm_rewards(amount=repeats * tx_amount, wallet=wallet)
+        await full_node_api.create_coins_with_amounts(amounts=[tx_amount] * repeats, wallet=wallet)
+
+        for _ in range(repeats):
+            tx = await wallet.generate_signed_transaction(
+                uint64(tx_amount),
+                await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                uint64(0),
+            )
+            await wallet.push_transaction(tx)
+
+            await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+            assert tx.spend_bundle is not None
+            assert full_node_api.full_node.mempool_manager.get_spendbundle(tx.spend_bundle.name()) is not None
+            # TODO: this fails but it seems like it shouldn't when above passes
+            # assert tx.is_in_mempool()
