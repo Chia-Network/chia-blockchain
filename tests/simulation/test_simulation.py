@@ -57,7 +57,7 @@ class TestSimulation:
             yield _
 
     @pytest.mark.asyncio
-    async def _test_simulation_1(self, simulation, extra_node):
+    async def test_simulation_1(self, simulation, extra_node):
         node1, node2, _, _, _, _, _, _, _, server1 = simulation
         await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
         # Use node2 to test node communication, since only node1 extends the chain.
