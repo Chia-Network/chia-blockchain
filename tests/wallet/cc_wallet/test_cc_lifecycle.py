@@ -255,6 +255,7 @@ class TestCCLifecycle:
                     Program.to(
                         [
                             [51, acs.get_tree_hash(), total_amount],
+                            [51, acs.get_tree_hash(), 0],  # Create a zero coin for the next test
                             [51, 0, -113, genesis_checker, checker_solution],
                         ]
                     )
@@ -264,6 +265,48 @@ class TestCCLifecycle:
                 additional_spends=[acs_bundle],
                 limitations_solutions=[checker_solution],
                 cost_str="Mint Value",
+            )
+
+            # Spend a zero value coin
+            all_cats = await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False)
+            zero_val: Coin = [cr.coin for cr in all_cats if cr.coin.amount == 0][0]
+            await self.do_spend(
+                sim,
+                sim_client,
+                genesis_checker,
+                [zero_val],
+                [NO_LINEAGE_PROOF],
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), 0],
+                            [51, 0, -113, genesis_checker, checker_solution],
+                        ]
+                    )
+                ],
+                (MempoolInclusionStatus.SUCCESS, None),
+                limitations_solutions=[checker_solution],
+                cost_str="Spending zero val",
+            )
+
+            # Check that a coin can be spent if its parent was zero val
+            all_cats = await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False)
+            zero_val_child: Coin = [cr.coin for cr in all_cats if cr.coin.amount == 0][0]
+            await self.do_spend(
+                sim,
+                sim_client,
+                genesis_checker,
+                [zero_val_child],
+                [LineageProof(zero_val.parent_coin_info, acs_ph, 0)],
+                [
+                    Program.to(
+                        [
+                            [51, acs.get_tree_hash(), 0],
+                        ]
+                    )
+                ],
+                (MempoolInclusionStatus.SUCCESS, None),
+                cost_str="Spending zero val child",
             )
 
         finally:
