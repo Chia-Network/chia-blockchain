@@ -5,6 +5,7 @@ from typing import Dict, List, Union
 from pathlib import Path
 from chia.util.config import load_config
 
+
 def plunge_path_in_config_(fname: str, config: Dict, path: List[str]):
     """
     Simple conveniece for finding a path in a config and reporting precisely what
@@ -22,8 +23,9 @@ def plunge_path_in_config_(fname: str, config: Dict, path: List[str]):
             config = config[path[index]]
             index += 1
 
+
 def get_agg_sig_me_additional_data(
-    root_path:Union[str, Path]=None
+    root_path: Union[str, Path] = None
 ) -> Dict:
     """
     Loads the correct value for the AGG_SIG_ME_ADDITIONAL_DATA constant
@@ -59,7 +61,7 @@ def get_agg_sig_me_additional_data(
                 "AGG_SIG_ME_ADDITIONAL_DATA"
             ]
         )
-    except:
+    except Exception as _:
         # We can't get additional data, so we'll go with the mainnet genesis
         # challenge.
         agg_sig_me_additional_data = plunge_path_in_config_(
