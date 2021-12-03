@@ -39,6 +39,7 @@ wallet_program_files = set(
         "chia/wallet/puzzles/singleton_launcher.clvm",
         "chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clvm",
         "chia/wallet/puzzles/delegated_genesis_checker.clvm",
+        "chia/wallet/puzzles/nft_innerpuz.clvm"
     ]
 )
 
