@@ -306,6 +306,7 @@ class FullNodeSimulator(FullNodeAPI):
 
             found: Set[Coin] = set()
             for coin_name in coin_names_to_wait_for:
+                # TODO: is this the proper check?
                 if coin_store.get_coin_record(coin_name) is not None:
                     found.add(coin_name)
 
@@ -349,5 +350,10 @@ class FullNodeSimulator(FullNodeAPI):
 
         await self.process_transaction_records(records=transaction_records)
 
-        coins_to_receive = {coin for transaction_record in transaction_records for coin in transaction_record.additions}
+        output_coins = {coin for transaction_record in transaction_records for coin in transaction_record.additions}
+        puzzle_hashes = {output["puzzlehash"] for output in outputs}
+        change_coins = {coin for coin in output_coins if coin.puzzle_hash not in puzzle_hashes}
+        coins_to_receive = output_coins - change_coins
         await wait_for_coins_in_wallet(coins=coins_to_receive, wallet=wallet)
+
+        return coins_to_receive

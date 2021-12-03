@@ -225,14 +225,17 @@ class TestSimulation:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
 
+        # generate some coins for repetitive testing
         await full_node_api.farm_rewards(amount=repeats * tx_amount, wallet=wallet)
-        await full_node_api.create_coins_with_amounts(amounts=[tx_amount] * repeats, wallet=wallet)
+        coins = await full_node_api.create_coins_with_amounts(amounts=[tx_amount] * repeats, wallet=wallet)
+        assert len(coins) == repeats
 
-        for _ in range(repeats):
+        # repeating just to try to expose any flakiness
+        for coin in coins:
             tx = await wallet.generate_signed_transaction(
-                uint64(tx_amount),
-                await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                uint64(0),
+                amount=uint64(tx_amount),
+                puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                coins={coin},
             )
             await wallet.push_transaction(tx)
 
@@ -241,3 +244,37 @@ class TestSimulation:
             assert full_node_api.full_node.mempool_manager.get_spendbundle(tx.spend_bundle.name()) is not None
             # TODO: this fails but it seems like it shouldn't when above passes
             # assert tx.is_in_mempool()
+
+    @pytest.mark.asyncio
+    async def test_process_transaction_records(
+        self,
+        one_wallet_node: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
+    ) -> None:
+        repeats = 50
+        tx_amount = 1
+        [[full_node_api], [[wallet_node, wallet_server]]] = one_wallet_node
+
+        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+
+        # Avoiding an attribute hint issue below.
+        assert wallet_node.wallet_state_manager is not None
+
+        wallet = wallet_node.wallet_state_manager.main_wallet
+
+        # generate some coins for repetitive testing
+        await full_node_api.farm_rewards(amount=repeats * tx_amount, wallet=wallet)
+        coins = await full_node_api.create_coins_with_amounts(amounts=[tx_amount] * repeats, wallet=wallet)
+        assert len(coins) == repeats
+
+        # repeating just to try to expose any flakiness
+        for coin in coins:
+            tx = await wallet.generate_signed_transaction(
+                amount=uint64(tx_amount),
+                puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                coins={coin},
+            )
+            await wallet.push_transaction(tx)
+
+            await full_node_api.process_transaction_records(records=[tx])
+            # TODO: is this the proper check?
+            assert full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
