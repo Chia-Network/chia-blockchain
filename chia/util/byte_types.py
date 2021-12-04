@@ -28,6 +28,10 @@ class SizedBytes(bytes):
         return bytes.__new__(cls, v)
 
     @classmethod
+    def zeros(cls: Type[_T_SizedBytes]) -> _T_SizedBytes:
+        return cls([0] * cls._size)
+
+    @classmethod
     def parse(cls: Type[_T_SizedBytes], f: BinaryIO) -> _T_SizedBytes:
         b = f.read(cls._size)
         assert len(b) == cls._size
