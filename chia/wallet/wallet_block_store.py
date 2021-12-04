@@ -191,16 +191,11 @@ class WalletBlockStore:
         peak: Optional[bytes32] = None
         for row in rows:
             header_hash_bytes, block_record_bytes, is_peak = row
-            header_hash = bytes.fromhex(header_hash_bytes)
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, BlockRecord]"; expected type "bytes32"  [index]
-            ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)  # type: ignore[index]
+            header_hash = bytes32.fromhex(header_hash_bytes)
+            ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)
             if is_peak:
                 assert peak is None  # Sanity check, only one peak
-                # TODO: address hint error and remove ignore
-                #       error: Incompatible types in assignment (expression has type "bytes", variable has type
-                #       "Optional[bytes32]")  [assignment]
-                peak = header_hash  # type: ignore[assignment]
+                peak = header_hash
         return ret, peak
 
     def rollback_cache_block(self, header_hash: bytes32):
