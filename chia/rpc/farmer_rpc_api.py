@@ -121,10 +121,7 @@ class FarmerRpcApi:
         return {"pool_state": pools_list}
 
     async def set_payout_instructions(self, request: Dict) -> Dict:
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        launcher_id: bytes32 = hexstr_to_bytes(request["launcher_id"])  # type: ignore[assignment]
+        launcher_id: bytes32 = bytes32.from_hexstr(request["launcher_id"])
         await self.service.set_payout_instructions(launcher_id, request["payout_instructions"])
         return {}
 

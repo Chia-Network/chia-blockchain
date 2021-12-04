@@ -915,19 +915,13 @@ class WalletRpcApi:
 
         wsm = self.service.wallet_state_manager
         secure = request["secure"]
-        trade_id = hexstr_to_bytes(request["trade_id"])
+        trade_id = bytes32.from_hexstr(request["trade_id"])
 
         async with self.service.wallet_state_manager.lock:
             if secure:
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to "cancel_pending_offer_safely" of "TradeManager" has incompatible type
-                #       "bytes"; expected "bytes32"  [arg-type]
-                await wsm.trade_manager.cancel_pending_offer_safely(trade_id)  # type: ignore[arg-type]
+                await wsm.trade_manager.cancel_pending_offer_safely(trade_id)
             else:
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to "cancel_pending_offer" of "TradeManager" has incompatible type "bytes";
-                #       expected "bytes32"  [arg-type]
-                await wsm.trade_manager.cancel_pending_offer(trade_id)  # type: ignore[arg-type]
+                await wsm.trade_manager.cancel_pending_offer(trade_id)
         return {}
 
     async def get_backup_info(self, request: Dict):

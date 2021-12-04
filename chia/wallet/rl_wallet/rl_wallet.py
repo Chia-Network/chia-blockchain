@@ -234,12 +234,9 @@ class RLWallet:
         admin_pubkey_bytes = hexstr_to_bytes(admin_pubkey)
 
         assert self.rl_info.user_pubkey is not None
-        # TODO: address hint errors and remove ignores
-        #       error: Argument 1 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
-        #       error: Argument 2 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
         origin = Coin(
-            hexstr_to_bytes(origin_parent_id),  # type: ignore[arg-type]
-            hexstr_to_bytes(origin_puzzle_hash),  # type: ignore[arg-type]
+            bytes32.from_hexstr(origin_parent_id),
+            bytes32.from_hexstr(origin_puzzle_hash),
             origin_amount,
         )
         rl_puzzle = rl_puzzle_for_pk(
