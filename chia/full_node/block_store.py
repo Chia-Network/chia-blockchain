@@ -5,7 +5,6 @@ import aiosqlite
 
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.db_wrapper import DBWrapper
@@ -28,8 +27,6 @@ class BlockStore:
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.db_wrapper = db_wrapper
         self.db = db_wrapper.db
-        await self.db.execute("pragma journal_mode=wal")
-        await self.db.execute("pragma synchronous=2")
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, height bigint,"
             "  is_block tinyint, is_fully_compactified tinyint, block blob)"
@@ -52,14 +49,19 @@ class BlockStore:
 
         # Height index so we can look up in order of height for sync purposes
         await self.db.execute("CREATE INDEX IF NOT EXISTS full_block_height on full_blocks(height)")
-        await self.db.execute("CREATE INDEX IF NOT EXISTS is_block on full_blocks(is_block)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS is_fully_compactified on full_blocks(is_fully_compactified)")
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
 
-        await self.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
-        await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
-        await self.db.execute("CREATE INDEX IF NOT EXISTS is_block on block_records(is_block)")
+        if self.db_wrapper.allow_upgrades:
+            await self.db.execute("DROP INDEX IF EXISTS hh")
+            await self.db.execute("DROP INDEX IF EXISTS is_block")
+            await self.db.execute("DROP INDEX IF EXISTS peak")
+            await self.db.execute(
+                "CREATE INDEX IF NOT EXISTS is_peak_eq_1_idx on block_records(is_peak) where is_peak = 1"
+            )
+        else:
+            await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak) where is_peak = 1")
 
         await self.db.commit()
         self.block_cache = LRUCache(1000)
@@ -217,7 +219,9 @@ class BlockStore:
         for row in rows:
             header_hash = bytes.fromhex(row[0])
             full_block: FullBlock = FullBlock.from_bytes(row[1])
-            all_blocks[header_hash] = full_block
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "bytes" for "Dict[bytes32, FullBlock]"; expected type "bytes32"  [index]
+            all_blocks[header_hash] = full_block  # type: ignore[index]
             self.block_cache.put(header_hash, full_block)
         ret: List[FullBlock] = []
         for hh in header_hashes:
@@ -255,7 +259,9 @@ class BlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
             header_hash = bytes.fromhex(row[0])
-            ret[header_hash] = BlockRecord.from_bytes(row[1])
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "bytes" for "Dict[bytes32, BlockRecord]"; expected type "bytes32"  [index]
+            ret[header_hash] = BlockRecord.from_bytes(row[1])  # type: ignore[index]
 
         return ret
 
@@ -280,49 +286,13 @@ class BlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
             header_hash = bytes.fromhex(row[0])
-            ret[header_hash] = BlockRecord.from_bytes(row[1])
-        return ret, bytes.fromhex(peak_row[0])
-
-    async def get_peak_height_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:
-        """
-        Returns a dictionary with all blocks, as well as the header hash of the peak,
-        if present.
-        """
-
-        res = await self.db.execute("SELECT * from block_records WHERE is_peak = 1")
-        row = await res.fetchone()
-        await res.close()
-        if row is None:
-            return {}, {}
-
-        peak: bytes32 = bytes.fromhex(row[0])
-        cursor = await self.db.execute("SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records")
-        rows = await cursor.fetchall()
-        await cursor.close()
-        hash_to_prev_hash: Dict[bytes32, bytes32] = {}
-        hash_to_height: Dict[bytes32, uint32] = {}
-        hash_to_summary: Dict[bytes32, SubEpochSummary] = {}
-
-        for row in rows:
-            hash_to_prev_hash[bytes.fromhex(row[0])] = bytes.fromhex(row[1])
-            hash_to_height[bytes.fromhex(row[0])] = row[2]
-            if row[3] is not None:
-                hash_to_summary[bytes.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])
-
-        height_to_hash: Dict[uint32, bytes32] = {}
-        sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
-
-        curr_header_hash = peak
-        curr_height = hash_to_height[curr_header_hash]
-        while True:
-            height_to_hash[curr_height] = curr_header_hash
-            if curr_header_hash in hash_to_summary:
-                sub_epoch_summaries[curr_height] = hash_to_summary[curr_header_hash]
-            if curr_height == 0:
-                break
-            curr_header_hash = hash_to_prev_hash[curr_header_hash]
-            curr_height = hash_to_height[curr_header_hash]
-        return height_to_hash, sub_epoch_summaries
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "bytes" for "Dict[bytes32, BlockRecord]"; expected type "bytes32"  [index]
+            ret[header_hash] = BlockRecord.from_bytes(row[1])  # type: ignore[index]
+        # TODO: address hint error and remove ignore
+        #       error: Incompatible return value type (got "Tuple[Dict[bytes32, BlockRecord], bytes]", expected
+        #       "Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]")  [return-value]
+        return ret, bytes.fromhex(peak_row[0])  # type: ignore[return-value]
 
     async def set_peak(self, header_hash: bytes32) -> None:
         # We need to be in a sqlite transaction here.

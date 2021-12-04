@@ -21,8 +21,9 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
+from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
-from chia.util.errors import Err
+from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint64, uint32
 from chia.util.streamable import Streamable, dataclass_from_dict, streamable
@@ -49,7 +50,7 @@ def batch_pre_validate_blocks(
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
 ) -> List[bytes]:
-    blocks = {}
+    blocks: Dict[bytes, BlockRecord] = {}
     for k, v in blocks_pickled.items():
         blocks[k] = BlockRecord.from_bytes(v)
     results: List[PreValidationResult] = []
@@ -82,14 +83,16 @@ def batch_pre_validate_blocks(
                         min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
                         cost_per_byte=constants.COST_PER_BYTE,
                         safe_mode=True,
-                        rust_checker=block.height > constants.RUST_CONDITION_CHECKER,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
 
                 header_block = get_block_header(block, tx_additions, removals)
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to "BlockCache" has incompatible type "Dict[bytes, BlockRecord]"; expected
+                #       "Dict[bytes32, BlockRecord]"  [arg-type]
                 required_iters, error = validate_finished_header_block(
                     constants,
-                    BlockCache(blocks),
+                    BlockCache(blocks),  # type: ignore[arg-type]
                     header_block,
                     check_filter,
                     expected_difficulty[i],
@@ -108,9 +111,12 @@ def batch_pre_validate_blocks(
         for i in range(len(header_blocks_pickled)):
             try:
                 header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to "BlockCache" has incompatible type "Dict[bytes, BlockRecord]"; expected
+                #       "Dict[bytes32, BlockRecord]"  [arg-type]
                 required_iters, error = validate_finished_header_block(
                     constants,
-                    BlockCache(blocks),
+                    BlockCache(blocks),  # type: ignore[arg-type]
                     header_block,
                     check_filter,
                     expected_difficulty[i],
@@ -317,3 +323,34 @@ async def pre_validate_blocks_multiprocessing(
         for batch_result in (await asyncio.gather(*futures))
         for result in batch_result
     ]
+
+
+def _run_generator(
+    constants_dict: bytes,
+    unfinished_block_bytes: bytes,
+    block_generator_bytes: bytes,
+) -> Tuple[Optional[Err], Optional[bytes]]:
+    """
+    Runs the CLVM generator from bytes inputs. This is meant to be called under a ProcessPoolExecutor, in order to
+    validate the heavy parts of a block (clvm program) in a different process.
+    """
+    try:
+        constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
+        unfinished_block: UnfinishedBlock = UnfinishedBlock.from_bytes(unfinished_block_bytes)
+        assert unfinished_block.transactions_info is not None
+        block_generator: BlockGenerator = BlockGenerator.from_bytes(block_generator_bytes)
+        assert block_generator.program == unfinished_block.transactions_generator
+        npc_result: NPCResult = get_name_puzzle_conditions(
+            block_generator,
+            min(constants.MAX_BLOCK_COST_CLVM, unfinished_block.transactions_info.cost),
+            cost_per_byte=constants.COST_PER_BYTE,
+            safe_mode=False,
+        )
+        if npc_result.error is not None:
+            return Err(npc_result.error), None
+    except ValidationError as e:
+        return e.code, None
+    except Exception:
+        return Err.UNKNOWN, None
+
+    return None, bytes(npc_result)

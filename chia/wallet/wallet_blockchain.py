@@ -286,7 +286,7 @@ class WalletBlockchain(BlockchainInterface):
                 assert block is not None
                 replaced = None
                 if uint32(0) in self.__height_to_hash:
-                    replaced = (self.__height_to_hash[uint32(0)],)
+                    replaced = self.__height_to_hash[uint32(0)]
                 self.__height_to_hash[uint32(0)] = block.header_hash
                 heights_changed.add((uint32(0), replaced))
                 assert len(block.additions) == 0 and len(block.removals) == 0
@@ -396,7 +396,10 @@ class WalletBlockchain(BlockchainInterface):
 
     def height_to_block_record(self, height: uint32, check_db=False) -> BlockRecord:
         header_hash = self.height_to_hash(height)
-        return self.block_record(header_hash)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "block_record" of "WalletBlockchain" has incompatible type "Optional[bytes32]";
+        #       expected "bytes32"  [arg-type]
+        return self.block_record(header_hash)  # type: ignore[arg-type]
 
     def get_ses_heights(self) -> List[uint32]:
         return sorted(self.__sub_epoch_summaries.keys())

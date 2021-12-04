@@ -28,7 +28,13 @@ async def sign_coin_spends(
             raise ValueError(error_msg)
 
         # Create signature
-        for pk, msg in pkm_pairs_for_conditions_dict(conditions_dict, bytes(coin_spend.coin.name()), additional_data):
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "pkm_pairs_for_conditions_dict" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
+        for pk_bytes, msg in pkm_pairs_for_conditions_dict(
+            conditions_dict, bytes(coin_spend.coin.name()), additional_data  # type: ignore[arg-type]
+        ):
+            pk = blspy.G1Element.from_bytes(pk_bytes)
             pk_list.append(pk)
             msg_list.append(msg)
             if inspect.iscoroutinefunction(secret_key_for_public_key_f):

@@ -1,6 +1,7 @@
 import base64
 import fasteners
 import os
+import shutil
 import sys
 import threading
 import yaml
@@ -12,7 +13,7 @@ from functools import wraps
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
-from typing import Optional
+from typing import Any, Dict, Optional
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
@@ -35,9 +36,7 @@ def loads_keyring(method):
 
     @wraps(method)
     def inner(self, *args, **kwargs):
-        # Watchdog's event dispatch timing is unreliable on macOS. Force a file modification time check for macOS.
-        if sys.platform == "darwin":
-            self.check_if_keyring_file_modified()
+        self.check_if_keyring_file_modified()
 
         # Check the outer payload for 'data', and check if we have a decrypted cache (payload_cache)
         with self.load_keyring_lock:
@@ -56,10 +55,6 @@ def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
         if lock.acquire_write_lock(timeout=timeout):
             yield  # <----
             lock.release_write_lock()
-            try:
-                os.remove(lock_path)
-            except Exception:
-                pass
             break
         else:
             print(f"Failed to acquire keyring writer lock after {timeout} seconds.", end="")
@@ -79,10 +74,6 @@ def acquire_reader_lock(lock_path: Path, timeout=5, max_iters=6):
         if lock.acquire_read_lock(timeout=timeout):
             yield  # <----
             lock.release_read_lock()
-            try:
-                os.remove(lock_path)
-            except Exception:
-                pass
             break
         else:
             print(f"Failed to acquire keyring reader lock after {timeout} seconds.", end="")
@@ -117,6 +108,9 @@ class FileKeyring(FileSystemEventHandler):
         # that holds a dictionary of keys.
         data: <base64-encoded string of encrypted inner-payload>
 
+        # An optional passphrase hint
+        passphrase_hint: <cleartext string>
+
     The file is encrypted using ChaCha20Poly1305. The symmetric key is derived from the
     master passphrase using PBKDF2. The nonce is updated each time the file is written-to.
     The salt is updated each time the master passphrase is changed.
@@ -141,7 +135,12 @@ class FileKeyring(FileSystemEventHandler):
 
     @staticmethod
     def lockfile_path_for_file_path(file_path: Path) -> Path:
-        return file_path.with_suffix(".lock")
+        """
+        Returns a path suitable for creating a lockfile derived from the input path.
+        Currently used to provide a lockfile path to be used by
+        fasteners.InterProcessReaderWriterLock when guarding access to keyring.yaml
+        """
+        return file_path.with_name(f".{file_path.name}.lock")
 
     def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH):
         """
@@ -153,6 +152,9 @@ class FileKeyring(FileSystemEventHandler):
         self.payload_cache = {}  # This is used as a building block for adding keys etc if the keyring is empty
         self.load_keyring_lock = threading.RLock()
         self.keyring_last_mod_time = None
+
+        # Key/value pairs to set on the outer payload on the next write
+        self.outer_payload_properties_for_next_write: Dict[str, Any] = {}
 
         if not self.keyring_path.exists():
             # Super simple payload if starting from scratch
@@ -172,16 +174,24 @@ class FileKeyring(FileSystemEventHandler):
 
         self.keyring_observer = Observer()
 
+    def cleanup_keyring_file_watcher(self):
+        if getattr(self, "keyring_observer"):
+            self.keyring_observer.unschedule_all()
+
     def on_modified(self, event):
         self.check_if_keyring_file_modified()
 
     def check_if_keyring_file_modified(self):
         if self.keyring_path.exists():
-            last_modified = os.stat(self.keyring_path).st_mtime
-            if not self.keyring_last_mod_time or self.keyring_last_mod_time < last_modified:
-                self.keyring_last_mod_time = last_modified
-                with self.load_keyring_lock:
-                    self.needs_load_keyring = True
+            try:
+                last_modified = os.stat(self.keyring_path).st_mtime
+                if not self.keyring_last_mod_time or self.keyring_last_mod_time < last_modified:
+                    self.keyring_last_mod_time = last_modified
+                    with self.load_keyring_lock:
+                        self.needs_load_keyring = True
+            except FileNotFoundError:
+                # Shouldn't happen, but if the file doesn't exist there's nothing to do...
+                pass
 
     @staticmethod
     def default_outer_payload() -> dict:
@@ -416,6 +426,10 @@ class FileKeyring(FileSystemEventHandler):
             "data": base64.b64encode(encrypted_inner_payload).decode("utf-8"),
         }
 
+        # Merge in other properties like "passphrase_hint"
+        outer_payload.update(self.outer_payload_properties_for_next_write)
+        self.outer_payload_properties_for_next_write = {}
+
         self.write_data_to_keyring(outer_payload)
 
         # Update our cached payload
@@ -427,7 +441,10 @@ class FileKeyring(FileSystemEventHandler):
         temp_path: Path = self.keyring_path.with_suffix("." + str(os.getpid()))
         with open(os.open(str(temp_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "w") as f:
             _ = yaml.safe_dump(data, f)
-        os.replace(str(temp_path), self.keyring_path)
+        try:
+            os.replace(str(temp_path), self.keyring_path)
+        except PermissionError:
+            shutil.move(str(temp_path), str(self.keyring_path))
 
     def prepare_for_migration(self):
         if not self.payload_cache:
@@ -435,3 +452,25 @@ class FileKeyring(FileSystemEventHandler):
 
         if not self.salt:
             self.salt = FileKeyring.generate_salt()
+
+    def get_passphrase_hint(self) -> Optional[str]:
+        """
+        Return the passphrase hint (if set). The hint data may not yet be written to the keyring, so we
+        return the hint data either from the staging dict (outer_payload_properties_for_next_write), or
+        from outer_payload_cache (loaded from the keyring)
+        """
+        passphrase_hint: Optional[str] = self.outer_payload_properties_for_next_write.get("passphrase_hint", None)
+        if passphrase_hint is None:
+            passphrase_hint = self.outer_payload_cache.get("passphrase_hint", None)
+        return passphrase_hint
+
+    def set_passphrase_hint(self, passphrase_hint: Optional[str]) -> None:
+        """
+        Store the new passphrase hint in the staging dict (outer_payload_properties_for_next_write) to
+        be written-out on the next write to the keyring.
+        """
+        assert self.outer_payload_properties_for_next_write is not None
+        if passphrase_hint is not None and len(passphrase_hint) > 0:
+            self.outer_payload_properties_for_next_write["passphrase_hint"] = passphrase_hint
+        elif "passphrase_hint" in self.outer_payload_properties_for_next_write:
+            del self.outer_payload_properties_for_next_write["passphrase_hint"]

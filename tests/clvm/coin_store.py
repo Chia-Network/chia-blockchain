@@ -1,18 +1,17 @@
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Dict, Iterator, Optional, Set
+from typing import Dict, Iterator, Optional
 
-from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict  # noqa
+from chia.util.condition_tools import created_outputs_for_conditions_dict
+from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict, get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import (
-    conditions_dict_for_solution,
-    coin_announcement_names_for_conditions_dict,
-    puzzle_announcement_names_for_conditions_dict,
-)
 from chia.util.ints import uint32, uint64
+from chia.full_node.bundle_tools import simple_solution_generator
+from chia.util.errors import Err
+from chia.consensus.cost_calculator import NPCResult
 
 
 MAX_COST = 11000000000
@@ -60,62 +59,42 @@ class CoinStore:
         spend_bundle: SpendBundle,
         now: CoinTimestamp,
         max_cost: int,
+        cost_per_byte: int,
     ) -> int:
         # this should use blockchain consensus code
 
-        coin_announcements: Set[bytes32] = set()
-        puzzle_announcements: Set[bytes32] = set()
-
-        conditions_dicts = []
-        for coin_spend in spend_bundle.coin_spends:
-            assert isinstance(coin_spend.coin, Coin)
-            err, conditions_dict, cost = conditions_dict_for_solution(
-                coin_spend.puzzle_reveal, coin_spend.solution, max_cost
-            )
-            if conditions_dict is None:
-                raise BadSpendBundleError(f"clvm validation failure {err}")
-            conditions_dicts.append(conditions_dict)
-            coin_announcements.update(
-                coin_announcement_names_for_conditions_dict(
-                    conditions_dict,
-                    coin_spend.coin,
-                )
-            )
-            puzzle_announcements.update(
-                puzzle_announcement_names_for_conditions_dict(
-                    conditions_dict,
-                    coin_spend.coin,
-                )
-            )
+        program = simple_solution_generator(spend_bundle)
+        result: NPCResult = get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True)
+        if result.error is not None:
+            raise BadSpendBundleError(f"condition validation failure {Err(result.error)}")
 
         ephemeral_db = dict(self._db)
-        for coin in spend_bundle.additions():
-            name = coin.name()
-            ephemeral_db[name] = CoinRecord(
-                coin,
-                uint32(now.height),
-                uint32(0),
-                False,
-                False,
-                uint64(now.seconds),
-            )
+        for npc in result.npc_list:
+            for coin in created_outputs_for_conditions_dict(npc.condition_dict, npc.coin_name):
+                name = coin.name()
+                ephemeral_db[name] = CoinRecord(
+                    coin,
+                    uint32(now.height),
+                    uint32(0),
+                    False,
+                    False,
+                    uint64(now.seconds),
+                )
 
-        for coin_spend, conditions_dict in zip(spend_bundle.coin_spends, conditions_dicts):  # noqa
-            prev_transaction_block_height = now.height
-            timestamp = now.seconds
-            coin_record = ephemeral_db.get(coin_spend.coin.name())
+        for npc in result.npc_list:
+            prev_transaction_block_height = uint32(now.height)
+            timestamp = uint64(now.seconds)
+            coin_record = ephemeral_db.get(npc.coin_name)
             if coin_record is None:
-                raise BadSpendBundleError(f"coin not found for id 0x{coin_spend.coin.name().hex()}")  # noqa
+                raise BadSpendBundleError(f"coin not found for id 0x{npc.coin_name.hex()}")  # noqa
             err = mempool_check_conditions_dict(
                 coin_record,
-                coin_announcements,
-                puzzle_announcements,
-                conditions_dict,
-                uint32(prev_transaction_block_height),
-                uint64(timestamp),
+                npc.condition_dict,
+                prev_transaction_block_height,
+                timestamp,
             )
-        if err is not None:
-            raise BadSpendBundleError(f"condition validation failure {err}")
+            if err is not None:
+                raise BadSpendBundleError(f"condition validation failure {Err(err)}")
 
         return 0
 
@@ -124,8 +103,9 @@ class CoinStore:
         spend_bundle: SpendBundle,
         now: CoinTimestamp,
         max_cost: int,
+        cost_per_byte: int,
     ):
-        err = self.validate_spend_bundle(spend_bundle, now, max_cost)
+        err = self.validate_spend_bundle(spend_bundle, now, max_cost, cost_per_byte)
         if err != 0:
             raise BadSpendBundleError(f"validation failure {err}")
         additions = spend_bundle.additions()

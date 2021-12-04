@@ -35,8 +35,6 @@ class WalletPuzzleStore:
 
         self.db_wrapper = db_wrapper
         self.db_connection = self.db_wrapper.db
-        await self.db_connection.execute("pragma journal_mode=wal")
-        await self.db_connection.execute("pragma synchronous=2")
         await self.db_connection.execute(
             (
                 "CREATE TABLE IF NOT EXISTS derivation_paths("
@@ -127,9 +125,12 @@ class WalletPuzzleStore:
         await cursor.close()
 
         if row is not None and row[0] is not None:
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "DerivationRecord" has incompatible type "bytes"; expected "bytes32"
+            #       [arg-type]
             return DerivationRecord(
                 uint32(row[0]),
-                bytes32.fromhex(row[2]),
+                bytes32.fromhex(row[2]),  # type: ignore[arg-type]
                 G1Element.from_bytes(bytes.fromhex(row[1])),
                 WalletType(row[3]),
                 uint32(row[4]),
@@ -137,21 +138,24 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_derivation_record_for_puzzle_hash(self, puzzle_hash: str) -> Optional[DerivationRecord]:
+    async def get_derivation_record_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[DerivationRecord]:
         """
         Returns the derivation record by index and wallet id.
         """
         cursor = await self.db_connection.execute(
             "SELECT * FROM derivation_paths WHERE puzzle_hash=?;",
-            (puzzle_hash,),
+            (puzzle_hash.hex(),),
         )
         row = await cursor.fetchone()
         await cursor.close()
 
         if row is not None and row[0] is not None:
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "DerivationRecord" has incompatible type "bytes"; expected "bytes32"
+            #       [arg-type]
             return DerivationRecord(
                 uint32(row[0]),
-                bytes32.fromhex(row[2]),
+                bytes32.fromhex(row[2]),  # type: ignore[arg-type]
                 G1Element.from_bytes(bytes.fromhex(row[1])),
                 WalletType(row[3]),
                 uint32(row[4]),

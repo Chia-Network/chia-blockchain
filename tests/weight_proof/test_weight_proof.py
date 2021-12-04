@@ -31,7 +31,7 @@ except ImportError:
 
 
 from chia.consensus.pot_iterations import calculate_iterations_quality
-from chia.full_node.weight_proof import (  # type: ignore
+from chia.full_node.weight_proof import (
     WeightProofHandler,
     _map_sub_epoch_summaries,
     _validate_sub_epoch_segments,
@@ -40,13 +40,6 @@ from chia.full_node.weight_proof import (  # type: ignore
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32, uint64
-from tests.core.fixtures import (
-    default_400_blocks,
-    default_1000_blocks,
-    default_10000_blocks,
-    default_10000_blocks_compact,
-    pre_genesis_empty_slots_1000_blocks,
-)
 
 
 @pytest.fixture(scope="session")
@@ -120,8 +113,15 @@ async def load_blocks_dont_validate(
             cc_sp,
         )
 
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "BlockCache" has incompatible type "Dict[uint32, bytes32]"; expected
+        #       "Optional[Dict[bytes32, HeaderBlock]]"  [arg-type]
         sub_block = block_to_block_record(
-            test_constants, BlockCache(sub_blocks, height_to_hash), required_iters, block, None
+            test_constants,
+            BlockCache(sub_blocks, height_to_hash),  # type: ignore[arg-type]
+            required_iters,
+            block,
+            None,
         )
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.height] = block.header_hash

@@ -20,8 +20,8 @@ from chia.util.block_cache import BlockCache
 from tests.block_tools import get_signage_point, create_block_tools
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
-from tests.core.fixtures import default_1000_blocks, create_blockchain  # noqa: F401
 from tests.setup_nodes import test_constants as test_constants_original
+from tests.util.blockchain import create_blockchain
 from tests.util.keyring import TempKeyring
 
 
@@ -45,18 +45,18 @@ def event_loop():
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="function")
-async def empty_blockchain():
-    bc1, connection, db_path = await create_blockchain(test_constants)
+@pytest.fixture(scope="function", params=[1, 2])
+async def empty_blockchain(request):
+    bc1, connection, db_path = await create_blockchain(test_constants, request.param)
     yield bc1
     await connection.close()
     bc1.shut_down()
     db_path.unlink()
 
 
-@pytest.fixture(scope="function")
-async def empty_blockchain_original():
-    bc1, connection, db_path = await create_blockchain(test_constants_original)
+@pytest.fixture(scope="function", params=[1, 2])
+async def empty_blockchain_original(request):
+    bc1, connection, db_path = await create_blockchain(test_constants_original, request.param)
     yield bc1
     await connection.close()
     bc1.shut_down()
@@ -222,7 +222,7 @@ class TestFullNodeStore:
             sb = blockchain.block_record(block.header_hash)
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
             res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain)
-            assert res[0] is None
+            assert res.added_eos is None
 
         # Add reorg blocks
         blocks_reorg = bt.get_consecutive_blocks(
@@ -233,7 +233,7 @@ class TestFullNodeStore:
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
         for block in blocks_reorg:
-            res, _, fork_height = await blockchain.receive_block(block)
+            res, _, fork_height, _ = await blockchain.receive_block(block)
 
             if res == ReceiveBlockResult.NEW_PEAK:
                 if fork_height is not None and fork_height != block.height - 1:
@@ -243,7 +243,7 @@ class TestFullNodeStore:
                 sb = blockchain.block_record(block.header_hash)
                 sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
                 res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, fork_block, blockchain)
-                assert res[0] is None
+                assert res.added_eos is None
 
         # Add slots to the end
         blocks_2 = bt.get_consecutive_blocks(
@@ -286,7 +286,7 @@ class TestFullNodeStore:
                 normalized_to_identity_cc_ip=normalized_to_identity,
                 normalized_to_identity_cc_sp=normalized_to_identity,
             )
-            res, _, fork_height = await blockchain.receive_block(blocks[-1])
+            res, _, fork_height, _ = await blockchain.receive_block(blocks[-1])
             if res == ReceiveBlockResult.NEW_PEAK:
                 if fork_height is not None and fork_height != blocks[-1].height - 1:
                     fork_block = blockchain.block_record(blockchain.height_to_hash(fork_height))
@@ -297,7 +297,7 @@ class TestFullNodeStore:
                 sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(blocks[-1].header_hash)
 
                 res = store.new_peak(sb, blocks[-1], sp_sub_slot, ip_sub_slot, fork_block, blockchain)
-                assert res[0] is None
+                assert res.added_eos is None
                 if sb.overflow and sp_sub_slot is not None:
                     assert sp_sub_slot != ip_sub_slot
                     break
@@ -418,7 +418,10 @@ class TestFullNodeStore:
         )
 
         # Get signage point by hash
-        assert store.get_signage_point(saved_sp_hash) is not None
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "get_signage_point" of "FullNodeStore" has incompatible type "Optional[bytes32]";
+        #       expected "bytes32"  [arg-type]
+        assert store.get_signage_point(saved_sp_hash) is not None  # type: ignore[arg-type]
         assert store.get_signage_point(std_hash(b"2")) is None
 
         # Test adding signage points before genesis
@@ -544,15 +547,15 @@ class TestFullNodeStore:
             peak = sb
             peak_full_block = block
             res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain)
-            assert res[0] is None
+            assert res.added_eos is None
 
         assert store.new_finished_sub_slot(dependant_sub_slots[0], blockchain, peak, peak_full_block) is None
         block = blocks[-2]
         sb = blockchain.block_record(block.header_hash)
         sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
         res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain)
-        assert res[0] == dependant_sub_slots[0]
-        assert res[1] == res[2] == []
+        assert res.added_eos == dependant_sub_slots[0]
+        assert res.new_signage_points == res.new_infusion_points == []
 
         # Test future IP cache
         store.initialize_genesis_sub_slot()
@@ -570,7 +573,7 @@ class TestFullNodeStore:
 
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
             res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain)
-            assert res[0] is None
+            assert res.added_eos is None
 
         case_0, case_1 = False, False
         for i in range(5, len(blocks) - 1):
@@ -593,10 +596,10 @@ class TestFullNodeStore:
             res = store.new_peak(sb, prev_block, sp_sub_slot, ip_sub_slot, None, blockchain)
             if len(block.finished_sub_slots) == 0:
                 case_0 = True
-                assert res[2] == [new_ip]
+                assert res.new_infusion_points == [new_ip]
             else:
                 case_1 = True
-                assert res[2] == []
+                assert res.new_infusion_points == []
                 found_ips: List[timelord_protocol.NewInfusionPointVDF] = []
                 for ss in block.finished_sub_slots:
                     ipvdf = store.new_finished_sub_slot(ss, blockchain, sb, prev_block)
@@ -736,7 +739,7 @@ class TestFullNodeStore:
         for block in blocks:
             for sub_slot in block.finished_sub_slots:
                 assert store.new_finished_sub_slot(sub_slot, blockchain, peak, peak_full_block) is not None
-            res, err, _ = await blockchain.receive_block(block)
+            res, err, _, _ = await blockchain.receive_block(block)
             assert res == ReceiveBlockResult.NEW_PEAK
             peak = blockchain.get_peak()
             peak_full_block = await blockchain.get_full_peak()

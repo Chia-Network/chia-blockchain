@@ -33,6 +33,7 @@ ANYONE_CAN_SPEND_WITH_PADDING_PUZZLE_HASH = Program.to(binutils.assemble("(a (q 
 POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
 MAX_BLOCK_COST_CLVM = int(1e18)
+COST_PER_BYTE = int(12000)
 
 
 class PuzzleDB:
@@ -269,7 +270,13 @@ def launcher_conditions_and_spend_bundle(
     puzzle_db.add_puzzle(launcher_puzzle)
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     launcher_coin = Coin(parent_coin_id, launcher_puzzle_hash, launcher_amount)
-    singleton_full_puzzle = singleton_puzzle(launcher_coin.name(), launcher_puzzle_hash, initial_singleton_inner_puzzle)
+    # TODO: address hint error and remove ignore
+    #       error: Argument 1 to "singleton_puzzle" has incompatible type "bytes32"; expected "Program"  [arg-type]
+    singleton_full_puzzle = singleton_puzzle(
+        launcher_coin.name(),  # type: ignore[arg-type]
+        launcher_puzzle_hash,
+        initial_singleton_inner_puzzle,
+    )
     puzzle_db.add_puzzle(singleton_full_puzzle)
     singleton_full_puzzle_hash = singleton_full_puzzle.get_tree_hash()
     message_program = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
@@ -417,14 +424,22 @@ def spend_coin_to_singleton(
     coin_spend = CoinSpend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, conditions)
     spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_spend], G2Element())])
 
-    additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
+    additions, removals = coin_store.update_coin_store_for_spend_bundle(
+        spend_bundle, now, MAX_BLOCK_COST_CLVM, COST_PER_BYTE
+    )
 
     launcher_coin = launcher_spend_bundle.coin_spends[0].coin
 
     assert_coin_spent(coin_store, launcher_coin)
     assert_coin_spent(coin_store, farmed_coin)
 
-    singleton_expected_puzzle = singleton_puzzle(launcher_id, launcher_puzzle_hash, initial_singleton_puzzle)
+    # TODO: address hint error and remove ignore
+    #       error: Argument 1 to "singleton_puzzle" has incompatible type "bytes32"; expected "Program"  [arg-type]
+    singleton_expected_puzzle = singleton_puzzle(
+        launcher_id,  # type: ignore[arg-type]
+        launcher_puzzle_hash,
+        initial_singleton_puzzle,
+    )
     singleton_expected_puzzle_hash = singleton_expected_puzzle.get_tree_hash()
     expected_singleton_coin = Coin(launcher_coin.name(), singleton_expected_puzzle_hash, launcher_amount)
     assert_coin_spent(coin_store, expected_singleton_coin, is_spent=False)
@@ -519,7 +534,9 @@ def test_lifecycle_with_coinstore_as_wallet():
         coin_spend = SINGLETON_WALLET.coin_spend_for_conditions(PUZZLE_DB, conditions=singleton_conditions)
         spend_bundle = SpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
 
-        additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
+        additions, removals = coin_store.update_coin_store_for_spend_bundle(
+            spend_bundle, now, MAX_BLOCK_COST_CLVM, COST_PER_BYTE
+        )
         now.seconds += 500
         now.height += 1
 
@@ -548,7 +565,9 @@ def test_lifecycle_with_coinstore_as_wallet():
         coin_spend = SINGLETON_WALLET.coin_spend_for_conditions(PUZZLE_DB, conditions=singleton_conditions)
         spend_bundle = SpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
 
-        additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
+        additions, removals = coin_store.update_coin_store_for_spend_bundle(
+            spend_bundle, now, MAX_BLOCK_COST_CLVM, COST_PER_BYTE
+        )
         now.seconds += 500
         now.height += 1
 
@@ -599,7 +618,9 @@ def test_lifecycle_with_coinstore_as_wallet():
 
     spend_bundle = SpendBundle([singleton_coin_spend], G2Element())
 
-    additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
+    additions, removals = coin_store.update_coin_store_for_spend_bundle(
+        spend_bundle, now, MAX_BLOCK_COST_CLVM, COST_PER_BYTE
+    )
 
     assert len(list(coin_store.all_unspent_coins())) == 1
 
@@ -635,7 +656,9 @@ def test_lifecycle_with_coinstore_as_wallet():
         spend_bundle = SpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
         spend_bundle.debug()
 
-        additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
+        additions, removals = coin_store.update_coin_store_for_spend_bundle(
+            spend_bundle, now, MAX_BLOCK_COST_CLVM, COST_PER_BYTE
+        )
         now.seconds += 500
         now.height += 1
 
@@ -651,7 +674,9 @@ def test_lifecycle_with_coinstore_as_wallet():
     )
     spend_bundle = SpendBundle([coin_spend], G2Element())
 
-    additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
+    additions, removals = coin_store.update_coin_store_for_spend_bundle(
+        spend_bundle, now, MAX_BLOCK_COST_CLVM, COST_PER_BYTE
+    )
     now.seconds += 500
     now.height += 1
     change_count = SINGLETON_WALLET.update_state(PUZZLE_DB, removals)
@@ -688,7 +713,9 @@ def test_lifecycle_with_coinstore_as_wallet():
         )
         spend_bundle = SpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
 
-        additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
+        additions, removals = coin_store.update_coin_store_for_spend_bundle(
+            spend_bundle, now, MAX_BLOCK_COST_CLVM, COST_PER_BYTE
+        )
         now.seconds += 500
         now.height += 1
 
@@ -716,7 +743,9 @@ def test_lifecycle_with_coinstore_as_wallet():
     PUZZLE_DB.add_puzzle(full_puzzle)
 
     try:
-        additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
+        additions, removals = coin_store.update_coin_store_for_spend_bundle(
+            spend_bundle, now, MAX_BLOCK_COST_CLVM, COST_PER_BYTE
+        )
         assert 0
     except BadSpendBundleError as ex:
         assert ex.args[0] == "condition validation failure Err.ASSERT_HEIGHT_RELATIVE_FAILED"
@@ -724,7 +753,9 @@ def test_lifecycle_with_coinstore_as_wallet():
     now.seconds += 350000
     now.height += 1445
 
-    additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
+    additions, removals = coin_store.update_coin_store_for_spend_bundle(
+        spend_bundle, now, MAX_BLOCK_COST_CLVM, COST_PER_BYTE
+    )
 
     SINGLETON_WALLET.update_state(PUZZLE_DB, removals)
 
@@ -739,7 +770,9 @@ def test_lifecycle_with_coinstore_as_wallet():
     spend_bundle = SpendBundle([coin_spend], G2Element())
     spend_bundle.debug()
 
-    additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
+    additions, removals = coin_store.update_coin_store_for_spend_bundle(
+        spend_bundle, now, MAX_BLOCK_COST_CLVM, COST_PER_BYTE
+    )
     update_count = SINGLETON_WALLET.update_state(PUZZLE_DB, removals)
 
     assert update_count == 0

@@ -113,7 +113,7 @@ class RejectRemovalsRequest(Streamable):
 @streamable
 class RequestAdditions(Streamable):
     height: uint32
-    header_hash: bytes32
+    header_hash: Optional[bytes32]
     puzzle_hashes: Optional[List[bytes32]]
 
 
@@ -153,3 +153,76 @@ class RespondHeaderBlocks(Streamable):
     start_height: uint32
     end_height: uint32
     header_blocks: List[HeaderBlock]
+
+
+@dataclass(frozen=True)
+@streamable
+class CoinState(Streamable):
+    coin: Coin
+    spent_height: Optional[uint32]
+    created_height: Optional[uint32]
+
+
+@dataclass(frozen=True)
+@streamable
+class RegisterForPhUpdates(Streamable):
+    puzzle_hashes: List[bytes32]
+    min_height: uint32
+
+
+@dataclass(frozen=True)
+@streamable
+class RespondToPhUpdates(Streamable):
+    puzzle_hashes: List[bytes32]
+    min_height: uint32
+    coin_states: List[CoinState]
+
+
+@dataclass(frozen=True)
+@streamable
+class RegisterForCoinUpdates(Streamable):
+    coin_ids: List[bytes32]
+    min_height: uint32
+
+
+@dataclass(frozen=True)
+@streamable
+class RespondToCoinUpdates(Streamable):
+    coin_ids: List[bytes32]
+    min_height: uint32
+    coin_states: List[CoinState]
+
+
+@dataclass(frozen=True)
+@streamable
+class CoinStateUpdate(Streamable):
+    height: uint32
+    fork_height: uint32
+    peak_hash: bytes32
+    items: List[CoinState]
+
+
+@dataclass(frozen=True)
+@streamable
+class RequestChildren(Streamable):
+    coin_name: bytes32
+
+
+@dataclass(frozen=True)
+@streamable
+class RespondChildren(Streamable):
+    coin_states: List[CoinState]
+
+
+@dataclass(frozen=True)
+@streamable
+class RequestSESInfo(Streamable):
+    start_height: uint32
+    end_height: uint32
+
+
+@dataclass(frozen=True)
+@streamable
+class RespondSESInfo(Streamable):
+    reward_chain_hash: List[bytes32]
+    heights: List[List[uint32]]

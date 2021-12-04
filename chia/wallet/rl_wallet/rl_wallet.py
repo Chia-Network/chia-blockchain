@@ -234,9 +234,12 @@ class RLWallet:
         admin_pubkey_bytes = hexstr_to_bytes(admin_pubkey)
 
         assert self.rl_info.user_pubkey is not None
+        # TODO: address hint errors and remove ignores
+        #       error: Argument 1 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+        #       error: Argument 2 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
         origin = Coin(
-            hexstr_to_bytes(origin_parent_id),
-            hexstr_to_bytes(origin_puzzle_hash),
+            hexstr_to_bytes(origin_parent_id),  # type: ignore[arg-type]
+            hexstr_to_bytes(origin_puzzle_hash),  # type: ignore[arg-type]
             origin_amount,
         )
         rl_puzzle = rl_puzzle_for_pk(
@@ -303,10 +306,13 @@ class RLWallet:
 
         rl_coin = await self._get_rl_coin()
         puzzle_hash = rl_coin.puzzle_hash if rl_coin is not None else None
+        # TODO: address hint error and remove ignore
+        #       error: Argument "to_puzzle_hash" to "TransactionRecord" has incompatible type "Optional[bytes32]";
+        #       expected "bytes32"  [arg-type]
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=puzzle_hash,
+            to_puzzle_hash=puzzle_hash,  # type: ignore[arg-type]
             amount=uint64(0),
             fee_amount=uint64(0),
             confirmed=False,

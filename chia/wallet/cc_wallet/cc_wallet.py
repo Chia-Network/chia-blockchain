@@ -115,6 +115,9 @@ class CCWallet:
         if cc_coin is None:
             raise ValueError("Internal Error, unable to generate new coloured coin")
 
+        # TODO: address hint error and remove ignore
+        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
         regular_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -130,8 +133,11 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=token_bytes(),  # type: ignore[arg-type]
         )
+        # TODO: address hint error and remove ignore
+        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
         cc_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -147,7 +153,7 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),
+            name=token_bytes(),  # type: ignore[arg-type]
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(cc_record)
@@ -256,7 +262,6 @@ class CCWallet:
                 self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
                 safe_mode=True,
-                rust_checker=True,
             )
             cost_result: uint64 = calculate_cost_of_program(
                 program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
@@ -391,7 +396,7 @@ class CCWallet:
         origin_id = origin.name()
 
         cc_inner = await self.get_new_inner_hash()
-        cc_puzzle_hash: Program = cc_puzzle_hash_for_inner_puzzle_hash(
+        cc_puzzle_hash: bytes32 = cc_puzzle_hash_for_inner_puzzle_hash(
             CC_MOD, self.cc_info.my_genesis_checker, cc_inner
         )
 
@@ -417,6 +422,9 @@ class CCWallet:
         await self.add_lineage(eve_coin.parent_coin_info, Program.to((0, [origin.as_list(), 1])))
 
         if send:
+            # TODO: address hint error and remove ignore
+            #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+            #       [arg-type]
             regular_record = TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
@@ -432,7 +440,7 @@ class CCWallet:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(TransactionType.INCOMING_TX.value),
-                name=token_bytes(),
+                name=token_bytes(),  # type: ignore[arg-type]
             )
             cc_record = TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -566,7 +574,7 @@ class CCWallet:
 
     async def inner_puzzle_for_cc_puzhash(self, cc_hash: bytes32) -> Program:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            cc_hash.hex()
+            cc_hash
         )
         inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(bytes(record.pubkey))
         return inner_puzzle
@@ -635,7 +643,10 @@ class CCWallet:
             innersol_list.append(innersol)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
-            spendable_cc_list.append(SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "SpendableCC" has incompatible type "Optional[bytes32]"; expected "bytes32"
+            #       [arg-type]
+            spendable_cc_list.append(SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof))  # type: ignore[arg-type]  # noqa: E501
             sigs = sigs + await self.get_sigs(coin_inner_puzzle, innersol, coin.name())
 
         spend_bundle = spend_bundle_for_spendable_ccs(

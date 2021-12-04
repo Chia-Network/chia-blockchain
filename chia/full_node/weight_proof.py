@@ -107,7 +107,10 @@ class WeightProofHandler:
             return None
 
         summary_heights = self.blockchain.get_ses_heights()
-        prev_ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(uint32(0)))
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "get_block_record_from_db" of "BlockchainInterface" has incompatible type
+        #       "Optional[bytes32]"; expected "bytes32"  [arg-type]
+        prev_ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(uint32(0)))  # type: ignore[arg-type]  # noqa: E501
         if prev_ses_block is None:
             return None
         sub_epoch_data = self.get_sub_epoch_data(tip_rec.height, summary_heights)
@@ -137,7 +140,10 @@ class WeightProofHandler:
 
             if _sample_sub_epoch(prev_ses_block.weight, ses_block.weight, weight_to_check):  # type: ignore
                 sample_n += 1
-                segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.header_hash)
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to "get_sub_epoch_challenge_segments" of "BlockchainInterface" has
+                #       incompatible type "bytes32"; expected "uint32"  [arg-type]
+                segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.header_hash)  # type: ignore[arg-type]  # noqa: E501
                 if segments is None:
                     segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
                     if segments is None:
@@ -145,7 +151,10 @@ class WeightProofHandler:
                             f"failed while building segments for sub epoch {sub_epoch_n}, ses height {ses_height} "
                         )
                         return None
-                    await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.header_hash, segments)
+                    # TODO: address hint error and remove ignore
+                    #       error: Argument 1 to "persist_sub_epoch_challenge_segments" of "BlockchainInterface" has
+                    #       incompatible type "bytes32"; expected "uint32"  [arg-type]
+                    await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.header_hash, segments)  # type: ignore[arg-type]  # noqa: E501
                 log.debug(f"sub epoch {sub_epoch_n} has {len(segments)} segments")
                 sub_epoch_segments.extend(segments)
             prev_ses_block = ses_block
@@ -186,7 +195,10 @@ class WeightProofHandler:
             if curr_height == 0:
                 break
             # add to needed reward chain recent blocks
-            header_block = headers[self.blockchain.height_to_hash(curr_height)]
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, HeaderBlock]"; expected type
+            #       "bytes32"  [index]
+            header_block = headers[self.blockchain.height_to_hash(curr_height)]  # type: ignore[index]
             block_rec = blocks[header_block.header_hash]
             if header_block is None:
                 log.error("creating recent chain failed")
@@ -194,10 +206,13 @@ class WeightProofHandler:
             recent_chain.insert(0, header_block)
             if block_rec.sub_epoch_summary_included:
                 ses_count += 1
-            curr_height = uint32(curr_height - 1)  # type: ignore
+            curr_height = uint32(curr_height - 1)
             blocks_n += 1
 
-        header_block = headers[self.blockchain.height_to_hash(curr_height)]
+        # TODO: address hint error and remove ignore
+        #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, HeaderBlock]"; expected type "bytes32"
+        #       [index]
+        header_block = headers[self.blockchain.height_to_hash(curr_height)]  # type: ignore[index]
         recent_chain.insert(0, header_block)
 
         log.info(
@@ -294,7 +309,10 @@ class WeightProofHandler:
                 first = False
             else:
                 height = height + uint32(1)  # type: ignore
-            curr = header_blocks[self.blockchain.height_to_hash(height)]
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, HeaderBlock]"; expected type
+            #       "bytes32"  [index]
+            curr = header_blocks[self.blockchain.height_to_hash(height)]  # type: ignore[index]
             if curr is None:
                 return None
         log.debug(f"next sub epoch starts at {height}")
@@ -313,7 +331,10 @@ class WeightProofHandler:
             if end - curr_rec.height == batch_size - 1:
                 blocks = await self.blockchain.get_block_records_in_range(curr_rec.height - batch_size, curr_rec.height)
                 end = curr_rec.height
-            curr_rec = blocks[self.blockchain.height_to_hash(uint32(curr_rec.height - 1))]
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, BlockRecord]"; expected type
+            #       "bytes32"  [index]
+            curr_rec = blocks[self.blockchain.height_to_hash(uint32(curr_rec.height - 1))]  # type: ignore[index]
         return curr_rec.height
 
     async def _create_challenge_segment(
@@ -426,7 +447,10 @@ class WeightProofHandler:
                 curr.total_iters,
             )
             tmp_sub_slots_data.append(ssd)
-            curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, HeaderBlock]"; expected type
+            #       "bytes32"  [index]
+            curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]  # type: ignore[index]
 
         if len(tmp_sub_slots_data) > 0:
             sub_slots_data.extend(tmp_sub_slots_data)
@@ -455,7 +479,10 @@ class WeightProofHandler:
     ) -> Tuple[Optional[List[SubSlotData]], uint32]:
         # gets all vdfs first sub slot after challenge block to last sub slot
         log.debug(f"slot end vdf start height {start_height}")
-        curr = header_blocks[self.blockchain.height_to_hash(start_height)]
+        # TODO: address hint error and remove ignore
+        #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, HeaderBlock]"; expected type "bytes32"
+        #       [index]
+        curr = header_blocks[self.blockchain.height_to_hash(start_height)]  # type: ignore[index]
         curr_header_hash = curr.header_hash
         sub_slots_data: List[SubSlotData] = []
         tmp_sub_slots_data: List[SubSlotData] = []
@@ -474,7 +501,10 @@ class WeightProofHandler:
                 tmp_sub_slots_data = []
             tmp_sub_slots_data.append(self.handle_block_vdfs(curr, blocks))
 
-            curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, HeaderBlock]"; expected type
+            #       "bytes32"  [index]
+            curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]  # type: ignore[index]
             curr_header_hash = curr.header_hash
 
         if len(tmp_sub_slots_data) > 0:
@@ -978,7 +1008,7 @@ def _validate_segment(
             if required_iters is None:
                 return False, uint64(0), uint64(0), uint64(0)
             assert sub_slot_data.signage_point_index is not None
-            ip_iters = ip_iters + calculate_ip_iters(  # type: ignore
+            ip_iters = ip_iters + calculate_ip_iters(
                 constants, curr_ssi, sub_slot_data.signage_point_index, required_iters
             )
             if not _validate_challenge_block_vdfs(constants, idx, segment.sub_slots, curr_ssi):
@@ -988,8 +1018,8 @@ def _validate_segment(
             if not _validate_sub_slot_data(constants, idx, segment.sub_slots, curr_ssi):
                 log.error(f"failed to validate sub slot data {idx} vdfs")
                 return False, uint64(0), uint64(0), uint64(0)
-        slot_iters = slot_iters + curr_ssi  # type: ignore
-        slots = slots + uint64(1)  # type: ignore
+        slot_iters = slot_iters + curr_ssi
+        slots = slots + uint64(1)
     return True, ip_iters, slot_iters, slots
 
 
@@ -1356,7 +1386,7 @@ def __get_rc_sub_slot(
 
     new_diff = None if ses is None else ses.new_difficulty
     new_ssi = None if ses is None else ses.new_sub_slot_iters
-    ses_hash = None if ses is None else ses.get_hash()
+    ses_hash: Optional[bytes32] = None if ses is None else ses.get_hash()
     overflow = is_overflow_block(constants, first.signage_point_index)
     if overflow:
         if idx >= 2 and slots[idx - 2].cc_slot_end is not None and slots[idx - 1].cc_slot_end is not None:

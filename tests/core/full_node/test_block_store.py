@@ -10,6 +10,7 @@ import pytest
 from chia.consensus.blockchain import Blockchain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.hint_store import HintStore
 from chia.util.db_wrapper import DBWrapper
 from tests.setup_nodes import bt, test_constants
 
@@ -24,7 +25,8 @@ def event_loop():
 
 class TestBlockStore:
     @pytest.mark.asyncio
-    async def test_block_store(self):
+    @pytest.mark.parametrize("db_version", [1, 2])
+    async def test_block_store(self, tmp_dir, db_version):
         assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(10)
 
@@ -38,13 +40,14 @@ class TestBlockStore:
 
         connection = await aiosqlite.connect(db_filename)
         connection_2 = await aiosqlite.connect(db_filename_2)
-        db_wrapper = DBWrapper(connection)
-        db_wrapper_2 = DBWrapper(connection_2)
+        db_wrapper = DBWrapper(connection, False, db_version)
+        db_wrapper_2 = DBWrapper(connection_2, False, db_version)
 
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, test_constants)
+        hint_store = await HintStore.create(db_wrapper_2)
+        bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir)
 
         store = await BlockStore.create(db_wrapper)
         await BlockStore.create(db_wrapper_2)
@@ -83,7 +86,8 @@ class TestBlockStore:
         db_filename_2.unlink()
 
     @pytest.mark.asyncio
-    async def test_deadlock(self):
+    @pytest.mark.parametrize("db_version", [1, 2])
+    async def test_deadlock(self, tmp_dir, db_version):
         """
         This test was added because the store was deadlocking in certain situations, when fetching and
         adding blocks repeatedly. The issue was patched.
@@ -99,13 +103,14 @@ class TestBlockStore:
 
         connection = await aiosqlite.connect(db_filename)
         connection_2 = await aiosqlite.connect(db_filename_2)
-        wrapper = DBWrapper(connection)
-        wrapper_2 = DBWrapper(connection_2)
+        wrapper = DBWrapper(connection, False, db_version)
+        wrapper_2 = DBWrapper(connection_2, False, db_version)
 
         store = await BlockStore.create(wrapper)
         coin_store_2 = await CoinStore.create(wrapper_2)
         store_2 = await BlockStore.create(wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, test_constants)
+        hint_store = await HintStore.create(wrapper_2)
+        bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir)
         block_records = []
         for block in blocks:
             await bc.receive_block(block)

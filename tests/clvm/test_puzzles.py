@@ -26,6 +26,7 @@ T1 = CoinTimestamp(1, 10000000)
 T2 = CoinTimestamp(5, 10003000)
 
 MAX_BLOCK_COST_CLVM = int(1e18)
+COST_PER_BYTE = int(12000)
 
 
 def secret_exponent_for_index(index: int) -> int:
@@ -72,7 +73,7 @@ def do_test_spend(
     coin_spend = CoinSpend(coin, puzzle_reveal, solution)
 
     spend_bundle = SpendBundle([coin_spend], G2Element())
-    coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, MAX_BLOCK_COST_CLVM)
+    coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, MAX_BLOCK_COST_CLVM, COST_PER_BYTE)
 
     # ensure all outputs are there
     for puzzle_hash, amount in payments:

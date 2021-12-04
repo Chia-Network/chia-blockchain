@@ -7,7 +7,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
-from chia.util.errors import Err
+from chia.util.errors import Err, ValidationError
 from chia.util.db_wrapper import DBWrapper
 from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
@@ -49,6 +49,7 @@ class SimBlockRecord:
         self.timestamp = timestamp
         self.is_transaction_block = True
         self.header_hash = std_hash(bytes(height))
+        self.prev_transaction_block_hash = std_hash(std_hash(height))
 
 
 class SpendSim:
@@ -78,7 +79,7 @@ class SpendSim:
         await self.connection.close()
 
     async def new_peak(self):
-        await self.mempool_manager.new_peak(self.block_records[-1])
+        await self.mempool_manager.new_peak(self.block_records[-1], [])
 
     def new_coin_record(self, coin: Coin, coinbase=False) -> CoinRecord:
         return CoinRecord(
@@ -108,7 +109,10 @@ class SpendSim:
             return None
         return simple_solution_generator(bundle)
 
-    async def farm_block(self, puzzle_hash: bytes32 = (b"0" * 32)):
+    # TODO: address hint error and remove ignore
+    #       error: Incompatible default for argument "puzzle_hash" (default has type "bytes", argument has type
+    #       "bytes32")  [assignment]
+    async def farm_block(self, puzzle_hash: bytes32 = (b"0" * 32)):  # type: ignore[assignment]
         # Fees get calculated
         fees = uint64(0)
         if self.mempool_manager.mempool.spends:
@@ -129,8 +133,9 @@ class SpendSim:
             uint64(calculate_base_farmer_reward(next_block_height) + fees),
             self.defaults.GENESIS_CHALLENGE,
         )
-        await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(pool_coin, True), False)
-        await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(farmer_coin, True), False)
+        await self.mempool_manager.coin_store._add_coin_records(
+            [self.new_coin_record(pool_coin, True), self.new_coin_record(farmer_coin, True)]
+        )
 
         # Coin store gets updated
         generator_bundle: Optional[SpendBundle] = None
@@ -147,10 +152,12 @@ class SpendSim:
                     return_additions = additions
                     return_removals = removals
 
-                for addition in additions:
-                    await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(addition), False)
-                for removal in removals:
-                    await self.mempool_manager.coin_store._set_spent(removal.name(), uint32(self.block_height + 1))
+                await self.mempool_manager.coin_store._add_coin_records(
+                    [self.new_coin_record(addition) for addition in additions]
+                )
+                await self.mempool_manager.coin_store._set_spent(
+                    [r.name() for r in removals], uint32(self.block_height + 1)
+                )
 
         # SimBlockRecord is created
         generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)
@@ -200,7 +207,12 @@ class SimClient:
         self.service = service
 
     async def push_tx(self, spend_bundle: SpendBundle) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
-        cost_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(spend_bundle)
+        try:
+            cost_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
+                spend_bundle, None, spend_bundle.name()
+            )
+        except ValidationError as e:
+            return MempoolInclusionStatus.FAILED, e.code
         cost, status, error = await self.service.mempool_manager.add_spendbundle(
             spend_bundle, cost_result, spend_bundle.name()
         )

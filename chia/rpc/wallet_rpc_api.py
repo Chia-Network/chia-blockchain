@@ -444,10 +444,8 @@ class WalletRpcApi:
         wallet_state_manager = self.service.wallet_state_manager
         main_wallet = wallet_state_manager.main_wallet
         host = request["host"]
-        if "fee" in request:
-            fee: uint64 = request["fee"]
-        else:
-            fee = uint64(0)
+        fee = uint64(request.get("fee", 0))
+
         if request["wallet_type"] == "cc_wallet":
             if request["mode"] == "new":
                 async with self.service.wallet_state_manager.lock:
@@ -559,6 +557,9 @@ class WalletRpcApi:
                     "backup_dids": did_wallet.did_info.backup_ids,
                     "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
                 }
+            else:  # undefined did_type
+                pass
+
         elif request["wallet_type"] == "pool_wallet":
             if request["mode"] == "new":
                 owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(True)
@@ -586,26 +587,27 @@ class WalletRpcApi:
                         delayed_address = None
                         if "p2_singleton_delayed_ph" in request:
                             delayed_address = hexstr_to_bytes(request["p2_singleton_delayed_ph"])
+                        # TODO: address hint error and remove ignore
+                        #       error: Argument 6 to "create_new_pool_wallet_transaction" of "PoolWallet" has
+                        #       incompatible type "Optional[bytes]"; expected "Optional[bytes32]"  [arg-type]
                         tr, p2_singleton_puzzle_hash, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
                             wallet_state_manager,
                             main_wallet,
                             initial_target_state,
                             fee,
                             request.get("p2_singleton_delay_time", None),
-                            delayed_address,
+                            delayed_address,  # type: ignore[arg-type]
                         )
                     except Exception as e:
                         raise ValueError(str(e))
                     return {
+                        "total_fee": fee * 2,
                         "transaction": tr,
                         "launcher_id": launcher_id.hex(),
                         "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
                     }
             elif request["mode"] == "recovery":
                 raise ValueError("Need upgraded singleton for on-chain recovery")
-
-            else:  # undefined did_type
-                pass
 
         else:  # undefined wallet_type
             pass
@@ -888,10 +890,10 @@ class WalletRpcApi:
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
-        trade_id = request["trade_id"]
+        trade_id = hexstr_to_bytes(request["trade_id"])
         trade: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
         if trade is None:
-            raise ValueError(f"No trade with trade id: {trade_id}")
+            raise ValueError(f"No trade with trade id: {trade_id.hex()}")
 
         result = trade_record_to_dict(trade)
         return {"trade": result}
@@ -917,9 +919,15 @@ class WalletRpcApi:
 
         async with self.service.wallet_state_manager.lock:
             if secure:
-                await wsm.trade_manager.cancel_pending_offer_safely(trade_id)
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to "cancel_pending_offer_safely" of "TradeManager" has incompatible type
+                #       "bytes"; expected "bytes32"  [arg-type]
+                await wsm.trade_manager.cancel_pending_offer_safely(trade_id)  # type: ignore[arg-type]
             else:
-                await wsm.trade_manager.cancel_pending_offer(trade_id)
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to "cancel_pending_offer" of "TradeManager" has incompatible type "bytes";
+                #       expected "bytes32"  [arg-type]
+                await wsm.trade_manager.cancel_pending_offer(trade_id)  # type: ignore[arg-type]
         return {}
 
     async def get_backup_info(self, request: Dict):
@@ -1198,7 +1206,10 @@ class WalletRpcApi:
     ##########################################################################################
     # Pool Wallet
     ##########################################################################################
-    async def pw_join_pool(self, request):
+    async def pw_join_pool(self, request) -> Dict:
+        if self.service.wallet_state_manager is None:
+            return {"success": False, "error": "not_initialized"}
+        fee = uint64(request.get("fee", 0))
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
@@ -1206,44 +1217,53 @@ class WalletRpcApi:
         target_puzzlehash = None
         if "target_puzzlehash" in request:
             target_puzzlehash = bytes32(hexstr_to_bytes(request["target_puzzlehash"]))
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "create_pool_state" has incompatible type "Optional[bytes32]"; expected "bytes32"
+        #       [arg-type]
         new_target_state: PoolState = create_pool_state(
             FARMING_TO_POOL,
-            target_puzzlehash,
+            target_puzzlehash,  # type: ignore[arg-type]
             owner_pubkey,
             request["pool_url"],
             uint32(request["relative_lock_height"]),
         )
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.join_pool(new_target_state)
-            return {"transaction": tx}
+            total_fee, tx = await wallet.join_pool(new_target_state, fee)
+            return {"total_fee": total_fee, "transaction": tx}
 
-    async def pw_self_pool(self, request):
+    async def pw_self_pool(self, request) -> Dict:
+        if self.service.wallet_state_manager is None:
+            return {"success": False, "error": "not_initialized"}
         # Leaving a pool requires two state transitions.
         # First we transition to PoolSingletonState.LEAVING_POOL
         # Then we transition to FARMING_TO_POOL or SELF_POOLING
+        fee = uint64(request.get("fee", 0))
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.self_pool()
-            return {"transaction": tx}
+            total_fee, tx = await wallet.self_pool(fee)  # total_fee: uint64, tx: TransactionRecord
+            return {"total_fee": total_fee, "transaction": tx}
 
-    async def pw_absorb_rewards(self, request):
+    async def pw_absorb_rewards(self, request) -> Dict:
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
+        if self.service.wallet_state_manager is None:
+            return {"success": False, "error": "not_initialized"}
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before collecting rewards")
-
+        fee = uint64(request.get("fee", 0))
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        fee = uint64(request["fee"])
 
         async with self.service.wallet_state_manager.lock:
             transaction: TransactionRecord = await wallet.claim_pool_rewards(fee)
             state: PoolWalletInfo = await wallet.get_current_state()
         return {"state": state.to_json_dict(), "transaction": transaction}
 
-    async def pw_status(self, request):
+    async def pw_status(self, request) -> Dict:
         """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""
+        if self.service.wallet_state_manager is None:
+            return {"success": False, "error": "not_initialized"}
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if wallet.type() != WalletType.POOLING_WALLET.value:
