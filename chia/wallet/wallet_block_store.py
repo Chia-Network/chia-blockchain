@@ -302,10 +302,7 @@ class WalletBlockStore:
         if row is None:
             return {}, {}
 
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        peak: bytes32 = bytes.fromhex(row[0])  # type: ignore[assignment]
+        peak: bytes32 = bytes32.fromhex(row[0])
         cursor = await self.db.execute("SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records")
         rows = await cursor.fetchall()
         await cursor.close()
@@ -314,11 +311,7 @@ class WalletBlockStore:
         hash_to_summary: Dict[bytes32, SubEpochSummary] = {}
 
         for row in rows:
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, bytes32]"; expected type "bytes32"  [index]
-            #       error: Incompatible types in assignment (expression has type "bytes", target has type "bytes32")
-            #       [assignment]
-            hash_to_prev_hash[bytes.fromhex(row[0])] = bytes.fromhex(row[1])  # type: ignore[index,assignment]
+            hash_to_prev_hash[bytes32.fromhex(row[0])] = bytes32.fromhex(row[1])
             # TODO: address hint error and remove ignore
             #       error: Invalid index type "bytes" for "Dict[bytes32, uint32]"; expected type "bytes32"  [index]
             hash_to_height[bytes.fromhex(row[0])] = row[2]  # type: ignore[index]

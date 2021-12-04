@@ -289,10 +289,7 @@ class BlockStore:
             # TODO: address hint error and remove ignore
             #       error: Invalid index type "bytes" for "Dict[bytes32, BlockRecord]"; expected type "bytes32"  [index]
             ret[header_hash] = BlockRecord.from_bytes(row[1])  # type: ignore[index]
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible return value type (got "Tuple[Dict[bytes32, BlockRecord], bytes]", expected
-        #       "Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]")  [return-value]
-        return ret, bytes.fromhex(peak_row[0])  # type: ignore[return-value]
+        return ret, bytes32.fromhex(peak_row[0])
 
     async def set_peak(self, header_hash: bytes32) -> None:
         # We need to be in a sqlite transaction here.

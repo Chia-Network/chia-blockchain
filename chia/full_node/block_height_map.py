@@ -80,14 +80,8 @@ class BlockHeightMap:
             # it's OK if this file doesn't exist, we can rebuild it
             pass
 
-        # TODO: address hint errors and remove ignores
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        peak: bytes32 = bytes.fromhex(row[0])  # type: ignore[assignment]
-        # TODO: address hint errors and remove ignores
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        prev_hash: bytes32 = bytes.fromhex(row[1])  # type: ignore[assignment]
+        peak: bytes32 = bytes32.fromhex(row[0])
+        prev_hash: bytes32 = bytes32.fromhex(row[1])
         height = row[2]
 
         # allocate memory for height to hash map
@@ -157,12 +151,7 @@ class BlockHeightMap:
             # maps block-hash -> (height, prev-hash, sub-epoch-summary)
             ordered: Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]] = {}
             for r in rows:
-                # TODO: address hint errors and remove ignores
-                #       error: Invalid index type "bytes" for "Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]]";
-                #       expected type "bytes32"  [index]
-                #       error: Incompatible types in assignment (expression has type "Tuple[Any, bytes, Any]", target
-                #       has type "Tuple[uint32, bytes32, Optional[bytes]]")  [assignment]
-                ordered[bytes.fromhex(r[0])] = (r[2], bytes.fromhex(r[1]), r[3])  # type: ignore[index,assignment]
+                ordered[bytes32.fromhex(r[0])] = (r[2], bytes32.fromhex(r[1]), r[3])
 
             while height > window_end:
                 entry = ordered[prev_hash]
