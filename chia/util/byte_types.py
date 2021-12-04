@@ -61,4 +61,5 @@ class SizedBytes(bytes):
         #       released in a new mypy version.  Once released this should be removed.
         #       https://github.com/python/typeshed/pull/6201
         @classmethod
-        def fromhex(cls: Type[_T_SizedBytes], __s: str) -> _T_SizedBytes: ...
+        def fromhex(cls: Type[_T_SizedBytes], __s: str) -> _T_SizedBytes:
+            ...
