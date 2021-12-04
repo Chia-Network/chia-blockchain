@@ -253,10 +253,8 @@ class WalletBlockStore:
         ret: Dict[bytes32, HeaderBlock] = {}
         for row in rows:
             header_hash_bytes, block_record_bytes = row
-            header_hash = bytes.fromhex(header_hash_bytes)
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, HeaderBlock]"; expected type "bytes32"  [index]
-            ret[header_hash] = HeaderBlock.from_bytes(block_record_bytes)  # type: ignore[index]
+            header_hash = bytes32.fromhex(header_hash_bytes)
+            ret[header_hash] = HeaderBlock.from_bytes(block_record_bytes)
 
         return ret
 
@@ -307,14 +305,9 @@ class WalletBlockStore:
 
         for row in rows:
             hash_to_prev_hash[bytes32.fromhex(row[0])] = bytes32.fromhex(row[1])
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, uint32]"; expected type "bytes32"  [index]
-            hash_to_height[bytes.fromhex(row[0])] = row[2]  # type: ignore[index]
+            hash_to_height[bytes32.fromhex(row[0])] = row[2]
             if row[3] is not None:
-                # TODO: address hint error and remove ignore
-                #       error: Invalid index type "bytes" for "Dict[bytes32, SubEpochSummary]"; expected type "bytes32"
-                #       [index]
-                hash_to_summary[bytes.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])  # type: ignore[index]
+                hash_to_summary[bytes32.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])
 
         height_to_hash: Dict[uint32, bytes32] = {}
         sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
