@@ -11,15 +11,17 @@ from chia.util.condition_tools import created_outputs_for_conditions_dict
 
 def get_block_header(block: FullBlock, tx_addition_coins: List[Coin], removals_names: List[bytes32]) -> HeaderBlock:
     # Create filter
-    byte_array_tx: List[bytes32] = []
     addition_coins = tx_addition_coins + list(block.get_included_reward_coins())
+    tx_for_bip158: List[List[int]]
     if block.is_transaction_block():
-        for coin in addition_coins:
-            byte_array_tx.append(coin.puzzle_hash)
-        for name in removals_names:
-            byte_array_tx.append(name)
+        tx_for_bip158 = [
+            *(list(coin.puzzle_hash) for coin in addition_coins),
+            *(list(name) for name in removals_names),
+        ]
+    else:
+        tx_for_bip158 = []
 
-    bip158: PyBIP158 = PyBIP158(byte_array_tx)
+    bip158: PyBIP158 = PyBIP158(tx_for_bip158)
     encoded_filter: bytes = bytes(bip158.GetEncoded())
 
     return HeaderBlock(

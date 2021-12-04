@@ -98,7 +98,6 @@ def create_foliage(
         height = uint32(prev_block.height + 1)
 
     # Create filter
-    byte_array_tx: List[bytes32] = []
     tx_additions: List[Coin] = []
     tx_removals: List[bytes32] = []
 
@@ -193,12 +192,15 @@ def create_foliage(
         additions.extend(reward_claims_incorporated.copy())
         for coin in additions:
             tx_additions.append(coin)
-            byte_array_tx.append(coin.puzzle_hash)
         for coin in removals:
             tx_removals.append(coin.name())
-            byte_array_tx.append(coin.name())
 
-        bip158: PyBIP158 = PyBIP158(byte_array_tx)
+        tx_for_bip158: List[List[int]] = [
+            *(list(coin.puzzle_hash) for coin in additions),
+            *(list(coin.name()) for coin in removals),
+        ]
+
+        bip158: PyBIP158 = PyBIP158(tx_for_bip158)
         encoded = bytes(bip158.GetEncoded())
 
         removal_merkle_set = MerkleSet()
