@@ -117,7 +117,5 @@ def decode_puzzle_hash(address: str) -> bytes32:
     if data is None:
         raise ValueError("Invalid Address")
     decoded = convertbits(data, 5, 8, False)
-    decoded_bytes = bytes(decoded)
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
-    return decoded_bytes  # type: ignore[return-value]
+    decoded_bytes = bytes32(decoded)
+    return decoded_bytes

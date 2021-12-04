@@ -88,10 +88,7 @@ def create_foliage(
 
     random.seed(seed)
     # Use the extension data to create different blocks based on header hash
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-    #       [assignment]
-    extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")  # type: ignore[assignment]
+    extension_data: bytes32 = bytes32(random.randint(0, 100000000).to_bytes(32, "big"))
     if prev_block is None:
         height: uint32 = uint32(0)
     else:

@@ -1880,13 +1880,10 @@ class FullNode:
                 != self.constants.GENESIS_CHALLENGE
             ):
                 # If we don't have the prev, request the prev instead
-                # TODO: address hint error and remove ignore
-                #       error: Argument 3 to "RequestSignagePointOrEndOfSubSlot" has incompatible type "bytes"; expected
-                #       "bytes32"  [arg-type]
                 full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
                     request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
                     uint8(0),
-                    bytes([0] * 32),  # type: ignore[arg-type]
+                    bytes32([0] * 32),
                 )
                 return (
                     make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request),
