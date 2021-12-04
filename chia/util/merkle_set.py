@@ -40,7 +40,7 @@ TERMINAL = bytes([1])
 MIDDLE = bytes([2])
 TRUNCATED = bytes([3])
 
-BLANK = bytes([0] * 32)
+BLANK = bytes32([0] * 32)
 
 prehashed: Dict[bytes, Any] = {}
 
@@ -61,14 +61,14 @@ def hashdown(mystr: bytes) -> bytes:
     return h.digest()[:32]
 
 
-def compress_root(mystr: bytes) -> bytes:
+def compress_root(mystr: bytes) -> bytes32:
     assert len(mystr) == 33
     if mystr[0:1] == MIDDLE:
-        return mystr[1:]
+        return bytes32(mystr[1:])
     if mystr[0:1] == EMPTY:
         assert mystr[1:] == BLANK
         return BLANK
-    return sha256(mystr).digest()[:32]
+    return bytes32(sha256(mystr).digest()[:32])
 
 
 def get_bit(mybytes: bytes, pos: int) -> int:
@@ -125,7 +125,7 @@ class MerkleSet:
         else:
             self.root = root
 
-    def get_root(self) -> bytes:
+    def get_root(self) -> bytes32:
         return compress_root(self.root.get_hash())
 
     def add_already_hashed(self, toadd: bytes):
