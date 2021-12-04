@@ -329,12 +329,9 @@ class DIDWallet:
             f = open(filename, "r")
             details = f.readline().split(":")
             f.close()
-            # TODO: address hint errors and remove ignores
-            #       error: Argument 1 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
-            #       error: Argument 2 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
             origin = Coin(
-                bytes.fromhex(details[0]),  # type: ignore[arg-type]
-                bytes.fromhex(details[1]),  # type: ignore[arg-type]
+                bytes32.fromhex(details[0]),
+                bytes32.fromhex(details[1]),
                 uint64(int(details[2])),
             )
             backup_ids = []
