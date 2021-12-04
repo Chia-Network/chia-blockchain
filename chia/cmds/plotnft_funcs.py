@@ -205,10 +205,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         await farmer_client.await_closed()
         return
     pool_state_dict: Dict[bytes32, Dict] = {
-        # TODO: address hint error and remove ignore
-        #       error: Key expression in dictionary comprehension has incompatible type "bytes"; expected type "bytes32"
-        #       [misc]
-        hexstr_to_bytes(pool_state_item["pool_config"]["launcher_id"]): pool_state_item  # type: ignore[misc]
+        bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
         for pool_state_item in pool_state_list
     }
     if wallet_id_passed_in is not None:
