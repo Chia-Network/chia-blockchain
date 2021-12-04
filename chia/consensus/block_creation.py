@@ -193,16 +193,10 @@ def create_foliage(
         additions.extend(reward_claims_incorporated.copy())
         for coin in additions:
             tx_additions.append(coin)
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-            #       [arg-type]
-            byte_array_tx.append(bytearray(coin.puzzle_hash))  # type: ignore[arg-type]
+            byte_array_tx.append(coin.puzzle_hash)
         for coin in removals:
             tx_removals.append(coin.name())
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-            #       [arg-type]
-            byte_array_tx.append(bytearray(coin.name()))  # type: ignore[arg-type]
+            byte_array_tx.append(coin.name())
 
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded = bytes(bip158.GetEncoded())
