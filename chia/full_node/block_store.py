@@ -256,10 +256,8 @@ class BlockStore:
         await cursor.close()
         ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
-            header_hash = bytes.fromhex(row[0])
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, BlockRecord]"; expected type "bytes32"  [index]
-            ret[header_hash] = BlockRecord.from_bytes(row[1])  # type: ignore[index]
+            header_hash = bytes32.fromhex(row[0])
+            ret[header_hash] = BlockRecord.from_bytes(row[1])
 
         return ret
 
@@ -283,10 +281,8 @@ class BlockStore:
         await cursor.close()
         ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
-            header_hash = bytes.fromhex(row[0])
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, BlockRecord]"; expected type "bytes32"  [index]
-            ret[header_hash] = BlockRecord.from_bytes(row[1])  # type: ignore[index]
+            header_hash = bytes32.fromhex(row[0])
+            ret[header_hash] = BlockRecord.from_bytes(row[1])
         return ret, bytes32.fromhex(peak_row[0])
 
     async def set_peak(self, header_hash: bytes32) -> None:
