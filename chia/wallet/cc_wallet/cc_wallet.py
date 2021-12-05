@@ -415,9 +415,6 @@ class CCWallet:
         await self.add_lineage(eve_coin.parent_coin_info, Program.to((0, [origin.as_list(), 1])))
 
         if send:
-            # TODO: address hint error and remove ignore
-            #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
-            #       [arg-type]
             regular_record = TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
