@@ -980,7 +980,7 @@ class FullNode:
         height: uint32,
         fork_height: uint32,
         peak_hash: bytes32,
-        state_update: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
+        state_update: Tuple[List[CoinRecord], Dict[bytes32, Dict[bytes32, CoinRecord]]],
     ):
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
 
@@ -1003,10 +1003,7 @@ class FullNode:
 
         for hint, records in hint_state.items():
             if hint in self.ph_subscriptions:
-                # TODO: address hint error and remove ignore
-                #       error: Invalid index type "bytes" for "Dict[bytes32, Set[bytes32]]"; expected type "bytes32"
-                #       [index]
-                subscribed_peers = self.ph_subscriptions[hint]  # type: ignore[index]
+                subscribed_peers = self.ph_subscriptions[hint]
                 for peer in subscribed_peers:
                     if peer not in changes_for_peer:
                         changes_for_peer[peer] = set()
@@ -1304,7 +1301,7 @@ class FullNode:
         record: BlockRecord,
         fork_height: uint32,
         peer: Optional[ws.WSChiaConnection],
-        coin_changes: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
+        coin_changes: Tuple[List[CoinRecord], Dict[bytes32, Dict[bytes32, CoinRecord]]],
         mempool_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]],
         fns_peak_result: FullNodeStorePeakResult,
     ):
@@ -1444,7 +1441,7 @@ class FullNode:
                 )
                 # This recursion ends here, we cannot recurse again because transactions_generator is not None
                 return await self.respond_block(block_response, peer)
-        coin_changes: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]] = ([], {})
+        coin_changes: Tuple[List[CoinRecord], Dict[bytes32, Dict[bytes32, CoinRecord]]] = ([], {})
         mempool_new_peak_result, fns_peak_result = None, None
         async with self._blockchain_lock_high_priority:
             # After acquiring the lock, check again, because another asyncio thread might have added it

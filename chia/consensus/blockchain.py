@@ -182,7 +182,7 @@ class Blockchain(BlockchainInterface):
         ReceiveBlockResult,
         Optional[Err],
         Optional[uint32],
-        Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
+        Tuple[List[CoinRecord], Dict[bytes32, Dict[bytes32, CoinRecord]]],
     ]:
         """
         This method must be called under the blockchain lock
@@ -331,7 +331,7 @@ class Blockchain(BlockchainInterface):
         Optional[uint32],
         Optional[uint32],
         List[BlockRecord],
-        Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
+        Tuple[List[CoinRecord], Dict[bytes32, Dict[bytes32, CoinRecord]]],
     ]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
@@ -454,18 +454,12 @@ class Blockchain(BlockchainInterface):
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
-            # TODO: address hint error and remove ignore
-            #       error: Incompatible return value type (got
-            #       "Tuple[uint32, uint32, List[BlockRecord], Tuple[List[CoinRecord], Dict[bytes32, Dict[bytes32, CoinRecord]]]]",  # noqa: E501
-            #       expected
-            #       "Tuple[Optional[uint32], Optional[uint32], List[BlockRecord], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]]"  # noqa: E501
-            #       )  [return-value]
             return (
                 uint32(max(fork_height, 0)),
                 block_record.height,
                 records_to_add,
                 (list(lastest_coin_state.values()), hint_coin_state),
-            )  # type: ignore[return-value]
+            )
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
         return None, None, [], ([], {})
