@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Optional
+from typing import Any, Generic, Optional, TypeVar
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.ints import uint8, uint16
@@ -31,12 +31,15 @@ class Delivery(IntEnum):
     SPECIFIC = 6
 
 
+_T_Optional_uint16 = TypeVar("_T_Optional_uint16", bound=Optional[uint16])
+
+
 @dataclass(frozen=True)
 @streamable
-class Message(Streamable):
+class Message(Streamable, Generic[_T_Optional_uint16]):
     type: uint8  # one of ProtocolMessageTypes
     # message id
-    id: Optional[uint16]
+    id: _T_Optional_uint16
     # Message data for that type
     data: bytes
 

@@ -88,9 +88,9 @@ class WSChiaConnection:
         self.session = session
         self.close_callback = close_callback
 
-        self.pending_requests: Dict[bytes32, asyncio.Event] = {}
-        self.pending_timeouts: Dict[bytes32, asyncio.Task] = {}
-        self.request_results: Dict[bytes32, Message] = {}
+        self.pending_requests: Dict[uint16, asyncio.Event] = {}
+        self.pending_timeouts: Dict[uint16, asyncio.Task] = {}
+        self.request_results: Dict[uint16, Message] = {}
         self.closed = False
         self.connection_type: Optional[NodeType] = None
         if is_outbound:
@@ -342,10 +342,7 @@ class WSChiaConnection:
 
         message = Message(message_no_id.type, request_id, message_no_id.data)
 
-        # TODO: address hint error and remove ignore
-        #       error: Invalid index type "Optional[uint16]" for "Dict[bytes32, Event]"; expected type "bytes32"
-        #       [index]
-        self.pending_requests[message.id] = event  # type: ignore[index]
+        self.pending_requests[message.id] = event
         await self.outgoing_queue.put(message)
 
         # If the timeout passes, we set the event
@@ -360,34 +357,16 @@ class WSChiaConnection:
                 raise
 
         timeout_task = asyncio.create_task(time_out(message.id, timeout))
-        # TODO: address hint error and remove ignore
-        #       error: Invalid index type "Optional[uint16]" for "Dict[bytes32, Task[Any]]"; expected type "bytes32"
-        #       [index]
-        self.pending_timeouts[message.id] = timeout_task  # type: ignore[index]
+        self.pending_timeouts[message.id] = timeout_task
         await event.wait()
 
-        # TODO: address hint error and remove ignore
-        #       error: No overload variant of "pop" of "MutableMapping" matches argument type "Optional[uint16]"
-        #       [call-overload]
-        #       note: Possible overload variants:
-        #       note:     def pop(self, key: bytes32) -> Event
-        #       note:     def [_T] pop(self, key: bytes32, default: Union[Event, _T] = ...) -> Union[Event, _T]
-        self.pending_requests.pop(message.id)  # type: ignore[call-overload]
+        self.pending_requests.pop(message.id)
         result: Optional[Message] = None
         if message.id in self.request_results:
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "Optional[uint16]" for "Dict[bytes32, Message]"; expected type "bytes32"
-            #       [index]
-            result = self.request_results[message.id]  # type: ignore[index]
+            result = self.request_results[message.id]
             assert result is not None
             self.log.debug(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
-            # TODO: address hint error and remove ignore
-            #       error: No overload variant of "pop" of "MutableMapping" matches argument type "Optional[uint16]"
-            #       [call-overload]
-            #       note: Possible overload variants:
-            #       note:     def pop(self, key: bytes32) -> Message
-            #       note:     def [_T] pop(self, key: bytes32, default: Union[Message, _T] = ...) -> Union[Message, _T]
-            self.request_results.pop(result.id)  # type: ignore[call-overload]
+            self.request_results.pop(result.id)
 
         return result
 
