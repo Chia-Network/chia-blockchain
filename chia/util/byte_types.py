@@ -1,4 +1,5 @@
 import io
+from secrets import token_bytes
 from typing import BinaryIO, Type, TypeVar
 
 _T_SizedBytes = TypeVar("_T_SizedBytes", bound="SizedBytes")
@@ -26,6 +27,10 @@ class SizedBytes(bytes):
         if not isinstance(v, bytes) or len(v) != cls._size:
             raise ValueError("bad %s initializer %s" % (cls.__name__, v))
         return bytes.__new__(cls, v)
+
+    @classmethod
+    def secret(cls: Type[_T_SizedBytes]) -> _T_SizedBytes:
+        return cls(token_bytes(cls._size))
 
     @classmethod
     def parse(cls: Type[_T_SizedBytes], f: BinaryIO) -> _T_SizedBytes:

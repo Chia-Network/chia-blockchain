@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import replace
-from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set
 
 from blspy import AugSchemeMPL, G2Element
@@ -115,9 +114,6 @@ class CCWallet:
         if cc_coin is None:
             raise ValueError("Internal Error, unable to generate new coloured coin")
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
         regular_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -133,11 +129,8 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),  # type: ignore[arg-type]
+            name=bytes32.secret(),
         )
-        # TODO: address hint error and remove ignore
-        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
         cc_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -153,7 +146,7 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),  # type: ignore[arg-type]
+            name=bytes32.secret(),
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(cc_record)
@@ -440,7 +433,7 @@ class CCWallet:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(TransactionType.INCOMING_TX.value),
-                name=token_bytes(),  # type: ignore[arg-type]
+                name=bytes32.secret(),
             )
             cc_record = TransactionRecord(
                 confirmed_at_height=uint32(0),

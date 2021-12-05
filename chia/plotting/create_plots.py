@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from secrets import token_bytes
 from typing import Dict, List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G1Element, PrivateKey
@@ -192,7 +191,7 @@ async def create_plots(
             assert len(test_private_keys) == num
             sk: PrivateKey = test_private_keys[i]
         else:
-            sk = AugSchemeMPL.key_gen(token_bytes(32))
+            sk = AugSchemeMPL.key_gen(bytes32.secret())
 
         # The plot public key is the combination of the harvester and farmer keys
         # New plots will also include a taproot of the keys, for extensibility

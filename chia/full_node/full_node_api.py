@@ -2,7 +2,6 @@ import asyncio
 import dataclasses
 import time
 import traceback
-from secrets import token_bytes
 from typing import Callable, Dict, List, Optional, Tuple, Set
 
 from blspy import AugSchemeMPL, G2Element
@@ -199,13 +198,11 @@ class FullNodeAPI:
                     if task_id in full_node.full_node_store.tx_fetch_tasks:
                         full_node.full_node_store.tx_fetch_tasks.pop(task_id)
 
-            task_id = token_bytes()
+            task_id = bytes32.secret()
             fetch_task = asyncio.create_task(
                 tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id)
             )
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, Task[Any]]"; expected type "bytes32"  [index]
-            self.full_node.full_node_store.tx_fetch_tasks[task_id] = fetch_task  # type: ignore[index]
+            self.full_node.full_node_store.tx_fetch_tasks[task_id] = fetch_task
             return None
         return None
 

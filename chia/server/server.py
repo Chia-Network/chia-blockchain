@@ -6,7 +6,6 @@ import traceback
 from collections import Counter
 from ipaddress import IPv6Address, ip_address, ip_network, IPv4Network, IPv6Network
 from pathlib import Path
-from secrets import token_bytes
 from typing import Any, Callable, Dict, List, Optional, Union, Set, Tuple
 from typing import Counter as typing_Counter
 
@@ -611,16 +610,12 @@ class ChiaServer:
                     if task_id in self.execute_tasks:
                         self.execute_tasks.remove(task_id)
 
-            task_id = token_bytes()
+            task_id = bytes32.secret()
             api_task = asyncio.create_task(api_call(payload_inc, connection_inc, task_id))
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, Task[Any]]"; expected type "bytes32"  [index]
-            self.api_tasks[task_id] = api_task  # type: ignore[index]
+            self.api_tasks[task_id] = api_task
             if connection_inc.peer_node_id not in self.tasks_from_peer:
                 self.tasks_from_peer[connection_inc.peer_node_id] = set()
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "add" of "set" has incompatible type "bytes"; expected "bytes32"  [arg-type]
-            self.tasks_from_peer[connection_inc.peer_node_id].add(task_id)  # type: ignore[arg-type]
+            self.tasks_from_peer[connection_inc.peer_node_id].add(task_id)
 
     async def send_to_others(
         self,

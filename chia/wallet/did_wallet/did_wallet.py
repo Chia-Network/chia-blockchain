@@ -5,7 +5,6 @@ import json
 from typing import Dict, Optional, List, Any, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element
-from secrets import token_bytes
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import RespondAdditions, RejectAdditionsRequest
 from chia.server.outbound_message import NodeType
@@ -97,9 +96,6 @@ class DIDWallet:
             self.did_info.current_inner, self.did_info.origin_coin.name()
         ).get_tree_hash()
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -115,11 +111,8 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),  # type: ignore[arg-type]
+            name=bytes32.secret(),
         )
-        # TODO: address hint error and remove ignore
-        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
         regular_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -135,7 +128,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),  # type: ignore[arg-type]
+            name=bytes32.secret(),
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(did_record)
@@ -521,7 +514,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=bytes32.secret(),
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -574,9 +567,6 @@ class DIDWallet:
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -592,7 +582,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),  # type: ignore[arg-type]
+            name=bytes32.secret(),
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -643,9 +633,6 @@ class DIDWallet:
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -661,7 +648,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),  # type: ignore[arg-type]
+            name=bytes32.secret(),
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -714,9 +701,6 @@ class DIDWallet:
         signature = AugSchemeMPL.sign(private, message)
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
         spend_bundle = SpendBundle(list_of_solutions, signature)
-        # TODO: address hint error and remove ignore
-        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -732,7 +716,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),  # type: ignore[arg-type]
+            name=bytes32.secret(),
         )
         await self.standard_wallet.push_transaction(did_record)
         if filename is not None:
@@ -857,9 +841,6 @@ class DIDWallet:
         else:
             spend_bundle = spend_bundle.aggregate([spend_bundle, SpendBundle(list_of_solutions, aggsig)])
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -875,7 +856,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),  # type: ignore[arg-type]
+            name=bytes32.secret(),
         )
         await self.standard_wallet.push_transaction(did_record)
         new_did_info = DIDInfo(

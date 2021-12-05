@@ -2,7 +2,6 @@ import logging
 import time
 import traceback
 from pathlib import Path
-from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Tuple
 
 from blspy import AugSchemeMPL
@@ -544,13 +543,10 @@ class TradeManager:
         if chia_spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
             if chia_discrepancy < 0:
-                # TODO: address hint error and remove ignore
-                #       error: Argument "to_puzzle_hash" to "TransactionRecord" has incompatible type "bytes"; expected
-                #       "bytes32"  [arg-type]
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
-                    to_puzzle_hash=token_bytes(),  # type: ignore[arg-type]
+                    to_puzzle_hash=bytes32.secret(),
                     amount=uint64(abs(chia_discrepancy)),
                     fee_amount=uint64(0),
                     confirmed=False,
@@ -565,13 +561,10 @@ class TradeManager:
                     name=chia_spend_bundle.name(),
                 )
             else:
-                # TODO: address hint error and remove ignore
-                #       error: Argument "to_puzzle_hash" to "TransactionRecord" has incompatible type "bytes"; expected
-                #       "bytes32"  [arg-type]
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
-                    to_puzzle_hash=token_bytes(),  # type: ignore[arg-type]
+                    to_puzzle_hash=bytes32.secret(),
                     amount=uint64(abs(chia_discrepancy)),
                     fee_amount=uint64(0),
                     confirmed=False,
@@ -590,13 +583,10 @@ class TradeManager:
         for colour, amount in cc_discrepancies.items():
             wallet = wallets[colour]
             if chia_discrepancy > 0:
-                # TODO: address hint error and remove ignore
-                #       error: Argument "to_puzzle_hash" to "TransactionRecord" has incompatible type "bytes"; expected
-                #       "bytes32"  [arg-type]
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
-                    to_puzzle_hash=token_bytes(),  # type: ignore[arg-type]
+                    to_puzzle_hash=bytes32.secret(),
                     amount=uint64(abs(amount)),
                     fee_amount=uint64(0),
                     confirmed=False,
@@ -611,15 +601,10 @@ class TradeManager:
                     name=spend_bundle.name(),
                 )
             else:
-                # TODO: address hint errors and remove ignores
-                #       error: Argument "to_puzzle_hash" to "TransactionRecord" has incompatible type "bytes"; expected
-                #       "bytes32"  [arg-type]
-                #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
-                #       [arg-type]
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
-                    to_puzzle_hash=token_bytes(),  # type: ignore[arg-type]
+                    to_puzzle_hash=bytes32.secret(),
                     amount=uint64(abs(amount)),
                     fee_amount=uint64(0),
                     confirmed=False,
@@ -631,17 +616,14 @@ class TradeManager:
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.INCOMING_TRADE.value),
-                    name=token_bytes(),  # type: ignore[arg-type]
+                    name=bytes32.secret(),
                 )
             my_tx_records.append(tx_record)
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument "to_puzzle_hash" to "TransactionRecord" has incompatible type "bytes"; expected
-        #       "bytes32"  [arg-type]
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=token_bytes(),  # type: ignore[arg-type]
+            to_puzzle_hash=bytes32.secret(),
             amount=uint64(0),
             fee_amount=uint64(0),
             confirmed=False,

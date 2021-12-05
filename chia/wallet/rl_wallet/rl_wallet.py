@@ -3,7 +3,6 @@ import asyncio
 import json
 import time
 from dataclasses import dataclass
-from secrets import token_bytes
 from typing import Any, List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G1Element, PrivateKey
@@ -81,7 +80,7 @@ class RLWallet:
             [
                 DerivationRecord(
                     unused,
-                    bytes32(token_bytes(32)),
+                    bytes32.secret(),
                     pubkey,
                     WalletType.RATE_LIMITED,
                     wallet_info.id,
@@ -122,7 +121,7 @@ class RLWallet:
                 [
                     DerivationRecord(
                         unused,
-                        bytes32(token_bytes(32)),
+                        bytes32.secret(),
                         pubkey,
                         WalletType.RATE_LIMITED,
                         wallet_info.id,
