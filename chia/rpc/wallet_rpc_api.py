@@ -586,17 +586,14 @@ class WalletRpcApi:
                     try:
                         delayed_address = None
                         if "p2_singleton_delayed_ph" in request:
-                            delayed_address = hexstr_to_bytes(request["p2_singleton_delayed_ph"])
-                        # TODO: address hint error and remove ignore
-                        #       error: Argument 6 to "create_new_pool_wallet_transaction" of "PoolWallet" has
-                        #       incompatible type "Optional[bytes]"; expected "Optional[bytes32]"  [arg-type]
+                            delayed_address = bytes32.from_hexstr(request["p2_singleton_delayed_ph"])
                         tr, p2_singleton_puzzle_hash, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
                             wallet_state_manager,
                             main_wallet,
                             initial_target_state,
                             fee,
                             request.get("p2_singleton_delay_time", None),
-                            delayed_address,  # type: ignore[arg-type]
+                            delayed_address,
                         )
                     except Exception as e:
                         raise ValueError(str(e))

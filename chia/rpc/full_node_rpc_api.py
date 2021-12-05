@@ -208,10 +208,7 @@ class FullNodeRpcApi:
             return {"eos": eos, "time_received": time_received, "reverted": True}
 
         # Now we handle the case of getting a signage point
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        sp_hash: bytes32 = hexstr_to_bytes(request["sp_hash"])  # type: ignore[assignment]
+        sp_hash: bytes32 = bytes32.from_hexstr(request["sp_hash"])
         sp_tuple = self.service.full_node_store.recent_signage_points.get(sp_hash)
         if sp_tuple is None:
             raise ValueError(f"Did not find sp {sp_hash.hex()} in cache")
@@ -467,12 +464,9 @@ class FullNodeRpcApi:
         """
         if "name" not in request:
             raise ValueError("Name not in request")
-        name = hexstr_to_bytes(request["name"])
+        name = bytes32.from_hexstr(request["name"])
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_coin_record" of "CoinStore" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
-        coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(name)  # type: ignore[arg-type]  # noqa: E501
+        coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(name)
         if coin_record is None:
             raise ValueError(f"Coin record 0x{name.hex()} not found")
 
@@ -605,10 +599,7 @@ class FullNodeRpcApi:
     async def get_mempool_item_by_tx_id(self, request: Dict) -> Optional[Dict]:
         if "tx_id" not in request:
             raise ValueError("No tx_id in request")
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        tx_id: bytes32 = hexstr_to_bytes(request["tx_id"])  # type: ignore[assignment]
+        tx_id: bytes32 = bytes32.from_hexstr(request["tx_id"])
 
         item = self.service.mempool_manager.get_mempool_item(tx_id)
         if item is None:
