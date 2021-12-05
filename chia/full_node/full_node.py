@@ -394,12 +394,8 @@ class FullNode:
                             mempool_new_peak_result, fns_peak_result = await self.peak_post_processing(
                                 peak_fb, peak, fork_height, peer, coin_changes[0]
                             )
-                            # TODO: address hint error and remove ignore
-                            #       error: Argument 5 to "peak_post_processing_2" of "FullNode" has incompatible type
-                            #       "Tuple[List[CoinRecord], Dict[bytes, Dict[bytes, CoinRecord]]]"; expected
-                            #       "Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]"  [arg-type]
                             await self.peak_post_processing_2(
-                                peak_fb, peak, fork_height, peer, coin_changes, mempool_new_peak_result, fns_peak_result  # type: ignore[arg-type]  # noqa: E501
+                                peak_fb, peak, fork_height, peer, coin_changes, mempool_new_peak_result, fns_peak_result
                             )
                         except asyncio.CancelledError:
                             # Still do post processing after cancel
@@ -1024,7 +1020,7 @@ class FullNode:
         peer: ws.WSChiaConnection,
         fork_point: Optional[uint32],
         wp_summaries: Optional[List[SubEpochSummary]] = None,
-    ) -> Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes, CoinRecord]]]]:
+    ) -> Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes32, Dict[bytes32, CoinRecord]]]]:
         advanced_peak = False
         fork_height: Optional[uint32] = uint32(0)
 
@@ -1056,7 +1052,7 @@ class FullNode:
 
         # Dicts because deduping
         all_coin_changes: Dict[bytes32, CoinRecord] = {}
-        all_hint_changes: Dict[bytes, Dict[bytes32, CoinRecord]] = {}
+        all_hint_changes: Dict[bytes32, Dict[bytes32, CoinRecord]] = {}
 
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
@@ -1090,13 +1086,7 @@ class FullNode:
                 f"Total time for {len(blocks_to_validate)} blocks: {time.time() - pre_validate_start}, "
                 f"advanced: {advanced_peak}"
             )
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible return value type (got
-        #       "Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]]",
-        #       expected
-        #       "Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes, CoinRecord]]]]")
-        #       [return-value]
-        return True, advanced_peak, fork_height, (list(all_coin_changes.values()), all_hint_changes)  # type: ignore[return-value]  # noqa: E501
+        return True, advanced_peak, fork_height, (list(all_coin_changes.values()), all_hint_changes)
 
     async def _finish_sync(self):
         """
