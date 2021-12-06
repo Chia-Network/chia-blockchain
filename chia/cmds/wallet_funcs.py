@@ -54,10 +54,11 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
     starttx = args.get("offset", 0)
     numtx = args.get("num", 50)
     version = args.get("version", 1)
+    newest_first = args.get("newest_first", True)
 
     endtx = starttx + numtx
     txs: List[TransactionRecord] = await wallet_client.get_transactions(
-        wallet_id, all=args["all"], start=starttx, end=endtx, version=version
+        wallet_id, all=args["all"], start=starttx, end=endtx, newest_first=newest_first, version=version
     )
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
