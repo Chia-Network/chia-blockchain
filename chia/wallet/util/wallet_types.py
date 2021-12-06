@@ -3,6 +3,7 @@ from enum import IntEnum
 from typing_extensions import TypedDict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
 
 
 class WalletType(IntEnum):
@@ -20,5 +21,5 @@ class WalletType(IntEnum):
 
 
 class AmountWithPuzzlehash(TypedDict):
-    amount: int
+    amount: uint64
     puzzlehash: bytes32
