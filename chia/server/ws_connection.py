@@ -284,6 +284,12 @@ class WSChiaConnection:
                         self.total_latency_messages += 1
                         self.total_latency_time += latency
                 await self.outgoing_queue_ping.put(WSMessage(WSMsgType.PING, None, None))
+        except asyncio.CancelledError:
+            pass
+        except BrokenPipeError as e:
+            self.log.warning(f"{e} {self.peer_host}")
+        except ConnectionResetError as e:
+            self.log.warning(f"{e} {self.peer_host}")
         except Exception as e:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception while pinging: {e} with {self.peer_host}")

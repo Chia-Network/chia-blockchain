@@ -260,7 +260,7 @@ class ChiaServer:
             connection_times = [
                 (peer_id, connection.creation_time) for peer_id, connection in all_inbounds.items()
             ]
-            connection_times = sorted(connection_times, key=lambda x: x[1]))
+            connection_times = sorted(connection_times, key=lambda x: x[1])
             keep_nodes_by_time = [peer_id for peer_id, _ in connection_times]
             keep_nodes_by_time = keep_nodes_by_time[:(len(keep_nodes_by_time) // 2)]
             ping_times = [
@@ -268,7 +268,7 @@ class ChiaServer:
                 for peer_id, connection in all_inbounds.items()
                 if connection.get_avg_latency_time() is not None
             ]
-            ping_times = sorted(ping_times, key=lambda x: x[1]))
+            ping_times = sorted(ping_times, key=lambda x: x[1])
             keep_nodes_by_ping = [peer_id for peer_id, _ in ping_times]
             keep_nodes_by_ping = keep_nodes_by_ping[:(len(keep_nodes_by_ping) // 4)]
             all_inbounds = [
