@@ -290,12 +290,12 @@ class FullNodeSimulator(FullNodeAPI):
         Arguments:
             records: The transaction records to process.
         """
-        coin_names_to_wait_for: Set[bytes32] = set()
+        coins_to_wait_for: Set[bytes32] = set()
         for record in records:
             if record.spend_bundle is None:
                 continue
 
-            coin_names_to_wait_for.update(record.spend_bundle.additions())
+            coins_to_wait_for.update(record.spend_bundle.additions())
 
         coin_store = self.full_node.coin_store
 
@@ -305,14 +305,14 @@ class FullNodeSimulator(FullNodeAPI):
             await self.process_blocks(count=1)
 
             found: Set[Coin] = set()
-            for coin_name in coin_names_to_wait_for:
+            for coin in coins_to_wait_for:
                 # TODO: is this the proper check?
-                if await coin_store.get_coin_record(coin_name) is not None:
-                    found.add(coin_name)
+                if await coin_store.get_coin_record(coin.name()) is not None:
+                    found.add(coin)
 
-            coin_names_to_wait_for = coin_names_to_wait_for.difference(found)
+            coins_to_wait_for = coins_to_wait_for.difference(found)
 
-            if len(coin_names_to_wait_for) == 0:
+            if len(coins_to_wait_for) == 0:
                 return
 
     async def create_coins_with_amounts(
