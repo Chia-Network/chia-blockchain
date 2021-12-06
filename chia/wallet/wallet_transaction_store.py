@@ -347,13 +347,14 @@ class WalletTransactionStore:
             cursor = await self.db_connection.execute(
                 f"SELECT * from transaction_record where wallet_id=? and confirmed_at_height not in"
                 f" (select confirmed_at_height from transaction_record order by confirmed_at_height"
-                f" LIMIT {start})"
-                f" order by confirmed_at_height DESC, rowid LIMIT {limit}",
+                f" ASC LIMIT {start})"
+                f" order by confirmed_at_height DESC LIMIT {limit}",
                 (wallet_id,),
             )
         else:
             cursor = await self.db_connection.execute(
-                f"SELECT * from transaction_record where wallet_id=? order by confirmed_at_height DESC, rowid"
+                f"SELECT * from transaction_record where wallet_id=? "
+                f"order by confirmed ASC, confirmed_at_height DESC, rowid"
                 f" LIMIT {start}, {limit}",
                 (wallet_id,),
             )

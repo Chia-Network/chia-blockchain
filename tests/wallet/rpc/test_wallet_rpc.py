@@ -250,29 +250,35 @@ class TestWalletRpc:
                 )
 
             # should get all transactions
+            # pending txs are always listed first, then newest by height
+            # highest height is newer
             all_transactions = await client.get_transactions(wallet_id="1", all=True, version=2)
             assert len(all_transactions) == len(transactions) + len(amounts)
+            tx: TransactionRecord = all_transactions[0]
+            assert not tx.confirmed
+            tx = all_transactions[-1]
+            assert tx.confirmed_at_height == 2
 
             # should get 50 transactions using v1 query by default
             tx_test_list = await client.get_transactions(wallet_id="1")
             assert len(tx_test_list) == 50
-            # test the same order returned from all transactions
-            # v1 query returns list reversed for funsies
-            tx_test_list.reverse()
-            assert all_transactions[0:50] == tx_test_list
 
-            # Test that v1 query and v2 query return the same data whenever start=0
+            # v1 and v2 do not return same list as they differ in pending handling
             tx_test_list_v2 = await client.get_transactions(wallet_id="1", version=2)
-            assert tx_test_list == tx_test_list_v2
+            assert len(tx_test_list_v2)
+            tx = tx_test_list_v2[0]
+            assert not tx.confirmed
+            tx = tx_test_list_v2[-1]
+            assert not tx.confirmed
+            assert tx_test_list_v2 != tx_test_list
 
-            tx_test_list = await client.get_transactions(wallet_id="1", end=89)
-            tx_test_list_v2 = await client.get_transactions(wallet_id="1", end=89, version=2)
-            tx_test_list.reverse()
-            assert tx_test_list == tx_test_list_v2
-            # Test again consistent ordering with all transactions
-            assert all_transactions[0:89] == tx_test_list
-
+            # v2 queries should return items in the same order
+            # Test consistent ordering with all transactions
             all_transactions = await client.get_transactions(wallet_id="1", all=True, version=2)
+
+            tx_test_list_v2 = await client.get_transactions(wallet_id="1", end=89, version=2)
+            assert all_transactions[0:89] == tx_test_list_v2
+
             tx_test_list = await client.get_transactions(wallet_id="1", end=125, version=2)
             assert tx_test_list == all_transactions
 
