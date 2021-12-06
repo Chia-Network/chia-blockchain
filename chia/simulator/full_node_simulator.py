@@ -307,7 +307,7 @@ class FullNodeSimulator(FullNodeAPI):
             found: Set[Coin] = set()
             for coin_name in coin_names_to_wait_for:
                 # TODO: is this the proper check?
-                if coin_store.get_coin_record(coin_name) is not None:
+                if await coin_store.get_coin_record(coin_name) is not None:
                     found.add(coin_name)
 
             coin_names_to_wait_for = coin_names_to_wait_for.difference(found)
