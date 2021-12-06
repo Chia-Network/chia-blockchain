@@ -1005,12 +1005,13 @@ class FullNode:
             # immediately above, if it has length 32 then it might match an entry in
             # `self.ph_subscriptions`.  It is unclear if there is a more proper means
             # of handling this situation.
-            subscribed_peers = self.ph_subscriptions.get(hint, [])  # type: ignore[call-overload]
-            for peer in subscribed_peers:
-                if peer not in changes_for_peer:
-                    changes_for_peer[peer] = set()
-                for record in records.values():
-                    changes_for_peer[peer].add(record.coin_state)
+            subscribed_peers = self.ph_subscriptions.get(hint)  # type: ignore[call-overload]
+            if subscribed_peers is not None:
+                for peer in subscribed_peers:
+                    if peer not in changes_for_peer:
+                        changes_for_peer[peer] = set()
+                    for record in records.values():
+                        changes_for_peer[peer].add(record.coin_state)
 
         for peer, changes in changes_for_peer.items():
             if peer not in self.server.all_connections:
