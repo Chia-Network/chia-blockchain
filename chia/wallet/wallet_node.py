@@ -801,7 +801,7 @@ class WalletNode:
         if self.wallet_state_manager is None:
             return None
         header_block_records: List[HeaderBlockRecord] = []
-        all_outgoing_per_wallet: Dict[int, List[TransactionRecord]] = {}
+        all_txs_per_wallet: Dict[int, List[TransactionRecord]] = {}
 
         for block in header_blocks:
             if block.is_transaction_block:
@@ -829,15 +829,13 @@ class WalletNode:
                     if wallet_info is None:
                         continue
                     wallet_id, wallet_type = wallet_info
-                    if wallet_id in all_outgoing_per_wallet:
-                        all_outgoing = all_outgoing_per_wallet[wallet_id]
+                    if wallet_id in all_txs_per_wallet:
+                        all_txs = all_txs_per_wallet[wallet_id]
                     else:
-                        all_outgoing = await self.wallet_state_manager.tx_store.get_all_transactions_for_wallet(
-                            wallet_id, TransactionType.OUTGOING_TX
-                        )
-                        all_outgoing_per_wallet[wallet_id] = all_outgoing
+                        all_txs = await self.wallet_state_manager.tx_store.get_all_transactions_for_wallet(wallet_id)
+                        all_txs_per_wallet[wallet_id] = all_txs
                     await self.wallet_state_manager.coin_added(
-                        added_coin, block.height, all_outgoing, wallet_id, wallet_type
+                        added_coin, block.height, all_txs, wallet_id, wallet_type
                     )
 
                 all_unconfirmed: List[
