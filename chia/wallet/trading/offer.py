@@ -136,7 +136,7 @@ class Offer:
 
     def get_requested_amounts(self) -> Dict[Optional[bytes32], int]:
         requested_amounts: Dict[Optional[bytes32], int] = {}
-        for asset_id, coins in self.requested_payments.items():
+        for asset_id, coins in self.get_requested_payments().items():
             requested_amounts[asset_id] = uint64(sum([c.amount for c in coins]))
         return requested_amounts
 
