@@ -342,7 +342,7 @@ class WalletTransactionStore:
         # use rowid as additional order by ensures that the returned list is deterministic
         # otherwise rows with the same height could be returned in a different order
 
-        # Version 1 and Version 2 queries return the same data if and only if start = 0
+        # Version 1 and Version 2 queries do not return the same data due to sorting and ordering differences
         if version == 1:
             cursor = await self.db_connection.execute(
                 f"SELECT * from transaction_record where wallet_id=? and confirmed_at_height not in"
