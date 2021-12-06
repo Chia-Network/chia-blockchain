@@ -289,6 +289,10 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("get_offer_summary", {"offer": bytes(offer).hex()})
         return res["summary"]
 
+    async def check_offer_validity(self, offer: Offer) -> bool:
+        res = await self.fetch("check_offer_validity", {"offer": bytes(offer).hex()})
+        return res["valid"]
+
     async def take_offer(self, offer: Offer, fee=uint64(0)) -> TradeRecord:
         res = await self.fetch("take_offer", {"offer": bytes(offer).hex(), "fee": fee})
         return TradeRecord.from_json_dict_convenience(res["trade_record"])

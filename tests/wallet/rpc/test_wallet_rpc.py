@@ -355,6 +355,8 @@ class TestWalletRpc:
             summary = await client.get_offer_summary(offer)
             assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}}
 
+            assert await client.check_offer_validity(offer)
+
             all_offers = await client.get_all_offers(file_contents=True)
             assert len(all_offers) == 1
             assert TradeStatus(all_offers[0].status) == TradeStatus.PENDING_ACCEPT

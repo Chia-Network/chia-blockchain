@@ -90,6 +90,7 @@ class WalletRpcApi:
             "/get_cat_list": self.get_cat_list,
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_offer_summary": self.get_offer_summary,
+            "/check_offer_validity": self.check_offer_validity,
             "/take_offer": self.take_offer,
             "/get_offer": self.get_offer,
             "/get_all_offers": self.get_all_offers,
@@ -853,6 +854,13 @@ class WalletRpcApi:
         offered, requested = offer.summary()
 
         return {"summary": {"offered": offered, "requested": requested}}
+
+    async def check_offer_validity(self, request):
+        assert self.service.wallet_state_manager is not None
+        offer_hex: str = request["offer"]
+        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+
+        return {"valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer))}
 
     async def take_offer(self, request):
         assert self.service.wallet_state_manager is not None
