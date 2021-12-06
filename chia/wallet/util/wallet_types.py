@@ -1,5 +1,9 @@
 from enum import IntEnum
 
+from typing_extensions import TypedDict
+
+from chia.types.blockchain_format.sized_bytes import bytes32
+
 
 class WalletType(IntEnum):
     # Wallet Types
@@ -13,3 +17,8 @@ class WalletType(IntEnum):
     RECOVERABLE = 7
     DISTRIBUTED_ID = 8
     POOLING_WALLET = 9
+
+
+class AmountWithPuzzlehash(TypedDict):
+    amount: int
+    puzzlehash: bytes32

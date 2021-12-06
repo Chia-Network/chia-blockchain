@@ -64,10 +64,7 @@ def validate_clvm_and_signature(
 
         # Verify aggregated signature
         cache: LRUCache = LRUCache(10000)
-        # TODO: address hint error and remove ignore
-        #       error: Argument 2 to "aggregate_verify" has incompatible type "List[bytes32]"; expected "List[bytes]"
-        #       [arg-type]
-        if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):  # type: ignore[arg-type]  # noqa: E501
+        if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):
             return Err.BAD_AGGREGATE_SIGNATURE, b"", {}
         new_cache_entries: Dict[bytes, bytes] = {}
         for k, v in cache.cache.items():
