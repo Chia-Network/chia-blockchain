@@ -175,7 +175,7 @@ class BlockTools:
                 self.total_result.processed += update_result.processed
                 self.total_result.duration += update_result.duration
                 assert update_result.remaining == len(self.expected_plots) - self.total_result.processed
-                assert update_result.loaded <= self.refresh_parameter.batch_size
+                assert len(update_result.loaded) <= self.refresh_parameter.batch_size
 
             if event == PlotRefreshEvents.done:
                 assert self.total_result.loaded == update_result.loaded
