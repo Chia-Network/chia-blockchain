@@ -507,7 +507,7 @@ class TestWalletSimulator:
 
         # Farm a few blocks so we can confirm the resubmitted transaction
         # TODO: setup to be able to wait for reorged transactions
-        await full_node_api.process_blocks(count=4)
+        await full_node_api.process_blocks(count=10)
 
         # By this point, the transaction should be confirmed
         print(await wallet.get_confirmed_balance())
