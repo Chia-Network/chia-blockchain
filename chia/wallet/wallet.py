@@ -3,7 +3,6 @@ import time
 from typing import Any, Dict, List, Optional, Set
 
 from blspy import G1Element
-from typing_extensions import TypedDict
 
 from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
