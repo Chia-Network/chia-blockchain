@@ -664,17 +664,18 @@ class WalletRpcApi:
 
         all = request.get("all", False)
         version = request.get("version", 1)
+        newest_first = request.get("newest_first", True)
 
         if all:
             transactions = await self.service.wallet_state_manager.tx_store.get_all_transactions_for_wallet(
-                wallet_id=wallet_id, version=version
+                wallet_id=wallet_id, newest_first=newest_first, version=version
             )
         else:
             start = request.get("start", 0)
             end = request.get("end", 50)
 
             transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
-                wallet_id, start, end, version
+                wallet_id, start=start, end=end, newest_first=newest_first, version=version
             )
 
         formatted_transactions = []

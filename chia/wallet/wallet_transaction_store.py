@@ -333,7 +333,9 @@ class WalletTransactionStore:
         else:
             return []
 
-    async def get_transactions_between(self, wallet_id: int, start, end, version: int) -> List[TransactionRecord]:
+    async def get_transactions_between(
+        self, wallet_id: int, start, end, newest_first: bool, version: int
+    ) -> List[TransactionRecord]:
         """Return a list of transaction between start and end index. List is in reverse chronological order.
         start = 0 is most recent transaction
         """
@@ -345,18 +347,30 @@ class WalletTransactionStore:
         # Version 1 and Version 2 queries do not return the same data due to sorting and ordering differences
         if version == 1:
             cursor = await self.db_connection.execute(
-                f"SELECT * from transaction_record where wallet_id=? and confirmed_at_height not in"
-                f" (select confirmed_at_height from transaction_record order by confirmed_at_height"
-                f" ASC LIMIT {start})"
-                f" order by confirmed_at_height DESC LIMIT {limit}",
-                (wallet_id,),
+                (
+                    "SELECT * from transaction_record where wallet_id=? and confirmed_at_height not in"
+                    " (select confirmed_at_height from transaction_record order by confirmed_at_height"
+                    " ASC LIMIT ?) order by confirmed_at_height DESC LIMIT ?"
+                ),
+                (
+                    wallet_id,
+                    start,
+                    limit,
+                ),
             )
         else:
+            if newest_first:
+                sortstring = " order by confirmed ASC, confirmed_at_height DESC, rowid"
+            else:
+                sortstring = " order by confirmed_at_height, rowid"
+
             cursor = await self.db_connection.execute(
-                f"SELECT * from transaction_record where wallet_id=? "
-                f"order by confirmed ASC, confirmed_at_height DESC, rowid"
-                f" LIMIT {start}, {limit}",
-                (wallet_id,),
+                f"SELECT * from transaction_record where wallet_id=? {sortstring} LIMIT ?,?",
+                (
+                    wallet_id,
+                    start,
+                    limit,
+                ),
             )
 
         rows = await cursor.fetchall()
@@ -385,7 +399,7 @@ class WalletTransactionStore:
         return count
 
     async def get_all_transactions_for_wallet(
-        self, wallet_id: int, type: int = None, version: int = 1
+        self, wallet_id: int, type: int = None, newest_first: bool = True, version: int = 1
     ) -> List[TransactionRecord]:
         """
         Returns all stored transactions.
@@ -393,7 +407,10 @@ class WalletTransactionStore:
         if version == 1:
             sortstring = ""
         else:
-            sortstring = " order by confirmed ASC, confirmed_at_height DESC, rowid"
+            if newest_first:
+                sortstring = " order by confirmed ASC, confirmed_at_height DESC, rowid"
+            else:
+                sortstring = " order by confirmed DESC, confirmed_at_height, rowid"
 
         if type is None:
             cursor = await self.db_connection.execute(

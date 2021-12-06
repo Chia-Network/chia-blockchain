@@ -70,6 +70,11 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     required=True,
     help="Number of transactions starting at offset to return",
 )
+@click.option(
+    "--newest-first/--oldest-first",
+    default=True,
+    help="Show newest or oldest transactions first. Default is newest-first.",
+)
 def get_transactions_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -79,6 +84,7 @@ def get_transactions_cmd(
     paginate: Optional[bool],
     all: bool,
     num: int,
+    newest_first: bool,
 ) -> None:
     extra_params = {
         "id": id,
@@ -87,6 +93,7 @@ def get_transactions_cmd(
         "num": num,
         "paginate": paginate,
         "all": all,
+        "newest_first": newest_first,
         "version": 2,
     }
     import asyncio

@@ -105,9 +105,11 @@ class WalletRpcClient(RpcClient):
     async def get_transactions(
         self,
         wallet_id: str,
+        *,
         all: Optional[bool] = None,
         start: Optional[int] = None,
         end: Optional[int] = None,
+        newest_first: Optional[bool] = None,
         version: Optional[int] = None,
     ) -> List[TransactionRecord]:
         request: Dict[str, Any] = {"wallet_id": wallet_id}
@@ -119,6 +121,8 @@ class WalletRpcClient(RpcClient):
             request["end"] = end
         if version is not None:
             request["version"] = version
+        if newest_first is not None:
+            request["newest_first"] = newest_first
 
         res = await self.fetch(
             "get_transactions",

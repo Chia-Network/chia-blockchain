@@ -259,6 +259,13 @@ class TestWalletRpc:
             tx = all_transactions[-1]
             assert tx.confirmed_at_height == 2
 
+            # should get all transactions but oldest first
+            all_transactions = await client.get_transactions(wallet_id="1", all=True, newest_first=False, version=2)
+            tx: TransactionRecord = all_transactions[0]
+            assert tx.confirmed_at_height == 2
+            tx = all_transactions[-1]
+            assert not tx.confirmed
+
             # should get 50 transactions using v1 query by default
             tx_test_list = await client.get_transactions(wallet_id="1")
             assert len(tx_test_list) == 50
