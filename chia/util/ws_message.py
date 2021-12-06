@@ -2,11 +2,9 @@ from secrets import token_bytes
 from typing import Any, Dict
 
 from chia.util.json_util import dict_to_json_str
+from chia.types.blockchain_format.sized_bytes import bytes32
 
-try:
-    from typings import TypedDict
-except ImportError:
-    from typing_extensions import TypedDict
+from typing_extensions import TypedDict
 
 
 # Messages must follow this format
@@ -22,7 +20,7 @@ class WsRpcMessage(TypedDict):
     command: str
     ack: bool
     data: Dict[str, Any]
-    request_id: str
+    request_id: bytes32
     destination: str
     origin: str
 
