@@ -26,7 +26,10 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name) -> None:
         chia_amount = Decimal(int(tx.amount)) / units["chia"]
         to_address = encode_puzzle_hash(tx.to_puzzle_hash, name)
         print(f"Transaction {tx.name}")
-        print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
+        if tx.confirmed:
+            print(f"Status: Confirmed at {tx.confirmed_at_height}")
+        else:
+            print(f"Status: {'In mempool' if tx.is_in_mempool() else 'Pending'}")
         print(f"Amount {'sent' if tx.sent else 'received'}: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))

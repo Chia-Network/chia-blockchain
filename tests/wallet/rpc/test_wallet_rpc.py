@@ -250,31 +250,46 @@ class TestWalletRpc:
                 )
 
             # should get all transactions
-            all_transactions = await client.get_transactions(wallet_id="1", all=True)
+            all_transactions = await client.get_transactions(wallet_id="1", all=True, version=2)
             assert len(all_transactions) == len(transactions) + len(amounts)
 
             # should get 50 transactions using v1 query by default
-            all_transactions = await client.get_transactions(wallet_id="1")
-            assert len(all_transactions) == 50
+            tx_test_list = await client.get_transactions(wallet_id="1")
+            assert len(tx_test_list) == 50
+            # test the same order returned from all transactions
+            # v1 query returns list reversed for funsies
+            tx_test_list.reverse()
+            assert all_transactions[0:50] == tx_test_list
 
             # Test that v1 query and v2 query return the same data whenever start=0
-            all_v2 = await client.get_transactions(wallet_id="1", version=2)
-            assert len(all_transactions) == len(all_v2)
-            assert all_transactions == all_v2
+            tx_test_list_v2 = await client.get_transactions(wallet_id="1", version=2)
+            assert tx_test_list == tx_test_list_v2
 
-            all_transactions = await client.get_transactions(wallet_id="1", end=89)
-            all_v2 = await client.get_transactions(wallet_id="1", end=89, version=2)
-            assert len(all_transactions) == len(all_v2)
-            assert all_transactions == all_v2
+            tx_test_list = await client.get_transactions(wallet_id="1", end=89)
+            tx_test_list_v2 = await client.get_transactions(wallet_id="1", end=89, version=2)
+            tx_test_list.reverse()
+            assert tx_test_list == tx_test_list_v2
+            # Test again consistent ordering with all transactions
+            assert all_transactions[0:89] == tx_test_list
+
+            all_transactions = await client.get_transactions(wallet_id="1", all=True, version=2)
+            tx_test_list = await client.get_transactions(wallet_id="1", end=125, version=2)
+            assert tx_test_list == all_transactions
 
             # should get skip the first 100 transactions with v2 query
-            all_transactions = await client.get_transactions(wallet_id="1", start=100, end=300, version=2)
-            assert len(all_transactions) == len(transactions) + len(amounts) - 100
+            tx_test_list = await client.get_transactions(wallet_id="1", start=100, end=300, version=2)
+            assert tx_test_list == all_transactions[-25:]
 
             # Test the broken v1 query
             all_transactions = await client.get_transactions(wallet_id="1", start=100, end=300, version=1)
             # why 15? I dunno, this query doesn't work like you expect, so returns are curious
             assert len(all_transactions) == 15
+
+            tx_test_list = await client.get_transactions(wallet_id="1", all=True, version=1)
+            tx_test_list_v2 = await client.get_transactions(wallet_id="1", all=True, version=2)
+            assert len(tx_test_list) == len(tx_test_list_v2)
+            # these should not be the same due to ordering by v2
+            assert tx_test_list != tx_test_list_v2
 
             # test is complete, just throw out the transactions instead of waiting for them to process
             await client.delete_unconfirmed_transactions("1")

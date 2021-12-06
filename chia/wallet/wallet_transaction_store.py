@@ -347,14 +347,14 @@ class WalletTransactionStore:
             cursor = await self.db_connection.execute(
                 f"SELECT * from transaction_record where wallet_id=? and confirmed_at_height not in"
                 f" (select confirmed_at_height from transaction_record order by confirmed_at_height"
-                f" ASC LIMIT {start})"
-                f" order by rowid, confirmed_at_height DESC LIMIT {limit}",
+                f" LIMIT {start})"
+                f" order by confirmed_at_height DESC, rowid LIMIT {limit}",
                 (wallet_id,),
             )
         else:
             cursor = await self.db_connection.execute(
-                f"SELECT * from transaction_record where wallet_id=? order by rowid, confirmed_at_height"
-                f" DESC LIMIT {start}, {limit}",
+                f"SELECT * from transaction_record where wallet_id=? order by confirmed_at_height DESC, rowid"
+                f" LIMIT {start}, {limit}",
                 (wallet_id,),
             )
 
@@ -366,7 +366,8 @@ class WalletTransactionStore:
             record = TransactionRecord.from_bytes(row[0])
             records.append(record)
 
-        records.reverse()
+        if version == 1:
+            records.reverse()  # This doesn't seem logical but leaving in for compatibility
 
         return records
 
@@ -382,17 +383,25 @@ class WalletTransactionStore:
         await cursor.close()
         return count
 
-    async def get_all_transactions_for_wallet(self, wallet_id: int, type: int = None) -> List[TransactionRecord]:
+    async def get_all_transactions_for_wallet(
+        self, wallet_id: int, type: int = None, version: int = 1
+    ) -> List[TransactionRecord]:
         """
         Returns all stored transactions.
         """
+        if version == 1:
+            sortstring = ""
+        else:
+            sortstring = " order by confirmed ASC, confirmed_at_height DESC, rowid"
+
         if type is None:
             cursor = await self.db_connection.execute(
-                "SELECT * from transaction_record where wallet_id=?", (wallet_id,)
+                "SELECT * from transaction_record where wallet_id=?" + sortstring,
+                (wallet_id,),
             )
         else:
             cursor = await self.db_connection.execute(
-                "SELECT * from transaction_record where wallet_id=? and type=?",
+                "SELECT * from transaction_record where wallet_id=? and type=?" + sortstring,
                 (
                     wallet_id,
                     type,
