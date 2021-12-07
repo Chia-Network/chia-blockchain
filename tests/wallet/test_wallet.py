@@ -506,6 +506,8 @@ class TestWalletSimulator:
         # Farm a few blocks so we can confirm the resubmitted transaction
         # TODO: setup to be able to wait for reorged transactions
         for _ in range(2):
+            # TODO: Not sure why these games are required, albeit only on macOS with
+            #       Python 3.8.
             await asyncio.sleep(5)
             await full_node_api.process_blocks(count=1)
 
