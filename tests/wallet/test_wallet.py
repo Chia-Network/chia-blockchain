@@ -478,18 +478,16 @@ class TestWalletSimulator:
         await server_3.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         pre_funds = await full_node_api.farm_blocks(count=5, wallet=wallet)
         old_reorg_height = full_node_api.full_node.blockchain.get_peak_height()
-        post_funds = await full_node_api.farm_blocks(count=3, wallet=wallet)
-        total_funds = pre_funds + post_funds
-        all_blocks = await full_node_api.get_all_full_blocks()
 
+        all_blocks = await full_node_api.get_all_full_blocks()
         # Ensure that we use a coin that we will not reorg out
         coin = list(all_blocks[2].get_included_reward_coins())[0]
 
+        post_funds = await full_node_api.farm_blocks(count=3, wallet=wallet)
+        total_funds = pre_funds + post_funds
+
         tx = await wallet.generate_signed_transaction(reorg_transaction_mojos, ph2, coins={coin})
         await wallet.push_transaction(tx)
-        await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
-        await time_out_assert(5, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
-        await time_out_assert(5, wallet.get_confirmed_balance, total_funds)
         await full_node_api.process_transaction_records(records=[tx])
         await time_out_assert(5, wallet_2.get_confirmed_balance, reorg_transaction_mojos)
 
@@ -507,7 +505,9 @@ class TestWalletSimulator:
 
         # Farm a few blocks so we can confirm the resubmitted transaction
         # TODO: setup to be able to wait for reorged transactions
-        await full_node_api.process_blocks(count=10)
+        for _ in range(5):
+            await asyncio.sleep(5)
+            await full_node_api.process_blocks(count=1)
 
         # By this point, the transaction should be confirmed
         print(await wallet.get_confirmed_balance())
