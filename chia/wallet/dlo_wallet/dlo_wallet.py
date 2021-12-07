@@ -231,7 +231,7 @@ class DLOWallet:
 
         if self.dlo_info.active_offer is None:
             # TODO: is this what we want here?
-            raise ValueError(f"Unable to get a coin, no coins selected and no active offer.")
+            raise ValueError("Unable to get a coin, no coins selected and no active offer.")
 
         return self.dlo_info.active_offer
 
