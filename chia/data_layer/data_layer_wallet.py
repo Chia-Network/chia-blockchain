@@ -27,6 +27,7 @@ from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.transaction_record import ItemAndTransactionRecords
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -80,7 +81,7 @@ class DataLayerWallet:
         root_hash: bytes32,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
-    ) -> _T_DataLayerWallet:
+    ) -> ItemAndTransactionRecords[_T_DataLayerWallet]:
         """
         This must be called under the wallet state manager lock
         """
@@ -167,7 +168,7 @@ class DataLayerWallet:
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(dl_record)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
-        return self
+        return ItemAndTransactionRecords(item=self, transaction_records=[regular_record])
 
     async def generate_launcher_spend(
         self,
@@ -233,7 +234,7 @@ class DataLayerWallet:
     async def create_update_state_spend(
         self,
         root_hash: bytes,
-    ) -> SpendBundle:
+    ) -> TransactionRecord:
         new_inner_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         new_db_layer_puzzle = create_host_layer_puzzle(new_inner_inner_puzzle, root_hash)
         coins = await self.select_coins(uint64(1))
@@ -297,7 +298,7 @@ class DataLayerWallet:
             name=token_bytes(),
         )
         await self.standard_wallet.push_transaction(dl_record)
-        return spend_bundle
+        return dl_record
 
     async def create_report_spend(self) -> SpendBundle:
         coins = await self.select_coins(uint64(1))
