@@ -313,10 +313,10 @@ class TradeManager:
             wallet: Wallet = wsm.main_wallet
             if key is None:
                 continue
-            exists: Optional[Wallet] = await wsm.get_wallet_for_colour(key)
+            exists: Optional[Wallet] = await wsm.get_wallet_for_colour(key.hex())
             if exists is None:
                 self.log.info(f"Creating wallet for asset ID: {key}")
-                await CCWallet.create_wallet_for_cc(wsm, wallet, key)
+                await CCWallet.create_wallet_for_cc(wsm, wallet, key.hex())
 
     async def check_offer_validity(self, offer: Offer) -> bool:
         all_removals: List[Coin] = offer.bundle.removals()

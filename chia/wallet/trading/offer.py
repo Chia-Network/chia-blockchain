@@ -9,12 +9,12 @@ from chia.types.announcement import Announcement
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
-from chia.wallet.cat_wallet.cat_utils import (
-    CAT_MOD,
-    SpendableCAT,
-    construct_cat_puzzle,
+from chia.wallet.cc_wallet.cc_utils import (
+    CC_MOD,
+    SpendableCC,
+    construct_cc_puzzle,
     match_cat_puzzle,
-    unsigned_spend_bundle_for_spendable_cats,
+    unsigned_spend_bundle_for_spendable_ccs,
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm
@@ -72,7 +72,7 @@ class Offer:
         announcements: List[Announcement] = []
         for tail, payments in notarized_payments.items():
             if tail:
-                settlement_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail, OFFER_MOD).get_tree_hash()
+                settlement_ph: bytes32 = construct_cc_puzzle(CC_MOD, tail, OFFER_MOD).get_tree_hash()
             else:
                 settlement_ph = OFFER_MOD.get_tree_hash()
 
@@ -108,7 +108,7 @@ class Offer:
             if matched:
                 _, tail_hash_program, _ = curried_args
                 tail_hash: Optional[bytes32] = bytes32(tail_hash_program.as_python())
-                offer_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD).get_tree_hash()
+                offer_ph: bytes32 = construct_cc_puzzle(CC_MOD, tail_hash, OFFER_MOD).get_tree_hash()
             else:
                 tail_hash = None
                 offer_ph = OFFER_MOD.get_tree_hash()
@@ -275,7 +275,7 @@ class Offer:
                     matched, curried_args = match_cat_puzzle(parent_spend.puzzle_reveal.to_program())
                     assert matched
                     _, _, inner_puzzle = curried_args
-                    spendable_cat = SpendableCAT(
+                    spendable_cat = SpendableCC(
                         coin,
                         tail_hash,
                         OFFER_MOD,
@@ -285,7 +285,7 @@ class Offer:
                         ),
                     )
                     solution: Program = (
-                        unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_cat])
+                        unsigned_spend_bundle_for_spendable_ccs(CC_MOD, [spendable_cat])
                         .coin_spends[0]
                         .solution.to_program()
                     )
@@ -295,7 +295,7 @@ class Offer:
                 completion_spends.append(
                     CoinSpend(
                         coin,
-                        construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD) if tail_hash else OFFER_MOD,
+                        construct_cc_puzzle(CC_MOD, tail_hash, OFFER_MOD) if tail_hash else OFFER_MOD,
                         solution,
                     )
                 )
@@ -306,7 +306,7 @@ class Offer:
         # Before we serialze this as a SpendBundle, we need to serialze the `requested_payments` as dummy CoinSpends
         additional_coin_spends: List[CoinSpend] = []
         for tail_hash, payments in self.requested_payments.items():
-            puzzle_reveal: Program = construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD) if tail_hash else OFFER_MOD
+            puzzle_reveal: Program = construct_cc_puzzle(CC_MOD, tail_hash, OFFER_MOD) if tail_hash else OFFER_MOD
             inner_solutions = []
             nonces: List[bytes32] = [p.nonce for p in payments]
             for nonce in list(dict.fromkeys(nonces)):  # dedup without messing with order

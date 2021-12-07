@@ -191,7 +191,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                 unit: int = units["chia"]
             else:
                 name = await wallet_client.get_cat_name(wallet_id)
-                unit = units["cat"]
+                unit = units["colouredcoin"]
             multiplier: int = -1 if item in offers else 1
             printable_dict[name] = (amount, unit, multiplier)
             if uint32(int(wallet_id)) in offer_dict:
@@ -243,7 +243,7 @@ async def print_offer_summary(wallet_client: WalletRpcClient, sum_dict: dict):
             result = await wallet_client.cat_asset_id_to_name(bytes.fromhex(asset_id))
             wid = "Unknown"
             name = asset_id
-            unit = units["cat"]
+            unit = units["colouredcoin"]
             if result is not None:
                 wid = str(result[0])
                 name = result[1]

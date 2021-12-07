@@ -815,7 +815,7 @@ class WalletRpcApi:
 
     async def cat_asset_id_to_name(self, request):
         assert self.service.wallet_state_manager is not None
-        wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request["asset_id"])
+        wallet = await self.service.wallet_state_manager.get_wallet_for_colour(request["asset_id"])
         if wallet is None:
             raise ValueError("The asset ID specified does not belong to a wallet")
         else:

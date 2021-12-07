@@ -12,11 +12,11 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.coin_spend import CoinSpend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.ints import uint64
-from chia.wallet.cat_wallet.cat_utils import (
-    CAT_MOD,
-    construct_cat_puzzle,
-    SpendableCAT,
-    unsigned_spend_bundle_for_spendable_cats,
+from chia.wallet.cc_wallet.cc_utils import (
+    CC_MOD,
+    construct_cc_puzzle,
+    SpendableCC,
+    unsigned_spend_bundle_for_spendable_ccs,
 )
 from chia.wallet.payment import Payment
 from chia.wallet.trading.offer import Offer, NotarizedPayment
@@ -37,7 +37,7 @@ def str_to_tail_hash(tail_str: str) -> bytes32:
 
 
 def str_to_cat_hash(tail_str: str) -> bytes32:
-    return construct_cat_puzzle(CAT_MOD, str_to_tail_hash(tail_str), acs).get_tree_hash()
+    return construct_cc_puzzle(CC_MOD, str_to_tail_hash(tail_str), acs).get_tree_hash()
 
 
 class TestOfferLifecycle:
@@ -67,13 +67,13 @@ class TestOfferLifecycle:
             for amount in amounts:
                 if tail_str:
                     tail: Program = str_to_tail(tail_str)  # Making a fake but unique TAIL
-                    cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
+                    cat_puzzle: Program = construct_cc_puzzle(CC_MOD, tail.get_tree_hash(), acs)
                     payments.append(Payment(cat_puzzle.get_tree_hash(), amount))
                     cat_bundles.append(
-                        unsigned_spend_bundle_for_spendable_cats(
-                            CAT_MOD,
+                        unsigned_spend_bundle_for_spendable_ccs(
+                            CC_MOD,
                             [
-                                SpendableCAT(
+                                SpendableCC(
                                     Coin(parent_coin.name(), cat_puzzle.get_tree_hash(), amount),
                                     tail.get_tree_hash(),
                                     acs,
@@ -106,7 +106,7 @@ class TestOfferLifecycle:
         for tail_str, _ in requested_coins.items():
             if tail_str:
                 tail_hash: bytes32 = str_to_tail_hash(tail_str)
-                cat_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail_hash, acs).get_tree_hash()
+                cat_ph: bytes32 = construct_cc_puzzle(CC_MOD, tail_hash, acs).get_tree_hash()
                 coin_dict[tail_str] = [
                     cr.coin
                     for cr in await (sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
@@ -156,8 +156,8 @@ class TestOfferLifecycle:
                 G2Element(),
             )
         else:
-            spendable_cats: List[SpendableCAT] = [
-                SpendableCAT(
+            spendable_cats: List[SpendableCC] = [
+                SpendableCC(
                     c,
                     str_to_tail_hash(tail_str),
                     acs,
@@ -170,7 +170,7 @@ class TestOfferLifecycle:
                 )
                 for c in selected_coins
             ]
-            bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cats)
+            bundle = unsigned_spend_bundle_for_spendable_ccs(CC_MOD, spendable_cats)
 
         return bundle
 
