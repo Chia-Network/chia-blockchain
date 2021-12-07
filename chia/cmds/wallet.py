@@ -271,6 +271,7 @@ def get_offers_cmd(
 
 
 @wallet_cmd.command("take_offer", short_help="Examine or take an offer")
+@click.argument("path_or_hex", type=str, nargs=1, required=True)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -279,13 +280,12 @@ def get_offers_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-@click.option("-p", "--filepath", help="The offer file you wish to examine/take")
 @click.option("-e", "--examine-only", help="Print the summary of the offer file but do not take it", is_flag=True)
 @click.option("-m", "--fee", help="The fee to use when pushing the completed offer", default="0")
 def take_offer_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, filepath: str, examine_only: bool, fee: str
+    path_or_hex: str, wallet_rpc_port: Optional[int], fingerprint: int, examine_only: bool, fee: str
 ) -> None:
-    extra_params = {"filepath": filepath, "examine_only": examine_only, "fee": fee}
+    extra_params = {"file": path_or_hex, "examine_only": examine_only, "fee": fee}
     import asyncio
     from .wallet_funcs import execute_with_wallet, take_offer
 
