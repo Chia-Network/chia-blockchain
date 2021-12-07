@@ -45,6 +45,7 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
     supported: bool = is_madmax_supported()
 
     if get_madmax_executable_path_for_ksize(plotters_root_path).exists():
+        version = None
         try:
             proc = run_command(
                 [os.fspath(get_madmax_executable_path_for_ksize(plotters_root_path)), "--version"],
