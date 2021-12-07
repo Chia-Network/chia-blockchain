@@ -58,7 +58,6 @@ from chia.util.keychain import KeyringIsLocked
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import (
     validate_additions,
     validate_removals,
@@ -1052,9 +1051,9 @@ class WalletNode:
         self.untrusted_caches[peer.peer_node_id] = peer_request_cache
         # Always sync fully from untrusted
         # Get state for puzzle hashes
-        self.log.debug(f"Start untrusted_subscribe_to_puzzle_hashes  ")
+        self.log.debug("Start untrusted_subscribe_to_puzzle_hashes  ")
         await self.untrusted_subscribe_to_puzzle_hashes(peer, True, peer_request_cache, weight_proof)
-        self.log.debug(f"End untrusted_subscribe_to_puzzle_hashes  ")
+        self.log.debug("End untrusted_subscribe_to_puzzle_hashes  ")
 
         # Get state for coins ids
         all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(uint32(0))

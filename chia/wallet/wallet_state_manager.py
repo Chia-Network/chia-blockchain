@@ -1171,7 +1171,7 @@ class WalletStateManager:
 
         # Get additions on unconfirmed transactions
         unconfirmed_additions: Set[Coin] = set()
-        for tx_record in (await self.tx_store.get_all_unconfirmed()):
+        for tx_record in await self.tx_store.get_all_unconfirmed():
             unconfirmed_additions.update(set(tx_record.additions))
 
         # Filter coins up to and including fork point
