@@ -233,7 +233,7 @@ class DataLayerWallet:
     async def create_update_state_spend(
         self,
         root_hash: bytes,
-    ) -> SpendBundle:
+    ) -> TransactionRecord:
         new_inner_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         new_db_layer_puzzle = create_host_layer_puzzle(new_inner_inner_puzzle, root_hash)
         coins = await self.select_coins(uint64(1))
@@ -297,7 +297,7 @@ class DataLayerWallet:
             name=token_bytes(),
         )
         await self.standard_wallet.push_transaction(dl_record)
-        return spend_bundle
+        return dl_record
 
     async def create_report_spend(self) -> SpendBundle:
         coins = await self.select_coins(uint64(1))

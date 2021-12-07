@@ -1309,7 +1309,7 @@ class WalletRpcApi:
         changelist = [process_change(change) for change in request["changelist"]]
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         # todo input checks
-        await self.service.data_layer.insert(store_id, changelist)
+        return await self.service.data_layer.insert(store_id, changelist)
 
 
 def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
