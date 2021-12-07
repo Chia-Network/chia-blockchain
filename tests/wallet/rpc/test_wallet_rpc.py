@@ -227,8 +227,9 @@ class TestWalletRpc:
                 return maybe_confirmed_breakup_transaction_result.confirmed
 
             # process the transaction
-            for _ in range(2):
+            for _ in range(10):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+                await asyncio.sleep(1)
 
             await time_out_assert(
                 timeout=10,
