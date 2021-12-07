@@ -54,7 +54,7 @@ async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) ->
     assert res["result"]
     tx0: TransactionRecord = res["result"][0]
     tx1: TransactionRecord = res["result"][1]
-    dl_wallet = wallet_node.data_layer.wallet
+    # dl_wallet = wallet_node.data_layer.wallet
     await asyncio.sleep(1)
     # todo these should work but mempool status for these txs is empty
     # await time_out_assert(15, is_transaction_in_mempool, True, tx1.wallet_id, rpc_api, tx1.name)

@@ -90,6 +90,7 @@ class WalletNode:
     peer_task: Optional[asyncio.Task]
     logged_in: bool
     wallet_peers_initialized: bool
+    data_layer: Optional[DataLayer]
 
     def __init__(
         self,
@@ -122,6 +123,7 @@ class WalletNode:
         self.wallet_state_manager = None
         self.backup_initialized = False  # Delay first launch sync after user imports backup info or decides to skip
         self.server = None
+        self.data_layer = None
         self.wsm_close_task = None
         self.sync_task: Optional[asyncio.Task] = None
         self.logged_in_fingerprint: Optional[int] = None
@@ -251,11 +253,15 @@ class WalletNode:
     def _close(self):
         self.log.info("self._close")
         self.logged_in_fingerprint = None
+        if self.data_layer is not None:
+            self.data_layer._close()
         self._shut_down = True
 
     async def _await_closed(self):
         self.log.info("self._await_closed")
         await self.server.close_all_connections()
+        if self.data_layer is not None:
+            await self.data_layer._await_closed()
         asyncio.create_task(self.wallet_peers.ensure_is_closed())
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager.close_all_stores()
@@ -1032,6 +1038,8 @@ class WalletNode:
             return []
 
     async def create_data_layer(self, amount: uint64, fee: uint64) -> Tuple[TransactionRecord, TransactionRecord]:
+        if self.data_layer is None:
+            raise Exception("Data layer not created")
         return await self.data_layer.create(amount, fee)
 
 

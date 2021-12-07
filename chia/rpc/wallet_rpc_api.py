@@ -1281,23 +1281,31 @@ class WalletRpcApi:
         return {"result": value}
 
     async def create_kv_store(self, request: Dict[str, Any] = None) -> Dict[str, Any]:
+        if self.service.data_layer is None:
+            raise Exception("Data layer not created")
         value = await self.service.data_layer.create_store()
         return {"id": value.hex()}
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = hexstr_to_bytes(request["id"])
         key = hexstr_to_bytes(request["key"])
+        if self.service.data_layer is None:
+            raise Exception("Data layer not created")
         value = await self.service.data_layer.get_value(store_id=store_id, key=key)
         return {"data": value.hex()}
 
     async def get_pairs(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
+        if self.service.data_layer is None:
+            raise Exception("Data layer not created")
         value = await self.service.data_layer.get_pairs(store_id)
         return {"data": value.hex()}
 
     async def get_ancestors(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         key = hexstr_to_bytes(request["key"])
+        if self.service.data_layer is None:
+            raise Exception("Data layer not created")
         value = await self.service.data_layer.get_ancestors(key, store_id)
         return {"data": value.hex()}
 
@@ -1309,6 +1317,8 @@ class WalletRpcApi:
         changelist = [process_change(change) for change in request["changelist"]]
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         # todo input checks
+        if self.service.data_layer is None:
+            raise Exception("Data layer not created")
         return await self.service.data_layer.insert(store_id, changelist)
 
 
