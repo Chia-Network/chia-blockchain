@@ -5,7 +5,7 @@
   OPTIONAL_CREATOR_FEE_PUZHASH
   OPTIONAL_CREATOR_FEE_CALCULATOR
   my_puzhash  ; not used for transfer TODO optimise
-  my_amount  ; not used for transfer TODO optimise
+  my_amount
   my_did_inner_hash
   my_did_amount
   my_did_parent
@@ -14,6 +14,7 @@
   new_did_inner_hash
   new_did_amount
   trade_price
+  fee_calculator_solution
 )
 
   (include condition_codes.clvm)
@@ -54,10 +55,12 @@
     (c (list CREATE_COIN_ANNOUNCEMENT trade_price)
       (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT new_did new_did_parent new_did_inner_hash new_did_amount) trade_price))
         (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT CURRENT_OWNER_DID my_did_parent my_did_inner_hash my_did_amount) trade_price new_did))
-          (c (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT OPTIONAL_CREATOR_FEE_PUZHASH OPTIONAL_CREATOR_FEE_CALCULATOR new_did))
-            (if OPTIONAL_CREATOR_FEE_CALCULATOR
-              (list (list CREATE_COIN OPTIONAL_CREATOR_FEE_PUZHASH (a OPTIONAL_CREATOR_FEE_CALCULATOR trade_price)))
-              ()
+          (c (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT OPTIONAL_CREATOR_FEE_PUZHASH OPTIONAL_CREATOR_FEE_CALCULATOR new_did) my_amount)
+            (c (list ASSERT_MY_AMOUNT my_amount)
+              (if OPTIONAL_CREATOR_FEE_CALCULATOR
+                (list (list CREATE_COIN OPTIONAL_CREATOR_FEE_PUZHASH (a OPTIONAL_CREATOR_FEE_CALCULATOR (list trade_price fee_calculator_solution))))
+                ()
+              )
             )
           )
         )
