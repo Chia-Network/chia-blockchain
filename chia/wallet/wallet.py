@@ -384,7 +384,7 @@ class Wallet:
         coins: Set[Coin] = None,
         primaries: Optional[List[Dict[str, bytes32]]] = None,
         ignore_max_send_amount: bool = False,
-        announcements_to_consume: Set[Announcement] = None,
+        announcements_to_consume: Set[bytes32] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.

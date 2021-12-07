@@ -11,6 +11,7 @@
 Chia is a modern cryptocurrency built from scratch, designed to be efficient, decentralized, and secure. Here are some of the features and benefits:
 * [Proof of space and time](https://docs.google.com/document/d/1tmRIb7lgi4QfKkNaxuKOBHRmwbVlGL4f7EsBDr_5xZE/edit) based consensus which allows anyone to farm with commodity hardware
 * Very easy to use full node and farmer GUI and cli (thousands of nodes active on mainnet)
+* [Chia seeder](https://github.com/Chia-Network/chia-blockchain/wiki/Chia-Seeder-User-Guide), which maintains a list of reliable nodes within the Chia network via a built-in DNS server.
 * Simplified UTXO based transaction model, with small on-chain state
 * Lisp-style Turing-complete functional [programming language](https://chialisp.com/) for money related use cases
 * BLS keys and aggregate signatures (only one signature per block)
@@ -33,6 +34,7 @@ TCP port 8444 access to your peer.
 These methods tend to be router make/model specific.
 
 Most users should only install harvesters, farmers, plotter, full nodes, and wallets.
+Setting up a seeder is best left to more advanced users.
 Building Timelords and VDFs is for sophisticated users, in most environments.
 Chia Network and additional volunteers are running sufficient Timelords
 for consensus.

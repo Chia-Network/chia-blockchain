@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 import logging
 from time import time
 
@@ -10,7 +11,9 @@ import chia.server.ws_connection as ws
 
 from chia.full_node.mempool import Mempool
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import full_node_protocol
+from chia.protocols import full_node_protocol, wallet_protocol
+from chia.protocols.wallet_protocol import TransactionAck
+from chia.server.outbound_message import Message
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -21,13 +24,14 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from chia.types.mempool_item import MempoolItem
 from chia.util.clvm import int_to_bytes
-from chia.util.condition_tools import conditions_for_solution
+from chia.util.condition_tools import conditions_for_solution, pkm_pairs
 from chia.util.errors import Err
 from chia.util.ints import uint64
 from chia.util.hash import std_hash
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.api_decorators import api_request, peer_required, bytes_required
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.types.name_puzzle_condition import NPC
 from chia.full_node.pending_tx_cache import PendingTxCache
 from blspy import G2Element
 
@@ -42,6 +46,7 @@ from chia.types.blockchain_format.program import SerializedProgram
 from clvm_tools import binutils
 from chia.types.generator_types import BlockGenerator
 from clvm.casts import int_from_bytes
+from blspy import G1Element
 
 BURN_PUZZLE_HASH = b"0" * 32
 BURN_PUZZLE_HASH_2 = b"1" * 32
@@ -230,8 +235,7 @@ class TestMempoolManager:
         spend_bundle = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0])
         assert spend_bundle is not None
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
-        res = await full_node_1.respond_transaction(tx, peer)
-        log.info(f"Res {res}")
+        await full_node_1.respond_transaction(tx, peer)
 
         await time_out_assert(
             10,
@@ -331,15 +335,15 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.PENDING
         assert err == Err.MEMPOOL_CONFLICT
 
-    async def send_sb(self, node, peer, sb):
-        tx = full_node_protocol.RespondTransaction(sb)
-        await node.respond_transaction(tx, peer)
+    async def send_sb(self, node: FullNodeAPI, sb: SpendBundle) -> Optional[Message]:
+        tx = wallet_protocol.SendTransaction(sb)
+        return await node.send_transaction(tx)
 
     async def gen_and_send_sb(self, node, peer, *args, **kwargs):
         sb = generate_test_spend_bundle(*args, **kwargs)
         assert sb is not None
 
-        await self.send_sb(node, peer, sb)
+        await self.send_sb(node, sb)
         return sb
 
     def assert_sb_in_pool(self, node, sb):
@@ -354,7 +358,7 @@ class TestMempoolManager:
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height
+        start_height = blocks[-1].height if len(blocks) > 0 else -1
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
@@ -390,7 +394,7 @@ class TestMempoolManager:
 
         sb2 = generate_test_spend_bundle(coin2, fee=uint64(min_fee_increase))
         sb12 = SpendBundle.aggregate((sb2, sb1_3))
-        await self.send_sb(full_node_1, peer, sb12)
+        await self.send_sb(full_node_1, sb12)
 
         # Aggregated spendbundle sb12 replaces sb1_3 since it spends a superset
         # of coins spent in sb1_3
@@ -399,31 +403,63 @@ class TestMempoolManager:
 
         sb3 = generate_test_spend_bundle(coin3, fee=uint64(min_fee_increase * 2))
         sb23 = SpendBundle.aggregate((sb2, sb3))
-        await self.send_sb(full_node_1, peer, sb23)
+        await self.send_sb(full_node_1, sb23)
 
         # sb23 must not replace existing sb12 as the former does not spend all
         # coins that are spent in the latter (specifically, coin1)
         self.assert_sb_in_pool(full_node_1, sb12)
         self.assert_sb_not_in_pool(full_node_1, sb23)
 
-        await self.send_sb(full_node_1, peer, sb3)
+        await self.send_sb(full_node_1, sb3)
         # Adding non-conflicting sb3 should succeed
         self.assert_sb_in_pool(full_node_1, sb3)
 
         sb4_1 = generate_test_spend_bundle(coin4, fee=uint64(min_fee_increase))
         sb1234_1 = SpendBundle.aggregate((sb12, sb3, sb4_1))
-        await self.send_sb(full_node_1, peer, sb1234_1)
+        await self.send_sb(full_node_1, sb1234_1)
         # sb1234_1 should not be in pool as it decreases total fees per cost
         self.assert_sb_not_in_pool(full_node_1, sb1234_1)
 
         sb4_2 = generate_test_spend_bundle(coin4, fee=uint64(min_fee_increase * 2))
         sb1234_2 = SpendBundle.aggregate((sb12, sb3, sb4_2))
-        await self.send_sb(full_node_1, peer, sb1234_2)
+        await self.send_sb(full_node_1, sb1234_2)
         # sb1234_2 has a higher fee per cost than its conflicts and should get
         # into mempool
         self.assert_sb_in_pool(full_node_1, sb1234_2)
         self.assert_sb_not_in_pool(full_node_1, sb12)
         self.assert_sb_not_in_pool(full_node_1, sb3)
+
+    @pytest.mark.asyncio
+    async def test_invalid_signature(self, two_nodes):
+        reward_ph = WALLET_A.get_new_puzzlehash()
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+        start_height = blocks[-1].height if len(blocks) > 0 else -1
+        blocks = bt.get_consecutive_blocks(
+            3,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
+        )
+
+        for block in blocks:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
+
+        coins = iter(blocks[-1].get_included_reward_coins())
+        coin1 = next(coins)
+        coins = iter(blocks[-2].get_included_reward_coins())
+
+        sb: SpendBundle = generate_test_spend_bundle(coin1)
+        assert sb.aggregated_signature != G2Element.generator()
+        sb = dataclasses.replace(sb, aggregated_signature=G2Element.generator())
+        res: Optional[Message] = await self.send_sb(full_node_1, sb)
+        assert res is not None
+        ack: TransactionAck = TransactionAck.from_bytes(res.data)
+        assert ack.status == MempoolInclusionStatus.FAILED.value
+        assert ack.error == Err.BAD_AGGREGATE_SIGNATURE.name
 
     async def condition_tester(
         self,
@@ -2220,3 +2256,83 @@ class TestMaliciousGenerators:
         assert spend_bundle is not None
         res = await full_node_1.full_node.respond_transaction(new_bundle, new_bundle.name())
         assert res == (MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE)
+
+
+class TestPkmPairs:
+
+    h1 = b"a" * 32
+    h2 = b"b" * 32
+    h3 = b"c" * 32
+    h4 = b"d" * 32
+
+    pk1 = G1Element.generator()
+    pk2 = G1Element.generator()
+
+    CCA = ConditionOpcode.CREATE_COIN_ANNOUNCEMENT
+    CC = ConditionOpcode.CREATE_COIN
+    ASM = ConditionOpcode.AGG_SIG_ME
+    ASU = ConditionOpcode.AGG_SIG_UNSAFE
+
+    def test_empty_list(self):
+        npc_list = []
+        pks, msgs = pkm_pairs(npc_list, b"foobar")
+        assert pks == []
+        assert msgs == []
+
+    def test_no_agg_sigs(self):
+        npc_list = [
+            NPC(self.h1, self.h2, [(self.CCA, [ConditionWithArgs(self.CCA, [b"msg"])])]),
+            NPC(self.h3, self.h4, [(self.CC, [ConditionWithArgs(self.CCA, [self.h1, bytes([1])])])]),
+        ]
+        pks, msgs = pkm_pairs(npc_list, b"foobar")
+        assert pks == []
+        assert msgs == []
+
+    def test_agg_sig_me(self):
+        npc_list = [
+            NPC(
+                self.h1,
+                self.h2,
+                [
+                    (
+                        self.ASM,
+                        [
+                            ConditionWithArgs(self.ASM, [bytes(self.pk1), b"msg1"]),
+                            ConditionWithArgs(self.ASM, [bytes(self.pk2), b"msg2"]),
+                        ],
+                    )
+                ],
+            )
+        ]
+        pks, msgs = pkm_pairs(npc_list, b"foobar")
+        assert pks == [bytes(self.pk1), bytes(self.pk2)]
+        assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2" + self.h1 + b"foobar"]
+
+    def test_agg_sig_unsafe(self):
+        npc_list = [
+            NPC(
+                self.h1,
+                self.h2,
+                [
+                    (
+                        self.ASU,
+                        [
+                            ConditionWithArgs(self.ASU, [bytes(self.pk1), b"msg1"]),
+                            ConditionWithArgs(self.ASU, [bytes(self.pk2), b"msg2"]),
+                        ],
+                    )
+                ],
+            )
+        ]
+        pks, msgs = pkm_pairs(npc_list, b"foobar")
+        assert pks == [bytes(self.pk1), bytes(self.pk2)]
+        assert msgs == [b"msg1", b"msg2"]
+
+    def test_agg_sig_mixed(self):
+        npc_list = [
+            NPC(self.h1, self.h2, [(self.ASM, [ConditionWithArgs(self.ASM, [bytes(self.pk1), b"msg1"])])]),
+            NPC(self.h1, self.h2, [(self.ASU, [ConditionWithArgs(self.ASU, [bytes(self.pk2), b"msg2"])])]),
+        ]
+        pks, msgs = pkm_pairs(npc_list, b"foobar")
+        assert pks == [bytes(self.pk1), bytes(self.pk2)]
+        assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2"]
