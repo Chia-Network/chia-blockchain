@@ -590,17 +590,14 @@ class WalletRpcApi:
                     try:
                         delayed_address = None
                         if "p2_singleton_delayed_ph" in request:
-                            delayed_address = hexstr_to_bytes(request["p2_singleton_delayed_ph"])
-                        # TODO: address hint error and remove ignore
-                        #       error: Argument 6 to "create_new_pool_wallet_transaction" of "PoolWallet" has
-                        #       incompatible type "Optional[bytes]"; expected "Optional[bytes32]"  [arg-type]
+                            delayed_address = bytes32.from_hexstr(request["p2_singleton_delayed_ph"])
                         tr, p2_singleton_puzzle_hash, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
                             wallet_state_manager,
                             main_wallet,
                             initial_target_state,
                             fee,
                             request.get("p2_singleton_delay_time", None),
-                            delayed_address,  # type: ignore[arg-type]
+                            delayed_address,
                         )
                     except Exception as e:
                         raise ValueError(str(e))
@@ -894,7 +891,7 @@ class WalletRpcApi:
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
-        trade_id = hexstr_to_bytes(request["trade_id"])
+        trade_id = bytes32.from_hexstr(request["trade_id"])
         trade: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
         if trade is None:
             raise ValueError(f"No trade with trade id: {trade_id.hex()}")
@@ -919,19 +916,13 @@ class WalletRpcApi:
 
         wsm = self.service.wallet_state_manager
         secure = request["secure"]
-        trade_id = hexstr_to_bytes(request["trade_id"])
+        trade_id = bytes32.from_hexstr(request["trade_id"])
 
         async with self.service.wallet_state_manager.lock:
             if secure:
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to "cancel_pending_offer_safely" of "TradeManager" has incompatible type
-                #       "bytes"; expected "bytes32"  [arg-type]
-                await wsm.trade_manager.cancel_pending_offer_safely(trade_id)  # type: ignore[arg-type]
+                await wsm.trade_manager.cancel_pending_offer_safely(trade_id)
             else:
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to "cancel_pending_offer" of "TradeManager" has incompatible type "bytes";
-                #       expected "bytes32"  [arg-type]
-                await wsm.trade_manager.cancel_pending_offer(trade_id)  # type: ignore[arg-type]
+                await wsm.trade_manager.cancel_pending_offer(trade_id)
         return {}
 
     async def get_backup_info(self, request: Dict):
