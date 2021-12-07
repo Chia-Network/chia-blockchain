@@ -38,13 +38,6 @@ class MockPlotInfo:
     prover: MockDiskProver
 
 
-class TestRefreshResult:
-    loaded: int = 0
-    removed: int = 0
-    processed: int = 0
-    remaining: int = 0
-
-
 class TestDirectory:
     path: Path
     plots: List[Path]
