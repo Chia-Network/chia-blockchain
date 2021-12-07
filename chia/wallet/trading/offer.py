@@ -76,9 +76,7 @@ class Offer:
             else:
                 settlement_ph = OFFER_MOD.get_tree_hash()
 
-            msg: bytes32 = Program.to(
-                (payments[0].nonce, [p.as_condition_args() for p in payments])
-            ).get_tree_hash()
+            msg: bytes32 = Program.to((payments[0].nonce, [p.as_condition_args() for p in payments])).get_tree_hash()
             announcements.append(Announcement(settlement_ph, msg))
 
         return announcements

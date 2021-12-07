@@ -160,7 +160,9 @@ class TradeManager:
     async def cancel_pending_offer(self, trade_id: bytes32):
         await self.trade_store.set_status(trade_id, TradeStatus.CANCELLED, False)
 
-    async def cancel_pending_offer_safely(self, trade_id: bytes32, fee: uint64 = uint64(0)) -> List[TransactionRecord]:
+    async def cancel_pending_offer_safely(
+        self, trade_id: bytes32, fee: uint64 = uint64(0)
+    ) -> Optional[List[TransactionRecord]]:
         """This will create a transaction that includes coins that were offered"""
         self.log.info(f"Secure-Cancel pending offer with id trade_id {trade_id.hex()}")
         trade = await self.trade_store.get_trade_record(trade_id)
@@ -325,7 +327,7 @@ class TradeManager:
         assert coin_states is not None
         return not any([cs.spent_height is not None for cs in coin_states])
 
-    async def respond_to_offer(self, offer: Offer, fee = uint64(0)) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
+    async def respond_to_offer(self, offer: Offer, fee=uint64(0)) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         take_offer_dict: Dict[int, int] = {}
         arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
         for asset_id, amount in arbitrage.items():

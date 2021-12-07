@@ -1,5 +1,4 @@
 import asyncio
-from pathlib import Path
 from secrets import token_bytes
 
 import pytest
@@ -9,7 +8,6 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from tests.setup_nodes import setup_simulators_and_wallets
