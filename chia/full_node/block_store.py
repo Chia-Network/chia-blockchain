@@ -371,7 +371,7 @@ class BlockStore:
             await cursor_2.close()
             if peak_height is None:
                 return None
-            return peak_row[0], peak_height[0]
+            return bytes32(peak_row[0]), uint32(peak_height[0])
         else:
             res = await self.db.execute("SELECT header_hash, height from block_records WHERE is_peak = 1")
             peak_row = await res.fetchone()
