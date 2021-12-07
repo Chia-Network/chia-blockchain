@@ -75,8 +75,6 @@ export default function PlotExternalNFTCard(props: Props) {
     },
   } = props;
 
-  console.log('nft', nft);
-
   const percentPointsSuccessful24 = getPercentPointsSuccessfull(
     pointsAcknowledged24H,
     pointsFound24H,
