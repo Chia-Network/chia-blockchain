@@ -318,7 +318,7 @@ class ChiaServer:
         if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:
             self.log.warning(f"Peer {request.remote} is banned, refusing connection")
             return None
-        ws = web.WebSocketResponse(max_msg_size=50 * 1024 * 1024)
+        ws = web.WebSocketResponse(max_msg_size=50 * 1024 * 1024, autoping=False)
         await ws.prepare(request)
         close_event = asyncio.Event()
         cert_bytes = request.transport._ssl_protocol._extra["ssl_object"].getpeercert(True)
