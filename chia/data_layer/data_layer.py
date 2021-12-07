@@ -23,7 +23,7 @@ class DataLayer:
     data_store: DataStore
     db_wrapper: DBWrapper
     db_path: Path
-    connection: aiosqlite.Connection
+    connection: Optional[aiosqlite.Connection]
     config: Dict[str, Any]
     log: logging.Logger
     wallet_state_manager: WalletStateManager
@@ -43,6 +43,7 @@ class DataLayer:
         config = load_config(root_path, "config.yaml", "data_layer")
         self.initialized = False
         self.config = config
+        self.connection = None
         self.wallet_state_manager = wallet_state_manager
         self.log = logging.getLogger(name if name is None else __name__)
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
@@ -73,7 +74,8 @@ class DataLayer:
         pass
 
     async def _await_closed(self) -> None:
-        await self.connection.close()
+        if self.connection is not None:
+            await self.connection.close()
 
     async def create_store(self) -> bytes32:
         assert self.wallet.dl_info.origin_coin
