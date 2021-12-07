@@ -201,9 +201,7 @@ class BlockHeightMap:
     def get_hash(self, height: uint32) -> bytes32:
         idx = height * 32
         assert idx + 32 <= len(self.__height_to_hash)
-        # TODO: address hint errors and remove ignores
-        #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
-        return bytes(self.__height_to_hash[idx : idx + 32])  # type: ignore[return-value]
+        return bytes32(self.__height_to_hash[idx : idx + 32])
 
     def contains_height(self, height: uint32) -> bool:
         return height * 32 < len(self.__height_to_hash)

@@ -109,10 +109,7 @@ class SpendSim:
             return None
         return simple_solution_generator(bundle)
 
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible default for argument "puzzle_hash" (default has type "bytes", argument has type
-    #       "bytes32")  [assignment]
-    async def farm_block(self, puzzle_hash: bytes32 = (b"0" * 32)):  # type: ignore[assignment]
+    async def farm_block(self, puzzle_hash: bytes32 = bytes32(b"0" * 32)):
         # Fees get calculated
         fees = uint64(0)
         if self.mempool_manager.mempool.spends:

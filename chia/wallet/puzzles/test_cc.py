@@ -40,9 +40,7 @@ def add_puzzles_to_puzzle_preimage_db(puzzles: List[Program]) -> None:
 
 
 def int_as_bytes32(v: int) -> bytes32:
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
-    return v.to_bytes(32, byteorder="big")  # type: ignore[return-value]
+    return bytes32(v.to_bytes(32, byteorder="big"))
 
 
 def generate_farmed_coin(
