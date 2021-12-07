@@ -55,7 +55,8 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
             )
             version = proc.stdout.strip()
         except Exception as e:
-            print(f"Failed to determine madmax version: {e}")
+            tb = traceback.format_exc()
+            log.error(f"Failed to determine madmax version: {e} {tb}")
 
         if version is not None:
             installed = True
