@@ -255,7 +255,9 @@ class ChiaServer:
             if time.time() - self.last_inbound_disconnection <= 360:
                 return False
             node_type = NodeType.FULL_NODE
-            all_inbounds = [conn for _, conn in self.connection_by_type[node_type].items() if not conn.is_outbound]
+            all_inbounds = {
+                peer_id: conn for peer_id, conn in self.connection_by_type[node_type].items() if not conn.is_outbound
+            }
             # Keep 50% of the oldest inbound connections and also 25% of the best ping connections.
             connection_times = [
                 (peer_id, connection.creation_time) for peer_id, connection in all_inbounds.items()
@@ -305,10 +307,10 @@ class ChiaServer:
                 return False
             self.last_inbound_disconnection = time.time()
             await connection_to_disconnect.close()
-            close_event.set()
             return True
         except Exception as e:
-            self.log.error(f"Exception trying to disconnect node: {type(e)} {e}.")
+            error_stack = traceback.format_exc()
+            self.log.error(f"Exception trying to disconnect node: {type(e)} {e} {error_stack}.")
             return False
 
     async def incoming_connection(self, request):
