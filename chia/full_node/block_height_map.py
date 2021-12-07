@@ -80,8 +80,14 @@ class BlockHeightMap:
             # it's OK if this file doesn't exist, we can rebuild it
             pass
 
-        peak: bytes32 = bytes32.fromhex(row[0])
-        prev_hash: bytes32 = bytes32.fromhex(row[1])
+        peak: bytes32
+        prev_hash: bytes32
+        if db.db_version == 2:
+            peak = row[0]
+            prev_hash = row[1]
+        else:
+            peak = bytes32.fromhex(row[0])
+            prev_hash = bytes32.fromhex(row[1])
         height = row[2]
 
         # allocate memory for height to hash map
@@ -150,8 +156,13 @@ class BlockHeightMap:
 
             # maps block-hash -> (height, prev-hash, sub-epoch-summary)
             ordered: Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]] = {}
-            for r in rows:
-                ordered[bytes32.fromhex(r[0])] = (r[2], bytes32.fromhex(r[1]), r[3])
+
+            if self.db.db_version == 2:
+                for r in rows:
+                    ordered[r[0]] = (r[2], r[1], r[3])
+            else:
+                for r in rows:
+                    ordered[bytes32.fromhex(r[0])] = (r[2], bytes32.fromhex(r[1]), r[3])  # type: ignore[index,assignment]
 
             while height > window_end:
                 entry = ordered[prev_hash]
@@ -177,9 +188,7 @@ class BlockHeightMap:
     def get_hash(self, height: uint32) -> bytes32:
         idx = height * 32
         assert idx + 32 <= len(self.__height_to_hash)
-        # TODO: address hint errors and remove ignores
-        #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
-        return bytes(self.__height_to_hash[idx : idx + 32])  # type: ignore[return-value]
+        return bytes32(self.__height_to_hash[idx : idx + 32])
 
     def contains_height(self, height: uint32) -> bool:
         return height * 32 < len(self.__height_to_hash)

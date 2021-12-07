@@ -44,19 +44,12 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
     if "pool_list" in config["pool"]:
         for pool_config_dict in config["pool"]["pool_list"]:
             try:
-                # TODO: address hint errors and remove ignores
-                #       error: Argument 1 to "PoolWalletConfig" has incompatible type "bytes"; expected "bytes32"
-                #       [arg-type]
-                #       error: Argument 4 to "PoolWalletConfig" has incompatible type "bytes"; expected "bytes32"
-                #       [arg-type]
-                #       error: Argument 5 to "PoolWalletConfig" has incompatible type "bytes"; expected "bytes32"
-                #       [arg-type]
                 pool_config = PoolWalletConfig(
-                    hexstr_to_bytes(pool_config_dict["launcher_id"]),  # type: ignore[arg-type]
+                    bytes32.from_hexstr(pool_config_dict["launcher_id"]),
                     pool_config_dict["pool_url"],
                     pool_config_dict["payout_instructions"],
-                    hexstr_to_bytes(pool_config_dict["target_puzzle_hash"]),  # type: ignore[arg-type]
-                    hexstr_to_bytes(pool_config_dict["p2_singleton_puzzle_hash"]),  # type: ignore[arg-type]
+                    bytes32.from_hexstr(pool_config_dict["target_puzzle_hash"]),
+                    bytes32.from_hexstr(pool_config_dict["p2_singleton_puzzle_hash"]),
                     G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
                     G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["authentication_public_key"])),
                 )

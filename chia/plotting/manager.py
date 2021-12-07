@@ -244,15 +244,16 @@ class PlotManager:
                     filenames_to_remove.append(plot_filename)
                     if loaded_plot in self.plots:
                         del self.plots[loaded_plot]
-                    total_result.removed += 1
+                    total_result.removed.append(loaded_plot)
                     # No need to check the duplicates here since we drop the whole entry
                     continue
 
                 paths_to_remove: List[str] = []
                 for path in duplicated_paths:
-                    if plot_removed(Path(path) / Path(plot_filename)):
+                    loaded_plot = Path(path) / Path(plot_filename)
+                    if plot_removed(loaded_plot):
                         paths_to_remove.append(path)
-                        total_result.removed += 1
+                        total_result.removed.append(loaded_plot)
                 for path in paths_to_remove:
                     duplicated_paths.remove(path)
 
@@ -292,8 +293,8 @@ class PlotManager:
             self.last_refresh_time = time.time()
 
             self.log.debug(
-                f"_refresh_task: total_result.loaded {total_result.loaded}, "
-                f"total_result.removed {total_result.removed}, "
+                f"_refresh_task: total_result.loaded {len(total_result.loaded)}, "
+                f"total_result.removed {len(total_result.removed)}, "
                 f"total_duration {total_result.duration:.2f} seconds"
             )
 
@@ -409,7 +410,7 @@ class PlotManager:
                 )
 
                 with counter_lock:
-                    result.loaded += 1
+                    result.loaded.append(new_plot_info)
 
                 if file_path in self.failed_to_open_filenames:
                     del self.failed_to_open_filenames[file_path]
@@ -442,8 +443,8 @@ class PlotManager:
         result.duration = time.time() - start_time
 
         self.log.debug(
-            f"refresh_batch: loaded {result.loaded}, "
-            f"removed {result.removed}, processed {result.processed}, "
+            f"refresh_batch: loaded {len(result.loaded)}, "
+            f"removed {len(result.removed)}, processed {result.processed}, "
             f"remaining {result.remaining}, batch_size {self.refresh_parameter.batch_size}, "
             f"duration: {result.duration:.2f} seconds"
         )
