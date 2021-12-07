@@ -172,6 +172,7 @@ async def add_token(args: dict, wallet_client: WalletRpcClient, fingerprint: int
         else:
             raise e
 
+
 async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     offers: List[str] = args["offers"]
     requests: List[str] = args["requests"]
@@ -289,13 +290,16 @@ async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
 
 async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    filepath = pathlib.Path(args["filepath"])
+    if "." in args["file"]:
+        filepath = pathlib.Path(args["file"])
+        with open(filepath, "r") as file:
+            offer_hex: str = file.read()
+            file.close()
+    else:
+        offer_hex = args["file"]
+
     examine_only: bool = args["examine_only"]
     fee: int = int(Decimal(args["fee"]) * units["chia"])
-
-    with open(filepath, "r") as file:
-        offer_hex = file.read()
-        file.close()
 
     offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
     offered, requested = offer.summary()
