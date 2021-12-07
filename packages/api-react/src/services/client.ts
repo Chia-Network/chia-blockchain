@@ -1,12 +1,9 @@
-import { createApi } from '@reduxjs/toolkit/query/react';
-import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import { ConnectionState, ServiceName } from '@chia/api';
+import api, { baseQuery } from '../api';
 
-const baseQuery = chiaLazyBaseQuery();
+const apiWithTag = api.enhanceEndpoints({addTagTypes: []});
 
-export const clientApi = createApi({
-  reducerPath: 'clientApi',
-  baseQuery,
+export const clientApi = apiWithTag.injectEndpoints({
   endpoints: (build) => ({
     close: build.mutation<boolean, {
       force?: boolean;

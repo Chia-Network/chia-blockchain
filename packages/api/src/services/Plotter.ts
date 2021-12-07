@@ -47,6 +47,7 @@ function addPlotProgress(queue: PlotQueueItem[]): PlotQueueItem[] {
 function mergeQueue(
   currentQueue: PlotQueueItem[],
   partialQueue: PlotQueueItemPartial[],
+  isLogChange: boolean,
 ): PlotQueueItem[] {
   let result = [...currentQueue];
 
@@ -66,7 +67,7 @@ function mergeQueue(
       ...rest,
     };
 
-    if (logNew !== undefined) {
+    if (isLogChange && logNew !== undefined) {
       const newLog = originalItem.log
         ? `${originalItem.log}${logNew}`
         : logNew;
@@ -88,6 +89,12 @@ export default class Plotter extends Service {
     super(ServiceName.PLOTTER, client, options, async () => {
       this.onLogChanged((data: any) => {
         const { queue } = data;
+        this.queue = mergeQueue(this.queue, queue, true);
+        this.emit('queue_changed', this.queue, null);
+      });
+
+      this.onPlotQueueStateChange((data: any) => {
+        const { queue } = data;
         this.queue = mergeQueue(this.queue, queue);
         this.emit('queue_changed', this.queue, null);
       });
@@ -98,7 +105,7 @@ export default class Plotter extends Service {
       }
     });
   }
-
+/*
   startPlotting(
     plotterName, // plotterName
     k, // plotSize
@@ -187,6 +194,7 @@ export default class Plotter extends Service {
       id,
     });
   }
+  */
 
   async getQueue() {
     await this.whenReady();
@@ -205,5 +213,12 @@ export default class Plotter extends Service {
     processData?: (data: any) => any,
   ) {
     return this.onStateChanged('log_changed', callback, processData);
+  }
+
+  onPlotQueueStateChange(
+    callback: (data: any, message?: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onStateChanged('state_changed', callback, processData);
   }
 }

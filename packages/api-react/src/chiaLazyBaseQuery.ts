@@ -36,8 +36,12 @@ type Options = {
 export default function chiaLazyBaseQuery(options: Options = {}): BaseQueryFn<
   {
     command: string;
-    service?: Service;
-    client?: boolean;
+    service: Service;
+    args?: any[];
+    mockResponse?: any;
+  } | {
+    command: string;
+    client: boolean;
     args?: any[];
     mockResponse?: any;
   },

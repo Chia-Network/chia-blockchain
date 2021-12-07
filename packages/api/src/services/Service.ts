@@ -141,7 +141,6 @@ export default class Service extends EventEmitter {
   ) {
     return this.onCommand('state_changed', (data, message) => {
       if (data.state === state) {
-        console.log('data state', state);
         callback(data, message);
       }
     }, processData);

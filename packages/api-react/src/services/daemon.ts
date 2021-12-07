@@ -1,22 +1,17 @@
-import { createApi } from '@reduxjs/toolkit/query/react';
 import { Daemon, optionsForPlotter, defaultsForPlotter } from '@chia/api';
 import type { KeyringStatus, ServiceName } from '@chia/api';
-import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
+import api, { baseQuery } from '../api';
 
-const baseQuery = chiaLazyBaseQuery({
-  service: Daemon,
-});
+const apiWithTag = api.enhanceEndpoints({addTagTypes: ['KeyringStatus', 'ServiceRunning']})
 
-export const daemonApi = createApi({
-  reducerPath: 'daemonApi',
-  baseQuery,
-  tagTypes: ['KeyringStatus', 'ServiceRunning'],
+export const daemonApi = apiWithTag.injectEndpoints({
   endpoints: (build) => ({
     ping: build.query<boolean, {
     }>({
       query: () => ({
         command: 'ping',
+        service: Daemon,
       }),
       transformResponse: (response: any) => response?.success,
     }),
@@ -25,6 +20,7 @@ export const daemonApi = createApi({
     }>({
       query: () => ({
         command: 'keyringStatus',
+        service: Daemon,
       }),
       transformResponse: (response: any) => {
         const { status, ...rest } = response;
@@ -36,6 +32,7 @@ export const daemonApi = createApi({
       providesTags: ['KeyringStatus'],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onKeyringStatusChanged',
+        service: Daemon,
         onUpdate: (draft, data) => {
           // empty base array
           draft.splice(0);
@@ -54,6 +51,7 @@ export const daemonApi = createApi({
     }>({
       query: ({ service, testing }) => ({
         command: 'startService',
+        service: Daemon,
         args: [service, testing],
       }),
     }),
@@ -63,6 +61,7 @@ export const daemonApi = createApi({
     }>({
       query: ({ service }) => ({
         command: 'stopService',
+        service: Daemon,
         args: [service],
       }),
     }),
@@ -72,6 +71,7 @@ export const daemonApi = createApi({
     }>({
       query: ({ service }) => ({
         command: 'isRunning',
+        service: Daemon,
         args: [service],
       }),
       transformResponse: (response: any) => response?.isRunning,
@@ -86,6 +86,7 @@ export const daemonApi = createApi({
     }>({
       query: ({ currentPassphrase, newPassphrase, passphraseHint, savePassphrase }) => ({
         command: 'setKeyringPassphrase',
+        service: Daemon,
         args: [currentPassphrase, newPassphrase, passphraseHint, savePassphrase],
       }),
       invalidatesTags: () => ['KeyringStatus'],
@@ -97,6 +98,7 @@ export const daemonApi = createApi({
     }>({
       query: ({ currentPassphrase }) => ({
         command: 'removeKeyringPassphrase',
+        service: Daemon,
         args: [currentPassphrase],
       }),
       invalidatesTags: () => ['KeyringStatus'],
@@ -111,6 +113,7 @@ export const daemonApi = createApi({
     }>({
       query: ({ passphrase, passphraseHint, savePassphrase, cleanupLegacyKeyring }) => ({
         command: 'migrateKeyring',
+        service: Daemon,
         args: [passphrase, passphraseHint, savePassphrase, cleanupLegacyKeyring],
       }),
       invalidatesTags: () => ['KeyringStatus'],
@@ -122,6 +125,7 @@ export const daemonApi = createApi({
     }>({
       query: ({ key }) => ({
         command: 'unlockKeyring',
+        service: Daemon,
         args: [key],
       }),
       invalidatesTags: () => ['KeyringStatus'],
@@ -131,6 +135,7 @@ export const daemonApi = createApi({
     getPlotters: build.query<Object, undefined>({
       query: () => ({
         command: 'getPlotters',
+        service: Daemon,
       }),
       transformResponse: (response: any) => {
         const { plotters } = response;
@@ -164,19 +169,17 @@ export const daemonApi = createApi({
       // providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
     }),
 
-    /*
     stopPlotting: build.mutation<boolean, {
       id: string;
     }>({
       query: ({ id }) => ({
         command: 'stopPlotting',
+        service: Daemon,
         args: [id],
       }),
       transformResponse: (response: any) => response?.success,
       // providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
     }),
-    */
-    /*
     startPlotting: build.mutation<boolean, PlotAdd>({
       query: ({ 
         bladebitDisableNUMA,
@@ -205,6 +208,7 @@ export const daemonApi = createApi({
         workspaceLocation2,
        }) => ({
         command: 'startPlotting',
+        service: Daemon,
         args: [
           plotterName,
           plotSize,
@@ -235,7 +239,6 @@ export const daemonApi = createApi({
       transformResponse: (response: any) => response?.success,
       // providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
     }),
-    */
   }),
 });
 
@@ -251,6 +254,6 @@ export const {
   useUnlockKeyringMutation,
 
   useGetPlottersQuery,
-  // useStopPlottingMutation,
-  // useStartPlottingMutation,
+  useStopPlottingMutation,
+  useStartPlottingMutation,
 } = daemonApi;

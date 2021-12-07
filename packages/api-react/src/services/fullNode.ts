@@ -1,22 +1,17 @@
-import { createApi } from '@reduxjs/toolkit/query/react';
 import { FullNode } from '@chia/api';
 import type { Block, BlockRecord, BlockHeader, BlockchainState, FullNodeConnection } from '@chia/api';
-import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
+import api, { baseQuery } from '../api';
 
-const baseQuery = chiaLazyBaseQuery({
-  service: FullNode,
-});
+const apiWithTag = api.enhanceEndpoints({addTagTypes: ['BlockchainState', 'FullNodeConnections']})
 
-export const fullNodeApi = createApi({
-  reducerPath: 'fullNodeApi',
-  baseQuery,
-  tagTypes: ['BlockchainState', 'FullNodeConnections'],
+export const fullNodeApi = apiWithTag.injectEndpoints({
   endpoints: (build) => ({
     ping: build.query<boolean, {
     }>({
       query: () => ({
         command: 'ping',
+        service: FullNode,
       }),
       transformResponse: (response: any) => response?.success,
     }),
@@ -27,6 +22,7 @@ export const fullNodeApi = createApi({
     }>({
       query: ({ start, end }) => ({
         command: 'getBlockRecords',
+        service: FullNode,
         args: [start, end],
       }),
       transformResponse: (response: any) => response?.blockRecords,
@@ -34,21 +30,25 @@ export const fullNodeApi = createApi({
     getUnfinishedBlockHeaders: build.query<BlockHeader[], undefined>({
       query: () => ({
         command: 'getUnfinishedBlockHeaders',
+        service: FullNode,
       }),
       transformResponse: (response: any) => response?.headers,
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onBlockchainState',
+        service: FullNode,
         endpoint: () => fullNodeApi.endpoints.getUnfinishedBlockHeaders,
       }]),
     }),
     getBlockchainState: build.query<BlockchainState, undefined>({
       query: () => ({
         command: 'getBlockchainState',
+        service: FullNode,
       }),
       providesTags: ['BlockchainState'],
       transformResponse: (response: any) => response?.blockchainState,
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onBlockchainState',
+        service: FullNode,
         onUpdate: (draft, data) => Object.assign(draft, {
           ...data.blockchainState,
         }),
@@ -57,6 +57,7 @@ export const fullNodeApi = createApi({
     getConnections: build.query<FullNodeConnection[], undefined>({
       query: () => ({
         command: 'getConnections',
+        service: FullNode,
       }),
       transformResponse: (response: any) => response?.connections,
       providesTags: (connections) => connections
@@ -67,6 +68,7 @@ export const fullNodeApi = createApi({
       :  [{ type: 'FullNodeConnections', id: 'LIST' }],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onConnections',
+        service: FullNode,
         onUpdate: (draft, data) => {
           // empty base array
           draft.splice(0);
@@ -82,6 +84,7 @@ export const fullNodeApi = createApi({
     }>({
       query: ({ host, port }) => ({
         command: 'openConnection',
+        service: FullNode,
         args: [host, port],
       }),
       invalidatesTags: [{ type: 'FullNodeConnections', id: 'LIST' }],
@@ -91,6 +94,7 @@ export const fullNodeApi = createApi({
     }>({
       query: ({ nodeId }) => ({
         command: 'closeConnection',
+        service: FullNode,
         args: [nodeId],
       }),
       invalidatesTags: (_result, _error, { nodeId }) => [{ type: 'FullNodeConnections', id: 'LIST' }, { type: 'FullNodeConnections', id: nodeId }],
@@ -100,6 +104,7 @@ export const fullNodeApi = createApi({
     }>({
       query: ({ headerHash }) => ({
         command: 'getBlock',
+        service: FullNode,
         args: [headerHash],
       }),
       transformResponse: (response: any) => response?.block,
@@ -109,6 +114,7 @@ export const fullNodeApi = createApi({
     }>({
       query: ({ headerHash }) => ({
         command: 'getBlockRecord',
+        service: FullNode,
         args: [headerHash],
       }),
       transformResponse: (response: any) => response?.blockRecord,

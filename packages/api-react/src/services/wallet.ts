@@ -1,23 +1,18 @@
-import { createApi } from '@reduxjs/toolkit/query/react';
 import { Wallet, CAT, Pool, Farmer, WalletType, OfferTradeRecord } from '@chia/api';
-import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import type { Transaction, WalletConnections } from '@chia/api';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 import normalizePoolState from '../utils/normalizePoolState';
+import api, { baseQuery } from '../api';
 
-const baseQuery = chiaLazyBaseQuery({
-  service: Wallet,
-});
+const apiWithTag = api.enhanceEndpoints({addTagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions', 'WalletConnections', 'LoggedInFingerprint', 'PoolWalletStatus', 'NFTs', 'OfferTradeRecord']})
 
-export const walletApi = createApi({
-  reducerPath: 'walletApi',
-  baseQuery,
-  tagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions', 'WalletConnections', 'LoggedInFingerprint', 'PoolWalletStatus', 'NFTs', 'OfferTradeRecord'],
+export const walletApi = apiWithTag.injectEndpoints({
   endpoints: (build) => ({
     ping: build.query<boolean, {
     }>({
       query: () => ({
         command: 'ping',
+        service: Wallet,
       }),
       transformResponse: (response: any) => response?.success,
     }),
@@ -26,6 +21,7 @@ export const walletApi = createApi({
     }>({
       query: () => ({
         command: 'getLoggedInFingerprint',
+        service: Wallet,
         mockResponse: { fingerprint: '3125625846' },
       }),
       transformResponse: (response: any) => response?.fingerprint,
@@ -42,6 +38,7 @@ export const walletApi = createApi({
         try {
           const { data, error } = await fetchWithBQ({
             command: 'getWallets',
+            service: Wallet,
           });
 
           if (error) {
@@ -106,6 +103,7 @@ export const walletApi = createApi({
       },
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onWalletCreated',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getWallets,
       }]),
     }),
@@ -115,11 +113,13 @@ export const walletApi = createApi({
     }>({
       query: ({ transactionId }) => ({
         command: 'getTransaction',
+        service: Wallet,
         args: [transactionId],
       }),
       transformResponse: (response: any) => response?.transaction,
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onTransactionUpdate',
+        service: Wallet,
         onUpdate: (draft, data, { transactionId }) => {
           const { additionalData: { transaction } } = data;
 
@@ -137,6 +137,7 @@ export const walletApi = createApi({
     }>({
       query: ({ walletId }) => ({
         command: 'getPwStatus',
+        service: Wallet,
         args: [walletId],
       }),
       /*
@@ -158,6 +159,7 @@ export const walletApi = createApi({
     }>({
       query: ({ walletId, fee }) => ({
         command: 'pwAbsorbRewards',
+        service: Wallet,
         args: [walletId, fee],
       }),
       invalidatesTags: [
@@ -175,6 +177,7 @@ export const walletApi = createApi({
     }>({
       query: ({ walletId, poolUrl, relativeLockHeight, targetPuzzlehash, fee }) => ({
         command: 'pwJoinPool',
+        service: Wallet,
         args: [
           walletId,
           poolUrl,
@@ -195,6 +198,7 @@ export const walletApi = createApi({
     }>({
       query: ({ walletId, fee }) => ({
         command: 'pwSelfPool',
+        service: Wallet,
         args: [walletId, fee],
       }),
       invalidatesTags: [
@@ -209,6 +213,7 @@ export const walletApi = createApi({
     }>({
       query: ({ walletType, options }) => ({
         command: 'createNewWallet',
+        service: Wallet,
         args: [walletType, options],
       }),
       invalidatesTags: [{ type: 'Wallets', id: 'LIST' }],
@@ -219,6 +224,7 @@ export const walletApi = createApi({
     }>({
       query: ({ walletId }) => ({
         command: 'deleteUnconfirmedTransactions',
+        service: Wallet,
         args: [walletId],
       }),
     }),
@@ -239,6 +245,7 @@ export const walletApi = createApi({
     }>({
       query: ({ walletId }) => ({
         command: 'getWalletBalance',
+        service: Wallet,
         args: [walletId],
       }),
       transformResponse: (response) => {
@@ -261,12 +268,15 @@ export const walletApi = createApi({
       },
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onCoinAdded',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getWalletBalance,
       }, {
         command: 'onCoinRemoved',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getWalletBalance,
       }, {
         command: 'onPendingTransaction',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getWalletBalance,
       }]),
     }),
@@ -274,6 +284,7 @@ export const walletApi = createApi({
     getFarmedAmount: build.query<any, undefined>({
       query: () => ({
         command: 'getFarmedAmount',
+        service: Wallet,
       }),
     }),
   
@@ -326,6 +337,7 @@ export const walletApi = createApi({
                 // subscribing to tx_updates
                 subscribeResponse = await baseQuery({
                   command: 'onTransactionUpdate',
+                  service: Wallet,
                   args: [(data: any) => {
                     const { additionalData: { transaction } } = data;
   
@@ -338,6 +350,7 @@ export const walletApi = createApi({
               // make transaction
               const { data: sendTransactionData, error, ...rest } = await fetchWithBQ({
                 command: 'sendTransaction',
+                service: Wallet,
                 args: [walletId, amount, fee, address],
               });
 
@@ -376,6 +389,7 @@ export const walletApi = createApi({
     generateMnemonic: build.mutation<string[], undefined>({
       query: () => ({
         command: 'generateMnemonic',
+        service: Wallet,
       }),
       transformResponse: (response: any) => response?.mnemonic,
     }),
@@ -383,6 +397,7 @@ export const walletApi = createApi({
     getPublicKeys: build.query<number[], undefined>({
       query: () => ({
         command: 'getPublicKeys',
+        service: Wallet,
       }),
       transformResponse: (response: any) => response?.publicKeyFingerprints,
       providesTags: (keys) => keys
@@ -400,6 +415,7 @@ export const walletApi = createApi({
     }>({
       query: ({ mnemonic, type, filePath }) => ({
         command: 'addKey',
+        service: Wallet,
         args: [mnemonic, type, filePath],
       }),
       transformResponse: (response: any) => response?.fingerprint,
@@ -411,6 +427,7 @@ export const walletApi = createApi({
     }>({
       query: ({ fingerprint }) => ({
         command: 'deleteKey',
+        service: Wallet,
         args: [fingerprint],
       }),
       invalidatesTags: (_result, _error, { fingerprint }) => [{ type: 'Keys', id: fingerprint }],
@@ -427,6 +444,7 @@ export const walletApi = createApi({
     }>({
       query: ({ fingerprint }) => ({
         command: 'checkDeleteKey',
+        service: Wallet,
         args: [fingerprint],
       }),
     }),
@@ -434,6 +452,7 @@ export const walletApi = createApi({
     deleteAllKeys: build.mutation<any, undefined>({
       query: () => ({
         command: 'deleteAllKeys',
+        service: Wallet,
       }),
       invalidatesTags: [{ type: 'Keys', id: 'LIST' }],
     }),
@@ -451,6 +470,7 @@ export const walletApi = createApi({
         host,
       }) => ({
         command: 'logIn',
+        service: Wallet,
         args: [fingerprint, type, filePath, host],
       }),
       invalidatesTags: [{ type: 'LoggedInFingerprint' }],
@@ -465,6 +485,7 @@ export const walletApi = createApi({
         host,
       }) => ({
         command: 'logInAndSkipImport',
+        service: Wallet,
         args: [fingerprint, host],
       }),
     }),
@@ -480,6 +501,7 @@ export const walletApi = createApi({
         host,
       }) => ({
         command: 'logInAndImportBackup',
+        service: Wallet,
         args: [fingerprint, filePath, host],
       }),
     }),
@@ -493,6 +515,7 @@ export const walletApi = createApi({
         options,
       }) => ({
         command: 'getBackupInfo',
+        service: Wallet,
         args: [filePath, options],
       }),
     }),
@@ -506,6 +529,7 @@ export const walletApi = createApi({
         fingerprint,
       }) => ({
         command: 'getBackupInfoByFingerprint',
+        service: Wallet,
         args: [filePath, fingerprint],
       }),
     }),
@@ -519,6 +543,7 @@ export const walletApi = createApi({
         words,
       }) => ({
         command: 'getBackupInfoByWords',
+        service: Wallet,
         args: [filePath, words],
       }),
     }),
@@ -537,6 +562,7 @@ export const walletApi = createApi({
         fingerprint,
       }) => ({
         command: 'getPrivateKey',
+        service: Wallet,
         args: [fingerprint],
       }),
       transformResponse: (response: any) => response?.privateKey,
@@ -557,6 +583,7 @@ export const walletApi = createApi({
         reverse,
       }) => ({
         command: 'getTransactions',
+        service: Wallet,
         args: [walletId, start, end, sortKey, reverse],
       }),
       transformResponse: (response: any) => response?.transactions,
@@ -568,12 +595,15 @@ export const walletApi = createApi({
       },
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onCoinAdded',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getTransactions,
       }, {
         command: 'onCoinRemoved',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getTransactions,
       }, {
         command: 'onPendingTransaction',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getTransactions,
       }]),
     }),
@@ -585,17 +615,21 @@ export const walletApi = createApi({
         walletId,
       }) => ({
         command: 'getTransactionsCount',
+        service: Wallet,
         args: [walletId],
       }),
       transformResponse: (response: any) => response?.count,
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onCoinAdded',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getTransactionsCount,
       }, {
         command: 'onCoinRemoved',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getTransactionsCount,
       }, {
         command: 'onPendingTransaction',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getTransactionsCount,
       }]),
     }),
@@ -607,6 +641,7 @@ export const walletApi = createApi({
         walletId,
       }) => ({
         command: 'getNextAddress',
+        service: Wallet,
         args: [walletId, false],
       }),
       transformResponse: (response: any) => response?.address,
@@ -624,6 +659,7 @@ export const walletApi = createApi({
         newAddress,
       }) => ({
         command: 'getNextAddress',
+        service: Wallet,
         args: [walletId, newAddress],
       }),
       transformResponse: (response: any) => response?.address,
@@ -639,6 +675,7 @@ export const walletApi = createApi({
         address,
       }) => ({
         command: 'farmBlock',
+        service: Wallet,
         args: [address],
       }),
     }),
@@ -646,13 +683,16 @@ export const walletApi = createApi({
     getHeightInfo: build.query<number, undefined>({
       query: () => ({
         command: 'getHeightInfo',
+        service: Wallet,
       }),
       transformResponse: (response: any) => response?.height,
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onSyncChanged',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getHeightInfo,
       }, {
         command: 'onNewBlock',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getHeightInfo,
       }]),
     }),
@@ -660,15 +700,18 @@ export const walletApi = createApi({
     getNetworkInfo: build.query<any, undefined>({
       query: () => ({
         command: 'getNetworkInfo',
+        service: Wallet,
       }),
     }),
 
     getSyncStatus: build.query<any, undefined>({
       query: () => ({
         command: 'getSyncStatus',
+        service: Wallet,
       }),
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onSyncChanged',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getSyncStatus,
       }]),
     }),
@@ -676,6 +719,7 @@ export const walletApi = createApi({
     getConnections: build.query<WalletConnections[], undefined>({
       query: () => ({
         command: 'getConnections',
+        service: Wallet,
       }),
       transformResponse: (response: any) => response?.connections,
       providesTags: (connections) => connections
@@ -686,6 +730,7 @@ export const walletApi = createApi({
       :  [{ type: 'WalletConnections', id: 'LIST' }],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onConnections',
+        service: Wallet,
         onUpdate: (draft, data) => {
           // empty base array
           draft.splice(0);
@@ -701,6 +746,7 @@ export const walletApi = createApi({
     }>({
       query: ({ host, port }) => ({
         command: 'openConnection',
+        service: Wallet,
         args: [host, port],
       }),
       invalidatesTags: [{ type: 'WalletConnections', id: 'LIST' }],
@@ -710,6 +756,7 @@ export const walletApi = createApi({
     }>({
       query: ({ nodeId }) => ({
         command: 'closeConnection',
+        service: Wallet,
         args: [nodeId],
       }),
       invalidatesTags: (_result, _error, { nodeId }) => [{ type: 'WalletConnections', id: 'LIST' }, { type: 'WalletConnections', id: nodeId }],
@@ -721,6 +768,7 @@ export const walletApi = createApi({
         filePath,
       }) => ({
         command: 'createBackup',
+        service: Wallet,
         args: [filePath],
       }),
     }),
@@ -999,6 +1047,7 @@ export const walletApi = createApi({
                 // subscribing to tx_updates
                 subscribeResponse = await baseQuery({
                   command: 'onTransactionUpdate',
+                  service: Wallet,
                   args: [(data: any) => {
                     const { additionalData: { transaction } } = data;
 
@@ -1196,6 +1245,7 @@ export const walletApi = createApi({
             (async () => {
               const { data, error } = await fetchWithBQ({
                 command: 'getWallets',
+                service: Wallet,
               });
     
               if (error) {
@@ -1242,6 +1292,7 @@ export const walletApi = createApi({
             await Promise.all<PoolWalletStatus>(poolWallets.map(async (wallet) => {
               const { data, error } = await fetchWithBQ({
                 command: 'getPwStatus',
+                service: Wallet,
                 args: [wallet.id],
               });
     
@@ -1257,6 +1308,7 @@ export const walletApi = createApi({
             await Promise.all<WalletBalance>(poolWallets.map(async (wallet) => {
                 const { data, error } = await fetchWithBQ({
                   command: 'getWalletBalance',
+                  service: Wallet,
                   args: [wallet.id],
                 });
       

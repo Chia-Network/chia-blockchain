@@ -1,22 +1,18 @@
-import { createApi } from '@reduxjs/toolkit/query/react';
 import { Harvester } from '@chia/api';
 import type { Plot } from '@chia/api';
-import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
+import api, { baseQuery } from '../api';
+import { apiWithTag } from './farmer';
 
-const baseQuery = chiaLazyBaseQuery({
-  service: Harvester,
-});
+const apiWithTag2 = apiWithTag.enhanceEndpoints({addTagTypes: ['Plots', 'PlotDirectories']})
 
-export const harvesterApi = createApi({
-  reducerPath: 'harvesterApi',
-  baseQuery,
-  tagTypes: ['Plots', 'PlotDirectories'],
+export const harvesterApi = apiWithTag2.injectEndpoints({
   endpoints: (build) => ({
     ping: build.query<boolean, {
     }>({
       query: () => ({
         command: 'ping',
+        service: Harvester,
       }),
       transformResponse: (response: any) => response?.success,
     }),
@@ -25,6 +21,7 @@ export const harvesterApi = createApi({
     }>({
       query: () => ({
         command: 'getPlots',
+        service: Harvester,
       }),
       transformResponse: (response: any) => { 
         console.log('get plots respojnse', response);
@@ -38,6 +35,7 @@ export const harvesterApi = createApi({
         :  [{ type: 'Plots', id: 'LIST' }],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onRefreshPlots',
+        service: Harvester,
         endpoint: () => harvesterApi.endpoints.getPlots,
       }]),
     }),
@@ -45,15 +43,56 @@ export const harvesterApi = createApi({
     }>({
       query: () => ({
         command: 'refreshPlots',
+        service: Harvester,
       }),
+      invalidatesTags: [{ type: 'Harvesters', id: 'LIST' }],
     }),
+
     deletePlot: build.mutation<boolean, { 
       filename: string;
     }>({
+      /*
       query: ({ filename }) => ({
         command: 'deletePlot',
+        service: Harvester,
         args: [filename],
       }),
+      */
+      async queryFn({ filename }, _queryApi, _extraOptions, fetchWithBQ) {
+        try {
+          console.log('DELETE PLOT', filename);
+          const { data, error } = await fetchWithBQ({
+            command: 'deletePlot',
+            service: Harvester,
+            args: [filename],
+          });
+
+          console.log('DELETE PLOT response', error, data);
+
+          if (error) {
+            throw error;
+          }
+
+          const refreshResponse = await fetchWithBQ({
+            command: 'refreshPlots',
+            service: Harvester,
+          });
+
+          console.log('refresh response', refreshResponse);
+
+          if (refreshResponse.error) {
+            throw error;
+          } 
+
+          return {
+            data,
+          };
+        } catch (error: any) {
+          return {
+            error,
+          };
+        }
+      },
       transformResponse(response) {
         console.log('restponse deletePlot', response);
         return response?.success;
@@ -68,6 +107,7 @@ export const harvesterApi = createApi({
     getPlotDirectories: build.query<string[], undefined>({
       query: () => ({
         command: 'getPlotDirectories',
+        service: Harvester,
       }),
       transformResponse: (response: any) => response?.directories,
       providesTags: (directories) => directories
@@ -82,6 +122,7 @@ export const harvesterApi = createApi({
     }>({
       query: ({ dirname }) => ({
         command: 'addPlotDirectory',
+        service: Harvester,
         args: [dirname],
       }),
       invalidatesTags: (_result, _error, { dirname }) => [
@@ -94,6 +135,7 @@ export const harvesterApi = createApi({
     }>({
       query: ({ dirname }) => ({
         command: 'removePlotDirectory',
+        service: Harvester,
         args: [dirname],
       }),
       invalidatesTags: (_result, _error, { dirname }) => [{ type: 'PlotDirectories', id: 'LIST'}, { type: 'PlotDirectories', id: dirname }],

@@ -1,9 +1,13 @@
+import type { Service } from '@chia/api';
+
 type Invalidate = {
   command: string;
+  service: Service;
   endpoint: () => Object;
   skip?: (data: any, args: any) => boolean;
 } | {
   command: string;
+  service: Service;
   onUpdate: (draft, data, args: any) => void;
   skip?: (data: any, args: any) => boolean;
 };
@@ -16,10 +20,11 @@ export default function onCacheEntryAddedInvalidate(rtkQuery, invalidates: Inval
       await cacheDataLoaded;
 
       await Promise.all(invalidates.map(async(invalidate) => {
-        const { command, endpoint, onUpdate, skip } = invalidate;
+        const { command, service, endpoint, onUpdate, skip } = invalidate;
 
         const response = await rtkQuery({
-          command: command,
+          command,
+          service,
           args: [(data) => {
             if (skip && !skip(data, args)) {
               return;

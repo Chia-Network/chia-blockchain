@@ -1,22 +1,17 @@
-import { createApi } from '@reduxjs/toolkit/query/react';
 import { Farmer } from '@chia/api';
 import type { Plot, FarmerConnection, RewardTargets, SignagePoint, Pool, FarmingInfo } from '@chia/api';
-import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
+import api, { baseQuery } from '../api';
 
-const baseQuery = chiaLazyBaseQuery({
-  service: Farmer,
-});
+export const apiWithTag = api.enhanceEndpoints({addTagTypes: ['Harvesters', 'RewardTargets', 'FarmerConnections', 'SignagePoints', 'PoolLoginLink', 'Pools', 'PayoutInstructions']})
 
-export const farmerApi = createApi({
-  reducerPath: 'farmerApi',
-  baseQuery,
-  tagTypes: ['Harvesters', 'RewardTargets', 'FarmerConnections', 'SignagePoints', 'PoolLoginLink', 'Pools', 'PayoutInstructions'],
+export const farmerApi = apiWithTag.injectEndpoints({
   endpoints: (build) => ({
     ping: build.query<boolean, {
     }>({
       query: () => ({
         command: 'ping',
+        service: Farmer,
       }),
       transformResponse: (response: any) => response?.success,
     }),
@@ -25,6 +20,7 @@ export const farmerApi = createApi({
     }>({
       query: () => ({
         command: 'getHarvesters',
+        service: Farmer,
       }),
       transformResponse: (response: any) => response?.harvesters,
       providesTags: (harvesters) => harvesters
@@ -35,6 +31,7 @@ export const farmerApi = createApi({
         :  [{ type: 'Harvesters', id: 'LIST' }],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onRefreshPlots',
+        service: Farmer,
         endpoint: () => farmerApi.endpoints.getHarvesters,
       }]),
     }),
@@ -44,6 +41,7 @@ export const farmerApi = createApi({
     }>({
       query: ({ searchForPrivateKey }) => ({
         command: 'getRewardTargets',
+        service: Farmer,
         args: [searchForPrivateKey],
       }),
       // transformResponse: (response: any) => response,
@@ -56,6 +54,7 @@ export const farmerApi = createApi({
     }>({
       query: ({ farmerTarget, poolTarget }) => ({
         command: 'setRewardTargets',
+        service: Farmer,
         args: [farmerTarget, poolTarget],
       }),
       invalidatesTags: ['RewardTargets'],
@@ -64,6 +63,7 @@ export const farmerApi = createApi({
     getConnections: build.query<FarmerConnection[], undefined>({
       query: () => ({
         command: 'getConnections',
+        service: Farmer,
       }),
       transformResponse: (response: any) => response?.connections,
       providesTags: (connections) => connections
@@ -74,6 +74,7 @@ export const farmerApi = createApi({
         : [{ type: 'FarmerConnections', id: 'LIST' }],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onConnections',
+        service: Farmer,
         onUpdate: (draft, data) => {
           // empty base array
           draft.splice(0);
@@ -89,6 +90,7 @@ export const farmerApi = createApi({
     }>({
       query: ({ host, port }) => ({
         command: 'openConnection',
+        service: Farmer,
         args: [host, port],
       }),
       invalidatesTags: [{ type: 'FarmerConnections', id: 'LIST' }],
@@ -98,6 +100,7 @@ export const farmerApi = createApi({
     }>({
       query: ({ nodeId }) => ({
         command: 'closeConnection',
+        service: Farmer,
         args: [nodeId],
       }),
       invalidatesTags: (_result, _error, { nodeId }) => [{ type: 'FarmerConnections', id: 'LIST' }, { type: 'FarmerConnections', id: nodeId }],
@@ -108,6 +111,7 @@ export const farmerApi = createApi({
     }>({
       query: ({ launcherId }) => ({
         command: 'getPoolLoginLink',
+        service: Farmer,
         args: [launcherId],
       }),
       transformResponse: (response: any) => response?.loginLink,
@@ -118,6 +122,7 @@ export const farmerApi = createApi({
     getSignagePoints: build.query<SignagePoint[], undefined>({
       query: () => ({
         command: 'getSignagePoints',
+        service: Farmer,
       }),
       transformResponse: (response: any) => response?.signagePoints,
       providesTags: (signagePoints) => signagePoints
@@ -128,6 +133,7 @@ export const farmerApi = createApi({
         :  [{ type: 'SignagePoints', id: 'LIST' }],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onNewSignagePoint',
+        service: Farmer,
         onUpdate: (draft, data) => {
           draft.unshift(data);
         },
@@ -137,6 +143,7 @@ export const farmerApi = createApi({
     getPoolState: build.query<Pool[], undefined>({
       query: () => ({
         command: 'getPoolState',
+        service: Farmer,
       }),
       transformResponse: (response: any) => response?.poolState,
       providesTags: (poolsList) => poolsList
@@ -153,6 +160,7 @@ export const farmerApi = createApi({
     }>({
       query: ({ launcherId, payoutInstructions }) => ({
         command: 'setPayoutInstructions',
+        service: Farmer,
         args: [launcherId, payoutInstructions],
       }),
       invalidatesTags: (_result, _error, { launcherId }) => [{ type: 'PayoutInstructions', id: launcherId }],
@@ -162,10 +170,12 @@ export const farmerApi = createApi({
     }>({
       query: () => ({
         command: 'getFarmingInfo',
+        service: Farmer,
       }),
       // transformResponse: (response: any) => response,
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onFarmingInfoChanged',
+        service: Farmer,
         endpoint: () => farmerApi.endpoints.getFarmingInfo,
       }]),
     }),

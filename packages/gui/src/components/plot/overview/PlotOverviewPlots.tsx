@@ -125,8 +125,6 @@ export default function PlotOverviewPlots() {
     (item) => item.state !== PlotStatusEnum.FINISHED,
   );
 
-  console.log('plots', plots);
-
   return (
     <>
       <PlotHeader>

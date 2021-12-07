@@ -29,7 +29,8 @@ export const {
   useUnlockKeyringMutation,
 
   useGetPlottersQuery,
-  // useStartPlottingMutation,
+  useStopPlottingMutation,
+  useStartPlottingMutation,
 } = daemon;
 
 // farmer hooks
@@ -151,6 +152,6 @@ export const {
   plotterApi,
 
   useGetPlotQueueQuery,
-  useStopPlottingMutation,
-  useStartPlottingMutation,
+  // useStopPlottingMutation,
+  // useStartPlottingMutation,
 } = plotter;
