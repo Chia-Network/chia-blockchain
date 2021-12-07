@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Dict, Generic, List, Optional, Tuple, TypeVar, TYPE_CHECKING
 
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.types.blockchain_format.coin import Coin
@@ -9,6 +9,21 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.transaction_type import TransactionType
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet import Wallet
+
+
+T = TypeVar("T")
+
+
+@dataclass
+class ItemAndTransactionRecords(Generic[T]):
+    item: T
+    # TODO: this seems better but needs a WalletProtocol or similar developed
+    # records: Dict["Wallet", List["TransactionRecord"]]
+    regular: List["TransactionRecord"]
+    data_layer: List["TransactionRecord"]
 
 
 @dataclass(frozen=True)

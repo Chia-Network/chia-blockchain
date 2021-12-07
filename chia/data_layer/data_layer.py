@@ -58,10 +58,12 @@ class DataLayer:
         assert self.wallet_state_manager
         main_wallet = self.wallet_state_manager.main_wallet
         async with self.wallet_state_manager.lock:
-            wallet, regular_spend, dl_spend = await DataLayerWallet.create_new_dl_wallet(
+            creation_record = await DataLayerWallet.create_new_dl_wallet(
                 self.wallet_state_manager, main_wallet, amount, None, fee
             )
-            self.wallet = wallet
+            self.wallet = creation_record.item
+            [regular_spend] = creation_record.regular
+            [dl_spend] = creation_record.data_layer
         self.initialized = True  # todo do this on the callback after tx is buried
         return regular_spend, dl_spend
 
