@@ -73,8 +73,8 @@ steps:
 
   - task: NodeTool@0
     inputs:
-      versionSpec: '14.x'
-    displayName: "Setup Node 14.x"
+      versionSpec: '16.x'
+    displayName: "Setup Node 16.x"
 
   - bash: |
       . ./activate
