@@ -45,9 +45,12 @@ class BlockStore:
                 "prev_hash blob,"
                 "height bigint,"
                 "block blob,"
-                "sub_epoch_summary blob,"
-                "is_peak tinyint)"
+                "sub_epoch_summary blob)"
             )
+
+            # This is a single-row table containing the hash of the current
+            # peak. The "key" field is there to make update statements simple
+            await self.db.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
 
             # Sub epoch segments for weight proofs
             await self.db.execute(
@@ -62,7 +65,6 @@ class BlockStore:
                 "CREATE INDEX IF NOT EXISTS is_fully_compactified on full_blocks(is_fully_compactified)"
             )
             await self.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
-            await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak) where is_peak = 1")
 
         else:
 
@@ -135,7 +137,7 @@ class BlockStore:
             await cursor_1.close()
 
             cursor_2 = await self.db.execute(
-                "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?,?, ?)",
+                "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?, ?)",
                 (
                     header_hash,
                     block.prev_header_hash,
@@ -144,7 +146,6 @@ class BlockStore:
                     None
                     if block_record.sub_epoch_summary_included is None
                     else bytes(block_record.sub_epoch_summary_included),
-                    False,
                 ),
             )
             await cursor_2.close()
@@ -357,6 +358,28 @@ class BlockStore:
 
         return ret
 
+    async def get_peak(self) -> Optional[Tuple[bytes32, uint32]]:
+
+        if self.db_wrapper.db_version == 2:
+            cursor = await self.db.execute("SELECT hash FROM current_peak WHERE key = 0")
+            peak_row = await cursor.fetchone()
+            await cursor.close()
+            if peak_row is None:
+                return None
+            cursor_2 = await self.db.execute("SELECT height FROM full_blocks WHERE header_hash=?", (peak_row[0],))
+            peak_height = await cursor_2.fetchone()
+            await cursor_2.close()
+            if peak_height is None:
+                return None
+            return bytes32(peak_row[0]), uint32(peak_height[0])
+        else:
+            res = await self.db.execute("SELECT header_hash, height from block_records WHERE is_peak = 1")
+            peak_row = await res.fetchone()
+            await res.close()
+            if peak_row is None:
+                return None
+            return bytes32(bytes.fromhex(peak_row[0])), uint32(peak_row[1])
+
     async def get_block_records_close_to_peak(
         self, blocks_n: int
     ) -> Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]:
@@ -365,38 +388,37 @@ class BlockStore:
         peak header hash.
         """
 
-        res = await self.db.execute("SELECT * from block_records WHERE is_peak = 1")
-        peak_row = await res.fetchone()
-        await res.close()
-        if peak_row is None:
+        peak = await self.get_peak()
+        if peak is None:
             return {}, None
 
-        formatted_str = f"SELECT header_hash, block  from block_records WHERE height >= {peak_row[2] - blocks_n}"
+        formatted_str = f"SELECT header_hash, block  from block_records WHERE height >= {peak[1] - blocks_n}"
         cursor = await self.db.execute(formatted_str)
         rows = await cursor.fetchall()
         await cursor.close()
         ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
-            header_hash = self.maybe_from_hex(row[0])
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, BlockRecord]"; expected type "bytes32"  [index]
-            ret[header_hash] = BlockRecord.from_bytes(row[1])  # type: ignore[index]
+            header_hash = bytes32(self.maybe_from_hex(row[0]))
+            ret[header_hash] = BlockRecord.from_bytes(row[1])
 
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible return value type (got "Tuple[Dict[bytes32, BlockRecord], bytes]", expected
-        #       "Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]")  [return-value]
-        return ret, self.maybe_from_hex(peak_row[0])  # type: ignore[return-value]
+        return ret, peak[0]
 
     async def set_peak(self, header_hash: bytes32) -> None:
         # We need to be in a sqlite transaction here.
         # Note: we do not commit this to the database yet, as we need to also change the coin store
-        cursor_1 = await self.db.execute("UPDATE block_records SET is_peak=0 WHERE is_peak=1")
-        await cursor_1.close()
-        cursor_2 = await self.db.execute(
-            "UPDATE block_records SET is_peak=1 WHERE header_hash=?",
-            (self.maybe_to_hex(header_hash),),
-        )
-        await cursor_2.close()
+
+        if self.db_wrapper.db_version == 2:
+            # Note: we use the key field as 0 just to ensure all inserts replace the existing row
+            cursor = await self.db.execute("INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, header_hash))
+            await cursor.close()
+        else:
+            cursor_1 = await self.db.execute("UPDATE block_records SET is_peak=0 WHERE is_peak=1")
+            await cursor_1.close()
+            cursor_2 = await self.db.execute(
+                "UPDATE block_records SET is_peak=1 WHERE header_hash=?",
+                (self.maybe_to_hex(header_hash),),
+            )
+            await cursor_2.close()
 
     async def is_fully_compactified(self, header_hash: bytes32) -> Optional[bool]:
         cursor = await self.db.execute(
