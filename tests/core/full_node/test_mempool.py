@@ -407,14 +407,13 @@ class TestMempoolManager:
         sb23 = SpendBundle.aggregate((sb2, sb3))
         await self.send_sb(full_node_1, sb23)
 
-        # sb23 must not replace existing sb12 as the former does not spend all
-        # coins that are spent in the latter (specifically, coin1)
-        self.assert_sb_in_pool(full_node_1, sb12)
-        self.assert_sb_not_in_pool(full_node_1, sb23)
+        # sb23 should replace existing sb12 even though it is not a superset
+        self.assert_sb_not_in_pool(full_node_1, sb12)
+        self.assert_sb_in_pool(full_node_1, sb23)
 
-        await self.send_sb(full_node_1, sb3)
-        # Adding non-conflicting sb3 should succeed
-        self.assert_sb_in_pool(full_node_1, sb3)
+        sb1_4 = await self.gen_and_send_sb(full_node_1, peer, coin1, fee=uint64(min_fee_increase))
+        # Adding non-conflicting sb1_4 should succeed
+        self.assert_sb_in_pool(full_node_1, sb1_4)
 
         sb4_1 = generate_test_spend_bundle(coin4, fee=uint64(min_fee_increase))
         sb1234_1 = SpendBundle.aggregate((sb12, sb3, sb4_1))

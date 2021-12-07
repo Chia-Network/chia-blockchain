@@ -212,13 +212,6 @@ class MempoolManager:
             conflicting_fees += item.fee
             conflicting_cost += item.cost
 
-            # All coins spent in all conflicting items must also be spent in
-            # the new item
-            for coin in item.removals:
-                if coin.name() not in removals:
-                    log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
-                    return False
-
         # New item must have higher fee per cost
         conflicting_fees_per_cost = conflicting_fees / conflicting_cost
         if fees_per_cost <= conflicting_fees_per_cost:
