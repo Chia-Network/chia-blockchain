@@ -52,6 +52,7 @@ class WalletRpcApi:
         return {
             # Key management
             "/log_in": self.log_in,
+            "/get_logged_in_fingerprint": self.get_logged_in_fingerprint,
             "/get_public_keys": self.get_public_keys,
             "/get_private_key": self.get_private_key,
             "/generate_mnemonic": self.generate_mnemonic,
@@ -194,6 +195,9 @@ class WalletRpcApi:
             return response
 
         return {"success": False, "error": "Unknown Error"}
+
+    async def get_logged_in_fingerprint(self, request: Dict):
+        return {"fingerprint": self.service.logged_in_fingerprint}
 
     async def get_public_keys(self, request: Dict):
         try:
