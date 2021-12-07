@@ -218,6 +218,20 @@ class SimClient:
     async def get_coin_record_by_name(self, name: bytes32) -> CoinRecord:
         return await self.service.mempool_manager.coin_store.get_coin_record(name)
 
+    async def get_coin_records_by_parent_ids(
+        self,
+        parent_ids: List[bytes32],
+        start_height: Optional[int] = None,
+        end_height: Optional[int] = None,
+        include_spent_coins: bool = False,
+    ) -> List[CoinRecord]:
+        kwargs: Dict[str, Any] = {"include_spent_coins": include_spent_coins, "parent_ids": parent_ids}
+        if start_height is not None:
+            kwargs["start_height"] = start_height
+        if end_height is not None:
+            kwargs["end_height"] = end_height
+        return await self.service.mempool_manager.coin_store.get_coin_records_by_parent_ids(**kwargs)
+
     async def get_coin_records_by_puzzle_hash(
         self,
         puzzle_hash: bytes32,
