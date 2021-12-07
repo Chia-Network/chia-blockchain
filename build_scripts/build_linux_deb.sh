@@ -26,6 +26,7 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 echo "Installing npm and electron packagers"
 npm install electron-packager -g
 npm install electron-installer-debian -g
+npm install lerna -g
 
 echo "Create dist/"
 rm -rf dist
@@ -46,8 +47,10 @@ cd .. || exit
 cd chia-blockchain-gui || exit
 
 echo "npm build"
+lerna clean -y
 npm install
-npm audit fix
+# Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
+# npm audit fix
 npm run build
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
