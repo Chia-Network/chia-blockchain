@@ -1,15 +1,17 @@
 (mod (
   NFT_MOD_HASH
-  SINGLETON_STRUCT
+  SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (NFT_SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
   CURRENT_OWNER_DID
   OPTIONAL_CREATOR_FEE_PUZHASH
   OPTIONAL_CREATOR_FEE_CALCULATOR
-  my_puzhash  ; this becomes my_did's innerpuzhash in case of TRANSFER
-  my_amount  ; this becomes my_did's amount in case of TRANSFER
+  my_puzhash  ; not used for transfer TODO optimise
+  my_amount  ; not used for transfer TODO optimise
+  my_did_inner_hash
+  my_did_amount
   my_did_parent
   new_did
   new_did_parent
-  new_did_inner
+  new_did_inner_hash
   new_did_amount
   trade_price
 )
@@ -34,7 +36,7 @@
   )
 
   ; this function calculates a coin ID given the inner puzzle and singleton information
-  (defun create_singleton_coin_ID (SINGLETON_STRUCT launcher_id parent innerpuzhash amount)
+  (defun-inline create_singleton_coin_ID (SINGLETON_STRUCT launcher_id parent innerpuzhash amount)
     (sha256 parent (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c launcher_id (r (r SINGLETON_STRUCT)))) innerpuzhash) amount)
   )
 
@@ -48,11 +50,10 @@
      )
   )
 
-
   (if new_did
     (c (list CREATE_COIN_ANNOUNCEMENT trade_price)
-      (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT new_did new_did_parent new_did_inner new_did_amount) trade_price))
-        (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT CURRENT_OWNER_DID my_did_parent my_puzhash my_amount) trade_price))
+      (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT new_did new_did_parent new_did_inner_hash new_did_amount) trade_price))
+        (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT CURRENT_OWNER_DID my_did_parent my_did_inner_hash my_did_amount) trade_price new_did))
           (c (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT OPTIONAL_CREATOR_FEE_PUZHASH OPTIONAL_CREATOR_FEE_CALCULATOR new_did))
             (if OPTIONAL_CREATOR_FEE_CALCULATOR
               (list (list CREATE_COIN OPTIONAL_CREATOR_FEE_PUZHASH (a OPTIONAL_CREATOR_FEE_CALCULATOR trade_price)))
@@ -67,6 +68,7 @@
       (list CREATE_COIN my_puzhash my_amount)
       (list ASSERT_MY_AMOUNT my_amount)
       (list ASSERT_MY_PUZZLEHASH my_puzhash)
+      (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT CURRENT_OWNER_DID my_did_parent my_did_inner_hash my_did_amount) 'a'))
     )
   )
 )
