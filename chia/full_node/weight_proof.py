@@ -194,7 +194,7 @@ class WeightProofHandler:
             recent_chain.insert(0, header_block)
             if block_rec.sub_epoch_summary_included:
                 ses_count += 1
-            curr_height = uint32(curr_height - 1)  # type: ignore
+            curr_height = uint32(curr_height - 1)
             blocks_n += 1
 
         header_block = headers[self.blockchain.height_to_hash(curr_height)]
@@ -978,7 +978,7 @@ def _validate_segment(
             if required_iters is None:
                 return False, uint64(0), uint64(0), uint64(0)
             assert sub_slot_data.signage_point_index is not None
-            ip_iters = ip_iters + calculate_ip_iters(  # type: ignore
+            ip_iters = ip_iters + calculate_ip_iters(
                 constants, curr_ssi, sub_slot_data.signage_point_index, required_iters
             )
             if not _validate_challenge_block_vdfs(constants, idx, segment.sub_slots, curr_ssi):
@@ -988,8 +988,8 @@ def _validate_segment(
             if not _validate_sub_slot_data(constants, idx, segment.sub_slots, curr_ssi):
                 log.error(f"failed to validate sub slot data {idx} vdfs")
                 return False, uint64(0), uint64(0), uint64(0)
-        slot_iters = slot_iters + curr_ssi  # type: ignore
-        slots = slots + uint64(1)  # type: ignore
+        slot_iters = slot_iters + curr_ssi
+        slots = slots + uint64(1)
     return True, ip_iters, slot_iters, slots
 
 
@@ -1356,7 +1356,7 @@ def __get_rc_sub_slot(
 
     new_diff = None if ses is None else ses.new_difficulty
     new_ssi = None if ses is None else ses.new_sub_slot_iters
-    ses_hash = None if ses is None else ses.get_hash()
+    ses_hash: Optional[bytes32] = None if ses is None else ses.get_hash()
     overflow = is_overflow_block(constants, first.signage_point_index)
     if overflow:
         if idx >= 2 and slots[idx - 2].cc_slot_end is not None and slots[idx - 1].cc_slot_end is not None:
