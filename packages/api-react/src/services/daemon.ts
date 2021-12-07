@@ -164,6 +164,7 @@ export const daemonApi = createApi({
       // providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
     }),
 
+    /*
     stopPlotting: build.mutation<boolean, {
       id: string;
     }>({
@@ -174,7 +175,8 @@ export const daemonApi = createApi({
       transformResponse: (response: any) => response?.success,
       // providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
     }),
-    
+    */
+    /*
     startPlotting: build.mutation<boolean, PlotAdd>({
       query: ({ 
         bladebitDisableNUMA,
@@ -233,6 +235,7 @@ export const daemonApi = createApi({
       transformResponse: (response: any) => response?.success,
       // providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
     }),
+    */
   }),
 });
 
@@ -248,6 +251,6 @@ export const {
   useUnlockKeyringMutation,
 
   useGetPlottersQuery,
-  useStopPlottingMutation,
-  useStartPlottingMutation,
+  // useStopPlottingMutation,
+  // useStartPlottingMutation,
 } = daemonApi;

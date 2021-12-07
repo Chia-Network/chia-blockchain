@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { sumBy, uniqBy } from 'lodash';
 import type { Plot } from '@chia/api';
 import PlotQueueItem from 'types/PlotQueueItem';
-import { useGetCombinedPlotsQuery } from '@chia/api-react';
+import { useGetCombinedPlotsQuery, useGetPlotQueueQuery } from '@chia/api-react';
 // import useThrottleSelector from './useThrottleSelector';
 
 export default function usePlots(): {
@@ -14,18 +14,10 @@ export default function usePlots(): {
   hasQueue: boolean;
   size: number;
 } {
-  const { data: plots, isLoading } = useGetCombinedPlotsQuery();
+  const { data: plots, isLoading: isLoadingPlots } = useGetCombinedPlotsQuery();
+  const { data: queue, isLoading: isLoadingQueue, error } = useGetPlotQueueQuery();
 
-  const queue = []; /*useThrottleSelector(
-    (state: RootState) => state.plot_queue.queue,
-    {
-      wait: 5000,
-      force(_data, _dataBefore, state) {
-        const event = state.plot_queue?.event;
-        return event === 'state_changed';
-      },
-    },
-  );*/
+  const isLoading = isLoadingPlots || isLoadingQueue;
 
   const uniquePlots = useMemo(() => {
     if (!plots) {
@@ -67,6 +59,6 @@ export default function usePlots(): {
     queue,
     loading: isLoading,
     hasPlots: !!plots && plots.length > 0,
-    hasQueue: !!queue.length,
+    hasQueue: !!queue?.length,
   };
 }

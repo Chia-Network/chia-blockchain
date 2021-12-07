@@ -1,6 +1,5 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useDispatch } from 'react-redux';
 import { ConfirmDialog, More, useOpenDialog } from '@chia/core';
 import {
   Box,
@@ -13,9 +12,9 @@ import {
   DeleteForever as DeleteForeverIcon,
   Info as InfoIcon,
 } from '@material-ui/icons';
+import { useStopPlottingMutation } from '@chia/api-react';
 import type PlotQueueItem from '../../../types/PlotQueueItem';
 import PlotStatus from '../../../constants/PlotStatus';
-import { stopPlotting } from '../../../modules/plotter_messages';
 import PlotQueueLogDialog from './PlotQueueLogDialog';
 
 type Props = {
@@ -27,7 +26,7 @@ export default function PlotQueueAction(props: Props) {
     queueItem: { id, state },
   } = props;
 
-  const dispatch = useDispatch();
+  const [stopPlotting] = useStopPlottingMutation();
   const openDialog = useOpenDialog();
   const canDelete = state !== PlotStatus.REMOVING;
 
@@ -36,11 +35,14 @@ export default function PlotQueueAction(props: Props) {
       return;
     }
 
-    const deleteConfirmed = await openDialog(
+    await openDialog(
       <ConfirmDialog
         title={<Trans>Delete Plot</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
         confirmColor="danger"
+        onConfirm={() => stopPlotting({
+          id,
+        }).unwrap()}
       >
         <Trans>
           Are you sure you want to delete the plot? The plot cannot be
@@ -48,11 +50,6 @@ export default function PlotQueueAction(props: Props) {
         </Trans>
       </ConfirmDialog>,
     );
-
-    // @ts-ignore
-    if (deleteConfirmed) {
-      dispatch(stopPlotting(id));
-    }
   }
 
   function handleViewLog() {

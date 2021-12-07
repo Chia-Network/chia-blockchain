@@ -2,11 +2,9 @@ import React, { ReactNode, useEffect, useState, Suspense } from 'react';
 import { Provider } from 'react-redux';
 import useDarkMode from 'use-dark-mode';
 import { Outlet } from 'react-router-dom';
-import { sleep, ThemeProvider, ModalDialogsProvider, ModalDialogs, LocaleProvider, LayoutLoading } from '@chia/core';
+import { sleep, ThemeProvider, ModalDialogsProvider, ModalDialogs, LocaleProvider, LayoutLoading, dark, light } from '@chia/core';
 import { store, api } from '@chia/api-react';
 import { Trans } from '@lingui/macro';
-import darkTheme from '../../theme/dark';
-import lightTheme from '../../theme/light';
 import { i18n, defaultLocale, locales } from '../../config/locales';
 import AppState from './AppState';
 
@@ -31,7 +29,7 @@ export default function App(props: AppProps) {
   const [isReady, setIsReady] = useState<boolean>(false);
   const { value: darkMode } = useDarkMode();
 
-  const theme = darkMode ? darkTheme : lightTheme;
+  const theme = darkMode ? dark : light;
 
   async function init() {
     const config = await waitForConfig();

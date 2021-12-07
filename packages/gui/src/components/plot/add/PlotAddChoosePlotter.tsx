@@ -11,10 +11,9 @@ import {
   MenuItem,
   Typography,
 } from '@material-ui/core';
-import PlotterName from '../../../constants/PlotterName';
-import Plotter, { PlotterMap } from '../../../types/Plotter';
 import styled from 'styled-components';
-import { defaultPlotter } from '../../../modules/plotterConfiguration';
+import { defaultPlotter, PlotterName } from '@chia/api';
+import type { Plotter, PlotterMap } from '@chia/api';
 
 type Props = {
   step: number;
@@ -59,7 +58,7 @@ export default function PlotAddChoosePlotter(props: Props) {
   }
 
   function plotterDisplayName(plotterName: PlotterName): string {
-    const plotter = plotters[plotterName] ?? defaultPlotter();
+    const plotter = plotters[plotterName] ?? defaultPlotter;
     const { version } = plotter;
     const installed = plotter.installInfo?.installed ?? false;
     let displayName = plotter.displayName;

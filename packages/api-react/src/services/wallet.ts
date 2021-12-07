@@ -12,7 +12,7 @@ const baseQuery = chiaLazyBaseQuery({
 export const walletApi = createApi({
   reducerPath: 'walletApi',
   baseQuery,
-  tagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions', 'WalletConnections', 'LoggedInFingerprint', 'OfferTradeRecord'],
+  tagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions', 'WalletConnections', 'LoggedInFingerprint', 'PoolWalletStatus', 'NFTs', 'OfferTradeRecord'],
   endpoints: (build) => ({
     ping: build.query<boolean, {
     }>({
@@ -139,6 +139,17 @@ export const walletApi = createApi({
         command: 'getPwStatus',
         args: [walletId],
       }),
+      /*
+      transformResponse: (response: any, _error, { walletId }) => ({
+        ...response,
+        walletId,
+      }),
+      */
+      providesTags(result, _error, { walletId }) {
+        return result 
+          ? [{ type: 'PoolWalletStatus', id: walletId }] 
+          : [];
+      },
     }),
 
     pwAbsorbRewards: build.mutation<any, { 
@@ -149,7 +160,10 @@ export const walletApi = createApi({
         command: 'pwAbsorbRewards',
         args: [walletId, fee],
       }),
-      invalidatesTags: [{ type: 'Transactions', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'Transactions', id: 'LIST' }, 
+        { type: 'NFTs', id: 'LIST' }, 
+      ],
     }),
 
     pwJoinPool: build.mutation<any, { 
@@ -169,6 +183,10 @@ export const walletApi = createApi({
           fee,
         ],
       }),
+      invalidatesTags: [
+        { type: 'Transactions', id: 'LIST' }, 
+        { type: 'NFTs', id: 'LIST' }, 
+      ],
     }),
 
     pwSelfPool: build.mutation<any, { 
@@ -179,6 +197,10 @@ export const walletApi = createApi({
         command: 'pwSelfPool',
         args: [walletId, fee],
       }),
+      invalidatesTags: [
+        { type: 'Transactions', id: 'LIST' }, 
+        { type: 'NFTs', id: 'LIST' }, 
+      ], 
     }),
 
     createNewWallet: build.mutation<any, { 
@@ -1295,6 +1317,7 @@ export const walletApi = createApi({
           };
         }
       },
+      providesTags: [{ type: 'NFTs', id: 'LIST' }], 
     }),
   }),
 });

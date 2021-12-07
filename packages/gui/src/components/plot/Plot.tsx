@@ -11,7 +11,7 @@ export default function Plot() {
     <>
       <DashboardTitle>
         <Link to="/dashboard/plot" color="textPrimary">
-          <Trans>Plot</Trans>
+          <Trans>Plots</Trans>
         </Link>
         <PlotHeaderTarget />
       </DashboardTitle>

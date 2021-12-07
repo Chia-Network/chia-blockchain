@@ -26,54 +26,27 @@ type Props = {
 
 export default function PlotNFTGetPoolLoginLinkDialog(props: Props) {
   const { onClose, open, nft } = props;
-  const [getPoolLoginLink] = useGetPoolLoginLinkQuery();
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | undefined>(undefined);
-  const [loginLink, setLoginLink] = useState<string | undefined>(undefined);
-
   const {
     poolState: {
       poolConfig: { poolUrl, launcherId },
     },
   } = nft;
 
+  const { data: loginLink, isLoading, error } = useGetPoolLoginLinkQuery({
+    launcherId,
+  }, {
+    skip: !poolUrl,
+  });
+
   function handleClose() {
     onClose();
   }
 
-  async function updatePoolLoginLink() {
-    setError(undefined);
-    setLoginLink(undefined);
-
-    if (!poolUrl) {
-      setLoading(false);
-      setError(new Error(t`This plot NFT is not connected to pool`));
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await getPoolLoginLink({
-        launcherId,
-      }).unwrap();
-      if (response.success !== true) {
-        throw new Error(response.message ?? t`Something went wrong`);
-      }
-      setLoginLink(response?.loginLink);
-    } catch (error) {
-      setError(error);
-    } finally {
-      setLoading(false);
-    }
-  }
   function handleDialogClose(event: any, reason: any) {
     if (reason !== 'backdropClick' || reason !== 'EscapeKeyDown') {
       onClose();
-    }}
-
-  useEffect(() => {
-    updatePoolLoginLink();
-  }, [poolUrl]); // eslint-disable-line
+    }
+  }
 
   return (
     <Dialog onClose={handleDialogClose} maxWidth="md" open={open}>
@@ -82,7 +55,7 @@ export default function PlotNFTGetPoolLoginLinkDialog(props: Props) {
       </DialogTitle>
       <DialogContent dividers>
         <Flex gap={2} flexDirection="column">
-          {loading ? (
+          {isLoading ? (
             <Loading center />
           ) : (
             <Flex flexDirection="column" gap={2}>

@@ -1,6 +1,6 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { Harvester } from '@chia/api';
-import type { Plot, BlockchainConnection } from '@chia/api';
+import type { Plot } from '@chia/api';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 
@@ -26,7 +26,10 @@ export const harvesterApi = createApi({
       query: () => ({
         command: 'getPlots',
       }),
-      transformResponse: (response: any) => response?.plots,
+      transformResponse: (response: any) => { 
+        console.log('get plots respojnse', response);
+        return response?.plots;
+      },
       providesTags: (plots) => plots
         ? [
           ...plots.map(({ filename }) => ({ type: 'Plots', id: filename } as const)),
@@ -44,14 +47,22 @@ export const harvesterApi = createApi({
         command: 'refreshPlots',
       }),
     }),
-    deletePlot: build.mutation<BlockchainConnection, { 
+    deletePlot: build.mutation<boolean, { 
       filename: string;
     }>({
       query: ({ filename }) => ({
         command: 'deletePlot',
         args: [filename],
       }),
-      invalidatesTags: (_result, _error, { filename }) => [{ type: 'Plots', id: 'LIST' }, { type: 'Plots', id: filename }],
+      transformResponse(response) {
+        console.log('restponse deletePlot', response);
+        return response?.success;
+      },
+      invalidatesTags: (_result, _error, { filename }) => [
+        { type: 'Plots', id: 'LIST' }, 
+        { type: 'Plots', id: filename },
+        { type: 'Harvesters', id: 'LIST' },
+      ],
     }),
 
     getPlotDirectories: build.query<string[], undefined>({

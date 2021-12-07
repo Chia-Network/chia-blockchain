@@ -74,13 +74,16 @@ export default class Daemon extends Service {
     return this.command('get_plotters');
   }
 
+  /*
   stopPlotting(id: string) {
     return this.command('stop_plotting', {
       id,
       service: ServiceName.PLOTTER,
     });
   }
+  */
 
+  /*
   startPlotting(
     plotterName, // plotterName
     k, // plotSize
@@ -162,10 +165,9 @@ export default class Daemon extends Service {
       args.K = K;
     }
 
-    console.log('start plotting api', args);
-
     return this.command('start_plotting', args, undefined, undefined, true);  
   }
+  */
 
   exit() {
     return this.command('exit');

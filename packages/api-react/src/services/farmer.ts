@@ -1,6 +1,6 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { Farmer } from '@chia/api';
-import type { Plot, FarmerConnection, RewardTargets, SignagePoint, Pool } from '@chia/api';
+import type { Plot, FarmerConnection, RewardTargets, SignagePoint, Pool, FarmingInfo } from '@chia/api';
 import chiaLazyBaseQuery from '../chiaLazyBaseQuery';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 
@@ -11,7 +11,7 @@ const baseQuery = chiaLazyBaseQuery({
 export const farmerApi = createApi({
   reducerPath: 'farmerApi',
   baseQuery,
-  tagTypes: ['Harvesters', 'RewardTargets', 'FarmerConnections', 'SignagePoints', 'PoolLoginLinks', 'Pools', 'PayoutInstructions'],
+  tagTypes: ['Harvesters', 'RewardTargets', 'FarmerConnections', 'SignagePoints', 'PoolLoginLink', 'Pools', 'PayoutInstructions'],
   endpoints: (build) => ({
     ping: build.query<boolean, {
     }>({
@@ -71,7 +71,7 @@ export const farmerApi = createApi({
           ...connections.map(({ nodeId }) => ({ type: 'FarmerConnections', id: nodeId } as const)),
           { type: 'FarmerConnections', id: 'LIST' },
         ] 
-        :  [{ type: 'FarmerConnections', id: 'LIST' }],
+        : [{ type: 'FarmerConnections', id: 'LIST' }],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onConnections',
         onUpdate: (draft, data) => {
@@ -111,7 +111,7 @@ export const farmerApi = createApi({
         args: [launcherId],
       }),
       transformResponse: (response: any) => response?.loginLink,
-      providesTags: (launcherId) => [{ type: 'PoolLoginLinks', id: launcherId }],
+      providesTags: (launcherId) => [{ type: 'PoolLoginLink', id: launcherId }],
       // TODO invalidate when join pool/change pool
     }),
 
@@ -157,6 +157,18 @@ export const farmerApi = createApi({
       }),
       invalidatesTags: (_result, _error, { launcherId }) => [{ type: 'PayoutInstructions', id: launcherId }],
     }),
+
+    getFarmingInfo: build.query<FarmingInfo[], {
+    }>({
+      query: () => ({
+        command: 'getFarmingInfo',
+      }),
+      // transformResponse: (response: any) => response,
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
+        command: 'onFarmingInfoChanged',
+        endpoint: () => farmerApi.endpoints.getFarmingInfo,
+      }]),
+    }),
   }),
 });
 
@@ -174,4 +186,5 @@ export const {
   useGetSignagePointsQuery,
   useGetPoolStateQuery,
   useSetPayoutInstructionsMutation,
+  useGetFarmingInfoQuery,
 } = farmerApi;

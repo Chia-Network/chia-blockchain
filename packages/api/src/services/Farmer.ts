@@ -1,12 +1,35 @@
 import Client from '../Client';
 import Service from './Service';
 import type { Options } from './Service';
+import type FarmingInfo from '../@types/FarmingInfo';
 import type Message from '../Message';
 import ServiceName from '../constants/ServiceName';
 
+const FARMING_INFO_MAX_ITEMS = 1000;
 export default class Farmer extends Service {
+  // last FARMING_INFO_MAX_ITEMS farming info
+  private farmingInfo: FarmingInfo[] = [];
+
   constructor(client: Client, options?: Options) {
-    super(ServiceName.FARMER, client, options);
+    super(ServiceName.FARMER, client, options, async () => {
+      this.onNewFarmingInfo((data) => {
+        const { farmingInfo } = data;
+
+        if (farmingInfo) {
+          this.farmingInfo = [
+            farmingInfo,
+            ...this.farmingInfo,
+          ].slice(0, FARMING_INFO_MAX_ITEMS);
+
+          this.emit('farming_info_changed', this.farmingInfo, null);
+        }
+      });
+    });
+  }
+
+  async getFarmingInfo() {
+    await this.whenReady();
+    return this.farmingInfo;
   }
 
   async getRewardTargets(searchForPrivateKey: boolean) {
@@ -71,6 +94,13 @@ export default class Farmer extends Service {
     return this.onCommand('new_farming_info', callback, processData);
   }
 
+  onNewPlots(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onCommand('new_plots', callback, processData);
+  }
+
   onNewSignagePoint(
     callback: (data: any, message: Message) => void,
     processData?: (data: any) => any,
@@ -86,5 +116,12 @@ export default class Farmer extends Service {
       console.log('refresh_plots in farmer', ...args);
       return callback(...args);
     }, processData);
+  }
+
+  onFarmingInfoChanged(
+    callback: (data: any, message?: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onCommand('farming_info_changed', callback, processData);
   }
 }

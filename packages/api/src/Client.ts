@@ -242,13 +242,17 @@ export default class Client extends EventEmitter {
 
     this.changeState(ConnectionState.CONNECTED);
 
-    await this.daemon.registerService(ServiceName.EVENTS);
+    await this.registerService(ServiceName.EVENTS);
     await this.startServices();
 
     if (this.connectedPromiseResponse) {
       this.connectedPromiseResponse.resolve();
       this.connectedPromiseResponse = null;
     }
+  }
+
+  registerService(service: ServiceName) {
+    return this.daemon.registerService(service);
   }
 
   private handleClose = () => {

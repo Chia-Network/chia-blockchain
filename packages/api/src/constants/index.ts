@@ -1,4 +1,5 @@
 export { default as ConnectionState } from './ConnectionState';
+export { default as defaultPlotter } from './defaultPlotter';
 export { default as PassphrasePromptReason } from './PassphrasePromptReason';
 export { default as PlotterName } from './PlotterName';
 export { default as ServiceConnectionName } from './ServiceConnectionName';

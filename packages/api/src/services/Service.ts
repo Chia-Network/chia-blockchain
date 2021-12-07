@@ -3,6 +3,7 @@ import { isUndefined, omitBy } from 'lodash';
 import type Client from '../Client';
 import ServiceName from '../constants/ServiceName';
 import Message from '../Message';
+import sleep from '../utils/sleep';
 
 export type Options = {
   origin?: ServiceName;
@@ -13,8 +14,14 @@ export default class Service extends EventEmitter {
   private _client: Client;
   private _name: ServiceName;
   private _origin: ServiceName;
+  private _readyPromise: Promise<null> | undefined;
 
-  constructor(name: ServiceName, client: Client, options: Options = {}) {
+  constructor(
+    name: ServiceName, 
+    client: Client, 
+    options: Options = {}, 
+    onInit: () => Promise<void>,
+  ) {
     super();
 
     const { origin, skipAddService } = options;
@@ -28,6 +35,27 @@ export default class Service extends EventEmitter {
     }
     
     client.on('message', this.handleMessage);
+
+    this._readyPromise = new Promise(async (resolve, reject) => {
+      setTimeout(async () => {
+        try {
+          if (onInit) {
+            await onInit();
+          }
+          resolve(null);
+          return;
+        } catch (error: any) {
+          reject(error);
+        }
+      });
+    });
+  }
+
+  async whenReady(callback?: () => Promise<any>) {
+    await this._readyPromise;
+    if (callback) {
+      return callback();
+    }
   }
 
   get name() {
@@ -42,8 +70,8 @@ export default class Service extends EventEmitter {
     return this._origin;
   }
 
-  get registered() {
-    return this.client.isRegistered(this);
+  register() {
+    return this._client.registerService(this.name);
   }
 
   handleMessage = (message: Message) => {
@@ -113,6 +141,7 @@ export default class Service extends EventEmitter {
   ) {
     return this.onCommand('state_changed', (data, message) => {
       if (data.state === state) {
+        console.log('data state', state);
         callback(data, message);
       }
     }, processData);

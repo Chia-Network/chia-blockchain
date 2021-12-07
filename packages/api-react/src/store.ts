@@ -5,6 +5,7 @@ import { daemonApi } from './services/daemon';
 import { farmerApi } from './services/farmer';
 import { fullNodeApi } from './services/fullNode';
 import { harvesterApi } from './services/harvester';
+import { plotterApi } from './services/plotter';
 import { walletApi } from './services/wallet';
 import apiReducer from './slices/api';
 
@@ -16,6 +17,7 @@ export function createStore(options?: ConfigureStoreOptions['preloadedState']) {
       [farmerApi.reducerPath]: farmerApi.reducer,
       [fullNodeApi.reducerPath]: fullNodeApi.reducer,
       [harvesterApi.reducerPath]: harvesterApi.reducer,
+      [plotterApi.reducerPath]: plotterApi.reducer,
       [walletApi.reducerPath]: walletApi.reducer,
       api: apiReducer,
     },
@@ -28,6 +30,7 @@ export function createStore(options?: ConfigureStoreOptions['preloadedState']) {
         farmerApi.middleware,
         fullNodeApi.middleware,
         harvesterApi.middleware,
+        plotterApi.middleware,
         walletApi.middleware,
       ),
     ...options,

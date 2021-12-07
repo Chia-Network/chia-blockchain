@@ -3,6 +3,7 @@ import * as daemon from './daemon';
 import * as farmer from './farmer';
 import * as fullNode from './fullNode';
 import * as harvester from './harvester';
+import * as plotter from './plotter';
 import * as wallet from './wallet';
 
 export const {
@@ -28,8 +29,7 @@ export const {
   useUnlockKeyringMutation,
 
   useGetPlottersQuery,
-  useStopPlottingMutation,
-  useStartPlottingMutation,
+  // useStartPlottingMutation,
 } = daemon;
 
 // farmer hooks
@@ -47,6 +47,7 @@ export const {
   useGetSignagePointsQuery,
   useGetPoolStateQuery,
   useSetPayoutInstructionsMutation,
+  useGetFarmingInfoQuery,
 } = farmer;
 
 // full node hooks
@@ -144,3 +145,12 @@ export const {
   useAddPlotDirectoryMutation,
   useRemovePlotDirectoryMutation,
 } = harvester;
+
+// plotter hooks
+export const {
+  plotterApi,
+
+  useGetPlotQueueQuery,
+  useStopPlottingMutation,
+  useStartPlottingMutation,
+} = plotter;

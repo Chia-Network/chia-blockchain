@@ -1,5 +1,5 @@
 import React, { useMemo, useState, ReactNode } from 'react';
-import { Trans } from '@lingui/macro';
+import { Trans, t } from '@lingui/macro';
 import { useNavigate } from 'react-router';
 import {
   UnitFormat,
@@ -42,7 +42,7 @@ export default function PlotNFTAbsorbRewards(props: Props) {
 
   const [working, setWorking] = useState<boolean>(false);
   const { wallet, loading: loadingWallet } = useStandardWallet();
-  const [ pwAbsorbRewards] = usePwAbsorbRewardsMutation();
+  const [pwAbsorbRewards] = usePwAbsorbRewardsMutation();
   const navigate = useNavigate();
   const nft = useMemo(() => {
     return data?.nfts?.find(
@@ -61,14 +61,13 @@ export default function PlotNFTAbsorbRewards(props: Props) {
     try {
       setWorking(true);
       const walletId = nft?.poolWalletStatus.walletId;
-      const address = wallet?.address;
 
       const { fee } = data;
-
       const feeMojos = chiaToMojo(fee);
 
-      if (walletId === undefined || !address) {
-        return;
+
+      if (walletId === undefined) { 
+        throw new Error(t`Wallet is not defined`);
       }
 
       await pwAbsorbRewards({

@@ -186,7 +186,7 @@ export default function PoolOverview() {
         </Flex>
         {showTable ? (
           <Table
-            uniqueField="p2SingletonPuzzleHash"
+            uniqueField="poolState.p2SingletonPuzzleHash"
             rows={nfts}
             cols={groupsCols}
           />

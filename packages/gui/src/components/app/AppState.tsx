@@ -1,10 +1,10 @@
-import React, { useState, useEffect, ReactNode } from 'react';
+import React, { useState, useEffect, ReactNode, useMemo } from 'react';
 import isElectron from 'is-electron';
 import { Trans } from '@lingui/macro';
 import { ConnectionState, ServiceHumanName, ServiceName, PassphrasePromptReason } from '@chia/api';
 import { useCloseMutation, useGetStateQuery, useGetKeyringStatusQuery, useClientStartServiceMutation } from '@chia/api-react';
 import { Flex, useSkipMigration, LayoutHero, LayoutLoading, sleep } from '@chia/core';
-import { Typography } from '@material-ui/core';
+import { Typography, Collapse } from '@material-ui/core';
 import AppKeyringMigrator from './AppKeyringMigrator';
 import AppPassPrompt from './AppPassPrompt';
 import config from '../../config/config';
@@ -42,11 +42,19 @@ export default function AppState(props: Props) {
   const { data: clienState = {}, isLoading: isClientStateLoading } = useGetStateQuery();
   const { data: keyringStatus, isLoading: isLoadingKeyringStatus, error } = useGetKeyringStatusQuery();
   const [isMigrationSkipped] = useSkipMigration();
-  const [allServicesRunning, setAllServicesRunning] = useState<boolean>(false);
 
   const isConnected = !isClientStateLoading && clienState?.state === ConnectionState.CONNECTED;
 
   const [runningServices, setRunningServices] = useState<Object>({});
+
+  const runningServicesCount = useMemo(() => {
+    return Object
+      .values(runningServices)
+      .filter(isRunning => !!isRunning)
+      .length;
+  }, [runningServices]);
+
+  const allServicesRunning = services.length === runningServicesCount;
 
   async function loadAllServices() {
     await Promise.all(services.map(async (service) => {
@@ -59,8 +67,6 @@ export default function AppState(props: Props) {
         [service]: true,
       }));
     }));
-
-    setAllServicesRunning(true);
   }
   
   useEffect(() => {
@@ -144,14 +150,20 @@ export default function AppState(props: Props) {
   if (!allServicesRunning) {
     return (
       <LayoutLoading>
-          <Trans>Starting services</Trans>
-          {services.map((service) => (
-            <Typography key={service} variant="body1" color="textSecondary"  align="center">
-              {ServiceHumanName[service]}
-              {': '} 
-              {runningServices[service] ? <Trans>Running</Trans> : <Trans>Starting</Trans>}
-            </Typography>
-          ))}
+        <Flex flexDirection="column" gap={2}> 
+          <Typography variant="body1" align="center">
+            <Trans>Starting services</Trans>
+          </Typography>
+          <Flex flexDirection="column" gap={0.5}>
+            {services.map((service) => (
+              <Collapse key={service} in={!runningServices[service]} timeout={{ enter: 0, exit: 1000 }}>
+                <Typography variant="body1" color="textSecondary"  align="center">
+                  {ServiceHumanName[service]}
+                </Typography>
+              </Collapse>
+            ))}
+          </Flex>
+        </Flex>
       </LayoutLoading>
     );
   }

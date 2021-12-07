@@ -22,8 +22,6 @@ export default function FarmLatestBlockChallenges() {
   const { data: signagePoints = [], isLoading } = useGetSignagePointsQuery();
   const { data: plots, isLoading: isLoadingPlots } = useGetCombinedPlotsQuery();
 
-  console.log('signagePoints', signagePoints);
-
   const hasPlots = plots?.length > 0;
   const reducedSignagePoints = signagePoints;
 

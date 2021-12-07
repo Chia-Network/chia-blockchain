@@ -22,6 +22,7 @@ export type { default as PlotAdd } from './PlotAdd';
 export type { default as PlotNFT } from './PlotNFT';
 export type { default as PlotNFTExternal } from './PlotNFTExternal';
 export type { default as PlotQueueItem } from './PlotQueueItem';
+export type { default as Plotter, PlotterMap } from './Plotter';
 export type { default as Point } from './Point';
 export type { default as PoolInfo } from './PoolInfo';
 export type { default as PoolState } from './PoolState';
