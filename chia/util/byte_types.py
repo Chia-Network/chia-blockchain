@@ -47,9 +47,8 @@ class SizedBytes(bytes):
     @classmethod
     def from_hexstr(cls: Type[_T_SizedBytes], input_str: str) -> _T_SizedBytes:
         if input_str.startswith("0x") or input_str.startswith("0X"):
-            # The hinting will be fixed by https://github.com/Chia-Network/chia-blockchain/pull/9458
-            return cls.fromhex(input_str[2:])  # type: ignore[return-value]
-        return cls.fromhex(input_str)  # type: ignore[return-value]
+            return cls.fromhex(input_str[2:])
+        return cls.fromhex(input_str)
 
     def __bytes__(self) -> bytes:
         f = io.BytesIO()

@@ -162,7 +162,7 @@ class BlockHeightMap:
                     ordered[r[0]] = (r[2], r[1], r[3])
             else:
                 for r in rows:
-                    ordered[bytes32.fromhex(r[0])] = (r[2], bytes32.fromhex(r[1]), r[3])  # type: ignore[index,assignment]
+                    ordered[bytes32.fromhex(r[0])] = (r[2], bytes32.fromhex(r[1]), r[3])
 
             while height > window_end:
                 entry = ordered[prev_hash]

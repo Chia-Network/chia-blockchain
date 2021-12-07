@@ -311,7 +311,9 @@ class BlockStore:
         for row in rows:
             header_hash = self.maybe_from_hex(row[0])
             full_block: FullBlock = FullBlock.from_bytes(row[1])
-            all_blocks[header_hash] = full_block
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "bytes" for "Dict[bytes32, FullBlock]"; expected type "bytes32"  [index]
+            all_blocks[header_hash] = full_block  # type: ignore[index]
             self.block_cache.put(header_hash, full_block)
         ret: List[FullBlock] = []
         for hh in header_hashes:
