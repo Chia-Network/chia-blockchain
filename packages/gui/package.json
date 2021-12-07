@@ -10,7 +10,7 @@
         "node": ">=12.20.0"
     },
     "scripts": {
-        "start": "cross-env NODE_ENV=development webpack serve --config ./webpack.react.babel.ts",
+        "start": "npm run electron",
         "dev:electron": "cross-env NODE_ENV=development webpack --config webpack.electron.babel.ts --mode development && electron .",
         "dev:react": "cross-env NODE_ENV=development NODE_OPTIONS=--max_old_space_size=4096 webpack serve --config webpack.react.babel.ts --mode development",
         "dev": "npm run locale && concurrently --kill-others \"npm run dev:react\" \"npm run dev:electron\"",
