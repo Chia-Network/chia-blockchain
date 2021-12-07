@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, Generic, List, Optional, Tuple, TypeVar, TYPE_CHECKING
+from typing import Generic, List, Optional, Tuple, TypeVar
 
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.types.blockchain_format.coin import Coin
@@ -10,8 +10,9 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.transaction_type import TransactionType
 
-if TYPE_CHECKING:
-    from chia.wallet.wallet import Wallet
+# TODO: relates to the ItemAndTransactionRecords.records TODO below
+# if TYPE_CHECKING:
+#     from chia.wallet.wallet import Wallet
 
 
 T = TypeVar("T")
