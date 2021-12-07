@@ -219,12 +219,12 @@ class TestWalletRpc:
             )
             assert set(amounts).issubset(addition.amount for addition in initial_breakup_transaction_result.additions)
 
-            async def breakup_transaction_confirmed(transaction_name):
-                maybe_confirmed_breakup_transaction_result = await client.get_transaction(
+            async def transaction_confirmed(transaction_name):
+                maybe_confirmed_transaction_result = await client.get_transaction(
                     wallet_id="1",
                     transaction_id=transaction_name,
                 )
-                return maybe_confirmed_breakup_transaction_result.confirmed
+                return maybe_confirmed_transaction_result.confirmed
 
             # process the transaction
             for _ in range(10):
@@ -233,7 +233,7 @@ class TestWalletRpc:
 
             await time_out_assert(
                 timeout=10,
-                function=breakup_transaction_confirmed,
+                function=transaction_confirmed,
                 value=True,
                 transaction_name=initial_breakup_transaction_result.name,
             )
@@ -243,12 +243,33 @@ class TestWalletRpc:
 
             transactions = await client.get_transactions(wallet_id="1")
 
-            for amount in amounts:
-                await client.send_transaction_multi(
+            # add all but the last one which we save for pending
+            for amount in amounts[:-1]:
+                test_tx = await client.send_transaction_multi(
                     wallet_id="1",
                     additions=[{"amount": amount, "puzzle_hash": a_wallet_one_puzzle_hash}],
                     coins=[additions[amount]],
                 )
+
+            # farm some more blocks to stablize the transaction list
+            for _ in range(5):
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+                await asyncio.sleep(1)
+
+            await time_out_assert(
+                timeout=10,
+                function=transaction_confirmed,
+                value=True,
+                transaction_name=test_tx.name,
+            )
+
+            # add the last one as pending
+            amount = amounts[-1]
+            await client.send_transaction_multi(
+                wallet_id="1",
+                additions=[{"amount": amount, "puzzle_hash": a_wallet_one_puzzle_hash}],
+                coins=[additions[amount]],
+            )
 
             # should get all transactions
             # pending txs are always listed first, then newest by height
@@ -262,6 +283,7 @@ class TestWalletRpc:
 
             # should get all transactions but oldest first
             all_transactions = await client.get_transactions(wallet_id="1", all=True, newest_first=False, version=2)
+            assert len(all_transactions) == len(transactions) + len(amounts)
             tx: TransactionRecord = all_transactions[0]
             assert tx.confirmed_at_height == 2
             tx = all_transactions[-1]
@@ -273,10 +295,8 @@ class TestWalletRpc:
 
             # v1 and v2 do not return same list as they differ in pending handling
             tx_test_list_v2 = await client.get_transactions(wallet_id="1", version=2)
-            assert len(tx_test_list_v2)
+            assert len(tx_test_list_v2) == 50
             tx = tx_test_list_v2[0]
-            assert not tx.confirmed
-            tx = tx_test_list_v2[-1]
             assert not tx.confirmed
             assert tx_test_list_v2 != tx_test_list
 
@@ -296,8 +316,8 @@ class TestWalletRpc:
 
             # Test the broken v1 query
             all_transactions = await client.get_transactions(wallet_id="1", start=100, end=300, version=1)
-            # why 15? I dunno, this query doesn't work like you expect, so returns are curious
-            assert len(all_transactions) == 15
+            # why 1? I dunno, this query doesn't work like you expect, so returns are curious
+            assert len(all_transactions) == 1
 
             tx_test_list = await client.get_transactions(wallet_id="1", all=True, version=1)
             tx_test_list_v2 = await client.get_transactions(wallet_id="1", all=True, version=2)
