@@ -48,7 +48,7 @@ class BlockStore:
                 "sub_epoch_summary blob)"
             )
 
-            # This is a single-row table containing the hassh of the current
+            # This is a single-row table containing the hash of the current
             # peak. The "key" field is there to make update statements simple
             await self.db.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
 
