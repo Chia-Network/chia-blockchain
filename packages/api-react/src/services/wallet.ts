@@ -22,7 +22,6 @@ export const walletApi = apiWithTag.injectEndpoints({
       query: () => ({
         command: 'getLoggedInFingerprint',
         service: Wallet,
-        mockResponse: { fingerprint: '3125625846' },
       }),
       transformResponse: (response: any) => response?.fingerprint,
       providesTags: [{ type: 'LoggedInFingerprint' }],
