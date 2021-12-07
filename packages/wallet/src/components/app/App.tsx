@@ -1,96 +1,75 @@
-import React, { useEffect, useState } from 'react';
+import React, { ReactNode, useEffect, useState, Suspense } from 'react';
 import { Provider } from 'react-redux';
 import useDarkMode from 'use-dark-mode';
-import { createHashHistory } from 'history';
-import { Outlet, Router } from 'react-router-dom';
-import { Loading, LocaleProvider, ThemeProvider, ModalDialogsProvider, ModalDialogs, useLocale } from '@chia/core';
+import { Outlet } from 'react-router-dom';
+import { sleep, ThemeProvider, ModalDialogsProvider, ModalDialogs, LocaleProvider, LayoutLoading, dark, light } from '@chia/core';
 import { store, api } from '@chia/api-react';
-import { ServiceName } from '@chia/api';
 import { Trans } from '@lingui/macro';
-import LayoutHero from '../layout/LayoutHero';
-import darkTheme from '../../theme/dark';
-import lightTheme from '../../theme/light';
 import { i18n, defaultLocale, locales } from '../../config/locales';
 import AppState from './AppState';
 
-export const history = createHashHistory();
-
 async function waitForConfig() {
-  const { remote } = window.require('electron');
-
-  let keyPath = null;
-
   while(true) {
-    keyPath = remote.getGlobal('key_path');
-    if (keyPath) {
-      return;
+    const config = window.ipcRenderer.invoke('getConfig');
+    if (config) {
+      return config;
     }
 
-    await new Promise((resolve) => {
-      setTimeout(resolve, 50);
-    });
+    await sleep(50);
   }
 }
 
-export default function App() {
+type AppProps = {
+  outlet?: boolean;
+  children?: ReactNode;
+};
+
+export default function App(props: AppProps) {
+  const { children, outlet } = props;
   const [isReady, setIsReady] = useState<boolean>(false);
   const { value: darkMode } = useDarkMode();
 
-  const theme = darkMode 
-    ? darkTheme 
-    : lightTheme;
+  const theme = darkMode ? dark : light;
 
-  const { api: { config } } = store.getState();
-  
-  useEffect(async () => {
-    if (config) {
-      setIsReady(true);
-      return;
-    }
-
-    await waitForConfig();
-
-    const { remote } = window.require('electron');
-    const fs = remote.require('fs');
+  async function init() {
+    const config = await waitForConfig();
+    const { cert, key, url } = config;
     const WS = window.require('ws');
-
-    const keyPath = remote.getGlobal('key_path');
-    const certPath = remote.getGlobal('cert_path');
-    const url = remote.getGlobal('daemon_rpc_ws');
 
     store.dispatch(api.initializeConfig({
       url,
-      cert: fs.readFileSync(certPath).toString(),
-      key: fs.readFileSync(keyPath).toString(),
+      cert,
+      key,
       webSocket: WS,
-      services: [ServiceName.WALLET],
     }));
 
     setIsReady(true);
-  }, [config]);
+  }
+  
+  useEffect(() => {
+    init();
+  }, []);
 
   return (
-    <Provider store={store}>
-      <Router history={history}>
+    <ModalDialogsProvider>
+      <Provider store={store}>
         <LocaleProvider i18n={i18n} defaultLocale={defaultLocale} locales={locales}>
-          <ThemeProvider theme={theme} global fonts>
+          <ThemeProvider theme={theme} fonts global>
             {isReady ? (
-              <AppState>
-                <ModalDialogsProvider>
-                  <Outlet />
-                  <ModalDialogs />
-                </ModalDialogsProvider>
-              </AppState>
+              <Suspense fallback={<LayoutLoading />}>
+                <AppState>
+                  {outlet ? <Outlet /> : children}
+                </AppState>
+              </Suspense>
             ) : (
-              <LayoutHero>
-                <Loading center>
-                  <Trans>Loading configuration</Trans>
-                </Loading>
-              </LayoutHero>
+              <LayoutLoading>
+                <Trans>Loading configuration</Trans>
+              </LayoutLoading>
             )}
+            <ModalDialogs />
           </ThemeProvider>
         </LocaleProvider>
-      </Router>
-    </Provider>
+      </Provider>
+    </ModalDialogsProvider>
   );
 }

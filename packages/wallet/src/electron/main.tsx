@@ -128,7 +128,7 @@ async function startMain() {
           chiaEnvironment.startChiaDaemon();
         }
 
-        await chiaConfig.loadConfig('standalone_wallet');
+        ipcMain.handle('getConfig', () => chiaConfig.loadConfig('standalone_wallet'));
 
         decidedToClose = false;
         mainWindow = new BrowserWindow({

@@ -3,15 +3,12 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const lodash = require('lodash');
-const sleepData = require('./sleep');
+const sleepModule = require('./sleep');
 
-const sleep = sleepData.default;
+const sleep = lodash.default;
 
 // defaults used in case of error point to the localhost daemon & its certs
 let self_hostname = 'localhost';
-// global.daemon_rpc_ws = `wss://${self_hostname}:55400`;
-// global.cert_path = 'config/ssl/daemon/private_daemon.crt';
-// global.key_path = 'config/ssl/daemon/private_daemon.key';
 
 async function loadConfig(net) {
   try {
@@ -45,6 +42,12 @@ async function loadConfig(net) {
         'config/ssl/daemon/private_daemon.key',
       ),
     ); // jshint ignore:line
+
+    return {
+      url: global.daemon_rpc_ws,
+      cert: fs.readFileSync(global.cert_path).toString(),
+      key: fs.readFileSync(global.key_path).toString(),
+    };
   } catch (e) {
     if (e.code === 'ENOENT') {
       console.log('Waiting for configuration file');
