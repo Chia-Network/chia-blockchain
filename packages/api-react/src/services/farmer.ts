@@ -7,7 +7,7 @@ export const apiWithTag = api.enhanceEndpoints({addTagTypes: ['Harvesters', 'Rew
 
 export const farmerApi = apiWithTag.injectEndpoints({
   endpoints: (build) => ({
-    ping: build.query<boolean, {
+    farmerPing: build.query<boolean, {
     }>({
       query: () => ({
         command: 'ping',
@@ -60,7 +60,7 @@ export const farmerApi = apiWithTag.injectEndpoints({
       invalidatesTags: ['RewardTargets'],
     }),
 
-    getConnections: build.query<FarmerConnection[], undefined>({
+    getFarmerConnections: build.query<FarmerConnection[], undefined>({
       query: () => ({
         command: 'getConnections',
         service: Farmer,
@@ -84,7 +84,7 @@ export const farmerApi = apiWithTag.injectEndpoints({
         },
       }]),
     }),
-    openConnection: build.mutation<FarmerConnection, { 
+    openFarmerConnection: build.mutation<FarmerConnection, { 
       host: string;
       port: number;
     }>({
@@ -95,7 +95,7 @@ export const farmerApi = apiWithTag.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'FarmerConnections', id: 'LIST' }],
     }),
-    closeConnection: build.mutation<FarmerConnection, { 
+    closeFarmerConnection: build.mutation<FarmerConnection, { 
       nodeId: string;
     }>({
       query: ({ nodeId }) => ({
@@ -185,13 +185,13 @@ export const farmerApi = apiWithTag.injectEndpoints({
 // TODO add new farming info query and event for last_attepmtp_proofs
 
 export const { 
-  usePingQuery,
+  useFarmerPingQuery,
   useGetHarvestersQuery,
   useGetRewardTargetsQuery,
   useSetRewardTargetsMutation,
-  useGetConnectionsQuery,
-  useOpenConnectionMutation,
-  useCloseConnectionMutation,
+  useGetFarmerConnectionsQuery,
+  useOpenFarmerConnectionMutation,
+  useCloseFarmerConnectionMutation,
   useGetPoolLoginLinkQuery,
   useGetSignagePointsQuery,
   useGetPoolStateQuery,

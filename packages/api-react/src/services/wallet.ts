@@ -8,7 +8,7 @@ const apiWithTag = api.enhanceEndpoints({addTagTypes: ['Keys', 'Wallets', 'Walle
 
 export const walletApi = apiWithTag.injectEndpoints({
   endpoints: (build) => ({
-    ping: build.query<boolean, {
+    walletPing: build.query<boolean, {
     }>({
       query: () => ({
         command: 'ping',
@@ -715,7 +715,7 @@ export const walletApi = apiWithTag.injectEndpoints({
       }]),
     }),
 
-    getConnections: build.query<WalletConnections[], undefined>({
+    getWalletConnections: build.query<WalletConnections[], undefined>({
       query: () => ({
         command: 'getConnections',
         service: Wallet,
@@ -739,7 +739,7 @@ export const walletApi = apiWithTag.injectEndpoints({
         },
       }]),
     }),
-    openConnection: build.mutation<WalletConnections, { 
+    openWalletConnection: build.mutation<WalletConnections, { 
       host: string;
       port: number;
     }>({
@@ -750,7 +750,7 @@ export const walletApi = apiWithTag.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'WalletConnections', id: 'LIST' }],
     }),
-    closeConnection: build.mutation<WalletConnections, { 
+    closeWalletConnection: build.mutation<WalletConnections, { 
       nodeId: string;
     }>({
       query: ({ nodeId }) => ({
@@ -1374,7 +1374,7 @@ export const walletApi = apiWithTag.injectEndpoints({
 });
 
 export const {
-  usePingQuery,
+  useWalletPingQuery,
   useGetLoggedInFingerprintQuery,
   useGetWalletsQuery,
   useGetTransactionQuery,
@@ -1408,9 +1408,9 @@ export const {
   useGetHeightInfoQuery,
   useGetNetworkInfoQuery,
   useGetSyncStatusQuery,
-  useGetConnectionsQuery,
-  useOpenConnectionMutation,
-  useCloseConnectionMutation,
+  useGetWalletConnectionsQuery,
+  useOpenWalletConnectionMutation,
+  useCloseWalletConnectionMutation,
   useCreateBackupMutation,
   useGetAllOffersQuery,
   useCreateOfferForIdsMutation,

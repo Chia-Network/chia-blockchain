@@ -7,7 +7,7 @@ const apiWithTag = api.enhanceEndpoints({addTagTypes: ['BlockchainState', 'FullN
 
 export const fullNodeApi = apiWithTag.injectEndpoints({
   endpoints: (build) => ({
-    ping: build.query<boolean, {
+    fullNodePing: build.query<boolean, {
     }>({
       query: () => ({
         command: 'ping',
@@ -54,7 +54,7 @@ export const fullNodeApi = apiWithTag.injectEndpoints({
         }),
       }]),
     }),
-    getConnections: build.query<FullNodeConnection[], undefined>({
+    getFullNodeConnections: build.query<FullNodeConnection[], undefined>({
       query: () => ({
         command: 'getConnections',
         service: FullNode,
@@ -78,7 +78,7 @@ export const fullNodeApi = apiWithTag.injectEndpoints({
         },
       }]),
     }),
-    openConnection: build.mutation<FullNodeConnection, { 
+    openFullNodeConnection: build.mutation<FullNodeConnection, { 
       host: string;
       port: number;
     }>({
@@ -89,7 +89,7 @@ export const fullNodeApi = apiWithTag.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'FullNodeConnections', id: 'LIST' }],
     }),
-    closeConnection: build.mutation<FullNodeConnection, { 
+    closeFullNodeConnection: build.mutation<FullNodeConnection, { 
       nodeId: string;
     }>({
       query: ({ nodeId }) => ({
@@ -123,13 +123,13 @@ export const fullNodeApi = apiWithTag.injectEndpoints({
 });
 
 export const { 
-  usePingQuery,
+  useFullNodePingQuery,
   useGetBlockRecordsQuery,
   useGetUnfinishedBlockHeadersQuery,
   useGetBlockchainStateQuery,
-  useGetConnectionsQuery,
-  useOpenConnectionMutation,
-  useCloseConnectionMutation,
+  useGetFullNodeConnectionsQuery,
+  useOpenFullNodeConnectionMutation,
+  useCloseFullNodeConnectionMutation,
   useGetBlockQuery,
   useGetBlockRecordQuery,
 } = fullNodeApi;

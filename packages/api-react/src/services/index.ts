@@ -11,14 +11,14 @@ export const {
 
   useCloseMutation,
   useGetStateQuery,
-  useStartServiceMutation: useClientStartServiceMutation,
+  useClientStartServiceMutation,
 } = client;
 
 // daemon hooks
 export const {
   daemonApi,
 
-  usePingQuery: useDaemonPingQuery,
+  useDaemonPingQuery,
   useGetKeyringStatusQuery,
   useStartServiceMutation,
   useStopServiceMutation,
@@ -37,13 +37,13 @@ export const {
 export const {
   farmerApi,
 
-  usePingQuery: useFarmerPingQuery,
+  useFarmerPingQuery,
   useGetHarvestersQuery,
   useGetRewardTargetsQuery,
   useSetRewardTargetsMutation,
-  useGetConnectionsQuery: useGetFarmerConnectionsQuery,
-  useOpenConnectionMutation: useOpenFarmerConnectionMutation,
-  useCloseConnectionMutation: useCloseFarmerConnectionMutation,
+  useGetFarmerConnectionsQuery,
+  useOpenFarmerConnectionMutation,
+  useCloseFarmerConnectionMutation,
   useGetPoolLoginLinkQuery,
   useGetSignagePointsQuery,
   useGetPoolStateQuery,
@@ -55,13 +55,13 @@ export const {
 export const {
   fullNodeApi,
 
-  usePingQuery: useFullNodePingQuery,
+  useFullNodePingQuery,
   useGetBlockRecordsQuery,
   useGetUnfinishedBlockHeadersQuery,
   useGetBlockchainStateQuery,
-  useGetConnectionsQuery: useGetFullNodeConnectionsQuery,
-  useOpenConnectionMutation: useOpenFullNodeConnectionMutation,
-  useCloseConnectionMutation: useCloseFullNodeConnectionMutation,
+  useGetFullNodeConnectionsQuery,
+  useOpenFullNodeConnectionMutation,
+  useCloseFullNodeConnectionMutation,
   useGetBlockQuery,
   useGetBlockRecordQuery,
 } = fullNode;
@@ -70,7 +70,7 @@ export const {
 export const {
   walletApi,
 
-  usePingQuery: useWalletPingQuery,
+  useWalletPingQuery,
   useGetLoggedInFingerprintQuery,
   useGetWalletsQuery,
   useGetTransactionQuery,
@@ -104,9 +104,9 @@ export const {
   useGetHeightInfoQuery,
   useGetNetworkInfoQuery,
   useGetSyncStatusQuery,
-  useGetConnectionsQuery: useGetWalletConnectionsQuery,
-  useOpenConnectionMutation: useOpenWalletConnectionMutation,
-  useCloseConnectionMutation: useCloseWalletConnectionMutation,
+  useGetWalletConnectionsQuery,
+  useOpenWalletConnectionMutation,
+  useCloseWalletConnectionMutation,
   useCreateBackupMutation,
   useGetAllOffersQuery,
   useCreateOfferForIdsMutation,
@@ -138,7 +138,7 @@ export const {
 export const {
   harvesterApi,
 
-  usePingQuery: useHarvesterPingQuery,
+  useHarvesterPingQuery,
   useGetPlotsQuery,
   useRefreshPlotsMutation,
   useDeletePlotMutation,

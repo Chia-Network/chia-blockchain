@@ -8,7 +8,7 @@ const apiWithTag2 = apiWithTag.enhanceEndpoints({addTagTypes: ['Plots', 'PlotDir
 
 export const harvesterApi = apiWithTag2.injectEndpoints({
   endpoints: (build) => ({
-    ping: build.query<boolean, {
+    harvesterPing: build.query<boolean, {
     }>({
       query: () => ({
         command: 'ping',
@@ -144,7 +144,7 @@ export const harvesterApi = apiWithTag2.injectEndpoints({
 });
 
 export const { 
-  usePingQuery,
+  useHarvesterPingQuery,
   useGetPlotsQuery,
   useRefreshPlotsMutation,
   useDeletePlotMutation,

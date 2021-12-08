@@ -53,7 +53,7 @@ export const clientApi = apiWithTag.injectEndpoints({
     }),
 
 
-    startService: build.mutation<boolean, {
+    clientStartService: build.mutation<boolean, {
       service?: ServiceName;
     }>({
       query: ({ service }) => ({
@@ -68,5 +68,5 @@ export const clientApi = apiWithTag.injectEndpoints({
 export const { 
   useCloseMutation,
   useGetStateQuery,
-  useStartServiceMutation,
+  useClientStartServiceMutation,
 } = clientApi;

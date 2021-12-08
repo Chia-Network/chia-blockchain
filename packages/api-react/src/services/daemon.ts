@@ -7,7 +7,7 @@ const apiWithTag = api.enhanceEndpoints({addTagTypes: ['KeyringStatus', 'Service
 
 export const daemonApi = apiWithTag.injectEndpoints({
   endpoints: (build) => ({
-    ping: build.query<boolean, {
+    daemonPing: build.query<boolean, {
     }>({
       query: () => ({
         command: 'ping',
@@ -243,7 +243,7 @@ export const daemonApi = apiWithTag.injectEndpoints({
 });
 
 export const { 
-  usePingQuery,
+  useDaemonPingQuery,
   useGetKeyringStatusQuery,
   useStartServiceMutation,
   useStopServiceMutation,
