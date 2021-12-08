@@ -1,7 +1,7 @@
 from typing import KeysView, Generator
 
 SERVICES_FOR_GROUP = {
-    "all": ("chia_harvester chia_timelord_launcher chia_timelord " "chia_farmer chia_full_node chia_wallet").split(),
+    "all": "chia_harvester chia_timelord_launcher chia_timelord chia_farmer chia_full_node chia_wallet".split(),
     "node": "chia_full_node".split(),
     "harvester": "chia_harvester".split(),
     "farmer": "chia_harvester chia_farmer chia_full_node chia_wallet".split(),
