@@ -114,7 +114,9 @@ def created_outputs_for_conditions_dict(
     for cvp in conditions_dict.get(ConditionOpcode.CREATE_COIN, []):
         puzzle_hash, amount_bin = cvp.vars[0], cvp.vars[1]
         amount = int_from_bytes(amount_bin)
-        coin = Coin(input_coin_name, puzzle_hash, uint64(amount))
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+        coin = Coin(input_coin_name, puzzle_hash, uint64(amount))  # type: ignore[arg-type]
         output_coins.append(coin)
     return output_coins
 

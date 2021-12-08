@@ -2,11 +2,12 @@ import logging
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
-from typing import Callable, List
+from typing import Callable, List, Optional
 import pytest
 
 from dataclasses import dataclass
 from chia.plotting.util import (
+    PlotInfo,
     PlotRefreshResult,
     PlotRefreshEvents,
     remove_plot,
@@ -14,6 +15,7 @@ from chia.plotting.util import (
     add_plot_directory,
     remove_plot_directory,
 )
+from chia.util.config import create_default_chia_config
 from chia.util.path import mkdir
 from chia.plotting.manager import PlotManager
 from tests.block_tools import get_plot_dir
@@ -22,8 +24,25 @@ from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
-expected_result: PlotRefreshResult = PlotRefreshResult()
-expected_result_matched = True
+
+@dataclass
+class MockDiskProver:
+    filename: str
+
+    def get_filename(self) -> str:
+        return self.filename
+
+
+@dataclass
+class MockPlotInfo:
+    prover: MockDiskProver
+
+
+class TestRefreshResult:
+    loaded: int = 0
+    removed: int = 0
+    processed: int = 0
+    remaining: int = 0
 
 
 class TestDirectory:
@@ -46,6 +65,12 @@ class TestDirectory:
     def __len__(self):
         return len(self.plots)
 
+    def plot_info_list(self) -> List[MockPlotInfo]:
+        return [MockPlotInfo(MockDiskProver(str(x))) for x in self.plots]
+
+    def path_list(self) -> List[Path]:
+        return self.plots
+
     def drop(self, path: Path):
         assert self.path / path.name
         del self.plots[self.plots.index(self.path / path.name)]
@@ -59,23 +84,21 @@ class TestEnvironment:
     dir_2: TestDirectory
 
 
-def create_test_environment(*, dir_1_count: int, dir_2_count: int) -> TestEnvironment:
+@pytest.fixture(scope="function")
+def test_environment(tmp_path) -> TestEnvironment:
+    dir_1_count: int = 7
+    dir_2_count: int = 3
     plots: List[Path] = list(sorted(get_plot_dir().glob("*.plot")))
-    assert dir_1_count > 0
     assert len(plots) >= dir_1_count + dir_2_count
-    dir_1: TestDirectory = TestDirectory(get_plot_dir().resolve() / "1", plots[0:dir_1_count])
-    dir_2: TestDirectory = TestDirectory(get_plot_dir().resolve() / "2", plots[dir_1_count : dir_1_count + dir_2_count])
 
-    bt.refresh_plots()
-    assert len(bt.plot_manager.plots) >= len(dir_1) + len(dir_2)
-    bt.plot_manager.stop_refreshing()
-    for directory in get_plot_directories(bt.root_path):
-        remove_plot_directory(bt.root_path, directory)
+    dir_1: TestDirectory = TestDirectory(tmp_path / "plots" / "1", plots[0:dir_1_count])
+    dir_2: TestDirectory = TestDirectory(tmp_path / "plots" / "2", plots[dir_1_count : dir_1_count + dir_2_count])
+    create_default_chia_config(tmp_path)
 
-    plot_manager = PlotManager(bt.root_path, refresh_callback)
+    plot_manager = PlotManager(tmp_path, refresh_callback)
     plot_manager.set_public_keys(bt.plot_manager.farmer_public_keys, bt.plot_manager.pool_public_keys)
 
-    return TestEnvironment(bt.root_path, plot_manager, dir_1, dir_2)
+    return TestEnvironment(tmp_path, plot_manager, dir_1, dir_2)
 
 
 # Wrap `remove_plot` to give it the same interface as the other triggers, e.g. `add_plot_directory(Path, str)`.
@@ -85,6 +108,11 @@ def trigger_remove_plot(_: Path, plot_path: str):
 
 # Note: We assign `expected_result_matched` in the callback and assert it in the test thread to avoid
 # crashing the refresh thread of the plot manager with invalid assertions.
+
+expected_result: PlotRefreshResult = PlotRefreshResult()
+expected_result_matched = False
+
+
 def refresh_callback(event: PlotRefreshEvents, refresh_result: PlotRefreshResult):
     global expected_result_matched
     if event != PlotRefreshEvents.done:
@@ -99,36 +127,56 @@ def validate_values(names: List[str], actual: PlotRefreshResult, expected: PlotR
     for name in names:
         try:
             actual_value = actual.__getattribute__(name)
-            expected_value = expected.__getattribute__(name)
-            if actual_value != expected_value:
-                log.error(f"{name} invalid: actual {actual_value} expected {expected_value}")
-                return False
+            if type(actual_value) == list:
+                expected_list = expected_result.__getattribute__(name)
+                if len(expected_list) != len(actual_value):
+                    return False
+                values_found = 0
+                for value in actual_value:
+                    if type(value) == PlotInfo:
+                        for plot_info in expected_list:
+                            if plot_info.prover.get_filename() == value.prover.get_filename():
+                                values_found += 1
+                                continue
+                    else:
+                        if value in expected_list:
+                            values_found += 1
+                            continue
+                if values_found != len(expected_list):
+                    log.error(f"{name} invalid: values_found {values_found} expected {len(expected_list)}")
+                    return False
+            else:
+                expected_value = expected.__getattribute__(name)
+                if actual_value != expected_value:
+                    log.error(f"{name} invalid: actual {actual_value} expected {expected_value}")
+                    return False
         except AttributeError as error:
             log.error(f"{error}")
             return False
     return True
 
 
-async def run_refresh_test(manager: PlotManager):
+async def run_refresh_test(manager: PlotManager, *, expect_match: bool = True):
     global expected_result_matched
-    expected_result_matched = True
+    expected_result_matched = False
     manager.start_refreshing()
     manager.trigger_refresh()
     await time_out_assert(5, manager.needs_refresh, value=False)
-    assert expected_result_matched
+    if expect_match:
+        assert expected_result_matched
 
 
 @pytest.mark.asyncio
-async def test_plot_refreshing():
-    env: TestEnvironment = create_test_environment(dir_1_count=5, dir_2_count=7)
+async def test_plot_refreshing(test_environment):
+    env: TestEnvironment = test_environment
     dir_duplicates: TestDirectory = TestDirectory(get_plot_dir().resolve() / "duplicates", env.dir_1.plots)
 
     async def run_test_case(
         *,
         trigger: Callable,
         test_path: Path,
-        expect_loaded: int,
-        expect_removed: int,
+        expect_loaded: List[MockPlotInfo],
+        expect_removed: List[Path],
         expect_processed: int,
         expect_duplicates: int,
         expected_directories: int,
@@ -149,8 +197,8 @@ async def test_plot_refreshing():
     await run_test_case(
         trigger=add_plot_directory,
         test_path=env.dir_1.path,
-        expect_loaded=len(env.dir_1),
-        expect_removed=0,
+        expect_loaded=env.dir_1.plot_info_list(),
+        expect_removed=[],
         expect_processed=len(env.dir_1),
         expect_duplicates=0,
         expected_directories=1,
@@ -161,8 +209,8 @@ async def test_plot_refreshing():
     await run_test_case(
         trigger=add_plot_directory,
         test_path=env.dir_2.path,
-        expect_loaded=len(env.dir_2),
-        expect_removed=0,
+        expect_loaded=env.dir_2.plot_info_list(),
+        expect_removed=[],
         expect_processed=len(env.dir_1) + len(env.dir_2),
         expect_duplicates=0,
         expected_directories=2,
@@ -173,8 +221,8 @@ async def test_plot_refreshing():
     await run_test_case(
         trigger=add_plot_directory,
         test_path=dir_duplicates.path,
-        expect_loaded=0,
-        expect_removed=0,
+        expect_loaded=[],
+        expect_removed=[],
         expect_processed=len(env.dir_1) + len(env.dir_2) + len(dir_duplicates),
         expect_duplicates=len(dir_duplicates),
         expected_directories=3,
@@ -191,8 +239,8 @@ async def test_plot_refreshing():
     await run_test_case(
         trigger=trigger_remove_plot,
         test_path=drop_path,
-        expect_loaded=0,
-        expect_removed=1,
+        expect_loaded=[],
+        expect_removed=[drop_path],
         expect_processed=len(env.dir_1) + len(env.dir_2) + len(dir_duplicates),
         expect_duplicates=len(dir_duplicates),
         expected_directories=3,
@@ -206,8 +254,8 @@ async def test_plot_refreshing():
     await run_test_case(
         trigger=trigger_remove_plot,
         test_path=drop_path,
-        expect_loaded=0,
-        expect_removed=1,
+        expect_loaded=[],
+        expect_removed=[drop_path],
         expect_processed=len(env.dir_1) + len(env.dir_2) + len(dir_duplicates),
         expect_duplicates=len(dir_duplicates),
         expected_directories=3,
@@ -217,8 +265,8 @@ async def test_plot_refreshing():
     await run_test_case(
         trigger=remove_plot_directory,
         test_path=dir_duplicates.path,
-        expect_loaded=0,
-        expect_removed=len(dir_duplicates),
+        expect_loaded=[],
+        expect_removed=dir_duplicates.path_list(),
         expect_processed=len(env.dir_1) + len(env.dir_2),
         expect_duplicates=0,
         expected_directories=2,
@@ -231,8 +279,8 @@ async def test_plot_refreshing():
     await run_test_case(
         trigger=add_plot_directory,
         test_path=dir_duplicates.path,
-        expect_loaded=0,
-        expect_removed=0,
+        expect_loaded=[],
+        expect_removed=[],
         expect_processed=len(env.dir_1) + len(env.dir_2) + len(dir_duplicates),
         expect_duplicates=len(dir_duplicates),
         expected_directories=3,
@@ -244,8 +292,8 @@ async def test_plot_refreshing():
     await run_test_case(
         trigger=remove_plot_directory,
         test_path=env.dir_1.path,
-        expect_loaded=len(dir_duplicates),
-        expect_removed=len(env.dir_1),
+        expect_loaded=dir_duplicates.plot_info_list(),
+        expect_removed=env.dir_1.path_list(),
         expect_processed=len(env.dir_2) + len(dir_duplicates),
         expect_duplicates=0,
         expected_directories=2,
@@ -256,8 +304,8 @@ async def test_plot_refreshing():
     await run_test_case(
         trigger=add_plot_directory,
         test_path=env.dir_1.path,
-        expect_loaded=len(env.dir_1) - len(dir_duplicates),
-        expect_removed=0,
+        expect_loaded=[],
+        expect_removed=[],
         expect_processed=len(env.dir_1) + len(env.dir_2) + len(dir_duplicates),
         expect_duplicates=len(dir_duplicates),
         expected_directories=3,
@@ -271,8 +319,8 @@ async def test_plot_refreshing():
     await run_test_case(
         trigger=trigger_remove_plot,
         test_path=drop_path,
-        expect_loaded=0,
-        expect_removed=1,
+        expect_loaded=[],
+        expect_removed=[drop_path],
         expect_processed=len(env.dir_1) + len(env.dir_2) + len(dir_duplicates),
         expect_duplicates=len(env.dir_1),
         expected_directories=3,
@@ -282,8 +330,8 @@ async def test_plot_refreshing():
     await run_test_case(
         trigger=remove_plot_directory,
         test_path=dir_duplicates.path,
-        expect_loaded=len(env.dir_1),
-        expect_removed=len(dir_duplicates),
+        expect_loaded=env.dir_1.plot_info_list(),
+        expect_removed=dir_duplicates.path_list(),
         expect_processed=len(env.dir_1) + len(env.dir_2),
         expect_duplicates=0,
         expected_directories=2,
@@ -293,8 +341,8 @@ async def test_plot_refreshing():
     await run_test_case(
         trigger=remove_plot_directory,
         test_path=env.dir_2.path,
-        expect_loaded=0,
-        expect_removed=len(env.dir_2),
+        expect_loaded=[],
+        expect_removed=env.dir_2.path_list(),
         expect_processed=len(env.dir_1),
         expect_duplicates=0,
         expected_directories=1,
@@ -304,8 +352,8 @@ async def test_plot_refreshing():
     await run_test_case(
         trigger=remove_plot_directory,
         test_path=env.dir_1.path,
-        expect_loaded=0,
-        expect_removed=len(env.dir_1),
+        expect_loaded=[],
+        expect_removed=env.dir_1.path_list(),
         expect_processed=0,
         expect_duplicates=0,
         expected_directories=0,
@@ -315,11 +363,11 @@ async def test_plot_refreshing():
 
 
 @pytest.mark.asyncio
-async def test_invalid_plots():
-    env: TestEnvironment = create_test_environment(dir_1_count=3, dir_2_count=0)
+async def test_invalid_plots(test_environment):
+    env: TestEnvironment = test_environment
     # Test re-trying if processing a plot failed
     # First create a backup of the plot
-    retry_test_plot = list(env.dir_1.path.iterdir())[0].resolve()
+    retry_test_plot = env.dir_1.path_list()[0].resolve()
     retry_test_plot_save = Path(env.dir_1.path / ".backup").resolve()
     copy(retry_test_plot, retry_test_plot_save)
     # Invalidate the plot
@@ -327,15 +375,15 @@ async def test_invalid_plots():
         file.write(bytes(100))
     # Add it and validate it fails to load
     add_plot_directory(env.root_path, str(env.dir_1.path))
-    expected_result.loaded = len(env.dir_1) - 1
-    expected_result.removed = 0
+    expected_result.loaded = env.dir_1.plot_info_list()[1:]
+    expected_result.removed = []
     expected_result.processed = len(env.dir_1)
     expected_result.remaining = 0
     await run_refresh_test(env.plot_manager)
     assert len(env.plot_manager.failed_to_open_filenames) == 1
     assert retry_test_plot in env.plot_manager.failed_to_open_filenames
     # Make sure the file stays in `failed_to_open_filenames` and doesn't get loaded in the next refresh cycle
-    expected_result.loaded = 0
+    expected_result.loaded = []
     expected_result.processed = len(env.dir_1)
     await run_refresh_test(env.plot_manager)
     assert len(env.plot_manager.failed_to_open_filenames) == 1
@@ -343,7 +391,7 @@ async def test_invalid_plots():
     # Now decrease the re-try timeout, restore the valid plot file and make sure it properly loads now
     env.plot_manager.refresh_parameter.retry_invalid_seconds = 0
     move(retry_test_plot_save, retry_test_plot)
-    expected_result.loaded = 1
+    expected_result.loaded = env.dir_1.plot_info_list()[0:1]
     expected_result.processed = len(env.dir_1)
     await run_refresh_test(env.plot_manager)
     assert len(env.plot_manager.failed_to_open_filenames) == 0
@@ -352,11 +400,11 @@ async def test_invalid_plots():
 
 
 @pytest.mark.asyncio
-async def test_plot_info_caching():
-    env: TestEnvironment = create_test_environment(dir_1_count=5, dir_2_count=0)
+async def test_plot_info_caching(test_environment):
+    env: TestEnvironment = test_environment
     add_plot_directory(env.root_path, str(env.dir_1.path))
-    expected_result.loaded = len(env.dir_1)
-    expected_result.removed = 0
+    expected_result.loaded = env.dir_1.plot_info_list()
+    expected_result.removed = []
     expected_result.processed = len(env.dir_1)
     expected_result.remaining = 0
     await run_refresh_test(env.plot_manager)
@@ -369,10 +417,6 @@ async def test_plot_info_caching():
     # Manually trigger `save_cache` and make sure it creates a new cache file
     env.plot_manager.cache.save()
     assert env.plot_manager.cache.path().exists()
-    expected_result.loaded = len(env.dir_1)
-    expected_result.removed = 0
-    expected_result.processed = len(env.dir_1)
-    expected_result.remaining = 0
     plot_manager: PlotManager = PlotManager(env.root_path, refresh_callback)
     plot_manager.cache.load()
     assert len(plot_manager.cache) == len(plot_manager.cache)
@@ -400,10 +444,60 @@ async def test_plot_info_caching():
     plot_manager.cache.load()
     assert len(plot_manager.cache) == 0
     plot_manager.set_public_keys(bt.plot_manager.farmer_public_keys, bt.plot_manager.pool_public_keys)
-    expected_result.loaded = len(env.dir_1)
-    expected_result.removed = 0
-    expected_result.processed = len(env.dir_1)
-    expected_result.remaining = 0
     await run_refresh_test(plot_manager)
     assert len(plot_manager.plots) == len(plot_manager.plots)
     plot_manager.stop_refreshing()
+
+
+@pytest.mark.parametrize(
+    ["event_to_raise"],
+    [
+        pytest.param(PlotRefreshEvents.started, id="started"),
+        pytest.param(PlotRefreshEvents.batch_processed, id="batch_processed"),
+        pytest.param(PlotRefreshEvents.done, id="done"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_callback_event_raises(test_environment, event_to_raise: PlotRefreshEvents):
+    last_event_fired: Optional[PlotRefreshEvents] = None
+
+    def raising_callback(event: PlotRefreshEvents, _: PlotRefreshResult):
+        nonlocal last_event_fired
+        last_event_fired = event
+        if event == event_to_raise:
+            raise Exception(f"run_raise_in_callback {event_to_raise}")
+
+    env: TestEnvironment = test_environment
+    # Load dir_1
+    add_plot_directory(env.root_path, str(env.dir_1.path))
+    expected_result.loaded = env.dir_1.plot_info_list()
+    expected_result.removed = []
+    expected_result.processed = len(env.dir_1)
+    expected_result.remaining = 0
+    await run_refresh_test(env.plot_manager)
+    # Load dir_2
+    add_plot_directory(env.root_path, str(env.dir_2.path))
+    expected_result.loaded = env.dir_2.plot_info_list()
+    expected_result.removed = []
+    expected_result.processed = len(env.dir_1) + len(env.dir_2)
+    expected_result.remaining = 0
+    await run_refresh_test(env.plot_manager)
+    # Now raise the exception in the callback
+    default_callback = env.plot_manager._refresh_callback
+    env.plot_manager.set_refresh_callback(raising_callback)
+    await run_refresh_test(env.plot_manager, expect_match=False)
+    # And make sure the follow-up evens aren't fired
+    assert last_event_fired is not None and last_event_fired.value == event_to_raise.value
+    # The exception should trigger `PlotManager.reset()` and clear the plots
+    assert len(env.plot_manager.plots) == 0
+    assert len(env.plot_manager.plot_filename_paths) == 0
+    assert len(env.plot_manager.failed_to_open_filenames) == 0
+    assert len(env.plot_manager.no_key_filenames) == 0
+    # The next run without the valid callback should lead to re-loading of all plot
+    env.plot_manager.set_refresh_callback(default_callback)
+    expected_result.loaded = env.dir_1.plot_info_list() + env.dir_2.plot_info_list()
+    expected_result.removed = []
+    expected_result.processed = len(env.dir_1) + len(env.dir_2)
+    expected_result.remaining = 0
+    await run_refresh_test(env.plot_manager)
+    env.plot_manager.stop_refreshing()
