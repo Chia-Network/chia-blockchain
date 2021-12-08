@@ -126,6 +126,7 @@ class Farmer:
         self.state_changed_callback: Optional[Callable] = None
         self.log = log
         self.started = False
+        self.harvester_handshake_task: Optional[asyncio.Task] = None
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
@@ -216,15 +217,35 @@ class Farmer:
         self.state_changed_callback = callback
 
     async def on_connect(self, peer: WSChiaConnection):
-        # Sends a handshake to the harvester
         self.state_changed("add_connection", {})
-        handshake = harvester_protocol.HarvesterHandshake(
-            self.get_public_keys(),
-            self.pool_public_keys,
-        )
-        if peer.connection_type is NodeType.HARVESTER:
+
+        async def handshake_task():
+            # Wait until the task in `Farmer._start` is done so that we have keys available for the handshake. Bail out
+            # early if we need to shut down or if the harvester is not longer connected.
+            while not self.started and not self._shut_down and peer in self.server.get_connections():
+                await asyncio.sleep(1)
+
+            if self._shut_down:
+                log.debug("handshake_task: shutdown")
+                self.harvester_handshake_task = None
+                return
+
+            if peer not in self.server.get_connections():
+                log.debug("handshake_task: disconnected")
+                self.harvester_handshake_task = None
+                return
+
+            # Sends a handshake to the harvester
+            handshake = harvester_protocol.HarvesterHandshake(
+                self.get_public_keys(),
+                self.pool_public_keys,
+            )
             msg = make_msg(ProtocolMessageTypes.harvester_handshake, handshake)
             await peer.send_message(msg)
+            self.harvester_handshake_task = None
+
+        if peer.connection_type is NodeType.HARVESTER:
+            self.harvester_handshake_task = asyncio.create_task(handshake_task())
 
     def set_server(self, server):
         self.server = server
