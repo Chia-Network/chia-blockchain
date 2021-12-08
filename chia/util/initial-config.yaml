@@ -115,6 +115,34 @@ logging: &logging
   log_syslog_host: "localhost"  # Send logging messages to a remote or local Unix syslog
   log_syslog_port: 514  # UDP port of the remote or local Unix syslog
 
+seeder:
+  # The fake full node used for crawling will run on this port.
+  port: 8444
+  # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
+  other_peers_port: 8444
+  # Path to crawler DB. If empty, will use $CHIA_ROOT/crawler.db
+  crawler_db_path: ""
+  # Peers used for the initial run.
+  bootstrap_peers:
+    - "node.chia.net"
+  # Only consider nodes synced at least to this height.
+  minimum_height: 240000
+  # How many of a particular version we need to see before reporting it in the logs
+  minimum_version_count: 100
+  domain_name: "seeder.example.com."
+  nameserver: "example.com."
+  ttl: 300
+  soa:
+    rname: "hostmaster.example.com."
+    serial_number: 1619105223
+    refresh: 10800
+    retry: 10800
+    expire: 604800
+    minimum: 1800
+  network_overrides: *network_overrides
+  selected_network: *selected_network
+  logging: *logging
+
 harvester:
   # The harvester server (if run) will run on this port
   port: 8448
@@ -241,10 +269,16 @@ timelord:
   # Bluebox (sanatizing Timelord):
   # If set 'True', the timelord will create compact proofs of time, instead of
   # extending the chain. The attribute 'fast_algorithm' won't apply if timelord
-  # is running in sanitizer_mode.
+  # is running in bluebox_mode.
   # You must set 'send_uncompact_interval' in 'full_node' > 0 in the full_node
   # section below to have full_node send existing time proofs to be sanitized.
-  sanitizer_mode: False
+  bluebox_mode: False
+  # This runs a less CPU intensive bluebox. Runs for windows. Settings apply as for `bluebox_mode`.
+  # Optionally set `process_count` in `timelord_launcher` to 0, since timelord launcher won't be used in this case.
+  # IMPORTANT! `bluebox_mode` must also be set to True for this option to work.
+  slow_bluebox: False
+  # If `slow_bluebox` is True, launches `slow_bluebox_process_count` processes.
+  slow_bluebox_process_count: 1
 
   ssl:
     private_crt:  "config/ssl/timelord/private_timelord.crt"
@@ -383,7 +417,7 @@ introducer:
   host: *self_hostname
   port: 8445
   max_peers_to_send: 20
-  # The introducer will only return peers who it has seen in the last
+  # The introducer will only return peers it has seen in the last
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
   logging: *logging

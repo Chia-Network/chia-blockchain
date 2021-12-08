@@ -115,6 +115,9 @@ class CCWallet:
         if cc_coin is None:
             raise ValueError("Internal Error, unable to generate new coloured coin")
 
+        # TODO: address hint error and remove ignore
+        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
         regular_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -130,8 +133,11 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=token_bytes(),  # type: ignore[arg-type]
         )
+        # TODO: address hint error and remove ignore
+        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
         cc_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -147,7 +153,7 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),
+            name=token_bytes(),  # type: ignore[arg-type]
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(cc_record)
@@ -416,6 +422,9 @@ class CCWallet:
         await self.add_lineage(eve_coin.parent_coin_info, Program.to((0, [origin.as_list(), 1])))
 
         if send:
+            # TODO: address hint error and remove ignore
+            #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+            #       [arg-type]
             regular_record = TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
@@ -431,7 +440,7 @@ class CCWallet:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(TransactionType.INCOMING_TX.value),
-                name=token_bytes(),
+                name=token_bytes(),  # type: ignore[arg-type]
             )
             cc_record = TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -634,7 +643,10 @@ class CCWallet:
             innersol_list.append(innersol)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
-            spendable_cc_list.append(SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "SpendableCC" has incompatible type "Optional[bytes32]"; expected "bytes32"
+            #       [arg-type]
+            spendable_cc_list.append(SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof))  # type: ignore[arg-type]  # noqa: E501
             sigs = sigs + await self.get_sigs(coin_inner_puzzle, innersol, coin.name())
 
         spend_bundle = spend_bundle_for_spendable_ccs(

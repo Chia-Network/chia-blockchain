@@ -345,7 +345,7 @@ async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: C
     config = b_tools.config["timelord"]
     config["port"] = port
     config["full_node_peer"]["port"] = full_node_port
-    config["sanitizer_mode"] = sanitizer
+    config["bluebox_mode"] = sanitizer
     config["fast_algorithm"] = False
     if sanitizer:
         config["vdf_server"]["port"] = 7999
