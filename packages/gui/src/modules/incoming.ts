@@ -173,7 +173,7 @@ export default function incomingReducer(
     case 'OUTGOING_MESSAGE':
       if (
         action.message.command === 'send_transaction' ||
-        action.message.command === 'cc_spend'
+        action.message.command === 'cat_spend'
       ) {
         const wallet_id = action.message.data.wallet_id;
         const { wallets, ...rest } = state;
@@ -356,8 +356,8 @@ export default function incomingReducer(
             synced: data.synced,
           },
         };
-      } else if (command === 'cc_get_colour') {
-        const { wallet_id, colour } = data;
+      } else if (command === 'cat_get_asset_id') {
+        const { wallet_id, asset_id } = data;
         const { wallets, ...rest } = state;
 
         return {
@@ -366,11 +366,11 @@ export default function incomingReducer(
             wallets,
             (wallet: Wallet) => wallet.id === wallet_id,
             {
-              colour,
+              asset_id,
             },
           ),
         };
-      } else if (command === 'cc_get_name') {
+      } else if (command === 'cat_get_name') {
         const { wallet_id, name } = data;
         const { wallets, ...rest } = state;
 

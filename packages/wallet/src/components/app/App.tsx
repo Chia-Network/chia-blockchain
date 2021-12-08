@@ -3,7 +3,7 @@ import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
 import useDarkMode from 'use-dark-mode';
 import { createHashHistory } from 'history';
-import { Router } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { createGlobalStyle } from 'styled-components';
 import { Loading, ThemeProvider, ModalDialogsProvider, ModalDialogs } from '@chia/core';
 import { store, api } from '@chia/api-react';
@@ -104,7 +104,7 @@ export default function App() {
 
   return (
     <Provider store={store}>
-      <Router history={history}>
+      <MemoryRouter history={history}>
         <I18nProvider i18n={i18n}>
           <ThemeProvider theme={theme}>
             <GlobalStyle />
@@ -125,7 +125,7 @@ export default function App() {
             )}
           </ThemeProvider>
         </I18nProvider>
-      </Router>
+      </MemoryRouter>
     </Provider>
   );
 }

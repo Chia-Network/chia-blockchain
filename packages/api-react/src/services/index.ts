@@ -59,6 +59,13 @@ export const {
   useGetSyncStatusQuery,
   useGetConnectionsQuery: useGetWalletConnectionsQuery,
   useCreateBackupMutation,
+  useGetAllOffersQuery,
+  useCreateOfferForIdsMutation,
+  useCancelOfferMutation,
+  useCheckOfferValidityMutation,
+  useTakeOfferMutation,
+  useGetOfferSummaryMutation,
+  useGetOfferDataMutation,
 
   // CAT
   useCreateNewCATWalletMutation,

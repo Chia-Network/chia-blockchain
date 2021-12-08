@@ -16,7 +16,7 @@ import {
 } from '@material-ui/core';
 import {
   get_address,
-  cc_spend,
+  cat_spend,
   farm_block,
   rename_cc_wallet,
 } from '../../../modules/message';
@@ -534,7 +534,7 @@ function SendCard(props: SendCardProps) {
       return;
     }
 
-    dispatch(cc_spend(id, address, amount_value, fee_value));
+    dispatch(cat_spend(id, address, amount_value, fee_value));
     address_input.value = '';
     amount_input.value = '';
   }

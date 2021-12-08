@@ -34,7 +34,7 @@ msgstr ""
 #~ msgid "+ Add New Plot NFT"
 #~ msgstr "+ Добавить новые участки NFT"
 
-#: src/components/wallet/WalletHeader.tsx:61
+#: src/components/wallet/WalletHeader.tsx:77
 msgid "+ Add Token"
 msgstr ""
 
@@ -72,9 +72,21 @@ msgstr ""
 #~ msgid "Accept"
 #~ msgstr "Принять"
 
+#: src/components/wallet/offers/OfferViewer.tsx:420
+msgid "Accept Offer"
+msgstr ""
+
+#: src/components/wallet/offers/OfferManager.tsx:443
+msgid "Accepted Offers"
+msgstr ""
+
 #: src/components/trading/TradingOverview.jsx:228
 #~ msgid "Accepted at time:"
 #~ msgstr "Принято в:"
+
+#: src/components/wallet/offers/OfferViewer.tsx:182
+msgid "Accepted on Date"
+msgstr ""
 
 #: src/components/plot/PlotsFailed.tsx:19
 #: src/components/plot/PlotsNotFound.tsx:19
@@ -82,12 +94,9 @@ msgstr ""
 #~ msgid "Action"
 #~ msgstr "Действие"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:67
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:67
-#: src/components/fullNode/FullNodeConnections.tsx:82
-#: src/components/pool/PoolOverview.tsx:69
-#~ msgid "Actions"
-#~ msgstr "Действия"
+#: src/components/wallet/offers/OfferManager.tsx:351
+msgid "Actions"
+msgstr "Действия"
 
 #: src/components/wallet/cat/WalletCATCreateExistingSimple.tsx:97
 msgid "Add"
@@ -168,6 +177,9 @@ msgstr ""
 #: src/components/wallet/WalletHistory.tsx:124
 #: src/components/wallet/WalletSend.tsx:160
 #: src/components/wallet/cat/WalletCATSend.tsx:203
+#: src/components/wallet/offers/OfferEditorConditionsPanel.tsx:49
+#: src/components/wallet/offers/OfferEditorConditionsPanel.tsx:62
+#: src/components/wallet/offers/OfferViewer.tsx:214
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
 msgid "Amount"
 msgstr "Количество"
@@ -184,12 +196,16 @@ msgstr "Начальное количество монет"
 msgid "Amount must be an even amount."
 msgstr "Сумма должна быть не менее %{count}"
 
+#: src/components/wallet/offers/OfferManager.tsx:82
+msgid "Are you sure you want to cancel your offer?"
+msgstr ""
+
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:46
 #~ msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 #~ msgstr "Вы уверены, что хотите удалить участок? Участок не подлежит восстановлению."
 
-#: src/components/wallet/WalletHeader.tsx:44
+#: src/components/wallet/WalletHeader.tsx:46
 msgid "Are you sure you want to delete unconfirmed transactions?"
 msgstr "Вы действительно хотите удалить неподтвержденные транзакции?"
 
@@ -218,6 +234,10 @@ msgstr ""
 msgid "Asset Id"
 msgstr ""
 
+#: src/components/wallet/offers/OfferAssetSelector.tsx:117
+msgid "Asset Type"
+msgstr ""
+
 #: src/constants/WalletName.ts:11
 msgid "Atomic Swap Wallet"
 msgstr ""
@@ -236,6 +256,7 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:35
 #: src/components/selectKey/SelectKeyItem.tsx:82
+#: src/components/wallet/offers/OfferViewer.tsx:411
 msgid "Back"
 msgstr "Назад"
 
@@ -338,12 +359,23 @@ msgstr "может быть сохранен в качестве резервн�
 
 #: src/components/backup/BackupCreate.tsx:50
 #: src/components/wallet/WalletRenameDialog.tsx:91
+#: src/components/wallet/offers/OfferDataEntryDialog.tsx:69
 msgid "Cancel"
 msgstr "Отмена"
+
+#: src/components/wallet/offers/OfferManager.tsx:185
+#: src/components/wallet/offers/OfferManager.tsx:186
+#: src/components/wallet/offers/OfferManager.tsx:340
+msgid "Cancel Offer"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:389
 #~ msgid "Cancel and Spend"
 #~ msgstr "Отменить и отправить"
+
+#: src/components/wallet/offers/OfferManager.tsx:101
+msgid "Cancel on blockchain"
+msgstr ""
 
 #: src/components/wallet/WalletSend.tsx:99
 #: src/components/wallet/cat/WalletCATSend.tsx:117
@@ -578,10 +610,9 @@ msgstr "Кошелек Chia"
 #~ msgid "Claim Rewards"
 #~ msgstr "Забрать награду"
 
-#: src/components/plot/PlotAddDirectoryDialog.tsx:118
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:89
-#~ msgid "Close"
-#~ msgstr "Закрыть"
+#: src/components/wallet/offers/OfferManager.tsx:188
+msgid "Close"
+msgstr "Закрыть"
 
 #: src/components/app/AppState.tsx:46
 msgid "Closing down node and server"
@@ -590,6 +621,10 @@ msgstr "Закрытие узла и сервера"
 #: src/components/wallet/did/WalletDID.tsx:984
 msgid "Coin Name"
 msgstr "Название токена"
+
+#: src/components/wallet/offers/OfferViewer.tsx:454
+msgid "Coins"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:366
 #~ msgid "Coins:"
@@ -629,7 +664,7 @@ msgstr "Подтвердить"
 #~ msgid "Confirm Disconnect"
 #~ msgstr "Подтвердить отключение"
 
-#: src/components/wallet/WalletHeader.tsx:39
+#: src/components/wallet/WalletHeader.tsx:41
 msgid "Confirmation"
 msgstr "Подтверждение"
 
@@ -638,6 +673,7 @@ msgid "Confirmed"
 msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:238
+#: src/components/wallet/offers/OfferViewer.tsx:176
 msgid "Confirmed at Height"
 msgstr ""
 
@@ -802,6 +838,15 @@ msgstr "Создать новый приватный ключ"
 #~ msgid "Create admin wallet"
 #~ msgstr "Создать администрационный кошелек"
 
+#: src/components/wallet/offers/OfferEditor.tsx:182
+#: src/components/wallet/offers/OfferManager.tsx:433
+msgid "Create an Offer"
+msgstr ""
+
+#: src/components/wallet/offers/OfferManager.tsx:428
+msgid "Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party."
+msgstr ""
+
 #: src/components/wallet/cat/WalletCATCreateExisting.tsx:76
 msgid "Create custom CAT Wallet"
 msgstr ""
@@ -838,6 +883,10 @@ msgstr ""
 #~ msgid "Created by us:"
 #~ msgstr "Создано нами?"
 
+#: src/components/wallet/offers/OfferManager.tsx:103
+msgid "Creates and submits a transaction on the blockchain that cancels the offer"
+msgstr ""
+
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:51
 #~ msgid "Creating Plot NFT and Joining the Pool"
 #~ msgstr "Создание участка NFT и присоединение к пулу"
@@ -845,6 +894,11 @@ msgstr ""
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:49
 #~ msgid "Creating Plot NFT for Self Pooling"
 #~ msgstr "Создание участка NFT для самостоятельной добычи"
+
+#: src/components/wallet/offers/OfferManager.tsx:278
+#: src/components/wallet/offers/OfferViewer.tsx:192
+msgid "Creation Date"
+msgstr ""
 
 #: src/components/plot/add/PlotAdd.tsx:86
 #~ msgid "Currency code is not defined"
@@ -894,7 +948,7 @@ msgstr "Дата"
 
 #: src/components/selectKey/SelectKey.tsx:34
 #: src/components/selectKey/SelectKeyItem.tsx:81
-#: src/components/wallet/WalletHeader.tsx:40
+#: src/components/wallet/WalletHeader.tsx:42
 #: src/components/wallet/did/WalletDID.tsx:449
 #: src/components/wallet/did/WalletDID.tsx:862
 #: src/components/wallet/did/WalletDIDCreate.tsx:194
@@ -907,7 +961,7 @@ msgstr "Удалить"
 #~ msgid "Delete Plot"
 #~ msgstr "Удалить участок"
 
-#: src/components/wallet/WalletHeader.tsx:85
+#: src/components/wallet/WalletHeader.tsx:108
 msgid "Delete Unconfirmed Transactions"
 msgstr "Удалить неподтвержденные транзакции"
 
@@ -931,6 +985,10 @@ msgstr "Удаление всех ключей приведет к безвоз�
 #: src/components/selectKey/SelectKeyItem.tsx:113
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Удаление ключа приведет к безвозвратному удалению ключа с вашего компьютера, убедитесь, что у вас есть резервные копии. Вы уверены что хотите продолжить?"
+
+#: src/components/wallet/offers/OfferViewer.tsx:431
+msgid "Details"
+msgstr ""
 
 #: src/electron/main.tsx:304
 msgid "Developer"
@@ -961,6 +1019,10 @@ msgstr "Инструменты разработчика"
 #~ msgid "Disconnect"
 #~ msgstr "Отключить"
 
+#: src/components/wallet/offers/OfferManager.tsx:311
+msgid "Display Offer Data"
+msgstr ""
+
 #: src/components/wallet/create/WalletCreateList.tsx:39
 #: src/components/wallet/did/WalletDIDSelect.tsx:25
 msgid "Distributed Identity"
@@ -979,13 +1041,17 @@ msgstr ""
 #~ msgid "Does your machine support parallel plotting?"
 #~ msgstr "Поддерживает ли ваша машина параллельное засеивание?"
 
+#: src/components/wallet/offers/OfferImport.tsx:100
+msgid "Drag & drop an offer file below to view its details"
+msgstr ""
+
 #: src/components/wallet/did/WalletDID.tsx:428
 msgid "Drag and drop attestation packet(s)"
 msgstr ""
 
-#: src/components/trading/ViewOffer.jsx:39
-#~ msgid "Drag and drop offer file"
-#~ msgstr "Перетащите сюда файл с предложением сделки"
+#: src/components/wallet/offers/OfferImport.tsx:119
+msgid "Drag and drop offer file"
+msgstr "Перетащите сюда файл с предложением сделки"
 
 #: src/components/backup/BackupRestore.tsx:173
 msgid "Drag and drop your backup file"
@@ -1046,6 +1112,10 @@ msgstr ""
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "Expected Time to Win"
 #~ msgstr ""
+
+#: src/components/wallet/offers/OfferManager.tsx:325
+msgid "Export Offer File"
+msgstr ""
 
 #: src/components/plot/PlotsFailed.tsx:38
 #~ msgid "Failed to open (invalid plots)"
@@ -1119,6 +1189,8 @@ msgstr "Открытый ключ фермера:"
 #: src/components/wallet/cat/WalletCATSend.tsx:216
 #: src/components/wallet/create/createRLAdmin.jsx:244
 #: src/components/wallet/create/createRLAdmin.jsx:272
+#: src/components/wallet/offers/OfferManager.tsx:118
+#: src/components/wallet/offers/OfferViewer.tsx:398
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
 msgid "Fee"
 msgstr "Комиссия"
@@ -1257,6 +1329,14 @@ msgstr "IP адрес"
 #~ msgid "If none selected, then it will default to the temporary directory."
 #~ msgstr "Если ничего не выбрано, по умолчанию используется временный каталог."
 
+#: src/components/wallet/offers/OfferManager.tsx:87
+msgid "If you have already shared your offer file, you may need to submit a transaction to cancel the pending offer. Click \"Cancel on blockchain\" to submit a cancellation transaction."
+msgstr ""
+
+#: src/components/wallet/offers/OfferDataEntryDialog.tsx:76
+msgid "Import"
+msgstr ""
+
 #: src/components/wallet/WalletImport.tsx:91
 msgid "Import Wallet from Mnemonics"
 msgstr "Импортировать кошелек из мнемоники"
@@ -1268,6 +1348,10 @@ msgstr "Импорт мнемоники (24 слова)"
 #: src/components/fullNode/FullNode.jsx:45
 #~ msgid "In Progress"
 #~ msgstr "В процессе"
+
+#: src/components/wallet/offers/OfferEditorConditionsPanel.tsx:151
+msgid "In exchange for"
+msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:43
 msgid "Incoming"
@@ -1301,6 +1385,18 @@ msgstr "Начальное количество монет"
 #: src/components/wallet/create/createRLUser.jsx:87
 msgid "Initialize a Rate Limited User Wallet:"
 msgstr "Инициализируйте кошелек пользователя с ограничением скорости вывода монет:"
+
+#: src/components/wallet/offers/OfferViewer.tsx:296
+msgid ""
+"Insufficient funds available to accept offer. Ensure that your\n"
+"spendable balance is sufficient to cover the offer amount."
+msgstr ""
+
+#: src/components/wallet/offers/OfferEditor.tsx:129
+msgid ""
+"Insufficient funds available to create offer. Ensure that your\n"
+"spendable balance is sufficient to cover the offer amount."
+msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:218
 msgid "Interval"
@@ -1396,7 +1492,7 @@ msgstr ""
 msgid "Loading list of the keys"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:21
+#: src/components/wallet/Wallets.tsx:22
 msgid "Loading list of wallets"
 msgstr "Загрузка списка кошельков"
 
@@ -1459,6 +1555,11 @@ msgstr ""
 #: src/components/farm/overview/FarmOverview.tsx:53
 #~ msgid "Manage Farming Rewards"
 #~ msgstr "Управление вознаграждением за фарминг"
+
+#: src/components/wallet/WalletHeader.tsx:84
+#: src/components/wallet/offers/OfferManager.tsx:420
+msgid "Manage Offers"
+msgstr ""
 
 #: src/components/wallet/did/WalletDID.tsx:806
 msgid "Manage Recovery DIDs"
@@ -1551,6 +1652,10 @@ msgstr "Нет 24 слов семя, так как этот ключ импор�
 #~ msgid "No blocks farmed yet"
 #~ msgstr "Выращенных блоков пока нет"
 
+#: src/components/wallet/offers/OfferManager.tsx:373
+msgid "No current offers"
+msgstr ""
+
 #: src/components/wallet/WalletHistory.tsx:273
 msgid "No previous transactions"
 msgstr "Нет предыдущих транзакций"
@@ -1558,6 +1663,10 @@ msgstr "Нет предыдущих транзакций"
 #: src/components/farm/FarmManageFarmingRewards.tsx:160
 #~ msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 #~ msgstr "Не найдено закрытых ключей для одного или обоих адресов. Безопасно только в том случае, если вы отправляете вознаграждение на другой кошелек."
+
+#: src/components/wallet/offers/OfferViewer.tsx:197
+msgid "Node Count"
+msgstr ""
 
 #: src/components/wallet/WalletConnections.tsx:24
 msgid "Node ID"
@@ -1584,9 +1693,17 @@ msgstr "Не определено"
 msgid "Not Synced"
 msgstr "Не синхронизирован"
 
+#: src/components/wallet/offers/OfferViewer.tsx:186
+msgid "Not accepted"
+msgstr ""
+
 #: src/components/trading/TradingOverview.jsx:222
 #~ msgid "Not accepted yet"
 #~ msgstr "Еще не принято"
+
+#: src/components/wallet/offers/OfferViewer.tsx:177
+msgid "Not confirmed"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:195
 #~ msgid "Not confirmed yet"
@@ -1618,12 +1735,30 @@ msgstr "Не синхронизирован"
 #~ msgstr "Количество потоков"
 
 #: src/components/wallet/cat/WalletCATTAILDialog.tsx:82
+#: src/components/wallet/offers/OfferDataDialog.tsx:75
 msgid "OK"
 msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:67
 #~ msgid "Offer"
 #~ msgstr "Предложение"
+
+#: src/components/wallet/offers/OfferDataDialog.tsx:42
+#: src/components/wallet/offers/OfferDataDialog.tsx:50
+msgid "Offer Data"
+msgstr ""
+
+#: src/components/wallet/offers/OfferViewer.tsx:171
+msgid "Offer Identifier"
+msgstr ""
+
+#: src/components/wallet/offers/OfferViewer.tsx:282
+msgid "Offer has been accepted and is awaiting confirmation."
+msgstr ""
+
+#: src/components/wallet/offers/OfferManager.tsx:240
+msgid "Offered"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:413
 #~ msgid "Offers Created"
@@ -1645,6 +1780,15 @@ msgstr ""
 #: src/components/wallet/WalletHistory.tsx:43
 msgid "Outgoing"
 msgstr "Исходящие"
+
+#: src/components/wallet/offers/OfferViewer.tsx:237
+msgid "Parent Coin"
+msgstr ""
+
+#: src/components/wallet/offers/OfferDataEntryDialog.tsx:41
+#: src/components/wallet/offers/OfferImport.tsx:107
+msgid "Paste Offer Data"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:361
 #~ msgid "Payout Address"
@@ -1769,6 +1913,10 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:623
 msgid "Please finish syncing before making a transaction"
 msgstr "Пожалуйста, завершите синхронизацию перед совершением транзакции"
+
+#: src/components/wallet/WalletHeader.tsx:59
+msgid "Please finish syncing before managing offers"
+msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:66
 #~ msgid "Please select amount"
@@ -2061,6 +2209,10 @@ msgstr "Публичный ключ"
 msgid "Public key:"
 msgstr "Открытый ключ:"
 
+#: src/components/wallet/offers/OfferViewer.tsx:260
+msgid "Puzzle Hash"
+msgstr ""
+
 #: src/components/wallet/did/WalletDID.tsx:1002
 msgid "Puzzlehash"
 msgstr ""
@@ -2179,6 +2331,14 @@ msgstr ""
 msgid "Report an Issue..."
 msgstr "Сообщить о проблеме..."
 
+#: src/components/wallet/offers/OfferManager.tsx:262
+msgid "Requested"
+msgstr ""
+
+#: src/components/wallet/offers/OfferEditor.tsx:159
+msgid "Reset"
+msgstr ""
+
 #: src/components/backup/BackupRestore.tsx:160
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
 msgstr "Восстановление метаданных цветных монет и других смарт-кошельков из резервной копии"
@@ -2203,6 +2363,10 @@ msgstr "Можно пропустить"
 #: src/components/wallet/WalletRenameDialog.tsx:99
 msgid "Save"
 msgstr "Сохранить"
+
+#: src/components/wallet/offers/OfferEditor.tsx:167
+msgid "Save Offer"
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:338
 #~ msgid "Search"
@@ -2240,6 +2404,10 @@ msgstr "Выбор ключа"
 #: src/components/trading/ViewOffer.jsx:37
 #~ msgid "Select Offer"
 #~ msgstr "Выберите предложение"
+
+#: src/components/wallet/offers/OfferImport.tsx:114
+msgid "Select Offer File"
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 #~ msgid "Select Temporary Directory"
@@ -2319,6 +2487,10 @@ msgstr "Отправьте этот публичный ключ админист
 
 #: src/components/wallet/cat/WalletCAT.tsx:103
 msgid "Show Asset Id"
+msgstr ""
+
+#: src/components/wallet/offers/OfferManager.tsx:298
+msgid "Show Details"
 msgstr ""
 
 #: src/components/wallet/cat/WalletCAT.tsx:103
@@ -2404,10 +2576,12 @@ msgstr ""
 #~ msgstr "Состояние"
 
 #: src/components/wallet/WalletStatusCard.tsx:22
+#: src/components/wallet/offers/OfferManager.tsx:219
+#: src/components/wallet/offers/OfferViewer.tsx:165
 msgid "Status"
 msgstr "Статус"
 
-#: src/components/wallet/WalletHeader.tsx:67
+#: src/components/wallet/WalletHeader.tsx:90
 msgid "Status:"
 msgstr "Статус:"
 
@@ -2446,7 +2620,12 @@ msgstr "Подтвердить"
 
 #: src/components/wallet/WalletSend.tsx:120
 #: src/components/wallet/cat/WalletCATSend.tsx:161
+#: src/components/wallet/offers/OfferViewer.tsx:281
 msgid "Success"
+msgstr ""
+
+#: src/components/wallet/offers/OfferViewer.tsx:375
+msgid "Summary"
 msgstr ""
 
 #: src/components/wallet/WalletStatus.tsx:39
@@ -2634,6 +2813,18 @@ msgstr "Это общий баланс + отложенный баланс: эт
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:46
 #~ msgid "This node is fully caught up and validating the network"
 #~ msgstr "Этот узел полностью догнал соседние узлы и выполняет валидацию в сети"
+
+#: src/components/wallet/offers/OfferViewer.tsx:198
+msgid "This number reflects the number of nodes that the accepted SpendBundle has been sent to"
+msgstr ""
+
+#: src/components/wallet/offers/OfferViewer.tsx:327
+msgid "This offer has completed successfully"
+msgstr ""
+
+#: src/components/wallet/offers/OfferViewer.tsx:323
+msgid "This offer is no longer valid"
+msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:308
 #~ msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
@@ -2859,6 +3050,11 @@ msgstr "Вид"
 #~ msgid "View Pool Login Link"
 #~ msgstr "Ссылка для входа на пул"
 
+#: src/components/wallet/offers/OfferImport.tsx:131
+#: src/components/wallet/offers/OfferManager.tsx:436
+msgid "View an Offer"
+msgstr ""
+
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 msgid "View pending balances"
 msgstr "Просмотр ожидаемого баланса"
@@ -2866,6 +3062,18 @@ msgstr "Просмотр ожидаемого баланса"
 #: src/components/wallet/cat/WalletCAT.tsx:393
 #~ msgid "View pending balances..."
 #~ msgstr "Просмотр ожидаемого баланса..."
+
+#: src/components/wallet/offers/OfferViewer.tsx:488
+msgid "Viewing offer"
+msgstr ""
+
+#: src/components/wallet/offers/OfferViewer.tsx:486
+msgid "Viewing offer created at {0}"
+msgstr ""
+
+#: src/components/wallet/offers/OfferViewer.tsx:483
+msgid "Viewing offer: {offerFilePath}"
+msgstr ""
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:26
 #: src/components/plot/PlotStatus.tsx:26
@@ -2927,7 +3135,7 @@ msgstr ""
 #~ msgid "WalletStatusCard.syncing"
 #~ msgstr ""
 
-#: src/components/wallet/Wallets.tsx:22
+#: src/components/wallet/Wallets.tsx:23
 msgid "Wallets"
 msgstr "Кошельки"
 
@@ -3004,6 +3212,10 @@ msgstr "Вы не являетесь собственным пулом"
 #~ msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
 #~ msgstr "Вы все еще можете создавать участки для этого участка NFT, но вы не можете вносить изменения до завершения синхронизации."
 
+#: src/components/wallet/offers/OfferViewer.tsx:319
+msgid "You created this offer"
+msgstr ""
+
 #: src/components/plot/add/PlotAddChooseSize.tsx:63
 #~ msgid "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 #~ msgstr ""
@@ -3048,6 +3260,10 @@ msgstr "Вы не являетесь собственным пулом"
 #~ msgid "You need {currencyCode} to join a pool."
 #~ msgstr "Вам нужно {currencyCode} , чтобы присоединиться к пулу."
 
+#: src/components/wallet/offers/OfferEditorConditionsPanel.tsx:150
+msgid "You will offer"
+msgstr ""
+
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
 #~ msgid "You will recieve <0/> to {0}"
 #~ msgstr "Вы получите <0/> на {0}"
@@ -3071,6 +3287,10 @@ msgstr ""
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:96
 #~ msgid "Your Harvester Network"
 #~ msgstr "Ваша сеть комбайнов"
+
+#: src/components/wallet/offers/OfferManager.tsx:442
+msgid "Your Offers"
+msgstr ""
 
 #: src/components/pool/PoolOverview.tsx:160
 #~ msgid "Your Pool Overview"
@@ -3112,6 +3332,10 @@ msgstr "синхр."
 msgid "syncing"
 msgstr "синх-ция"
 
+#: src/components/wallet/offers/OfferAssetSelector.tsx:127
+msgid "{0}"
+msgstr ""
+
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
 #~ msgstr "{0} Block Rewards"
@@ -3139,3 +3363,7 @@ msgstr "синх-ция"
 #: src/components/core/components/Amount/Amount.tsx:82
 #~ msgid "{mojo, plural, one {mojo} other {mojos}}"
 #~ msgstr ""
+
+#: src/components/wallet/offers/OfferViewer.tsx:84
+msgid "{mojos, plural, one {mojo} other {mojos}}"
+msgstr ""

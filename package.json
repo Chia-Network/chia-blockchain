@@ -1,29 +1,29 @@
 {
-  "name": "root",
-  "private": true,
-  "scripts": {
-    "clean": "lerna clean",
-    "bootstrap": "lerna bootstrap --nohoist packages/wallet",
-    "version:major": "lerna version major",
-    "version:minor": "lerna version minor",
-    "version:patch": "lerna version patch",
-    "lint": "lerna run lint",
-    "publish": "lerna publish",
-    "postinstall": "npm run bootstrap",
-    "build": "lerna run build",
-    "build:watch": "lerna run build:watch",
-    "start:gui": "lerna run start --scope @chia/gui",
-    "start:wallet": "lerna run start --scope @chia/wallet",
-    "dev:gui": "lerna run dev --scope @chia/gui --stream",
-    "dev:wallet": "lerna run dev --scope @chia/wallet --stream",
-    "electron": "npm run start:wallet",
-    "locale:extract": "lerna run locale:extract",
-    "audit": "lerna-audit --no-fix",
-    "audit:fix": "lerna-audit"
-  },
-  "devDependencies": {
-    "lerna": "^4.0.0",
-    "lerna-audit": "^1.3.3"
-  },
-  "version": "1.2.10-dev132"
+    "name": "root",
+    "private": true,
+    "scripts": {
+        "clean": "lerna clean",
+        "bootstrap": "lerna bootstrap --nohoist packages/wallet",
+        "version:major": "lerna version major",
+        "version:minor": "lerna version minor",
+        "version:patch": "lerna version patch",
+        "lint": "lerna run lint",
+        "publish": "lerna publish",
+        "postinstall": "npm run bootstrap",
+        "build": "lerna run build",
+        "build:watch": "lerna run build:watch",
+        "start:gui": "lerna run start --scope @chia/gui",
+        "start:wallet": "lerna run start --scope @chia/wallet",
+        "dev:gui": "lerna run dev --scope @chia/gui --stream",
+        "dev:wallet": "lerna run dev --scope @chia/wallet --stream",
+        "electron": "npm run start:wallet",
+        "locale:extract": "lerna run locale:extract",
+        "audit": "lerna-audit --no-fix",
+        "audit:fix": "lerna-audit"
+    },
+    "devDependencies": {
+        "lerna": "^4.0.0",
+        "lerna-audit": "^1.3.3"
+    },
+    "version": "1.2.11-dev255"
 }

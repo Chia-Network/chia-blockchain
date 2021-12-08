@@ -12,8 +12,8 @@ import {
   get_height_info,
   get_sync_status,
   get_connection_info,
-  get_colour_info,
-  get_colour_name,
+  get_cat_info,
+  get_cat_name,
   did_get_recovery_list,
   did_get_did,
   pingWallet,
@@ -294,8 +294,8 @@ export const handle_message = async (store, payload, errorProcessed) => {
           store.dispatch(get_address(wallet.id, false));
         }
         if (wallet.type === COLOURED_COIN) {
-          store.dispatch(get_colour_name(wallet.id));
-          store.dispatch(get_colour_info(wallet.id));
+          store.dispatch(get_cat_name(wallet.id));
+          store.dispatch(get_cat_info(wallet.id));
         }
         if (wallet.type === DISTRIBUTED_ID) {
           store.dispatch(did_get_recovery_list(wallet.id));
@@ -338,10 +338,10 @@ export const handle_message = async (store, payload, errorProcessed) => {
     } else if (state === 'did_coin_added') {
       store.dispatch(format_message('get_wallets', {}));
     }
-  } else if (payload.command === 'cc_set_name') {
+  } else if (payload.command === 'cat_set_name') {
     if (payload.data.success) {
       const { wallet_id } = payload.data;
-      store.dispatch(get_colour_name(wallet_id));
+      store.dispatch(get_cat_name(wallet_id));
     }
   } else if (payload.command === 'did_create_backup_file') {
     if (payload.data.success) {

@@ -8,10 +8,11 @@ import IconButton from '../IconButton';
 
 type Props = MenuProps & {
   children: ({ onClose }: { onClose: () => void }) => ReactNode;
+  disabled?: boolean;
 };
 
 export default function More(props: Props) {
-  const { children, ...rest } = props;
+  const { children, disabled, ...rest } = props;
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = !!anchorEl;
 
@@ -25,7 +26,7 @@ export default function More(props: Props) {
 
   return (
     <>
-      <IconButton aria-label="more" aria-haspopup="true" onClick={handleClick}>
+      <IconButton aria-label="more" aria-haspopup="true" onClick={handleClick} disabled={disabled}>
         <MoreVertIcon />
       </IconButton>
       <Menu
@@ -42,3 +43,7 @@ export default function More(props: Props) {
     </>
   );
 }
+
+More.defaultProps = {
+  disabled: false,
+};

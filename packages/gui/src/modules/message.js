@@ -580,30 +580,30 @@ export const create_cc_for_colour_action = (colour, fee) => (dispatch) =>
     },
   );
 
-export const get_colour_info = (wallet_id) => {
+export const get_cat_info = (wallet_id) => {
   const action = walletMessage();
-  action.message.command = 'cc_get_colour';
+  action.message.command = 'cat_get_asset_id';
   action.message.data = { wallet_id };
   return action;
 };
 
-export const get_colour_name = (wallet_id) => {
+export const get_cat_name = (wallet_id) => {
   const action = walletMessage();
-  action.message.command = 'cc_get_name';
+  action.message.command = 'cat_get_name';
   action.message.data = { wallet_id };
   return action;
 };
 
 export const rename_cc_wallet = (wallet_id, name) => {
   const action = walletMessage();
-  action.message.command = 'cc_set_name';
+  action.message.command = 'cat_set_name';
   action.message.data = { wallet_id, name };
   return action;
 };
 
-export const cc_spend = (wallet_id, address, amount, fee) => {
+export const cat_spend = (wallet_id, address, amount, fee) => {
   const action = walletMessage();
-  action.message.command = 'cc_spend';
+  action.message.command = 'cat_spend';
   action.message.data = {
     wallet_id,
     inner_address: address,
