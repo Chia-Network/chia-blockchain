@@ -39,7 +39,6 @@ import BlockTitle from './BlockTitle';
 /* global BigInt */
 
 async function computeNewPlotId(block) {
-  console.log('block', block);
   const { poolPublicKey, plotPublicKey } =
     block.rewardChainBlock.proofOfSpace;
   if (!poolPublicKey) {

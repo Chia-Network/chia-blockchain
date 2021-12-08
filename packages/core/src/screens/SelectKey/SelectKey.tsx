@@ -25,11 +25,13 @@ export default function SelectKey() {
   const openDialog = useOpenDialog();
   const navigate = useNavigate();
   const [deleteAllKeys] = useDeleteAllKeysMutation();
-  const [logIn] = useLogInAndSkipImportMutation();
-  const { data: publicKeyFingerprints, isLoading, error, refetch } = useGetPublicKeysQuery();
+  const [logIn, { isLoading: isLoadingLogIn}] = useLogInAndSkipImportMutation();
+  const { data: publicKeyFingerprints, isLoading: isLoadingPublicKeys, error, refetch } = useGetPublicKeysQuery();
   const hasFingerprints = !!publicKeyFingerprints?.length;
   const [selectedFingerprint, setSelectedFingerprint] = useState<number | undefined>();
   const showError = useShowError();
+
+  const isLoading = isLoadingPublicKeys || isLoadingLogIn;
 
   async function handleSelect(fingerprint: number) {
     if (selectedFingerprint) {
@@ -71,7 +73,7 @@ export default function SelectKey() {
     <StyledContainer maxWidth="xs">
       <Flex flexDirection="column" alignItems="center" gap={3}>
         <Logo width={130} />
-        {isLoading ? (
+        {isLoadingPublicKeys ? (
           <Loading center>
             <Trans>Loading list of the keys</Trans>
           </Loading>
@@ -133,6 +135,7 @@ export default function SelectKey() {
             variant="contained"
             color="primary"
             size="large"
+            disabled={isLoading}
             fullWidth
           >
             <Trans>Create a new private key</Trans>
@@ -142,6 +145,7 @@ export default function SelectKey() {
             type="submit"
             variant="outlined"
             size="large"
+            disabled={isLoading}
             fullWidth
           >
             <Trans>Import from Mnemonics (24 words)</Trans>
@@ -151,6 +155,7 @@ export default function SelectKey() {
             variant="outlined"
             color="danger"
             size="large"
+            disabled={isLoading}
             fullWidth
           >
             <Trans>Delete all keys</Trans>
