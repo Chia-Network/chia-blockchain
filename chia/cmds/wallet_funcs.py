@@ -300,7 +300,12 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     examine_only: bool = args["examine_only"]
     fee: int = int(Decimal(args["fee"]) * units["chia"])
 
-    offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+    try:
+        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+    except ValueError:
+        print("Please enter a valid offer file or hex blob")
+        return
+
     offered, requested = offer.summary()
     print("Summary:")
     print("  OFFERED:")
