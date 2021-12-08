@@ -86,7 +86,7 @@ pyinstaller --log-level INFO $SPEC_FILE
 Write-Output "   ---"
 Write-Output "Copy chia executables to chia-blockchain-gui\"
 Write-Output "   ---"
-Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\" -Recurse
+Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\packages\gui\" -Recurse
 Set-Location -Path "..\chia-blockchain-gui" -PassThru
 
 git status
@@ -124,6 +124,8 @@ $packageVersion = "$env:CHIA_INSTALLER_VERSION"
 $packageName = "Chia-$packageVersion"
 
 Write-Output "packageName is $packageName"
+
+Set-Location -Path "packages\gui" -PassThru
 
 Write-Output "   ---"
 Write-Output "fix version in package.json"

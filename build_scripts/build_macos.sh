@@ -37,7 +37,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "pyinstaller failed!"
 	exit $LAST_EXIT_CODE
 fi
-cp -r dist/daemon ../chia-blockchain-gui
+cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 cd .. || exit
 cd chia-blockchain-gui || exit
 

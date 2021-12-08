@@ -43,7 +43,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-cp -r dist/daemon ../chia-blockchain-gui
+cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 cd .. || exit
 cd chia-blockchain-gui || exit
 
@@ -58,6 +58,9 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "npm run build failed!"
 	exit $LAST_EXIT_CODE
 fi
+
+# Change to the gui package
+cd packages/gui || exit
 
 # sets the version for chia-blockchain in package.json
 cp package.json package.json.orig
@@ -76,8 +79,8 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-mv $DIR_NAME ../build_scripts/dist/
-cd ../build_scripts || exit
+mv $DIR_NAME ../../../build_scripts/dist/
+cd ../../../build_scripts || exit
 
 if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
 	echo "Create chia-blockchain-$CHIA_INSTALLER_VERSION.rpm"
