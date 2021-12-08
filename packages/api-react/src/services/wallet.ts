@@ -50,7 +50,7 @@ export const walletApi = createApi({
                   throw tailError;
                 }
 
-                meta.tail = tailData.assetId;
+                meta.tail = tailData.colour;
 
                 // get CAT name
                 const { data: nameData, error: nameError } = await fetchWithBQ({
@@ -813,7 +813,7 @@ export const walletApi = createApi({
         service: CAT,
         args: [walletId],
       }),
-      transformResponse: (response: any) => response?.assetId,
+      transformResponse: (response: any) => response?.colour,
     }),
 
     getCatList: build.query<{

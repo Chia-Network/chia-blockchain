@@ -9,7 +9,7 @@ interface Wallet {
   data: Object;
   transactions: Transaction[];
   address: string;
-  asset_id: string;
+  colour: string;
   mydid: string;
   didcoin: string;
   backup_dids: string[];

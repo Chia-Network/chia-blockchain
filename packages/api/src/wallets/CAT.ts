@@ -21,33 +21,33 @@ export default class CATWallet extends Wallet {
   ) {
     return super.createNewWallet('cat_wallet', {
       mode: 'existing',
-      asset_id: tail,
+      colour: tail,
       fee,
       host,
     });
   }
 
   async getTail(walletId: number) {
-    return this.command('cat_get_asset_id', {
+    return this.command('cc_get_colour', {
       walletId,
     });
   }
 
   async getName(walletId: number) {
-    return this.command('cat_get_name', {
+    return this.command('cc_get_name', {
       walletId,
     });
   }
 
   async setName(walletId: number, name: string) {
-    return this.command('cat_set_name', {
+    return this.command('cc_set_name', {
       walletId,
       name,
     });
   }
 
   async spend(walletId: number, innerAddress: string, amount: string, fee: string, memos?: string[]) {
-    return this.command('cat_spend', {
+    return this.command('cc_spend', {
       walletId,
       innerAddress,
       amount,
