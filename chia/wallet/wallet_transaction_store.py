@@ -348,12 +348,12 @@ class WalletTransactionStore:
             raise ValueError(f"There is no known sort {sort_key}")
 
         if reverse:
-            query_str = SortKey.reverse(SortKey[sort_key])
+            query_str = SortKey[sort_key].descending()
         else:
-            query_str = SortKey[sort_key]
+            query_str = SortKey[sort_key].ascending()
 
         cursor = await self.db_connection.execute(
-            f"SELECT * from transaction_record where wallet_id=?" f" {query_str}" f" LIMIT {start}, {limit}",
+            f"SELECT * from transaction_record where wallet_id=?" f" {query_str}, rowid" f" LIMIT {start}, {limit}",
             (wallet_id,),
         )
         rows = await cursor.fetchall()
