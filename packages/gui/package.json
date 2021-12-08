@@ -118,8 +118,6 @@
         "cross-env": "^7.0.3",
         "css-loader": "^6.5.1",
         "electron": "^14.2.1",
-        "electron-osx-sign": "github:electron/electron-osx-sign#main",
-        "electron-winstaller": "^5.0.0",
         "eslint": "^7.32.0",
         "eslint-config-airbnb": "^18.2.1",
         "eslint-config-airbnb-typescript": "^14.0.0",
