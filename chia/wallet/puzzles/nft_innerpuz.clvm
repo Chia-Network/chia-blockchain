@@ -67,11 +67,11 @@
       )
     )
     (list
-      (list ASSERT_HEIGHT_RELATIVE 2)
       (list CREATE_COIN my_puzhash my_amount)
       (list ASSERT_MY_AMOUNT my_amount)
       (list ASSERT_MY_PUZZLEHASH my_puzhash)
       (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT CURRENT_OWNER_DID my_did_parent my_did_inner_hash my_did_amount) 'a'))
+      (list CREATE_COIN_ANNOUNCEMENT CURRENT_OWNER_DID)
     )
   )
 )
