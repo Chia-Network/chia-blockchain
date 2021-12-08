@@ -50,6 +50,7 @@ export default function Table(props: Props) {
       page={page}
       rowsPerPage={rowsPerPage}
       pages={pages}
+      count={rows.length}
       {...rest}
     />
   );

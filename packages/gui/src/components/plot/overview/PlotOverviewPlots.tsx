@@ -150,7 +150,11 @@ export default function PlotOverviewPlots() {
           </Typography>
         </Flex>
 
-        <Table cols={cols} rows={plots} pages>
+        <Table 
+          cols={cols} 
+          rows={plots} 
+          pages
+        >
           {queuePlots
             ? queuePlots.map((item) => {
                 const { id } = item;
