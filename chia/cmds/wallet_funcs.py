@@ -222,7 +222,6 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                 if offer is not None:
                     with open(pathlib.Path(filepath), "w") as file:
                         file.write(bytes(offer).hex())
-                        file.close()
                     print(f"Created offer with ID {trade_record.trade_id}")
                     print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view status")
                 else:
