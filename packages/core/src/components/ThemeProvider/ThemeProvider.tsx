@@ -11,6 +11,10 @@ import Fonts from '../Fonts';
 import useLocale from '../../hooks/useLocale';
 
 export function getMaterialLocale(locale: string) {
+  if (!locale) {
+    return materialLocales.enUS;
+  }
+
   const materialLocale = locale.replace('-', '');
   return materialLocales[materialLocale] ?? materialLocales.enUS;
 }
