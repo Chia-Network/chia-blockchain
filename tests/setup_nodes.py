@@ -188,7 +188,9 @@ async def setup_wallet_node(
         keychain.delete_all_keys()
 
 
-async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConstants, b_tools):
+async def setup_harvester(
+    port, farmer_port, consensus_constants: ConsensusConstants, b_tools, start_service: bool = True
+):
     kwargs = service_kwargs_for_harvester(b_tools.root_path, b_tools.config["harvester"], consensus_constants)
     kwargs.update(
         server_listen_ports=[port],
@@ -200,7 +202,8 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
 
     service = Service(**kwargs)
 
-    await service.start()
+    if start_service:
+        await service.start()
 
     yield service
 
@@ -213,6 +216,7 @@ async def setup_farmer(
     consensus_constants: ConsensusConstants,
     b_tools,
     full_node_port: Optional[uint16] = None,
+    start_service: bool = True,
 ):
     config = bt.config["farmer"]
     config_pool = bt.config["pool"]
@@ -238,7 +242,8 @@ async def setup_farmer(
 
     service = Service(**kwargs)
 
-    await service.start()
+    if start_service:
+        await service.start()
 
     yield service
 
@@ -456,10 +461,10 @@ async def setup_simulators_and_wallets(
         await _teardown_nodes(node_iters)
 
 
-async def setup_farmer_harvester(consensus_constants: ConsensusConstants):
+async def setup_farmer_harvester(consensus_constants: ConsensusConstants, start_services: bool = True):
     node_iters = [
-        setup_harvester(21234, 21235, consensus_constants, bt),
-        setup_farmer(21235, consensus_constants, bt),
+        setup_harvester(21234, 21235, consensus_constants, bt, start_services),
+        setup_farmer(21235, consensus_constants, bt, start_service=start_services),
     ]
 
     harvester_service = await node_iters[0].__anext__()
