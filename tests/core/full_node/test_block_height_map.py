@@ -34,7 +34,7 @@ async def new_block(
 ):
     if db.db_version == 2:
         cursor = await db.db.execute(
-            "INSERT INTO block_records VALUES(?, ?, ?, ?)",
+            "INSERT INTO full_blocks VALUES(?, ?, ?, ?)",
             (
                 block_hash,
                 parent,
@@ -66,7 +66,7 @@ async def setup_db(db: DBWrapper):
 
     if db.db_version == 2:
         await db.db.execute(
-            "CREATE TABLE IF NOT EXISTS block_records("
+            "CREATE TABLE IF NOT EXISTS full_blocks("
             "header_hash blob PRIMARY KEY,"
             "prev_hash blob,"
             "height bigint,"
@@ -74,8 +74,8 @@ async def setup_db(db: DBWrapper):
         )
         await db.db.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
 
-        await db.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
-        await db.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
+        await db.db.execute("CREATE INDEX IF NOT EXISTS height on full_blocks(height)")
+        await db.db.execute("CREATE INDEX IF NOT EXISTS hh on full_blocks(header_hash)")
     else:
         await db.db.execute(
             "CREATE TABLE IF NOT EXISTS block_records("
@@ -175,7 +175,10 @@ class TestBlockHeightMap:
             # in the DB since we keep loading until we find a match of both hash
             # and sub epoch summary. In this test we have a sub epoch summary
             # every 20 blocks, so we generate the 30 last blocks only
-            await db_wrapper.db.execute("DROP TABLE block_records")
+            if db_version == 2:
+                await db_wrapper.db.execute("DROP TABLE full_blocks")
+            else:
+                await db_wrapper.db.execute("DROP TABLE block_records")
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10000, ses_every=20, start_height=9970)
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
