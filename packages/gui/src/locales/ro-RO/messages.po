@@ -58,8 +58,8 @@ msgstr "Un 'cultivator' este un serviciu care rulează pe o mașină care dețin
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:432
-#: src/electron/main.tsx:519
+#: src/electron/main.tsx:433
+#: src/electron/main.tsx:520
 msgid "About Chia Blockchain"
 msgstr "Despre blockchain-ul Chia"
 
@@ -196,7 +196,7 @@ msgstr "Sigur vrei să închizi? Parcelarea și cultivarea se vor opri."
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Sigur vrei să folosești k={plotSize}?"
 
-#: src/components/app/AppState.tsx:142
+#: src/components/app/AppState.tsx:148
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -219,7 +219,7 @@ msgstr "Fișierul backup este utilizat pentru restaurarea portofelelor inteligen
 msgid "Balance"
 msgstr "Sold"
 
-#: src/components/block/Block.jsx:307
+#: src/components/block/Block.jsx:306
 msgid "Base Farmer Reward Amount"
 msgstr "Recompensa de bază pentru Fermier"
 
@@ -236,11 +236,11 @@ msgstr ""
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:117
-#: src/components/block/Block.jsx:126
-#: src/components/block/Block.jsx:143
-#: src/components/block/Block.jsx:147
-#: src/components/block/Block.jsx:323
+#: src/components/block/Block.jsx:116
+#: src/components/block/Block.jsx:125
+#: src/components/block/Block.jsx:142
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:322
 msgid "Block"
 msgstr "Bloc"
 
@@ -252,11 +252,11 @@ msgstr ""
 #~ msgid "Block Test"
 #~ msgstr "Bloc Test"
 
-#: src/components/block/Block.jsx:225
+#: src/components/block/Block.jsx:224
 msgid "Block VDF Iterations"
 msgstr "Iterațiile VDF pentru bloc"
 
-#: src/components/block/Block.jsx:327
+#: src/components/block/Block.jsx:326
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Bloc la înălțimea {0} în blockchainul Chia"
 
@@ -264,11 +264,11 @@ msgstr "Bloc la înălțimea {0} în blockchainul Chia"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:130
+#: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
 msgstr "Bloc cu hash {headerHash}"
 
-#: src/components/block/Block.jsx:152
+#: src/components/block/Block.jsx:151
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Blocul cu hashul {headerHash} nu exista."
 
@@ -356,15 +356,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr ""
 
-#: src/electron/main.tsx:411
+#: src/electron/main.tsx:412
 msgid "Chat on KeyBase"
 msgstr "Discută pe KeyBase"
 
-#: src/electron/main.tsx:429
+#: src/electron/main.tsx:430
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:368
+#: src/electron/main.tsx:369
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki Blockchain Chia"
 
@@ -394,7 +394,7 @@ msgstr ""
 msgid "Close"
 msgstr "Închide"
 
-#: src/components/app/AppState.tsx:100
+#: src/components/app/AppState.tsx:106
 msgid "Closing down node and server"
 msgstr "Oprește nodul și serverul"
 
@@ -481,8 +481,8 @@ msgstr ""
 msgid "Connected"
 msgstr "Conectat"
 
-#: src/components/app/AppState.tsx:135
-#: src/components/app/AppState.tsx:139
+#: src/components/app/AppState.tsx:141
+#: src/components/app/AppState.tsx:145
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -507,7 +507,7 @@ msgstr "Tipul conexiunii"
 msgid "Connections"
 msgstr "Conexiuni"
 
-#: src/electron/main.tsx:392
+#: src/electron/main.tsx:393
 msgid "Contribute on GitHub"
 msgstr "Contribuie pe GitHub"
 
@@ -737,15 +737,15 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:314
+#: src/electron/main.tsx:315
 msgid "Developer"
 msgstr "Dezvoltator"
 
-#: src/electron/main.tsx:317
+#: src/electron/main.tsx:318
 msgid "Developer Tools"
 msgstr "Unelte Dezvoltator"
 
-#: src/components/block/Block.jsx:211
+#: src/components/block/Block.jsx:210
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "Dificultate"
@@ -812,7 +812,7 @@ msgstr "Drag and drop fisierul backup"
 msgid "Drag and drop your recovery backup file"
 msgstr ""
 
-#: src/electron/main.tsx:273
+#: src/electron/main.tsx:274
 msgid "Edit"
 msgstr "Editare"
 
@@ -916,7 +916,7 @@ msgstr "Ferma"
 msgid "Farmer Public Key"
 msgstr ""
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:256
 msgid "Farmer Puzzle Hash"
 msgstr "Farmer Puzzle Hash"
 
@@ -998,7 +998,7 @@ msgstr "Comision ({currencyCode})"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:311
+#: src/components/block/Block.jsx:310
 msgid "Fees Amount"
 msgstr "Suma taxe"
 
@@ -1006,8 +1006,8 @@ msgstr "Suma taxe"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:265
-#: src/electron/main.tsx:466
+#: src/electron/main.tsx:266
+#: src/electron/main.tsx:467
 msgid "File"
 msgstr "Filă"
 
@@ -1027,11 +1027,11 @@ msgstr "Locatia folderului final"
 msgid "Finished"
 msgstr "Terminat"
 
-#: src/electron/main.tsx:417
+#: src/electron/main.tsx:418
 msgid "Follow on Twitter"
 msgstr "Urmărește pe Twitter"
 
-#: src/electron/main.tsx:376
+#: src/electron/main.tsx:377
 msgid "Frequently Asked Questions"
 msgstr "Întrebări frecvente"
 
@@ -1048,7 +1048,7 @@ msgstr ""
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:342
+#: src/electron/main.tsx:343
 msgid "Full Screen"
 msgstr "Ecran Complet"
 
@@ -1080,17 +1080,17 @@ msgstr ""
 msgid "Header Hash"
 msgstr "Hash-ul Antetului"
 
-#: src/components/block/Block.jsx:175
+#: src/components/block/Block.jsx:174
 msgid "Header hash"
 msgstr "Hash-ul Antetului"
 
-#: src/components/block/Block.jsx:191
+#: src/components/block/Block.jsx:190
 #: src/components/fullNode/FullNode.jsx:78
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "Înălțime"
 
-#: src/electron/main.tsx:364
+#: src/electron/main.tsx:365
 msgid "Help"
 msgstr "Ajutor"
 
@@ -1267,7 +1267,7 @@ msgstr ""
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:108
+#: src/components/app/AppState.tsx:114
 msgid "Loading keyring status"
 msgstr ""
 
@@ -1415,7 +1415,7 @@ msgstr "Portofel nou"
 
 #: src/components/_wallet_old/WalletAdd.tsx:95
 #: src/components/_wallet_old/WalletImport.tsx:162
-#: src/components/block/Block.jsx:341
+#: src/components/block/Block.jsx:340
 msgid "Next"
 msgstr "Următor"
 
@@ -1762,7 +1762,7 @@ msgstr ""
 msgid "Plot Count"
 msgstr "Număr Parcele"
 
-#: src/components/block/Block.jsx:289
+#: src/components/block/Block.jsx:288
 msgid "Plot Id"
 msgstr "Id Parcelă"
 
@@ -1783,7 +1783,7 @@ msgstr ""
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:249
+#: src/components/block/Block.jsx:248
 msgid "Plot Public Key"
 msgstr "Cheie Publică Parcelă"
 
@@ -1880,12 +1880,12 @@ msgstr ""
 msgid "Pool Payout Instructions"
 msgstr ""
 
-#: src/components/block/Block.jsx:253
+#: src/components/block/Block.jsx:252
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "Cheie Publică Asociație"
 
-#: src/components/block/Block.jsx:273
+#: src/components/block/Block.jsx:272
 msgid "Pool Puzzle Hash"
 msgstr "Hash Enigmă Asociație"
 
@@ -1905,7 +1905,7 @@ msgstr ""
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
-#: src/components/block/Block.jsx:303
+#: src/components/block/Block.jsx:302
 msgid "Pool Reward Amount"
 msgstr "Sumă Răsplată Asociație"
 
@@ -1956,7 +1956,7 @@ msgstr ""
 msgid "Preparing standard wallet"
 msgstr ""
 
-#: src/components/block/Block.jsx:338
+#: src/components/block/Block.jsx:337
 msgid "Previous"
 msgstr "Anterior"
 
@@ -1964,7 +1964,7 @@ msgstr "Anterior"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:204
 msgid "Previous Header Hash"
 msgstr "Hash Antet Anterior"
 
@@ -1984,7 +1984,7 @@ msgstr "Cheia privată {0}"
 msgid "Private key:"
 msgstr "Cheia privată:"
 
-#: src/components/block/Block.jsx:241
+#: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
 msgstr "Mărimea 'Proof of Space'"
 
@@ -2090,7 +2090,7 @@ msgstr "Re-scanează parcele"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:384
+#: src/electron/main.tsx:385
 msgid "Release Notes"
 msgstr "Note de lansare"
 
@@ -2112,7 +2112,7 @@ msgstr ""
 msgid "Rename"
 msgstr "Redenumește"
 
-#: src/electron/main.tsx:403
+#: src/electron/main.tsx:404
 msgid "Report an Issue..."
 msgstr "Semnalează o problemă..."
 
@@ -2317,7 +2317,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:480
+#: src/electron/main.tsx:481
 msgid "Speech"
 msgstr "Vorbire"
 
@@ -2349,7 +2349,7 @@ msgstr "Lungimea intervalului pentru cheltuieli (număr de blocuri)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limită de cheltuieli (Chia per interval): {0}"
 
-#: src/components/app/AppState.tsx:155
+#: src/components/app/AppState.tsx:161
 msgid "Starting services"
 msgstr ""
 
@@ -2518,19 +2518,19 @@ msgstr ""
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:292
+#: src/components/block/Block.jsx:291
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "'Sămânța' folosită pentru a creea o parcelă. Aceasta depinde de pk-ul asociației si pk-ul parcelei."
 
-#: src/components/block/Block.jsx:218
+#: src/components/block/Block.jsx:217
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "Numărul total de VDF (funcție de întârziere verificabilă) sau dovezi ale iterațiilor de timp pe întregul lanț până la acest bloc secundar."
 
-#: src/components/block/Block.jsx:234
+#: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "Numărul total de VDF (funcție de întârziere verificabilă) sau dovezi ale iterațiilor de timp pe acest bloc."
 
-#: src/components/block/Block.jsx:314
+#: src/components/block/Block.jsx:313
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Taxele totale pentru tranzacții din acest bloc. Câștigate de fermier."
 
@@ -2573,7 +2573,7 @@ msgstr "Aceasta este suma tranzacțiilor în așteptare primite și expediate (n
 msgid "This is the time of the latest peak sub block."
 msgstr "Acesta este momentul celui mai recent subbloc peak."
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:183
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Acesta este momentul în care blocul a fost creat de fermier, care este înainte de a fi finalizat cu o 'proof of time'"
 
@@ -2639,7 +2639,7 @@ msgstr "Creata in timp"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:179
+#: src/components/block/Block.jsx:178
 msgid "Timestamp"
 msgstr "Timestamp-ul"
 
@@ -2673,7 +2673,7 @@ msgstr "Dimensiunea totală a parcelelor:"
 msgid "Total Size of Plots"
 msgstr "Dimensiunea totală a parcelelor"
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:214
 msgid "Total VDF Iterations"
 msgstr "Totalul iteratiilor VDF"
 
@@ -2713,7 +2713,7 @@ msgstr "Tranzactionare"
 msgid "Trading History"
 msgstr "Istoria tranzactiilor"
 
-#: src/components/block/Block.jsx:299
+#: src/components/block/Block.jsx:298
 msgid "Transactions Filter Hash"
 msgstr "Filtru Hash Tranzacții"
 
@@ -2779,7 +2779,7 @@ msgstr "Iteratii sub slot VDF"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:305
+#: src/electron/main.tsx:306
 msgid "View"
 msgstr "Afișare"
 
@@ -2907,11 +2907,11 @@ msgstr ""
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr ""
 
-#: src/components/block/Block.jsx:195
+#: src/components/block/Block.jsx:194
 msgid "Weight"
 msgstr "Greutate"
 
-#: src/components/block/Block.jsx:198
+#: src/components/block/Block.jsx:197
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "Greutatea este dificultatea totala adaugata a tuturor subblocurilor până la acesta inclusiv"
 
@@ -2927,7 +2927,7 @@ msgstr "Bine ati venit! Urmatoarele cuvinte sunt folosite pentru backupul portof
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Cand primiti pachetul de informatii despre configurare de la administratorul dvs., introduceti-l mai jos pentru a finaliza configurarea portofelului dvs. limitat:"
 
-#: src/electron/main.tsx:350
+#: src/electron/main.tsx:351
 msgid "Window"
 msgstr "Fereastră"
 

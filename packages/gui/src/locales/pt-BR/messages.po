@@ -58,8 +58,8 @@ msgstr "Harvester é um serviço executado em uma máquina onde os plots estão 
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:432
-#: src/electron/main.tsx:519
+#: src/electron/main.tsx:433
+#: src/electron/main.tsx:520
 msgid "About Chia Blockchain"
 msgstr "Sobre Chia Blockchain"
 
@@ -196,7 +196,7 @@ msgstr "Você tem certeza que quer sair? O loteamento e o cultivo da GUI serão 
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Tem certeza de que deseja usar k = {plotSize}?"
 
-#: src/components/app/AppState.tsx:142
+#: src/components/app/AppState.tsx:148
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -219,7 +219,7 @@ msgstr "O arquivo de backup é usado para restaurar carteiras inteligentes."
 msgid "Balance"
 msgstr "Saldo"
 
-#: src/components/block/Block.jsx:307
+#: src/components/block/Block.jsx:306
 msgid "Base Farmer Reward Amount"
 msgstr "Valor base da recompensa do fazendeiro"
 
@@ -236,11 +236,11 @@ msgstr "Melhor estimativa nas últimas 24 horas"
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:117
-#: src/components/block/Block.jsx:126
-#: src/components/block/Block.jsx:143
-#: src/components/block/Block.jsx:147
-#: src/components/block/Block.jsx:323
+#: src/components/block/Block.jsx:116
+#: src/components/block/Block.jsx:125
+#: src/components/block/Block.jsx:142
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:322
 msgid "Block"
 msgstr "Bloco"
 
@@ -252,11 +252,11 @@ msgstr ""
 #~ msgid "Block Test"
 #~ msgstr "Bloco Teste"
 
-#: src/components/block/Block.jsx:225
+#: src/components/block/Block.jsx:224
 msgid "Block VDF Iterations"
 msgstr "Bloco VDF Iterações"
 
-#: src/components/block/Block.jsx:327
+#: src/components/block/Block.jsx:326
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Bloco na altura {0} na Chia Blockchain"
 
@@ -264,11 +264,11 @@ msgstr "Bloco na altura {0} na Chia Blockchain"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:130
+#: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
 msgstr "Bloco com hash {headerHash}"
 
-#: src/components/block/Block.jsx:152
+#: src/components/block/Block.jsx:151
 msgid "Block with hash {headerHash} does not exist."
 msgstr "O bloco com hash {headerHash} não existe."
 
@@ -356,15 +356,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "Trocar Bolão"
 
-#: src/electron/main.tsx:411
+#: src/electron/main.tsx:412
 msgid "Chat on KeyBase"
 msgstr "Chat no KeyBase"
 
-#: src/electron/main.tsx:429
+#: src/electron/main.tsx:430
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:368
+#: src/electron/main.tsx:369
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki da Chia Blockchain"
 
@@ -394,7 +394,7 @@ msgstr "Resgatar recompensas"
 msgid "Close"
 msgstr "Fechar"
 
-#: src/components/app/AppState.tsx:100
+#: src/components/app/AppState.tsx:106
 msgid "Closing down node and server"
 msgstr "Fechar nó e servidor"
 
@@ -481,8 +481,8 @@ msgstr "Conectar ao bolão"
 msgid "Connected"
 msgstr "Conectado"
 
-#: src/components/app/AppState.tsx:135
-#: src/components/app/AppState.tsx:139
+#: src/components/app/AppState.tsx:141
+#: src/components/app/AppState.tsx:145
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -507,7 +507,7 @@ msgstr "Tipo de conexão"
 msgid "Connections"
 msgstr "Conexões"
 
-#: src/electron/main.tsx:392
+#: src/electron/main.tsx:393
 msgid "Contribute on GitHub"
 msgstr "Contribua no GitHub"
 
@@ -737,15 +737,15 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:314
+#: src/electron/main.tsx:315
 msgid "Developer"
 msgstr "Desenvolvedor"
 
-#: src/electron/main.tsx:317
+#: src/electron/main.tsx:318
 msgid "Developer Tools"
 msgstr "Ferramentas de desenvolvimento"
 
-#: src/components/block/Block.jsx:211
+#: src/components/block/Block.jsx:210
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "Dificuldade"
@@ -812,7 +812,7 @@ msgstr "Arraste e solte seu arquivo de backup"
 msgid "Drag and drop your recovery backup file"
 msgstr "Arraste e solte seu arquivo de backup"
 
-#: src/electron/main.tsx:273
+#: src/electron/main.tsx:274
 msgid "Edit"
 msgstr "Editar"
 
@@ -916,7 +916,7 @@ msgstr "Fazenda"
 msgid "Farmer Public Key"
 msgstr "Chave Pública do Fazendeiro"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:256
 msgid "Farmer Puzzle Hash"
 msgstr "Puzzle Hash do fazendeiro"
 
@@ -998,7 +998,7 @@ msgstr "Taxa ({currencyCode})"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:311
+#: src/components/block/Block.jsx:310
 msgid "Fees Amount"
 msgstr "Montante das taxas"
 
@@ -1006,8 +1006,8 @@ msgstr "Montante das taxas"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:265
-#: src/electron/main.tsx:466
+#: src/electron/main.tsx:266
+#: src/electron/main.tsx:467
 msgid "File"
 msgstr "Arquivo"
 
@@ -1027,11 +1027,11 @@ msgstr "Local da pasta final"
 msgid "Finished"
 msgstr "Concluído"
 
-#: src/electron/main.tsx:417
+#: src/electron/main.tsx:418
 msgid "Follow on Twitter"
 msgstr "Siga no Twitter"
 
-#: src/electron/main.tsx:376
+#: src/electron/main.tsx:377
 msgid "Frequently Asked Questions"
 msgstr "Perguntas Frequentes"
 
@@ -1048,7 +1048,7 @@ msgstr "Resumo do nó completo"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:342
+#: src/electron/main.tsx:343
 msgid "Full Screen"
 msgstr "Tela Cheia"
 
@@ -1080,17 +1080,17 @@ msgstr "Lotes da colheita local"
 msgid "Header Hash"
 msgstr "Hash do cabeçalho"
 
-#: src/components/block/Block.jsx:175
+#: src/components/block/Block.jsx:174
 msgid "Header hash"
 msgstr "Hash do cabeçalho"
 
-#: src/components/block/Block.jsx:191
+#: src/components/block/Block.jsx:190
 #: src/components/fullNode/FullNode.jsx:78
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "Altura"
 
-#: src/electron/main.tsx:364
+#: src/electron/main.tsx:365
 msgid "Help"
 msgstr "Ajuda"
 
@@ -1267,7 +1267,7 @@ msgstr "Visualização em lista"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:108
+#: src/components/app/AppState.tsx:114
 msgid "Loading keyring status"
 msgstr ""
 
@@ -1415,7 +1415,7 @@ msgstr "Nova Carteira"
 
 #: src/components/_wallet_old/WalletAdd.tsx:95
 #: src/components/_wallet_old/WalletImport.tsx:162
-#: src/components/block/Block.jsx:341
+#: src/components/block/Block.jsx:340
 msgid "Next"
 msgstr "Próximo"
 
@@ -1762,7 +1762,7 @@ msgstr "Por favor, aguarde a sincronização da carteira"
 msgid "Plot Count"
 msgstr "Quantidade de Lotes"
 
-#: src/components/block/Block.jsx:289
+#: src/components/block/Block.jsx:288
 msgid "Plot Id"
 msgstr "Id do lote"
 
@@ -1783,7 +1783,7 @@ msgstr "Lote NFT com p2_singleton_puzzle_hash {plotNFTId} não existe"
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:249
+#: src/components/block/Block.jsx:248
 msgid "Plot Public Key"
 msgstr "Chave Pública do Lote"
 
@@ -1880,12 +1880,12 @@ msgstr "Link para entrar no bolão"
 msgid "Pool Payout Instructions"
 msgstr "Instruções de pagamento do bolão"
 
-#: src/components/block/Block.jsx:253
+#: src/components/block/Block.jsx:252
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "Chave pública do pool"
 
-#: src/components/block/Block.jsx:273
+#: src/components/block/Block.jsx:272
 msgid "Pool Puzzle Hash"
 msgstr "Pool Puzzle Hash"
 
@@ -1905,7 +1905,7 @@ msgstr "Endereço de Recompensa do bolão não está formatado corretamente."
 msgid "Pool Reward Address must not be empty."
 msgstr "Endereço de Recompensas do bolão não deve estar vazio."
 
-#: src/components/block/Block.jsx:303
+#: src/components/block/Block.jsx:302
 msgid "Pool Reward Amount"
 msgstr "Valor da recompensa da pool"
 
@@ -1956,7 +1956,7 @@ msgstr "Preparando o Lote NFT"
 msgid "Preparing standard wallet"
 msgstr "Preparando a carteira padrão"
 
-#: src/components/block/Block.jsx:338
+#: src/components/block/Block.jsx:337
 msgid "Previous"
 msgstr "Anterior"
 
@@ -1964,7 +1964,7 @@ msgstr "Anterior"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:204
 msgid "Previous Header Hash"
 msgstr "Hash do cabeçalho anterior"
 
@@ -1984,7 +1984,7 @@ msgstr "Chave privada {0}"
 msgid "Private key:"
 msgstr "Chave privada:"
 
-#: src/components/block/Block.jsx:241
+#: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
 msgstr "Prova de Tamanho do Espaço"
 
@@ -2090,7 +2090,7 @@ msgstr "Atualizar Lotes"
 msgid "Relative Lock Height"
 msgstr "Altura relativa bloqueada"
 
-#: src/electron/main.tsx:384
+#: src/electron/main.tsx:385
 msgid "Release Notes"
 msgstr "Notas de Lançamento"
 
@@ -2112,7 +2112,7 @@ msgstr "Removendo"
 msgid "Rename"
 msgstr "Renomear"
 
-#: src/electron/main.tsx:403
+#: src/electron/main.tsx:404
 msgid "Report an Issue..."
 msgstr "Reportar um problema..."
 
@@ -2317,7 +2317,7 @@ msgstr "Suavize suas recompensas de coleta XCH ao se juntar a um bolão."
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:480
+#: src/electron/main.tsx:481
 msgid "Speech"
 msgstr "Fala"
 
@@ -2349,7 +2349,7 @@ msgstr "Intervalo de gastos (número de blocos)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limite de gastos (chia por intervalo): {0}"
 
-#: src/components/app/AppState.tsx:155
+#: src/components/app/AppState.tsx:161
 msgid "Starting services"
 msgstr ""
 
@@ -2518,19 +2518,19 @@ msgstr "A operação de troca de bolão foi cancelada. Por favor, tente novament
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:292
+#: src/components/block/Block.jsx:291
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "A semente usada para criar o lote. Isso depende do pool pk e lote pk."
 
-#: src/components/block/Block.jsx:218
+#: src/components/block/Block.jsx:217
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "O número total de VDF (função de atraso verificável) ou prova de iterações de tempo em toda a cadeia até este sub-bloco."
 
-#: src/components/block/Block.jsx:234
+#: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "O número total de VDF (função de atraso verificável) ou prova de iterações de tempo neste bloco."
 
-#: src/components/block/Block.jsx:314
+#: src/components/block/Block.jsx:313
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "As taxas de transações totais neste bloco. Recompensado ao fazendeiro."
 
@@ -2573,7 +2573,7 @@ msgstr "Esta é a soma das transações pendentes de entrada e saída (ainda nã
 msgid "This is the time of the latest peak sub block."
 msgstr "Esta é a hora do último sub bloco."
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:183
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Este é o momento em que o bloco foi criado pelo fazendeiro, que é antes de ser finalizado com uma prova de tempo"
 
@@ -2639,7 +2639,7 @@ msgstr "Hora de Criação"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:179
+#: src/components/block/Block.jsx:178
 msgid "Timestamp"
 msgstr "Timestamp"
 
@@ -2673,7 +2673,7 @@ msgstr "Tamanho total do lote:"
 msgid "Total Size of Plots"
 msgstr "Tamanho Total de Lotes"
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:214
 msgid "Total VDF Iterations"
 msgstr "Total de iterações VDF"
 
@@ -2713,7 +2713,7 @@ msgstr "Negociação"
 msgid "Trading History"
 msgstr "História de Negociação"
 
-#: src/components/block/Block.jsx:299
+#: src/components/block/Block.jsx:298
 msgid "Transactions Filter Hash"
 msgstr "Hash do filtro de transações"
 
@@ -2779,7 +2779,7 @@ msgstr "VDF Sub Slot Iterações"
 msgid "Verify Pool Details"
 msgstr "Verificar Detalhes do bolão"
 
-#: src/electron/main.tsx:305
+#: src/electron/main.tsx:306
 msgid "View"
 msgstr "Exibir"
 
@@ -2907,11 +2907,11 @@ msgstr "Aviso: Esta chave é usada para o endereço das recompensas da sua colet
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr "Aviso: Esta chave é usada para o endereço das recompensas da sua coleta. Ao excluir esta chave, você pode perder acesso a qualquer futuro prêmio da coleta"
 
-#: src/components/block/Block.jsx:195
+#: src/components/block/Block.jsx:194
 msgid "Weight"
 msgstr "Peso"
 
-#: src/components/block/Block.jsx:198
+#: src/components/block/Block.jsx:197
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "O peso é a dificuldade total adicionada de todos os sub-blocos incluindo até este"
 
@@ -2927,7 +2927,7 @@ msgstr "Bem-vinda! As palavras a seguir são usadas para o backup da carteira. S
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Quando você receber o pacote de informações de configuração de seu administrador, digite-o abaixo para concluir a configuração de sua carteira limitada:"
 
-#: src/electron/main.tsx:350
+#: src/electron/main.tsx:351
 msgid "Window"
 msgstr "Janela"
 

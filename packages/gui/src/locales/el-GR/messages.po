@@ -58,8 +58,8 @@ msgstr "Ο harvester είναι μια υπηρεσία που εκτελείτ�
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:432
-#: src/electron/main.tsx:519
+#: src/electron/main.tsx:433
+#: src/electron/main.tsx:520
 msgid "About Chia Blockchain"
 msgstr "Περί Chia Blockchain"
 
@@ -196,7 +196,7 @@ msgstr "Είστε βέβαιοι ότι θέλετε να σταματήσετ�
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Είστε βέβαιοι ότι θέλετε να χρησιμοποιήσετε k={plotSize};"
 
-#: src/components/app/AppState.tsx:142
+#: src/components/app/AppState.tsx:148
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -219,7 +219,7 @@ msgstr "Το αντίγραφο ασφαλείας χρησιμοποιείτα�
 msgid "Balance"
 msgstr "Υπόλοιπο"
 
-#: src/components/block/Block.jsx:307
+#: src/components/block/Block.jsx:306
 msgid "Base Farmer Reward Amount"
 msgstr "Ποσό Ανταμοιβής Base Farmer"
 
@@ -236,11 +236,11 @@ msgstr "Καλύτερη εκτίμηση κατά τις τελευταίες 2
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:117
-#: src/components/block/Block.jsx:126
-#: src/components/block/Block.jsx:143
-#: src/components/block/Block.jsx:147
-#: src/components/block/Block.jsx:323
+#: src/components/block/Block.jsx:116
+#: src/components/block/Block.jsx:125
+#: src/components/block/Block.jsx:142
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:322
 msgid "Block"
 msgstr "Block"
 
@@ -252,11 +252,11 @@ msgstr ""
 #~ msgid "Block Test"
 #~ msgstr "Δοκιμή block"
 
-#: src/components/block/Block.jsx:225
+#: src/components/block/Block.jsx:224
 msgid "Block VDF Iterations"
 msgstr "Επαναλήψεις VDF του Block"
 
-#: src/components/block/Block.jsx:327
+#: src/components/block/Block.jsx:326
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Block στο ύψος {0} στο Chia blockchain"
 
@@ -264,11 +264,11 @@ msgstr "Block στο ύψος {0} στο Chia blockchain"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:130
+#: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
 msgstr "Block με hash {headerHash}"
 
-#: src/components/block/Block.jsx:152
+#: src/components/block/Block.jsx:151
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Block με hash {headerHash} δεν υπάρχει."
 
@@ -356,15 +356,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr ""
 
-#: src/electron/main.tsx:411
+#: src/electron/main.tsx:412
 msgid "Chat on KeyBase"
 msgstr "Συνομιλήστε στο KeyBase"
 
-#: src/electron/main.tsx:429
+#: src/electron/main.tsx:430
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:368
+#: src/electron/main.tsx:369
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -394,7 +394,7 @@ msgstr ""
 msgid "Close"
 msgstr "Κλείσιμο"
 
-#: src/components/app/AppState.tsx:100
+#: src/components/app/AppState.tsx:106
 msgid "Closing down node and server"
 msgstr "Κλείσιμο κόμβου και διακομιστή"
 
@@ -481,8 +481,8 @@ msgstr ""
 msgid "Connected"
 msgstr "Συνδέθηκε"
 
-#: src/components/app/AppState.tsx:135
-#: src/components/app/AppState.tsx:139
+#: src/components/app/AppState.tsx:141
+#: src/components/app/AppState.tsx:145
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -507,7 +507,7 @@ msgstr "Τύπος σύνδεσης"
 msgid "Connections"
 msgstr "Συνδέσεις"
 
-#: src/electron/main.tsx:392
+#: src/electron/main.tsx:393
 msgid "Contribute on GitHub"
 msgstr "Συμβάλετε στο GitHub"
 
@@ -737,15 +737,15 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:314
+#: src/electron/main.tsx:315
 msgid "Developer"
 msgstr "Προγραμματιστής"
 
-#: src/electron/main.tsx:317
+#: src/electron/main.tsx:318
 msgid "Developer Tools"
 msgstr "Εργαλεία Προγραμματιστή"
 
-#: src/components/block/Block.jsx:211
+#: src/components/block/Block.jsx:210
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "Eπίπεδο Δυσκολίας"
@@ -812,7 +812,7 @@ msgstr "Σύρετε και αποθέστε το αρχείο αντιγράφ�
 msgid "Drag and drop your recovery backup file"
 msgstr ""
 
-#: src/electron/main.tsx:273
+#: src/electron/main.tsx:274
 msgid "Edit"
 msgstr "Επεξεργασία"
 
@@ -916,7 +916,7 @@ msgstr "Farm"
 msgid "Farmer Public Key"
 msgstr ""
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:256
 msgid "Farmer Puzzle Hash"
 msgstr "Farmer Puzzle Hash"
 
@@ -998,7 +998,7 @@ msgstr "Τέλη ({currencyCode})"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:311
+#: src/components/block/Block.jsx:310
 msgid "Fees Amount"
 msgstr "Ποσό Τέλων"
 
@@ -1006,8 +1006,8 @@ msgstr "Ποσό Τέλων"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:265
-#: src/electron/main.tsx:466
+#: src/electron/main.tsx:266
+#: src/electron/main.tsx:467
 msgid "File"
 msgstr "Αρχείο"
 
@@ -1027,11 +1027,11 @@ msgstr "Τελική τοποθεσία φακέλου"
 msgid "Finished"
 msgstr "Ολοκληρώθηκε"
 
-#: src/electron/main.tsx:417
+#: src/electron/main.tsx:418
 msgid "Follow on Twitter"
 msgstr "Ακολουθήστε μας στο Τwitter"
 
-#: src/electron/main.tsx:376
+#: src/electron/main.tsx:377
 msgid "Frequently Asked Questions"
 msgstr "Συχνές ερωτήσεις"
 
@@ -1048,7 +1048,7 @@ msgstr ""
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:342
+#: src/electron/main.tsx:343
 msgid "Full Screen"
 msgstr "Πλήρης Οθόνη"
 
@@ -1080,17 +1080,17 @@ msgstr ""
 msgid "Header Hash"
 msgstr "Header Hash"
 
-#: src/components/block/Block.jsx:175
+#: src/components/block/Block.jsx:174
 msgid "Header hash"
 msgstr "Header Hash"
 
-#: src/components/block/Block.jsx:191
+#: src/components/block/Block.jsx:190
 #: src/components/fullNode/FullNode.jsx:78
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "Ύψος"
 
-#: src/electron/main.tsx:364
+#: src/electron/main.tsx:365
 msgid "Help"
 msgstr "Βοήθεια"
 
@@ -1267,7 +1267,7 @@ msgstr ""
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:108
+#: src/components/app/AppState.tsx:114
 msgid "Loading keyring status"
 msgstr ""
 
@@ -1415,7 +1415,7 @@ msgstr "Νέο Πορτοφόλι"
 
 #: src/components/_wallet_old/WalletAdd.tsx:95
 #: src/components/_wallet_old/WalletImport.tsx:162
-#: src/components/block/Block.jsx:341
+#: src/components/block/Block.jsx:340
 msgid "Next"
 msgstr "Επόμενο"
 
@@ -1762,7 +1762,7 @@ msgstr ""
 msgid "Plot Count"
 msgstr "Μετρητής Plot"
 
-#: src/components/block/Block.jsx:289
+#: src/components/block/Block.jsx:288
 msgid "Plot Id"
 msgstr "Plot Id"
 
@@ -1783,7 +1783,7 @@ msgstr ""
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:249
+#: src/components/block/Block.jsx:248
 msgid "Plot Public Key"
 msgstr "Plot Public Key"
 
@@ -1880,12 +1880,12 @@ msgstr ""
 msgid "Pool Payout Instructions"
 msgstr ""
 
-#: src/components/block/Block.jsx:253
+#: src/components/block/Block.jsx:252
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "Public Key Πισίνας"
 
-#: src/components/block/Block.jsx:273
+#: src/components/block/Block.jsx:272
 msgid "Pool Puzzle Hash"
 msgstr "Puzzle Hash Πισίνας"
 
@@ -1905,7 +1905,7 @@ msgstr ""
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
-#: src/components/block/Block.jsx:303
+#: src/components/block/Block.jsx:302
 msgid "Pool Reward Amount"
 msgstr "Ποσό Ανταμοιβής Ομίλου"
 
@@ -1956,7 +1956,7 @@ msgstr ""
 msgid "Preparing standard wallet"
 msgstr ""
 
-#: src/components/block/Block.jsx:338
+#: src/components/block/Block.jsx:337
 msgid "Previous"
 msgstr "Προηγούμενο"
 
@@ -1964,7 +1964,7 @@ msgstr "Προηγούμενο"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:204
 msgid "Previous Header Hash"
 msgstr "Προηγούμενη Header Hash"
 
@@ -1984,7 +1984,7 @@ msgstr "Ιδιωτικό κλειδί {0}"
 msgid "Private key:"
 msgstr "Ιδιωτικό κλειδί:"
 
-#: src/components/block/Block.jsx:241
+#: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
 msgstr "Αποδεικτικό μεγέθους χώρου"
 
@@ -2090,7 +2090,7 @@ msgstr "Ανανέωση Plots"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:384
+#: src/electron/main.tsx:385
 msgid "Release Notes"
 msgstr "Τι νέο υπάρχει"
 
@@ -2112,7 +2112,7 @@ msgstr "Αφαιρείται"
 msgid "Rename"
 msgstr "Μετονομασία"
 
-#: src/electron/main.tsx:403
+#: src/electron/main.tsx:404
 msgid "Report an Issue..."
 msgstr "Αναφορά προβλήματος..."
 
@@ -2317,7 +2317,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:480
+#: src/electron/main.tsx:481
 msgid "Speech"
 msgstr "Speech"
 
@@ -2349,7 +2349,7 @@ msgstr "Spending Interval Length (number of blocks)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Όριο δαπανών (chia ανά διάστημα): {0}"
 
-#: src/components/app/AppState.tsx:155
+#: src/components/app/AppState.tsx:161
 msgid "Starting services"
 msgstr ""
 
@@ -2518,19 +2518,19 @@ msgstr ""
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:292
+#: src/components/block/Block.jsx:291
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "Το seed που χρησιμοποιείται για τη δημιουργία του plot. Αυτό εξαρτάται από το pk της πισίνας και το pk του plot."
 
-#: src/components/block/Block.jsx:218
+#: src/components/block/Block.jsx:217
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "Ο συνολικός αριθμός VDF (επαληθεύσιμη λειτουργία καθυστέρησης) ή απόδειξη χρονικών επαναλήψεων σε ολόκληρη την αλυσίδα μέχρι αυτό το υπό-μπλοκ."
 
-#: src/components/block/Block.jsx:234
+#: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "Ο συνολικός αριθμός VDF (επαληθεύσιμη λειτουργία καθυστέρησης) ή απόδειξη χρονικών επαναλήψεων σε ολόκληρη την αλυσίδα μέχρι αυτό το υπό-μπλοκ."
 
-#: src/components/block/Block.jsx:314
+#: src/components/block/Block.jsx:313
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Το συνολικό ποσό των τελών των συναλλαγών σε αυτό το μπλοκ. Ανταμοιβή στον αγρότη."
 
@@ -2573,7 +2573,7 @@ msgstr "Αυτό είναι το άθροισμα των εισερχόμενω�
 msgid "This is the time of the latest peak sub block."
 msgstr "Αυτή είναι η ώρα του τελευταίου υπο-μπλοκ κορυφής."
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:183
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Αυτή είναι η στιγμή που το μπλοκ δημιουργήθηκε από τον farmer, η οποία είναι πριν οριστικοποιηθεί με αποδεικτικό χρόνου"
 
@@ -2639,7 +2639,7 @@ msgstr "Ώρα δημιουργίας"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:179
+#: src/components/block/Block.jsx:178
 msgid "Timestamp"
 msgstr "Χρονικό Στιγμιότυπο"
 
@@ -2673,7 +2673,7 @@ msgstr "Συνολικό Μέγεθος Plot:"
 msgid "Total Size of Plots"
 msgstr "Συνολικό μέγεθος των plots"
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:214
 msgid "Total VDF Iterations"
 msgstr "Σύνολο Επαναλήψεων VDF"
 
@@ -2713,7 +2713,7 @@ msgstr "Συναλλαγές"
 msgid "Trading History"
 msgstr "Ιστορικό Συναλλαγών"
 
-#: src/components/block/Block.jsx:299
+#: src/components/block/Block.jsx:298
 msgid "Transactions Filter Hash"
 msgstr "Hash Φίλτρο Συναλλαγών"
 
@@ -2779,7 +2779,7 @@ msgstr "VDF Sub Slot Iterations"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:305
+#: src/electron/main.tsx:306
 msgid "View"
 msgstr "Εμφάνιση"
 
@@ -2907,11 +2907,11 @@ msgstr ""
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr ""
 
-#: src/components/block/Block.jsx:195
+#: src/components/block/Block.jsx:194
 msgid "Weight"
 msgstr "Βάρος"
 
-#: src/components/block/Block.jsx:198
+#: src/components/block/Block.jsx:197
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "Το βάρος είναι η συνολική προστιθέμενη δυσκολία όλων των υπο-μπλοκ μέχρι και αυτό"
 
@@ -2927,7 +2927,7 @@ msgstr "Καλώς ορίσατε! Οι ακόλουθες λέξεις χρησ
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Όταν λαμβάνετε το πακέτο πληροφοριών εγκατάστασης από τον διαχειριστή σας, πληκτρολογήστε το παρακάτω για να ολοκληρώσετε την εγκατάσταση του Rate Limited Wallet:"
 
-#: src/electron/main.tsx:350
+#: src/electron/main.tsx:351
 msgid "Window"
 msgstr "Παράθυρο"
 

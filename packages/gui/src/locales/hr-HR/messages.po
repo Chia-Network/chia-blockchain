@@ -58,8 +58,8 @@ msgstr "Sakupljač je servis pokrenut na računalu gdje su spremljena zemljišta
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:432
-#: src/electron/main.tsx:519
+#: src/electron/main.tsx:433
+#: src/electron/main.tsx:520
 msgid "About Chia Blockchain"
 msgstr "O Chia Blockchainu"
 
@@ -196,7 +196,7 @@ msgstr "Sigurno želiš izaći? Obrada zemljišta i uzgoj će prestati sa radom.
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Sigurno želiš koristiti k={plotSize}?"
 
-#: src/components/app/AppState.tsx:142
+#: src/components/app/AppState.tsx:148
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -219,7 +219,7 @@ msgstr "Datoteka sigurnosne kopije se koristi za povrat pametnih novčanika."
 msgid "Balance"
 msgstr "Stanje"
 
-#: src/components/block/Block.jsx:307
+#: src/components/block/Block.jsx:306
 msgid "Base Farmer Reward Amount"
 msgstr "Iznos Osnovne Nagrade Farmera"
 
@@ -236,11 +236,11 @@ msgstr "Najbolja procjena u zadnja 24 sata"
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:117
-#: src/components/block/Block.jsx:126
-#: src/components/block/Block.jsx:143
-#: src/components/block/Block.jsx:147
-#: src/components/block/Block.jsx:323
+#: src/components/block/Block.jsx:116
+#: src/components/block/Block.jsx:125
+#: src/components/block/Block.jsx:142
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:322
 msgid "Block"
 msgstr "Blok"
 
@@ -252,11 +252,11 @@ msgstr ""
 #~ msgid "Block Test"
 #~ msgstr "Test Blok"
 
-#: src/components/block/Block.jsx:225
+#: src/components/block/Block.jsx:224
 msgid "Block VDF Iterations"
 msgstr "VDF Ponavljanje Bloka"
 
-#: src/components/block/Block.jsx:327
+#: src/components/block/Block.jsx:326
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Blok je na {0} visini u Chia blockchainu"
 
@@ -264,11 +264,11 @@ msgstr "Blok je na {0} visini u Chia blockchainu"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:130
+#: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
 msgstr "Blok sa hashom {headerHash}"
 
-#: src/components/block/Block.jsx:152
+#: src/components/block/Block.jsx:151
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Blok sa hashom {headerHash} ne postoji."
 
@@ -356,15 +356,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr ""
 
-#: src/electron/main.tsx:411
+#: src/electron/main.tsx:412
 msgid "Chat on KeyBase"
 msgstr "Razgovaraj na KeyBase"
 
-#: src/electron/main.tsx:429
+#: src/electron/main.tsx:430
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:368
+#: src/electron/main.tsx:369
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -394,7 +394,7 @@ msgstr ""
 msgid "Close"
 msgstr "Zatvori"
 
-#: src/components/app/AppState.tsx:100
+#: src/components/app/AppState.tsx:106
 msgid "Closing down node and server"
 msgstr "Zatvaram čvor i server"
 
@@ -481,8 +481,8 @@ msgstr ""
 msgid "Connected"
 msgstr "Povezano"
 
-#: src/components/app/AppState.tsx:135
-#: src/components/app/AppState.tsx:139
+#: src/components/app/AppState.tsx:141
+#: src/components/app/AppState.tsx:145
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -507,7 +507,7 @@ msgstr "Vrsta veze"
 msgid "Connections"
 msgstr "Veze"
 
-#: src/electron/main.tsx:392
+#: src/electron/main.tsx:393
 msgid "Contribute on GitHub"
 msgstr "Doprinos na GitHub"
 
@@ -737,15 +737,15 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:314
+#: src/electron/main.tsx:315
 msgid "Developer"
 msgstr "Razvojni programer"
 
-#: src/electron/main.tsx:317
+#: src/electron/main.tsx:318
 msgid "Developer Tools"
 msgstr "Alati za razvojne programere"
 
-#: src/components/block/Block.jsx:211
+#: src/components/block/Block.jsx:210
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "Kompleksnost"
@@ -812,7 +812,7 @@ msgstr "Povuci i ispusti datoteku sigurnosne kopije"
 msgid "Drag and drop your recovery backup file"
 msgstr ""
 
-#: src/electron/main.tsx:273
+#: src/electron/main.tsx:274
 msgid "Edit"
 msgstr "Uredi"
 
@@ -916,7 +916,7 @@ msgstr "Farma"
 msgid "Farmer Public Key"
 msgstr "Farmerski kurac"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:256
 msgid "Farmer Puzzle Hash"
 msgstr "Zagonetni hash farmera"
 
@@ -998,7 +998,7 @@ msgstr "Naknada ({currencyCode})"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:311
+#: src/components/block/Block.jsx:310
 msgid "Fees Amount"
 msgstr "Iznos naknada"
 
@@ -1006,8 +1006,8 @@ msgstr "Iznos naknada"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:265
-#: src/electron/main.tsx:466
+#: src/electron/main.tsx:266
+#: src/electron/main.tsx:467
 msgid "File"
 msgstr "Datoteka"
 
@@ -1027,11 +1027,11 @@ msgstr "Lokacija krajnjeg direktorija"
 msgid "Finished"
 msgstr "Završeno"
 
-#: src/electron/main.tsx:417
+#: src/electron/main.tsx:418
 msgid "Follow on Twitter"
 msgstr "Prati na Twitteru"
 
-#: src/electron/main.tsx:376
+#: src/electron/main.tsx:377
 msgid "Frequently Asked Questions"
 msgstr "Često Postavljana Pitanja"
 
@@ -1048,7 +1048,7 @@ msgstr ""
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:342
+#: src/electron/main.tsx:343
 msgid "Full Screen"
 msgstr "Puni zaslon"
 
@@ -1080,17 +1080,17 @@ msgstr ""
 msgid "Header Hash"
 msgstr "Hash zaglavlja"
 
-#: src/components/block/Block.jsx:175
+#: src/components/block/Block.jsx:174
 msgid "Header hash"
 msgstr "Hash zaglavlja"
 
-#: src/components/block/Block.jsx:191
+#: src/components/block/Block.jsx:190
 #: src/components/fullNode/FullNode.jsx:78
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "Visina"
 
-#: src/electron/main.tsx:364
+#: src/electron/main.tsx:365
 msgid "Help"
 msgstr "Pomoć"
 
@@ -1267,7 +1267,7 @@ msgstr ""
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:108
+#: src/components/app/AppState.tsx:114
 msgid "Loading keyring status"
 msgstr ""
 
@@ -1415,7 +1415,7 @@ msgstr "Novi novčanik"
 
 #: src/components/_wallet_old/WalletAdd.tsx:95
 #: src/components/_wallet_old/WalletImport.tsx:162
-#: src/components/block/Block.jsx:341
+#: src/components/block/Block.jsx:340
 msgid "Next"
 msgstr "Dalje"
 
@@ -1762,7 +1762,7 @@ msgstr ""
 msgid "Plot Count"
 msgstr "Broj zemljišta"
 
-#: src/components/block/Block.jsx:289
+#: src/components/block/Block.jsx:288
 msgid "Plot Id"
 msgstr "ID Zemljišta"
 
@@ -1783,7 +1783,7 @@ msgstr ""
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:249
+#: src/components/block/Block.jsx:248
 msgid "Plot Public Key"
 msgstr "Javni ključ Zemljišta"
 
@@ -1880,12 +1880,12 @@ msgstr ""
 msgid "Pool Payout Instructions"
 msgstr ""
 
-#: src/components/block/Block.jsx:253
+#: src/components/block/Block.jsx:252
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "Javni ključ bazena"
 
-#: src/components/block/Block.jsx:273
+#: src/components/block/Block.jsx:272
 msgid "Pool Puzzle Hash"
 msgstr "Zagonetni hash bazena"
 
@@ -1905,7 +1905,7 @@ msgstr ""
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
-#: src/components/block/Block.jsx:303
+#: src/components/block/Block.jsx:302
 msgid "Pool Reward Amount"
 msgstr "Iznos nagrade Bazena"
 
@@ -1956,7 +1956,7 @@ msgstr ""
 msgid "Preparing standard wallet"
 msgstr ""
 
-#: src/components/block/Block.jsx:338
+#: src/components/block/Block.jsx:337
 msgid "Previous"
 msgstr "Prethodno"
 
@@ -1964,7 +1964,7 @@ msgstr "Prethodno"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:204
 msgid "Previous Header Hash"
 msgstr "Prethodni hash zaglavlja"
 
@@ -1984,7 +1984,7 @@ msgstr "Privatni ključ {0}"
 msgid "Private key:"
 msgstr "Privatni ključ:"
 
-#: src/components/block/Block.jsx:241
+#: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
 msgstr "Dokaz o Veličini Prostora"
 
@@ -2090,7 +2090,7 @@ msgstr "Osvježi zemljišta"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:384
+#: src/electron/main.tsx:385
 msgid "Release Notes"
 msgstr "Bilješke o izdanju"
 
@@ -2112,7 +2112,7 @@ msgstr "Uklanjam"
 msgid "Rename"
 msgstr "Preimenuj"
 
-#: src/electron/main.tsx:403
+#: src/electron/main.tsx:404
 msgid "Report an Issue..."
 msgstr "Prijavi problem..."
 
@@ -2317,7 +2317,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:480
+#: src/electron/main.tsx:481
 msgid "Speech"
 msgstr "Govor"
 
@@ -2349,7 +2349,7 @@ msgstr "Duljina intervala potrošnje (broj blokova)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limit potrošnje (chia po intervalu): {0}"
 
-#: src/components/app/AppState.tsx:155
+#: src/components/app/AppState.tsx:161
 msgid "Starting services"
 msgstr ""
 
@@ -2518,19 +2518,19 @@ msgstr ""
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:292
+#: src/components/block/Block.jsx:291
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "Sjeme korišteno za kreiranje zemljišta. Ovo ovisi o pk bazena i pk zemljišta."
 
-#: src/components/block/Block.jsx:218
+#: src/components/block/Block.jsx:217
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "Ukupan broj VDF (provjerljiva funkcija odgode) ili dokaz o vremenskim ponavljanjima cijelog lanca u ovom pod bloku."
 
-#: src/components/block/Block.jsx:234
+#: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "Ukupan broj VDF (provjerljiva funkcija odgode) ili dokaz o vremenskim ponavljanjima ovog bloka."
 
-#: src/components/block/Block.jsx:314
+#: src/components/block/Block.jsx:313
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Ukupno naknada transakcija u ovom bloku. Nagrađeno za farmera."
 
@@ -2573,7 +2573,7 @@ msgstr "Ovo je ukupan zbroj ulaznih i izlaznih transakcija na čekanju (koje jo�
 msgid "This is the time of the latest peak sub block."
 msgstr "Ovo je vrijeme najnovijeg pod bloka."
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:183
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Ovo je vrijeme bloka koji je farmer kreirao, koje je prije nego je završen sa dokazom o vremenu"
 
@@ -2639,7 +2639,7 @@ msgstr "Vrijeme kreiranja"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:179
+#: src/components/block/Block.jsx:178
 msgid "Timestamp"
 msgstr "Vremenska oznaka"
 
@@ -2673,7 +2673,7 @@ msgstr "Ukupna veličina zemljišta:"
 msgid "Total Size of Plots"
 msgstr "Ukupna veličina zemljišta"
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:214
 msgid "Total VDF Iterations"
 msgstr "Ukupno VDF ponavljanja"
 
@@ -2713,7 +2713,7 @@ msgstr "Trgovanje"
 msgid "Trading History"
 msgstr "Povijest trgovanja"
 
-#: src/components/block/Block.jsx:299
+#: src/components/block/Block.jsx:298
 msgid "Transactions Filter Hash"
 msgstr "Hash filtera transakcija"
 
@@ -2779,7 +2779,7 @@ msgstr "VDF Pod Slot Ponavljanja"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:305
+#: src/electron/main.tsx:306
 msgid "View"
 msgstr "Pregled"
 
@@ -2907,11 +2907,11 @@ msgstr ""
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr ""
 
-#: src/components/block/Block.jsx:195
+#: src/components/block/Block.jsx:194
 msgid "Weight"
 msgstr "Težina"
 
-#: src/components/block/Block.jsx:198
+#: src/components/block/Block.jsx:197
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "Težina je ukupno dodanih kompleksnosti svih pod blokova uključujući i ovaj"
 
@@ -2927,7 +2927,7 @@ msgstr "Dobrodošao! Navedene riječi se koriste kao sigurnosna kopija tvog Nov�
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Kada zaprimiš informacijski paket od administratora, unesi ga ispod za završetak postavljanja svoj ograničenog novčanika:"
 
-#: src/electron/main.tsx:350
+#: src/electron/main.tsx:351
 msgid "Window"
 msgstr "Prozor"
 

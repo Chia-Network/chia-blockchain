@@ -58,8 +58,8 @@ msgstr "수확기는 플롯이 실제 저장되어 구동되는 기기입니다.
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:432
-#: src/electron/main.tsx:519
+#: src/electron/main.tsx:433
+#: src/electron/main.tsx:520
 msgid "About Chia Blockchain"
 msgstr "치아 블록체인에 대하여"
 
@@ -196,7 +196,7 @@ msgstr "정말 종료해도 괜찮습니까? GUI 플로팅과 코인 파밍이 �
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "다음 값으로 정하시겠습니까? k={plotSize}"
 
-#: src/components/app/AppState.tsx:142
+#: src/components/app/AppState.tsx:148
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -219,7 +219,7 @@ msgstr "백업된 파일은 스마트 월렛을 복구하는데 사용됩니다.
 msgid "Balance"
 msgstr "잔고"
 
-#: src/components/block/Block.jsx:307
+#: src/components/block/Block.jsx:306
 msgid "Base Farmer Reward Amount"
 msgstr "파밍에 대한 보상 지급의 최소 금액"
 
@@ -236,11 +236,11 @@ msgstr "지난 24시간 동안의 최적 예측값입니다."
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:117
-#: src/components/block/Block.jsx:126
-#: src/components/block/Block.jsx:143
-#: src/components/block/Block.jsx:147
-#: src/components/block/Block.jsx:323
+#: src/components/block/Block.jsx:116
+#: src/components/block/Block.jsx:125
+#: src/components/block/Block.jsx:142
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:322
 msgid "Block"
 msgstr "블록"
 
@@ -252,11 +252,11 @@ msgstr ""
 #~ msgid "Block Test"
 #~ msgstr "블록 테스트"
 
-#: src/components/block/Block.jsx:225
+#: src/components/block/Block.jsx:224
 msgid "Block VDF Iterations"
 msgstr "블록 VDF 반복"
 
-#: src/components/block/Block.jsx:327
+#: src/components/block/Block.jsx:326
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Chia 블록체인 높이 {0} 에 있는 블록"
 
@@ -264,11 +264,11 @@ msgstr "Chia 블록체인 높이 {0} 에 있는 블록"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:130
+#: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
 msgstr "해쉬 {headerHash} 의 블록"
 
-#: src/components/block/Block.jsx:152
+#: src/components/block/Block.jsx:151
 msgid "Block with hash {headerHash} does not exist."
 msgstr "{headerHash} 에 해당하는 블록이 존재하지 않습니다."
 
@@ -356,15 +356,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr ""
 
-#: src/electron/main.tsx:411
+#: src/electron/main.tsx:412
 msgid "Chat on KeyBase"
 msgstr "키베이스에서 채팅하기"
 
-#: src/electron/main.tsx:429
+#: src/electron/main.tsx:430
 msgid "Chia"
 msgstr "치아"
 
-#: src/electron/main.tsx:368
+#: src/electron/main.tsx:369
 msgid "Chia Blockchain Wiki"
 msgstr "치아 블록체인 위키"
 
@@ -394,7 +394,7 @@ msgstr ""
 msgid "Close"
 msgstr "닫기"
 
-#: src/components/app/AppState.tsx:100
+#: src/components/app/AppState.tsx:106
 msgid "Closing down node and server"
 msgstr "노드와 서버의 연결을 닫는 중..."
 
@@ -481,8 +481,8 @@ msgstr ""
 msgid "Connected"
 msgstr "연결됨"
 
-#: src/components/app/AppState.tsx:135
-#: src/components/app/AppState.tsx:139
+#: src/components/app/AppState.tsx:141
+#: src/components/app/AppState.tsx:145
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -507,7 +507,7 @@ msgstr "연결 유형"
 msgid "Connections"
 msgstr "연결"
 
-#: src/electron/main.tsx:392
+#: src/electron/main.tsx:393
 msgid "Contribute on GitHub"
 msgstr "GitHub에서 기여"
 
@@ -737,15 +737,15 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:314
+#: src/electron/main.tsx:315
 msgid "Developer"
 msgstr "개발자"
 
-#: src/electron/main.tsx:317
+#: src/electron/main.tsx:318
 msgid "Developer Tools"
 msgstr "개발자 도구"
 
-#: src/components/block/Block.jsx:211
+#: src/components/block/Block.jsx:210
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "난이도"
@@ -812,7 +812,7 @@ msgstr "백업 파일을 끌어 놓으세요"
 msgid "Drag and drop your recovery backup file"
 msgstr ""
 
-#: src/electron/main.tsx:273
+#: src/electron/main.tsx:274
 msgid "Edit"
 msgstr "편집"
 
@@ -916,7 +916,7 @@ msgstr "농장"
 msgid "Farmer Public Key"
 msgstr "파머 공개 키"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:256
 msgid "Farmer Puzzle Hash"
 msgstr "수확기 퍼즐 해시"
 
@@ -998,7 +998,7 @@ msgstr "수수료 ({currencyCode})"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:311
+#: src/components/block/Block.jsx:310
 msgid "Fees Amount"
 msgstr "수수료 금액"
 
@@ -1006,8 +1006,8 @@ msgstr "수수료 금액"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:265
-#: src/electron/main.tsx:466
+#: src/electron/main.tsx:266
+#: src/electron/main.tsx:467
 msgid "File"
 msgstr "파일"
 
@@ -1027,11 +1027,11 @@ msgstr "최종 폴더 위치"
 msgid "Finished"
 msgstr "완료됨"
 
-#: src/electron/main.tsx:417
+#: src/electron/main.tsx:418
 msgid "Follow on Twitter"
 msgstr "트위터 팔로우하기"
 
-#: src/electron/main.tsx:376
+#: src/electron/main.tsx:377
 msgid "Frequently Asked Questions"
 msgstr "자주 묻는 질문"
 
@@ -1048,7 +1048,7 @@ msgstr ""
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:342
+#: src/electron/main.tsx:343
 msgid "Full Screen"
 msgstr "전체 화면"
 
@@ -1080,17 +1080,17 @@ msgstr ""
 msgid "Header Hash"
 msgstr "헤더 해시"
 
-#: src/components/block/Block.jsx:175
+#: src/components/block/Block.jsx:174
 msgid "Header hash"
 msgstr "해더 해시"
 
-#: src/components/block/Block.jsx:191
+#: src/components/block/Block.jsx:190
 #: src/components/fullNode/FullNode.jsx:78
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "높이"
 
-#: src/electron/main.tsx:364
+#: src/electron/main.tsx:365
 msgid "Help"
 msgstr "도움말"
 
@@ -1267,7 +1267,7 @@ msgstr ""
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:108
+#: src/components/app/AppState.tsx:114
 msgid "Loading keyring status"
 msgstr ""
 
@@ -1415,7 +1415,7 @@ msgstr "새 지갑"
 
 #: src/components/_wallet_old/WalletAdd.tsx:95
 #: src/components/_wallet_old/WalletImport.tsx:162
-#: src/components/block/Block.jsx:341
+#: src/components/block/Block.jsx:340
 msgid "Next"
 msgstr "다음"
 
@@ -1762,7 +1762,7 @@ msgstr ""
 msgid "Plot Count"
 msgstr "플롯 수"
 
-#: src/components/block/Block.jsx:289
+#: src/components/block/Block.jsx:288
 msgid "Plot Id"
 msgstr "플롯 ID"
 
@@ -1783,7 +1783,7 @@ msgstr ""
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:249
+#: src/components/block/Block.jsx:248
 msgid "Plot Public Key"
 msgstr "구성 공개 키"
 
@@ -1880,12 +1880,12 @@ msgstr ""
 msgid "Pool Payout Instructions"
 msgstr ""
 
-#: src/components/block/Block.jsx:253
+#: src/components/block/Block.jsx:252
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "풀 퍼블릭 키"
 
-#: src/components/block/Block.jsx:273
+#: src/components/block/Block.jsx:272
 msgid "Pool Puzzle Hash"
 msgstr "풀 퍼즐 해시"
 
@@ -1905,7 +1905,7 @@ msgstr ""
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
-#: src/components/block/Block.jsx:303
+#: src/components/block/Block.jsx:302
 msgid "Pool Reward Amount"
 msgstr "풀 보상량"
 
@@ -1956,7 +1956,7 @@ msgstr ""
 msgid "Preparing standard wallet"
 msgstr ""
 
-#: src/components/block/Block.jsx:338
+#: src/components/block/Block.jsx:337
 msgid "Previous"
 msgstr "이전"
 
@@ -1964,7 +1964,7 @@ msgstr "이전"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:204
 msgid "Previous Header Hash"
 msgstr "이전 해더 해시"
 
@@ -1984,7 +1984,7 @@ msgstr "개인 키 {0}"
 msgid "Private key:"
 msgstr "개인 키:"
 
-#: src/components/block/Block.jsx:241
+#: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
 msgstr "공간 크기 증명"
 
@@ -2090,7 +2090,7 @@ msgstr "Plots 새로고침"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:384
+#: src/electron/main.tsx:385
 msgid "Release Notes"
 msgstr "릴리스 노트"
 
@@ -2112,7 +2112,7 @@ msgstr "제거"
 msgid "Rename"
 msgstr "이름 바꾸기"
 
-#: src/electron/main.tsx:403
+#: src/electron/main.tsx:404
 msgid "Report an Issue..."
 msgstr "문제 보고하기..."
 
@@ -2317,7 +2317,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:480
+#: src/electron/main.tsx:481
 msgid "Speech"
 msgstr "말하다"
 
@@ -2349,7 +2349,7 @@ msgstr "지출 간격 길이 (블록 수)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "지출 한도 (간격 당 chia): {0}"
 
-#: src/components/app/AppState.tsx:155
+#: src/components/app/AppState.tsx:161
 msgid "Starting services"
 msgstr ""
 
@@ -2518,19 +2518,19 @@ msgstr ""
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:292
+#: src/components/block/Block.jsx:291
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "플롯을 만드는 데 사용 된 시드입니다. 이는 풀 pk 및 플롯 pk에 따라 다릅니다."
 
-#: src/components/block/Block.jsx:218
+#: src/components/block/Block.jsx:217
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "VDF (확인 가능한 지연 함수) 의 전체 수 또는 이 하위 블록까지 전체 체인에 대한 시간 반복의 전체 수 입니다."
 
-#: src/components/block/Block.jsx:234
+#: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "VDF (확인 가능한 지연 함수) 의 총 수 또는이 블록의 시간 반복 증명입니다."
 
-#: src/components/block/Block.jsx:314
+#: src/components/block/Block.jsx:313
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "이 블록의 총 거래 수수료. 농부에게 보상."
 
@@ -2573,7 +2573,7 @@ msgstr "이것은 들어오고 나가는 보류 트랜잭션의 합계입니다 
 msgid "This is the time of the latest peak sub block."
 msgstr "이것은 최신 피크 서브 블록의 시간입니다."
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:183
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "이것은 농부가 블록을 만든 시간이며 시간 증명으로 완성되기 전입니다."
 
@@ -2639,7 +2639,7 @@ msgstr "생성 시간"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:179
+#: src/components/block/Block.jsx:178
 msgid "Timestamp"
 msgstr "타임스탬프"
 
@@ -2673,7 +2673,7 @@ msgstr "전체 플롯의 용량:"
 msgid "Total Size of Plots"
 msgstr "전체 플롯의 용량"
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:214
 msgid "Total VDF Iterations"
 msgstr "총 VDF 반복"
 
@@ -2713,7 +2713,7 @@ msgstr "거래"
 msgid "Trading History"
 msgstr "거래내역"
 
-#: src/components/block/Block.jsx:299
+#: src/components/block/Block.jsx:298
 msgid "Transactions Filter Hash"
 msgstr "거래 필터 해시"
 
@@ -2779,7 +2779,7 @@ msgstr "VDF 서브 슬롯 반복"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:305
+#: src/electron/main.tsx:306
 msgid "View"
 msgstr "보기"
 
@@ -2907,11 +2907,11 @@ msgstr ""
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr ""
 
-#: src/components/block/Block.jsx:195
+#: src/components/block/Block.jsx:194
 msgid "Weight"
 msgstr "중량"
 
-#: src/components/block/Block.jsx:198
+#: src/components/block/Block.jsx:197
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "무게는 이것을 포함하여 모든 서브 블록의 총 추가 난이도입니다."
 
@@ -2927,7 +2927,7 @@ msgstr "환영합니다. 다음의 단어들은 당신의 지갑 백업에 사�
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "관리자로부터 설정 정보 패킷을 받으면 아래에 입력하여 비율 제한 지갑 설정을 완료하세요."
 
-#: src/electron/main.tsx:350
+#: src/electron/main.tsx:351
 msgid "Window"
 msgstr "창"
 

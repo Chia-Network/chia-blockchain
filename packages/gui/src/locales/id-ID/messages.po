@@ -58,8 +58,8 @@ msgstr "Harvester adalah layanan yang berjalan pada komputer dimana plot disimpa
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:432
-#: src/electron/main.tsx:519
+#: src/electron/main.tsx:433
+#: src/electron/main.tsx:520
 msgid "About Chia Blockchain"
 msgstr "Tentang Chia Blockchain"
 
@@ -196,7 +196,7 @@ msgstr "Anda yakin ingin keluar dari program? Plotting dan Farming di GUI akan b
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Anda yakin ingin menggunakan k={plotSize}?"
 
-#: src/components/app/AppState.tsx:142
+#: src/components/app/AppState.tsx:148
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -219,7 +219,7 @@ msgstr "Berkas cadangan digunakan untuk mengembalikan smart wallet."
 msgid "Balance"
 msgstr "Saldo"
 
-#: src/components/block/Block.jsx:307
+#: src/components/block/Block.jsx:306
 msgid "Base Farmer Reward Amount"
 msgstr "Jumlah Upah Pokok Farmer"
 
@@ -236,11 +236,11 @@ msgstr "Estimasi terbaik berdasarkan 24 jam lalu"
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:117
-#: src/components/block/Block.jsx:126
-#: src/components/block/Block.jsx:143
-#: src/components/block/Block.jsx:147
-#: src/components/block/Block.jsx:323
+#: src/components/block/Block.jsx:116
+#: src/components/block/Block.jsx:125
+#: src/components/block/Block.jsx:142
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:322
 msgid "Block"
 msgstr "Blok"
 
@@ -252,11 +252,11 @@ msgstr ""
 #~ msgid "Block Test"
 #~ msgstr "Test Blok"
 
-#: src/components/block/Block.jsx:225
+#: src/components/block/Block.jsx:224
 msgid "Block VDF Iterations"
 msgstr "Perulangan blok VDF"
 
-#: src/components/block/Block.jsx:327
+#: src/components/block/Block.jsx:326
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Blok pada puncak {0} dalam rantai blok Chia"
 
@@ -264,11 +264,11 @@ msgstr "Blok pada puncak {0} dalam rantai blok Chia"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:130
+#: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
 msgstr "Blok dengan hash {headerHash}"
 
-#: src/components/block/Block.jsx:152
+#: src/components/block/Block.jsx:151
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Blok dengan hash {headerHash} tidak ada."
 
@@ -356,15 +356,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "Ubah Pool"
 
-#: src/electron/main.tsx:411
+#: src/electron/main.tsx:412
 msgid "Chat on KeyBase"
 msgstr "Hubung Chat di KeyBase"
 
-#: src/electron/main.tsx:429
+#: src/electron/main.tsx:430
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:368
+#: src/electron/main.tsx:369
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki Chia Blockchain"
 
@@ -394,7 +394,7 @@ msgstr "Ambil Hadiah"
 msgid "Close"
 msgstr "Tutup"
 
-#: src/components/app/AppState.tsx:100
+#: src/components/app/AppState.tsx:106
 msgid "Closing down node and server"
 msgstr "Menutup node dan server"
 
@@ -481,8 +481,8 @@ msgstr "Konek ke Pool"
 msgid "Connected"
 msgstr "Tersambung"
 
-#: src/components/app/AppState.tsx:135
-#: src/components/app/AppState.tsx:139
+#: src/components/app/AppState.tsx:141
+#: src/components/app/AppState.tsx:145
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -507,7 +507,7 @@ msgstr "Jenis koneksi"
 msgid "Connections"
 msgstr "Koneksi"
 
-#: src/electron/main.tsx:392
+#: src/electron/main.tsx:393
 msgid "Contribute on GitHub"
 msgstr "Berkontribusi di GitHub"
 
@@ -737,15 +737,15 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:314
+#: src/electron/main.tsx:315
 msgid "Developer"
 msgstr "Developer"
 
-#: src/electron/main.tsx:317
+#: src/electron/main.tsx:318
 msgid "Developer Tools"
 msgstr "Developer Tools"
 
-#: src/components/block/Block.jsx:211
+#: src/components/block/Block.jsx:210
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "Tingkat kesulitan"
@@ -812,7 +812,7 @@ msgstr "Seret dan lepas berkas cadangan anda"
 msgid "Drag and drop your recovery backup file"
 msgstr "Seret dan lepas berkas cadangan anda"
 
-#: src/electron/main.tsx:273
+#: src/electron/main.tsx:274
 msgid "Edit"
 msgstr "Ubah"
 
@@ -916,7 +916,7 @@ msgstr "Farm"
 msgid "Farmer Public Key"
 msgstr "Kunci Publik Farmer"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:256
 msgid "Farmer Puzzle Hash"
 msgstr "Teka-teki Hash Farmer"
 
@@ -998,7 +998,7 @@ msgstr "Biaya ({currencyCode})"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:311
+#: src/components/block/Block.jsx:310
 msgid "Fees Amount"
 msgstr "Jumlah Biaya"
 
@@ -1006,8 +1006,8 @@ msgstr "Jumlah Biaya"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:265
-#: src/electron/main.tsx:466
+#: src/electron/main.tsx:266
+#: src/electron/main.tsx:467
 msgid "File"
 msgstr "File"
 
@@ -1027,11 +1027,11 @@ msgstr "Lokasi folder akhir"
 msgid "Finished"
 msgstr "Selesai"
 
-#: src/electron/main.tsx:417
+#: src/electron/main.tsx:418
 msgid "Follow on Twitter"
 msgstr "Follow di Twitter"
 
-#: src/electron/main.tsx:376
+#: src/electron/main.tsx:377
 msgid "Frequently Asked Questions"
 msgstr "Frequently Asked Questions"
 
@@ -1048,7 +1048,7 @@ msgstr "Gambaran node Total"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:342
+#: src/electron/main.tsx:343
 msgid "Full Screen"
 msgstr "Layar Penuh"
 
@@ -1080,17 +1080,17 @@ msgstr "Plot Harvester Lokal"
 msgid "Header Hash"
 msgstr "Kepala hash"
 
-#: src/components/block/Block.jsx:175
+#: src/components/block/Block.jsx:174
 msgid "Header hash"
 msgstr "Kepala hash"
 
-#: src/components/block/Block.jsx:191
+#: src/components/block/Block.jsx:190
 #: src/components/fullNode/FullNode.jsx:78
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "Tinggi"
 
-#: src/electron/main.tsx:364
+#: src/electron/main.tsx:365
 msgid "Help"
 msgstr "Bantuan"
 
@@ -1267,7 +1267,7 @@ msgstr "Tampilan daftar"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:108
+#: src/components/app/AppState.tsx:114
 msgid "Loading keyring status"
 msgstr ""
 
@@ -1415,7 +1415,7 @@ msgstr "Dompet elektronik Baru"
 
 #: src/components/_wallet_old/WalletAdd.tsx:95
 #: src/components/_wallet_old/WalletImport.tsx:162
-#: src/components/block/Block.jsx:341
+#: src/components/block/Block.jsx:340
 msgid "Next"
 msgstr "Selanjutnya"
 
@@ -1762,7 +1762,7 @@ msgstr "Harap tunggu sampai sinkronisasi dompet selesai"
 msgid "Plot Count"
 msgstr "Jumlah Plot"
 
-#: src/components/block/Block.jsx:289
+#: src/components/block/Block.jsx:288
 msgid "Plot Id"
 msgstr "ID Plot"
 
@@ -1783,7 +1783,7 @@ msgstr ""
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:249
+#: src/components/block/Block.jsx:248
 msgid "Plot Public Key"
 msgstr "Public Key Plot"
 
@@ -1882,12 +1882,12 @@ msgstr ""
 msgid "Pool Payout Instructions"
 msgstr ""
 
-#: src/components/block/Block.jsx:253
+#: src/components/block/Block.jsx:252
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "Pool Kunci Publik"
 
-#: src/components/block/Block.jsx:273
+#: src/components/block/Block.jsx:272
 msgid "Pool Puzzle Hash"
 msgstr "Teka-teki Hash Pool"
 
@@ -1907,7 +1907,7 @@ msgstr ""
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
-#: src/components/block/Block.jsx:303
+#: src/components/block/Block.jsx:302
 msgid "Pool Reward Amount"
 msgstr "Jumlah Upah Pool"
 
@@ -1958,7 +1958,7 @@ msgstr ""
 msgid "Preparing standard wallet"
 msgstr ""
 
-#: src/components/block/Block.jsx:338
+#: src/components/block/Block.jsx:337
 msgid "Previous"
 msgstr "Sebelumnya"
 
@@ -1966,7 +1966,7 @@ msgstr "Sebelumnya"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:204
 msgid "Previous Header Hash"
 msgstr "Header Hash Sebelumnya"
 
@@ -1986,7 +1986,7 @@ msgstr "Kunci privat {0}"
 msgid "Private key:"
 msgstr "Kunci privat:"
 
-#: src/components/block/Block.jsx:241
+#: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
 msgstr "Ukuran Bukti Dari Ruang"
 
@@ -2092,7 +2092,7 @@ msgstr "Segarkan data Plot-Plot"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:384
+#: src/electron/main.tsx:385
 msgid "Release Notes"
 msgstr "Release Notes"
 
@@ -2114,7 +2114,7 @@ msgstr "Menghapus"
 msgid "Rename"
 msgstr "Ubah nama"
 
-#: src/electron/main.tsx:403
+#: src/electron/main.tsx:404
 msgid "Report an Issue..."
 msgstr "Melaporkan sebuah masalah..."
 
@@ -2319,7 +2319,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:480
+#: src/electron/main.tsx:481
 msgid "Speech"
 msgstr "Pertuturan"
 
@@ -2351,7 +2351,7 @@ msgstr "Durasi Interval Pengeluaran (jumlah blok)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Batas Pengeluaran (chia per jarak waktu): {0}"
 
-#: src/components/app/AppState.tsx:155
+#: src/components/app/AppState.tsx:161
 msgid "Starting services"
 msgstr ""
 
@@ -2520,19 +2520,19 @@ msgstr ""
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:292
+#: src/components/block/Block.jsx:291
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "Bulir yang digunakan untuk membuat plot. Ini tergantung oleh pool pk dan plot pk."
 
-#: src/components/block/Block.jsx:218
+#: src/components/block/Block.jsx:217
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "Jumlah total dari VDF (fungsi delay yang dapat diverfikasikan) atau bukti dari iterasi waktu pada keseluruhan chain sampai pada blok sub ini."
 
-#: src/components/block/Block.jsx:234
+#: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "Jumlah total dari VDF (fungsi delay yang dapat diverfikasikan) atau bukti dari iterasi waktu pada blok ini."
 
-#: src/components/block/Block.jsx:314
+#: src/components/block/Block.jsx:313
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Total dari biaya transaksi pada block ini. Diberikan kepada farmer."
 
@@ -2575,7 +2575,7 @@ msgstr "Ini ada jumlah dari transaksi masuk dan keluar yang masih dalam antrian 
 msgid "This is the time of the latest peak sub block."
 msgstr "Ini adalah waktu dari ketinggian terakhir sub block."
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:183
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Ini adalah waktu dimana blok di hasilkan oleh farmer, sebelum di finalisasi dengan bukti dari waktu"
 
@@ -2641,7 +2641,7 @@ msgstr "Waktu Dibuat"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:179
+#: src/components/block/Block.jsx:178
 msgid "Timestamp"
 msgstr "Timestamp"
 
@@ -2675,7 +2675,7 @@ msgstr "Jumlah Ukuran Plot:"
 msgid "Total Size of Plots"
 msgstr "Jumlah Ukuran Plot-Plot"
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:214
 msgid "Total VDF Iterations"
 msgstr "Jumlah iterasi VDF"
 
@@ -2715,7 +2715,7 @@ msgstr "Perdagangan"
 msgid "Trading History"
 msgstr "Sejarah Perdagangan"
 
-#: src/components/block/Block.jsx:299
+#: src/components/block/Block.jsx:298
 msgid "Transactions Filter Hash"
 msgstr "Seleksi Hash Transaksi"
 
@@ -2781,7 +2781,7 @@ msgstr "Iterasi VDF Sub Slot"
 msgid "Verify Pool Details"
 msgstr "Verifikasi Detil Pool"
 
-#: src/electron/main.tsx:305
+#: src/electron/main.tsx:306
 msgid "View"
 msgstr "Lihat"
 
@@ -2909,11 +2909,11 @@ msgstr ""
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr ""
 
-#: src/components/block/Block.jsx:195
+#: src/components/block/Block.jsx:194
 msgid "Weight"
 msgstr "Berat"
 
-#: src/components/block/Block.jsx:198
+#: src/components/block/Block.jsx:197
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "Beban adalah jumlah total ke rumitan semua sub blok sampai dengan blok ini"
 
@@ -2929,7 +2929,7 @@ msgstr "Selamat datang! kata-kata frasa ini akan diguna untuk simpanan dompet el
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Ketika anda menerima paket informasi setup dari administrator, masukan di bawah untuk menyelesaikan setup dompet rate terbatas anda:"
 
-#: src/electron/main.tsx:350
+#: src/electron/main.tsx:351
 msgid "Window"
 msgstr "Jendela"
 
