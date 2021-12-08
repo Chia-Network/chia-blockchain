@@ -28,12 +28,14 @@ export default function LocaleProvider(props: LocaleProviderProps) {
   const { children, i18n, locales, defaultLocale } = props;
 
   let [locale] = useLocalStorage<string>('locale', defaultLocale);
-
-  if (locale && locale.length === 2) {
+  if (typeof locale !== 'string' || (locale && locale.length === 2)) {
     locale = defaultLocale;
   }
 
   const handleSetLocale = useCallback((locale: string) => {
+    if (typeof locale !== 'string') {
+      throw new Error(`Locale ${locales} is not a string`);
+    }
     writeStorage('locale', locale);
   }, []);
 
