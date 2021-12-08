@@ -101,7 +101,7 @@ export default function SelectKey() {
             <Typography variant="h5" component="h1">
               <Trans>Sign In</Trans>
             </Typography>
-            <Typography variant="subtitle1">
+            <Typography variant="subtitle1" align="center">
               <Trans>
                 Welcome to Chia. Please log in with an existing key, or create
                 a new key.

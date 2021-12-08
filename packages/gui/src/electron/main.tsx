@@ -211,6 +211,7 @@ if (!handleSquirrelEvent()) {
           decidedToClose = true;
           mainWindow.webContents.send('exit-daemon');
           mainWindow.setBounds({height: 500, width: 500});
+          mainWindow.center();
           ipcMain.on('daemon-exited', (event, args) => {
             mainWindow.close();
 

@@ -76,6 +76,10 @@ export default function AppState(props: Props) {
   }, [keyringStatus?.isKeyringLocked, allServicesRunning]);
 
   async function handleClose(event) {
+    if (closing) {
+      return;
+    }
+
     setClosing(true);
 
     await close({
@@ -83,15 +87,17 @@ export default function AppState(props: Props) {
     }).unwrap();
 
     event.sender.send('daemon-exited');
-  }
+  } 
 
   useEffect(() => {
-    window.addEventListener('load', () => {
-      if (isElectron()) {
+    if (isElectron()) {
+      // @ts-ignore
+      window.ipcRenderer.on('exit-daemon', handleClose);
+      return () => {
         // @ts-ignore
-        window.ipcRenderer.on('exit-daemon', handleClose);
-      }
-    });
+        window.ipcRenderer.off('exit-daemon', handleClose);
+      };
+    }
   }, []);
 
   if (closing) {
