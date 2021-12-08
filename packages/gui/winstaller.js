@@ -14,6 +14,7 @@ function getInstallerConfig () {
   const outPath = path.join(rootPath, 'release-builds')
 
   return Promise.resolve({
+    name: "chia-blockchain",
     appDirectory: path.join(rootPath, 'Chia-win32-x64'),
     authors: 'Chia Network',
     version: process.env.CHIA_INSTALLER_VERSION,
