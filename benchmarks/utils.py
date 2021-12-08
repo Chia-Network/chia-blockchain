@@ -31,7 +31,9 @@ def rand_bytes(num) -> bytes:
 
 
 def rand_hash() -> bytes32:
-    return rand_bytes(32)
+    # TODO: address hint errors and remove ignores
+    #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
+    return rand_bytes(32)  # type: ignore[return-value]
 
 
 def rand_g1() -> G1Element:
@@ -44,7 +46,7 @@ def rand_g2() -> G2Element:
     return AugSchemeMPL.sign(sk, b"foobar")
 
 
-async def setup_db(name: str) -> DBWrapper:
+async def setup_db(name: str, db_version: int) -> DBWrapper:
     db_filename = Path(name)
     try:
         os.unlink(db_filename)
@@ -65,4 +67,4 @@ async def setup_db(name: str) -> DBWrapper:
     await connection.execute("pragma journal_mode=wal")
     await connection.execute("pragma synchronous=full")
 
-    return DBWrapper(connection)
+    return DBWrapper(connection, False, db_version)

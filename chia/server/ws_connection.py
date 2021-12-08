@@ -342,7 +342,10 @@ class WSChiaConnection:
 
         message = Message(message_no_id.type, request_id, message_no_id.data)
 
-        self.pending_requests[message.id] = event
+        # TODO: address hint error and remove ignore
+        #       error: Invalid index type "Optional[uint16]" for "Dict[bytes32, Event]"; expected type "bytes32"
+        #       [index]
+        self.pending_requests[message.id] = event  # type: ignore[index]
         await self.outgoing_queue.put(message)
 
         # If the timeout passes, we set the event
@@ -357,16 +360,34 @@ class WSChiaConnection:
                 raise
 
         timeout_task = asyncio.create_task(time_out(message.id, timeout))
-        self.pending_timeouts[message.id] = timeout_task
+        # TODO: address hint error and remove ignore
+        #       error: Invalid index type "Optional[uint16]" for "Dict[bytes32, Task[Any]]"; expected type "bytes32"
+        #       [index]
+        self.pending_timeouts[message.id] = timeout_task  # type: ignore[index]
         await event.wait()
 
-        self.pending_requests.pop(message.id)
+        # TODO: address hint error and remove ignore
+        #       error: No overload variant of "pop" of "MutableMapping" matches argument type "Optional[uint16]"
+        #       [call-overload]
+        #       note: Possible overload variants:
+        #       note:     def pop(self, key: bytes32) -> Event
+        #       note:     def [_T] pop(self, key: bytes32, default: Union[Event, _T] = ...) -> Union[Event, _T]
+        self.pending_requests.pop(message.id)  # type: ignore[call-overload]
         result: Optional[Message] = None
         if message.id in self.request_results:
-            result = self.request_results[message.id]
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "Optional[uint16]" for "Dict[bytes32, Message]"; expected type "bytes32"
+            #       [index]
+            result = self.request_results[message.id]  # type: ignore[index]
             assert result is not None
             self.log.debug(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
-            self.request_results.pop(result.id)
+            # TODO: address hint error and remove ignore
+            #       error: No overload variant of "pop" of "MutableMapping" matches argument type "Optional[uint16]"
+            #       [call-overload]
+            #       note: Possible overload variants:
+            #       note:     def pop(self, key: bytes32) -> Message
+            #       note:     def [_T] pop(self, key: bytes32, default: Union[Message, _T] = ...) -> Union[Message, _T]
+            self.request_results.pop(result.id)  # type: ignore[call-overload]
 
         return result
 

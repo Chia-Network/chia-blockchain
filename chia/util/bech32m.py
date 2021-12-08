@@ -106,7 +106,9 @@ def convertbits(data: List[int], frombits: int, tobits: int, pad: bool = True) -
 
 
 def encode_puzzle_hash(puzzle_hash: bytes32, prefix: str) -> str:
-    encoded = bech32_encode(prefix, convertbits(puzzle_hash, 8, 5))
+    # TODO: address hint error and remove ignore
+    #       Argument 1 to "convertbits" has incompatible type "bytes32"; expected "List[int]"  [arg-type]
+    encoded = bech32_encode(prefix, convertbits(puzzle_hash, 8, 5))  # type: ignore[arg-type]
     return encoded
 
 
@@ -115,5 +117,5 @@ def decode_puzzle_hash(address: str) -> bytes32:
     if data is None:
         raise ValueError("Invalid Address")
     decoded = convertbits(data, 5, 8, False)
-    decoded_bytes = bytes(decoded)
+    decoded_bytes = bytes32(decoded)
     return decoded_bytes

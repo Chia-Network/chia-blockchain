@@ -235,8 +235,8 @@ class RLWallet:
 
         assert self.rl_info.user_pubkey is not None
         origin = Coin(
-            hexstr_to_bytes(origin_parent_id),
-            hexstr_to_bytes(origin_puzzle_hash),
+            bytes32.from_hexstr(origin_parent_id),
+            bytes32.from_hexstr(origin_puzzle_hash),
             origin_amount,
         )
         rl_puzzle = rl_puzzle_for_pk(
@@ -303,10 +303,13 @@ class RLWallet:
 
         rl_coin = await self._get_rl_coin()
         puzzle_hash = rl_coin.puzzle_hash if rl_coin is not None else None
+        # TODO: address hint error and remove ignore
+        #       error: Argument "to_puzzle_hash" to "TransactionRecord" has incompatible type "Optional[bytes32]";
+        #       expected "bytes32"  [arg-type]
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=puzzle_hash,
+            to_puzzle_hash=puzzle_hash,  # type: ignore[arg-type]
             amount=uint64(0),
             fee_amount=uint64(0),
             confirmed=False,

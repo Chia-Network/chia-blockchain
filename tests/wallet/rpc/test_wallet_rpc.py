@@ -246,6 +246,8 @@ class TestWalletRpc:
             await client.log_in_and_skip(pks[1])
             sk_dict = await client.get_private_key(pks[1])
             assert sk_dict["fingerprint"] == pks[1]
+            fingerprint = await client.get_logged_in_fingerprint()
+            assert fingerprint == pks[1]
 
             # Add in reward addresses into farmer and pool for testing delete key checks
             # set farmer to first private key

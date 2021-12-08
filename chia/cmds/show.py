@@ -130,9 +130,9 @@ async def show_async(
                 # Nodetype length is 9 because INTRODUCER will be deprecated
                 if NodeType(con["type"]) is NodeType.FULL_NODE:
                     peak_height = con["peak_height"]
-                    peak_hash = con["peak_hash"]
-                    if peak_hash is None:
-                        peak_hash = "No Info"
+                    connection_peak_hash = con["peak_hash"]
+                    if connection_peak_hash is None:
+                        connection_peak_hash = "No Info"
                     if peak_height is None:
                         peak_height = 0
                     con_str = (
@@ -142,7 +142,7 @@ async def show_async(
                         f"{last_connect}  "
                         f"{mb_up:7.1f}|{mb_down:<7.1f}"
                         f"\n                                                 "
-                        f"-SB Height: {peak_height:8.0f}    -Hash: {peak_hash[2:10]}..."
+                        f"-SB Height: {peak_height:8.0f}    -Hash: {connection_peak_hash[2:10]}..."
                     )
                 else:
                     con_str = (

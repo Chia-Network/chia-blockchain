@@ -348,15 +348,21 @@ class Wallet:
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
+                # TODO: address hint error and remove ignore
+                #       error: Argument "coin_announcements_to_assert" to "make_solution" of "Wallet" has incompatible
+                #       type "Optional[Set[Announcement]]"; expected "Optional[Set[bytes32]]"  [arg-type]
                 solution: Program = self.make_solution(
                     primaries=primaries,
                     fee=fee,
                     coin_announcements={message},
-                    coin_announcements_to_assert=announcements_to_consume,
+                    coin_announcements_to_assert=announcements_to_consume,  # type: ignore[arg-type]
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
-                solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to <set> has incompatible type "Optional[bytes32]"; expected "bytes32"
+                #       [arg-type]
+                solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})  # type: ignore[arg-type]  # noqa: E501
 
             spends.append(
                 CoinSpend(
@@ -393,10 +399,15 @@ class Wallet:
         if primaries is None:
             non_change_amount = amount
         else:
-            non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
+            # TODO: address hint error and remove ignore
+            #       error: Generator has incompatible item type "bytes32"; expected "int"  [misc]
+            non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))  # type: ignore[misc]
 
+        # TODO: address hint error and remove ignore
+        #       error: Argument 8 to "_generate_unsigned_transaction" of "Wallet" has incompatible type
+        #       "Optional[Set[bytes32]]"; expected "Optional[Set[Announcement]]"  [arg-type]
         transaction = await self._generate_unsigned_transaction(
-            amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send_amount, announcements_to_consume
+            amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send_amount, announcements_to_consume  # type: ignore[arg-type]  # noqa: E501
         )
         assert len(transaction) > 0
 

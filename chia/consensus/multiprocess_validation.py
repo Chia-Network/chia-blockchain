@@ -87,9 +87,12 @@ def batch_pre_validate_blocks(
                     removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
 
                 header_block = get_block_header(block, tx_additions, removals)
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to "BlockCache" has incompatible type "Dict[bytes, BlockRecord]"; expected
+                #       "Dict[bytes32, BlockRecord]"  [arg-type]
                 required_iters, error = validate_finished_header_block(
                     constants,
-                    BlockCache(blocks),
+                    BlockCache(blocks),  # type: ignore[arg-type]
                     header_block,
                     check_filter,
                     expected_difficulty[i],
@@ -108,9 +111,12 @@ def batch_pre_validate_blocks(
         for i in range(len(header_blocks_pickled)):
             try:
                 header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to "BlockCache" has incompatible type "Dict[bytes, BlockRecord]"; expected
+                #       "Dict[bytes32, BlockRecord]"  [arg-type]
                 required_iters, error = validate_finished_header_block(
                     constants,
-                    BlockCache(blocks),
+                    BlockCache(blocks),  # type: ignore[arg-type]
                     header_block,
                     check_filter,
                     expected_difficulty[i],
