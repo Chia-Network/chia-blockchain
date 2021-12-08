@@ -431,7 +431,7 @@ class TestCATTrades:
         #     Offer.from_bytes(trade_take.offer).to_valid_spend().name(),
         # )
 
-        FEE = uint64(1000000000000)
+        FEE = uint64(2000000000000)
 
         txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=FEE)
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
@@ -469,7 +469,7 @@ class TestCATTrades:
         assert success is False
         assert trade_take is None
 
-        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id)
+        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=uint64(0))
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         for tx in txs:
             if tx.spend_bundle is not None:

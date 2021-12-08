@@ -1,7 +1,7 @@
 import logging
 import time
 import traceback
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, Set
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
@@ -184,8 +184,20 @@ class TradeManager:
                 )
                 all_txs.extend(txs)
             else:
+                if fee_to_pay > coin.amount:
+                    selected_coins: Set[Coin] = await wallet.select_coins(
+                        uint64(fee_to_pay - coin.amount),
+                        exclude=[coin],
+                    )
+                    selected_coins.add(coin)
+                else:
+                    selected_coins = {coin}
                 tx = await wallet.generate_signed_transaction(
-                    uint64(coin.amount - fee_to_pay), new_ph, fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
+                    uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
+                    new_ph,
+                    fee=fee_to_pay,
+                    coins=selected_coins,
+                    ignore_max_send_amount=True,
                 )
                 all_txs.append(tx)
             fee_to_pay = uint64(0)
