@@ -1,18 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Button, ConfirmDialog, Flex, Logo, Loading, useOpenDialog, TooltipIcon } from '@chia/core';
+import { Button, ConfirmDialog, Flex, Logo, Loading, useOpenDialog, TooltipIcon, useShowError } from '@chia/core';
 import {
   Card,
   Typography,
   Container,
   List,
 } from '@material-ui/core';
-import { Alert, AlertTitle } from '@material-ui/lab';
+import { useNavigate } from 'react-router';
+import { Alert } from '@material-ui/lab';
 import {
   useGetPublicKeysQuery,
   useDeleteAllKeysMutation,
-  useGetStateQuery,
+  useLogInAndSkipImportMutation,
 } from '@chia/api-react';
 import SelectKeyItem from './SelectKeyItem';
 
@@ -22,9 +23,32 @@ const StyledContainer = styled(Container)`
 
 export default function SelectKey() {
   const openDialog = useOpenDialog();
+  const navigate = useNavigate();
   const [deleteAllKeys] = useDeleteAllKeysMutation();
+  const [logIn] = useLogInAndSkipImportMutation();
   const { data: publicKeyFingerprints, isLoading, error, refetch } = useGetPublicKeysQuery();
   const hasFingerprints = !!publicKeyFingerprints?.length;
+  const [selectedFingerprint, setSelectedFingerprint] = useState<number | undefined>();
+  const showError = useShowError();
+
+  async function handleSelect(fingerprint: number) {
+    if (selectedFingerprint) {
+      return;
+    }
+
+    try {
+      setSelectedFingerprint(fingerprint);
+      await logIn({
+        fingerprint,
+      }).unwrap();
+  
+      navigate('/dashboard');
+    } catch (error) {
+      showError(error)
+    } finally {
+      setSelectedFingerprint(undefined);
+    }
+  }
   
   async function handleDeleteAllKeys() {
     await openDialog(
@@ -95,7 +119,10 @@ export default function SelectKey() {
                 {publicKeyFingerprints.map((fingerprint: number) => (
                   <SelectKeyItem
                     key={fingerprint}
-                    fingerprint={fingerprint} 
+                    fingerprint={fingerprint}
+                    onSelect={handleSelect}
+                    loading={fingerprint === selectedFingerprint}
+                    disabled={!!selectedFingerprint && fingerprint !== selectedFingerprint}
                   />
                 ))}
               </List>

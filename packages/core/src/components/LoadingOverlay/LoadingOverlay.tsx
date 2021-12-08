@@ -21,20 +21,29 @@ const StyledLoadingContainer = styled.div`
 
 type Props = {
   children?: ReactNode;
-  loading: boolean;
+  loading?: boolean;
+  disabled?: boolean;
 };
 
 export default function LoadingOverlay(props: Props) {
-  const { children, loading } = props;
+  const { children, loading, disabled } = props;
 
   return (
     <StyledRoot>
       {children}
-      {loading && (
+      {(loading || disabled) && (
         <StyledLoadingContainer>
-          <Loading center />
+          {!disabled && (
+            <Loading center />
+          )}
         </StyledLoadingContainer>
       )}
     </StyledRoot>
   );
 }
+
+LoadingOverlay.defaultProps = {
+  children: undefined,
+  loading: false,
+  disabled: false,
+};

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { ConfirmDialog, useOpenDialog, LoadingOverlay, useShowError } from '@chia/core';
+import { ConfirmDialog, useOpenDialog, LoadingOverlay } from '@chia/core';
 import { Alert } from '@material-ui/lab';
 import {
   Tooltip,
@@ -10,7 +10,6 @@ import {
   ListItemSecondaryAction,
   IconButton,
 } from '@material-ui/core';
-import { useNavigate } from 'react-router';
 import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
@@ -18,7 +17,6 @@ import {
 import {
   useCheckDeleteKeyMutation,
   useDeleteKeyMutation,
-  useLogInAndSkipImportMutation,
 } from '@chia/api-react';
 import SelectKeyDetailDialog from './SelectKeyDetailDialog';
 
@@ -28,31 +26,19 @@ const StyledFingerprintListItem = styled(ListItem)`
 
 type Props = {
   fingerprint: number;
+  disabled?: boolean;
+  loading?: boolean;
+  onSelect: (fingerprint: number) => void;
 };
 
 export default function SelectKeyItem(props: Props) {
-  const { fingerprint } = props;
-  const navigate = useNavigate();
+  const { fingerprint, onSelect, disabled, loading } = props;
   const openDialog = useOpenDialog();
   const [deleteKey] = useDeleteKeyMutation();
   const [checkDeleteKey] = useCheckDeleteKeyMutation();
-  const [logIn] = useLogInAndSkipImportMutation();
-  const [loading, setLoading] = useState<boolean>(false);
-  const showError = useShowError();
 
   async function handleLogin() {
-    try {
-      setLoading(true);
-      await logIn({
-        fingerprint,
-      }).unwrap();
-  
-      navigate('/dashboard');
-    } catch (error) {
-      showError(error)
-    } finally {
-      setLoading(false);
-    }
+    onSelect(fingerprint);
   }
 
   function handleShowKey(event) {
@@ -119,7 +105,7 @@ export default function SelectKeyItem(props: Props) {
   }
 
   return (
-    <LoadingOverlay loading={loading}>
+    <LoadingOverlay loading={loading} disabled={disabled}>
       <StyledFingerprintListItem
         onClick={handleLogin}
         key={fingerprint}
