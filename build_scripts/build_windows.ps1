@@ -95,7 +95,6 @@ Write-Output "   ---"
 Write-Output "Prepare Electron packager"
 Write-Output "   ---"
 $Env:NODE_OPTIONS = "--max-old-space-size=3000"
-npm install -g electron-winstaller
 npm install -g electron-packager
 npm install -g lerna
 
@@ -114,6 +113,9 @@ If ($LastExitCode -gt 0){
     Throw "npm run build failed!"
 }
 
+# Change to the GUI directory
+Set-Location -Path "packages\gui" -PassThru
+
 Write-Output "   ---"
 Write-Output "Increase the stack for chia command for (chia plots create) chiapos limitations"
 # editbin.exe needs to be in the path
@@ -124,8 +126,6 @@ $packageVersion = "$env:CHIA_INSTALLER_VERSION"
 $packageName = "Chia-$packageVersion"
 
 Write-Output "packageName is $packageName"
-
-Set-Location -Path "packages\gui" -PassThru
 
 Write-Output "   ---"
 Write-Output "fix version in package.json"
