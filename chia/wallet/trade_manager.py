@@ -303,7 +303,6 @@ class TradeManager:
             return True, offer, None
 
         except Exception as e:
-            raise e
             tb = traceback.format_exc()
             self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
             return False, None, str(e)
