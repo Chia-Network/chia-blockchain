@@ -88,6 +88,8 @@ Write-Output "Copy chia executables to chia-blockchain-gui\"
 Write-Output "   ---"
 Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\packages\gui\" -Recurse
 Set-Location -Path "..\chia-blockchain-gui" -PassThru
+# We need the code sign cert in the gui subdirectory so we can actually sign the UI package
+Copy-Item "win_code_sign_cert.p12" -Destination "packages\gui\"
 
 git status
 
