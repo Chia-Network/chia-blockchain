@@ -313,7 +313,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         confirmation = input("Would you like to take this offer? (y/n): ")
         if confirmation in ["y", "yes"]:
             trade_record = await wallet_client.take_offer(offer, fee=fee)
-            print(f"Created offer with ID {trade_record.trade_id}")
+            print(f"Accepted offer with ID {trade_record.trade_id}")
             print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view its status")
 
 
