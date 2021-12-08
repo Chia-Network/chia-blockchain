@@ -583,6 +583,8 @@ class DataStore:
     async def get_tree_as_program(self, tree_id: bytes32, *, lock: bool = True) -> Program:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
+            # TODO: consider actual proper behavior
+            assert root.node_hash is not None
             root_node = await self.get_node(node_hash=root.node_hash, lock=False)
 
             cursor = await self.db.execute(

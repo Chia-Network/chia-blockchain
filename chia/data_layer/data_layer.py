@@ -9,7 +9,7 @@ from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint64, uint32
+from chia.util.ints import uint64
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -57,14 +57,15 @@ class DataLayer:
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
-        assert self.wallet_state_manager
+        assert self.wallet_state_manager is not None
         main_wallet = self.wallet_state_manager.main_wallet
         async with self.wallet_state_manager.lock:
+            # TODO: fix root_hash optionality issue
             creation_record = await DataLayerWallet.create_new_dl_wallet(
                 wallet_state_manager=self.wallet_state_manager,
                 wallet=main_wallet,
                 amount=amount,
-                root_hash=None,
+                root_hash=None,  # type: ignore[arg-type]
                 fee=fee,
             )
             self.wallet = creation_record.item
@@ -121,7 +122,7 @@ class DataLayer:
         # await self.data_store.change_root_status(root, Status.COMMITTED)
         return res
 
-    async def get_value(self, store_id: bytes32, key: bytes32) -> bytes32:
+    async def get_value(self, store_id: bytes32, key: bytes) -> bytes:
         res = await self.data_store.get_node_by_key(tree_id=store_id, key=key)
         if res is None:
             self.log.error("Failed to create tree")

@@ -1306,7 +1306,8 @@ class WalletRpcApi:
         if self.service.data_layer is None:
             raise Exception("Data layer not created")
         value = await self.service.data_layer.get_pairs(store_id)
-        return {"data": value.hex()}
+        # TODO: fix
+        return {"data": value.hex()}  # type: ignore[attr-defined]
 
     async def get_ancestors(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
@@ -1314,7 +1315,8 @@ class WalletRpcApi:
         if self.service.data_layer is None:
             raise Exception("Data layer not created")
         value = await self.service.data_layer.get_ancestors(key, store_id)
-        return {"data": value.hex()}
+        # TODO: fix
+        return {"data": value.hex()}  # type: ignore[attr-defined]
 
     async def update_kv_store(self, request: Dict[str, Any]):
         """
