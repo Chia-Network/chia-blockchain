@@ -247,7 +247,7 @@ async def print_offer_summary(wallet_client: WalletRpcClient, sum_dict: dict):
             if result is not None:
                 wid = str(result[0])
                 name = result[1]
-        print(f"    - {name} (Wallet ID: {wid}): {Decimal(int(amount)) / unit}")
+        print(f"    - {name} (Wallet ID: {wid}): {Decimal(int(amount)) / unit} ({int(Decimal(amount))} mojos)")
 
 
 async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: bool = False) -> None:
