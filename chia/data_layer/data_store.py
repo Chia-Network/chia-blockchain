@@ -151,7 +151,7 @@ class DataStore:
             value=None,
         )
 
-        return node_hash
+        return node_hash  # type: ignore[no-any-return]
 
     async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
         node_hash = Program.to((key, value)).get_tree_hash()
@@ -165,11 +165,11 @@ class DataStore:
             value=value.hex(),
         )
 
-        return node_hash
+        return node_hash  # type: ignore[no-any-return]
 
-    async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> bytes32:
+    async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> None:
         async with self.db_wrapper.locked_transaction(lock=True):
-            c = await self.db.execute(
+            await self.db.execute(
                 "UPDATE root SET status = ? WHERE tree_id=? and generation = ?",
                 (
                     status.value,
@@ -177,7 +177,6 @@ class DataStore:
                     root.generation,
                 ),
             )
-            await c.close()
 
     async def check(self) -> None:
         for check in self._checks:
@@ -189,7 +188,7 @@ class DataStore:
                 "SELECT * FROM node WHERE node_type == :node_type AND (key NOT NULL OR value NOT NULL)",
                 {"node_type": NodeType.INTERNAL},
             )
-            hashes = [hexstr_to_bytes(row["hash"]) async for row in cursor]
+            hashes = [bytes32.from_hexstr(row["hash"]) async for row in cursor]
 
         if len(hashes) > 0:
             raise InternalKeyValueError(node_hashes=hashes)
@@ -204,10 +203,10 @@ class DataStore:
             hashes = []
             async for row in cursor:
                 try:
-                    bytes32(hexstr_to_bytes(row["left"]))
-                    bytes32(hexstr_to_bytes(row["right"]))
+                    bytes32(bytes32.from_hexstr(row["left"]))
+                    bytes32(bytes32.from_hexstr(row["right"]))
                 except ValueError:
-                    hashes.append(hexstr_to_bytes(row["hash"]))
+                    hashes.append(bytes32.from_hexstr(row["hash"]))
 
         if len(hashes) > 0:
             raise InternalLeftRightNotBytes32Error(node_hashes=hashes)
@@ -218,7 +217,7 @@ class DataStore:
                 "SELECT * FROM node WHERE node_type == :node_type AND (left NOT NULL OR right NOT NULL)",
                 {"node_type": NodeType.TERMINAL},
             )
-            hashes = [hexstr_to_bytes(row["hash"]) async for row in cursor]
+            hashes = [bytes32.from_hexstr(row["hash"]) async for row in cursor]
 
         if len(hashes) > 0:
             raise TerminalLeftRightError(node_hashes=hashes)
@@ -247,7 +246,7 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT * FROM node")
 
-            bad_node_hashes: bytes32 = []
+            bad_node_hashes: List[bytes32] = []
             async for row in cursor:
                 node = row_to_node(row=row)
                 if isinstance(node, InternalNode):

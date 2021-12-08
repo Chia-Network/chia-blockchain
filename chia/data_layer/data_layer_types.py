@@ -44,8 +44,8 @@ Node = Union["TerminalNode", "InternalNode"]
 class TerminalNode:
     hash: bytes32
     # generation: int
-    key: bytes32
-    value: bytes32
+    key: bytes
+    value: bytes
 
     atom: None = field(init=False, default=None)
 
@@ -56,10 +56,10 @@ class TerminalNode:
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":
         return cls(
-            hash=bytes32(hexstr_to_bytes(row["hash"])),
+            hash=bytes32.fromhex(row["hash"]),  # type: ignore[arg-type]
             # generation=row["generation"],
-            key=hexstr_to_bytes(row["key"]),
-            value=hexstr_to_bytes(row["value"]),
+            key=bytes.fromhex(row["key"]),
+            value=bytes.fromhex(row["value"]),
         )
 
 

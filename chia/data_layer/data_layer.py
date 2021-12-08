@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import aiosqlite
 from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
@@ -60,7 +61,11 @@ class DataLayer:
         main_wallet = self.wallet_state_manager.main_wallet
         async with self.wallet_state_manager.lock:
             creation_record = await DataLayerWallet.create_new_dl_wallet(
-                self.wallet_state_manager, main_wallet, amount, None, fee
+                wallet_state_manager=self.wallet_state_manager,
+                wallet=main_wallet,
+                amount=amount,
+                root_hash=None,
+                fee=fee,
             )
             self.wallet = creation_record.item
             [regular_spend] = creation_record.regular
@@ -109,7 +114,7 @@ class DataLayer:
         if root.node_hash is not None:
             node_hash = root.node_hash
         else:
-            node_hash = uint32(0).to_bytes(32, "big")  # todo change
+            node_hash = bytes32([0] * 32)  # todo change
         res = await self.wallet.create_update_state_spend(node_hash)
         assert res
         # todo register callback to change status in data store
@@ -122,13 +127,13 @@ class DataLayer:
             self.log.error("Failed to create tree")
         return res.value
 
-    async def get_pairs(self, store_id: bytes32) -> bytes32:
+    async def get_pairs(self, store_id: bytes32) -> List[TerminalNode]:
         res = await self.data_store.get_pairs(store_id)
         if res is None:
             self.log.error("Failed to create tree")
         return res
 
-    async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> bytes32:
+    async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
         res = await self.data_store.get_ancestors(store_id, node_hash)
         if res is None:
             self.log.error("Failed to create tree")
