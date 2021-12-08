@@ -53,6 +53,7 @@ export default function LocaleToggle() {
         onClick={handleClick}
         startIcon={<Translate />}
         endIcon={<ExpandMore />}
+        disableFocusRipple
       >
         {currentLocaleLabel}
       </Button>
