@@ -1,3 +1,9 @@
 files:
+  - source: /packages/core/src/locales/en-US/*.po
+    translation: /packages/core/src/locales/%locale%/messages.po
   - source: /packages/gui/src/locales/en-US/*.po
     translation: /packages/gui/src/locales/%locale%/messages.po
+  - source: /packages/wallet/src/locales/en-US/*.po
+    translation: /packages/wallet/src/locales/%locale%/messages.po
+  - source: /packages/wallets/src/locales/en-US/*.po
+    translation: /packages/wallets/src/locales/%locale%/messages.po
