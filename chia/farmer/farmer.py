@@ -118,13 +118,14 @@ class Farmer:
         # Interval to request plots from connected harvesters
         self.update_harvester_cache_interval = UPDATE_HARVESTER_CACHE_INTERVAL
 
-        self.cache_clear_task: asyncio.Task
-        self.update_pool_state_task: asyncio.Task
+        self.cache_clear_task: Optional[asyncio.Task] = None
+        self.update_pool_state_task: Optional[asyncio.Task] = None
         self.constants = consensus_constants
         self._shut_down = False
         self.server: Any = None
         self.state_changed_callback: Optional[Callable] = None
         self.log = log
+        self.started = False
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
@@ -183,16 +184,33 @@ class Farmer:
         self.harvester_cache: Dict[str, Dict[str, HarvesterCacheEntry]] = {}
 
     async def _start(self):
-        await self.setup_keys()
-        self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
-        self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
+        async def start_task():
+            # `Farmer.setup_keys` throws if there are no keys setup yet. In this case we just try until it succeeds or
+            # until we need to shut down.
+            while not self._shut_down:
+                try:
+                    await self.setup_keys()
+                except Exception as e:
+                    log.warning(e)
+                    await asyncio.sleep(1)
+                else:
+                    self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
+                    self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
+                    log.debug("start_task: initialized")
+                    self.started = True
+                    break
+
+        asyncio.create_task(start_task())
 
     def _close(self):
         self._shut_down = True
 
     async def _await_closed(self):
-        await self.cache_clear_task
-        await self.update_pool_state_task
+        if self.cache_clear_task is not None:
+            await self.cache_clear_task
+        if self.update_pool_state_task is not None:
+            await self.update_pool_state_task
+        self.started = False
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
