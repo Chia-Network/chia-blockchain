@@ -1,5 +1,4 @@
 import Big from 'big.js';
-import { trimEnd } from 'lodash';
 import type Unit from '../constants/Unit';
 import UnitFractionDigits from '../constants/UnitFractionDigits';
 import UnitValue from '../constants/UnitValue';
@@ -43,6 +42,10 @@ class Chia {
 
   toString(): string {
     return this.value.toString();
+  }
+
+  toNumber(): string {
+    return this.value.toNumber();
   }
 
   toLocaleString(locale?: string): string {
