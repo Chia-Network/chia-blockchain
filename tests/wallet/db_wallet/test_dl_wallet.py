@@ -82,7 +82,7 @@ class TestDLWallet:
 
         dl_wallet_0: DataLayerWallet = creation_record.item
 
-        await full_node_api.process_transaction_records(records=creation_record.transaction_records)
+        await full_node_api.process_transaction_records(records=creation_record.regular)
 
         await time_out_assert(15, dl_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)

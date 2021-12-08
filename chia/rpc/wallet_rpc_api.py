@@ -1295,7 +1295,7 @@ class WalletRpcApi:
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32.from_hexstr(request["id"])
-        key = bytes32.from_hexstr(request["key"])
+        key = hexstr_to_bytes(request["key"])
         if self.service.data_layer is None:
             raise Exception("Data layer not created")
         value = await self.service.data_layer.get_value(store_id=store_id, key=key)
