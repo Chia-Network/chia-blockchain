@@ -202,7 +202,7 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
 
     await service.start()
 
-    yield service._node, service._node.server
+    yield service
 
     service.stop()
     await service.wait_closed()
@@ -240,7 +240,7 @@ async def setup_farmer(
 
     await service.start()
 
-    yield service._api, service._node.server
+    yield service
 
     service.stop()
     await service.wait_closed()
@@ -462,10 +462,10 @@ async def setup_farmer_harvester(consensus_constants: ConsensusConstants):
         setup_farmer(21235, consensus_constants, bt),
     ]
 
-    harvester, harvester_server = await node_iters[0].__anext__()
-    farmer, farmer_server = await node_iters[1].__anext__()
+    harvester_service = await node_iters[0].__anext__()
+    farmer_service = await node_iters[1].__anext__()
 
-    yield harvester, farmer
+    yield harvester_service, farmer_service
 
     await _teardown_nodes(node_iters)
 
@@ -495,8 +495,10 @@ async def setup_full_system(
         ]
 
         introducer, introducer_server = await node_iters[0].__anext__()
-        harvester, harvester_server = await node_iters[1].__anext__()
-        farmer, farmer_server = await node_iters[2].__anext__()
+        harvester_service = await node_iters[1].__anext__()
+        harvester = harvester_service._node
+        farmer_service = await node_iters[2].__anext__()
+        farmer = farmer_service._node
 
         async def num_connections():
             count = len(harvester.server.all_connections.items())
