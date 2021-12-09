@@ -8,6 +8,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.trade_record import TradeRecord
+from chia.wallet.trade_sorting import SortKey
 from chia.wallet.trading.trade_status import TradeStatus
 
 
@@ -236,6 +237,37 @@ class TradeStore:
         """
 
         cursor = await self.db_connection.execute("SELECT * from trade_records")
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            record = TradeRecord.from_bytes(row[0])
+            records.append(record)
+
+        return records
+
+    async def get_trades_between(
+        self, start: int, end: int, sort_key: Optional[str] = None, reverse: bool = False
+    ) -> List[TradeRecord]:
+        """
+        Return a list of trades sorted by a key and between a start and end index.
+        """
+        limit = end - start
+
+        if sort_key is None:
+            sort_key = "CREATED_AT_TIME"
+        if sort_key not in SortKey.__members__:
+            raise ValueError(f"There is no known sort {sort_key}")
+
+        if reverse:
+            query_str = SortKey[sort_key].descending()
+        else:
+            query_str = SortKey[sort_key].ascending()
+
+        cursor = await self.db_connection.execute(
+            f"SELECT * from trade_records" f" {query_str}" f" LIMIT {start}, {limit}"
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
