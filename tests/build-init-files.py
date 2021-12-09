@@ -27,7 +27,12 @@ def command(verbose, root_str):
     tree_roots = ["chia", "tests"]
     failed = False
     root = pathlib.Path(root_str).resolve()
-    directories = sorted(path for tree_root in tree_roots for path in root.joinpath(tree_root).rglob("**/"))
+    directories = sorted(
+        path
+        for tree_root in tree_roots
+        for path in root.joinpath(tree_root).rglob("**/")
+        if "__pycache__" not in path.parts
+    )
 
     for path in directories:
         init_path = path.joinpath("__init__.py")
