@@ -45,6 +45,7 @@ class DataLayer:
         self.initialized = False
         self.config = config
         self.connection = None
+        self.connection = None
         self.wallet_state_manager = wallet_state_manager
         self.log = logging.getLogger(name if name is None else __name__)
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
@@ -65,7 +66,7 @@ class DataLayer:
                 wallet_state_manager=self.wallet_state_manager,
                 wallet=main_wallet,
                 amount=amount,
-                root_hash=None,  # type: ignore[arg-type]
+                root_hash=None,
                 fee=fee,
             )
             self.wallet = creation_record.item

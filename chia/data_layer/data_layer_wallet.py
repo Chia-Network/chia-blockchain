@@ -79,7 +79,7 @@ class DataLayerWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         amount: uint64,
-        root_hash: bytes32,
+        root_hash: Optional[bytes32],
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
     ) -> ItemAndTransactionRecords[_T_DataLayerWallet]:

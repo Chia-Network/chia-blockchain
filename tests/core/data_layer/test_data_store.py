@@ -109,11 +109,11 @@ async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
 @pytest.mark.parametrize(argnames=["length"], argvalues=[[length] for length in [*range(0, 32), *range(33, 48)]])
 @pytest.mark.asyncio
 async def test_create_tree_fails_for_not_bytes32(raw_data_store: DataStore, length: int) -> None:
-    bad_tree_id = bytes32(b"\0" * length)
+    bad_tree_id = b"\0" * length
 
     # TODO: require a more specific exception
     with pytest.raises(Exception):
-        await raw_data_store.create_tree(tree_id=bad_tree_id)
+        await raw_data_store.create_tree(tree_id=bad_tree_id)  # type: ignore[arg-type]
 
 
 @pytest.mark.asyncio

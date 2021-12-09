@@ -188,10 +188,10 @@ class DataStore:
                 "SELECT * FROM node WHERE node_type == :node_type AND (key NOT NULL OR value NOT NULL)",
                 {"node_type": NodeType.INTERNAL},
             )
-            hashes = [bytes32.from_hexstr(row["hash"]) async for row in cursor]
+            hashes = [bytes32.fromhex(row["hash"]) async for row in cursor]
 
         if len(hashes) > 0:
-            raise InternalKeyValueError(node_hashes=hashes)
+            raise InternalKeyValueError(node_hashes=hashes)  # type: ignore[arg-type]
 
     async def _check_internal_left_right_are_bytes32(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -203,13 +203,13 @@ class DataStore:
             hashes = []
             async for row in cursor:
                 try:
-                    bytes32(bytes32.from_hexstr(row["left"]))
-                    bytes32(bytes32.from_hexstr(row["right"]))
+                    bytes32.fromhex(row["left"])
+                    bytes32.fromhex(row["right"])
                 except ValueError:
-                    hashes.append(bytes32.from_hexstr(row["hash"]))
+                    hashes.append(bytes32.fromhex(row["hash"]))
 
         if len(hashes) > 0:
-            raise InternalLeftRightNotBytes32Error(node_hashes=hashes)
+            raise InternalLeftRightNotBytes32Error(node_hashes=hashes)  # type: ignore[arg-type]
 
     async def _check_terminal_left_right_are_null(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -217,10 +217,10 @@ class DataStore:
                 "SELECT * FROM node WHERE node_type == :node_type AND (left NOT NULL OR right NOT NULL)",
                 {"node_type": NodeType.TERMINAL},
             )
-            hashes = [bytes32.from_hexstr(row["hash"]) async for row in cursor]
+            hashes = [bytes32.fromhex(row["hash"]) async for row in cursor]
 
         if len(hashes) > 0:
-            raise TerminalLeftRightError(node_hashes=hashes)
+            raise TerminalLeftRightError(node_hashes=hashes)  # type: ignore[arg-type]
 
     async def _check_roots_are_incrementing(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
