@@ -32,7 +32,7 @@ async def one_wallet_node() -> AsyncIterator[nodes]:
 
 
 # TODO: fix this
-@pytest.mark.xfail(reason="incomplete, needs caught up")
+@pytest.mark.xfail(reason="incomplete, needs caught up", strict=True)
 @pytest.mark.asyncio
 async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     root = chia_root.path
@@ -79,7 +79,7 @@ async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) ->
 
 
 # TODO: fix this
-@pytest.mark.xfail(reason="incomplete, needs caught up")
+@pytest.mark.xfail(reason="incomplete, needs caught up", strict=True)
 @pytest.mark.asyncio
 async def test_create_double_insert(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     root = chia_root.path
@@ -131,7 +131,7 @@ async def test_create_double_insert(chia_root: ChiaRoot, one_wallet_node: nodes)
 
 
 # TODO: fix this
-@pytest.mark.xfail(reason="incomplete, needs caught up")
+@pytest.mark.xfail(reason="incomplete, needs caught up", strict=True)
 @pytest.mark.asyncio
 async def test_get_pairs(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     root = chia_root.path
@@ -183,7 +183,7 @@ async def test_get_pairs(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
 
 
 # TODO: fix this
-@pytest.mark.xfail(reason="incomplete, needs caught up")
+@pytest.mark.xfail(reason="incomplete, needs caught up", strict=True)
 @pytest.mark.asyncio
 async def test_get_ancestors(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     root = chia_root.path
