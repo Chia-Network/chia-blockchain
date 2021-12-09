@@ -114,7 +114,7 @@ class WalletBlockchain(BlockchainInterface):
             return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_POSPACE
 
         block_record: BlockRecord = block_to_block_record(
-            self.constants, self, required_iters, None, block, sub_slot_iters
+            self.constants, self, required_iters, None, block
         )
         self.add_block_record(block_record)
         if self._peak is None:
