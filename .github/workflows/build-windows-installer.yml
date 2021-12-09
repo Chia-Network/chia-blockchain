@@ -65,6 +65,11 @@ jobs:
       with:
         python-version: "3.9"
 
+    - name: Setup Node 16.x
+      uses: actions/setup-node@v2.4.1
+      with:
+        node-version: '16.x'
+
     - name: Test for secrets access
       id: check_secrets
       shell: bash
