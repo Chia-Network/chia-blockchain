@@ -31,6 +31,16 @@ def adapt_inner_to_singleton(inner_puzzle: Program) -> Program:
     return Program.to([2, (1, inner_puzzle), [6, 1]])
 
 
+def adapt_inner_puzzle_hash_to_singleton(inner_puzzle_hash: bytes32) -> bytes32:
+    puzzle = adapt_inner_to_singleton(Program.to(inner_puzzle_hash))
+    return puzzle.get_tree_hash(inner_puzzle_hash)
+
+
+def remove_singleton_truth_wrapper(puzzle: Program) -> Program:
+    inner_puzzle = puzzle.rest().first().rest()
+    return inner_puzzle
+
+
 # Take standard coin and amount -> launch conditions & launcher coin solution
 def launch_conditions_and_coinsol(
     coin: Coin,
