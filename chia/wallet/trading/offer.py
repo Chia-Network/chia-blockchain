@@ -170,7 +170,7 @@ class Offer:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
         all_additions: List[Coin] = self.bundle.additions()
         all_removals: List[Coin] = self.bundle.removals()
-        non_ephemeral_removals: List[Coin] = list(filter(lambda c: c not in all_additions, all_removals))
+        non_ephemeral_removals: List[Coin] = list(set(all_removals) - set(all_additions))
 
         pending_dict: Dict[str, int] = {}
         # First we add up the amounts of all coins that share an ancestor with the offered coins (i.e. a primary coin)
@@ -179,13 +179,8 @@ class Offer:
             pending_dict[name] = 0
             for coin in coins:
                 root_removal: Coin = coin
-                while True:
-                    if root_removal in non_ephemeral_removals:
-                        break
-                    else:
-                        root_removal = list(
-                            filter(lambda c: c.name() == root_removal.parent_coin_info, non_ephemeral_removals)
-                        )[0]
+                while root_removal not in non_ephemeral_removals:
+                    root_removal = next(coin for coin in all_removals if coin.name() == root_removal.parent_coin_info)
 
                 for addition in filter(lambda c: c.parent_coin_info == root_removal.name(), all_additions):
                     pending_dict[name] += addition.amount
