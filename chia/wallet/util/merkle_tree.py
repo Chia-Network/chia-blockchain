@@ -1,6 +1,6 @@
 import math
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from enum import Enum
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
@@ -28,7 +28,7 @@ class MerkleTree:
     type: TreeType
     nodes: List[bytes32]
 
-    def __init__(self, nodes, waterfall=False):
+    def __init__(self, nodes: List[bytes32], waterfall: bool = False) -> None:
         self.type = TreeType.WATERFALL if waterfall else TreeType.TREE
         self.nodes = nodes
 
@@ -53,7 +53,9 @@ class MerkleTree:
     def calculate_root(self) -> bytes32:
         return self._root(self.nodes)
 
-    def _proof(self, puzzle_hashes: List[bytes32], searching_for: bytes32):
+    def _proof(
+        self, puzzle_hashes: List[bytes32], searching_for: bytes32
+    ) -> Tuple[Optional[int], Optional[List[bytes32]], bytes32, Optional[int]]:
         if len(puzzle_hashes) == 1:
             atom_hash = hash_an_atom(puzzle_hashes[0])
             if puzzle_hashes[0] == searching_for:
@@ -71,19 +73,26 @@ class MerkleTree:
 
             if first_hash[0] is not None:
                 final_list = first_hash[1]
-                final_list.append(rest_hash[2])
+                # TODO: handle hints
+                #       error: Item "None" of "Optional[List[bytes32]]" has no attribute "append"  [union-attr]
+                final_list.append(rest_hash[2])  # type: ignore[union-attr]
                 bit_num = first_hash[3]
                 final_path = first_hash[0]
             elif rest_hash[0] is not None:
                 final_list = rest_hash[1]
-                final_list.append(first_hash[2])
+                # TODO: handle hints
+                #       error: Item "None" of "Optional[List[bytes32]]" has no attribute "append"  [union-attr]
+                final_list.append(first_hash[2])  # type: ignore[union-attr]
                 bit_num = rest_hash[3]
-                final_path = rest_hash[0] | (1 << bit_num)
+                # TODO: handle hints
+                #       error: Unsupported operand types for << ("int" and "None")  [operator]
+                #       note: Right operand is of type "Optional[int]"
+                final_path = rest_hash[0] | (1 << bit_num)  # type: ignore[operator]
 
             pair_hash = hash_a_pair(first_hash[2], rest_hash[2])
 
             return (final_path, final_list, pair_hash, bit_num + 1 if bit_num is not None else None)
 
-    def generate_proof(self, leaf_reveal: bytes32):
+    def generate_proof(self, leaf_reveal: bytes32) -> Tuple[Optional[int], List[Optional[List[bytes32]]]]:
         proof = self._proof(self.nodes, leaf_reveal)
         return (proof[0], [proof[1]])

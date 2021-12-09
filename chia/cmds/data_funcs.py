@@ -40,7 +40,7 @@ async def get_value_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint:
     return response
 
 
-async def update_kv_store_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> Optional[Dict[str, Any]]:
+async def update_kv_store_cmd(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
     tree_id = args.get("tree_id", None)
     changelist = args.get("changelist", None)
