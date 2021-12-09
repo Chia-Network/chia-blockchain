@@ -10,7 +10,7 @@ repos:
     hooks:
     -   id: init_py_files
         name: __init__.py files
-        entry: python3 tests/build-init-files.py --root .
+        entry: python3 tests/build-init-files.py -v --root .
         language: python
         pass_filenames: false
         additional_dependencies: [click~=7.1]
