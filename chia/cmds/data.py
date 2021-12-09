@@ -1,14 +1,21 @@
 import json
 import logging
-from typing import Coroutine
+from typing import Any, Coroutine, Dict, Optional, TYPE_CHECKING
 
 import click
+
+
+if TYPE_CHECKING:
+    # Will be located here in the next mypy release
+    # from _typeshed import IdentityFunction
+    from click.decorators import _IdentityFunction as IdentityFunction
+
 
 logger = logging.getLogger(__name__)
 
 
 # TODO: this is more general and should be part of refactoring the overall CLI code duplication
-def run(coro: Coroutine):
+def run(coro: Coroutine[Any, Any, Optional[Dict[str, Any]]]) -> None:
     import asyncio
 
     response = asyncio.run(coro)
@@ -29,7 +36,7 @@ def data_cmd() -> None:
 #       malformed inputs.
 
 
-def create_changelist_option():
+def create_changelist_option() -> "IdentityFunction":
     return click.option(
         "-d",
         "--changelist",
@@ -40,7 +47,7 @@ def create_changelist_option():
     )
 
 
-def create_key_option():
+def create_key_option() -> "IdentityFunction":
     return click.option(
         "-h",
         "--key",
@@ -51,7 +58,7 @@ def create_key_option():
     )
 
 
-def create_kv_store_id_option():
+def create_kv_store_id_option() -> "IdentityFunction":
     return click.option(
         "-store",
         "-id",
@@ -61,7 +68,7 @@ def create_kv_store_id_option():
     )
 
 
-def create_kv_store_name_option():
+def create_kv_store_name_option() -> "IdentityFunction":
     return click.option(
         "-n",
         "--table_name",
@@ -72,7 +79,7 @@ def create_kv_store_name_option():
     )
 
 
-def create_rpc_port_option():
+def create_rpc_port_option() -> "IdentityFunction":
     return click.option(
         "-dp",
         "--data-rpc-port",

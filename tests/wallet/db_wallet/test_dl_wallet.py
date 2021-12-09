@@ -256,10 +256,7 @@ class TestDLWallet:
         offer_coin = await dlo_wallet_1.get_coin()
         offer_full_puzzle = dlo_wallet_1.puzzle_for_pk(0x00)
         db_puzzle, db_innerpuz, current_root = await dl_wallet_0.get_info_for_offer_claim()
-        inclusion_proof = (current_tree.generate_proof(Program.to("thing").get_tree_hash()),)
-        if len(inclusion_proof) == 1:
-            inclusion_proof = inclusion_proof[0]
-            # breakpoint()
+        inclusion_proof = current_tree.generate_proof(Program.to("thing").get_tree_hash())
         assert db_innerpuz is not None
         sb2 = await dlo_wallet_2.claim_dl_offer(
             offer_coin,

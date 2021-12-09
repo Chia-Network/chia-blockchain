@@ -36,18 +36,22 @@ upnp_dependencies = [
     "miniupnpc==2.2.2",  # Allows users to open ports on their router
 ]
 
+# TODO: unpin mypy and types-click after mypy's next release.  types-click >=0.1.13
+#       depends on changes made to typeshed after the version used in the most recent
+#       release of mypy, 0.910.
+#       https://github.com/python/typeshed/commit/7a9a107a63c5f4b938563ed6f8d934dc4b1de2c3
 dev_dependencies = [
     "pytest",
     "pytest-asyncio",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
     "flake8",
-    "mypy",
+    "mypy==0.910",
     "black",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
     "types-aiofiles",
-    "types-click",
+    "types-click==0.1.12",
     "types-cryptography",
     "types-pkg_resources",
     "types-pyyaml",

@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 
 
 from chia.data_layer.data_layer import DataLayer
@@ -49,7 +49,7 @@ class DataLayerRpcApi:
             "/get_pairs": self.get_pairs,
         }
 
-    async def create_kv_store(self, request: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def create_kv_store(self, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         value = await self.service.create_store()
         return {"id": value.hex()}
 
@@ -73,7 +73,7 @@ class DataLayerRpcApi:
         # TODO: fix
         return {"data": value.hex()}  # type: ignore[attr-defined]
 
-    async def update_kv_store(self, request: Dict[str, Any]):
+    async def update_kv_store(self, request: Dict[str, Any]) -> None:
         """
         rows_to_add a list of clvm objects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove
