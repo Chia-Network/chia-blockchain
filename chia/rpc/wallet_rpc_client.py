@@ -286,11 +286,11 @@ class WalletRpcClient(RpcClient):
     ##########################################################################################
     # Data Layer Wallet
     ##########################################################################################
-    async def start_data_layer(self):
+    async def start_data_layer(self) -> Dict[str, Any]:
         response = await self.fetch("start_data_layer", {})
         return response
 
-    async def create_kv_store(self):
+    async def create_kv_store(self) -> Dict[str, Any]:
         response = await self.fetch("create_kv_store", {})
         return response
 
