@@ -1,11 +1,13 @@
 name: Windows Installer on Windows 10 and Python 3.9
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
+      - protocol_and_cats_rebased
     tags:
-        - '**'
+      - '**'
   pull_request:
     branches:
       - '**'
@@ -60,6 +62,11 @@ jobs:
       name: Install Python 3.9
       with:
         python-version: "3.9"
+
+    - name: Setup Node 16.x
+      uses: actions/setup-node@v2.4.1
+      with:
+        node-version: '16.x'
 
     - name: Test for secrets access
       id: check_secrets
@@ -177,6 +184,7 @@ jobs:
       run: |
         ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
         aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/builds/
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/protocol_and_cats_rebased/
 
     - name: Create Checksums
       env:

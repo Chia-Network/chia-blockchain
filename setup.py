@@ -28,6 +28,7 @@ dependencies = [
     "click==7.1.2",  # For the CLI
     "dnspythonchia==2.2.0",  # Query DNS seeds
     "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
+    "packaging==21.0"
 ]
 
 upnp_dependencies = [
@@ -86,7 +87,7 @@ kwargs = dict(
         "chia.wallet",
         "chia.wallet.puzzles",
         "chia.wallet.rl_wallet",
-        "chia.wallet.cc_wallet",
+        "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
         "chia.wallet.settings",
         "chia.wallet.trading",

@@ -23,6 +23,7 @@ def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth:
                     peer_retry = False
             if peer_retry:
                 log.info(f"Reconnecting to peer {peer_info}")
+                log.debug(f"Total connections: {[connection.get_peer_info() for connection in server.all_connections]}")
                 try:
                     await server.start_client(peer_info, None, auth=auth)
                 except Exception as e:

@@ -18,7 +18,7 @@ class HeaderBlock(Streamable):
     challenge_chain_ip_proof: VDFProof
     reward_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
     reward_chain_ip_proof: VDFProof
-    infused_challenge_chain_ip_proof: Optional[VDFProof]  # Iff deficit < 4
+    infused_challenge_chain_ip_proof: Optional[VDFProof]  # Iff deficit < 16
     foliage: Foliage  # Reward chain foliage data
     foliage_transaction_block: Optional[FoliageTransactionBlock]  # Reward chain foliage data (tx block)
     transactions_filter: bytes  # Filter for block transactions

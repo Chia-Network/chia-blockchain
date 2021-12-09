@@ -107,6 +107,7 @@ class WSChiaConnection:
 
         # Used by crawler/dns introducer
         self.version = None
+        self.protocol_version = ""
 
     async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
         if self.is_outbound:
@@ -141,7 +142,7 @@ class WSChiaConnection:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
 
             self.version = inbound_handshake.software_version
-
+            self.protocol_version = inbound_handshake.protocol_version
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
 

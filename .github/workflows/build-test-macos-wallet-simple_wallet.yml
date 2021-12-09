@@ -1,12 +1,12 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS wallet-rl_wallet Tests
+name: MacOS wallet-simple_wallet Tests
 
 on:
   push:
     branches:
-      - main
+      - protocol_and_cats_rebased
     tags:
         - '**'
   pull_request:
@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: MacOS wallet-rl_wallet Tests
+    name: MacOS wallet-simple_wallet Tests
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -97,10 +97,10 @@ jobs:
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
-    - name: Test wallet-rl_wallet code with pytest
+    - name: Test wallet-simple_wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet/rl_wallet/test_*.py -s -v --durations 0
+        ./venv/bin/py.test tests/wallet/simple_wallet/test_simple_wallet.py -s -v --durations 0
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

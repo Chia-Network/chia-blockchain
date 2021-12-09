@@ -19,6 +19,7 @@ npm install electron-installer-dmg -g
 npm install electron-packager -g
 npm install electron/electron-osx-sign -g
 npm install notarize-cli -g
+npm install lerna -g
 
 echo "Create dist/"
 sudo rm -rf dist
@@ -26,6 +27,8 @@ mkdir dist
 
 echo "Create executables with pyinstaller"
 pip install pyinstaller==4.5
+
+echo "Create executables with pyinstaller"
 SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
@@ -33,14 +36,14 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "pyinstaller failed!"
 	exit $LAST_EXIT_CODE
 fi
-cp -r dist/daemon ../chia-blockchain-gui
+cp -r dist/daemon ../chia-blockchain-gui/packages/wallet
 cd .. || exit
 cd chia-blockchain-gui || exit
 
 echo "npm build"
 npm install
-npm audit fix
 npm run build
+
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "npm run build failed!"
@@ -49,6 +52,7 @@ fi
 
 # sets the version for chia-blockchain in package.json
 brew install jq
+cd ./packages/wallet
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
@@ -77,8 +81,8 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-mv Chia-darwin-x64 ../build_scripts/dist/
-cd ../build_scripts || exit
+mv Chia-darwin-x64 ../../../build_scripts/dist/
+cd ../../../build_scripts || exit
 
 DMG_NAME="Chia-$CHIA_INSTALLER_VERSION.dmg"
 echo "Create $DMG_NAME"

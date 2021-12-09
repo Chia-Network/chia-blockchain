@@ -3,7 +3,7 @@ min_mainnet_k_size: 32
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
-daemon_port: 55400
+daemon_port: 55401
 daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
@@ -66,12 +66,25 @@ network_overrides: &network_overrides
       MEMPOOL_BLOCK_BUFFER: 50
       EPOCH_BLOCKS: 768
       DIFFICULTY_STARTING: 30
+    testnet10:
+      AGG_SIG_ME_ADDITIONAL_DATA: ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2
+      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
+      DIFFICULTY_STARTING: 30
+      EPOCH_BLOCKS: 768
+      GENESIS_CHALLENGE: ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
+      MEMPOOL_BLOCK_BUFFER: 10
+      MIN_PLOT_SIZE: 18
+      NETWORK_TYPE: 1
+
   config:
     mainnet:
       address_prefix: "xch"
       default_full_node_port: 8444
     testnet0:
       address_prefix: "txch"
+      default_full_node_port: 58444
     testnet1:
       address_prefix: "txch"
     testnet2:
@@ -81,6 +94,9 @@ network_overrides: &network_overrides
     testnet4:
       address_prefix: "txch"
     testnet7:
+      address_prefix: "txch"
+      default_full_node_port: 58444
+    testnet10:
       address_prefix: "txch"
       default_full_node_port: 58444
 
@@ -365,7 +381,7 @@ ui:
   # this is where the electron UI will find its daemon
   # defaults to the one running locally with its private keys
   daemon_host: *self_hostname
-  daemon_port: 55400
+  daemon_port: 55401
   daemon_ssl:
     private_crt: config/ssl/daemon/private_daemon.crt
     private_key: config/ssl/daemon/private_daemon.key
@@ -387,13 +403,13 @@ introducer:
 
 wallet:
   port: 8449
-  rpc_port: 9256
+  rpc_port: 9257
 
   enable_profiler: False
 
   # see description for full_node.db_sync
   db_sync: auto
-
+  connect_to_unknown_peers: True
   # The minimum height that we care about for our transactions. Set to zero
   # If we are restoring from private key and don't know the height.
   starting_height: 0
@@ -401,7 +417,8 @@ wallet:
   num_sync_batches: 50
   initial_num_public_keys: 100
   initial_num_public_keys_new_wallet: 5
-
+  dns_servers:
+    - "dns-introducer.chia.net"
   full_node_peer:
     host: *self_hostname
     port: 8444
@@ -414,7 +431,7 @@ wallet:
   network_overrides: *network_overrides
   selected_network: *selected_network
 
-  target_peer_count: 5
+  target_peer_count: 3
   peer_connect_interval: 60
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds

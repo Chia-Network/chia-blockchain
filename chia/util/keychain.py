@@ -44,8 +44,7 @@ class KeyringMaxUnlockAttempts(Exception):
 
 
 def supports_keyring_passphrase() -> bool:
-    # Support can be disabled by setting CHIA_PASSPHRASE_SUPPORT to 0/false
-    return os.environ.get("CHIA_PASSPHRASE_SUPPORT", "true").lower() in ["1", "true"]
+    return False or os.environ.get("CHIA_PASSPHRASE_SUPPORT", "").lower() in ["1", "true"]
 
 
 def supports_os_passphrase_storage() -> bool:

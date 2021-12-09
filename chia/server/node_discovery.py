@@ -78,6 +78,7 @@ class FullNodeDiscovery:
         self.serialize_task: Optional[asyncio.Task] = None
         self.cleanup_task: Optional[asyncio.Task] = None
         self.initial_wait: int = 0
+        self.connection: Optional[aiosqlite.Connection] = None
         try:
             self.resolver: Optional[dns.asyncresolver.Resolver] = dns.asyncresolver.Resolver()
         except Exception:
@@ -92,6 +93,7 @@ class FullNodeDiscovery:
     async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
         self.connection = await aiosqlite.connect(self.peer_db_path)
+        assert self.connection is not None
         await self.connection.execute("pragma journal_mode=wal")
         await self.connection.execute("pragma synchronous=OFF")
         self.address_manager_store = await AddressManagerStore.create(self.connection)
@@ -117,7 +119,8 @@ class FullNodeDiscovery:
             self.cancel_task_safe(t)
         if len(self.pending_tasks) > 0:
             await asyncio.wait(self.pending_tasks)
-        await self.connection.close()
+        if self.connection is not None:
+            await self.connection.close()
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:
@@ -702,7 +705,7 @@ class WalletPeers(FullNodeDiscovery):
         )
 
     async def start(self) -> None:
-        self.initial_wait = 60
+        self.initial_wait = 1
         await self.initialize_address_manager()
         await self.start_tasks()
 

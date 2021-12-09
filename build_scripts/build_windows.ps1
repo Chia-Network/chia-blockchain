@@ -86,8 +86,9 @@ pyinstaller --log-level INFO $SPEC_FILE
 Write-Output "   ---"
 Write-Output "Copy chia executables to chia-blockchain-gui\"
 Write-Output "   ---"
-Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\" -Recurse
+Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\packages\wallet" -Recurse
 Set-Location -Path "..\chia-blockchain-gui" -PassThru
+Copy-Item "win_code_sign_cert.p12" -Destination "packages\wallet\"
 
 git status
 
@@ -95,10 +96,12 @@ Write-Output "   ---"
 Write-Output "Prepare Electron packager"
 Write-Output "   ---"
 $Env:NODE_OPTIONS = "--max-old-space-size=3000"
-npm install --save-dev electron-winstaller
+npm install -g electron-winstaller
 npm install -g electron-packager
+npm install -g lerna
+
+lerna clean -y
 npm install
-npm audit fix
 
 git status
 
@@ -109,6 +112,8 @@ npm run build
 If ($LastExitCode -gt 0){
     Throw "npm run build failed!"
 }
+
+Set-Location -Path "packages\wallet" -PassThru
 
 Write-Output "   ---"
 Write-Output "Increase the stack for chia command for (chia plots create) chiapos limitations"
@@ -132,13 +137,21 @@ Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
+electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion --executable-name=chia-blockchain
 Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
+
+# Specific to protocol_and_cats_rebased branch, move these directories to where they used to be so the rest of the CI
+# finds them where it expects to
+Copy-Item "Chia-win32-x64" -Destination "..\..\" -Recurse
+Copy-Item "release-builds" -Destination "..\..\" -Recurse
+
+# Move back to the root of the gui directory
+Set-Location -Path - -PassThru
 
 git status
 
@@ -157,3 +170,4 @@ git status
 Write-Output "   ---"
 Write-Output "Windows Installer complete"
 Write-Output "   ---"
+

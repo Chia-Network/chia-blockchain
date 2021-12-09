@@ -358,6 +358,9 @@ class ChiaServer:
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
+        if on_connect is None:
+            on_connect = self.on_connect
+
         if self.is_duplicate_or_self_connection(target_node):
             return False
 
@@ -766,13 +769,9 @@ class ChiaServer:
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict) -> bool:
         if trusted_peers is None:
             return False
-        for trusted_peer in trusted_peers:
-            cert = self.root_path / trusted_peers[trusted_peer]
-            pem_cert = x509.load_pem_x509_certificate(cert.read_bytes())
-            cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
-            der_cert = x509.load_der_x509_certificate(cert_bytes)
-            peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
-            if peer_id == peer.peer_node_id:
-                self.log.debug(f"trusted node {peer.peer_node_id} {peer.peer_host}")
-                return True
-        return False
+        if not self.config["testing"] and peer.peer_host == "127.0.0.1":
+            return True
+        if peer.peer_node_id.hex() not in trusted_peers:
+            return False
+
+        return True
