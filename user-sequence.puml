@@ -1,0 +1,33 @@
+@startuml
+actor Fred
+participant AuxAppUI #green
+participant UserStore #green
+database UserDB #green
+Fred -> AuxAppUI: Enters Data
+AuxAppUI -> UserStore: RPC call
+UserStore -> UserDB: Store data 
+UserDB --> UserStore: Key
+UserStore --> AuxAppUI: finished
+Fred -> AuxAppUI: Enters More Data
+AuxAppUI -> UserStore: RPC call
+UserStore -> UserDB: Store data 
+UserDB --> UserStore: Key
+UserStore --> AuxAppUI: finished
+Fred -> AuxAppUI: Finish and Publish
+UserStore -> UserStore: serialize and create delta
+UserStore -> Datalayer: RPC SubmitDelta(Delta, fee)
+Datalayer -> DataStore: update dl store
+database kvstore
+DataStore -> kvstore: store data
+DataStore -> DataStore: update tree roothash
+DataStore --> Datalayer: tree roothash
+Datalayer -> Chain: update singleton with tree roothash
+Datalayer --> UserStore: tree roothash
+UserStore -> Datalayer: RPC Get All Data? GetKeysValues()?
+Datalayer -> DataStore: get all data?
+DataStore --> Datalayer: return key,value data
+Datalayer --> UserStore: return key,value data
+UserStore -> UserStore: deserialize
+UserStore -> UserDB: store data
+UserStore -> AuxAppUI: Data Published
+@enduml
