@@ -28,7 +28,9 @@ async def sign_coin_spends(
             raise ValueError(error_msg)
 
         # Create signature
-        for pk_bytes, msg in pkm_pairs_for_conditions_dict(conditions_dict, coin_spend.coin.name(), additional_data):
+        for pk_bytes, msg in pkm_pairs_for_conditions_dict(
+            conditions_dict, bytes(coin_spend.coin.name()), additional_data
+        ):
             pk = blspy.G1Element.from_bytes(pk_bytes)
             pk_list.append(pk)
             msg_list.append(msg)
