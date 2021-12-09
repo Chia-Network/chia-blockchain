@@ -11,6 +11,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle as standard_puzzle
 from chia.wallet.puzzles.cc_loader import CC_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
+
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 
 
@@ -152,6 +153,7 @@ class CATPuzzle:
         # TODO: implement this
         return Program.to([])
 
+
 class OfferPuzzle:
     @staticmethod
     def match(puzzle: Program) -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
@@ -168,6 +170,7 @@ class OfferPuzzle:
     def solve(args: List[Union[PuzzleRepresentation, Program]], solution_dict: Dict[str, str]) -> Program:
         # TODO: implement this
         return Program.to([])
+
 
 """
 This may not need to be a class, it was just how I conceived of it.
