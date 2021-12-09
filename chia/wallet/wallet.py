@@ -147,9 +147,6 @@ class Wallet:
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
 
-    async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
-        return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
-
     async def hack_populate_secret_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> G1Element:
         maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
         if maybe is None:
@@ -304,8 +301,7 @@ class Wallet:
         coins: Set[Coin] = None,
         primaries_input: Optional[List[Dict[str, Any]]] = None,
         ignore_max_send_amount: bool = False,
-        coin_announcements_to_consume: Set[Announcement] = None,
-        puzzle_announcements_to_consume: Set[Announcement] = None,
+        announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
     ) -> List[CoinSpend]:
@@ -340,10 +336,8 @@ class Wallet:
 
         assert change >= 0
 
-        if coin_announcements_to_consume is not None:
-            coin_announcements_to_consume = {a.name() for a in coin_announcements_to_consume}
-        if puzzle_announcements_to_consume is not None:
-            puzzle_announcements_to_consume = {a.name() for a in puzzle_announcements_to_consume}
+        if announcements_to_consume is not None:
+            announcements_to_consume = {a.name() for a in announcements_to_consume}
 
         spends: List[CoinSpend] = []
         primary_announcement_hash: Optional[bytes32] = None
@@ -377,8 +371,7 @@ class Wallet:
                     primaries=primaries,
                     fee=fee,
                     coin_announcements={message},
-                    coin_announcements_to_assert=coin_announcements_to_consume,
-                    puzzle_announcements_to_assert=puzzle_announcements_to_consume,
+                    coin_announcements_to_assert=announcements_to_consume,
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
@@ -410,8 +403,7 @@ class Wallet:
         coins: Set[Coin] = None,
         primaries: Optional[List[Dict[str, Any]]] = None,
         ignore_max_send_amount: bool = False,
-        coin_announcements_to_consume: Set[Announcement] = None,
-        puzzle_announcements_to_consume: Set[Announcement] = None,
+        announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
     ) -> TransactionRecord:
@@ -433,8 +425,7 @@ class Wallet:
             coins,
             primaries,
             ignore_max_send_amount,
-            coin_announcements_to_consume,
-            puzzle_announcements_to_consume,
+            announcements_to_consume,
             memos,
             negative_change_allowed,
         )

@@ -163,20 +163,6 @@ class WalletCoinStore:
             return None
         return self.coin_record_from_row(row)
 
-    async def get_multiple_coin_records(self, coin_names: List[bytes32]) -> List[WalletCoinRecord]:
-        """Return WalletCoinRecord(s) that have a coin name in the specified list"""
-        if set(coin_names).issubset(set(self.coin_record_cache.keys())):
-            return list(filter(lambda cr: cr.coin.name() in coin_names, self.coin_record_cache.values()))
-        else:
-            as_hexes = [cn.hex() for cn in coin_names]
-            cursor = await self.db_connection.execute(
-                f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(as_hexes) - 1)}?)', tuple(as_hexes)
-            )
-            rows = await cursor.fetchall()
-            await cursor.close()
-
-            return [self.coin_record_from_row(row) for row in rows]
-
     async def get_first_coin_height(self) -> Optional[uint32]:
         """Returns height of first confirmed coin"""
         cursor = await self.db_connection.execute("SELECT MIN(confirmed_height) FROM coin_record;")

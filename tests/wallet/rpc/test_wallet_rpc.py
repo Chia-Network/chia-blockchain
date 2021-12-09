@@ -22,8 +22,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.trading.trade_status import TradeStatus
+from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
@@ -292,11 +291,6 @@ class TestWalletRpc:
             assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"
             await client.set_cat_name(cat_0_id, "My cat")
             assert (await client.get_cat_name(cat_0_id)) == "My cat"
-            wid, name = await client.cat_asset_id_to_name(col)
-            assert wid == cat_0_id
-            assert name == "My cat"
-            should_be_none = await client.cat_asset_id_to_name(bytes([0] * 32))
-            assert should_be_none is None
 
             await asyncio.sleep(1)
             for i in range(0, 5):
@@ -339,47 +333,6 @@ class TestWalletRpc:
 
             assert bal_0["confirmed_wallet_balance"] == 16
             assert bal_1["confirmed_wallet_balance"] == 4
-
-            ##########
-            # Offers #
-            ##########
-
-            # Create an offer of 5 chia for one CAT
-            offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, validate_only=True)
-            all_offers = await client.get_all_offers()
-            assert len(all_offers) == 0
-            assert offer is None
-
-            offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, fee=uint64(1))
-
-            summary = await client.get_offer_summary(offer)
-            assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}}
-
-            assert await client.check_offer_validity(offer)
-
-            all_offers = await client.get_all_offers(file_contents=True)
-            assert len(all_offers) == 1
-            assert TradeStatus(all_offers[0].status) == TradeStatus.PENDING_ACCEPT
-            assert all_offers[0].offer == bytes(offer)
-
-            trade_record = await client_2.take_offer(offer, fee=uint64(1))
-            assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CONFIRM
-
-            await client.cancel_offer(offer.name(), secure=False)
-
-            trade_record = await client.get_offer(offer.name(), file_contents=True)
-            assert trade_record.offer == bytes(offer)
-            assert TradeStatus(trade_record.status) == TradeStatus.CANCELLED
-
-            await client.cancel_offer(offer.name(), fee=uint64(1), secure=True)
-
-            trade_record = await client.get_offer(offer.name())
-            assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
-
-            await asyncio.sleep(1)
-            for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
-                await asyncio.sleep(0.5)
 
             # Keys and addresses
 
