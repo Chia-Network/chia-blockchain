@@ -19,6 +19,7 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo, FoliageBlockData
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 
 
 NUM_ITERS = 20000
@@ -58,6 +59,7 @@ async def run_add_block_benchmark(version: int):
     all_test_time = 0.0
 
     prev_block = bytes32([0] * 32)
+    prev_ses_hash = bytes32([0] * 32)
 
     try:
         block_store = await BlockStore.create(db_wrapper)
@@ -74,6 +76,7 @@ async def run_add_block_benchmark(version: int):
         prev_transaction_block = bytes32([0] * 32)
         prev_transaction_height = uint32(0)
         total_time = 0.0
+        ses_counter = 0
 
         if verbose:
             print("profiling add_full_block", end="")
@@ -90,7 +93,16 @@ async def run_add_block_benchmark(version: int):
             finished_challenge_slot_hashes = None
             finished_infused_challenge_slot_hashes = None
             finished_reward_slot_hashes = None
+
             sub_epoch_summary_included = None
+            if ses_counter == 0:
+                sub_epoch_summary_included = SubEpochSummary(
+                    prev_ses_hash,
+                    rand_hash(),
+                    uint8(random.randint(0, 255)),  # num_blocks_overflow: uint8
+                    None,  # new_difficulty: Optional[uint64]
+                    None,  # new_sub_slot_iters: Optional[uint64]
+                )
 
             record = BlockRecord(
                 header_hash,
@@ -228,6 +240,7 @@ async def run_add_block_benchmark(version: int):
             iters = uint128(iters + 123456)
             sp_index = uint8((sp_index + 1) % 64)
             deficit = uint8((deficit + 3) % 17)
+            ses_counter = (ses_counter + 1) % 384
             prev_block = header_hash
 
             # every 33 blocks is a transaction block
@@ -236,6 +249,9 @@ async def run_add_block_benchmark(version: int):
             if is_transaction:
                 prev_transaction_block = header_hash
                 prev_transaction_height = uint32(height)
+
+            if ses_counter == 0:
+                prev_ses_hash = header_hash
 
             if verbose:
                 print(".", end="")
