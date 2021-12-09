@@ -666,7 +666,7 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
 
         start = request.get("start", 0)
-        end = request.get("end", 1000)
+        end = request.get("end", 50)
         sort_key = request.get("sort_key", None)
         reverse = request.get("reverse", False)
 
