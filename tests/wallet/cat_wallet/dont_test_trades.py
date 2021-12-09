@@ -7,7 +7,7 @@ import pytest
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
-from chia.wallet.cc_wallet.cc_wallet import CCWallet
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
 from tests.setup_nodes import setup_simulators_and_wallets
@@ -63,40 +63,43 @@ async def wallets_prefarm(two_wallet_nodes):
     return wallet_node_0, wallet_node_1, full_node_api
 
 
-class TestCCTrades:
+class TestCATTrades:
     @pytest.mark.asyncio
-    async def test_cc_trade(self, wallets_prefarm):
+    async def test_cat_trade(self, wallets_prefarm):
         wallet_node_0, wallet_node_1, full_node = wallets_prefarm
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_0.wallet_state_manager, wallet_0, uint64(100))
+        cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+            wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100)
+        )
         await asyncio.sleep(1)
 
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
         await time_out_assert(15, wallet_height_at_least, True, wallet_node_0, 27)
-        await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
-        await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
+        await time_out_assert(15, cat_wallet.get_confirmed_balance, 100)
+        await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 100)
 
-        assert cc_wallet.cc_info.my_genesis_checker is not None
-        colour = cc_wallet.get_colour()
+        assert cat_wallet.cat_info.my_tail is not None
+        asset_id = cat_wallet.get_asset_id()
 
-        cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
-            wallet_node_1.wallet_state_manager, wallet_1, colour
+        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
+            wallet_node_1.wallet_state_manager, wallet_1, asset_id
         )
         await asyncio.sleep(1)
 
-        assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
+        assert cat_wallet.cat_info.my_tail == cat_wallet_2.cat_info.my_tail
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
         await time_out_assert(15, wallet_height_at_least, True, wallet_node_0, 31)
-        # send cc_wallet 2 a coin
-        cc_hash = await cc_wallet_2.get_new_inner_hash()
-        tx_record = await cc_wallet.generate_signed_transaction([uint64(1)], [cc_hash])
-        await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
-        await asyncio.sleep(1)
+        # send cat_wallet 2 a coin
+        cat_hash = await cat_wallet_2.get_new_inner_hash()
+        tx_records = await cat_wallet.generate_signed_transaction([uint64(1)], [cat_hash])
+        for tx_record in tx_records:
+            await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
+            await asyncio.sleep(1)
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
         await time_out_assert(15, wallet_height_at_least, True, wallet_node_0, 35)
@@ -126,7 +129,7 @@ class TestCCTrades:
         assert offer is not None
 
         assert offer["chia"] == -10
-        assert offer[colour] == 30
+        assert offer[asset_id] == 30
 
         success, trade, reason = await trade_manager_1.respond_to_offer(file_path)
         await asyncio.sleep(1)
@@ -137,35 +140,37 @@ class TestCCTrades:
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
         await time_out_assert(15, wallet_height_at_least, True, wallet_node_0, 39)
-        await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 31)
-        await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 31)
+        await time_out_assert(15, cat_wallet_2.get_confirmed_balance, 31)
+        await time_out_assert(15, cat_wallet_2.get_unconfirmed_balance, 31)
         trade_2 = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
         assert TradeStatus(trade_2.status) is TradeStatus.CONFIRMED
 
     @pytest.mark.asyncio
-    async def test_cc_trade_accept_with_zero(self, wallets_prefarm):
+    async def test_cat_trade_accept_with_zero(self, wallets_prefarm):
         wallet_node_0, wallet_node_1, full_node = wallets_prefarm
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_0.wallet_state_manager, wallet_0, uint64(100))
+        cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+            wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100)
+        )
         await asyncio.sleep(1)
 
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
-        await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
-        await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
+        await time_out_assert(15, cat_wallet.get_confirmed_balance, 100)
+        await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 100)
 
-        assert cc_wallet.cc_info.my_genesis_checker is not None
-        colour = cc_wallet.get_colour()
+        assert cat_wallet.cat_info.my_tail is not None
+        asset_id = cat_wallet.get_asset_id()
 
-        cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
-            wallet_node_1.wallet_state_manager, wallet_1, colour
+        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
+            wallet_node_1.wallet_state_manager, wallet_1, asset_id
         )
         await asyncio.sleep(1)
 
-        assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
+        assert cat_wallet.cat_info.my_tail == cat_wallet_2.cat_info.my_tail
 
         ph = await wallet_1.get_new_puzzlehash()
         for i in range(0, buffer_blocks):
@@ -195,10 +200,10 @@ class TestCCTrades:
         assert success is True
         assert offer is not None
 
-        assert cc_wallet.get_colour() == cc_wallet_2.get_colour()
+        assert cat_wallet.get_asset_id() == cat_wallet_2.get_asset_id()
 
         assert offer["chia"] == -10
-        assert offer[colour] == 30
+        assert offer[asset_id] == 30
 
         success, trade, reason = await trade_manager_1.respond_to_offer(file_path)
         await asyncio.sleep(1)
@@ -208,14 +213,14 @@ class TestCCTrades:
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
-        await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
-        await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 30)
+        await time_out_assert(15, cat_wallet_2.get_confirmed_balance, 30)
+        await time_out_assert(15, cat_wallet_2.get_unconfirmed_balance, 30)
         trade_2 = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
         assert TradeStatus(trade_2.status) is TradeStatus.CONFIRMED
 
     @pytest.mark.asyncio
-    async def test_cc_trade_with_multiple_colours(self, wallets_prefarm):
-        # This test start with CCWallet in both wallets. wall
+    async def test_cat_trade_with_multiple_asset_ids(self, wallets_prefarm):
+        # This test start with CATWallet in both wallets. wall
         # wallet1 {wallet_id: 2 = 70}
         # wallet2 {wallet_id: 2 = 30}
 
@@ -223,33 +228,35 @@ class TestCCTrades:
         wallet_a = wallet_node_a.wallet_state_manager.main_wallet
         wallet_b = wallet_node_b.wallet_state_manager.main_wallet
 
-        # cc_a_2 = coloured coin, Alice, wallet id = 2
-        cc_a_2 = wallet_node_a.wallet_state_manager.wallets[2]
-        cc_b_2 = wallet_node_b.wallet_state_manager.wallets[2]
+        # cat_a_2 = CAT, Alice, wallet id = 2
+        cat_a_2 = wallet_node_a.wallet_state_manager.wallets[2]
+        cat_b_2 = wallet_node_b.wallet_state_manager.wallets[2]
 
-        cc_a_3: CCWallet = await CCWallet.create_new_cc(wallet_node_a.wallet_state_manager, wallet_a, uint64(100))
+        cat_a_3: CATWallet = await CATWallet.create_new_cat_wallet(
+            wallet_node_a.wallet_state_manager, wallet_a, {"identifier": "genesis_by_id"}, uint64(100)
+        )
         await asyncio.sleep(1)
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
-        await time_out_assert(15, cc_a_3.get_confirmed_balance, 100)
-        await time_out_assert(15, cc_a_3.get_unconfirmed_balance, 100)
+        await time_out_assert(15, cat_a_3.get_confirmed_balance, 100)
+        await time_out_assert(15, cat_a_3.get_unconfirmed_balance, 100)
 
         # store these for asserting change later
-        cc_balance = await cc_a_2.get_unconfirmed_balance()
-        cc_balance_2 = await cc_b_2.get_unconfirmed_balance()
+        cat_balance = await cat_a_2.get_unconfirmed_balance()
+        cat_balance_2 = await cat_b_2.get_unconfirmed_balance()
 
-        assert cc_a_3.cc_info.my_genesis_checker is not None
-        red = cc_a_3.get_colour()
+        assert cat_a_3.cat_info.my_tail is not None
+        red = cat_a_3.get_asset_id()
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
-        cc_b_3: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_b.wallet_state_manager, wallet_b, red)
+        cat_b_3: CATWallet = await CATWallet.create_wallet_for_cat(wallet_node_b.wallet_state_manager, wallet_b, red)
         await asyncio.sleep(1)
 
-        assert cc_a_3.cc_info.my_genesis_checker == cc_b_3.cc_info.my_genesis_checker
+        assert cat_a_3.cat_info.my_tail == cat_b_3.cat_info.my_tail
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -279,11 +286,11 @@ class TestCCTrades:
         assert offer is not None
         assert offer["chia"] == -1000
 
-        colour_2 = cc_a_2.get_colour()
-        colour_3 = cc_a_3.get_colour()
+        asset_id_2 = cat_a_2.get_asset_id()
+        asset_id_3 = cat_a_3.get_asset_id()
 
-        assert offer[colour_2] == 20
-        assert offer[colour_3] == 50
+        assert offer[asset_id_2] == 20
+        assert offer[asset_id_3] == 50
 
         success, trade, reason = await trade_manager_1.respond_to_offer(file_path)
         await asyncio.sleep(1)
@@ -292,14 +299,14 @@ class TestCCTrades:
         for i in range(0, 10):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
-        await time_out_assert(15, cc_b_3.get_confirmed_balance, 50)
-        await time_out_assert(15, cc_b_3.get_unconfirmed_balance, 50)
+        await time_out_assert(15, cat_b_3.get_confirmed_balance, 50)
+        await time_out_assert(15, cat_b_3.get_unconfirmed_balance, 50)
 
-        await time_out_assert(15, cc_a_3.get_confirmed_balance, 50)
-        await time_out_assert(15, cc_a_3.get_unconfirmed_balance, 50)
+        await time_out_assert(15, cat_a_3.get_confirmed_balance, 50)
+        await time_out_assert(15, cat_a_3.get_unconfirmed_balance, 50)
 
-        await time_out_assert(15, cc_a_2.get_unconfirmed_balance, cc_balance - offer[colour_2])
-        await time_out_assert(15, cc_b_2.get_unconfirmed_balance, cc_balance_2 + offer[colour_2])
+        await time_out_assert(15, cat_a_2.get_unconfirmed_balance, cat_balance - offer[asset_id_2])
+        await time_out_assert(15, cat_b_2.get_unconfirmed_balance, cat_balance_2 + offer[asset_id_2])
 
         trade = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
 
@@ -310,10 +317,10 @@ class TestCCTrades:
     @pytest.mark.asyncio
     async def test_create_offer_with_zero_val(self, wallets_prefarm):
         # Wallet A              Wallet B
-        # CCWallet id 2: 50     CCWallet id 2: 50
-        # CCWallet id 3: 50     CCWallet id 2: 50
+        # CATWallet id 2: 50     CATWallet id 2: 50
+        # CATWallet id 3: 50     CATWallet id 2: 50
         # Wallet A will
-        # Wallet A will create a new CC and wallet B will create offer to buy that coin
+        # Wallet A will create a new CAT and wallet B will create offer to buy that coin
 
         wallet_node_a, wallet_node_b, full_node = wallets_prefarm
         wallet_a = wallet_node_a.wallet_state_manager.main_wallet
@@ -321,20 +328,22 @@ class TestCCTrades:
         trade_manager_a: TradeManager = wallet_node_a.wallet_state_manager.trade_manager
         trade_manager_b: TradeManager = wallet_node_b.wallet_state_manager.trade_manager
 
-        cc_a_4: CCWallet = await CCWallet.create_new_cc(wallet_node_a.wallet_state_manager, wallet_a, uint64(100))
+        cat_a_4: CATWallet = await CATWallet.create_new_cat_wallet(
+            wallet_node_a.wallet_state_manager, wallet_a, {"identifier": "genesis_by_id"}, uint64(100)
+        )
         await asyncio.sleep(1)
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
-        await time_out_assert(15, cc_a_4.get_confirmed_balance, 100)
+        await time_out_assert(15, cat_a_4.get_confirmed_balance, 100)
 
-        colour = cc_a_4.get_colour()
+        asset_id = cat_a_4.get_asset_id()
 
-        cc_b_4: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_b.wallet_state_manager, wallet_b, colour)
-        cc_balance = await cc_a_4.get_confirmed_balance()
-        cc_balance_2 = await cc_b_4.get_confirmed_balance()
-        offer_dict = {1: -30, cc_a_4.id(): 50}
+        cat_b_4: CATWallet = await CATWallet.create_wallet_for_cat(wallet_node_b.wallet_state_manager, wallet_b, asset_id)
+        cat_balance = await cat_a_4.get_confirmed_balance()
+        cat_balance_2 = await cat_b_4.get_confirmed_balance()
+        offer_dict = {1: -30, cat_a_4.id(): 50}
 
         file = "test_offer_file.offer"
         file_path = Path(file)
@@ -348,8 +357,8 @@ class TestCCTrades:
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
-        await time_out_assert(15, cc_a_4.get_confirmed_balance, cc_balance - 50)
-        await time_out_assert(15, cc_b_4.get_confirmed_balance, cc_balance_2 + 50)
+        await time_out_assert(15, cat_a_4.get_confirmed_balance, cat_balance - 50)
+        await time_out_assert(15, cat_b_4.get_confirmed_balance, cat_balance_2 + 50)
 
         async def assert_func():
             assert trade_a is not None
@@ -367,11 +376,11 @@ class TestCCTrades:
         await time_out_assert(15, assert_func_b, TradeStatus.CONFIRMED.value)
 
     @pytest.mark.asyncio
-    async def test_cc_trade_cancel_insecure(self, wallets_prefarm):
+    async def test_cat_trade_cancel_insecure(self, wallets_prefarm):
         # Wallet A              Wallet B
-        # CCWallet id 2: 50     CCWallet id 2: 50
-        # CCWallet id 3: 50     CCWallet id 3: 50
-        # CCWallet id 4: 40     CCWallet id 4: 60
+        # CATWallet id 2: 50     CATWallet id 2: 50
+        # CATWallet id 3: 50     CATWallet id 3: 50
+        # CATWallet id 4: 40     CATWallet id 4: 60
         # Wallet A will create offer, cancel it by deleting from db only
         wallet_node_a, wallet_node_b, full_node = wallets_prefarm
         wallet_a = wallet_node_a.wallet_state_manager.main_wallet
@@ -414,11 +423,11 @@ class TestCCTrades:
         assert trade_a.status == TradeStatus.CANCELED.value
 
     @pytest.mark.asyncio
-    async def test_cc_trade_cancel_secure(self, wallets_prefarm):
+    async def test_cat_trade_cancel_secure(self, wallets_prefarm):
         # Wallet A              Wallet B
-        # CCWallet id 2: 50     CCWallet id 2: 50
-        # CCWallet id 3: 50     CCWallet id 3: 50
-        # CCWallet id 4: 40     CCWallet id 4: 60
+        # CATWallet id 2: 50     CATWallet id 2: 50
+        # CATWallet id 3: 50     CATWallet id 3: 50
+        # CATWallet id 4: 40     CATWallet id 4: 60
         # Wallet A will create offer, cancel it by spending coins back to self
 
         wallet_node_a, wallet_node_b, full_node = wallets_prefarm
