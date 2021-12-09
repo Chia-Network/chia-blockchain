@@ -10,6 +10,8 @@ from blspy import G1Element
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle as standard_puzzle
 from chia.wallet.puzzles.cc_loader import CC_MOD
+from chia.wallet.puzzles.load_clvm import load_clvm
+OFFER_MOD = load_clvm("settlement_payments.clvm")
 
 
 class PuzzleRepresentation:
@@ -95,7 +97,8 @@ structure below.  They must all have three methods implemented:
 
 class StandardPuzzle:
     @staticmethod
-    def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
+    def match(puzzle: Program) -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
+        uncurried_mod, curried_args = puzzle.uncurry()
         if standard_puzzle.MOD == uncurried_mod:
             synthetic_pubkey = curried_args.first()
             return True, [synthetic_pubkey]
@@ -126,7 +129,8 @@ class StandardPuzzle:
 
 class CATPuzzle:
     @staticmethod
-    def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
+    def match(puzzle: Program) -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
+        uncurried_mod, curried_args = puzzle.uncurry()
         if CC_MOD == uncurried_mod:
             tail_hash = curried_args.rest().first()
             innerpuz = curried_args.rest().rest().first()
@@ -148,6 +152,22 @@ class CATPuzzle:
         # TODO: implement this
         return Program.to([])
 
+class OfferPuzzle:
+    @staticmethod
+    def match(puzzle: Program) -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
+        if OFFER_MOD == puzzle:
+            return True, []
+        else:
+            return False, []
+
+    @staticmethod
+    def construct(args: List[Union[PuzzleRepresentation, Program]]) -> Program:
+        return OFFER_MOD
+
+    @staticmethod
+    def solve(args: List[Union[PuzzleRepresentation, Program]], solution_dict: Dict[str, str]) -> Program:
+        # TODO: implement this
+        return Program.to([])
 
 """
 This may not need to be a class, it was just how I conceived of it.
@@ -160,6 +180,7 @@ class KnownPuzzles:
     map: Dict[bytes32, Any] = {
         standard_puzzle.MOD.get_tree_hash(): StandardPuzzle,
         CC_MOD.get_tree_hash(): CATPuzzle,
+        OFFER_MOD.get_tree_hash(): OfferPuzzle,
     }
 
     @classmethod
@@ -168,9 +189,8 @@ class KnownPuzzles:
 
     @classmethod
     def match_puzzle(cls, puzzle: Program) -> Tuple[bool, Union[PuzzleRepresentation, Program]]:
-        uncurried_mod, curried_args = puzzle.uncurry()
         for identifier, driver in cls.map.items():
-            matched, args = driver.match(uncurried_mod, curried_args)
+            matched, args = driver.match(puzzle)
             if matched:
                 return True, PuzzleRepresentation(identifier, args)
         return False, puzzle

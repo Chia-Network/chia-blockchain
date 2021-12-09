@@ -280,7 +280,7 @@ async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         records = [await wallet_client.get_offer(hexstr_to_bytes(id), file_contents)]
         if filepath is not None:
             with open(pathlib.Path(filepath), "w") as file:
-                file.write(records[0].offer.hex())
+                file.write(Offer.from_bytes(records[0].offer).compress().hex())
                 file.close()
 
     for record in records:
