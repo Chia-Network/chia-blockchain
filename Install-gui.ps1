@@ -21,7 +21,8 @@ Set-Location chia-blockchain-gui
 
 $ErrorActionPreference = "SilentlyContinue"
 npm install --loglevel=error
-npm run audit:fix
+# Audit fix doesn't currently play nice with lerna
+#npm run audit:fix
 npm run build
 py ..\installhelper.py
 
