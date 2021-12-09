@@ -45,10 +45,10 @@ jobs:
           ${{ runner.os }}-build-
           ${{ runner.os }}-
 
-    - name: Setup Node 12.x
+    - name: Setup Node 16.x
       uses: actions/setup-node@v2.3.0
       with:
-        node-version: '12.x'
+        node-version: '16.x'
 
     - name: Check npm audit and locale on ${{ matrix.os }}
       shell: bash
