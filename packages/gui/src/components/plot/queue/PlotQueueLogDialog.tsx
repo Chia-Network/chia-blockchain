@@ -10,7 +10,7 @@ import {
   Typography,
 } from '@material-ui/core';
 import { Flex, Log } from '@chia/core';
-import { useGetPlotQueueQuery } from '@chia/api-react';
+import { useGetPlotQueueQuery, useThrottleQuery } from '@chia/api-react';
 import styled from 'styled-components';
 
 const StyledLinearProgress = styled(LinearProgress)`
@@ -27,8 +27,10 @@ type Props = {
 
 export default function PlotQueueLogDialog(props: Props) {
   const { id, open, onClose } = props;
+  const { data: queue } = useThrottleQuery(useGetPlotQueueQuery, undefined, undefined, {
+    wait: 5000,
+  });
 
-const { data: queue, isLoading: isLoadingQueue, error } = useGetPlotQueueQuery();
   const queueItem = queue?.find((item) => item.id === id);
   const [log, setLog] = useState<ReactNode>(<Trans>Loading...</Trans>);
 

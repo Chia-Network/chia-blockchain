@@ -108,14 +108,18 @@ export default class Farmer extends Service {
     return this.onCommand('new_signage_point', callback, processData);
   }
 
+  onHarvesterChanged(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onCommand('get_harvesters', callback, processData);
+  }
+
   onRefreshPlots(
     callback: (data: any, message: Message) => void,
     processData?: (data: any) => any,
   ) {
-    return this.onCommand('refresh_plots', (...args) => {
-      console.log('refresh_plots in farmer', ...args);
-      return callback(...args);
-    }, processData);
+    return this.onCommand('refresh_plots', callback, processData);
   }
 
   onFarmingInfoChanged(

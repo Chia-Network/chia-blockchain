@@ -308,9 +308,10 @@ export default class Client extends EventEmitter {
       }
 
       resolve(message);
+    } else {
+      // other messages can be events like get_harvesters
+      this.emit('message', message);
     }
-
-    this.emit('message', message);
   }
 
   async send(message: Message, timeout?: number, disableFormat?: boolean): Promise<Response> {

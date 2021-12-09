@@ -71,13 +71,6 @@ export default function DashboardSideBar() {
           icon={<PoolIcon fontSize="large" />}
           title={<Trans>Pool</Trans>}
         />
-        <SideBarItem
-          to="/"
-          icon={<KeysIcon fontSize="large" />}
-          onSelect={handleLogOut}
-          title={<Trans>Keys</Trans>}
-          end
-        />
         {passphraseSupportEnabled && (
           <SideBarItem
             to="/dashboard/settings"
@@ -85,6 +78,13 @@ export default function DashboardSideBar() {
             title={<Trans>Settings</Trans>}
           />
         )}
+        <SideBarItem
+          to="/"
+          icon={<KeysIcon fontSize="large" />}
+          onSelect={handleLogOut}
+          title={<Trans>Keys</Trans>}
+          end
+        />
       </StyledList>
     </StyledRoot>
   );
