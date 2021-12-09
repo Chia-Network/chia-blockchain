@@ -26,8 +26,8 @@ from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.trade_utils import trade_record_to_dict
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
@@ -86,15 +86,13 @@ class WalletRpcApi:
             "/cc_get_name": self.cc_get_name,
             "/cc_spend": self.cc_spend,
             "/cc_get_colour": self.cc_get_colour,
-            "/cat_asset_id_to_name": self.cat_asset_id_to_name,
-            "/get_cat_list": self.get_cat_list,
             "/create_offer_for_ids": self.create_offer_for_ids,
-            "/get_offer_summary": self.get_offer_summary,
-            "/check_offer_validity": self.check_offer_validity,
-            "/take_offer": self.take_offer,
-            "/get_offer": self.get_offer,
-            "/get_all_offers": self.get_all_offers,
-            "/cancel_offer": self.cancel_offer,
+            "/get_discrepancies_for_offer": self.get_discrepancies_for_offer,
+            "/respond_to_offer": self.respond_to_offer,
+            "/get_trade": self.get_trade,
+            "/get_all_trades": self.get_all_trades,
+            "/cancel_trade": self.cancel_trade,
+            "/get_cat_list": self.get_cat_list,
             # DID Wallet
             "/did_update_recovery_ids": self.did_update_recovery_ids,
             "/did_get_pubkey": self.did_get_pubkey,
@@ -813,113 +811,85 @@ class WalletRpcApi:
         colour: str = wallet.get_colour()
         return {"colour": colour, "wallet_id": wallet_id}
 
-    async def cat_asset_id_to_name(self, request):
-        assert self.service.wallet_state_manager is not None
-        wallet = await self.service.wallet_state_manager.get_wallet_for_colour(request["asset_id"])
-        if wallet is None:
-            raise ValueError("The asset ID specified does not belong to a wallet")
-        else:
-            return {"wallet_id": wallet.id(), "name": (await wallet.get_name())}
-
     async def create_offer_for_ids(self, request):
         assert self.service.wallet_state_manager is not None
 
-        offer: Dict[str, int] = request["offer"]
-        fee: uint64 = uint64(request.get("fee", 0))
-        validate_only: bool = request.get("validate_only", False)
-
-        modified_offer = {}
-        for key in offer:
-            modified_offer[int(key)] = offer[key]
-
+        offer = request["ids"]
+        file_name = request["filename"]
         async with self.service.wallet_state_manager.lock:
             (
                 success,
-                trade_record,
+                spend_bundle,
                 error,
-            ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer, fee=fee, validate_only=validate_only
-            )
+            ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(offer, file_name)
         if success:
-            return {
-                "offer": trade_record.offer.hex(),
-                "trade_record": trade_record.to_json_dict_convenience(),
-            }
+            self.service.wallet_state_manager.trade_manager.write_offer_to_disk(Path(file_name), spend_bundle)
+            return {}
         raise ValueError(error)
 
-    async def get_offer_summary(self, request):
+    async def get_discrepancies_for_offer(self, request):
         assert self.service.wallet_state_manager is not None
-        offer_hex: str = request["offer"]
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
-        offered, requested = offer.summary()
+        file_name = request["filename"]
+        file_path = Path(file_name)
+        async with self.service.wallet_state_manager.lock:
+            (
+                success,
+                discrepancies,
+                error,
+            ) = await self.service.wallet_state_manager.trade_manager.get_discrepancies_for_offer(file_path)
 
-        return {"summary": {"offered": offered, "requested": requested}}
+        if success:
+            return {"discrepancies": discrepancies}
+        raise ValueError(error)
 
-    async def check_offer_validity(self, request):
+    async def respond_to_offer(self, request):
         assert self.service.wallet_state_manager is not None
-        offer_hex: str = request["offer"]
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
-
-        return {"valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer))}
-
-    async def take_offer(self, request):
-        assert self.service.wallet_state_manager is not None
-        offer_hex = request["offer"]
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
-        fee: uint64 = uint64(request.get("fee", 0))
-
+        file_path = Path(request["filename"])
         async with self.service.wallet_state_manager.lock:
             (
                 success,
                 trade_record,
                 error,
-            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer, fee=fee)
+            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(file_path)
         if not success:
             raise ValueError(error)
-        return {"trade_record": trade_record.to_json_dict_convenience()}
+        return {}
 
-    async def get_offer(self, request: Dict):
+    async def get_trade(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
-        trade_id = hexstr_to_bytes(request["trade_id"])
-        file_contents: bool = request.get("file_contents", False)
-        trade_record: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
-        if trade_record is None:
-            raise ValueError(f"No trade with trade id: {trade_id.hex()}")
+        trade_id = request["trade_id"]
+        trade: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
+        if trade is None:
+            raise ValueError(f"No trade with trade id: {trade_id}")
 
-        offer_value: Optional[str] = trade_record.offer.hex() if file_contents else None
-        return {"trade_record": trade_record.to_json_dict_convenience(), "offer": offer_value}
+        result = trade_record_to_dict(trade)
+        return {"trade": result}
 
-    async def get_all_offers(self, request: Dict):
+    async def get_all_trades(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
-
-        file_contents: bool = request.get("file_contents", False)
 
         all_trades = await trade_mgr.get_all_trades()
         result = []
-        offer_values: Optional[List[str]] = [] if file_contents else None
         for trade in all_trades:
-            result.append(trade.to_json_dict_convenience())
-            if file_contents and offer_values is not None:
-                offer_values.append(trade.offer.hex())
+            result.append(trade_record_to_dict(trade))
 
-        return {"trade_records": result, "offers": offer_values}
+        return {"trades": result}
 
-    async def cancel_offer(self, request: Dict):
+    async def cancel_trade(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
         wsm = self.service.wallet_state_manager
         secure = request["secure"]
         trade_id = hexstr_to_bytes(request["trade_id"])
-        fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
             if secure:
-                await wsm.trade_manager.cancel_pending_offer_safely(trade_id, fee=fee)
+                await wsm.trade_manager.cancel_pending_offer_safely(trade_id)
             else:
                 await wsm.trade_manager.cancel_pending_offer(trade_id)
         return {}
