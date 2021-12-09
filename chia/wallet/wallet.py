@@ -353,15 +353,12 @@ class Wallet:
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
-                # TODO: address hint error and remove ignore
-                #       error: Argument "coin_announcements_to_assert" to "make_solution" of "Wallet" has incompatible
-                #       type "Optional[Set[Announcement]]"; expected "Optional[Set[bytes32]]"  [arg-type]
                 solution: Program = self.make_solution(
                     primaries=primaries,
                     fee=fee,
                     coin_announcements={message},
                     coin_announcements_to_assert=coin_announcements_to_consume,
-                    puzzle_announcements_to_assert=puzzle_announcements_to_consume,  # type: ignore[arg-type]
+                    puzzle_announcements_to_assert=puzzle_announcements_to_consume,
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
@@ -410,9 +407,6 @@ class Wallet:
             #       error: Generator has incompatible item type "bytes32"; expected "int"  [misc]
             non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))  # type: ignore[misc]
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument 8 to "_generate_unsigned_transaction" of "Wallet" has incompatible type
-        #       "Optional[Set[bytes32]]"; expected "Optional[Set[Announcement]]"  [arg-type]
         transaction = await self._generate_unsigned_transaction(
             amount,
             puzzle_hash,
@@ -421,7 +415,7 @@ class Wallet:
             coins,
             primaries,
             ignore_max_send_amount,
-            coin_announcements_to_consume,  # type: ignore[arg-type]
+            coin_announcements_to_consume,
             puzzle_announcements_to_consume,
         )
         assert len(transaction) > 0

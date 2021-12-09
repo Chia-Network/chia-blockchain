@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import aiosqlite
 from chia.daemon.keychain_proxy import KeychainProxyConnectionFailure
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.data_store import DataStore
 from chia.server.server import ChiaServer
@@ -19,7 +20,7 @@ class DataLayer:
     data_store: DataStore
     db_wrapper: DBWrapper
     db_path: Path
-    connection: aiosqlite.Connection
+    connection: Optional[aiosqlite.Connection]
     config: Dict[str, Any]
     log: logging.Logger
     wallet: DataLayerWallet
@@ -40,6 +41,7 @@ class DataLayer:
         config = load_config(root_path, "config.yaml", "data_layer")
         self.initialized = False
         self.config = config
+        self.connection = None
         self.wallet_node = wallet_node
         self.log = logging.getLogger(name if name is None else __name__)
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
@@ -84,7 +86,8 @@ class DataLayer:
         pass
 
     async def _await_closed(self) -> None:
-        await self.connection.close()
+        if self.connection is not None:
+            await self.connection.close()
 
     async def create_store(self) -> bytes32:
         assert self.wallet.dl_info.origin_coin
@@ -120,19 +123,19 @@ class DataLayer:
         # todo need to mark data as pending and change once tx is confirmed
         return True
 
-    async def get_value(self, store_id: bytes32, key: bytes32) -> bytes32:
+    async def get_value(self, store_id: bytes32, key: bytes) -> bytes:
         res = await self.data_store.get_node_by_key(tree_id=store_id, key=key)
         if res is None:
             self.log.error("Failed to create tree")
         return res.value
 
-    async def get_pairs(self, store_id: bytes32) -> bytes32:
+    async def get_pairs(self, store_id: bytes32) -> List[TerminalNode]:
         res = await self.data_store.get_pairs(store_id)
         if res is None:
             self.log.error("Failed to create tree")
         return res
 
-    async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> bytes32:
+    async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
         res = await self.data_store.get_ancestors(store_id, node_hash)
         if res is None:
             self.log.error("Failed to create tree")

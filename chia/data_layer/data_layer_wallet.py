@@ -79,7 +79,7 @@ class DataLayerWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         amount: uint64,
-        root_hash: bytes32,
+        root_hash: Optional[bytes32],
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
     ) -> ItemAndTransactionRecords[_T_DataLayerWallet]:
@@ -147,7 +147,7 @@ class DataLayerWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),
+            name=bytes32(token_bytes()),
         )
         regular_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -164,7 +164,7 @@ class DataLayerWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=bytes32(token_bytes()),
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(dl_record)
@@ -175,7 +175,7 @@ class DataLayerWallet:
         self,
         amount: uint64,
         initial_root: bytes32,
-    ) -> Tuple[SpendBundle, bytes32, bytes32, Program]:
+    ) -> Tuple[SpendBundle, bytes32, Coin, Program]:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         """
@@ -195,7 +195,7 @@ class DataLayerWallet:
         full_puzzle: Program = create_host_fullpuz(inner_puzzle, initial_root, launcher_coin.name())
         puzzle_hash: bytes32 = full_puzzle.get_tree_hash()
 
-        announcement_set: Set[Announcement] = set()
+        announcement_set: Set[bytes32] = set()
         announcement_message = Program.to([puzzle_hash, amount, initial_root]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
         eve_coin = Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), amount)
@@ -212,14 +212,14 @@ class DataLayerWallet:
         await self.add_parent(eve_coin.parent_coin_info, eve_parent, False)
         await self.add_parent(eve_coin.name(), future_parent, False)
         create_launcher_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
-            amount,
-            genesis_launcher_puz.get_tree_hash(),
-            uint64(0),
-            None,
-            coins,
-            None,
-            False,
-            announcement_set,
+            amount=amount,
+            puzzle_hash=genesis_launcher_puz.get_tree_hash(),
+            fee=uint64(0),
+            origin_id=None,
+            coins=coins,
+            primaries=None,
+            ignore_max_send_amount=False,
+            coin_announcements_to_consume=announcement_set,
         )
         assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
         genesis_launcher_solution: Program = Program.to([puzzle_hash, amount, initial_root])
@@ -234,7 +234,7 @@ class DataLayerWallet:
 
     async def create_update_state_spend(
         self,
-        root_hash: bytes,
+        root_hash: bytes32,
     ) -> TransactionRecord:
         new_inner_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         new_db_layer_puzzle = create_host_layer_puzzle(new_inner_inner_puzzle, root_hash)
@@ -274,7 +274,12 @@ class DataLayerWallet:
         # fake_sb = await self.standard_wallet.sign_transaction([fake_for_signature])
 
         spend_bundle = await self.sign(coin_spend)
-        new_info = DataLayerInfo(self.dl_info.origin_coin, root_hash, self.dl_info.parent_info, new_inner_inner_puzzle)
+        new_info = DataLayerInfo(
+            origin_coin=self.dl_info.origin_coin,
+            root_hash=root_hash,
+            parent_info=self.dl_info.parent_info,
+            current_inner_inner=new_inner_inner_puzzle,
+        )
         await self.save_info(new_info, False)  # todo in_transaction false ?
         # await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         next_full_puz = create_host_fullpuz(new_inner_inner_puzzle, root_hash, self.dl_info.origin_coin.name())
@@ -296,7 +301,7 @@ class DataLayerWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),
+            name=bytes32(token_bytes()),
         )
         await self.standard_wallet.push_transaction(dl_record)
         return dl_record

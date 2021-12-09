@@ -199,10 +199,11 @@ class DLOWallet:
         )
         coin_spend = CoinSpend(coin, full_puzzle, solution)
         sb = SpendBundle([coin_spend], AugSchemeMPL.aggregate([]))
+        # TODO: fix optionality issue with to_puzzle_hash
         tr = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=recovery_target,
+            to_puzzle_hash=recovery_target,  # type: ignore[arg-type]
             amount=uint64(coin.amount),
             fee_amount=uint64(fee),
             confirmed=False,

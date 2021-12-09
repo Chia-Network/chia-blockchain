@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Iterable
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -7,7 +7,7 @@ class IntegrityError(Exception):
     pass
 
 
-def build_message_with_hashes(message: str, bytes_objects: List[bytes]) -> str:
+def build_message_with_hashes(message: str, bytes_objects: Iterable[bytes]) -> str:
     return "\n".join([message, *[f"    {b.hex()}" for b in bytes_objects]])
 
 
