@@ -43,7 +43,7 @@ import {
 import useAssetIdName from '../../../hooks/useAssetIdName';
 import useOpenExternal from '../../../hooks/useOpenExternal';
 import WalletType from '../../../constants/WalletType';
-import { chia_to_mojo, mojo_to_chia_string } from '../../../util/chia';
+import { chia_to_mojo, mojo_to_chia_string, mojo_to_colouredcoin_string } from '../../../util/chia';
 import OfferCoinOfInterest from 'types/OfferCoinOfInterest';
 import OfferState from './OfferState';
 import styled from 'styled-components';
@@ -64,6 +64,15 @@ const StyledHeaderBox = styled.div`
   padding-right: ${({ theme }) => `${theme.spacing(2)}px`};
   border-radius: 4px;
   background-color: ${({ theme }) => theme.palette.background.paper};
+`;
+
+const StyledTitle = styled(Box)`
+  font-size: 0.625rem;
+  color: rgba(255, 255, 255, 0.7);
+`;
+
+const StyledValue = styled(Box)`
+  word-break: break-all;
 `;
 
 type OfferMojoAmountProps = {
@@ -346,13 +355,27 @@ function OfferDetails(props: OfferDetailsProps) {
 
   function OfferSummaryEntry({ assetId, amount, ...rest}: { assetId: string, amount: number }) {
     const assetIdInfo = lookupAssetId(assetId);
-    const displayAmount = assetIdInfo ? formatAmountForWalletType(amount as number, assetIdInfo.walletType) : `${amount}`;
-    const displayName = assetIdInfo?.displayName ?? 'unknown';
+    const displayAmount = assetIdInfo ? formatAmountForWalletType(amount as number, assetIdInfo.walletType) : mojo_to_colouredcoin_string(amount);
+    const displayName = assetIdInfo?.displayName ?? t`Unknown CAT`;
 
     return (
       <Flex flexDirections="row" gap={1}>
         <Typography variant="body1" {...rest}>
-          {displayAmount} {displayName}
+          <Flex flexDirection="row" alignItems="center" gap={1}>
+            <Typography>{displayAmount} {displayName}</Typography>
+            {!(assetIdInfo?.displayName) && (
+              <TooltipIcon interactive>
+                <Flex flexDirection="column" gap={1}>
+                  <StyledTitle>TAIL</StyledTitle>
+                  <Flex alignItems="center" gap={1}>
+                    <StyledValue>{assetId.toLowerCase()}</StyledValue>
+                    <CopyToClipboard value={assetId.toLowerCase()} fontSize="small" />
+                  </Flex>
+                </Flex>
+              </TooltipIcon>
+            )}
+          </Flex>
+
         </Typography>
         {assetIdInfo?.walletType === WalletType.STANDARD_WALLET && (
           <Typography variant="body1" color="textSecondary">
