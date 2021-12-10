@@ -24,6 +24,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.types.blockchain_format.coin import Coin
+from chia.wallet.cc_wallet.cc_utils import match_cat_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 from chia.wallet.wallet import Wallet
 
@@ -61,6 +62,7 @@ class FullNodeRpcApi:
             "/puzzle_hash_for_pk": self.puzzle_hash_for_pk,
             "/push_tx": self.push_tx,
             "/get_puzzle_and_solution": self.get_puzzle_and_solution,
+            "/is_cat_coin": self.is_cat_coin,
             # Mempool
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
@@ -705,6 +707,38 @@ class FullNodeRpcApi:
         return {
             "status": status.name,
         }
+
+    async def is_cat_coin(self, request: Dict) -> Optional[Dict]:
+        '''
+        This RPC return true if the coin is a CAT coin, false otherwise
+
+        params:
+        - coin_id: the coin ID or coin name (hash of puzzle_hash + parent_hash + amount)
+        '''
+        coin_name: bytes32 = hexstr_to_bytes(request["coin_id"])
+        coin_record = await self.service.coin_store.get_coin_record(coin_name)
+        if coin_record is None:
+            raise ValueError(f"Not found coin record")
+        if coin_record.spent_block_index == 0:
+            raise ValueError(f"Coin must be spent to have a solution: {coin_record}")
+
+        height = coin_record.spent_block_index
+        header_hash = self.service.blockchain.height_to_hash(height)
+        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
+
+        if block is None or block.transactions_generator is None:
+            raise ValueError("Invalid block or block generator")
+
+        block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
+        assert block_generator is not None
+        error, puzzle, _ = get_puzzle_and_solution_for_coin(
+            block_generator, coin_name, self.service.constants.MAX_BLOCK_COST_CLVM
+        )
+        if error is not None:
+            raise ValueError(f"Error: {error}")
+
+        is_cat_coin, _ = match_cat_puzzle(puzzle)
+        return {"is_cat_coin": is_cat_coin}
 
     async def get_puzzle_and_solution(self, request: Dict) -> Optional[Dict]:
         coin_name: bytes32 = hexstr_to_bytes(request["coin_id"])
