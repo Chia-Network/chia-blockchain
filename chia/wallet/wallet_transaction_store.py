@@ -440,6 +440,20 @@ class WalletTransactionStore:
 
         return records
 
+    async def get_transactions_by_trade_id(self, trade_id: bytes32) -> List[TransactionRecord]:
+        cursor = await self.db_connection.execute(
+            "SELECT * from transaction_record WHERE trade_id=?", (trade_id,)
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            record = TransactionRecord.from_bytes(row[0])
+            records.append(record)
+
+        return records
+
     async def rollback_to_block(self, height: int):
         # Delete from storage
         to_delete = []

@@ -167,31 +167,23 @@ class Offer:
     # Also mostly for the UI, returns a dictionary of assets and how much of them is pended for this offer
     # This method is also imperfect for sufficiently complex spends
     def get_pending_amounts(self) -> Dict[str, int]:
-        offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
         all_additions: List[Coin] = self.bundle.additions()
         all_removals: List[Coin] = self.bundle.removals()
         non_ephemeral_removals: List[Coin] = list(filter(lambda c: c not in all_additions, all_removals))
 
         pending_dict: Dict[str, int] = {}
         # First we add up the amounts of all coins that share an ancestor with the offered coins (i.e. a primary coin)
-        for asset_id, coins in offered_coins.items():
+        for asset_id, coins in self.get_offered_coins().items():
             name = "xch" if asset_id is None else asset_id.hex()
             pending_dict[name] = 0
             for coin in coins:
-                root_removal: Coin = coin
-                while True:
-                    if root_removal in non_ephemeral_removals:
-                        break
-                    else:
-                        root_removal = list(
-                            filter(lambda c: c.name() == root_removal.parent_coin_info, non_ephemeral_removals)
-                        )[0]
+                root_removal: Coin = self.get_root_removal(coin)
 
                 for addition in filter(lambda c: c.parent_coin_info == root_removal.name(), all_additions):
                     pending_dict[name] += addition.amount
 
         # Then we add a potential fee as pending XCH
-        fee: int = sum([c.amount for c in all_removals]) - sum([c.amount for c in all_additions])
+        fee: int = sum(c.amount for c in all_removals) - sum(c.amount for c in all_additions)
         if fee > 0:
             pending_dict.setdefault("xch", 0)
             pending_dict["xch"] += fee
@@ -209,11 +201,27 @@ class Offer:
         additions = self.bundle.additions()
         return list(filter(lambda c: c not in additions, self.bundle.removals()))
 
-    # This will only return coins that create settlement payments
+    # This returns the non-ephemeral removal that is an ancestor of the specified coin
+    # This should maybe move to the SpendBundle object at some point
+    def get_root_removal(self, coin: Coin) -> Coin:
+        all_removals: Set[Coin] = set(self.bundle.removals())
+        all_removal_ids: Set[bytes32] = {c.name() for c in all_removals}
+        non_ephemeral_removals: Set[Coin] = {c for c in all_removals if c.parent_coin_info not in {r.name() for r in all_removals}}
+        if coin.name() not in all_removal_ids and coin.parent_coin_info not in all_removal_ids:
+            raise ValueError("The specified coin is not a coin in this bundle")
+
+        while coin not in non_ephemeral_removals:
+            coin = next(c for c in all_removals if c.name() == coin.parent_coin_info)
+
+        return coin
+
+    # This will only return coins that are ancestors of settlement payments
     def get_primary_coins(self) -> List[Coin]:
-        primary_ids = [c.parent_coin_info for coins in self.get_offered_coins().values() for c in coins]
-        primary_spends = list(filter(lambda cs: cs.coin.name() in primary_ids, self.bundle.coin_spends))
-        return [cs.coin for cs in primary_spends]
+        primary_coins: Set[Coin] = set()
+        for _, coins in self.get_offered_coins().items():
+            for coin in coins:
+                primary_coins.add(self.get_root_removal(coin))
+        return list(primary_coins)
 
     @classmethod
     def aggregate(cls, offers: List["Offer"]) -> "Offer":

@@ -1210,3 +1210,8 @@ class WalletStateManager:
                 additions_of_interest.append(puzzle_hash)
 
         return additions_of_interest, removals_of_interest
+
+    async def delete_trade_transactions(self, trade_id: bytes32):
+        txs: List[TransactionRecord] = await self.tx_store.get_transactions_by_trade_id(trade_id)
+        for tx in txs:
+            await self.tx_store.delete_transaction_record(tx.name())
