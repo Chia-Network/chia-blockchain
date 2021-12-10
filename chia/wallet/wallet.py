@@ -37,7 +37,7 @@ from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
@@ -388,7 +388,7 @@ class Wallet:
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-        primaries: Optional[List[Dict[str, bytes32]]] = None,
+        primaries: Optional[List[AmountWithPuzzlehash]] = None,
         ignore_max_send_amount: bool = False,
         announcements_to_consume: Set[bytes32] = None,
     ) -> TransactionRecord:
@@ -399,9 +399,7 @@ class Wallet:
         if primaries is None:
             non_change_amount = amount
         else:
-            # TODO: address hint error and remove ignore
-            #       error: Generator has incompatible item type "bytes32"; expected "int"  [misc]
-            non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))  # type: ignore[misc]
+            non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
 
         # TODO: address hint error and remove ignore
         #       error: Argument 8 to "_generate_unsigned_transaction" of "Wallet" has incompatible type

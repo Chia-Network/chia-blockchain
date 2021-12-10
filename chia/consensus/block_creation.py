@@ -123,6 +123,8 @@ def create_foliage(
 
     generator_block_heights_list: List[uint32] = []
 
+    foliage_transaction_block_hash: Optional[bytes32]
+
     if is_transaction_block:
         cost = uint64(0)
 
@@ -263,16 +265,13 @@ def create_foliage(
         )
         assert foliage_transaction_block is not None
 
-        foliage_transaction_block_hash: bytes32 = foliage_transaction_block.get_hash()
+        foliage_transaction_block_hash = foliage_transaction_block.get_hash()
         foliage_transaction_block_signature: Optional[G2Element] = get_plot_signature(
             foliage_transaction_block_hash, reward_block_unfinished.proof_of_space.plot_public_key
         )
         assert foliage_transaction_block_signature is not None
     else:
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "None", variable has type "bytes32")
-        #       [assignment]
-        foliage_transaction_block_hash = None  # type: ignore[assignment]
+        foliage_transaction_block_hash = None
         foliage_transaction_block_signature = None
         foliage_transaction_block = None
         transactions_info = None
