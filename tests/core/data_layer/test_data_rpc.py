@@ -112,7 +112,7 @@ async def test_create_double_insert(chia_root: ChiaRoot, one_wallet_node: nodes)
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
 
     rpc_api = WalletRpcApi(wallet_node)
-    res = await rpc_api.start_data_layer()
+    res = await rpc_api.start_data_layer()  # type: ignore[attr-defined]
     assert res["result"] is True
     key1 = b"a"
     value1 = b"\x01\x02"
@@ -159,7 +159,7 @@ async def test_get_pairs(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
     rpc_api = WalletRpcApi(wallet_node)
-    res = await rpc_api.start_data_layer()
+    res = await rpc_api.start_data_layer()  # type: ignore[attr-defined]
     assert res["result"] is True
     key1 = b"a"
     value1 = b"\x01\x02"
@@ -204,7 +204,7 @@ async def test_get_ancestors(chia_root: ChiaRoot, one_wallet_node: nodes) -> Non
     print(f"confirmed balance is {await wallet.get_confirmed_balance()}")
     print(f"unconfirmed balance is {await wallet.get_unconfirmed_balance()}")
     rpc_api = WalletRpcApi(wallet_node)
-    res = await rpc_api.start_data_layer()
+    res = await rpc_api.start_data_layer()  # type: ignore[attr-defined]
     assert res["result"] is True
     key1 = b"a"
     value1 = b"\x01\x02"
