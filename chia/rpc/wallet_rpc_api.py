@@ -664,16 +664,15 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
 
         wallet_id = int(request["wallet_id"])
-        if "start" in request:
-            start = request["start"]
-        else:
-            start = 0
-        if "end" in request:
-            end = request["end"]
-        else:
-            end = 50
 
-        transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(wallet_id, start, end)
+        start = request.get("start", 0)
+        end = request.get("end", 50)
+        sort_key = request.get("sort_key", None)
+        reverse = request.get("reverse", False)
+
+        transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
+            wallet_id, start, end, sort_key=sort_key, reverse=reverse
+        )
         formatted_transactions = []
         selected = self.service.config["selected_network"]
         prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
@@ -681,7 +680,6 @@ class WalletRpcApi:
             formatted = tx.to_json_dict()
             formatted["to_address"] = encode_puzzle_hash(tx.to_puzzle_hash, prefix)
             formatted_transactions.append(formatted)
-
         return {
             "transactions": formatted_transactions,
             "wallet_id": wallet_id,
