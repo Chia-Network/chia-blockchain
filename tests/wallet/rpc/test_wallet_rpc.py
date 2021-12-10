@@ -20,6 +20,7 @@ from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
+from tests.util.rpc import validate_get_routes
 
 log = logging.getLogger(__name__)
 
@@ -96,6 +97,7 @@ class TestWalletRpc:
         await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
 
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+        await validate_get_routes(client, wallet_rpc_api)
         client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
         try:
             addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")
@@ -244,6 +246,8 @@ class TestWalletRpc:
             await client.log_in_and_skip(pks[1])
             sk_dict = await client.get_private_key(pks[1])
             assert sk_dict["fingerprint"] == pks[1]
+            fingerprint = await client.get_logged_in_fingerprint()
+            assert fingerprint == pks[1]
 
             # Add in reward addresses into farmer and pool for testing delete key checks
             # set farmer to first private key

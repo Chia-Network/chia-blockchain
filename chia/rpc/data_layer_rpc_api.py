@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 
 
 from chia.data_layer.data_layer import DataLayer
@@ -49,12 +49,12 @@ class DataLayerRpcApi:
             "/get_pairs": self.get_pairs,
         }
 
-    async def create_kv_store(self, request: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def create_kv_store(self, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         value = await self.service.create_store()
         return {"id": value.hex()}
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        store_id = hexstr_to_bytes(request["id"])
+        store_id = bytes32.from_hexstr(request["id"])
         key = hexstr_to_bytes(request["key"])
         value = await self.service.get_value(store_id=store_id, key=key)
         return {"data": value.hex()}
@@ -62,15 +62,18 @@ class DataLayerRpcApi:
     async def get_pairs(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         value = await self.service.get_pairs(store_id)
-        return {"data": value.hex()}
+        # TODO: fix
+        return {"data": value.hex()}  # type: ignore[attr-defined]
 
     async def get_ancestors(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         key = hexstr_to_bytes(request["key"])
-        value = await self.service.get_ancestors(key, store_id)
-        return {"data": value.hex()}
+        # TODO: fix
+        value = await self.service.get_ancestors(key, store_id)  # type:ignore[arg-type]
+        # TODO: fix
+        return {"data": value.hex()}  # type: ignore[attr-defined]
 
-    async def update_kv_store(self, request: Dict[str, Any]):
+    async def update_kv_store(self, request: Dict[str, Any]) -> None:
         """
         rows_to_add a list of clvm objects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove

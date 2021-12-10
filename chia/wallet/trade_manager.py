@@ -178,7 +178,7 @@ class TradeManager:
         all: List[TradeRecord] = await self.trade_store.get_all_trades()
         return all
 
-    async def get_trade_by_id(self, trade_id: bytes) -> Optional[TradeRecord]:
+    async def get_trade_by_id(self, trade_id: bytes32) -> Optional[TradeRecord]:
         record = await self.trade_store.get_trade_record(trade_id)
         return record
 
@@ -361,11 +361,11 @@ class TradeManager:
             offer_spend_bundle: SpendBundle = trade_offer.spend_bundle
 
         coinsols: List[CoinSpend] = []  # [] of CoinSpends
-        cc_coinsol_outamounts: Dict[bytes32, List[Tuple[CoinSpend, int]]] = dict()
+        cc_coinsol_outamounts: Dict[str, List[Tuple[CoinSpend, int]]] = dict()
         aggsig = offer_spend_bundle.aggregated_signature
-        cc_discrepancies: Dict[bytes32, int] = dict()
+        cc_discrepancies: Dict[str, int] = dict()
         chia_discrepancy = None
-        wallets: Dict[bytes32, Any] = dict()  # colour to wallet dict
+        wallets: Dict[str, Any] = dict()  # colour to wallet dict
 
         for coinsol in offer_spend_bundle.coin_spends:
             puzzle: Program = Program.from_bytes(bytes(coinsol.puzzle_reveal))
@@ -466,7 +466,10 @@ class TradeManager:
                 aggsig = AugSchemeMPL.aggregate(sigs)
 
                 lineage_proof = await wallets[colour].get_lineage_proof_for_coin(coloured_coin)
-                spendable_cc_list.append(SpendableCC(coloured_coin, genesis_id, inner_puzzle, lineage_proof))
+                # TODO: address hint error and remove ignore
+                #       error: Argument 2 to "SpendableCC" has incompatible type "Optional[bytes32]"; expected "bytes32"
+                #       [arg-type]
+                spendable_cc_list.append(SpendableCC(coloured_coin, genesis_id, inner_puzzle, lineage_proof))  # type: ignore[arg-type]  # noqa: E501
                 innersol_list.append(inner_solution)
 
             # Create SpendableCC for each of the coloured coins received
@@ -480,7 +483,10 @@ class TradeManager:
                     mod_hash, genesis_coin_checker, inner_puzzle = r
                     inner_solution = solution.first()
                     lineage_proof = solution.rest().rest().first()
-                    spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))
+                    # TODO: address hint error and remove ignore
+                    #       error: Argument 2 to "SpendableCC" has incompatible type "Optional[bytes32]"; expected
+                    #       "bytes32"  [arg-type]
+                    spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))  # type: ignore[arg-type]  # noqa: E501
                     innersol_list.append(inner_solution)
 
             # Finish the output coin SpendableCC with new information
@@ -493,7 +499,10 @@ class TradeManager:
             assert inner_puzzle is not None
 
             lineage_proof = await wallets[colour].get_lineage_proof_for_coin(my_output_coin)
-            spendable_cc_list.append(SpendableCC(my_output_coin, genesis_id, inner_puzzle, lineage_proof))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "SpendableCC" has incompatible type "Optional[bytes32]"; expected "bytes32"
+            #       [arg-type]
+            spendable_cc_list.append(SpendableCC(my_output_coin, genesis_id, inner_puzzle, lineage_proof))  # type: ignore[arg-type]  # noqa: E501
             innersol_list.append(inner_solution)
 
             sigs = await wallets[colour].get_sigs(inner_puzzle, inner_solution, my_output_coin.name())
@@ -532,10 +541,13 @@ class TradeManager:
         if chia_spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
             if chia_discrepancy < 0:
+                # TODO: address hint error and remove ignore
+                #       error: Argument "to_puzzle_hash" to "TransactionRecord" has incompatible type "bytes"; expected
+                #       "bytes32"  [arg-type]
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
-                    to_puzzle_hash=token_bytes(),
+                    to_puzzle_hash=token_bytes(),  # type: ignore[arg-type]
                     amount=uint64(abs(chia_discrepancy)),
                     fee_amount=uint64(0),
                     confirmed=False,
@@ -550,10 +562,13 @@ class TradeManager:
                     name=chia_spend_bundle.name(),
                 )
             else:
+                # TODO: address hint error and remove ignore
+                #       error: Argument "to_puzzle_hash" to "TransactionRecord" has incompatible type "bytes"; expected
+                #       "bytes32"  [arg-type]
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
-                    to_puzzle_hash=token_bytes(),
+                    to_puzzle_hash=token_bytes(),  # type: ignore[arg-type]
                     amount=uint64(abs(chia_discrepancy)),
                     fee_amount=uint64(0),
                     confirmed=False,
@@ -572,10 +587,13 @@ class TradeManager:
         for colour, amount in cc_discrepancies.items():
             wallet = wallets[colour]
             if chia_discrepancy > 0:
+                # TODO: address hint error and remove ignore
+                #       error: Argument "to_puzzle_hash" to "TransactionRecord" has incompatible type "bytes"; expected
+                #       "bytes32"  [arg-type]
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
-                    to_puzzle_hash=token_bytes(),
+                    to_puzzle_hash=token_bytes(),  # type: ignore[arg-type]
                     amount=uint64(abs(amount)),
                     fee_amount=uint64(0),
                     confirmed=False,
@@ -590,10 +608,15 @@ class TradeManager:
                     name=spend_bundle.name(),
                 )
             else:
+                # TODO: address hint errors and remove ignores
+                #       error: Argument "to_puzzle_hash" to "TransactionRecord" has incompatible type "bytes"; expected
+                #       "bytes32"  [arg-type]
+                #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+                #       [arg-type]
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
-                    to_puzzle_hash=token_bytes(),
+                    to_puzzle_hash=token_bytes(),  # type: ignore[arg-type]
                     amount=uint64(abs(amount)),
                     fee_amount=uint64(0),
                     confirmed=False,
@@ -605,14 +628,17 @@ class TradeManager:
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.INCOMING_TRADE.value),
-                    name=token_bytes(),
+                    name=token_bytes(),  # type: ignore[arg-type]
                 )
             my_tx_records.append(tx_record)
 
+        # TODO: address hint error and remove ignore
+        #       error: Argument "to_puzzle_hash" to "TransactionRecord" has incompatible type "bytes"; expected
+        #       "bytes32"  [arg-type]
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=token_bytes(),
+            to_puzzle_hash=token_bytes(),  # type: ignore[arg-type]
             amount=uint64(0),
             fee_amount=uint64(0),
             confirmed=False,

@@ -29,6 +29,10 @@ steps:
     fetchDepth: 0
     displayName: "Checkout code"
 
+  - script: |
+      git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+    displayName: "Use https for git instead of ssh"
+
   - task: UsePythonVersion@0
     inputs:
       versionSpec: "$(python.version)"
@@ -69,8 +73,8 @@ steps:
 
   - task: NodeTool@0
     inputs:
-      versionSpec: '14.x'
-    displayName: "Setup Node 14.x"
+      versionSpec: '16.x'
+    displayName: "Setup Node 16.x"
 
   - bash: |
       . ./activate

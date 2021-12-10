@@ -362,7 +362,10 @@ class Wallet:
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
-                solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to <set> has incompatible type "Optional[bytes32]"; expected "bytes32"
+                #       [arg-type]
+                solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})  # type: ignore[arg-type]  # noqa: E501
 
             spends.append(
                 CoinSpend(
@@ -400,7 +403,9 @@ class Wallet:
         if primaries is None:
             non_change_amount = amount
         else:
-            non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
+            # TODO: address hint error and remove ignore
+            #       error: Generator has incompatible item type "bytes32"; expected "int"  [misc]
+            non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))  # type: ignore[misc]
 
         transaction = await self._generate_unsigned_transaction(
             amount,

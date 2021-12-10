@@ -35,6 +35,9 @@ class KeyTool(dict):
         for public_key, message_hash in pkm_pairs_for_conditions_dict(
             conditions_dict, coin_spend.coin.name(), additional_data
         ):
-            signature = self.sign(public_key, message_hash)
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "sign" of "KeyTool" has incompatible type "bytes"; expected "bytes32"
+            #       [arg-type]
+            signature = self.sign(public_key, message_hash)  # type: ignore[arg-type]
             signatures.append(signature)
         return AugSchemeMPL.aggregate(signatures)

@@ -203,7 +203,7 @@ class DataStore:
             value=None,
         )
 
-        return node_hash
+        return node_hash  # type: ignore[no-any-return]
 
     async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
         node_hash = Program.to((key, value)).get_tree_hash()
@@ -217,11 +217,11 @@ class DataStore:
             value=value,
         )
 
-        return node_hash
+        return node_hash  # type: ignore[no-any-return]
 
-    async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> bytes32:
+    async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> None:
         async with self.db_wrapper.locked_transaction(lock=True):
-            c = await self.db.execute(
+            await self.db.execute(
                 "UPDATE root SET status = ? WHERE tree_id=? and generation = ?",
                 (
                     status.value,
@@ -229,7 +229,6 @@ class DataStore:
                     root.generation,
                 ),
             )
-            await c.close()
 
     async def check(self) -> None:
         for check in self._checks:
@@ -570,6 +569,8 @@ class DataStore:
     async def get_tree_as_program(self, tree_id: bytes32, *, lock: bool = True) -> Program:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
+            # TODO: consider actual proper behavior
+            assert root.node_hash is not None
             root_node = await self.get_node(node_hash=root.node_hash, lock=False)
 
             cursor = await self.db.execute(

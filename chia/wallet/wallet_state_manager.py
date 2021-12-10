@@ -979,8 +979,8 @@ class WalletStateManager:
 
         my_puzzle_hashes = self.puzzle_store.all_puzzle_hashes
 
-        removals_of_interest: bytes32 = []
-        additions_of_interest: bytes32 = []
+        removals_of_interest: List[bytes32] = []
+        additions_of_interest: List[bytes32] = []
 
         (
             trade_removals,

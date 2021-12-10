@@ -14,7 +14,7 @@ from chia.util.ints import uint16
 # TODO: there seems to be a large amount of repetition in these to dedupe
 
 
-async def get_client(rpc_port) -> Tuple[DataLayerRpcClient, int]:
+async def get_client(rpc_port: Optional[int]) -> Tuple[DataLayerRpcClient, int]:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     self_hostname = config["self_hostname"]
     if rpc_port is None:
@@ -63,7 +63,11 @@ async def get_value_cmd(rpc_port: Optional[int], tree_id: str, key: str) -> Opti
     return response
 
 
-async def update_kv_store_cmd(rpc_port: Optional[int], tree_id: str, changelist: Dict) -> Optional[Dict[str, Any]]:
+async def update_kv_store_cmd(
+    rpc_port: Optional[int],
+    tree_id: str,
+    changelist: Dict[str, str],
+) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
 
     tree_id_bytes = bytes32(hexstr_to_bytes(tree_id))

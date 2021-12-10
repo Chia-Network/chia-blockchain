@@ -57,11 +57,17 @@ def validate_clvm_and_signature(
 
         pks: List[G1Element] = []
         msgs: List[bytes32] = []
-        pks, msgs = pkm_pairs(result.npc_list, additional_data)
+        # TODO: address hint error and remove ignore
+        #       error: Incompatible types in assignment (expression has type "List[bytes]", variable has type
+        #       "List[bytes32]")  [assignment]
+        pks, msgs = pkm_pairs(result.npc_list, additional_data)  # type: ignore[assignment]
 
         # Verify aggregated signature
         cache: LRUCache = LRUCache(10000)
-        if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "aggregate_verify" has incompatible type "List[bytes32]"; expected "List[bytes]"
+        #       [arg-type]
+        if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):  # type: ignore[arg-type]  # noqa: E501
             return Err.BAD_AGGREGATE_SIGNATURE, b"", {}
         new_cache_entries: Dict[bytes, bytes] = {}
         for k, v in cache.cache.items():

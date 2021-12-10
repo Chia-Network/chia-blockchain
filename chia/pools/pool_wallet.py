@@ -596,7 +596,7 @@ class PoolWallet:
         genesis_launcher_puz: Program = SINGLETON_LAUNCHER
         launcher_coin: Coin = Coin(launcher_parent.name(), genesis_launcher_puz.get_tree_hash(), amount)
 
-        escaping_inner_puzzle: bytes32 = create_waiting_room_inner_puzzle(
+        escaping_inner_puzzle: Program = create_waiting_room_inner_puzzle(
             initial_target_state.target_puzzle_hash,
             initial_target_state.relative_lock_height,
             initial_target_state.owner_pubkey,

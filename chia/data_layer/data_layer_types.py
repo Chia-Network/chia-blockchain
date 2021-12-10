@@ -41,8 +41,8 @@ Node = Union["TerminalNode", "InternalNode"]
 class TerminalNode:
     hash: bytes32
     # generation: int
-    key: bytes32
-    value: bytes32
+    key: bytes
+    value: bytes
 
     atom: None = field(init=False, default=None)
 

@@ -71,14 +71,9 @@ CHECKOUT_TEST_BLOCKS_AND_PLOTS
         BUILD_VDF_CLIENT: "N"
       run: |
         brew install boost
-        sh install.sh
+        sh install.sh -d
 
 INSTALL_TIMELORD
-
-    - name: Install developer requirements
-      run: |
-        . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
     - name: Test TEST_NAME code with pytest
       run: |

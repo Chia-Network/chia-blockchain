@@ -4,7 +4,6 @@ from chia.wallet.db_wallet.db_wallet_puzzles import create_offer_fullpuz
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
 from chia.util.ints import uint64
-from chia.wallet.wallet import Wallet
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.wallet.dlo_wallet.dlo_wallet import DLOWallet

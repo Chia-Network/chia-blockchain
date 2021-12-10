@@ -2,12 +2,10 @@ import asyncio
 import math
 import time
 import traceback
-from pathlib import Path
 from random import Random
 from secrets import randbits
 from typing import Dict, Optional, List, Set
 
-import aiosqlite
 
 import chia.server.ws_connection as ws
 import dns.asyncresolver
@@ -15,12 +13,13 @@ from chia.protocols import full_node_protocol, introducer_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
 from chia.server.address_manager_store import AddressManagerStore
+from chia.server.address_manager_sqlite_store import create_address_manager_from_db
 from chia.server.outbound_message import NodeType, make_msg
+from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
-from chia.util.path import mkdir, path_from_root
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
@@ -38,9 +37,8 @@ class FullNodeDiscovery:
     def __init__(
         self,
         server: ChiaServer,
-        root_path: Path,
         target_outbound_count: int,
-        peer_db_path: str,
+        peer_store_resolver: PeerStoreResolver,
         introducer_info: Optional[Dict],
         dns_servers: List[str],
         peer_connect_interval: int,
@@ -52,13 +50,9 @@ class FullNodeDiscovery:
         self.message_queue: asyncio.Queue = asyncio.Queue()
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
-        # This is a double check to make sure testnet and mainnet peer databases never mix up.
-        # If the network is not 'mainnet', it names the peer db differently, including the selected_network.
-        if selected_network != "mainnet":
-            if not peer_db_path.endswith(".sqlite"):
-                raise ValueError(f"Invalid path for peer table db: {peer_db_path}. Make the path end with .sqlite")
-            peer_db_path = peer_db_path[:-7] + "_" + selected_network + ".sqlite"
-        self.peer_db_path = path_from_root(root_path, peer_db_path)
+        self.legacy_peer_db_path = peer_store_resolver.legacy_peer_db_path
+        self.legacy_peer_db_migrated = False
+        self.peers_file_path = peer_store_resolver.peers_file_path
         self.dns_servers = dns_servers
         if introducer_info is not None:
             self.introducer_info: Optional[PeerInfo] = PeerInfo(
@@ -69,7 +63,7 @@ class FullNodeDiscovery:
             self.introducer_info = None
         self.peer_connect_interval = peer_connect_interval
         self.log = log
-        self.relay_queue = None
+        self.relay_queue: Optional[asyncio.Queue] = None
         self.address_manager: Optional[AddressManager] = None
         self.connection_time_pretest: Dict = {}
         self.received_count_from_peers: Dict = {}
@@ -89,17 +83,32 @@ class FullNodeDiscovery:
         if default_port is None and selected_network in NETWORK_ID_DEFAULT_PORTS:
             self.default_port = NETWORK_ID_DEFAULT_PORTS[selected_network]
 
+    async def migrate_address_manager_if_necessary(self) -> None:
+        if (
+            self.legacy_peer_db_migrated
+            or self.peers_file_path.exists()
+            or self.legacy_peer_db_path is None
+            or not self.legacy_peer_db_path.exists()
+        ):
+            # No need for migration if:
+            #   - we've already migrated
+            #   - we have a peers file
+            #   - we don't have a legacy peer db
+            return
+        try:
+            self.log.info(f"Migrating legacy peer database from {self.legacy_peer_db_path}")
+            # Attempt to create an AddressManager from the legacy peer database
+            address_manager: Optional[AddressManager] = await create_address_manager_from_db(self.legacy_peer_db_path)
+            if address_manager is not None:
+                self.log.info(f"Writing migrated peer data to {self.peers_file_path}")
+                # Write the AddressManager data to the new peers file
+                await AddressManagerStore.serialize(address_manager, self.peers_file_path)
+                self.legacy_peer_db_migrated = True
+        except Exception:
+            self.log.exception("Error migrating legacy peer database")
+
     async def initialize_address_manager(self) -> None:
-        mkdir(self.peer_db_path.parent)
-        self.connection = await aiosqlite.connect(self.peer_db_path)
-        await self.connection.execute("pragma journal_mode=wal")
-        await self.connection.execute("pragma synchronous=OFF")
-        self.address_manager_store = await AddressManagerStore.create(self.connection)
-        if not await self.address_manager_store.is_empty():
-            self.address_manager = await self.address_manager_store.deserialize()
-        else:
-            await self.address_manager_store.clear()
-            self.address_manager = AddressManager()
+        self.address_manager = await AddressManagerStore.create_address_manager(self.peers_file_path)
         self.server.set_received_message_callback(self.update_peer_timestamp_on_message)
 
     async def start_tasks(self) -> None:
@@ -117,7 +126,6 @@ class FullNodeDiscovery:
             self.cancel_task_safe(t)
         if len(self.pending_tasks) > 0:
             await asyncio.wait(self.pending_tasks)
-        await self.connection.close()
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:
@@ -433,7 +441,7 @@ class FullNodeDiscovery:
             serialize_interval = random.randint(15 * 60, 30 * 60)
             await asyncio.sleep(serialize_interval)
             async with self.address_manager.lock:
-                await self.address_manager_store.serialize(self.address_manager)
+                await AddressManagerStore.serialize(self.address_manager, self.peers_file_path)
 
     async def _periodically_cleanup(self) -> None:
         while not self.is_closed:
@@ -504,10 +512,9 @@ class FullNodePeers(FullNodeDiscovery):
     def __init__(
         self,
         server,
-        root_path,
         max_inbound_count,
         target_outbound_count,
-        peer_db_path,
+        peer_store_resolver: PeerStoreResolver,
         introducer_info,
         dns_servers,
         peer_connect_interval,
@@ -517,9 +524,8 @@ class FullNodePeers(FullNodeDiscovery):
     ):
         super().__init__(
             server,
-            root_path,
             target_outbound_count,
-            peer_db_path,
+            peer_store_resolver,
             introducer_info,
             dns_servers,
             peer_connect_interval,
@@ -528,10 +534,11 @@ class FullNodePeers(FullNodeDiscovery):
             log,
         )
         self.relay_queue = asyncio.Queue()
-        self.neighbour_known_peers = {}
+        self.neighbour_known_peers: Dict = {}
         self.key = randbits(256)
 
     async def start(self):
+        await self.migrate_address_manager_if_necessary()
         await self.initialize_address_manager()
         self.self_advertise_task = asyncio.create_task(self._periodically_self_advertise_and_clean_data())
         self.address_relay_task = asyncio.create_task(self._address_relay())
@@ -678,9 +685,8 @@ class WalletPeers(FullNodeDiscovery):
     def __init__(
         self,
         server,
-        root_path,
         target_outbound_count,
-        peer_db_path,
+        peer_store_resolver: PeerStoreResolver,
         introducer_info,
         dns_servers,
         peer_connect_interval,
@@ -690,9 +696,8 @@ class WalletPeers(FullNodeDiscovery):
     ) -> None:
         super().__init__(
             server,
-            root_path,
             target_outbound_count,
-            peer_db_path,
+            peer_store_resolver,
             introducer_info,
             dns_servers,
             peer_connect_interval,
@@ -703,6 +708,7 @@ class WalletPeers(FullNodeDiscovery):
 
     async def start(self) -> None:
         self.initial_wait = 60
+        await self.migrate_address_manager_if_necessary()
         await self.initialize_address_manager()
         await self.start_tasks()
 

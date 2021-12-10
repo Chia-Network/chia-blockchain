@@ -143,7 +143,8 @@ class Service:
         await self._server.start_server(self._on_connect_callback)
 
         self._reconnect_tasks = [
-            start_reconnect_task(self._server, _, self._log, self._auth_connect_peers) for _ in self._connect_peers
+            start_reconnect_task(self._server, _, self._log, self._auth_connect_peers, self.config.get("prefer_ipv6"))
+            for _ in self._connect_peers
         ]
         self._log.info(f"Started {self._service_name} service on network_id: {self._network_id}")
 

@@ -1,6 +1,6 @@
 import logging
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
@@ -55,8 +55,8 @@ class PlotRefreshEvents(Enum):
 
 @dataclass
 class PlotRefreshResult:
-    loaded: int = 0
-    removed: int = 0
+    loaded: List[PlotInfo] = field(default_factory=list)
+    removed: List[Path] = field(default_factory=list)
     processed: int = 0
     remaining: int = 0
     duration: float = 0

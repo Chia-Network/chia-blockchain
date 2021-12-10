@@ -18,7 +18,7 @@ cd "$PWD" || true
 
 # Do our best to get rid of any globally installed notarize-cli versions so the version in the current build script is
 # installed without conflicting with the other version that might be installed
-PATH=$(brew --prefix node@14)/bin:$PATH || true
+PATH=$(brew --prefix node@16)/bin:$PATH || true
 export PATH
 npm uninstall -g notarize-cli || true
 npm uninstall -g @chia-network/notarize-cli || true

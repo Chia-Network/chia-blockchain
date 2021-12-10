@@ -1,5 +1,6 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
+from chia.types.blockchain_format.sized_bytes import bytes32
 import click
 
 
@@ -49,6 +50,13 @@ async def show_async(
             sync_mode = blockchain_state["sync"]["sync_mode"]
             total_iters = peak.total_iters if peak is not None else 0
             num_blocks: int = 10
+            network_name = config["selected_network"]
+            genesis_challenge = config["farmer"]["network_overrides"]["constants"][network_name]["GENESIS_CHALLENGE"]
+            full_node_port = config["full_node"]["port"]
+            full_node_rpc_port = config["full_node"]["rpc_port"]
+
+            print(f"Network: {network_name}    Port: {full_node_port}   Rpc Port: {full_node_rpc_port}")
+            print(f"Genesis Challenge: {genesis_challenge}")
 
             if synced:
                 print("Current Blockchain Status: Full Node Synced")
@@ -118,14 +126,13 @@ async def show_async(
 
                 host = con["peer_host"]
                 # Strip IPv6 brackets
-                if host[0] == "[":
-                    host = host[1:39]
+                host = host.strip("[]")
                 # Nodetype length is 9 because INTRODUCER will be deprecated
                 if NodeType(con["type"]) is NodeType.FULL_NODE:
                     peak_height = con["peak_height"]
-                    peak_hash = con["peak_hash"]
-                    if peak_hash is None:
-                        peak_hash = "No Info"
+                    connection_peak_hash = con["peak_hash"]
+                    if connection_peak_hash is None:
+                        connection_peak_hash = "No Info"
                     if peak_height is None:
                         peak_height = 0
                     con_str = (
@@ -135,7 +142,7 @@ async def show_async(
                         f"{last_connect}  "
                         f"{mb_up:7.1f}|{mb_down:<7.1f}"
                         f"\n                                                 "
-                        f"-SB Height: {peak_height:8.0f}    -Hash: {peak_hash[2:10]}..."
+                        f"-SB Height: {peak_height:8.0f}    -Hash: {connection_peak_hash[2:10]}..."
                     )
                 else:
                     con_str = (
@@ -212,7 +219,7 @@ async def show_async(
                     )
                     block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
                     cost = str(full_block.transactions_info.cost)
-                    tx_filter_hash = "Not a transaction block"
+                    tx_filter_hash: Union[str, bytes32] = "Not a transaction block"
                     if full_block.foliage_transaction_block:
                         tx_filter_hash = full_block.foliage_transaction_block.filter_hash
                     fees: Any = block.fees
