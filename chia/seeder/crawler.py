@@ -188,10 +188,10 @@ class Crawler:
                             new_peer_reliability = PeerReliability(response_peer.host)
                             if self.crawl_store is not None:
                                 self.crawl_store.maybe_add_peer(new_peer, new_peer_reliability)
-                            await self.crawl_store.update_best_timestamp(
-                                response_peer.host,
-                                self.best_timestamp_per_peer[response_peer.host],
-                            )
+                        await self.crawl_store.update_best_timestamp(
+                            response_peer.host,
+                            self.best_timestamp_per_peer[response_peer.host],
+                        )
                 for host, version in self.version_cache:
                     self.handshake_time[host] = int(time.time())
                     self.host_to_version[host] = version
