@@ -38,13 +38,6 @@ class MockPlotInfo:
     prover: MockDiskProver
 
 
-class TestRefreshResult:
-    loaded: int = 0
-    removed: int = 0
-    processed: int = 0
-    remaining: int = 0
-
-
 class TestDirectory:
     path: Path
     plots: List[Path]
@@ -487,7 +480,7 @@ async def test_callback_event_raises(test_environment, event_to_raise: PlotRefre
     env.plot_manager.set_refresh_callback(raising_callback)
     await run_refresh_test(env.plot_manager, expect_match=False)
     # And make sure the follow-up evens aren't fired
-    assert last_event_fired is not None and last_event_fired.value == event_to_raise.value
+    assert last_event_fired == event_to_raise
     # The exception should trigger `PlotManager.reset()` and clear the plots
     assert len(env.plot_manager.plots) == 0
     assert len(env.plot_manager.plot_filename_paths) == 0
