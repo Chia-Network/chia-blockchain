@@ -1,4 +1,5 @@
 from typing import List, Optional
+from operator import attrgetter
 
 import aiosqlite
 
@@ -8,7 +9,6 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trade_sorting import SortKey
 from chia.wallet.trading.trade_status import TradeStatus
 
 
@@ -255,26 +255,19 @@ class TradeStore:
         """
         limit = end - start
 
-        if sort_key is None:
-            sort_key = "CREATED_AT_TIME"
-        if sort_key not in SortKey.__members__:
-            raise ValueError(f"There is no known sort {sort_key}")
-
-        if reverse:
-            query_str = SortKey[sort_key].descending()
+        records = await self.get_all_trades()
+        if sort_key is None or sort_key == "CONFIRMED_AT_HEIGHT":
+            records = sorted(records, key=attrgetter('confirmed_at_index'), reverse=True)
+        elif sort_key == "RELEVANCE":
+            sorted_records = sorted(records, key=attrgetter('created_at_time'), reverse=True)
+            sorted_records = sorted(records, key=attrgetter('confirmed_at_index'), reverse=True)
+            records = []
+            for status in ('PENDING', 'CONFIRMED', 'CANCELLED', 'FAILED', ''):
+                for record in sorted_records:
+                    if status in TradeStatus(record.status).name and record not in records:
+                        records.append(record)
         else:
-            query_str = SortKey[sort_key].ascending()
-
-        cursor = await self.db_connection.execute(
-            f"SELECT * from trade_records" f" {query_str}" f" LIMIT {start}, {limit}"
-        )
-        rows = await cursor.fetchall()
-        await cursor.close()
-        records = []
-
-        for row in rows:
-            record = TradeRecord.from_bytes(row[0])
-            records.append(record)
+            raise ValueError(f"No known sort {sort_key}")
 
         return records
 
