@@ -113,7 +113,7 @@ function OfferEditor(): JSX.Element {
 
             try {
               fs.writeFileSync(filePath, offerData);
-              history.replace('/dashboard/wallets/offers/manage');
+              history.goBack();
             }
             catch (err) {
               console.error(err);

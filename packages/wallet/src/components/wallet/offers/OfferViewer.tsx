@@ -287,7 +287,7 @@ function OfferDetails(props: OfferDetailsProps) {
         throw new Error(response.error?.message ?? 'Something went wrong');
       }
 
-      history.replace('/dashboard/wallets/offers/manage');
+      history.go(-2);
     }
     catch (e) {
       let error = e as Error;
