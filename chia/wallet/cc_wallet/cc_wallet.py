@@ -510,7 +510,7 @@ class CCWallet:
         if record is None:
             return puzzle_hash
         else:
-            return (await self.inner_puzzle_for_cat_puzhash(puzzle_hash)).get_tree_hash()
+            return (await self.inner_puzzle_for_cc_puzhash(puzzle_hash)).get_tree_hash()
 
     async def get_lineage_proof_for_coin(self, coin) -> Optional[LineageProof]:
         for name, proof in self.cc_info.lineage_proofs:
