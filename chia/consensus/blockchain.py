@@ -222,7 +222,7 @@ class Blockchain(BlockchainInterface):
                         block_generator,
                         min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
                         cost_per_byte=self.constants.COST_PER_BYTE,
-                        safe_mode=False,
+                        mempool_mode=False,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 else:
@@ -470,7 +470,7 @@ class Blockchain(BlockchainInterface):
                         block_generator,
                         self.constants.MAX_BLOCK_COST_CLVM,
                         cost_per_byte=self.constants.COST_PER_BYTE,
-                        safe_mode=False,
+                        mempool_mode=False,
                     )
                 tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 return tx_removals, tx_additions, npc_result

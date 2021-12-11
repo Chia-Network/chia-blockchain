@@ -34,6 +34,7 @@ def run_program(
 
 
 INFINITE_COST = 0x7FFFFFFFFFFFFFFF
+MEMPOOL_MODE = STRICT_MODE
 
 
 class Program(SExp):
@@ -237,8 +238,8 @@ class SerializedProgram:
         tmp = sexp_from_stream(io.BytesIO(self._buf), SExp.to)
         return _tree_hash(tmp, set(args))
 
-    def run_safe_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
-        return self._run(max_cost, STRICT_MODE, *args)
+    def run_mempool_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
+        return self._run(max_cost, MEMPOOL_MODE, *args)
 
     def run_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
         return self._run(max_cost, 0, *args)
