@@ -1,13 +1,11 @@
 import itertools
 import logging
-import sqlite3
-from typing import AsyncIterable, Awaitable, Callable, Dict, List
+from typing import Any, Awaitable, Callable, Dict, List
 
-import aiosqlite
 import pytest
 
-from chia.data_layer.data_layer_errors import TreeGenerationIncrementingError
-from chia.data_layer.data_layer_types import ProofOfInclusion, ProofOfInclusionLayer, Side, Status
+from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
+from chia.data_layer.data_layer_types import NodeType, ProofOfInclusion, ProofOfInclusionLayer, Side, Status
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
@@ -17,7 +15,6 @@ from chia.util.db_wrapper import DBWrapper
 
 from tests.core.data_layer.util import add_0123_example, add_01234567_example, Example
 
-# from tests.setup_nodes import bt, test_constants
 
 log = logging.getLogger(__name__)
 
@@ -25,43 +22,16 @@ log = logging.getLogger(__name__)
 pytestmark = pytest.mark.data_layer
 
 
-@pytest.fixture(name="db_connection", scope="function")
-async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
-    async with aiosqlite.connect(":memory:") as connection:
-        # make sure this is on for tests even if we disable it at run time
-        await connection.execute("PRAGMA foreign_keys = ON")
-        yield connection
-
-
-@pytest.fixture(name="db_wrapper", scope="function")
-def db_wrapper_fixture(db_connection: aiosqlite.Connection) -> DBWrapper:
-    return DBWrapper(db_connection)
-
-
-@pytest.fixture(name="tree_id", scope="function")
-def tree_id_fixture() -> bytes32:
-    base = b"a tree id"
-    pad = b"." * (32 - len(base))
-    return bytes32(pad + base)
-
-
-@pytest.fixture(name="raw_data_store", scope="function")
-async def raw_data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
-    return await DataStore.create(db_wrapper=db_wrapper)
-
-
-@pytest.fixture(name="data_store", scope="function")
-async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> AsyncIterable[DataStore]:
-    await raw_data_store.create_tree(tree_id=tree_id)
-
-    await raw_data_store.check()
-    yield raw_data_store
-    await raw_data_store.check()
-
-
-# @pytest.fixture(name="root", scope="function")
-# async def root_fixture(data_store: DataStore, tree_id: bytes32) -> Root:
-#     return await data_store.get_tree_root(tree_id=tree_id)
+@pytest.mark.asyncio
+async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_node_values: Dict[str, Any]) -> None:
+    async with data_store.db_wrapper.locked_transaction():
+        await data_store.db.execute(
+            """
+            INSERT INTO node(hash, node_type, left, right, key, value)
+            VALUES(:hash, :node_type, :left, :right, :key, :value)
+            """,
+            valid_node_values,
+        )
 
 
 table_columns: Dict[str, List[str]] = {
@@ -699,6 +669,46 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
 
 
 @pytest.mark.asyncio
+async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
+    async with raw_data_store.db_wrapper.locked_transaction():
+        await raw_data_store.db.execute(
+            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
+            {
+                "hash": a_bytes_32,
+                "node_type": NodeType.INTERNAL,
+                "left": a_bytes_32,
+                "right": a_bytes_32,
+            },
+        )
+
+    with pytest.raises(
+        NodeHashError,
+        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
+    ):
+        await raw_data_store._check_hashes()
+
+
+@pytest.mark.asyncio
+async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
+    async with raw_data_store.db_wrapper.locked_transaction():
+        await raw_data_store.db.execute(
+            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
+            {
+                "hash": a_bytes_32,
+                "node_type": NodeType.TERMINAL,
+                "key": Program.to((1, 2)).as_bin(),
+                "value": Program.to((1, 2)).as_bin(),
+            },
+        )
+
+    with pytest.raises(
+        NodeHashError,
+        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
+    ):
+        await raw_data_store._check_hashes()
+
+
+@pytest.mark.asyncio
 async def test_root_state(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
@@ -721,19 +731,3 @@ async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> Non
     root = await data_store.get_tree_root(tree_id)
     assert root.status.value == Status.COMMITTED.value
     assert not is_empty
-
-
-@pytest.mark.asyncio
-async def test_node_update_fails(data_store: DataStore, tree_id: bytes32) -> None:
-    await add_01234567_example(data_store=data_store, tree_id=tree_id)
-    node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
-
-    async with data_store.db_wrapper.locked_transaction():
-        with pytest.raises(sqlite3.IntegrityError, match=r"^updates not allowed to the node table$"):
-            await data_store.db.execute(
-                "UPDATE node SET value = :value WHERE hash == :hash",
-                {
-                    "hash": node.hash,
-                    "value": node.value,
-                },
-            )

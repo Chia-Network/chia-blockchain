@@ -5,7 +5,7 @@ from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 import aiosqlite
 
-from chia.data_layer.data_layer_errors import TreeGenerationIncrementingError
+from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_types import (
     InternalNode,
     Node,
@@ -50,10 +50,10 @@ class DataStore:
         await self.db.execute("PRAGMA foreign_keys=ON")
 
         async with self.db_wrapper.locked_transaction():
-            # TODO: Probably switch from hash being text to blob to more accurately
-            #       represent the data and simplify checks.
             # TODO: add tests for the sql checks
-            # TODO: remove _check_* functions that are redundant with these sql checks
+            # TODO: maybe checks can be consolidated to avoid repetition
+            # TODO: probably don't need to check length on references to fields that
+            #       are already themselves length checked
             await self.db.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS node(
@@ -65,7 +65,7 @@ class DataStore:
                     left BLOB REFERENCES node CHECK(
                         (
                             node_type == {int(NodeType.INTERNAL)}
-                            AND length(left) == 32
+                            AND left IS NOT NULL
                         )
                         OR
                         (
@@ -76,7 +76,7 @@ class DataStore:
                     right BLOB REFERENCES node CHECK(
                         (
                             node_type == {int(NodeType.INTERNAL)}
-                            AND length(right) == 32
+                            AND right IS NOT NULL
                         )
                         OR
                         (
@@ -254,7 +254,27 @@ class DataStore:
             if len(bad_trees) > 0:
                 raise TreeGenerationIncrementingError(tree_ids=bad_trees)
 
-    _checks: Tuple[Callable[["DataStore"], Awaitable[None]], ...] = (_check_roots_are_incrementing,)
+    async def _check_hashes(self, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute("SELECT * FROM node")
+
+            bad_node_hashes: List[bytes32] = []
+            async for row in cursor:
+                node = row_to_node(row=row)
+                if isinstance(node, InternalNode):
+                    expected_hash = Program.to((node.left_hash, node.right_hash)).get_tree_hash(
+                        node.left_hash, node.right_hash
+                    )
+                elif isinstance(node, TerminalNode):
+                    expected_hash = Program.to((node.key, node.value)).get_tree_hash()
+
+                if node.hash != expected_hash:
+                    bad_node_hashes.append(node.hash)
+
+        if len(bad_node_hashes) > 0:
+            raise NodeHashError(node_hashes=bad_node_hashes)
+
+    _checks: Tuple[Callable[["DataStore"], Awaitable[None]], ...] = (_check_roots_are_incrementing, _check_hashes)
 
     async def create_tree(self, tree_id: bytes32, *, lock: bool = True, status: Status = Status.PENDING) -> bool:
         async with self.db_wrapper.locked_transaction(lock=lock):
