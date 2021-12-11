@@ -177,7 +177,7 @@ class WalletBlockchain(BlockchainInterface):
         block = header_block_record.header
         genesis: bool = block.height == 0
 
-        if self.contains_block(block.header_hash):
+        if self.contains_block_in_peak_chain(block.header_hash):
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None
 
         if not self.contains_block(block.prev_header_hash) and not genesis:
@@ -310,11 +310,19 @@ class WalletBlockchain(BlockchainInterface):
             return None, []
 
         assert peak is not None
-        if block_record.weight > peak.weight:
+        # if block_record.weight > peak.weight:
+        if True:
             # Find the fork. if the block is just being appended, it will return the peak
             # If no blocks in common, returns -1, and reverts all blocks
-            if fork_point_with_peak is not None:
-                fork_h: int = fork_point_with_peak
+            if block_record.prev_hash == peak.header_hash:
+                fork_h: int = peak.height
+            elif fork_point_with_peak is not None:
+                fork_h = fork_point_with_peak
+            elif not self.contains_block_in_peak_chain(block_record.header_hash) and self.contains_block_in_peak_chain(
+                block_record.prev_hash
+            ):
+                # special case
+                fork_h = block_record.height - 1
             else:
                 fork_h = find_fork_point_in_chain(self, block_record, peak)
 
@@ -404,6 +412,13 @@ class WalletBlockchain(BlockchainInterface):
         that we have added but no longer keep in memory.
         """
         return header_hash in self.__block_records
+
+    def contains_block_in_peak_chain(self, header_hash: bytes32) -> bool:
+        "True if the header_hash is in current chain"
+        block = self.try_block_record(header_hash)
+        if block is None:
+            return False
+        return self.__height_to_hash.get(block.height) == header_hash
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self.__block_records[header_hash]
