@@ -103,7 +103,7 @@ class TradeManager:
         our_primary_coins: List[bytes32] = [cr.coin.name() for cr in our_coin_records]
         all_settlement_payments: List[Coin] = [c for coins in offer.get_offered_coins().values() for c in coins]
         our_settlement_payments: List[Coin] = list(
-            filter(lambda c: c.parent_coin_info in our_primary_coins, all_settlement_payments)
+            filter(lambda c: offer.get_root_removal(c).name() in our_primary_coins, all_settlement_payments)
         )
         our_settlement_ids: List[bytes32] = [c.name() for c in our_settlement_payments]
 
@@ -115,11 +115,11 @@ class TradeManager:
         # If any of our settlement_payments were spent, this offer was a success!
         if set(our_settlement_ids) & set(coin_state_names):
             height = coin_states[0].spent_height
-            await self.maybe_create_wallets_for_offer(offer)
             await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, True, height)
             self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
         else:
             # In any other scenario this trade failed
+            await self.wallet_state_manager.delete_trade_transactions(trade.trade_id)
             if trade.status == TradeStatus.PENDING_CANCEL.value:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED, True)
                 self.log.info(f"Trade with id: {trade.trade_id} canceled")
@@ -376,17 +376,19 @@ class TradeManager:
         # Now to deal with transaction history before pushing the spend
         settlement_coins: List[Coin] = [c for coins in complete_offer.get_offered_coins().values() for c in coins]
         settlement_coin_ids: List[bytes32] = [c.name() for c in settlement_coins]
-        settlement_parents: List[bytes32] = [c.parent_coin_info for c in settlement_coins]
+        primary_coins: List[bytes32] = [c.name() for c in complete_offer.get_primary_coins()]
         additions: List[Coin] = final_spend_bundle.not_ephemeral_additions()
         removals: List[Coin] = final_spend_bundle.removals()
         all_fees = uint64(final_spend_bundle.fees())
 
         txs = []
+
+        addition_dict: Dict[uint32, List[Coin]] = {}
         for addition in additions:
-            if addition.parent_coin_info in settlement_coin_ids:
-                wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(addition.puzzle_hash)
-                if wallet_info is not None:
-                    wallet_id, _ = wallet_info
+            wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(addition.puzzle_hash)
+            if wallet_info is not None:
+                wallet_id, _ = wallet_info
+                if addition.parent_coin_info in settlement_coin_ids:
                     wallet = self.wallet_state_manager.wallets[wallet_id]
                     to_puzzle_hash = await wallet.convert_puzzle_hash(addition.puzzle_hash)
                     txs.append(
@@ -409,32 +411,39 @@ class TradeManager:
                             memos=[],
                         )
                     )
+                else:  # This is change
+                    addition_dict.setdefault(wallet_id, [])
+                    addition_dict[wallet_id].append(addition)
 
         # While we want additions to show up as separate records, removals of the same wallet should show as one
         removal_dict: Dict[uint32, List[Coin]] = {}
         for removal in removals:
-            if removal.name() in settlement_parents:
-                wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(removal.puzzle_hash)
-                if wallet_info is not None:
-                    wallet_id, _ = wallet_info
-                    removal_dict.setdefault(wallet_id, [])
-                    removal_dict[wallet_id].append(removal)
+            wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(removal.puzzle_hash)
+            if wallet_info is not None:
+                wallet_id, _ = wallet_info
+                removal_dict.setdefault(wallet_id, [])
+                removal_dict[wallet_id].append(removal)
 
         for wid, grouped_removals in removal_dict.items():
             wallet = self.wallet_state_manager.wallets[wid]
-            to_puzzle_hash = bytes32([0] * 32)  # We use all zeros to be clear not to send here
+            to_puzzle_hash = bytes32([1] * 32)  # We use all zeros to be clear not to send here
             removal_tree_hash = Program.to([rem.as_list() for rem in grouped_removals]).get_tree_hash()
+            # We also need to calculate the sent amount
+            removed: int = sum(c.amount for c in grouped_removals)
+            change_coins: List[Coin] = addition_dict[wid] if wid in addition_dict else []
+            change_amount: int = sum(c.amount for c in change_coins)
+            sent_amount: int = removed - change_amount
             txs.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=to_puzzle_hash,
-                    amount=uint64(sum([c.amount for c in grouped_removals])),
+                    amount=uint64(sent_amount),
                     fee_amount=all_fees,
                     confirmed=False,
                     sent=uint32(10),
                     spend_bundle=None,
-                    additions=[],
+                    additions=change_coins,
                     removals=grouped_removals,
                     wallet_id=wallet.id(),
                     sent_to=[],
@@ -464,7 +473,7 @@ class TradeManager:
         push_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=bytes32([0] * 32),
+            to_puzzle_hash=bytes32([1] * 32),
             amount=uint64(0),
             fee_amount=uint64(0),
             confirmed=False,

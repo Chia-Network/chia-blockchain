@@ -174,6 +174,9 @@ class TestCATTrades:
         TAKER_CHIA_BALANCE += 0  # +1 and -1 for fee
         TAKER_NEW_CAT_BALANCE -= 2
 
+        await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
+        await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
+
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
@@ -211,12 +214,15 @@ class TestCATTrades:
         TAKER_CAT_BALANCE += 4
         TAKER_CHIA_BALANCE -= 3
 
-        for i in range(0, buffer_blocks):
-            await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
-
         cat_wallet_taker: CCWallet = await wallet_node_taker.wallet_state_manager.get_wallet_for_colour(
             cat_wallet_maker.get_colour()
         )
+
+        await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
+        await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
+
+        for i in range(0, buffer_blocks):
+            await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
         await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
         await time_out_assert(15, wallet_maker.get_unconfirmed_balance, MAKER_CHIA_BALANCE)
@@ -245,6 +251,9 @@ class TestCATTrades:
         MAKER_NEW_CAT_BALANCE += 6
         TAKER_CAT_BALANCE += 5
         TAKER_NEW_CAT_BALANCE -= 6
+
+        await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
+        await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -279,6 +288,9 @@ class TestCATTrades:
         TAKER_CAT_BALANCE -= 8
         TAKER_NEW_CAT_BALANCE -= 9
 
+        await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
+        await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
+
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
@@ -312,6 +324,9 @@ class TestCATTrades:
         TAKER_NEW_CAT_BALANCE += 12
         TAKER_CHIA_BALANCE -= 10
 
+        await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
+        await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
+
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
@@ -344,6 +359,9 @@ class TestCATTrades:
         TAKER_CHIA_BALANCE += 13
         TAKER_CAT_BALANCE += 14
         TAKER_NEW_CAT_BALANCE -= 15
+
+        await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
+        await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -445,6 +463,7 @@ class TestCATTrades:
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
         # await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, trade_take)
 
+        await time_out_assert(15, wallet_maker.get_pending_change_balance, 0)
         await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE - FEE)
         await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, MAKER_CAT_BALANCE)
         await time_out_assert(15, wallet_taker.get_confirmed_balance, TAKER_CHIA_BALANCE)
