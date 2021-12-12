@@ -7,7 +7,7 @@ from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.operators import OP_REWRITE, OPERATOR_LOOKUP
 from clvm.serialize import sexp_from_stream, sexp_to_stream
-from clvm_rs import STRICT_MODE, deserialize_and_run_program2, serialized_length, run_generator
+from clvm_rs import STRICT_MODE as MEMPOOL_MODE, deserialize_and_run_program2, serialized_length, run_generator
 from clvm_tools.curry import curry, uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -34,7 +34,6 @@ def run_program(
 
 
 INFINITE_COST = 0x7FFFFFFFFFFFFFFF
-MEMPOOL_MODE = STRICT_MODE
 
 
 class Program(SExp):

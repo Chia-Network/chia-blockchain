@@ -1,7 +1,7 @@
 import logging
 import time
 from typing import Dict, List, Optional
-from clvm_rs import STRICT_MODE
+from clvm_rs import STRICT_MODE as MEMPOOL_MODE
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.generator import create_generator_args, setup_generator_args
@@ -18,7 +18,6 @@ from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 
 GENERATOR_MOD = get_generator()
-MEMPOOL_MODE = STRICT_MODE
 
 log = logging.getLogger(__name__)
 
