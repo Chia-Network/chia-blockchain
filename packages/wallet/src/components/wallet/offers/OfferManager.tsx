@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import styled from 'styled-components';
-import { Trans } from '@lingui/macro';
+import { Trans, t } from '@lingui/macro';
 import moment from 'moment';
 import { Switch, Route, useHistory, useRouteMatch, useLocation } from 'react-router-dom';
 import {
@@ -33,10 +33,10 @@ import {
 } from '@material-ui/core';
 import { Cancel, GetApp as Download, Info, Visibility } from '@material-ui/icons';
 import { Trade as TradeIcon } from '@chia/icons';
-import { useCancelOfferMutation, useGetAllOffersQuery, useGetOfferDataMutation } from '@chia/api-react';
+import { useCancelOfferMutation, useGetAllOffersQuery, useGetOfferDataMutation, useGetWalletsQuery } from '@chia/api-react';
 import { colorForOfferState, displayStringForOfferState, formatAmountForWalletType, suggestedFilenameForOffer } from './utils';
 import useAssetIdName from '../../../hooks/useAssetIdName';
-import { chia_to_mojo } from '../../../util/chia';
+import { chia_to_mojo, mojo_to_colouredcoin_string } from '../../../util/chia';
 import { CreateOfferEditor } from './OfferEditor';
 import { OfferImport } from './OfferImport';
 import { OfferViewer } from './OfferViewer';
@@ -137,6 +137,7 @@ function OfferList(props: OfferListProps) {
   const { title, offers, loading } = props;
   const [getOfferData] = useGetOfferDataMutation();
   const [cancelOffer] = useCancelOfferMutation();
+  const { data: wallets, isLoading: isLoadingWallets } = useGetWalletsQuery();
   const lookupAssetId = useAssetIdName();
   const openDialog = useOpenDialog();
   const history = useHistory();
@@ -222,9 +223,11 @@ function OfferList(props: OfferListProps) {
         field: (row: OfferTradeRecord) => {
           const resolvedOfferInfo = Object.entries(row.summary.offered).map(([assetId, amount]) => {
             const assetIdInfo = lookupAssetId(assetId);
+            const displayAmount = assetIdInfo ? formatAmountForWalletType(amount as number, assetIdInfo.walletType) : mojo_to_colouredcoin_string(amount);
+            const displayName = assetIdInfo?.displayName ?? t`Unknown CAT`;
             return {
-              displayAmount: (assetIdInfo ? formatAmountForWalletType(amount as number, assetIdInfo.walletType) : `${amount}`),
-              displayName: (assetIdInfo ? assetIdInfo.displayName : 'unknown'),
+              displayAmount,
+              displayName,
             };
           });
           return (
@@ -243,10 +246,11 @@ function OfferList(props: OfferListProps) {
         field: (row: OfferTradeRecord) => {
           const resolvedOfferInfo = Object.entries(row.summary.requested).map(([assetId, amount]) => {
             const assetIdInfo = lookupAssetId(assetId);
-
+            const displayAmount = assetIdInfo ? formatAmountForWalletType(amount as number, assetIdInfo.walletType) : mojo_to_colouredcoin_string(amount);
+            const displayName = assetIdInfo?.displayName ?? t`Unknown CAT`;
             return {
-              displayAmount: (assetIdInfo ? formatAmountForWalletType(amount as number, assetIdInfo.walletType) : `${amount}`),
-              displayName: (assetIdInfo ? assetIdInfo.displayName : 'unknown'),
+              displayAmount,
+              displayName,
             };
           });
           return (
@@ -355,7 +359,7 @@ function OfferList(props: OfferListProps) {
 
   return (
     <Card title={title}>
-      <LoadingOverlay loading={loading}>
+      <LoadingOverlay loading={loading || isLoadingWallets}>
         {offers.length ? (
           <TableControlled
             rows={offers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)}
@@ -368,7 +372,7 @@ function OfferList(props: OfferListProps) {
             onPageChange={handlePageChange}
           />
         ) : (
-          !loading && (
+          !loading && !isLoadingWallets && (
             <Typography variant="body2">
               <Trans>No current offers</Trans>
             </Typography>
