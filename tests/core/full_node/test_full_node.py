@@ -288,23 +288,15 @@ class TestFullNodeBlockCompression:
         assert detect_potential_template_generator(uint32(9), program) is None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
 
-        # Creates a cc wallet
+        # Creates an existing CAT wallet and send to its puzzle hash
         async with wallet_node_1.wallet_state_manager.lock:
-            cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
-                wallet_node_1.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+            cc_wallet: CCWallet = await CCWallet.create_wallet_for_cc(
+                wallet_node_1.wallet_state_manager, wallet, bytes([0] * 32).hex()
             )
-        tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
-        tr = tx_queue[0]
-        await time_out_assert(
-            10,
-            full_node_1.full_node.mempool_manager.get_spendbundle,
-            tr.spend_bundle,
-            tr.spend_bundle.name(),
-        )
 
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
-            ph,
+            (await cc_wallet.get_new_cc_puzzle_hash()),
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -326,16 +318,20 @@ class TestFullNodeBlockCompression:
         assert detect_potential_template_generator(uint32(10), program) is None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
 
-        # Make a cc transaction
-        trs = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
-        tr: TransactionRecord = trs[0]
-        await wallet.wallet_state_manager.add_pending_transaction(tr)
+        # Make a cc wallet (which makes a CAT transaction)
+        async with wallet_node_1.wallet_state_manager.lock:
+            cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+                wallet_node_1.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+            )
+        tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
+        tr = tx_queue[0]
         await time_out_assert(
             10,
-            full_node_2.full_node.mempool_manager.get_spendbundle,
+            full_node_1.full_node.mempool_manager.get_spendbundle,
             tr.spend_bundle,
-            tr.name,
+            tr.spend_bundle.name(),
         )
+
         # Make a standard transaction
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
