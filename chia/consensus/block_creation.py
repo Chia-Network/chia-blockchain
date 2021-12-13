@@ -135,7 +135,7 @@ def create_foliage(
                 block_generator,
                 constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=constants.COST_PER_BYTE,
-                safe_mode=True,
+                mempool_mode=True,
             )
             cost = calculate_cost_of_program(block_generator.program, result, constants.COST_PER_BYTE)
 

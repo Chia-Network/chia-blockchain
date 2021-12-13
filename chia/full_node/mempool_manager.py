@@ -50,7 +50,9 @@ def validate_clvm_and_signature(
         bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
         program = simple_solution_generator(bundle)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        result: NPCResult = get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True)
+        result: NPCResult = get_name_puzzle_conditions(
+            program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True
+        )
 
         if result.error is not None:
             return Err(result.error), b"", {}
