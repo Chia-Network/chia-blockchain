@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Any
 
 import aiosqlite
 
@@ -87,10 +87,10 @@ class DataStore:
 
         return self
 
-    async def _insert_root(self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status, generation = None) -> None:
+    async def _insert_root(
+        self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status, generation: Optional[int] = None
+    ) -> None:
         if generation is not None:
-            existing_generation = generation
-        else:
             existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
 
             if existing_generation is None:
@@ -679,11 +679,13 @@ class DataStore:
 
     async def answer_server_query(
         self,
-        node_hash: bytes32,
-        tree_id: bytes32, *,
+        node_hash: Optional[bytes32],
+        tree_id: bytes32,
+        *,
         lock: bool = True,
         query_count: int = 2,
-    ):
+    ) -> List[Dict[str, Any]]:
+        assert node_hash is not None
         ancestors = await self.get_ancestors(node_hash, tree_id)
         stack = []
         path_hashes = []

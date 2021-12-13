@@ -7,17 +7,18 @@ from chia.types.blockchain_format.tree_hash import bytes32
 from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.data_layer.data_layer_types import Status, NodeType
+from typing import List
 
 
 class DataLayerClient:
-    async def init_db(self):
+    async def init_db(self) -> None:
         self.db_connection = await aiosqlite.connect(":memory_client:")
         self.db_wrapper = DBWrapper(self.db_connection)
         self.data_store = await DataStore.create(db_wrapper=self.db_wrapper, disable_check=True)
         tree_id = bytes32(b"\0" * 32)
         await self.data_store.create_tree(tree_id=tree_id)
 
-    async def download_data_layer(self):
+    async def download_data_layer(self) -> None:
         await self.init_db()
         async with aiohttp.ClientSession() as session:
             tree_id = "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -32,14 +33,14 @@ class DataLayerClient:
                 root_json["generation"],
             )
             print(f"Got root hash: {node}")
-            stack = []
+            stack: List[str] = []
             while node is not None:
                 url = f"http://0.0.0.0:8080/get_tree_nodes?tree_id={tree_id}&node_hash={node}"
                 async with session.get(url) as r:
                     json = await r.json()
                 answer = json["answer"]
                 for row in answer:
-                    # Assert that we received correct left-to-right ordering. 
+                    # Assert that we received correct left-to-right ordering.
                     assert node == row["hash"]
                     if row["is_terminal"]:
                         key = row["key"]
@@ -59,13 +60,15 @@ class DataLayerClient:
                         left_hash = None if row["left"] == "None" else row["left"]
                         right_hash = None if row["right"] == "None" else row["right"]
                         left_hash_bytes = None if left_hash is None else hexstr_to_bytes(left_hash)
-                        right_hash_bytes = None if left_hash is None else hexstr_to_bytes(right_hash)
+                        right_hash_bytes = None if right_hash is None else hexstr_to_bytes(right_hash)
                         hash = Program.to((left_hash_bytes, right_hash_bytes)).get_tree_hash(
                             left_hash_bytes, right_hash_bytes
                         )
                         if hash == bytes32.from_hexstr(row["hash"]):
                             print(f"Validated internal node {node}.")
-                            await self.data_store._insert_node(node, NodeType.INTERNAL, left_hash, right_hash, None, None)
+                            await self.data_store._insert_node(
+                                node, NodeType.INTERNAL, left_hash, right_hash, None, None
+                            )
                         else:
                             raise RuntimeError(f"Can't validate internal node {node}. Expected {hash}.")
                         if right_hash is not None:
