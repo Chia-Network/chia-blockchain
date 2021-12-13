@@ -164,6 +164,8 @@ class TestFullNodeBlockCompression:
 
         ph = await wallet.get_new_puzzlehash()
 
+        wallet_node_1.config["trusted_peers"] = {server_2.node_id: server_2.node_id}
+
         for i in range(4):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
@@ -203,7 +205,7 @@ class TestFullNodeBlockCompression:
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
-            10,
+            30,
             full_node_2.full_node.mempool_manager.get_spendbundle,
             tr.spend_bundle,
             tr.name,
@@ -320,13 +322,13 @@ class TestFullNodeBlockCompression:
 
         # Make a cc wallet (which makes a CAT transaction)
         async with wallet_node_1.wallet_state_manager.lock:
-            cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+            new_cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
                 wallet_node_1.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
             )
         tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
         tr = tx_queue[0]
         await time_out_assert(
-            10,
+            30,
             full_node_1.full_node.mempool_manager.get_spendbundle,
             tr.spend_bundle,
             tr.spend_bundle.name(),
