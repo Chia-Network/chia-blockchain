@@ -631,7 +631,7 @@ class PoolWallet:
         pool_state_bytes = Program.to([("p", bytes(initial_target_state)), ("t", delay_time), ("h", delay_ph)])
         announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([puzzle_hash, amount, pool_state_bytes]).get_tree_hash()
-        announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
+        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
             amount,
