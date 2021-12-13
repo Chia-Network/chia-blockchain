@@ -44,7 +44,7 @@ class DataStore:
     db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper) -> "DataStore":
+    async def create(cls, db_wrapper: DBWrapper, disable_check: bool = False) -> "DataStore":
         self = cls(db=db_wrapper.db, db_wrapper=db_wrapper)
         self.db.row_factory = aiosqlite.Row
 
@@ -54,7 +54,10 @@ class DataStore:
         await self.db.execute("pragma synchronous=FULL")
         # If foreign key checking gets turned off, please add corresponding check
         # methods.
-        await self.db.execute("PRAGMA foreign_keys=ON")
+        if not disable_check:
+            await self.db.execute("PRAGMA foreign_keys=ON")
+        else:
+            await self.db.execute("PRAGMA foreign_keys=OFF")
 
         async with self.db_wrapper.locked_transaction():
             await self.db.execute(
@@ -84,13 +87,16 @@ class DataStore:
 
         return self
 
-    async def _insert_root(self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status) -> None:
-        existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
-
-        if existing_generation is None:
-            generation = 0
+    async def _insert_root(self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status, generation = None) -> None:
+        if generation is not None:
+            existing_generation = generation
         else:
-            generation = existing_generation + 1
+            existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
+
+            if existing_generation is None:
+                generation = 0
+            else:
+                generation = existing_generation + 1
 
         await self.db.execute(
             """
@@ -261,6 +267,21 @@ class DataStore:
 
         if len(bad_node_hashes) > 0:
             raise NodeHashError(node_hashes=bad_node_hashes)
+
+    async def check_tree_is_complete(self, *, lock: bool = True) -> None:
+        cursor = await self.db.execute("SELECT * FROM node")
+        to_check = []
+        hashes = set()
+        async for row in cursor:
+            node = row_to_node(row=row)
+            hashes.add(node.hash)
+            if isinstance(node, InternalNode):
+                if node.left_hash is not None:
+                    to_check.append(node.left_hash)
+                if node.right_hash is not None:
+                    to_check.append(node.right_hash)
+        for hash in to_check:
+            assert hash in hashes
 
     _checks: Tuple[Callable[["DataStore"], Awaitable[None]], ...] = (
         _check_internal_key_value_are_null,
@@ -655,3 +676,57 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             return await self.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id, lock=False)
+
+    async def answer_server_query(
+        self,
+        node_hash: bytes32,
+        tree_id: bytes32, *,
+        lock: bool = True,
+        query_count: int = 2,
+    ):
+        ancestors = await self.get_ancestors(node_hash, tree_id)
+        stack = []
+        path_hashes = []
+        for ancestor in ancestors:
+            path_hashes.append(ancestor.hash)
+        for ancestor in reversed(ancestors):
+            if ancestor.right_hash not in path_hashes and ancestor.right_hash != node_hash:
+                stack.append(ancestor.right_hash)
+        count = 0
+        nodes = []
+        while count < query_count and node_hash is not None:
+            count += 1
+            node = await self.get_node(node_hash)
+            if node is None:
+                return []
+            if isinstance(node, TerminalNode):
+                nodes.append(
+                    {
+                        "hash": str(node_hash),
+                        "key": node.key.hex(),
+                        "value": node.value.hex(),
+                        "is_terminal": True,
+                    }
+                )
+                if len(stack) > 0:
+                    node_hash = stack.pop()
+                else:
+                    node_hash = None
+            if isinstance(node, InternalNode):
+                nodes.append(
+                    {
+                        "hash": str(node_hash),
+                        "left": "None" if node.left_hash is None else str(node.left_hash),
+                        "right": "None" if node.right_hash is None else str(node.right_hash),
+                        "is_terminal": False,
+                    }
+                )
+                if node.right_hash is not None:
+                    stack.append(node.right_hash)
+                if node.left_hash is not None:
+                    node_hash = node.left_hash
+                elif len(stack) > 0:
+                    node_hash = stack.pop()
+                else:
+                    node_hash = None
+        return nodes
