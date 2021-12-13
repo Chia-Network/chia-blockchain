@@ -43,6 +43,7 @@ class BlockStore:
                 "height bigint,"
                 "sub_epoch_summary blob,"
                 "is_fully_compactified tinyint,"
+                "in_main_chain tinyint,"
                 "block blob,"
                 "block_record blob)"
             )
@@ -51,6 +52,8 @@ class BlockStore:
             # peak. The "key" field is there to make update statements simple
             await self.db.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
 
+            await self.db.execute("CREATE INDEX IF NOT EXISTS height on full_blocks(height)")
+
             # Sub epoch segments for weight proofs
             await self.db.execute(
                 "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
@@ -58,10 +61,12 @@ class BlockStore:
                 "challenge_segments blob)"
             )
 
-            # Height index so we can look up in order of height for sync purposes
-            await self.db.execute("CREATE INDEX IF NOT EXISTS height on full_blocks(height)")
             await self.db.execute(
-                "CREATE INDEX IF NOT EXISTS is_fully_compactified on full_blocks(is_fully_compactified)"
+                "CREATE INDEX IF NOT EXISTS is_fully_compactified ON"
+                " full_blocks(is_fully_compactified, in_main_chain) WHERE in_main_chain=1"
+            )
+            await self.db.execute(
+                "CREATE INDEX IF NOT EXISTS main_chain ON full_blocks(height, in_main_chain) WHERE in_main_chain=1"
             )
 
         else:
@@ -128,6 +133,18 @@ class BlockStore:
         else:
             return FullBlock.from_bytes(block_bytes)
 
+    async def rollback(self, height: int) -> None:
+        if self.db_wrapper.db_version == 2:
+            await self.db.execute(
+                "UPDATE OR FAIL full_blocks SET in_main_chain=0 WHERE height>? AND in_main_chain=1", (height,)
+            )
+
+    async def set_in_chain(self, header_hashes: List[Tuple[bytes32]]) -> None:
+        if self.db_wrapper.db_version == 2:
+            await self.db.executemany(
+                "UPDATE OR FAIL full_blocks SET in_main_chain=1 WHERE header_hash=?", header_hashes
+            )
+
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
         self.block_cache.put(header_hash, block)
 
@@ -140,13 +157,14 @@ class BlockStore:
             )
 
             cursor_1 = await self.db.execute(
-                "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     header_hash,
                     block.prev_header_hash,
                     block.height,
                     ses,
                     int(block.is_fully_compactified()),
+                    0,  # in_main_chain
                     self.compress(block),
                     bytes(block_record),
                 ),
@@ -485,13 +503,21 @@ class BlockStore:
         return bool(row[0])
 
     async def get_random_not_compactified(self, number: int) -> List[int]:
-        # Since orphan blocks do not get compactified, we need to check whether all blocks with a
-        # certain height are not compact. And if we do have compact orphan blocks, then all that
-        # happens is that the occasional chain block stays uncompact - not ideal, but harmless.
-        cursor = await self.db.execute(
-            f"SELECT height FROM full_blocks GROUP BY height HAVING sum(is_fully_compactified)=0 "
-            f"ORDER BY RANDOM() LIMIT {number}"
-        )
+
+        if self.db_wrapper.db_version == 2:
+            cursor = await self.db.execute(
+                f"SELECT height FROM full_blocks WHERE in_main_chain=1 AND is_fully_compactified=0 "
+                f"ORDER BY RANDOM() LIMIT {number}"
+            )
+        else:
+            # Since orphan blocks do not get compactified, we need to check whether all blocks with a
+            # certain height are not compact. And if we do have compact orphan blocks, then all that
+            # happens is that the occasional chain block stays uncompact - not ideal, but harmless.
+            cursor = await self.db.execute(
+                f"SELECT height FROM full_blocks GROUP BY height HAVING sum(is_fully_compactified)=0 "
+                f"ORDER BY RANDOM() LIMIT {number}"
+            )
+
         rows = await cursor.fetchall()
         await cursor.close()
 
