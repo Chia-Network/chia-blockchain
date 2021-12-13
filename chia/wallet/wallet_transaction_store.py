@@ -441,9 +441,7 @@ class WalletTransactionStore:
         return records
 
     async def get_transactions_by_trade_id(self, trade_id: bytes32) -> List[TransactionRecord]:
-        cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE trade_id=?", (trade_id,)
-        )
+        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE trade_id=?", (trade_id,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
