@@ -84,7 +84,7 @@ if [ "$(uname)" = "Linux" ]; then
 	elif type pacman && [ -f "/etc/arch-release" ]; then
 		# Arch Linux
 		echo "Installing on Arch Linux."
-		sudo pacman -S --needed python git
+		sudo pacman -S --needed python git cmake boost-libs
 	elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
 		# AMZN 2
 		echo "Installing on Amazon Linux 2."
