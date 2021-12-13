@@ -43,7 +43,8 @@ class CrawlStore:
                 " added_timestamp bigint,"
                 " best_timestamp bigint,"
                 " version text,"
-                " handshake_time text)"
+                " handshake_time text"
+                " tls_version text)"
             )
         )
         await self.crawl_db.execute(
@@ -59,6 +60,11 @@ class CrawlStore:
                 " tries int, successes int)"
             )
         )
+
+        try:
+            await self.crawl_db.execute("ALTER TABLE peer_records ADD COLUMN tls_version text")
+        except aiosqlite.OperationalError:
+            pass  # ignore what is likely Duplicate column error
 
         await self.crawl_db.execute(("CREATE TABLE IF NOT EXISTS good_peers(ip text)"))
 
@@ -96,7 +102,7 @@ class CrawlStore:
 
         added_timestamp = int(time.time())
         cursor = await self.crawl_db.execute(
-            "INSERT OR REPLACE INTO peer_records VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO peer_records VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 peer_record.peer_id,
                 peer_record.ip_address,
@@ -109,6 +115,7 @@ class CrawlStore:
                 peer_record.best_timestamp,
                 peer_record.version,
                 peer_record.handshake_time,
+                peer_record.tls_version,
             ),
         )
         await cursor.close()
@@ -155,12 +162,12 @@ class CrawlStore:
         reliability.update(False, now - age_timestamp)
         await self.add_peer(replaced, reliability)
 
-    async def peer_connected(self, peer: PeerRecord):
+    async def peer_connected(self, peer: PeerRecord, tls_version: str):
         now = int(time.time())
         age_timestamp = int(max(peer.last_try_timestamp, peer.connected_timestamp))
         if age_timestamp == 0:
             age_timestamp = now - 1000
-        replaced = dataclasses.replace(peer, connected=True, connected_timestamp=now)
+        replaced = dataclasses.replace(peer, connected=True, connected_timestamp=now, tls_version=tls_version)
         reliability = await self.get_peer_reliability(peer.peer_id)
         if reliability is None:
             reliability = PeerReliability(peer.peer_id)
@@ -177,12 +184,12 @@ class CrawlStore:
         reliability = self.host_to_reliability[host]
         await self.add_peer(replaced, reliability)
 
-    async def peer_connected_hostname(self, host: str, connected: bool = True):
+    async def peer_connected_hostname(self, host: str, connected: bool = True, tls_version: str = "unknown"):
         if host not in self.host_to_records:
             return
         record = self.host_to_records[host]
         if connected:
-            await self.peer_connected(record)
+            await self.peer_connected(record, tls_version)
         else:
             await self.peer_failed_to_connect(record)
 
@@ -307,7 +314,9 @@ class CrawlStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10])
+            peer = PeerRecord(
+                row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11]
+            )
             self.host_to_records[row[0]] = peer
 
     # Crawler -> DNS.
