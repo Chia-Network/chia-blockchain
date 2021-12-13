@@ -305,14 +305,15 @@ class WalletRpcClient(RpcClient):
     async def get_all_offers(
         self, start: int = 0, end: int = 50, sort_key: str = None, reverse: bool = False, file_contents: bool = False
     ) -> List[TradeRecord]:
-        res = await self.fetch("get_all_offers",
+        res = await self.fetch(
+            "get_all_offers",
             {
                 "start": start,
                 "end": end,
                 "sort_key": sort_key,
                 "reverse": reverse,
                 "file_contents": file_contents,
-            }
+            },
         )
 
         records = []

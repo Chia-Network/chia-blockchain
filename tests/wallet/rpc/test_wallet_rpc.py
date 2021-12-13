@@ -376,10 +376,38 @@ class TestWalletRpc:
             trade_record = await client.get_offer(offer.name())
             assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
 
+            new_offer, new_trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, fee=uint64(1))
+            all_offers = await client.get_all_offers()
+            assert len(all_offers) == 2
+
             await asyncio.sleep(1)
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
+
+            # Test trade sorting
+            def only_ids(trades):
+                return [t.trade_id for t in trades]
+
+            trade_record = await client.get_offer(offer.name())
+            all_offers = await client.get_all_offers()  # confirmed at index descending
+            assert len(all_offers) == 2
+            assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
+            all_offers = await client.get_all_offers(reverse=True)  # confirmed at index ascending
+            assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
+            all_offers = await client.get_all_offers(sort_key="RELEVANCE")  # most relevant
+            assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
+            all_offers = await client.get_all_offers(sort_key="RELEVANCE", reverse=True)  # least relevant
+            assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
+            # Test pagination
+            all_offers = await client.get_all_offers(start=0, end=1)
+            assert len(all_offers) == 1
+            all_offers = await client.get_all_offers(start=-1, end=1)
+            assert len(all_offers) == 1
+            all_offers = await client.get_all_offers(start=50)
+            assert len(all_offers) == 0
+            all_offers = await client.get_all_offers(start=0, end=50)
+            assert len(all_offers) == 2
 
             # Keys and addresses
 
