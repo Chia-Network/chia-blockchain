@@ -294,13 +294,23 @@ async def test_get_pairs_when_empty(data_store: DataStore, tree_id: bytes32) -> 
     assert pairs == []
 
 
+@pytest.mark.parametrize(
+    argnames=["first_value", "second_value"],
+    argvalues=[[b"\x06", b"\x06"], [b"\x06", b"\x07"]],
+    ids=["same values", "different values"],
+)
 @pytest.mark.asyncio()
-async def test_inserting_duplicate_key_fails(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_inserting_duplicate_key_fails(
+    data_store: DataStore,
+    tree_id: bytes32,
+    first_value: bytes,
+    second_value: bytes,
+) -> None:
     key = b"\x05"
 
     first_hash = await data_store.insert(
         key=key,
-        value=b"\x06",
+        value=first_value,
         tree_id=tree_id,
         reference_node_hash=None,
         side=None,
@@ -310,7 +320,7 @@ async def test_inserting_duplicate_key_fails(data_store: DataStore, tree_id: byt
     with pytest.raises(Exception):
         await data_store.insert(
             key=key,
-            value=b"\x07",
+            value=second_value,
             tree_id=tree_id,
             reference_node_hash=first_hash,
             side=Side.RIGHT,
