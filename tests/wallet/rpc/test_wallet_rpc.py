@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional
+from typing import Optional, Any
 
 from blspy import G2Element
 
@@ -126,6 +126,9 @@ class TestWalletRpc:
         await time_out_assert(5, wallet.get_confirmed_balance, initial_funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
 
+        async def async_check_property(function, property_name: str, *args, **kwargs) -> Any:
+            return (await function(*args, **kwargs))[property_name]
+
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
         client_2 = await WalletRpcClient.create(self_hostname, test_rpc_port_2, bt.root_path, config)
         client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
@@ -149,14 +152,20 @@ class TestWalletRpc:
 
             await time_out_assert(5, tx_in_mempool, True)
             await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds - tx_amount)
-            assert (await client.get_wallet_balance("1"))["unconfirmed_wallet_balance"] == initial_funds - tx_amount
-            assert (await client.get_wallet_balance("1"))["confirmed_wallet_balance"] == initial_funds
+            await time_out_assert(
+                15,
+                async_check_property,
+                initial_funds - tx_amount,
+                client.get_wallet_balance,
+                "unconfirmed_wallet_balance",
+                "1",
+            )
+            await time_out_assert(
+                15, async_check_property, initial_funds, client.get_wallet_balance, "confirmed_wallet_balance", "1"
+            )
 
             for i in range(0, 5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
-
-            async def eventual_balance():
-                return (await client.get_wallet_balance("1"))["confirmed_wallet_balance"]
 
             # Checks that the memo can be retrieved
             tx_confirmed = await client.get_transaction("1", transaction_id)
@@ -165,7 +174,14 @@ class TestWalletRpc:
             assert [b"this is a basic tx"] in tx_confirmed.get_memos().values()
             assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in tx.spend_bundle.additions()]
 
-            await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount)
+            await time_out_assert(
+                15,
+                async_check_property,
+                initial_funds_eventually - tx_amount,
+                client.get_wallet_balance,
+                "confirmed_wallet_balance",
+                "1",
+            )
 
             # Tests offline signing
             ph_3 = await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()
@@ -185,15 +201,27 @@ class TestWalletRpc:
 
             push_res = await client_node.push_tx(tx_res.spend_bundle)
             assert push_res["success"]
-            assert (await client.get_wallet_balance("1"))[
-                "confirmed_wallet_balance"
-            ] == initial_funds_eventually - tx_amount
+            await time_out_assert(
+                15,
+                async_check_property,
+                initial_funds_eventually - tx_amount,
+                client.get_wallet_balance,
+                "confirmed_wallet_balance",
+                "1",
+            )
 
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
-            await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount - signed_tx_amount)
+            await time_out_assert(
+                15,
+                async_check_property,
+                initial_funds_eventually - tx_amount - signed_tx_amount,
+                client.get_wallet_balance,
+                "confirmed_wallet_balance",
+                "1",
+            )
 
             # Test transaction to two outputs, from a specified coin, with a fee
             coin_to_spend = None
@@ -234,7 +262,9 @@ class TestWalletRpc:
             assert found
 
             new_balance = initial_funds_eventually - tx_amount - signed_tx_amount - 444 - 999 - 100
-            await time_out_assert(5, eventual_balance, new_balance)
+            await time_out_assert(
+                15, async_check_property, new_balance, client.get_wallet_balance, "confirmed_wallet_balance", "1"
+            )
 
             send_tx_res: TransactionRecord = await client.send_transaction_multi(
                 "1",
@@ -261,7 +291,9 @@ class TestWalletRpc:
                 await asyncio.sleep(0.5)
 
             new_balance = new_balance - 555 - 666 - 200
-            await time_out_assert(5, eventual_balance, new_balance)
+            await time_out_assert(
+                15, async_check_property, new_balance, client.get_wallet_balance, "confirmed_wallet_balance", "1"
+            )
 
             # Checks that the memo can be retrieved
             tx_confirmed = await client.get_transaction("1", send_tx_res.name)
@@ -284,9 +316,12 @@ class TestWalletRpc:
             colour = bytes.fromhex(res["colour"])
             assert len(colour) > 0
 
-            bal_0 = await client.get_wallet_balance(cat_0_id)
-            assert bal_0["confirmed_wallet_balance"] == 0
-            assert bal_0["pending_coin_removal_count"] == 1
+            await time_out_assert(
+                15, async_check_property, 0, client.get_wallet_balance, "confirmed_wallet_balance", cat_0_id
+            )
+            await time_out_assert(
+                15, async_check_property, 1, client.get_wallet_balance, "pending_coin_removal_count", cat_0_id
+            )
             col = await client.get_cat_colour(cat_0_id)
             assert col == colour
             assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"
@@ -303,10 +338,15 @@ class TestWalletRpc:
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
-            bal_0 = await client.get_wallet_balance(cat_0_id)
-            assert bal_0["confirmed_wallet_balance"] == 20
-            assert bal_0["pending_coin_removal_count"] == 0
-            assert bal_0["unspent_coin_count"] == 1
+            await time_out_assert(
+                15, async_check_property, 20, client.get_wallet_balance, "confirmed_wallet_balance", cat_0_id
+            )
+            await time_out_assert(
+                15, async_check_property, 0, client.get_wallet_balance, "pending_coin_removal_count", cat_0_id
+            )
+            await time_out_assert(
+                15, async_check_property, 1, client.get_wallet_balance, "unspent_coin_count", cat_0_id
+            )
 
             # Creates a second wallet with the same CAT
             res = await client_2.create_wallet_for_existing_cat(colour)
@@ -319,8 +359,9 @@ class TestWalletRpc:
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
-            bal_1 = await client_2.get_wallet_balance(cat_1_id)
-            assert bal_1["confirmed_wallet_balance"] == 0
+            await time_out_assert(
+                15, async_check_property, 0, client_2.get_wallet_balance, "confirmed_wallet_balance", cat_1_id
+            )
 
             addr_0 = await client.get_next_address(cat_0_id, False)
             addr_1 = await client_2.get_next_address(cat_1_id, False)
@@ -334,11 +375,12 @@ class TestWalletRpc:
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
-            bal_0 = await client.get_wallet_balance(cat_0_id)
-            bal_1 = await client_2.get_wallet_balance(cat_1_id)
-
-            assert bal_0["confirmed_wallet_balance"] == 16
-            assert bal_1["confirmed_wallet_balance"] == 4
+            await time_out_assert(
+                15, async_check_property, 16, client.get_wallet_balance, "confirmed_wallet_balance", cat_0_id
+            )
+            await time_out_assert(
+                15, async_check_property, 4, client_2.get_wallet_balance, "confirmed_wallet_balance", cat_1_id
+            )
 
             ##########
             # Offers #
@@ -468,8 +510,9 @@ class TestWalletRpc:
 
             wallets = await client.get_wallets()
             assert len(wallets) == 1
-            balance = await client.get_wallet_balance(wallets[0]["id"])
-            assert balance["unconfirmed_wallet_balance"] == 0
+            await time_out_assert(
+                15, async_check_property, 0, client.get_wallet_balance, "unconfirmed_wallet_balance", wallets[0]["id"]
+            )
 
             try:
                 await client.send_transaction(wallets[0]["id"], 100, addr)
