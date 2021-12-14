@@ -2,7 +2,7 @@ import logging
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
-from typing import Callable, List, Optional
+from typing import Callable, Iterator, List, Optional
 import pytest
 
 from dataclasses import dataclass
@@ -130,7 +130,7 @@ class TestEnvironment:
 
 
 @pytest.fixture(scope="function")
-def test_environment(tmp_path) -> TestEnvironment:
+def test_environment(tmp_path) -> Iterator[TestEnvironment]:
     dir_1_count: int = 7
     dir_2_count: int = 3
     plots: List[Path] = list(sorted(get_plot_dir().glob("*.plot")))
@@ -143,7 +143,9 @@ def test_environment(tmp_path) -> TestEnvironment:
     refresh_tester = PlotRefreshTester(tmp_path)
     refresh_tester.plot_manager.set_public_keys(bt.plot_manager.farmer_public_keys, bt.plot_manager.pool_public_keys)
 
-    return TestEnvironment(tmp_path, refresh_tester, dir_1, dir_2)
+    yield TestEnvironment(tmp_path, refresh_tester, dir_1, dir_2)
+
+    refresh_tester.plot_manager.stop_refreshing()
 
 
 # Wrap `remove_plot` to give it the same interface as the other triggers, e.g. `add_plot_directory(Path, str)`.
@@ -345,7 +347,6 @@ async def test_plot_refreshing(test_environment):
         expected_directories=0,
         expect_total_plots=0,
     )
-    env.refresh_tester.plot_manager.stop_refreshing()
 
 
 @pytest.mark.asyncio
@@ -383,7 +384,6 @@ async def test_invalid_plots(test_environment):
     await env.refresh_tester.run(expected_result)
     assert len(env.refresh_tester.plot_manager.failed_to_open_filenames) == 0
     assert retry_test_plot not in env.refresh_tester.plot_manager.failed_to_open_filenames
-    env.refresh_tester.plot_manager.stop_refreshing()
 
 
 @pytest.mark.asyncio
@@ -493,4 +493,3 @@ async def test_callback_event_raises(test_environment, event_to_raise: PlotRefre
     expected_result.processed = len(env.dir_1) + len(env.dir_2)
     expected_result.remaining = 0
     await env.refresh_tester.run(expected_result)
-    env.refresh_tester.plot_manager.stop_refreshing()
