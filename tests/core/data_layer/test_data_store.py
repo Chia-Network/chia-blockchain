@@ -1,18 +1,11 @@
 import itertools
 import logging
-from typing import AsyncIterable, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List
 
-import aiosqlite
 import pytest
 
-from chia.data_layer.data_layer_errors import (
-    InternalKeyValueError,
-    InternalLeftRightNotBytes32Error,
-    NodeHashError,
-    TerminalLeftRightError,
-    TreeGenerationIncrementingError,
-)
-from chia.data_layer.data_layer_types import NodeType, ProofOfInclusion, ProofOfInclusionLayer, Side, Status
+from chia.data_layer.data_layer_errors import TreeGenerationIncrementingError
+from chia.data_layer.data_layer_types import ProofOfInclusion, ProofOfInclusionLayer, Side, Status
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
@@ -22,7 +15,6 @@ from chia.util.db_wrapper import DBWrapper
 
 from tests.core.data_layer.util import add_0123_example, add_01234567_example, Example
 
-# from tests.setup_nodes import bt, test_constants
 
 log = logging.getLogger(__name__)
 
@@ -30,43 +22,16 @@ log = logging.getLogger(__name__)
 pytestmark = pytest.mark.data_layer
 
 
-@pytest.fixture(name="db_connection", scope="function")
-async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
-    async with aiosqlite.connect(":memory:") as connection:
-        # make sure this is on for tests even if we disable it at run time
-        await connection.execute("PRAGMA foreign_keys = ON")
-        yield connection
-
-
-@pytest.fixture(name="db_wrapper", scope="function")
-def db_wrapper_fixture(db_connection: aiosqlite.Connection) -> DBWrapper:
-    return DBWrapper(db_connection)
-
-
-@pytest.fixture(name="tree_id", scope="function")
-def tree_id_fixture() -> bytes32:
-    base = b"a tree id"
-    pad = b"." * (32 - len(base))
-    return bytes32(pad + base)
-
-
-@pytest.fixture(name="raw_data_store", scope="function")
-async def raw_data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
-    return await DataStore.create(db_wrapper=db_wrapper)
-
-
-@pytest.fixture(name="data_store", scope="function")
-async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> AsyncIterable[DataStore]:
-    await raw_data_store.create_tree(tree_id=tree_id)
-
-    await raw_data_store.check()
-    yield raw_data_store
-    await raw_data_store.check()
-
-
-# @pytest.fixture(name="root", scope="function")
-# async def root_fixture(data_store: DataStore, tree_id: bytes32) -> Root:
-#     return await data_store.get_tree_root(tree_id=tree_id)
+@pytest.mark.asyncio
+async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_node_values: Dict[str, Any]) -> None:
+    async with data_store.db_wrapper.locked_transaction():
+        await data_store.db.execute(
+            """
+            INSERT INTO node(hash, node_type, left, right, key, value)
+            VALUES(:hash, :node_type, :left, :right, :key, :value)
+            """,
+            valid_node_values,
+        )
 
 
 table_columns: Dict[str, List[str]] = {
@@ -652,84 +617,6 @@ valid_program_hex = Program.to((b"abc", 2)).as_bin().hex()
 invalid_program_hex = b"\xab\xcd".hex()
 
 
-@pytest.mark.parametrize(
-    argnames="key_value",
-    argvalues=[
-        {"key": another_bytes_32.hex(), "value": None},
-        {"key": None, "value": another_bytes_32.hex()},
-    ],
-    ids=["key", "value"],
-)
-@pytest.mark.asyncio
-async def test_check_internal_key_value_are_null(
-    raw_data_store: DataStore,
-    key_value: Dict[str, Optional[str]],
-) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
-        await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **key_value},
-        )
-
-    with pytest.raises(
-        InternalKeyValueError,
-        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
-    ):
-        await raw_data_store._check_internal_key_value_are_null()
-
-
-@pytest.mark.parametrize(
-    argnames="left_right",
-    argvalues=[
-        {"left": a_bytes_32.hex(), "right": b"abc".hex()},
-        {"left": b"abc".hex(), "right": a_bytes_32.hex()},
-    ],
-    ids=["left", "right"],
-)
-@pytest.mark.asyncio
-async def test_check_internal_left_right_are_bytes32(raw_data_store: DataStore, left_right: Dict[str, str]) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
-        # needed to satisfy foreign key constraints
-        await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type) VALUES(:hash, :node_type)",
-            {"hash": b"abc".hex(), "node_type": NodeType.TERMINAL},
-        )
-
-        await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **left_right},
-        )
-
-    with pytest.raises(
-        InternalLeftRightNotBytes32Error,
-        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
-    ):
-        await raw_data_store._check_internal_left_right_are_bytes32()
-
-
-@pytest.mark.parametrize(
-    argnames="left_right",
-    argvalues=[
-        {"left": a_bytes_32.hex(), "right": None},
-        {"left": None, "right": a_bytes_32.hex()},
-    ],
-    ids=["left", "right"],
-)
-@pytest.mark.asyncio
-async def test_check_terminal_left_right_are_null(raw_data_store: DataStore, left_right: Dict[str, str]) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
-        await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
-            {"hash": a_bytes_32.hex(), "node_type": NodeType.TERMINAL, **left_right},
-        )
-
-    with pytest.raises(
-        TerminalLeftRightError,
-        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
-    ):
-        await raw_data_store._check_terminal_left_right_are_null()
-
-
 @pytest.mark.asyncio
 async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataStore) -> None:
     tree_id = hexstr_to_bytes("c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd")
@@ -780,46 +667,6 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
         match=r"\n +c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd$",
     ):
         await raw_data_store._check_roots_are_incrementing()
-
-
-@pytest.mark.asyncio
-async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
-        await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
-            {
-                "hash": a_bytes_32.hex(),
-                "node_type": NodeType.INTERNAL,
-                "left": a_bytes_32.hex(),
-                "right": a_bytes_32.hex(),
-            },
-        )
-
-    with pytest.raises(
-        NodeHashError,
-        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
-    ):
-        await raw_data_store._check_hashes()
-
-
-@pytest.mark.asyncio
-async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
-        await raw_data_store.db.execute(
-            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
-            {
-                "hash": a_bytes_32.hex(),
-                "node_type": NodeType.TERMINAL,
-                "key": Program.to((1, 2)).as_bin().hex(),
-                "value": Program.to((1, 2)).as_bin().hex(),
-            },
-        )
-
-    with pytest.raises(
-        NodeHashError,
-        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
-    ):
-        await raw_data_store._check_hashes()
 
 
 @pytest.mark.asyncio

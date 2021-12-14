@@ -4,9 +4,9 @@ import functools
 import os
 import pathlib
 import subprocess
-from typing import Any, Iterator, IO, List, Optional, TYPE_CHECKING, Union
+from typing import Any, Dict, Iterator, IO, List, Optional, TYPE_CHECKING, Union
 
-from chia.data_layer.data_layer_types import Side
+from chia.data_layer.data_layer_types import NodeType, Side
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.tree_hash import bytes32
@@ -173,3 +173,32 @@ class ChiaRoot:
             yield
         finally:
             self.print_log()
+
+
+def create_valid_node_values(
+    node_type: NodeType,
+    left_hash: Optional[bytes32] = None,
+    right_hash: Optional[bytes32] = None,
+) -> Dict[str, Any]:
+    if node_type == NodeType.INTERNAL:
+        return {
+            "hash": Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash).hex(),
+            "node_type": node_type,
+            "left": None if left_hash is None else left_hash.hex(),
+            "right": None if right_hash is None else right_hash.hex(),
+            "key": None,
+            "value": None,
+        }
+    elif node_type == NodeType.TERMINAL:
+        key = b""
+        value = b""
+        return {
+            "hash": Program.to((key, value)).get_tree_hash().hex(),
+            "node_type": node_type,
+            "left": None,
+            "right": None,
+            "key": key.hex(),
+            "value": value.hex(),
+        }
+
+    raise Exception(f"Unhandled node type: {node_type!r}")
