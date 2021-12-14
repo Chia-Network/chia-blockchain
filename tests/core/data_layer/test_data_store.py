@@ -28,18 +28,6 @@ log = logging.getLogger(__name__)
 pytestmark = pytest.mark.data_layer
 
 
-@pytest.mark.asyncio
-async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_node_values: Dict[str, Any]) -> None:
-    async with data_store.db_wrapper.locked_transaction():
-        await data_store.db.execute(
-            """
-            INSERT INTO node(hash, node_type, left, right, key, value)
-            VALUES(:hash, :node_type, :left, :right, :key, :value)
-            """,
-            valid_node_values,
-        )
-
-
 table_columns: Dict[str, List[str]] = {
     "node": ["hash", "node_type", "left", "right", "key", "value"],
     "root": ["tree_id", "generation", "node_hash", "status"],
