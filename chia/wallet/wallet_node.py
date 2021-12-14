@@ -347,11 +347,8 @@ class WalletNode:
             already_sent = set()
             for peer, status, _ in record.sent_to:
                 if status == MempoolInclusionStatus.SUCCESS.value:
-                    already_sent.add(hexstr_to_bytes(peer))
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "append" of "list" has incompatible type "Tuple[Message, Set[bytes]]"; expected
-            #       "Tuple[Message, Set[bytes32]]"  [arg-type]
-            messages.append((msg, already_sent))  # type: ignore[arg-type]
+                    already_sent.add(bytes32.from_hexstr(peer))
+            messages.append((msg, already_sent))
 
         return messages
 

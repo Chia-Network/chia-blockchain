@@ -178,11 +178,8 @@ class TradeManager:
         all: List[TradeRecord] = await self.trade_store.get_all_trades()
         return all
 
-    async def get_trade_by_id(self, trade_id: bytes) -> Optional[TradeRecord]:
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_trade_record" of "TradeStore" has incompatible type "bytes"; expected
-        #       "bytes32"  [arg-type]
-        record = await self.trade_store.get_trade_record(trade_id)  # type: ignore[arg-type]
+    async def get_trade_by_id(self, trade_id: bytes32) -> Optional[TradeRecord]:
+        record = await self.trade_store.get_trade_record(trade_id)
         return record
 
     async def get_locked_coins_in_spend_bundle(self, bundle: SpendBundle) -> Dict[bytes32, WalletCoinRecord]:

@@ -57,14 +57,31 @@ class BlockHeightMap:
         self.__height_to_hash_filename = blockchain_dir / "height-to-hash"
         self.__ses_filename = blockchain_dir / "sub-epoch-summaries"
 
-        res = await self.db.db.execute(
-            "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records WHERE is_peak=1"
-        )
-        row = await res.fetchone()
-        await res.close()
+        if db.db_version == 2:
+            cursor = await self.db.db.execute("SELECT hash FROM current_peak WHERE key = 0")
+            peak_row = await cursor.fetchone()
+            await cursor.close()
+            if peak_row is None:
+                return self
 
-        if row is None:
-            return self
+            cursor_2 = await db.db.execute(
+                "SELECT header_hash,prev_hash,height,sub_epoch_summary FROM block_records WHERE header_hash=?",
+                (peak_row[0],),
+            )
+            row = await cursor_2.fetchone()
+            await cursor_2.close()
+
+            if row is None:
+                return self
+        else:
+            res = await db.db.execute(
+                "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records WHERE is_peak=1"
+            )
+            row = await res.fetchone()
+            await res.close()
+
+            if row is None:
+                return self
 
         try:
             async with aiofiles.open(self.__height_to_hash_filename, "rb") as f:
@@ -80,14 +97,14 @@ class BlockHeightMap:
             # it's OK if this file doesn't exist, we can rebuild it
             pass
 
-        # TODO: address hint errors and remove ignores
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        peak: bytes32 = bytes.fromhex(row[0])  # type: ignore[assignment]
-        # TODO: address hint errors and remove ignores
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        prev_hash: bytes32 = bytes.fromhex(row[1])  # type: ignore[assignment]
+        peak: bytes32
+        prev_hash: bytes32
+        if db.db_version == 2:
+            peak = row[0]
+            prev_hash = row[1]
+        else:
+            peak = bytes32.fromhex(row[0])
+            prev_hash = bytes32.fromhex(row[1])
         height = row[2]
 
         # allocate memory for height to hash map
@@ -156,13 +173,13 @@ class BlockHeightMap:
 
             # maps block-hash -> (height, prev-hash, sub-epoch-summary)
             ordered: Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]] = {}
-            for r in rows:
-                # TODO: address hint errors and remove ignores
-                #       error: Invalid index type "bytes" for "Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]]";
-                #       expected type "bytes32"  [index]
-                #       error: Incompatible types in assignment (expression has type "Tuple[Any, bytes, Any]", target
-                #       has type "Tuple[uint32, bytes32, Optional[bytes]]")  [assignment]
-                ordered[bytes.fromhex(r[0])] = (r[2], bytes.fromhex(r[1]), r[3])  # type: ignore[index,assignment]
+
+            if self.db.db_version == 2:
+                for r in rows:
+                    ordered[r[0]] = (r[2], r[1], r[3])
+            else:
+                for r in rows:
+                    ordered[bytes32.fromhex(r[0])] = (r[2], bytes32.fromhex(r[1]), r[3])
 
             while height > window_end:
                 entry = ordered[prev_hash]
@@ -188,9 +205,7 @@ class BlockHeightMap:
     def get_hash(self, height: uint32) -> bytes32:
         idx = height * 32
         assert idx + 32 <= len(self.__height_to_hash)
-        # TODO: address hint errors and remove ignores
-        #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
-        return bytes(self.__height_to_hash[idx : idx + 32])  # type: ignore[return-value]
+        return bytes32(self.__height_to_hash[idx : idx + 32])
 
     def contains_height(self, height: uint32) -> bool:
         return height * 32 < len(self.__height_to_hash)

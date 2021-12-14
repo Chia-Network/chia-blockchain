@@ -222,7 +222,7 @@ class Blockchain(BlockchainInterface):
                         block_generator,
                         min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
                         cost_per_byte=self.constants.COST_PER_BYTE,
-                        safe_mode=False,
+                        mempool_mode=False,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 else:
@@ -341,7 +341,7 @@ class Blockchain(BlockchainInterface):
         """
         peak = self.get_peak()
         lastest_coin_state: Dict[bytes32, CoinRecord] = {}
-        hint_coin_state: Dict[bytes32, Dict[bytes32, CoinRecord]] = {}
+        hint_coin_state: Dict[bytes, Dict[bytes32, CoinRecord]] = {}
 
         if genesis:
             if peak is None:
@@ -443,29 +443,17 @@ class Blockchain(BlockchainInterface):
                         for coin_id, hint in hint_list:
                             key = hint
                             if key not in hint_coin_state:
-                                # TODO: address hint error and remove ignore
-                                #       error: Invalid index type "bytes" for
-                                #       "Dict[bytes32, Dict[bytes32, CoinRecord]]"; expected type "bytes32"  [index]
-                                hint_coin_state[key] = {}  # type: ignore[index]
-                            # TODO: address hint error and remove ignore
-                            #       error: Invalid index type "bytes" for "Dict[bytes32, Dict[bytes32, CoinRecord]]";
-                            #       expected type "bytes32"  [index]
-                            hint_coin_state[key][coin_id] = lastest_coin_state[coin_id]  # type: ignore[index]
+                                hint_coin_state[key] = {}
+                            hint_coin_state[key][coin_id] = lastest_coin_state[coin_id]
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
-            # TODO: address hint error and remove ignore
-            #       error: Incompatible return value type (got
-            #       "Tuple[uint32, uint32, List[BlockRecord], Tuple[List[CoinRecord], Dict[bytes32, Dict[bytes32, CoinRecord]]]]",  # noqa: E501
-            #       expected
-            #       "Tuple[Optional[uint32], Optional[uint32], List[BlockRecord], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]]"  # noqa: E501
-            #       )  [return-value]
             return (
                 uint32(max(fork_height, 0)),
                 block_record.height,
                 records_to_add,
                 (list(lastest_coin_state.values()), hint_coin_state),
-            )  # type: ignore[return-value]
+            )
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
         return None, None, [], ([], {})
@@ -482,7 +470,7 @@ class Blockchain(BlockchainInterface):
                         block_generator,
                         self.constants.MAX_BLOCK_COST_CLVM,
                         cost_per_byte=self.constants.COST_PER_BYTE,
-                        safe_mode=False,
+                        mempool_mode=False,
                     )
                 tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 return tx_removals, tx_additions, npc_result

@@ -1,5 +1,5 @@
 import io
-from typing import BinaryIO, Type, TypeVar
+from typing import BinaryIO, Type, TypeVar, TYPE_CHECKING
 
 _T_SizedBytes = TypeVar("_T_SizedBytes", bound="SizedBytes")
 
@@ -44,6 +44,12 @@ class SizedBytes(bytes):
         assert f.read() == b""
         return result
 
+    @classmethod
+    def from_hexstr(cls: Type[_T_SizedBytes], input_str: str) -> _T_SizedBytes:
+        if input_str.startswith("0x") or input_str.startswith("0X"):
+            return cls.fromhex(input_str[2:])
+        return cls.fromhex(input_str)
+
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
         self.stream(f)
@@ -54,3 +60,11 @@ class SizedBytes(bytes):
 
     def __repr__(self):
         return "<%s: %s>" % (self.__class__.__name__, str(self))
+
+    if TYPE_CHECKING:
+        # TODO: This stub implements a fix already merged into typeshed but not yet
+        #       released in a new mypy version.  Once released this should be removed.
+        #       https://github.com/python/typeshed/pull/6201
+        @classmethod
+        def fromhex(cls: Type[_T_SizedBytes], __s: str) -> _T_SizedBytes:
+            ...

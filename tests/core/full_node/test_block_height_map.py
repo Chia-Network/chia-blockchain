@@ -32,32 +32,62 @@ async def new_block(
     is_peak: bool,
     ses: Optional[SubEpochSummary],
 ):
-    cursor = await db.db.execute(
-        "INSERT INTO block_records VALUES(?, ?, ?, ?, ?)",
-        (
-            block_hash.hex(),
-            parent.hex(),
-            height,
-            # sub epoch summary
-            None if ses is None else bytes(ses),
-            is_peak,
-        ),
-    )
-    await cursor.close()
+    if db.db_version == 2:
+        cursor = await db.db.execute(
+            "INSERT INTO block_records VALUES(?, ?, ?, ?)",
+            (
+                block_hash,
+                parent,
+                height,
+                # sub epoch summary
+                None if ses is None else bytes(ses),
+            ),
+        )
+        await cursor.close()
+        if is_peak:
+            cursor = await db.db.execute("INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, block_hash))
+            await cursor.close()
+    else:
+        cursor = await db.db.execute(
+            "INSERT INTO block_records VALUES(?, ?, ?, ?, ?)",
+            (
+                block_hash.hex(),
+                parent.hex(),
+                height,
+                # sub epoch summary
+                None if ses is None else bytes(ses),
+                is_peak,
+            ),
+        )
+        await cursor.close()
 
 
 async def setup_db(db: DBWrapper):
-    await db.db.execute(
-        "CREATE TABLE IF NOT EXISTS block_records("
-        "header_hash text PRIMARY KEY,"
-        "prev_hash text,"
-        "height bigint,"
-        "sub_epoch_summary blob,"
-        "is_peak tinyint)"
-    )
-    await db.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
-    await db.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
-    await db.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
+
+    if db.db_version == 2:
+        await db.db.execute(
+            "CREATE TABLE IF NOT EXISTS block_records("
+            "header_hash blob PRIMARY KEY,"
+            "prev_hash blob,"
+            "height bigint,"
+            "sub_epoch_summary blob)"
+        )
+        await db.db.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
+
+        await db.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
+        await db.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
+    else:
+        await db.db.execute(
+            "CREATE TABLE IF NOT EXISTS block_records("
+            "header_hash text PRIMARY KEY,"
+            "prev_hash text,"
+            "height bigint,"
+            "sub_epoch_summary blob,"
+            "is_peak tinyint)"
+        )
+        await db.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
+        await db.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
+        await db.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
 
 
 # if chain_id != 0, the last block in the chain won't be considered the peak,

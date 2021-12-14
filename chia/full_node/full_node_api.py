@@ -936,10 +936,7 @@ class FullNodeAPI:
             if unfinished_block.is_transaction_block():
                 foliage_transaction_block_hash = unfinished_block.foliage.foliage_transaction_block_hash
             else:
-                # TODO: address hint error and remove ignore
-                #       error: Incompatible types in assignment (expression has type "bytes", variable has type
-                #       "Optional[bytes32]")  [assignment]
-                foliage_transaction_block_hash = bytes([0] * 32)  # type: ignore[assignment]
+                foliage_transaction_block_hash = bytes32([0] * 32)
 
             # TODO: address hint error and remove ignore
             #       error: Argument 3 to "RequestSignedValues" has incompatible type "Optional[bytes32]"; expected

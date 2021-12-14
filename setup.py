@@ -30,6 +30,8 @@ dependencies = [
     "dnspythonchia==2.2.0",  # Query DNS seeds
     "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.14",  # dns lib
+    "typing-extensions==4.0.1",  # typing backports like Protocol and TypedDict
+    "zstd==1.5.0.4",
 ]
 
 upnp_dependencies = [
@@ -37,6 +39,7 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    "pre-commit",
     "pytest",
     "pytest-asyncio",
     "pytest-monitor; sys_platform == 'linux'",

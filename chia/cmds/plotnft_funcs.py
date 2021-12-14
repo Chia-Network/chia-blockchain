@@ -57,6 +57,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
     fee = Decimal(args.get("fee", 0))
     fee_mojos = uint64(int(fee * units["chia"]))
 
+    target_puzzle_hash: Optional[bytes32]
     # Could use initial_pool_state_from_dict to simplify
     if state == "SELF_POOLING":
         pool_url: Optional[str] = None
@@ -71,7 +72,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
             return
         json_dict = await create_pool_args(pool_url)
         relative_lock_height = json_dict["relative_lock_height"]
-        target_puzzle_hash = hexstr_to_bytes(json_dict["target_puzzle_hash"])
+        target_puzzle_hash = bytes32.from_hexstr(json_dict["target_puzzle_hash"])
     else:
         raise ValueError("Plot NFT must be created in SELF_POOLING or FARMING_TO_POOL state.")
 
@@ -84,11 +85,8 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
 
     if user_input.lower() == "y" or user_input.lower() == "yes":
         try:
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "create_new_pool_wallet" of "WalletRpcClient" has incompatible type
-            #       "Optional[bytes]"; expected "Optional[bytes32]"  [arg-type]
             tx_record: TransactionRecord = await wallet_client.create_new_pool_wallet(
-                target_puzzle_hash,  # type: ignore[arg-type]
+                target_puzzle_hash,
                 pool_url,
                 relative_lock_height,
                 "localhost:5000",
@@ -164,10 +162,7 @@ async def pprint_pool_wallet_state(
         print(f"Relative lock height: {pool_wallet_info.current.relative_lock_height} blocks")
         payout_instructions: str = pool_state_dict[pool_wallet_info.launcher_id]["pool_config"]["payout_instructions"]
         try:
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "encode_puzzle_hash" has incompatible type "bytes"; expected "bytes32"
-            #       [arg-type]
-            payout_address = encode_puzzle_hash(bytes32.fromhex(payout_instructions), address_prefix)  # type: ignore[arg-type]  # noqa: E501
+            payout_address = encode_puzzle_hash(bytes32.fromhex(payout_instructions), address_prefix)
             print(f"Payout instructions (pool will pay to this address): {payout_address}")
         except Exception:
             print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
@@ -207,10 +202,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         await farmer_client.await_closed()
         return
     pool_state_dict: Dict[bytes32, Dict] = {
-        # TODO: address hint error and remove ignore
-        #       error: Key expression in dictionary comprehension has incompatible type "bytes"; expected type "bytes32"
-        #       [misc]
-        hexstr_to_bytes(pool_state_item["pool_config"]["launcher_id"]): pool_state_item  # type: ignore[misc]
+        bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
         for pool_state_item in pool_state_list
     }
     if wallet_id_passed_in is not None:
@@ -251,10 +243,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 
 
 async def get_login_link(launcher_id_str: str) -> None:
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-    #       [assignment]
-    launcher_id: bytes32 = hexstr_to_bytes(launcher_id_str)  # type: ignore[assignment]
+    launcher_id: bytes32 = bytes32.from_hexstr(launcher_id_str)
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     self_hostname = config["self_hostname"]
     farmer_rpc_port = config["farmer"]["rpc_port"]
