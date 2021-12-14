@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Any
 
 import aiosqlite
+import time
 
 from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
@@ -81,6 +82,14 @@ class DataStore:
                 )
                 """
             )
+            await self.db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS ancestors(
+                    hash TEXT PRIMARY KEY NOT NULL,
+                    ancestor TEXT
+                )
+                """
+            )
 
         return self
 
@@ -137,6 +146,29 @@ class DataStore:
                 """,
                 values,
             )
+            if left_hash is not None and right_hash is not None:
+                values = {
+                    "hash": left_hash,
+                    "ancestor": node_hash,
+                }
+                await self.db.execute(
+                    """
+                    INSERT OR REPLACE INTO ancestors(hash, ancestor)
+                    VALUES (:hash, :ancestor)
+                    """,
+                    values,
+                )
+                values = {
+                    "hash": right_hash,
+                    "ancestor": node_hash,
+                }
+                await self.db.execute(
+                    """
+                    INSERT OR REPLACE INTO ancestors(hash, ancestor)
+                    VALUES (:hash, :ancestor)
+                    """,
+                    values,
+                )
         else:
             result_dict = dict(result)
             if result_dict != values:
@@ -368,7 +400,29 @@ class DataStore:
 
         return ancestors
 
-    async def get_keys_values(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
+    async def get_ancestors_2(self, node_hash: bytes32, tree_id: bytes32, lock: bool = True) -> List[Node]:
+        # TODO: implement with RECURSIVE.
+        nodes = []
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            root = await self.get_tree_root(tree_id=tree_id, lock=False)
+            if root.node_hash is None:
+                raise Exception(f"Root hash is unspecified for tree ID: {tree_id.hex()}")
+            while node_hash != root.node_hash:
+                cursor = await self.db.execute(
+                    """
+                    SELECT hash, ancestor FROM ancestors
+                    WHERE hash == :node_hash
+                    """,
+                    {"node_hash": node_hash.hex()},
+                )
+                ancestor = [bytes32.fromhex(row["ancestor"]) async for row in cursor]
+                if len(ancestor) == 0:
+                    break
+                nodes.append(await self.get_node(ancestor[0], lock=lock))
+                node_hash = ancestor[0]
+        return nodes
+
+    async def get_pairs(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
 
@@ -467,12 +521,14 @@ class DataStore:
         *,
         lock: bool = True,
         status: Status = Status.PENDING,
+        optimized: bool = False,
     ) -> bytes32:
         async with self.db_wrapper.locked_transaction(lock=lock):
             was_empty = await self.table_is_empty(tree_id=tree_id, lock=False)
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
 
-            if not was_empty:
+            # If `optimized`, skip this check.
+            if not was_empty and not optimized:
                 # TODO: is there any way the db can enforce this?
                 pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
                 if any(key == node.key for node in pairs):
@@ -502,7 +558,10 @@ class DataStore:
                 if root.node_hash is None:
                     raise Exception("Internal error.")
 
-                ancestors = await self.get_ancestors(node_hash=reference_node_hash, tree_id=tree_id, lock=False)
+                if optimized:
+                    ancestors = await self.get_ancestors_2(node_hash=reference_node_hash, tree_id=tree_id, lock=False)
+                else:
+                    ancestors = await self.get_ancestors(node_hash=reference_node_hash, tree_id=tree_id, lock=False)
 
                 if side == Side.LEFT:
                     left = new_terminal_node_hash
@@ -683,7 +742,7 @@ class DataStore:
         query_count: int = 250,
     ) -> List[Dict[str, Any]]:
         assert node_hash is not None
-        ancestors = await self.get_ancestors(node_hash, tree_id)
+        ancestors = await self.get_ancestors_2(node_hash, tree_id, lock=False)
         stack = []
         path_hashes = []
         for ancestor in ancestors:

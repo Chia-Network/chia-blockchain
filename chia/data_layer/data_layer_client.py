@@ -29,6 +29,8 @@ class DataLayerClient:
             node = root_json["node_hash"]
             print(f"Got root hash: {node}")
             t1 = time.time()
+            internal_nodes = 0
+            terminal_nodes = 0
             stack: List[str] = []
             add_to_db_cache: Dict[str, Any] = {}
             while node is not None:
@@ -47,6 +49,7 @@ class DataLayerClient:
                             print(f"Validated terminal node {key} {value}.")
                             await self.data_store._insert_node(node, NodeType.TERMINAL, None, None, key, value)
                             print(f"Added terminal node {hash} to DB.")
+                            terminal_nodes += 1
                             right_hash = row["hash"]
                             while right_hash in add_to_db_cache:
                                 node, left_hash = add_to_db_cache[right_hash]
@@ -54,6 +57,7 @@ class DataLayerClient:
                                 await self.data_store._insert_node(
                                     node, NodeType.INTERNAL, left_hash, right_hash, None, None
                                 )
+                                internal_nodes += 1
                                 print(f"Added internal node {node} to DB.")
                                 right_hash = node
                         else:
@@ -95,7 +99,7 @@ class DataLayerClient:
             )
             # Assert we downloaded everything.
             t2 = time.time()
-            print(f"Time taken: {t2 - t1}.")
+            print(f"Time taken: {t2 - t1}. Terminal nodes: {terminal_nodes} Internal nodes: {internal_nodes}.")
             await self.data_store.check_tree_is_complete()
 
 
