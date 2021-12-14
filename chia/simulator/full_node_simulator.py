@@ -13,6 +13,7 @@ from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
 
 
@@ -342,7 +343,7 @@ class FullNodeSimulator(FullNodeAPI):
         #       WalletRpcApi.create_signed_transaction().  Perhaps it should be moved
         #       somewhere more reusable.
 
-        outputs: List[Dict[str, Any]] = []
+        outputs: List[AmountWithPuzzlehash] = []
         for amount in amounts:
             puzzle_hash = await wallet.get_new_puzzlehash()
             outputs.append({"puzzlehash": puzzle_hash, "amount": uint64(amount)})

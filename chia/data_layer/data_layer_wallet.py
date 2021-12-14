@@ -29,7 +29,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.transaction_record import ItemAndTransactionRecords
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
 
@@ -241,7 +241,7 @@ class DataLayerWallet:
         coins = await self.select_coins(uint64(1))
         assert coins is not None and coins != set()
         my_coin = coins.pop()
-        primaries = [({"puzzlehash": new_db_layer_puzzle.get_tree_hash(), "amount": my_coin.amount})]
+        primaries: List[AmountWithPuzzlehash] = [({"puzzlehash": new_db_layer_puzzle.get_tree_hash(), "amount": my_coin.amount})]
         inner_inner_sol = self.standard_wallet.make_solution(primaries=primaries)
         db_layer_sol = Program.to([0, inner_inner_sol])
         parent_info = await self.get_parent_for_coin(my_coin)
