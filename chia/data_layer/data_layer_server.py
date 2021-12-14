@@ -3,7 +3,7 @@ from aiohttp import web
 from chia.data_layer.data_store import DataStore
 from chia.util.db_wrapper import DBWrapper
 from chia.types.blockchain_format.tree_hash import bytes32
-from tests.core.data_layer.util import add_01234567_example
+from tests.core.data_layer.util import generate_big_datastore
 
 
 class DataLayerServer:
@@ -30,7 +30,8 @@ class DataLayerServer:
     async def init_example_data_store(self) -> None:
         tree_id = bytes32(b"\0" * 32)
         await self.data_store.create_tree(tree_id=tree_id)
-        await add_01234567_example(data_store=self.data_store, tree_id=tree_id)
+        await generate_big_datastore(data_store=self.data_store, tree_id=tree_id)
+        print("Generated datastore.")
 
     async def start(self) -> web.Application:
         self.db_connection = await aiosqlite.connect(":memory:")

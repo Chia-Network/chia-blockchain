@@ -1,6 +1,7 @@
 import asyncio
 import aiosqlite
 import aiohttp
+import time
 from chia.data_layer.data_store import DataStore
 from chia.util.db_wrapper import DBWrapper
 from chia.types.blockchain_format.tree_hash import bytes32
@@ -27,6 +28,7 @@ class DataLayerClient:
                 root_json = await r.json()
             node = root_json["node_hash"]
             print(f"Got root hash: {node}")
+            t1 = time.time()
             stack: List[str] = []
             add_to_db_cache: Dict[str, Any] = {}
             while node is not None:
@@ -92,6 +94,8 @@ class DataLayerClient:
                 root_json["generation"],
             )
             # Assert we downloaded everything.
+            t2 = time.time()
+            print(f"Time taken: {t2 - t1}.")
             await self.data_store.check_tree_is_complete()
 
 

@@ -680,7 +680,7 @@ class DataStore:
         tree_id: bytes32,
         *,
         lock: bool = True,
-        query_count: int = 2,
+        query_count: int = 500,
     ) -> List[Dict[str, Any]]:
         assert node_hash is not None
         ancestors = await self.get_ancestors(node_hash, tree_id)
