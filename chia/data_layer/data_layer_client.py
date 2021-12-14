@@ -7,7 +7,7 @@ from chia.types.blockchain_format.tree_hash import bytes32
 from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.data_layer.data_layer_types import Status, NodeType
-from typing import List, Any
+from typing import List, Any, Dict
 
 
 class DataLayerClient:
