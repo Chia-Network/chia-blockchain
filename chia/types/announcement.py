@@ -11,3 +11,6 @@ class Announcement:
 
     def name(self) -> bytes32:
         return std_hash(bytes(self.origin_info + self.message))
+
+    def __str__(self):
+        return self.name().decode("utf-8")

@@ -74,6 +74,25 @@ class Program(SExp):
     def __str__(self) -> str:
         return bytes(self).hex()
 
+    def at(self, position: str) -> "Program":
+        """
+        Take a string of only `f` and `r` characters and follow the corresponding path.
+
+        Example:
+
+        `assert Program.to(17) == Program.to([10, 20, 30, [15, 17], 40, 50]).at("rrrfrf")`
+
+        """
+        v = self
+        for c in position.lower():
+            if c == "f":
+                v = v.first()
+            elif c == "r":
+                v = v.rest()
+            else:
+                raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
+        return v
+
     def get_tree_hash(self, *args: List[bytes32]) -> bytes32:
         """
         Any values in `args` that appear in the tree

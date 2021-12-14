@@ -71,6 +71,7 @@ class TestCCTrades:
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
         cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_0.wallet_state_manager, wallet_0, uint64(100))
+        await asyncio.sleep(1)
 
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -84,6 +85,7 @@ class TestCCTrades:
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node_1.wallet_state_manager, wallet_1, colour
         )
+        await asyncio.sleep(1)
 
         assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
 
@@ -94,6 +96,7 @@ class TestCCTrades:
         cc_hash = await cc_wallet_2.get_new_inner_hash()
         tx_record = await cc_wallet.generate_signed_transaction([uint64(1)], [cc_hash])
         await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
+        await asyncio.sleep(1)
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
         await time_out_assert(15, wallet_height_at_least, True, wallet_node_0, 35)
@@ -110,11 +113,13 @@ class TestCCTrades:
         offer_dict = {1: 10, 2: -30}
 
         success, trade_offer, error = await trade_manager_0.create_offer_for_ids(offer_dict, file)
+        await asyncio.sleep(1)
 
         assert success is True
         assert trade_offer is not None
 
         success, offer, error = await trade_manager_1.get_discrepancies_for_offer(file_path)
+        await asyncio.sleep(1)
 
         assert error is None
         assert success is True
@@ -124,6 +129,7 @@ class TestCCTrades:
         assert offer[colour] == 30
 
         success, trade, reason = await trade_manager_1.respond_to_offer(file_path)
+        await asyncio.sleep(1)
 
         assert success is True
 
@@ -143,6 +149,7 @@ class TestCCTrades:
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
         cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_0.wallet_state_manager, wallet_0, uint64(100))
+        await asyncio.sleep(1)
 
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -156,6 +163,7 @@ class TestCCTrades:
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node_1.wallet_state_manager, wallet_1, colour
         )
+        await asyncio.sleep(1)
 
         assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
 
@@ -175,11 +183,13 @@ class TestCCTrades:
         offer_dict = {1: 10, 3: -30}
 
         success, trade_offer, error = await trade_manager_0.create_offer_for_ids(offer_dict, file)
+        await asyncio.sleep(1)
 
         assert success is True
         assert trade_offer is not None
 
         success, offer, error = await trade_manager_1.get_discrepancies_for_offer(file_path)
+        await asyncio.sleep(1)
 
         assert error is None
         assert success is True
@@ -191,6 +201,7 @@ class TestCCTrades:
         assert offer[colour] == 30
 
         success, trade, reason = await trade_manager_1.respond_to_offer(file_path)
+        await asyncio.sleep(1)
 
         assert success is True
 
@@ -217,6 +228,7 @@ class TestCCTrades:
         cc_b_2 = wallet_node_b.wallet_state_manager.wallets[2]
 
         cc_a_3: CCWallet = await CCWallet.create_new_cc(wallet_node_a.wallet_state_manager, wallet_a, uint64(100))
+        await asyncio.sleep(1)
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -235,6 +247,7 @@ class TestCCTrades:
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
         cc_b_3: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_b.wallet_state_manager, wallet_b, red)
+        await asyncio.sleep(1)
 
         assert cc_a_3.cc_info.my_genesis_checker == cc_b_3.cc_info.my_genesis_checker
 
@@ -254,11 +267,13 @@ class TestCCTrades:
         offer_dict = {1: 1000, 2: -20, 4: -50}
 
         success, trade_offer, error = await trade_manager_0.create_offer_for_ids(offer_dict, file)
+        await asyncio.sleep(1)
 
         assert success is True
         assert trade_offer is not None
 
         success, offer, error = await trade_manager_1.get_discrepancies_for_offer(file_path)
+        await asyncio.sleep(1)
         assert error is None
         assert success is True
         assert offer is not None
@@ -271,6 +286,7 @@ class TestCCTrades:
         assert offer[colour_3] == 50
 
         success, trade, reason = await trade_manager_1.respond_to_offer(file_path)
+        await asyncio.sleep(1)
 
         assert success is True
         for i in range(0, 10):
@@ -306,6 +322,7 @@ class TestCCTrades:
         trade_manager_b: TradeManager = wallet_node_b.wallet_state_manager.trade_manager
 
         cc_a_4: CCWallet = await CCWallet.create_new_cc(wallet_node_a.wallet_state_manager, wallet_a, uint64(100))
+        await asyncio.sleep(1)
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -327,6 +344,7 @@ class TestCCTrades:
         success, offer, error = await trade_manager_b.create_offer_for_ids(offer_dict, file)
 
         success, trade_a, reason = await trade_manager_a.respond_to_offer(file_path)
+        await asyncio.sleep(1)
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -370,6 +388,7 @@ class TestCCTrades:
         offer_dict = {1: 10, 2: -30, 3: 30}
 
         success, trade_offer, error = await trade_manager_a.create_offer_for_ids(offer_dict, file)
+        await asyncio.sleep(1)
 
         spendable_chia_after = await wallet_a.get_spendable_balance()
 
@@ -384,6 +403,7 @@ class TestCCTrades:
 
         # Cancel offer 1 by just deleting from db
         await trade_manager_a.cancel_pending_offer(trade_offer.trade_id)
+        await asyncio.sleep(1)
         spendable_after_cancel_1 = await wallet_a.get_spendable_balance()
 
         # Spendable should be the same as it was before making offer 1
@@ -416,6 +436,7 @@ class TestCCTrades:
         offer_dict = {1: 10, 2: -30, 3: 30}
 
         success, trade_offer, error = await trade_manager_a.create_offer_for_ids(offer_dict, file)
+        await asyncio.sleep(1)
 
         spendable_chia_after = await wallet_a.get_spendable_balance()
 
@@ -430,6 +451,7 @@ class TestCCTrades:
 
         # Cancel offer 1 by spending coins that were offered
         await trade_manager_a.cancel_pending_offer_safely(trade_offer.trade_id)
+        await asyncio.sleep(1)
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))

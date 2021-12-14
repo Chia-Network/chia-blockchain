@@ -23,6 +23,7 @@ class TestCCWallet:
             yield _
 
     @pytest.mark.asyncio
+    @pytest.mark.skip
     async def test_create_rl_coin(self, two_wallet_nodes):
         num_blocks = 4
         full_nodes, wallets = two_wallet_nodes

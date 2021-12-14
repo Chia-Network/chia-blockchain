@@ -33,7 +33,7 @@ Please visit our wiki for more information:
 1. Query the staking addresses according to your farming plot list:
 
    ```
-   $ sit farm summary
+   $ silicoin farm summary
    ...
    Staking addresses:
      sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr (balance: 0, plots: 27)
@@ -43,13 +43,13 @@ Please visit our wiki for more information:
 2. Deposit coins to the staking address:
 
    ```
-   $ sit wallet send -t sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr -a 1
+   $ silicoin wallet send -t sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr -a 1
    ```
 
    Wait for the transaction get confirmed, query staking balance again:
 
    ```
-   $ sit farm summary
+   $ silicoin farm summary
    ...
    Staking addresses:
      sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr (balance: 1, plots: 27)
@@ -59,7 +59,7 @@ Please visit our wiki for more information:
 3. Withdraw coins from the staking address:
 
    ```
-   $ sit wallet send_from -s sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr -t $RECEIVER
+   $ silicoin wallet send-from -s sit1x6jjvepyvjv7395nmtywvx9mknshgy78dsmuu38m0e9grxr080nsltjugr -t $RECEIVER
    ```
 
    Do a transaction to transfer the coins from the staking address to any receive address.

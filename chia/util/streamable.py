@@ -133,10 +133,30 @@ def streamable(cls: Any):
     which checks all types at construction. It also defines a simple serialization format,
     and adds parse, from bytes, stream, and __bytes__ methods.
 
-    Serialization format:
-    - Each field is serialized in order, by calling from_bytes/__bytes__.
-    - For Lists, there is a 4 byte prefix for the list length.
-    - For Optionals, there is a one byte prefix, 1 iff object is present, 0 iff not.
+    The primitives are:
+    * Sized ints serialized in big endian format, e.g. uint64
+    * Sized bytes serialized in big endian format, e.g. bytes32
+    * BLS public keys serialized in bls format (48 bytes)
+    * BLS signatures serialized in bls format (96 bytes)
+    * bool serialized into 1 byte (0x01 or 0x00)
+    * bytes serialized as a 4 byte size prefix and then the bytes.
+    * ConditionOpcode is serialized as a 1 byte value.
+    * str serialized as a 4 byte size prefix and then the utf-8 representation in bytes.
+
+    An item is one of:
+    * primitive
+    * Tuple[item1, .. itemx]
+    * List[item1, .. itemx]
+    * Optional[item]
+    * Custom item
+
+    A streamable must be a Tuple at the root level (although a dataclass is used here instead).
+    Iters are serialized in the following way:
+
+    1. A tuple of x items is serialized by appending the serialization of each item.
+    2. A List is serialized into a 4 byte size prefix (number of items) and the serialization of each item.
+    3. An Optional is serialized into a 1 byte prefix of 0x00 or 0x01, and if it's one, it's followed by the serialization of the item.
+    4. A Custom item is serialized by calling the .parse method, passing in the stream of bytes into it. An example is a CLVM program.
 
     All of the constituents must have parse/from_bytes, and stream/__bytes__ and therefore
     be of fixed size. For example, int cannot be a constituent since it is not a fixed size,

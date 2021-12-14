@@ -1,16 +1,16 @@
-# flake8: noqa: E501
 import logging
 from os import unlink
 from pathlib import Path
 from secrets import token_bytes
 from shutil import copy, move
+import time
 
 import pytest
 from blspy import AugSchemeMPL
 from chiapos import DiskPlotter
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk, PlotRefreshResult
+from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk, PlotRefreshResult, PlotRefreshEvents
 from chia.plotting.manager import PlotManager
 from chia.protocols import farmer_protocol
 from chia.rpc.farmer_rpc_api import FarmerRpcApi
@@ -27,7 +27,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_pooling_authentication_sk
 from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
-from tests.time_out_assert import time_out_assert
+from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 log = logging.getLogger(__name__)
 
@@ -169,40 +169,89 @@ class TestRpc:
             res_2 = await client_2.get_plots()
             assert len(res_2["plots"]) == num_plots
 
+            # Reset cache and force updates cache every second to make sure the farmer gets the most recent data
+            update_interval_before = farmer_api.farmer.update_harvester_cache_interval
+            farmer_api.farmer.update_harvester_cache_interval = 1
+            farmer_api.farmer.harvester_cache = {}
+
             # Test farmer get_harvesters
             async def test_get_harvesters():
+                harvester.plot_manager.trigger_refresh()
+                await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
                 farmer_res = await client.get_harvesters()
                 if len(list(farmer_res["harvesters"])) != 1:
+                    log.error(f"test_get_harvesters: invalid harvesters {list(farmer_res['harvesters'])}")
                     return False
                 if len(list(farmer_res["harvesters"][0]["plots"])) != num_plots:
+                    log.error(f"test_get_harvesters: invalid plots {list(farmer_res['harvesters'])}")
                     return False
                 return True
 
-            await time_out_assert(30, test_get_harvesters)
+            await time_out_assert_custom_interval(30, 1, test_get_harvesters)
+
+            # Reset cache and reset update interval to avoid hitting the rate limit
+            farmer_api.farmer.update_harvester_cache_interval = update_interval_before
+            farmer_api.farmer.harvester_cache = {}
 
             expected_result: PlotRefreshResult = PlotRefreshResult()
+            expected_result_matched = True
 
-            def test_refresh_callback(refresh_result: PlotRefreshResult):
-                assert refresh_result.loaded_plots == expected_result.loaded_plots
-                assert refresh_result.removed_plots == expected_result.removed_plots
-                assert refresh_result.processed_files == expected_result.processed_files
-                assert refresh_result.remaining_files == expected_result.remaining_files
+            # Note: We assign `expected_result_matched` in the callback and assert it in the test thread to avoid
+            # crashing the refresh thread of the plot manager with invalid assertions.
+            def test_refresh_callback(event: PlotRefreshEvents, refresh_result: PlotRefreshResult):
+                if event != PlotRefreshEvents.done:
+                    # Only validate the final results for this tests
+                    return
+
+                def test_value(name: str, actual: PlotRefreshResult, expected: PlotRefreshResult):
+                    nonlocal expected_result_matched
+                    try:
+                        actual_value = actual.__getattribute__(name)
+                        expected_value = expected.__getattribute__(name)
+                        if actual_value != expected_value:
+                            log.error(f"{name} invalid: actual {actual_value} expected {expected_value}")
+                            expected_result_matched = False
+                    except AttributeError as error:
+                        log.error(f"{error}")
+                        expected_result_matched = False
+
+                test_value("loaded", refresh_result, expected_result)
+                test_value("removed", refresh_result, expected_result)
+                test_value("processed", refresh_result, expected_result)
+                test_value("remaining", refresh_result, expected_result)
 
             harvester.plot_manager.set_refresh_callback(test_refresh_callback)
 
+            async def test_refresh_results(manager: PlotManager, start_refreshing: bool = False):
+                nonlocal expected_result_matched
+                expected_result_matched = True
+                if start_refreshing:
+                    manager.start_refreshing()
+                else:
+                    manager.trigger_refresh()
+                await time_out_assert(5, manager.needs_refresh, value=False)
+                assert expected_result_matched
+
             async def test_case(
-                trigger, expect_loaded, expect_removed, expect_processed, expected_directories, expect_total_plots
+                trigger,
+                expect_loaded,
+                expect_duplicates,
+                expect_removed,
+                expect_processed,
+                expected_directories,
+                expect_total_plots,
             ):
-                expected_result.loaded_plots = expect_loaded
-                expected_result.removed_plots = expect_removed
-                expected_result.processed_files = expect_processed
+                nonlocal expected_result_matched
+                expected_result.loaded = expect_loaded
+                expected_result.removed = expect_removed
+                expected_result.processed = expect_processed
                 await trigger
-                harvester.plot_manager.trigger_refresh()
                 assert len(await client_2.get_plot_directories()) == expected_directories
-                await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
+                await test_refresh_results(harvester.plot_manager)
                 result = await client_2.get_plots()
                 assert len(result["plots"]) == expect_total_plots
                 assert len(harvester.plot_manager.cache) == expect_total_plots
+                assert len(harvester.plot_manager.get_duplicates()) == expect_duplicates
                 assert len(harvester.plot_manager.failed_to_open_filenames) == 0
 
             # Add plot_dir with two new plots
@@ -210,7 +259,8 @@ class TestRpc:
                 client_2.add_plot_directory(str(plot_dir)),
                 expect_loaded=2,
                 expect_removed=0,
-                expect_processed=2,
+                expect_processed=num_plots + 2,
+                expect_duplicates=0,
                 expected_directories=2,
                 expect_total_plots=num_plots + 2,
             )
@@ -219,16 +269,19 @@ class TestRpc:
                 client_2.add_plot_directory(str(plot_dir_sub)),
                 expect_loaded=0,
                 expect_removed=0,
-                expect_processed=1,
+                expect_processed=num_plots + 3,
+                expect_duplicates=1,
                 expected_directories=3,
                 expect_total_plots=num_plots + 2,
             )
+            assert plot_dir_sub.resolve() / filename_2 in harvester.plot_manager.get_duplicates()
             # Delete one plot
             await test_case(
                 client_2.delete_plot(str(plot_dir / filename)),
                 expect_loaded=0,
                 expect_removed=1,
-                expect_processed=0,
+                expect_processed=num_plots + 2,
+                expect_duplicates=1,
                 expected_directories=3,
                 expect_total_plots=num_plots + 1,
             )
@@ -237,16 +290,19 @@ class TestRpc:
                 client_2.remove_plot_directory(str(plot_dir_sub)),
                 expect_loaded=0,
                 expect_removed=1,
-                expect_processed=0,
+                expect_processed=num_plots + 1,
+                expect_duplicates=0,
                 expected_directories=2,
                 expect_total_plots=num_plots + 1,
             )
+            assert plot_dir_sub.resolve() / filename_2 not in harvester.plot_manager.get_duplicates()
             # Re-add the directory with the duplicate for other tests
             await test_case(
                 client_2.add_plot_directory(str(plot_dir_sub)),
                 expect_loaded=0,
                 expect_removed=0,
-                expect_processed=1,
+                expect_processed=num_plots + 2,
+                expect_duplicates=1,
                 expected_directories=3,
                 expect_total_plots=num_plots + 1,
             )
@@ -256,7 +312,8 @@ class TestRpc:
                 client_2.remove_plot_directory(str(plot_dir)),
                 expect_loaded=1,
                 expect_removed=1,
-                expect_processed=1,
+                expect_processed=num_plots + 1,
+                expect_duplicates=0,
                 expected_directories=2,
                 expect_total_plots=num_plots + 1,
             )
@@ -265,7 +322,8 @@ class TestRpc:
                 client_2.add_plot_directory(str(plot_dir)),
                 expect_loaded=0,
                 expect_removed=0,
-                expect_processed=1,
+                expect_processed=num_plots + 2,
+                expect_duplicates=1,
                 expected_directories=3,
                 expect_total_plots=num_plots + 1,
             )
@@ -274,7 +332,8 @@ class TestRpc:
                 client_2.delete_plot(str(plot_dir / filename_2)),
                 expect_loaded=0,
                 expect_removed=1,
-                expect_processed=0,
+                expect_processed=num_plots + 1,
+                expect_duplicates=0,
                 expected_directories=3,
                 expect_total_plots=num_plots + 1,
             )
@@ -283,7 +342,8 @@ class TestRpc:
                 client_2.remove_plot_directory(str(plot_dir_sub)),
                 expect_loaded=0,
                 expect_removed=1,
-                expect_processed=0,
+                expect_processed=num_plots,
+                expect_duplicates=0,
                 expected_directories=2,
                 expect_total_plots=num_plots,
             )
@@ -291,8 +351,9 @@ class TestRpc:
             await test_case(
                 client_2.remove_plot_directory(str(get_plot_dir())),
                 expect_loaded=0,
-                expect_removed=20,
+                expect_removed=num_plots,
                 expect_processed=0,
+                expect_duplicates=0,
                 expected_directories=1,
                 expect_total_plots=0,
             )
@@ -300,11 +361,12 @@ class TestRpc:
             # First make sure cache gets written if required and new plots are loaded
             await test_case(
                 client_2.add_plot_directory(str(get_plot_dir())),
-                expect_loaded=20,
+                expect_loaded=num_plots,
                 expect_removed=0,
-                expect_processed=20,
+                expect_processed=num_plots,
+                expect_duplicates=0,
                 expected_directories=2,
-                expect_total_plots=20,
+                expect_total_plots=num_plots,
             )
             assert harvester.plot_manager.cache.path().exists()
             unlink(harvester.plot_manager.cache.path())
@@ -315,15 +377,14 @@ class TestRpc:
             # Manually trigger `save_cache` and make sure it creates a new cache file
             harvester.plot_manager.cache.save()
             assert harvester.plot_manager.cache.path().exists()
-
-            expected_result.loaded_plots = 20
-            expected_result.removed_plots = 0
-            expected_result.processed_files = 20
-            expected_result.remaining_files = 0
+            expected_result.loaded = 20
+            expected_result.removed = 0
+            expected_result.processed = 20
+            expected_result.remaining = 0
             plot_manager: PlotManager = PlotManager(harvester.root_path, test_refresh_callback)
-            plot_manager.start_refreshing()
+            plot_manager.cache.load()
             assert len(harvester.plot_manager.cache) == len(plot_manager.cache)
-            await time_out_assert(5, plot_manager.needs_refresh, value=False)
+            await test_refresh_results(plot_manager, start_refreshing=True)
             for path, plot_info in harvester.plot_manager.plots.items():
                 assert path in plot_manager.plots
                 assert plot_manager.plots[path].prover.get_filename() == plot_info.prover.get_filename()
@@ -350,12 +411,11 @@ class TestRpc:
             plot_manager.set_public_keys(
                 harvester.plot_manager.farmer_public_keys, harvester.plot_manager.pool_public_keys
             )
-            expected_result.loaded_plots = 20
-            expected_result.removed_plots = 0
-            expected_result.processed_files = 20
-            expected_result.remaining_files = 0
-            plot_manager.start_refreshing()
-            await time_out_assert(5, plot_manager.needs_refresh, value=False)
+            expected_result.loaded = 20
+            expected_result.removed = 0
+            expected_result.processed = 20
+            expected_result.remaining = 0
+            await test_refresh_results(plot_manager, start_refreshing=True)
             assert len(plot_manager.plots) == len(harvester.plot_manager.plots)
             plot_manager.stop_refreshing()
 
@@ -369,27 +429,24 @@ class TestRpc:
                 file.write(bytes(100))
             # Add it and validate it fails to load
             await harvester.add_plot_directory(str(plot_dir_sub))
-            expected_result.loaded_plots = 0
-            expected_result.removed_plots = 0
-            expected_result.processed_files = 1
-            expected_result.remaining_files = 0
-            harvester.plot_manager.start_refreshing()
-            await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
+            expected_result.loaded = 0
+            expected_result.removed = 0
+            expected_result.processed = num_plots + 1
+            expected_result.remaining = 0
+            await test_refresh_results(harvester.plot_manager, start_refreshing=True)
             assert retry_test_plot in harvester.plot_manager.failed_to_open_filenames
             # Make sure the file stays in `failed_to_open_filenames` and doesn't get loaded or processed in the next
             # update round
-            expected_result.loaded_plots = 0
-            expected_result.processed_files = 0
-            harvester.plot_manager.trigger_refresh()
-            await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
+            expected_result.loaded = 0
+            expected_result.processed = num_plots + 1
+            await test_refresh_results(harvester.plot_manager)
             assert retry_test_plot in harvester.plot_manager.failed_to_open_filenames
             # Now decrease the re-try timeout, restore the valid plot file and make sure it properly loads now
             harvester.plot_manager.refresh_parameter.retry_invalid_seconds = 0
             move(retry_test_plot_save, retry_test_plot)
-            expected_result.loaded_plots = 1
-            expected_result.processed_files = 1
-            harvester.plot_manager.trigger_refresh()
-            await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
+            expected_result.loaded = 1
+            expected_result.processed = num_plots + 1
+            await test_refresh_results(harvester.plot_manager)
             assert retry_test_plot not in harvester.plot_manager.failed_to_open_filenames
 
             # Test re-trying if processing a plot failed
@@ -472,7 +529,7 @@ class TestRpc:
                 {
                     "launcher_id": "ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa",
                     "authentication_public_key": bytes(auth_sk.get_g1()).hex(),
-                    "owner_public_key": "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5",
+                    "owner_public_key": "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5",  # noqa
                     "payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
                     "pool_url": "localhost",
                     "p2_singleton_puzzle_hash": "16e4bac26558d315cded63d4c5860e98deb447cc59146dd4de06ce7394b14f17",
@@ -493,6 +550,24 @@ class TestRpc:
             await farmer_api.farmer.update_pool_state()
             pool_state = (await client.get_pool_state())["pool_state"]
             assert pool_state[0]["pool_config"]["payout_instructions"] == "1234vy"
+
+            now = time.time()
+            # Big arbitrary numbers used to be unlikely to accidentally collide.
+            before_24h = (now - (25 * 60 * 60), 29984713)
+            since_24h = (now - (23 * 60 * 60), 93049817)
+            for p2_singleton_puzzle_hash, pool_dict in farmer_api.farmer.pool_state.items():
+                for key in ["points_found_24h", "points_acknowledged_24h"]:
+                    pool_dict[key].insert(0, since_24h)
+                    pool_dict[key].insert(0, before_24h)
+
+            sp = farmer_protocol.NewSignagePoint(
+                std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2)
+            )
+            await farmer_api.new_signage_point(sp)
+            client_pool_state = await client.get_pool_state()
+            for pool_dict in client_pool_state["pool_state"]:
+                for key in ["points_found_24h", "points_acknowledged_24h"]:
+                    assert pool_dict[key][0] == list(since_24h)
 
         finally:
             # Checks that the RPC manages to stop the node

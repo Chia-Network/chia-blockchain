@@ -20,7 +20,6 @@ from tests.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
-from tests.core.fixtures import empty_blockchain
 
 
 class TestRpc:

@@ -11,7 +11,6 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import disconnect_all_and_reconnect
-from tests.core.fixtures import default_400_blocks, default_1000_blocks
 from tests.setup_nodes import bt, self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 

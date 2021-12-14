@@ -38,8 +38,8 @@ testnet_kwargs = {
         "d819c28786af76b7977b1f941d8f48e0d74bd6b89ccc4d1471b6be8430186c3a"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
-    # Size of mempool = 50x the size of block
-    "MEMPOOL_BLOCK_BUFFER": 50,
+    # Size of mempool = 50x the size of block # temporary change until #9125 gets in
+    "MEMPOOL_BLOCK_BUFFER": 10,
     # Max coin amount, fits into 64 bits
     "MAX_COIN_AMOUNT": uint64((1 << 64) - 1),
     # Max block cost in clvm cost units

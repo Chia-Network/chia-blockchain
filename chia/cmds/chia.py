@@ -12,13 +12,14 @@ from chia.cmds.netspace import netspace_cmd
 from chia.cmds.passphrase import passphrase_cmd
 from chia.cmds.plotnft import plotnft_cmd
 from chia.cmds.plots import plots_cmd
+from chia.cmds.plotters import plotters_cmd
 from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
 from chia.cmds.wallet import wallet_cmd
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
 from chia.util.keychain import set_keys_root_path, supports_keyring_passphrase
-from chia.util.ssl import check_ssl
+from chia.util.ssl_check import check_ssl
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 DIST_NAME = "Venus"
@@ -68,7 +69,7 @@ def cli(
         set_keys_root_path(Path(keys_root_path))
 
     if passphrase_file is not None:
-        from .passphrase_funcs import cache_passphrase, read_passphrase_from_file
+        from chia.cmds.passphrase_funcs import cache_passphrase, read_passphrase_from_file
 
         try:
             cache_passphrase(read_passphrase_from_file(passphrase_file))
@@ -121,6 +122,7 @@ cli.add_command(start_cmd)
 cli.add_command(stop_cmd)
 cli.add_command(netspace_cmd)
 cli.add_command(farm_cmd)
+cli.add_command(plotters_cmd)
 
 if supports_keyring_passphrase():
     cli.add_command(passphrase_cmd)
