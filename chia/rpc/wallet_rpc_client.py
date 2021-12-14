@@ -104,7 +104,7 @@ class WalletRpcClient(RpcClient):
             "get_transaction",
             {"walled_id": wallet_id, "transaction_id": transaction_id.hex()},
         )
-        return TransactionRecord.from_json_dict(res["transaction"])
+        return TransactionRecord.from_json_dict_convenience(res["transaction"])
 
     async def get_transactions(
         self,
@@ -147,7 +147,7 @@ class WalletRpcClient(RpcClient):
             "send_transaction",
             {"wallet_id": wallet_id, "amount": amount, "address": address, "fee": fee},
         )
-        return TransactionRecord.from_json_dict(res["transaction"])
+        return TransactionRecord.from_json_dict_convenience(res["transaction"])
 
     async def send_transaction_multi(
         self, wallet_id: str, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)

@@ -75,9 +75,7 @@ class GenesisById(LimitationsProgram):
         await wallet.add_lineage(origin_id, LineageProof())
         tail: Program = cls.construct([Program.to(origin_id)])
 
-        minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(
-            CAT_MOD, tail.get_tree_hash(), cat_inner
-        ).get_tree_hash()
+        minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
         tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
             amount, minted_cat_puzzle_hash, uint64(0), origin_id, coins

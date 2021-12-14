@@ -272,7 +272,6 @@ class PoolWallet:
         The DB must be committed after calling this method. All validation should be done here.
         """
         coin_name_to_spend: Dict[bytes32, CoinSpend] = {cs.coin.name(): cs for cs in block_spends}
-
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
         tip_height = tip[0]
         tip_spend = tip[1]
@@ -363,11 +362,10 @@ class PoolWallet:
 
         p2_puzzle_hash: bytes32 = (await self.get_current_state()).p2_singleton_puzzle_hash
         await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
-            p2_puzzle_hash, self.wallet_id, True
+            p2_puzzle_hash, self.wallet_id, False
         )
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, create_puzzle_hashes=False)
-        self.wallet_state_manager.set_new_peak_callback(self.wallet_id, self.new_peak)
         return self
 
     @staticmethod
@@ -388,7 +386,6 @@ class PoolWallet:
         self.wallet_info = wallet_info
         self.target_state = None
         self.log = logging.getLogger(name if name else __name__)
-        self.wallet_state_manager.set_new_peak_callback(self.wallet_id, self.new_peak)
         return self
 
     @staticmethod
@@ -452,6 +449,7 @@ class PoolWallet:
             removals=spend_bundle.removals(),
             wallet_id=wallet_state_manager.main_wallet.id(),
             sent_to=[],
+            memos=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
@@ -567,6 +565,7 @@ class PoolWallet:
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
+            memos=[],
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=signed_spend_bundle.name(),
         )
@@ -585,7 +584,6 @@ class PoolWallet:
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         with the "pooling" inner state, which can be either self pooling or using a pool
         """
-
         coins: Set[Coin] = await standard_wallet.select_coins(amount)
         if coins is None:
             raise ValueError("Not enough coins to create pool wallet")
@@ -627,9 +625,9 @@ class PoolWallet:
 
         puzzle_hash: bytes32 = full_pooling_puzzle.get_tree_hash()
         pool_state_bytes = Program.to([("p", bytes(initial_target_state)), ("t", delay_time), ("h", delay_ph)])
-        announcement_set: Set[bytes32] = set()
+        announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([puzzle_hash, amount, pool_state_bytes]).get_tree_hash()
-        announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
+        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
             amount,
@@ -803,6 +801,7 @@ class PoolWallet:
             removals=spend_bundle.removals(),
             wallet_id=uint32(self.wallet_id),
             sent_to=[],
+            memos=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
@@ -810,7 +809,7 @@ class PoolWallet:
         await self.wallet_state_manager.add_pending_transaction(absorb_transaction)
         return absorb_transaction
 
-    async def new_peak(self, peak: BlockRecord) -> None:
+    async def new_peak(self, peak_height: uint64) -> None:
         # This gets called from the WalletStateManager whenever there is a new peak
 
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
@@ -828,14 +827,8 @@ class PoolWallet:
         ):
             leave_height = tip_height + pool_wallet_info.current.relative_lock_height
 
-            curr: BlockRecord = peak
-            while not curr.is_transaction_block:
-                curr = self.wallet_state_manager.blockchain.block_record(curr.prev_hash)
-
-            self.log.info(f"Last transaction block height: {curr.height} OK to leave at height {leave_height}")
-
             # Add some buffer (+2) to reduce chances of a reorg
-            if curr.height > leave_height + 2:
+            if peak_height > leave_height + 2:
                 unconfirmed: List[
                     TransactionRecord
                 ] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_id)
