@@ -1,0 +1,5 @@
+(mod (OPTIONAL_CURRIED_ARGS current_owner new_owner current_state trade_price solution)
+    ; in this instance the curried arg is backpayment address and proportion of trade price
+
+
+)
