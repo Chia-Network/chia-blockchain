@@ -17,12 +17,7 @@ from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.db_wrapper import DBWrapper
 
-from tests.core.data_layer.util import (
-    add_0123_example,
-    add_01234567_example,
-    ChiaRoot,
-    Example,
-)
+from tests.core.data_layer.util import add_0123_example, add_01234567_example, ChiaRoot, Example
 
 
 # TODO: These are more general than the data layer and should either move elsewhere or
