@@ -544,18 +544,18 @@ async def test_proof_of_inclusion_by_hash(data_store: DataStore, tree_id: bytes3
     expected_layers = [
         ProofOfInclusionLayer(
             other_hash_side=Side.RIGHT,
-            other_hash=bytes32.fromhex("fb66fe539b3eb2020dfbfadfd601fa318521292b41f04c2057c16fca6b947ca1"),  # type: ignore[arg-type]  # noqa: E501
-            combined_hash=bytes32.fromhex("36cb1fc56017944213055da8cb0178fb0938c32df3ec4472f5edf0dff85ba4a3"),  # type: ignore[arg-type]  # noqa: E501
+            other_hash=bytes32.fromhex("fb66fe539b3eb2020dfbfadfd601fa318521292b41f04c2057c16fca6b947ca1"),
+            combined_hash=bytes32.fromhex("36cb1fc56017944213055da8cb0178fb0938c32df3ec4472f5edf0dff85ba4a3"),
         ),
         ProofOfInclusionLayer(
             other_hash_side=Side.RIGHT,
-            other_hash=bytes32.fromhex("6d3af8d93db948e8b6aa4386958e137c6be8bab726db86789594b3588b35adcd"),  # type: ignore[arg-type]  # noqa: E501
-            combined_hash=bytes32.fromhex("5f67a0ab1976e090b834bf70e5ce2a0f0a9cd474e19a905348c44ae12274d30b"),  # type: ignore[arg-type]  # noqa: E501
+            other_hash=bytes32.fromhex("6d3af8d93db948e8b6aa4386958e137c6be8bab726db86789594b3588b35adcd"),
+            combined_hash=bytes32.fromhex("5f67a0ab1976e090b834bf70e5ce2a0f0a9cd474e19a905348c44ae12274d30b"),
         ),
         ProofOfInclusionLayer(
             other_hash_side=Side.LEFT,
-            other_hash=bytes32.fromhex("c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2"),  # type: ignore[arg-type]  # noqa: E501
-            combined_hash=bytes32.fromhex("7a5193a4e31a0a72f6623dfeb2876022ab74a48abb5966088a1c6f5451cc5d81"),  # type: ignore[arg-type]  # noqa: E501
+            other_hash=bytes32.fromhex("c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2"),
+            combined_hash=bytes32.fromhex("7a5193a4e31a0a72f6623dfeb2876022ab74a48abb5966088a1c6f5451cc5d81"),
         ),
     ]
 

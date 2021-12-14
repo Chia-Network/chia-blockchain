@@ -191,7 +191,7 @@ class DataStore:
             hashes = [bytes32.fromhex(row["hash"]) async for row in cursor]
 
         if len(hashes) > 0:
-            raise InternalKeyValueError(node_hashes=hashes)  # type: ignore[arg-type]
+            raise InternalKeyValueError(node_hashes=hashes)
 
     async def _check_internal_left_right_are_bytes32(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -209,7 +209,7 @@ class DataStore:
                     hashes.append(bytes32.fromhex(row["hash"]))
 
         if len(hashes) > 0:
-            raise InternalLeftRightNotBytes32Error(node_hashes=hashes)  # type: ignore[arg-type]
+            raise InternalLeftRightNotBytes32Error(node_hashes=hashes)
 
     async def _check_terminal_left_right_are_null(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -220,7 +220,7 @@ class DataStore:
             hashes = [bytes32.fromhex(row["hash"]) async for row in cursor]
 
         if len(hashes) > 0:
-            raise TerminalLeftRightError(node_hashes=hashes)  # type: ignore[arg-type]
+            raise TerminalLeftRightError(node_hashes=hashes)
 
     async def _check_roots_are_incrementing(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
