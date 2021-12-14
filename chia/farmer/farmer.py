@@ -142,15 +142,16 @@ class Farmer:
         keychain_proxy = await self.ensure_keychain_proxy()
         return await keychain_proxy.get_all_private_keys()
 
-    async def setup_keys(self):
+    async def setup_keys(self) -> bool:
+        no_keys_error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
         self.all_root_sks: List[PrivateKey] = [sk for sk, _ in await self.get_all_private_keys()]
         self._private_keys = [master_sk_to_farmer_sk(sk) for sk in self.all_root_sks] + [
             master_sk_to_pool_sk(sk) for sk in self.all_root_sks
         ]
 
         if len(self.get_public_keys()) == 0:
-            error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
-            raise RuntimeError(error_str)
+            log.warning(no_keys_error_str)
+            return False
 
         # This is the farmer configuration
         self.farmer_target_encoded = self.config["xch_target_address"]
@@ -168,8 +169,8 @@ class Farmer:
         assert len(self.farmer_target) == 32
         assert len(self.pool_target) == 32
         if len(self.pool_sks_map) == 0:
-            error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
-            raise RuntimeError(error_str)
+            log.warning(no_keys_error_str)
+            return False
 
         # The variables below are for use with an actual pool
 
@@ -184,22 +185,20 @@ class Farmer:
 
         self.harvester_cache: Dict[str, Dict[str, HarvesterCacheEntry]] = {}
 
+        return True
+
     async def _start(self):
         async def start_task():
-            # `Farmer.setup_keys` throws if there are no keys setup yet. In this case we just try until it succeeds or
-            # until we need to shut down.
+            # `Farmer.setup_keys` returns `False` if there are no keys setup yet. In this case we just try until it
+            # succeeds or until we need to shut down.
             while not self._shut_down:
-                try:
-                    await self.setup_keys()
-                except Exception as e:
-                    log.warning(e)
-                    await asyncio.sleep(1)
-                else:
+                if await self.setup_keys():
                     self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
                     self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
                     log.debug("start_task: initialized")
                     self.started = True
-                    break
+                    return
+                await asyncio.sleep(1)
 
         asyncio.create_task(start_task())
 
