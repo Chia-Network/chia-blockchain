@@ -52,7 +52,7 @@ def create_payload_dict(command: str, data: Dict[str, Any], origin: str, destina
         command=command,
         ack=False,
         data=data,
-        request_id=token_bytes().hex(),
+        request_id=bytes32(token_bytes()),
         destination=destination,
         origin=origin,
     )
