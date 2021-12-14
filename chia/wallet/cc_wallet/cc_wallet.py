@@ -45,7 +45,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -610,13 +610,13 @@ class CCWallet:
 
         total_amount = sum([x.amount for x in selected_coins])
         change = total_amount - total_outgoing
-        primaries = []
+        primaries: List[AmountWithPuzzlehash] = []
         for amount, puzzle_hash in zip(amounts, puzzle_hashes):
             primaries.append({"puzzlehash": puzzle_hash, "amount": amount})
 
         if change > 0:
             changepuzzlehash = await self.get_new_inner_hash()
-            primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
+            primaries.append({"puzzlehash": changepuzzlehash, "amount": uint64(change)})
 
         coin = list(selected_coins)[0]
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
