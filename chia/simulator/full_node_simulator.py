@@ -1,6 +1,6 @@
 import asyncio
 import itertools
-from typing import Any, Collection, Dict, List, Optional, Set
+from typing import Collection, List, Optional, Set
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward

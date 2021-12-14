@@ -241,7 +241,9 @@ class DataLayerWallet:
         coins = await self.select_coins(uint64(1))
         assert coins is not None and coins != set()
         my_coin = coins.pop()
-        primaries: List[AmountWithPuzzlehash] = [({"puzzlehash": new_db_layer_puzzle.get_tree_hash(), "amount": my_coin.amount})]
+        primaries: List[AmountWithPuzzlehash] = [
+            {"puzzlehash": new_db_layer_puzzle.get_tree_hash(), "amount": my_coin.amount}
+        ]
         inner_inner_sol = self.standard_wallet.make_solution(primaries=primaries)
         db_layer_sol = Program.to([0, inner_inner_sol])
         parent_info = await self.get_parent_for_coin(my_coin)
