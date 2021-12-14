@@ -34,18 +34,18 @@ MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 #   ,------------.
 #   | Coin A     |
 #   `------------'
-#         |       
+#         |
 #  ------------------ Atomic Transaction 1 -----------------
-#         v                                          
+#         v
 #   .------------.       .-------------------------------.
 #   | Launcher   |------>| Eve Coin Containing Program I |
 #   `------------'       `-------------------------------'
-#                                        |                
-#  -------------------- End Transaction 1 ------------------
-#                                        |                
-#  --------------- (2) Transaction With I ------------------
-#                                        |                
-#                                        v
+#                                        |
+#  -------------------- End Transaction 1 ------------------\
+#                                        |                   > The Eve coin
+#  --------------- (2) Transaction With I ------------------/  may also be
+#                                        |                     spent
+#                                        v                     simultaneously
 #                 .-----------------------------------.
 #                 | Running Singleton With Program I' |
 #                 `-----------------------------------'
