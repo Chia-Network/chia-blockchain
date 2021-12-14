@@ -118,8 +118,6 @@ class Crawler:
             self.connection = await aiosqlite.connect(self.db_path)
             self.crawl_store = await CrawlStore.create(self.connection)
             self.log.info("Started")
-            await self.crawl_store.load_to_db()
-            await self.crawl_store.load_reliable_peers_to_db()
             t_start = time.time()
             total_nodes = 0
             self.seen_nodes = set()
