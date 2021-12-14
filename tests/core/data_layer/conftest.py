@@ -5,7 +5,7 @@ import subprocess
 import sys
 import sysconfig
 import time
-from typing import Any, AsyncIterable, Awaitable, Callable, Dict, Iterator, List
+from typing import AsyncIterable, Awaitable, Callable, Iterator, List
 
 import aiosqlite
 
@@ -13,7 +13,6 @@ import aiosqlite
 from _pytest.fixtures import SubRequest
 import pytest
 
-from chia.data_layer.data_layer_types import NodeType
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.db_wrapper import DBWrapper

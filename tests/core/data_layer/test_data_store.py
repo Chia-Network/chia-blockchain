@@ -1,6 +1,6 @@
 import itertools
 import logging
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Awaitable, Callable, Dict, List, Optional
 
 import pytest
 
