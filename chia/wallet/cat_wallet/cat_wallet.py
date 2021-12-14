@@ -82,9 +82,7 @@ class CATWallet:
         empty_bytes = bytearray(32)
         self.cat_info = CATInfo(empty_bytes, None, [])
         info_as_string = bytes(self.cat_info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.CAT, info_as_string
-        )
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
         if self.wallet_info is None:
             raise ValueError("Internal Error")
 
@@ -169,9 +167,7 @@ class CATWallet:
         limitations_program_hash = hexstr_to_bytes(limitations_program_hash_hex)
         self.cat_info = CATInfo(limitations_program_hash, None, [])
         info_as_string = bytes(self.cat_info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.CAT, info_as_string
-        )
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
         if self.wallet_info is None:
             raise Exception("wallet_info is None")
 
@@ -288,7 +284,9 @@ class CATWallet:
     async def set_tail_program(self, tail_program: str):
         assert Program.fromhex(tail_program).get_tree_hash() == self.cat_info.limitations_program_hash
         await self.save_info(
-            CATInfo(self.cat_info.limitations_program_hash, Program.fromhex(tail_program), self.cat_info.lineage_proofs),
+            CATInfo(
+                self.cat_info.limitations_program_hash, Program.fromhex(tail_program), self.cat_info.lineage_proofs
+            ),
             False,
         )
 

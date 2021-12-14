@@ -113,9 +113,7 @@ class WalletBlockchain(BlockchainInterface):
         if required_iters is None:
             return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_POSPACE
 
-        block_record: BlockRecord = block_to_block_record(
-            self.constants, self, required_iters, None, block
-        )
+        block_record: BlockRecord = block_to_block_record(self.constants, self, required_iters, None, block)
         self.add_block_record(block_record)
         if self._peak is None:
             if block_record.is_transaction_block:
