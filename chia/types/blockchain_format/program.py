@@ -7,7 +7,7 @@ from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.operators import OP_REWRITE, OPERATOR_LOOKUP
 from clvm.serialize import sexp_from_stream, sexp_to_stream
-from clvm_rs import STRICT_MODE, deserialize_and_run_program2, serialized_length, run_generator
+from clvm_rs import STRICT_MODE as MEMPOOL_MODE, deserialize_and_run_program2, serialized_length, run_generator
 from clvm_tools.curry import curry, uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -237,8 +237,8 @@ class SerializedProgram:
         tmp = sexp_from_stream(io.BytesIO(self._buf), SExp.to)
         return _tree_hash(tmp, set(args))
 
-    def run_safe_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
-        return self._run(max_cost, STRICT_MODE, *args)
+    def run_mempool_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
+        return self._run(max_cost, MEMPOOL_MODE, *args)
 
     def run_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
         return self._run(max_cost, 0, *args)

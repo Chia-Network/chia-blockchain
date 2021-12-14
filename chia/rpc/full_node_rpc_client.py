@@ -36,6 +36,12 @@ class FullNodeRpcClient(RpcClient):
             return None
         return FullBlock.from_json_dict(response["block"])
 
+    async def get_blocks(self, start: int, end: int, exclude_reorged: bool = False) -> List[FullBlock]:
+        response = await self.fetch(
+            "get_blocks", {"start": start, "end": end, "exclude_header_hash": True, "exclude_reorged": exclude_reorged}
+        )
+        return [FullBlock.from_json_dict(block) for block in response["blocks"]]
+
     async def get_block_record_by_height(self, height) -> Optional[BlockRecord]:
         try:
             response = await self.fetch("get_block_record_by_height", {"height": height})

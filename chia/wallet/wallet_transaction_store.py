@@ -9,6 +9,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.transaction_type import TransactionType
 
 
@@ -333,16 +334,26 @@ class WalletTransactionStore:
         else:
             return []
 
-    async def get_transactions_between(self, wallet_id: int, start, end) -> List[TransactionRecord]:
+    async def get_transactions_between(
+        self, wallet_id: int, start, end, sort_key=None, reverse=False
+    ) -> List[TransactionRecord]:
         """Return a list of transaction between start and end index. List is in reverse chronological order.
         start = 0 is most recent transaction
         """
         limit = end - start
+
+        if sort_key is None:
+            sort_key = "CONFIRMED_AT_HEIGHT"
+        if sort_key not in SortKey.__members__:
+            raise ValueError(f"There is no known sort {sort_key}")
+
+        if reverse:
+            query_str = SortKey[sort_key].descending()
+        else:
+            query_str = SortKey[sort_key].ascending()
+
         cursor = await self.db_connection.execute(
-            f"SELECT * from transaction_record where wallet_id=? and confirmed_at_height not in"
-            f" (select confirmed_at_height from transaction_record order by confirmed_at_height"
-            f" ASC LIMIT {start})"
-            f" order by confirmed_at_height DESC LIMIT {limit}",
+            f"SELECT * from transaction_record where wallet_id=?" f" {query_str}, rowid" f" LIMIT {start}, {limit}",
             (wallet_id,),
         )
         rows = await cursor.fetchall()
@@ -352,8 +363,6 @@ class WalletTransactionStore:
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
             records.append(record)
-
-        records.reverse()
 
         return records
 

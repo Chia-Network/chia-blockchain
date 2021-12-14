@@ -79,7 +79,7 @@ class TestCostCalculation:
             program,
             test_constants.MAX_BLOCK_COST_CLVM,
             cost_per_byte=test_constants.COST_PER_BYTE,
-            safe_mode=False,
+            mempool_mode=False,
         )
 
         cost = calculate_cost_of_program(program.program, npc_result, test_constants.COST_PER_BYTE)
@@ -105,7 +105,7 @@ class TestCostCalculation:
         )
 
     @pytest.mark.asyncio
-    async def test_strict_mode(self):
+    async def test_mempool_mode(self):
         wallet_tool = bt.get_pool_wallet_tool()
         ph = wallet_tool.get_new_puzzlehash()
 
@@ -143,14 +143,14 @@ class TestCostCalculation:
             generator,
             test_constants.MAX_BLOCK_COST_CLVM,
             cost_per_byte=test_constants.COST_PER_BYTE,
-            safe_mode=True,
+            mempool_mode=True,
         )
         assert npc_result.error is not None
         npc_result = get_name_puzzle_conditions(
             generator,
             test_constants.MAX_BLOCK_COST_CLVM,
             cost_per_byte=test_constants.COST_PER_BYTE,
-            safe_mode=False,
+            mempool_mode=False,
         )
         assert npc_result.error is None
 
@@ -161,12 +161,12 @@ class TestCostCalculation:
         assert error is None
 
     @pytest.mark.asyncio
-    async def test_clvm_strict_mode(self):
+    async def test_clvm_mempool_mode(self):
         block = Program.from_bytes(bytes(SMALL_BLOCK_GENERATOR.program))
         disassembly = binutils.disassemble(block)
         # this is a valid generator program except the first clvm
         # if-condition, that depends on executing an unknown operator
-        # ("0xfe"). In strict mode, this should fail, but in non-strict
+        # ("0xfe"). In mempool mode, this should fail, but in non-mempool
         # mode, the unknown operator should be treated as if it returns ().
         program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
         generator = BlockGenerator(program, [])
@@ -174,14 +174,14 @@ class TestCostCalculation:
             generator,
             test_constants.MAX_BLOCK_COST_CLVM,
             cost_per_byte=test_constants.COST_PER_BYTE,
-            safe_mode=True,
+            mempool_mode=True,
         )
         assert npc_result.error is not None
         npc_result = get_name_puzzle_conditions(
             generator,
             test_constants.MAX_BLOCK_COST_CLVM,
             cost_per_byte=test_constants.COST_PER_BYTE,
-            safe_mode=False,
+            mempool_mode=False,
         )
         assert npc_result.error is None
 
@@ -197,7 +197,7 @@ class TestCostCalculation:
             generator,
             test_constants.MAX_BLOCK_COST_CLVM,
             cost_per_byte=test_constants.COST_PER_BYTE,
-            safe_mode=False,
+            mempool_mode=False,
         )
         end_time = time.time()
         duration = end_time - start_time
@@ -214,7 +214,7 @@ class TestCostCalculation:
         disassembly = binutils.disassemble(block)
         # this is a valid generator program except the first clvm
         # if-condition, that depends on executing an unknown operator
-        # ("0xfe"). In strict mode, this should fail, but in non-strict
+        # ("0xfe"). In mempool mode, this should fail, but in non-mempool
         # mode, the unknown operator should be treated as if it returns ().
         # the CLVM program has a cost of 391969
         program = SerializedProgram.from_bytes(
@@ -223,14 +223,14 @@ class TestCostCalculation:
 
         # ensure we fail if the program exceeds the cost
         generator = BlockGenerator(program, [])
-        npc_result: NPCResult = get_name_puzzle_conditions(generator, 10000000, cost_per_byte=0, safe_mode=False)
+        npc_result: NPCResult = get_name_puzzle_conditions(generator, 10000000, cost_per_byte=0, mempool_mode=False)
 
         assert npc_result.error is not None
         assert npc_result.clvm_cost == 0
 
         # raise the max cost to make sure this passes
         # ensure we pass if the program does not exceeds the cost
-        npc_result = get_name_puzzle_conditions(generator, 20000000, cost_per_byte=0, safe_mode=False)
+        npc_result = get_name_puzzle_conditions(generator, 20000000, cost_per_byte=0, mempool_mode=False)
 
         assert npc_result.error is None
         assert npc_result.clvm_cost > 10000000

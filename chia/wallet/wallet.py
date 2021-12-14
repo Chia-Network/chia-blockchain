@@ -37,7 +37,7 @@ from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
@@ -81,7 +81,7 @@ class Wallet:
                 program,
                 self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
-                safe_mode=True,
+                mempool_mode=True,
             )
             cost_result: uint64 = calculate_cost_of_program(
                 program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
@@ -391,7 +391,7 @@ class Wallet:
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-        primaries: Optional[List[Dict[str, bytes32]]] = None,
+        primaries: Optional[List[AmountWithPuzzlehash]] = None,
         ignore_max_send_amount: bool = False,
         coin_announcements_to_consume: Set[bytes32] = None,
         puzzle_announcements_to_consume: Set[bytes32] = None,
@@ -403,9 +403,7 @@ class Wallet:
         if primaries is None:
             non_change_amount = amount
         else:
-            # TODO: address hint error and remove ignore
-            #       error: Generator has incompatible item type "bytes32"; expected "int"  [misc]
-            non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))  # type: ignore[misc]
+            non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
 
         transaction = await self._generate_unsigned_transaction(
             amount,

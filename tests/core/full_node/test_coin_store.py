@@ -106,7 +106,7 @@ class TestCoinStoreWithBlocks:
                             block_gen,
                             bt.constants.MAX_BLOCK_COST_CLVM,
                             cost_per_byte=bt.constants.COST_PER_BYTE,
-                            safe_mode=False,
+                            mempool_mode=False,
                         )
                         tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                     else:

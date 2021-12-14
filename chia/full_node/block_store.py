@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List, Optional, Tuple, Any
 
 import aiosqlite
+import zstd
 
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -121,6 +122,15 @@ class BlockStore:
         else:
             return field.hex()
 
+    def compress(self, block: FullBlock) -> bytes:
+        return zstd.compress(bytes(block))
+
+    def maybe_decompress(self, block_bytes: bytes) -> FullBlock:
+        if self.db_wrapper.db_version == 2:
+            return FullBlock.from_bytes(zstd.decompress(block_bytes))
+        else:
+            return FullBlock.from_bytes(block_bytes)
+
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
         self.block_cache.put(header_hash, block)
 
@@ -131,7 +141,7 @@ class BlockStore:
                     header_hash,
                     block.height,
                     int(block.is_fully_compactified()),
-                    bytes(block),
+                    self.compress(block),
                 ),
             )
             await cursor_1.close()
@@ -229,7 +239,7 @@ class BlockStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            block = FullBlock.from_bytes(row[0])
+            block = self.maybe_decompress(row[0])
             self.block_cache.put(header_hash, block)
             return block
         return None
@@ -246,7 +256,11 @@ class BlockStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            return row[0]
+            if self.db_wrapper.db_version == 2:
+                return zstd.decompress(row[0])
+            else:
+                return row[0]
+
         return None
 
     async def get_full_blocks_at(self, heights: List[uint32]) -> List[FullBlock]:
@@ -258,7 +272,7 @@ class BlockStore:
         cursor = await self.db.execute(formatted_str, heights_db)
         rows = await cursor.fetchall()
         await cursor.close()
-        return [FullBlock.from_bytes(row[0]) for row in rows]
+        return [self.maybe_decompress(row[0]) for row in rows]
 
     async def get_block_records_by_hash(self, header_hashes: List[bytes32]):
         """
@@ -311,7 +325,7 @@ class BlockStore:
         all_blocks: Dict[bytes32, FullBlock] = {}
         for row in rows:
             header_hash = self.maybe_from_hex(row[0])
-            full_block: FullBlock = FullBlock.from_bytes(row[1])
+            full_block: FullBlock = self.maybe_decompress(row[1])
             # TODO: address hint error and remove ignore
             #       error: Invalid index type "bytes" for "Dict[bytes32, FullBlock]"; expected type "bytes32"  [index]
             all_blocks[header_hash] = full_block  # type: ignore[index]

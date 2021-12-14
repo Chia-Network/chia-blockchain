@@ -322,7 +322,7 @@ async def validate_block_body(
                     curr_block_generator,
                     min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost),
                     cost_per_byte=constants.COST_PER_BYTE,
-                    safe_mode=False,
+                    mempool_mode=False,
                 )
                 removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.npc_list)
             else:

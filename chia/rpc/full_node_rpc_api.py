@@ -281,6 +281,9 @@ class FullNodeRpcApi:
         exclude_hh = False
         if "exclude_header_hash" in request:
             exclude_hh = request["exclude_header_hash"]
+        exclude_reorged = False
+        if "exclude_reorged" in request:
+            exclude_reorged = request["exclude_reorged"]
 
         start = int(request["start"])
         end = int(request["end"])
@@ -290,9 +293,13 @@ class FullNodeRpcApi:
         blocks: List[FullBlock] = await self.service.block_store.get_full_blocks_at(block_range)
         json_blocks = []
         for block in blocks:
+            hh: bytes32 = block.header_hash
+            if exclude_reorged and self.service.blockchain.height_to_hash(block.height) != hh:
+                # Don't include forked (reorged) blocks
+                continue
             json = block.to_json_dict()
             if not exclude_hh:
-                json["header_hash"] = block.header_hash.hex()
+                json["header_hash"] = hh.hex()
             json_blocks.append(json)
         return {"blocks": json_blocks}
 
