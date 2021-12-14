@@ -44,7 +44,7 @@ class DataStore:
     db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper, disable_check: bool = False) -> "DataStore":
+    async def create(cls, db_wrapper: DBWrapper) -> "DataStore":
         self = cls(db=db_wrapper.db, db_wrapper=db_wrapper)
         self.db.row_factory = aiosqlite.Row
 
@@ -54,10 +54,7 @@ class DataStore:
         await self.db.execute("pragma synchronous=FULL")
         # If foreign key checking gets turned off, please add corresponding check
         # methods.
-        if not disable_check:
-            await self.db.execute("PRAGMA foreign_keys=ON")
-        else:
-            await self.db.execute("PRAGMA foreign_keys=OFF")
+        await self.db.execute("PRAGMA foreign_keys=ON")
 
         async with self.db_wrapper.locked_transaction():
             await self.db.execute(
@@ -718,8 +715,8 @@ class DataStore:
                 nodes.append(
                     {
                         "hash": str(node_hash),
-                        "left": "None" if node.left_hash is None else str(node.left_hash),
-                        "right": "None" if node.right_hash is None else str(node.right_hash),
+                        "left": str(node.left_hash),
+                        "right": str(node.right_hash),
                         "is_terminal": False,
                     }
                 )
