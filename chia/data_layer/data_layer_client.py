@@ -106,7 +106,8 @@ class DataLayerClient:
             t2 = time.time()
             print("Finished validating tree.")
             print(f"Time taken: {t2 - t1}. Terminal nodes: {terminal_nodes} Internal nodes: {internal_nodes}.")
-            await self.data_store.check_tree_is_complete()
+            # Disable this check as it keeps every hash in memory. Use it to test only small trees.
+            # await self.data_store.check_tree_is_complete()
 
 
 if __name__ == "__main__":
