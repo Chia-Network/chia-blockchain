@@ -22,10 +22,19 @@ class DataLayerServer:
     async def handle_tree_nodes(self, request: web.Request) -> web.Response:
         node_hash = request.rel_url.query["node_hash"]
         tree_id = request.rel_url.query["tree_id"]
+        root_hash = request.rel_url.query["root_hash"]
         node_hash_bytes = bytes32.from_hexstr(node_hash)
         tree_id_bytes = bytes32.from_hexstr(tree_id)
-        answer = await self.data_store.answer_server_query(node_hash_bytes, tree_id_bytes)
-        return web.json_response({"answer": answer})
+        root_hash_bytes = bytes32.from_hexstr(root_hash)
+        root_changed, answer = await self.data_store.answer_server_query(
+            node_hash_bytes, tree_id_bytes, root_hash_bytes
+        )
+        return web.json_response(
+            {
+                "root_changed": root_changed,
+                "answer": answer,
+            }
+        )
 
     async def init_example_data_store(self) -> None:
         tree_id = bytes32(b"\0" * 32)

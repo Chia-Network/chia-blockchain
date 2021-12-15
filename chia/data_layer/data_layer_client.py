@@ -22,11 +22,13 @@ class DataLayerClient:
     async def download_data_layer(self) -> None:
         await self.init_db()
         async with aiohttp.ClientSession() as session:
+            verbose = False
             tree_id = "0x0000000000000000000000000000000000000000000000000000000000000000"
             url = f"http://0.0.0.0:8080/get_tree_root?tree_id={tree_id}"
             async with session.get(url) as r:
                 root_json = await r.json()
             node = root_json["node_hash"]
+            root_hash = root_json["node_hash"]
             print(f"Got root hash: {node}")
             t1 = time.time()
             internal_nodes = 0
@@ -34,9 +36,13 @@ class DataLayerClient:
             stack: List[str] = []
             add_to_db_cache: Dict[str, Any] = {}
             while node is not None:
-                url = f"http://0.0.0.0:8080/get_tree_nodes?tree_id={tree_id}&node_hash={node}"
+                url = f"http://0.0.0.0:8080/get_tree_nodes?tree_id={tree_id}&node_hash={node}&root_hash={root_hash}"
                 async with session.get(url) as r:
                     json = await r.json()
+                root_changed = json["root_changed"]
+                if root_changed:
+                    print("Data changed since the download started. Aborting.")
+                    return
                 answer = json["answer"]
                 for row in answer:
                     # Assert that we received correct left-to-right ordering.
@@ -46,9 +52,11 @@ class DataLayerClient:
                         value = row["value"]
                         hash = Program.to((hexstr_to_bytes(key), hexstr_to_bytes(value))).get_tree_hash()
                         if hash == bytes32.from_hexstr(row["hash"]):
-                            print(f"Validated terminal node {key} {value}.")
+                            if verbose:
+                                print(f"Validated terminal node {key} {value}.")
                             await self.data_store._insert_node(node, NodeType.TERMINAL, None, None, key, value)
-                            print(f"Added terminal node {hash} to DB.")
+                            if verbose:
+                                print(f"Added terminal node {hash} to DB.")
                             terminal_nodes += 1
                             right_hash = row["hash"]
                             while right_hash in add_to_db_cache:
@@ -58,14 +66,14 @@ class DataLayerClient:
                                     node, NodeType.INTERNAL, left_hash, right_hash, None, None
                                 )
                                 internal_nodes += 1
-                                print(f"Added internal node {node} to DB.")
+                                if verbose:
+                                    print(f"Added internal node {node} to DB.")
                                 right_hash = node
                         else:
                             raise RuntimeError(f"Can't validate terminal node {node}. Expected {hash}.")
                         if len(stack) > 0:
                             node = stack.pop()
                         else:
-                            print("Finished validating tree.")
                             node = None
                     else:
                         left_hash = row["left"]
@@ -76,20 +84,17 @@ class DataLayerClient:
                             left_hash_bytes, right_hash_bytes
                         )
                         if hash == bytes32.from_hexstr(row["hash"]):
-                            print(f"Validated internal node {node}.")
+                            if verbose:
+                                print(f"Validated internal node {node}.")
                             add_to_db_cache[right_hash] = (node, left_hash)
+                            # At most max_height nodes will be pending to be added to DB.
                             assert len(add_to_db_cache) <= 100
                         else:
                             raise RuntimeError(f"Can't validate internal node {node}. Expected {hash}.")
-                        if right_hash is not None:
-                            stack.append(right_hash)
-                        if left_hash is not None:
-                            node = left_hash
-                        elif len(stack) > 0:
-                            node = stack.pop()
-                        else:
-                            print("Finished validating tree.")
-                            node = None
+                        stack.append(right_hash)
+                        node = left_hash
+
+                print(f"Finished validating batch of {len(answer)}.")
 
             await self.data_store._insert_root(
                 bytes32.from_hexstr(root_json["tree_id"]),
@@ -99,6 +104,7 @@ class DataLayerClient:
             )
             # Assert we downloaded everything.
             t2 = time.time()
+            print("Finished validating tree.")
             print(f"Time taken: {t2 - t1}. Terminal nodes: {terminal_nodes} Internal nodes: {internal_nodes}.")
             await self.data_store.check_tree_is_complete()
 

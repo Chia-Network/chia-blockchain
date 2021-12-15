@@ -1,10 +1,8 @@
 import logging
+import aiosqlite
 from collections import defaultdict
 from dataclasses import dataclass, replace
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Any
-
-import aiosqlite
-import time
 
 from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
@@ -400,7 +398,7 @@ class DataStore:
 
         return ancestors
 
-    async def get_ancestors_2(self, node_hash: bytes32, tree_id: bytes32, lock: bool = True) -> List[Node]:
+    async def get_ancestors_2(self, node_hash: bytes32, tree_id: bytes32, lock: bool = True) -> List[InternalNode]:
         # TODO: implement with RECURSIVE.
         nodes = []
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -415,10 +413,12 @@ class DataStore:
                     """,
                     {"node_hash": node_hash.hex()},
                 )
-                ancestor = [bytes32.fromhex(row["ancestor"]) async for row in cursor]
+                ancestor: List[bytes32] = [bytes32(bytes32.fromhex(row["ancestor"])) async for row in cursor]
                 if len(ancestor) == 0:
                     break
-                nodes.append(await self.get_node(ancestor[0], lock=lock))
+                node = await self.get_node(ancestor[0], lock=False)
+                assert isinstance(node, InternalNode)
+                nodes.append(node)
                 node_hash = ancestor[0]
         return nodes
 
@@ -559,7 +559,9 @@ class DataStore:
                     raise Exception("Internal error.")
 
                 if optimized:
-                    ancestors = await self.get_ancestors_2(node_hash=reference_node_hash, tree_id=tree_id, lock=False)
+                    ancestors: List[InternalNode] = await self.get_ancestors_2(
+                        node_hash=reference_node_hash, tree_id=tree_id, lock=False
+                    )
                 else:
                     ancestors = await self.get_ancestors(node_hash=reference_node_hash, tree_id=tree_id, lock=False)
 
@@ -735,24 +737,28 @@ class DataStore:
 
     async def answer_server_query(
         self,
-        node_hash: Optional[bytes32],
+        node_hash: bytes32,
         tree_id: bytes32,
+        root_hash: bytes32,
         *,
         lock: bool = True,
-        query_count: int = 250,
-    ) -> List[Dict[str, Any]]:
-        assert node_hash is not None
-        ancestors = await self.get_ancestors_2(node_hash, tree_id, lock=False)
+        query_count: int = 2500,
+    ) -> Tuple[bool, List[Dict[str, Any]]]:
+        ancestors = await self.get_ancestors_2(node_hash, tree_id, lock=True)
+        # Root hash changed, abort the process and start over again.
+        if root_hash != node_hash and root_hash != ancestors[-1].hash:
+            return (True, [])
         stack = []
         path_hashes = []
         for ancestor in ancestors:
             path_hashes.append(ancestor.hash)
         for ancestor in reversed(ancestors):
+            assert isinstance(ancestor, InternalNode)
             if ancestor.right_hash not in path_hashes and ancestor.right_hash != node_hash:
                 stack.append(ancestor.right_hash)
         count = 0
         nodes = []
-        while count < query_count and node_hash is not None:
+        while count < query_count:
             count += 1
             node = await self.get_node(node_hash)
             if node is None:
@@ -769,7 +775,7 @@ class DataStore:
                 if len(stack) > 0:
                     node_hash = stack.pop()
                 else:
-                    node_hash = None
+                    break
             if isinstance(node, InternalNode):
                 nodes.append(
                     {
@@ -779,12 +785,6 @@ class DataStore:
                         "is_terminal": False,
                     }
                 )
-                if node.right_hash is not None:
-                    stack.append(node.right_hash)
-                if node.left_hash is not None:
-                    node_hash = node.left_hash
-                elif len(stack) > 0:
-                    node_hash = stack.pop()
-                else:
-                    node_hash = None
-        return nodes
+                stack.append(node.right_hash)
+                node_hash = node.left_hash
+        return (False, nodes)
