@@ -237,6 +237,14 @@ class BlockTools:
         # Pool Plots
         for i in range(5):
             await self.new_plot(self.pool_ph)
+        # Some plots with keys that are not in the keychain
+        for i in range(3):
+            await self.new_plot(
+                path=self.plot_dir / "not_in_keychain",
+                plot_keys=PlotKeys(G1Element(), G1Element(), None),
+                exclude_final_dir=True,
+            )
+
         await self.refresh_plots()
 
     async def new_plot(
@@ -244,6 +252,7 @@ class BlockTools:
         pool_contract_puzzle_hash: Optional[bytes32] = None,
         path: Path = None,
         plot_keys: Optional[PlotKeys] = None,
+        exclude_final_dir: bool = False,
     ) -> Optional[bytes32]:
         final_dir = self.plot_dir
         if path is not None:
@@ -266,6 +275,7 @@ class BlockTools:
         args.nobitfield = False
         args.exclude_final_dir = False
         args.list_duplicates = False
+        args.exclude_final_dir = exclude_final_dir
         try:
             if plot_keys is None:
                 pool_pk: Optional[G1Element] = None
@@ -296,10 +306,11 @@ class BlockTools:
                 assert len(created) == 0
                 plot_id_new, path_new = list(existed.items())[0]
 
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, Path]"; expected type "bytes32"
-            #       [index]
-            self.expected_plots[plot_id_new] = path_new  # type: ignore[index]
+            if not exclude_final_dir:
+                # TODO: address hint error and remove ignore
+                #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, Path]"; expected type "bytes32"
+                #       [index]
+                self.expected_plots[plot_id_new] = path_new  # type: ignore[index]
 
             # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
             self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[
