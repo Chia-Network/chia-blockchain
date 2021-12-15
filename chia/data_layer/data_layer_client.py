@@ -45,20 +45,18 @@ class DataLayerClient:
                     return
                 answer = json["answer"]
                 for row in answer:
-                    # Assert that we received correct left-to-right ordering.
-                    assert node == row["hash"]
                     if row["is_terminal"]:
                         key = row["key"]
                         value = row["value"]
                         hash = Program.to((hexstr_to_bytes(key), hexstr_to_bytes(value))).get_tree_hash()
-                        if hash == bytes32.from_hexstr(row["hash"]):
+                        if hash.hex() == node:
                             if verbose:
                                 print(f"Validated terminal node {key} {value}.")
                             await self.data_store._insert_node(node, NodeType.TERMINAL, None, None, key, value)
                             if verbose:
                                 print(f"Added terminal node {hash} to DB.")
                             terminal_nodes += 1
-                            right_hash = row["hash"]
+                            right_hash = hash.hex()
                             while right_hash in add_to_db_cache:
                                 node, left_hash = add_to_db_cache[right_hash]
                                 del add_to_db_cache[right_hash]
@@ -83,7 +81,7 @@ class DataLayerClient:
                         hash = Program.to((left_hash_bytes, right_hash_bytes)).get_tree_hash(
                             left_hash_bytes, right_hash_bytes
                         )
-                        if hash == bytes32.from_hexstr(row["hash"]):
+                        if hash.hex() == node:
                             if verbose:
                                 print(f"Validated internal node {node}.")
                             add_to_db_cache[right_hash] = (node, left_hash)

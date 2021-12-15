@@ -766,7 +766,6 @@ class DataStore:
             if isinstance(node, TerminalNode):
                 nodes.append(
                     {
-                        "hash": str(node_hash),
                         "key": node.key.hex(),
                         "value": node.value.hex(),
                         "is_terminal": True,
@@ -779,7 +778,6 @@ class DataStore:
             if isinstance(node, InternalNode):
                 nodes.append(
                     {
-                        "hash": str(node_hash),
                         "left": str(node.left_hash),
                         "right": str(node.right_hash),
                         "is_terminal": False,
