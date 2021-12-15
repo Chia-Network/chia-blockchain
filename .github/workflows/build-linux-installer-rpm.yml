@@ -16,7 +16,7 @@ jobs:
     name: Linux .rpm installer on Python 3.9
     runs-on: ubuntu-latest
     container:
-      image: chianetwork/centos7-builder:latest
+      image: cmmarslender/centos-7-builder:openssl-sqlite3
     timeout-minutes: 40
     strategy:
       fail-fast: false
