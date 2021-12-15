@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useFormContext, useFieldArray } from 'react-hook-form';
 import { Trans } from '@lingui/macro';
-import { Amount, Flex, TextFieldNumber } from '@chia/core';
+import { Amount, Flex } from '@chia/core';
 import { Divider, Grid, IconButton, Typography } from '@material-ui/core';
 import { Add, Remove } from '@material-ui/icons';
 import { useGetWalletsQuery } from '@chia/api-react';
@@ -42,32 +42,19 @@ function OfferEditorConditionRow(props: OfferEditorConditionsRowProps) {
         />
       </Grid>
       <Grid xs={6} item>
-        {item.walletType === WalletType.STANDARD_WALLET && (
-          <Amount
-            variant="filled"
-            color="secondary"
-            label={<Trans>Amount</Trans>}
-            defaultValue={item.amount}
-            id={`${namePrefix}.amount`}
-            name={`${namePrefix}.amount`}
-            disabled={disabled}
-            required
-            fullWidth
-          />
-        )}
-        {item.walletType === WalletType.CAT && (
-          <TextFieldNumber
-            variant="filled"
-            color="secondary"
-            label={<Trans>Amount</Trans>}
-            defaultValue={item.amount}
-            id={`${namePrefix}.amount`}
-            name={`${namePrefix}.amount`}
-            disabled={disabled}
-            required
-            fullWidth
-          />
-        )}
+        <Amount
+          variant="filled"
+          color="secondary"
+          label={<Trans>Amount</Trans>}
+          defaultValue={item.amount}
+          id={`${namePrefix}.amount`}
+          name={`${namePrefix}.amount`}
+          disabled={disabled}
+          symbol={item.walletType === WalletType.STANDARD_WALLET ? undefined : ""}
+          showAmountInMojos={item.walletType === WalletType.STANDARD_WALLET}
+          required
+          fullWidth
+        />
       </Grid>
       <Flex flexDirection="row" justifyContent="top" alignItems="flex-start" gap={0.5} style={{paddingTop: '0.25em'}}>
         <IconButton aria-label="remove" onClick={removeRow} disabled={disabled || !removeRow}>

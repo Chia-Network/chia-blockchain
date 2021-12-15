@@ -2,13 +2,13 @@ import React, { useMemo } from 'react';
 import { Trans, t } from '@lingui/macro';
 import {
   AdvancedOptions,
+  Amount,
   Fee,
   Form,
   AlertDialog,
   Flex,
   Card,
   ButtonLoading,
-  TextFieldNumber,
   TextField,
   useOpenDialog,
 } from '@chia/core';
@@ -194,14 +194,15 @@ export default function WalletCATSend(props: Props) {
             />
           </Grid>
           <Grid xs={12} md={6} item>
-            <TextFieldNumber
+            <Amount
               id="filled-secondary"
               variant="filled"
               color="secondary"
               name="amount"
               disabled={isSubmitting}
               label={<Trans>Amount</Trans>}
-              currency={unit}
+              symbol={unit || ""}
+              showAmountInMojos={false}
               fullWidth
               required
             />
