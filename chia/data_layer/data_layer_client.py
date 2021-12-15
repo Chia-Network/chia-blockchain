@@ -51,7 +51,7 @@ class DataLayerClient:
                         hash = Program.to((hexstr_to_bytes(key), hexstr_to_bytes(value))).get_tree_hash()
                         if hash.hex() == node:
                             if verbose:
-                                print(f"Validated terminal node {key} {value}.")
+                                print(f"Received terminal node {key} {value}.")
                             await self.data_store._insert_node(node, NodeType.TERMINAL, None, None, key, value)
                             if verbose:
                                 print(f"Added terminal node {hash} to DB.")
@@ -68,7 +68,9 @@ class DataLayerClient:
                                     print(f"Added internal node {node} to DB.")
                                 right_hash = node
                         else:
-                            raise RuntimeError(f"Can't validate terminal node {node}. Expected {hash}.")
+                            raise RuntimeError(
+                                f"Did not received expected node. Expected: {node} Received: {hash.hex()}"
+                            )
                         if len(stack) > 0:
                             node = stack.pop()
                         else:
@@ -83,12 +85,14 @@ class DataLayerClient:
                         )
                         if hash.hex() == node:
                             if verbose:
-                                print(f"Validated internal node {node}.")
+                                print(f"Received internal node {node}.")
                             add_to_db_cache[right_hash] = (node, left_hash)
                             # At most max_height nodes will be pending to be added to DB.
                             assert len(add_to_db_cache) <= 100
                         else:
-                            raise RuntimeError(f"Can't validate internal node {node}. Expected {hash}.")
+                            raise RuntimeError(
+                                f"Did not received expected node. Expected: {node} Received: {hash.hex()}"
+                            )
                         stack.append(right_hash)
                         node = left_hash
 
