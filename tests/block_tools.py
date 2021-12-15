@@ -240,7 +240,10 @@ class BlockTools:
         await self.refresh_plots()
 
     async def new_plot(
-        self, pool_contract_puzzle_hash: Optional[bytes32] = None, path: Path = None
+        self,
+        pool_contract_puzzle_hash: Optional[bytes32] = None,
+        path: Path = None,
+        plot_keys: Optional[PlotKeys] = None,
     ) -> Optional[bytes32]:
         final_dir = self.plot_dir
         if path is not None:
@@ -264,18 +267,19 @@ class BlockTools:
         args.exclude_final_dir = False
         args.list_duplicates = False
         try:
-            pool_pk: Optional[G1Element] = None
-            pool_address: Optional[str] = None
-            if pool_contract_puzzle_hash is None:
-                pool_pk = self.pool_pk
-            else:
-                pool_address = encode_puzzle_hash(pool_contract_puzzle_hash, "xch")
+            if plot_keys is None:
+                pool_pk: Optional[G1Element] = None
+                pool_address: Optional[str] = None
+                if pool_contract_puzzle_hash is None:
+                    pool_pk = self.pool_pk
+                else:
+                    pool_address = encode_puzzle_hash(pool_contract_puzzle_hash, "xch")
 
-            keys = PlotKeys(self.farmer_pk, pool_pk, pool_address)
+                plot_keys = PlotKeys(self.farmer_pk, pool_pk, pool_address)
             # No datetime in the filename, to get deterministic filenames and not re-plot
             created, existed = await create_plots(
                 args,
-                keys,
+                plot_keys,
                 self.root_path,
                 use_datetime=False,
                 test_private_keys=[AugSchemeMPL.key_gen(std_hash(len(self.expected_plots).to_bytes(2, "big")))],
