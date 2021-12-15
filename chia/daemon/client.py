@@ -34,7 +34,11 @@ class DaemonProxy:
                 except websockets.exceptions.ConnectionClosedOK:
                     return None
                 decoded = json.loads(message)
-                id = decoded["request_id"]
+                try:
+                    id = bytes32.from_hexstr(decoded["request_id"])
+                except (AttributeError, TypeError, ValueError):
+                    # treat an invalid request id the same as one we are unaware of
+                    continue
 
                 if id in self._request_dict:
                     self.response_dict[id] = decoded
