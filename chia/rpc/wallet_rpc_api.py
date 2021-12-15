@@ -897,9 +897,13 @@ class WalletRpcApi:
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
+        start: int = request.get("start", 0)
+        end: int = request.get("end", 50)
+        sort_key: Optional[str] = request.get("sort_key", None)
+        reverse: bool = request.get("reverse", False)
         file_contents: bool = request.get("file_contents", False)
 
-        all_trades = await trade_mgr.get_all_trades()
+        all_trades = await trade_mgr.trade_store.get_trades_between(start, end, sort_key=sort_key, reverse=reverse)
         result = []
         offer_values: Optional[List[str]] = [] if file_contents else None
         for trade in all_trades:

@@ -1,4 +1,5 @@
 from typing import List, Optional
+from operator import attrgetter
 
 import aiosqlite
 
@@ -245,6 +246,40 @@ class TradeStore:
             records.append(record)
 
         return records
+
+    async def get_trades_between(
+        self, start: int, end: int, sort_key: Optional[str] = None, reverse: bool = False
+    ) -> List[TradeRecord]:
+        """
+        Return a list of trades sorted by a key and between a start and end index.
+        """
+        records = await self.get_all_trades()
+
+        # Sort
+        records = sorted(records, key=attrgetter("trade_id"))  # For determinism
+        if sort_key is None or sort_key == "CONFIRMED_AT_HEIGHT":
+            records = sorted(records, key=attrgetter("confirmed_at_index"), reverse=(not reverse))
+        elif sort_key == "RELEVANCE":
+            sorted_records = sorted(records, key=attrgetter("created_at_time"), reverse=(not reverse))
+            sorted_records = sorted(sorted_records, key=attrgetter("confirmed_at_index"), reverse=(not reverse))
+            # custom sort of the statuses here
+            records = []
+            statuses = ["PENDING", "CONFIRMED", "CANCELLED", "FAILED"]
+            if reverse:
+                statuses.reverse()
+            statuses.append("")  # This is a catch all for any statuses we have not explicitly designated
+            for status in statuses:
+                for record in sorted_records:
+                    if status in TradeStatus(record.status).name and record not in records:
+                        records.append(record)
+        else:
+            raise ValueError(f"No known sort {sort_key}")
+
+        # Paginate
+        if start > len(records) - 1:
+            return []
+        else:
+            return records[max(start, 0) : min(end, len(records))]
 
     async def get_trades_above(self, height: uint32) -> List[TradeRecord]:
         cursor = await self.db_connection.execute("SELECT * from trade_records WHERE confirmed_at_index>?", (height,))
