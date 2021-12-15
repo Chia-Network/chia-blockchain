@@ -65,7 +65,7 @@ class BlockHeightMap:
                 return self
 
             cursor_2 = await db.db.execute(
-                "SELECT header_hash,prev_hash,height,sub_epoch_summary FROM block_records WHERE header_hash=?",
+                "SELECT header_hash,prev_hash,height,sub_epoch_summary FROM full_blocks WHERE header_hash=?",
                 (peak_row[0],),
             )
             row = await cursor_2.fetchone()
@@ -162,11 +162,19 @@ class BlockHeightMap:
         while height > 0:
             # load 5000 blocks at a time
             window_end = max(0, height - 5000)
-            cursor = await self.db.db.execute(
-                "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records "
-                "INDEXED BY height WHERE height>=? AND height <?",
-                (window_end, height),
-            )
+
+            if self.db.db_version == 2:
+                cursor = await self.db.db.execute(
+                    "SELECT header_hash,prev_hash,height,sub_epoch_summary from full_blocks "
+                    "INDEXED BY height WHERE height>=? AND height <?",
+                    (window_end, height),
+                )
+            else:
+                cursor = await self.db.db.execute(
+                    "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records "
+                    "INDEXED BY height WHERE height>=? AND height <?",
+                    (window_end, height),
+                )
 
             rows = await cursor.fetchall()
             await cursor.close()
