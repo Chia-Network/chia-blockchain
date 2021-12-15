@@ -258,7 +258,7 @@ steps:
       MADMAX_VERSION=$(curl --silent "https://api.github.com/repos/Chia-Network/chia-plotter-madmax/releases/latest" | jq -r '.tag_name')
       MADMAX_VERSION=$(curl --silent "https://api.github.com/repos/Chia-Network/chia-plotter-madmax/releases/latest" | jq -r '.tag_name')
       MADMAX_VERSION=$(curl --silent "https://api.github.com/repos/Chia-Network/chia-plotter-madmax/releases/latest" | jq -r '.tag_name')
-      set -o pipefail
+      set -e -o pipefail
       MADMAX_VERSION=$(curl --fail --silent "https://api.github.com/repos/Chia-Network/chia-plotter-madmax/releases/latest" | jq -r '.tag_name')
 
       mkdir "$(System.DefaultWorkingDirectory)/madmax"
