@@ -7,6 +7,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.config import load_config, save_config
+from operator import attrgetter
 import logging
 
 import pytest
@@ -25,6 +26,7 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_sorting import SortKey
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
 
@@ -263,6 +265,40 @@ class TestWalletRpc:
             new_balance = new_balance - 555 - 666 - 200
             await time_out_assert(5, eventual_balance, new_balance)
 
+            address = await client.get_next_address("1", True)
+            assert len(address) > 10
+
+            transactions = await client.get_transactions("1")
+            assert len(transactions) > 1
+
+            all_transactions = await client.get_transactions("1")
+            # Test transaction pagination
+            some_transactions = await client.get_transactions("1", 0, 5)
+            some_transactions_2 = await client.get_transactions("1", 5, 10)
+            assert some_transactions == all_transactions[0:5]
+            assert some_transactions_2 == all_transactions[5:10]
+
+            # Testing sorts
+            # Test the default sort (CONFIRMED_AT_HEIGHT)
+            assert all_transactions == sorted(all_transactions, key=attrgetter("confirmed_at_height"))
+            all_transactions = await client.get_transactions("1", reverse=True)
+            assert all_transactions == sorted(all_transactions, key=attrgetter("confirmed_at_height"), reverse=True)
+
+            # Test RELEVANCE
+            await client.send_transaction("1", 1, encode_puzzle_hash(ph_2, "xch"))  # Create a pending tx
+
+            all_transactions = await client.get_transactions("1", sort_key=SortKey.RELEVANCE)
+            sorted_transactions = sorted(all_transactions, key=attrgetter("created_at_time"), reverse=True)
+            sorted_transactions = sorted(sorted_transactions, key=attrgetter("confirmed_at_height"), reverse=True)
+            sorted_transactions = sorted(sorted_transactions, key=attrgetter("confirmed"))
+            assert all_transactions == sorted_transactions
+
+            all_transactions = await client.get_transactions("1", sort_key=SortKey.RELEVANCE, reverse=True)
+            sorted_transactions = sorted(all_transactions, key=attrgetter("created_at_time"))
+            sorted_transactions = sorted(sorted_transactions, key=attrgetter("confirmed_at_height"))
+            sorted_transactions = sorted(sorted_transactions, key=attrgetter("confirmed"), reverse=True)
+            assert all_transactions == sorted_transactions
+
             # Checks that the memo can be retrieved
             tx_confirmed = await client.get_transaction("1", send_tx_res.name)
             assert tx_confirmed.confirmed
@@ -415,11 +451,12 @@ class TestWalletRpc:
             assert len(address) > 10
 
             all_transactions = await client.get_transactions("1")
+
             some_transactions = await client.get_transactions("1", 0, 5)
             some_transactions_2 = await client.get_transactions("1", 5, 10)
             assert len(all_transactions) > 1
-            assert some_transactions == all_transactions[len(all_transactions) - 5 : len(all_transactions)]
-            assert some_transactions_2 == all_transactions[len(all_transactions) - 10 : len(all_transactions) - 5]
+            assert some_transactions == all_transactions[0:5]
+            assert some_transactions_2 == all_transactions[5:10]
 
             transaction_count = await client.get_transaction_count("1")
             assert transaction_count == len(all_transactions)

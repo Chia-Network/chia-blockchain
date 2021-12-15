@@ -376,7 +376,6 @@ class TradeManager:
         # Now to deal with transaction history before pushing the spend
         settlement_coins: List[Coin] = [c for coins in complete_offer.get_offered_coins().values() for c in coins]
         settlement_coin_ids: List[bytes32] = [c.name() for c in settlement_coins]
-        primary_coins: List[bytes32] = [c.name() for c in complete_offer.get_primary_coins()]
         additions: List[Coin] = final_spend_bundle.not_ephemeral_additions()
         removals: List[Coin] = final_spend_bundle.removals()
         all_fees = uint64(final_spend_bundle.fees())
