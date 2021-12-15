@@ -118,8 +118,6 @@ class Crawler:
             self.connection = await aiosqlite.connect(self.db_path)
             self.crawl_store = await CrawlStore.create(self.connection)
             self.log.info("Started")
-            await self.crawl_store.load_to_db()
-            await self.crawl_store.load_reliable_peers_to_db()
             t_start = time.time()
             total_nodes = 0
             self.seen_nodes = set()
@@ -230,8 +228,18 @@ class Crawler:
                 self.server.banned_peers = {}
                 if len(peers_to_crawl) == 0:
                     continue
-                await self.crawl_store.load_to_db()
-                await self.crawl_store.load_reliable_peers_to_db()
+
+                # Try up to 5 times to write to the DB in case there is a lock that causes a timeout
+                for i in range(1, 5):
+                    try:
+                        await self.crawl_store.load_to_db()
+                        await self.crawl_store.load_reliable_peers_to_db()
+                    except Exception as e:
+                        self.log.error(f"Exception while saving to DB: {e}.")
+                        self.log.error("Waiting 5 seconds before retry...")
+                        await asyncio.sleep(5)
+                        continue
+                    break
                 total_records = self.crawl_store.get_total_records()
                 ipv6_count = self.crawl_store.get_ipv6_peers()
                 self.log.error("***")
