@@ -58,30 +58,25 @@ class BlockHeightMap:
         self.__ses_filename = blockchain_dir / "sub-epoch-summaries"
 
         if db.db_version == 2:
-            cursor = await self.db.db.execute("SELECT hash FROM current_peak WHERE key = 0")
-            peak_row = await cursor.fetchone()
-            await cursor.close()
-            if peak_row is None:
-                return self
+            async with self.db.db.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
+                peak_row = await cursor.fetchone()
+                if peak_row is None:
+                    return self
 
-            cursor_2 = await db.db.execute(
+            async with db.db.execute(
                 "SELECT header_hash,prev_hash,height,sub_epoch_summary FROM full_blocks WHERE header_hash=?",
                 (peak_row[0],),
-            )
-            row = await cursor_2.fetchone()
-            await cursor_2.close()
-
-            if row is None:
-                return self
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row is None:
+                    return self
         else:
-            res = await db.db.execute(
+            async with await db.db.execute(
                 "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records WHERE is_peak=1"
-            )
-            row = await res.fetchone()
-            await res.close()
-
-            if row is None:
-                return self
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row is None:
+                    return self
 
         try:
             async with aiofiles.open(self.__height_to_hash_filename, "rb") as f:
@@ -164,30 +159,27 @@ class BlockHeightMap:
             window_end = max(0, height - 5000)
 
             if self.db.db_version == 2:
-                cursor = await self.db.db.execute(
+                query = (
                     "SELECT header_hash,prev_hash,height,sub_epoch_summary from full_blocks "
-                    "INDEXED BY height WHERE height>=? AND height <?",
-                    (window_end, height),
+                    "INDEXED BY height WHERE height>=? AND height <?"
                 )
             else:
-                cursor = await self.db.db.execute(
+                query = (
                     "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records "
-                    "INDEXED BY height WHERE height>=? AND height <?",
-                    (window_end, height),
+                    "INDEXED BY height WHERE height>=? AND height <?"
                 )
 
-            rows = await cursor.fetchall()
-            await cursor.close()
+            async with self.db.db.execute(query, (window_end, height)) as cursor:
 
-            # maps block-hash -> (height, prev-hash, sub-epoch-summary)
-            ordered: Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]] = {}
+                # maps block-hash -> (height, prev-hash, sub-epoch-summary)
+                ordered: Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]] = {}
 
-            if self.db.db_version == 2:
-                for r in rows:
-                    ordered[r[0]] = (r[2], r[1], r[3])
-            else:
-                for r in rows:
-                    ordered[bytes32.fromhex(r[0])] = (r[2], bytes32.fromhex(r[1]), r[3])
+                if self.db.db_version == 2:
+                    for r in await cursor.fetchall():
+                        ordered[r[0]] = (r[2], r[1], r[3])
+                else:
+                    for r in await cursor.fetchall():
+                        ordered[bytes32.fromhex(r[0])] = (r[2], bytes32.fromhex(r[1]), r[3])
 
             while height > window_end:
                 entry = ordered[prev_hash]
