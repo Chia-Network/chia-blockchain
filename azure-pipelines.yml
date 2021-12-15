@@ -59,6 +59,7 @@ steps:
     displayName: Create installer version number
 
   - script: |
+      curl -u "$(GithubUsername):$(GithubToken)" -v "https://api.github.com/repos/Chia-Network/chia-plotter-madmax/releases/latest" | grep "ratelimit"
       MADMAX_VERSION=$(curl -u "$(GithubUsername):$(GithubToken)" --silent "https://api.github.com/repos/Chia-Network/chia-plotter-madmax/releases/latest" | jq -r '.tag_name')
 
       mkdir "$(System.DefaultWorkingDirectory)/madmax"
