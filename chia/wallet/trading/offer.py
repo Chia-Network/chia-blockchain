@@ -206,7 +206,9 @@ class Offer:
     def get_root_removal(self, coin: Coin) -> Coin:
         all_removals: Set[Coin] = set(self.bundle.removals())
         all_removal_ids: Set[bytes32] = {c.name() for c in all_removals}
-        non_ephemeral_removals: Set[Coin] = {c for c in all_removals if c.parent_coin_info not in {r.name() for r in all_removals}}
+        non_ephemeral_removals: Set[Coin] = {
+            c for c in all_removals if c.parent_coin_info not in {r.name() for r in all_removals}
+        }
         if coin.name() not in all_removal_ids and coin.parent_coin_info not in all_removal_ids:
             raise ValueError("The specified coin is not a coin in this bundle")
 
