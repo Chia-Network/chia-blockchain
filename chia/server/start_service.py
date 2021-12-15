@@ -133,6 +133,7 @@ class Service:
         self._enable_signals()
 
         await self._node._start(**kwargs)
+        self._node._shut_down = False
 
         for port in self._upnp_ports:
             if self.upnp is None:
@@ -242,6 +243,8 @@ class Service:
             # this is a blocking call, waiting for the UPnP thread to exit
             self.upnp.shutdown()
 
+        self._did_start = False
+        self._is_stopping.clear()
         self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
 
 
