@@ -58,7 +58,7 @@ steps:
     displayName: Create installer version number
 
   - script: |
-      set -o pipefail
+      set -o errexit -o pipefail
       MADMAX_VERSION=$(curl --fail --silent "https://api.github.com/repos/Chia-Network/chia-plotter-madmax/releases/latest" | jq -r '.tag_name')
 
       mkdir "$(System.DefaultWorkingDirectory)/madmax"
