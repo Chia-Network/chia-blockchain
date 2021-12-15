@@ -247,6 +247,10 @@ class PlotManager:
                     if plot_removed(path):
                         del self.failed_to_open_filenames[path]
 
+                for path in list(self.no_key_filenames):
+                    if plot_removed(path):
+                        self.no_key_filenames.remove(path)
+
                 filenames_to_remove: List[str] = []
                 for plot_filename, paths_entry in self.plot_filename_paths.items():
                     loaded_path, duplicated_paths = paths_entry
