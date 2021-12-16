@@ -82,7 +82,7 @@ class TestDLWallet:
 
         dl_wallet_0: DataLayerWallet = creation_record.item
 
-        await full_node_api.process_transaction_records(records=creation_record.regular)
+        await full_node_api.process_transaction_records(records=creation_record.transaction_records)
 
         assert dl_wallet_0.dl_info.root_hash == current_root
 
