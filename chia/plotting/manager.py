@@ -247,7 +247,7 @@ class PlotManager:
                     if plot_removed(path):
                         del self.failed_to_open_filenames[path]
 
-                for path in list(self.no_key_filenames):
+                for path in self.no_key_filenames.copy():
                     if plot_removed(path):
                         self.no_key_filenames.remove(path)
 
