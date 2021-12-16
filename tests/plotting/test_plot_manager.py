@@ -76,6 +76,7 @@ class PlotRefreshTester:
 
     def __init__(self, root_path: Path):
         self.plot_manager = PlotManager(root_path, self.refresh_callback)
+        self.plot_manager.start_refreshing()
 
     def refresh_callback(self, event: PlotRefreshEvents, refresh_result: PlotRefreshResult):
         if event != PlotRefreshEvents.done:
@@ -115,7 +116,6 @@ class PlotRefreshTester:
     async def run(self, expected_result: PlotRefreshResult):
         self.expected_result = expected_result
         self.expected_result_matched = False
-        self.plot_manager.start_refreshing()
         self.plot_manager.trigger_refresh()
         await time_out_assert(5, self.plot_manager.needs_refresh, value=False)
         assert self.expected_result_matched
