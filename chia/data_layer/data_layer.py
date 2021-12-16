@@ -9,7 +9,6 @@ from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint64
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -58,16 +57,11 @@ class DataLayer:
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
-        assert self.wallet_state_manager is not None
-        main_wallet = self.wallet_state_manager.main_wallet
-        async with self.wallet_state_manager.lock:
-            # TODO: fix root_hash optionality issue
-            creation_record = await DataLayerWallet.create_new_dl_wallet(
-                wallet_state_manager=self.wallet_state_manager,
-                wallet=main_wallet,
-                amount=amount,
-                root_hash=None,
-                fee=fee,
+        assert self.wallet_node.wallet_state_manager
+        main_wallet = self.wallet_node.wallet_state_manager.main_wallet
+        async with self.wallet_node.wallet_state_manager.lock:
+            creation_record = await self.wallet.create_new_dl_wallet(
+                self.wallet_node.wallet_state_manager, main_wallet, None, fee=fee
             )
             self.wallet = creation_record.item
             [regular_spend] = creation_record.regular

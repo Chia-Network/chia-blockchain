@@ -1,5 +1,4 @@
 import logging
-import os
 import json
 import time
 from dataclasses import dataclass, replace
@@ -122,7 +121,7 @@ class DataLayerWallet:
         self,
         fee: uint64,
         initial_root: bytes32,
-    ) -> Tuple[SpendBundle, bytes32, Coin, Program]:
+    ) -> Tuple[List[TransactionRecord], List[Tuple[bytes32, Optional[LineageProof]]], Coin, Program]:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         """
@@ -156,12 +155,12 @@ class DataLayerWallet:
             launcher_coin.puzzle_hash,
             launcher_coin.amount,
         )
-        parents: List[Tuple[bytes32, LineageProof]] = []
+        parents: List[Tuple[bytes32, Optional[LineageProof]]] = []
         parents.append((eve_coin.parent_coin_info, eve_parent))
         parents.append((eve_coin.name(), future_parent))
         self.tip_coin = eve_coin
         create_launcher_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
-            amount=1,
+            amount=uint64(1),
             puzzle_hash=genesis_launcher_puz.get_tree_hash(),
             fee=uint64(0),
             origin_id=None,
@@ -185,7 +184,7 @@ class DataLayerWallet:
         dl_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=bytes32([2]*32),
+            to_puzzle_hash=bytes32([2] * 32),
             amount=uint64(1),
             fee_amount=fee,
             confirmed=False,
