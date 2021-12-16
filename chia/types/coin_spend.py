@@ -62,17 +62,18 @@ class CoinSpend(Streamable):
         _, new_puzzle_rep = KnownPuzzles.match_puzzle(coin_spend.puzzle_reveal.to_program())
         return cls(
             coin_spend.coin,
-            Program.to(bytes(new_puzzle_rep)).to_serialized_program(),
+            Program.to(KnownPuzzles.serialize_and_version(new_puzzle_rep)).to_serialized_program(),
             coin_spend.solution,
         )
 
     @classmethod
     def decompress(cls, coin_spend: "CoinSpend") -> "CoinSpend":
         program = Program.to([])
+        deversioned_bytes = KnownPuzzles.check_version(coin_spend.puzzle_reveal.to_program().as_python())
         try:
-            program = PuzzleRepresentation.from_bytes(coin_spend.puzzle_reveal.to_program().as_python()).construct()
+            program = PuzzleRepresentation.from_bytes(deversioned_bytes).construct()
         except Exception:
-            program = Program.from_bytes(coin_spend.puzzle_reveal.to_program().as_python())
+            program = Program.from_bytes(deversioned_bytes)
 
         return cls(
             coin_spend.coin,

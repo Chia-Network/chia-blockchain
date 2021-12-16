@@ -3,7 +3,7 @@ from typing import Dict, Tuple, List, Union, Any
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 
-from chia.util.ints import uint32
+from chia.util.ints import uint16, uint32
 
 # These imports should be temporary
 from blspy import G1Element
@@ -172,6 +172,9 @@ class OfferPuzzle:
         return Program.to([])
 
 
+class CompressionVersionError(Exception):
+    pass
+
 """
 This may not need to be a class, it was just how I conceived of it.
 All known puzzle drivers should get registered to this object, and then they can be retrieved or
@@ -180,6 +183,7 @@ searched through as necessary.
 
 
 class KnownPuzzles:
+    version: uint16 = 1  # This needs to be incremented whenever the map below changes
     map: Dict[bytes32, Any] = {
         standard_puzzle.MOD.get_tree_hash(): StandardPuzzle,
         CC_MOD.get_tree_hash(): CATPuzzle,
@@ -197,3 +201,14 @@ class KnownPuzzles:
             if matched:
                 return True, PuzzleRepresentation(identifier, args)
         return False, puzzle
+
+    @classmethod
+    def serialize_and_version(cls, rep: Union[PuzzleRepresentation, Program]) -> bytes:
+        return bytes(uint16(cls.version)) + bytes(rep)
+
+    @classmethod
+    def check_version(cls, object_bytes: bytes) -> bytes:
+        if int.from_bytes(object_bytes[0:2], "big") > cls.version:
+            raise CompressionVersionError()
+        else:
+            return object_bytes[2:]
