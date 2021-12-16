@@ -183,7 +183,11 @@ searched through as necessary.
 
 
 class KnownPuzzles:
-    version: uint16 = 1  # This needs to be incremented whenever the map below changes
+    """
+    The version field here needs to be updated whenever the map below changes.
+    There should only ever be additions to the map to keep compatibility with older versions.
+    """
+    version: uint16 = 1
     map: Dict[bytes32, Any] = {
         standard_puzzle.MOD.get_tree_hash(): StandardPuzzle,
         CC_MOD.get_tree_hash(): CATPuzzle,
