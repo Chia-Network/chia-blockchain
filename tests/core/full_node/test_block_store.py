@@ -49,11 +49,7 @@ class TestBlockStore:
                 assert block == await store.get_full_block(block.header_hash)
                 assert block == await store.get_full_block(block.header_hash)
                 assert block_record == (await store.get_block_record(block_record_hh))
-                await store.set_in_chain(
-                    [
-                        (block_record.header_hash),
-                    ]
-                )
+                await store.set_in_chain([(block_record.header_hash,)])
                 await store.set_peak(block_record.header_hash)
                 await store.set_peak(block_record.header_hash)
 
