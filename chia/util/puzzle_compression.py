@@ -32,11 +32,11 @@ class PuzzleRepresentation:
         self.args = args
 
     def construct(self) -> Program:
-        driver = KnownPuzzles.get_driver(self.base)
+        driver = PuzzleCompressor.get_driver(self.base)
         return driver.construct(self.args)
 
     def solve(self, solution_dict: Dict[str, str]) -> Program:
-        driver = KnownPuzzles.get_driver(self.base)
+        driver = PuzzleCompressor.get_driver(self.base)
         return driver.solve(self.args, solution_dict)
 
     @classmethod
@@ -83,7 +83,7 @@ class PuzzleRepresentation:
 
 """
 The following are example classes.
-Ideally, all of our current driver code would be put into a puzzle driver class and registered with the KnownPuzzles
+Ideally, all of our current driver code would be put into a puzzle driver class and registered with the PuzzleCompressor
 structure below.  They must all have three methods implemented:
 - match: Take the result of a uncurry() call and return the relevant list of args that will be put into the
          PuzzleRepresentation. (The criteria for this list of args is that you should be able to fully construct
@@ -135,7 +135,7 @@ class CATPuzzle:
         if CC_MOD == uncurried_mod:
             tail_hash = curried_args.rest().first()
             innerpuz = curried_args.rest().rest().first()
-            _, matched_inner = KnownPuzzles.match_puzzle(innerpuz)
+            _, matched_inner = PuzzleCompressor.match_puzzle(innerpuz)
             return True, [tail_hash, matched_inner]
         else:
             return False, []
@@ -171,48 +171,53 @@ class OfferPuzzle:
         # TODO: implement this
         return Program.to([])
 
-
-class CompressionVersionError(Exception):
-    pass
-
 """
-This may not need to be a class, it was just how I conceived of it.
-All known puzzle drivers should get registered to this object, and then they can be retrieved or
-searched through as necessary.
+Below is a dictionary that contains version numbers mapped to dictionaries of identifiers mapped to puzzle drivers.
+The idea is that specifying a compression version will determine what puzzles you can interpret.
+All version numbers will support all versions lower than themselves to ensure backwards compatibility.
+It's a dict with numbers as the keys rather than a list to be clear that the order needs to be preserved.
 """
 
-
-class KnownPuzzles:
-    """
-    The version field here needs to be updated whenever the map below changes.
-    There should only ever be additions to the map to keep compatibility with older versions.
-    """
-    version: uint16 = 1
-    map: Dict[bytes32, Any] = {
+HASH_TO_DRIVER: Dict[uint16, Dict[bytes32, Any]] = {
+    0: {
         standard_puzzle.MOD.get_tree_hash(): StandardPuzzle,
         CC_MOD.get_tree_hash(): CATPuzzle,
         OFFER_MOD.get_tree_hash(): OfferPuzzle,
     }
+}
+
+LATEST_VERSION: uint16 = uint16(max(HASH_TO_DRIVER.keys()))
+
+class CompressionVersionError(Exception):
+    pass
+
+class PuzzleCompressor:
+    @classmethod
+    def get_driver_dict(cls, version=LATEST_VERSION) -> Dict[bytes32, Any]:
+        final_dict: Dict[bytes32, Any] = {}
+        for key in range(0, version+1):
+            final_dict = final_dict | HASH_TO_DRIVER[key]
+        return final_dict
 
     @classmethod
-    def get_driver(cls, identifier: bytes32) -> Any:
-        return cls.map[identifier]
+    def get_driver(cls, identifier: bytes32, version=LATEST_VERSION) -> Any:
+        return cls.get_driver_dict(version=version)[identifier]
 
     @classmethod
-    def match_puzzle(cls, puzzle: Program) -> Tuple[bool, Union[PuzzleRepresentation, Program]]:
-        for identifier, driver in cls.map.items():
+    def match_puzzle(cls, puzzle: Program, version=LATEST_VERSION) -> Tuple[bool, Union[PuzzleRepresentation, Program]]:
+        for identifier, driver in cls.get_driver_dict(version=version).items():
             matched, args = driver.match(puzzle)
             if matched:
                 return True, PuzzleRepresentation(identifier, args)
         return False, puzzle
 
     @classmethod
-    def serialize_and_version(cls, rep: Union[PuzzleRepresentation, Program]) -> bytes:
-        return bytes(uint16(cls.version)) + bytes(rep)
+    def serialize_and_version(cls, rep: Union[PuzzleRepresentation, Program], version=LATEST_VERSION) -> bytes:
+        return bytes(uint16(version)) + bytes(rep)
 
     @classmethod
-    def check_version(cls, object_bytes: bytes) -> bytes:
-        if int.from_bytes(object_bytes[0:2], "big") > cls.version:
+    def deserialize(cls, object_bytes: bytes, version=LATEST_VERSION) -> bytes:
+        if int.from_bytes(object_bytes[0:2], "big") > version:
             raise CompressionVersionError()
         else:
             return object_bytes[2:]

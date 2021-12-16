@@ -6,7 +6,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.chain_utils import additions_for_solution, fee_for_solution
-from chia.util.puzzle_compression import KnownPuzzles, PuzzleRepresentation
+from chia.util.puzzle_compression import PuzzleCompressor, PuzzleRepresentation
 from chia.util.streamable import Streamable, streamable
 
 
@@ -59,17 +59,17 @@ class CoinSpend(Streamable):
 
     @classmethod
     def compress(cls, coin_spend: "CoinSpend") -> "CoinSpend":
-        _, new_puzzle_rep = KnownPuzzles.match_puzzle(coin_spend.puzzle_reveal.to_program())
+        _, new_puzzle_rep = PuzzleCompressor.match_puzzle(coin_spend.puzzle_reveal.to_program())
         return cls(
             coin_spend.coin,
-            Program.to(KnownPuzzles.serialize_and_version(new_puzzle_rep)).to_serialized_program(),
+            Program.to(PuzzleCompressor.serialize_and_version(new_puzzle_rep)).to_serialized_program(),
             coin_spend.solution,
         )
 
     @classmethod
     def decompress(cls, coin_spend: "CoinSpend") -> "CoinSpend":
         program = Program.to([])
-        deversioned_bytes = KnownPuzzles.check_version(coin_spend.puzzle_reveal.to_program().as_python())
+        deversioned_bytes = PuzzleCompressor.deserialize(coin_spend.puzzle_reveal.to_program().as_python())
         try:
             program = PuzzleRepresentation.from_bytes(deversioned_bytes).construct()
         except Exception:
