@@ -704,6 +704,7 @@ class BlockTools:
                 )
                 pending_ses = True
 
+            ses_hash: Optional[bytes32]
             if sub_epoch_summary is not None:
                 ses_hash = sub_epoch_summary.get_hash()
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
@@ -711,10 +712,7 @@ class BlockTools:
 
                 log.info(f"Sub epoch summary: {sub_epoch_summary}")
             else:
-                # TODO: address hint error and remove ignore
-                #       error: Incompatible types in assignment (expression has type "None", variable has type
-                #       "bytes32")  [assignment]
-                ses_hash = None  # type: ignore[assignment]
+                ses_hash = None
                 new_sub_slot_iters = None
                 new_difficulty = None
 

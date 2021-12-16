@@ -10,6 +10,7 @@ from enum import Enum
 from typing import Any, BinaryIO, Dict, List, Tuple, Type, Callable, Optional, Iterator
 
 from blspy import G1Element, G2Element, PrivateKey
+from typing_extensions import Literal
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -200,13 +201,13 @@ def parse_bool(f: BinaryIO) -> bool:
         raise ValueError("Bool byte must be 0 or 1")
 
 
-def parse_uint32(f: BinaryIO, byteorder: str = "big") -> uint32:
+def parse_uint32(f: BinaryIO, byteorder: Literal["little", "big"] = "big") -> uint32:
     size_bytes = f.read(4)
     assert size_bytes is not None and len(size_bytes) == 4  # Checks for EOF
     return uint32(int.from_bytes(size_bytes, byteorder))
 
 
-def write_uint32(f: BinaryIO, value: uint32, byteorder: str = "big"):
+def write_uint32(f: BinaryIO, value: uint32, byteorder: Literal["little", "big"] = "big"):
     f.write(value.to_bytes(4, byteorder))
 
 
