@@ -283,7 +283,10 @@ function OfferList(props: OfferListProps) {
       },
       {
         field: (row: OfferTradeRecord) => {
-          const { tradeId } = row;
+          const { tradeId, status } = row;
+          const canExport = status === OfferState.PENDING_ACCEPT; // implies isMyOffer === true
+          const canDisplayData = status === OfferState.PENDING_ACCEPT;
+          const canCancel = status === OfferState.PENDING_ACCEPT;
 
           return (
             <More>
@@ -302,20 +305,22 @@ function OfferList(props: OfferListProps) {
                       <Trans>Show Details</Trans>
                     </Typography>
                   </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      onClose();
-                      handleShowOfferData(row._offerData);
-                    }}
-                  >
-                    <ListItemIcon>
-                      <Visibility fontSize="small" />
-                    </ListItemIcon>
-                    <Typography variant="inherit" noWrap>
-                      <Trans>Display Offer Data</Trans>
-                    </Typography>
-                  </MenuItem>
-                  {row.isMyOffer && (
+                  {canDisplayData && (
+                    <MenuItem
+                      onClick={() => {
+                        onClose();
+                        handleShowOfferData(row._offerData);
+                      }}
+                    >
+                      <ListItemIcon>
+                        <Visibility fontSize="small" />
+                      </ListItemIcon>
+                      <Typography variant="inherit" noWrap>
+                        <Trans>Display Offer Data</Trans>
+                      </Typography>
+                    </MenuItem>
+                  )}
+                  {canExport && (
                     <MenuItem
                       onClick={() => {
                         onClose();
@@ -330,7 +335,7 @@ function OfferList(props: OfferListProps) {
                       </Typography>
                     </MenuItem>
                   )}
-                  {row.status === OfferState.PENDING_ACCEPT && (
+                  {canCancel && (
                     <MenuItem
                       onClick={() => {
                         onClose();
