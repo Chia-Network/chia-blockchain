@@ -209,7 +209,7 @@ class DataLayerWallet:
         new_db_layer_puzzle = create_host_layer_puzzle(new_inner_inner_puzzle, root_hash)
         primaries = [({"puzzlehash": new_db_layer_puzzle.get_tree_hash(), "amount": self.tip_coin.amount})]
         inner_inner_sol = self.standard_wallet.make_solution(primaries=primaries)
-        db_layer_sol = Program.to([0, inner_inner_sol])
+        db_layer_sol = Program.to([0, inner_inner_sol, self.dl_info.current_inner_inner])
         parent_info = await self.get_parent_for_coin(self.tip_coin)
         assert parent_info is not None
 
