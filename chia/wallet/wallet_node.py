@@ -1046,11 +1046,6 @@ class WalletNode:
         else:
             return []
 
-    async def create_data_layer(self, amount: uint64, fee: uint64) -> Tuple[TransactionRecord, TransactionRecord]:
-        if self.data_layer is None:
-            raise Exception("Data layer not created")
-        return await self.data_layer.create(amount, fee)
-
 
 async def wallet_next_block_check(
     peer: WSChiaConnection, potential_peek: uint32, blockchain: BlockchainInterface

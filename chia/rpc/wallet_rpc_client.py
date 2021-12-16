@@ -282,24 +282,3 @@ class WalletRpcClient(RpcClient):
             PoolWalletInfo.from_json_dict(json_dict["state"]),
             [TransactionRecord.from_json_dict(tr) for tr in json_dict["unconfirmed_transactions"]],
         )
-
-    ##########################################################################################
-    # Data Layer Wallet
-    ##########################################################################################
-    async def start_data_layer(self) -> Dict[str, Any]:
-        response = await self.fetch("start_data_layer", {})
-        return response
-
-    async def create_kv_store(self) -> Dict[str, Any]:
-        response = await self.fetch("create_kv_store", {})
-        return response
-
-    async def get_value(self, tree_id: bytes32, key: bytes) -> Dict:
-        return await self.fetch("get_value", {"tree_id": tree_id.hex(), "key": key.hex()})
-
-    async def update_kv_store(self, tree_id: bytes32, changelist: Dict[str, str]) -> Dict:
-        response = await self.fetch("update_kv_store", {"tree_id": tree_id, "changelist": changelist})
-        return response
-
-    async def get_tree_state(self, tree_id: bytes32) -> bytes32:
-        pass

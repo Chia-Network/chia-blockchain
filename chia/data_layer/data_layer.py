@@ -136,7 +136,7 @@ class DataLayer:
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
-        res = await self.data_store.get_ancestors(store_id, node_hash)
+        res = await self.data_store.get_ancestors(tree_id=store_id, node_hash=node_hash)
         if res is None:
             self.log.error("Failed to create tree")
         return res
