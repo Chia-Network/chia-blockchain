@@ -9,6 +9,7 @@ from chia.types.announcement import Announcement
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
+from chia.util.puzzle_compression import PuzzleCompressor
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     SpendableCC,
@@ -375,7 +376,12 @@ class Offer:
         return self.to_spend_bundle().name()
 
     def compress(self) -> bytes:
-        return bytes(SpendBundle.compress(self.to_spend_bundle()))
+        as_spend_bundle = self.to_spend_bundle()
+        matched_puzzles = [
+            PuzzleCompressor.match_puzzle(cs.puzzle_reveal.to_program())[1] for cs in as_spend_bundle.coin_spends
+        ]
+        lowest_version = PuzzleCompressor.identify_lowest_compatible_version(matched_puzzles)
+        return bytes(SpendBundle.compress(as_spend_bundle, version=lowest_version))
 
     @classmethod
     def from_compressed(cls, compressed_bytes: bytes) -> "Offer":

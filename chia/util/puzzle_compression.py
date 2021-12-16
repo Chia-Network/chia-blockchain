@@ -171,6 +171,7 @@ class OfferPuzzle:
         # TODO: implement this
         return Program.to([])
 
+
 """
 Below is a dictionary that contains version numbers mapped to dictionaries of identifiers mapped to puzzle drivers.
 The idea is that specifying a compression version will determine what puzzles you can interpret.
@@ -179,24 +180,27 @@ It's a dict with numbers as the keys rather than a list to be clear that the ord
 """
 
 HASH_TO_DRIVER: Dict[uint16, Dict[bytes32, Any]] = {
-    0: {
+    uint16(0): {
         standard_puzzle.MOD.get_tree_hash(): StandardPuzzle,
         CC_MOD.get_tree_hash(): CATPuzzle,
         OFFER_MOD.get_tree_hash(): OfferPuzzle,
     }
+    # TODO: Add version tests when there are more versions :)
 }
 
 LATEST_VERSION: uint16 = uint16(max(HASH_TO_DRIVER.keys()))
 
+
 class CompressionVersionError(Exception):
     pass
+
 
 class PuzzleCompressor:
     @classmethod
     def get_driver_dict(cls, version=LATEST_VERSION) -> Dict[bytes32, Any]:
         final_dict: Dict[bytes32, Any] = {}
-        for key in range(0, version+1):
-            final_dict = final_dict | HASH_TO_DRIVER[key]
+        for key in range(0, version + 1):
+            final_dict = final_dict | HASH_TO_DRIVER[uint16(key)]
         return final_dict
 
     @classmethod
@@ -221,3 +225,24 @@ class PuzzleCompressor:
             raise CompressionVersionError()
         else:
             return object_bytes[2:]
+
+    @classmethod
+    def get_identifier_version(cls, identifier: bytes32) -> uint16:
+        for id, driver_dict in HASH_TO_DRIVER.items():
+            if identifier in driver_dict:
+                return id
+        raise ValueError("The given identifier does not have a puzzle driver mapping")
+
+    @classmethod
+    def identify_lowest_compatible_version(cls, matched_puzzles: List[Union[PuzzleRepresentation, Program]]) -> uint16:
+        highest_version: uint16 = uint16(0)
+        for puz in matched_puzzles:
+            if isinstance(puz, PuzzleRepresentation):
+                highest_version = uint16(
+                    max(
+                        highest_version,
+                        cls.get_identifier_version(puz.base),
+                        cls.identify_lowest_compatible_version(puz.args),
+                    )
+                )
+        return highest_version

@@ -18,6 +18,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
+from chia.util.puzzle_compression import CompressionVersionError
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cc_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
@@ -851,6 +852,8 @@ class WalletRpcApi:
         offer_hex: str = request["offer"]
         try:
             offer_hex = bytes(Offer.from_compressed(hexstr_to_bytes(request["offer"]))).hex()
+        except CompressionVersionError:
+            raise "This offer file is incompatible with your version of software.  Upgrade your software and try again."
         except Exception:
             pass
         offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
@@ -863,6 +866,8 @@ class WalletRpcApi:
         offer_hex: str = request["offer"]
         try:
             offer_hex = bytes(Offer.from_compressed(hexstr_to_bytes(request["offer"]))).hex()
+        except CompressionVersionError:
+            raise "This offer file is incompatible with your version of software.  Upgrade your software and try again."
         except Exception:
             pass
         offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
@@ -874,6 +879,8 @@ class WalletRpcApi:
         offer_hex: str = request["offer"]
         try:
             offer_hex = bytes(Offer.from_compressed(hexstr_to_bytes(request["offer"]))).hex()
+        except CompressionVersionError:
+            raise "This offer file is incompatible with your version of software.  Upgrade your software and try again."
         except Exception:
             pass
         offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))

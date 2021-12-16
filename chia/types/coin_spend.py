@@ -6,7 +6,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.chain_utils import additions_for_solution, fee_for_solution
-from chia.util.puzzle_compression import PuzzleCompressor, PuzzleRepresentation
+from chia.util.puzzle_compression import PuzzleCompressor, PuzzleRepresentation, LATEST_VERSION
 from chia.util.streamable import Streamable, streamable
 
 
@@ -58,8 +58,8 @@ class CoinSpend(Streamable):
     """
 
     @classmethod
-    def compress(cls, coin_spend: "CoinSpend") -> "CoinSpend":
-        _, new_puzzle_rep = PuzzleCompressor.match_puzzle(coin_spend.puzzle_reveal.to_program())
+    def compress(cls, coin_spend: "CoinSpend", version=LATEST_VERSION) -> "CoinSpend":
+        _, new_puzzle_rep = PuzzleCompressor.match_puzzle(coin_spend.puzzle_reveal.to_program(), version=LATEST_VERSION)
         return cls(
             coin_spend.coin,
             Program.to(PuzzleCompressor.serialize_and_version(new_puzzle_rep)).to_serialized_program(),

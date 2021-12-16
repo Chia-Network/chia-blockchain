@@ -10,6 +10,7 @@ from clvm.casts import int_from_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.puzzle_compression import LATEST_VERSION
 from chia.util.streamable import Streamable, dataclass_from_dict, recurse_jsonify, streamable
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 from .blockchain_format.program import Program
@@ -86,7 +87,7 @@ class SpendBundle(Streamable):
     """
 
     @classmethod
-    def compress(cls, bundle: "SpendBundle") -> "SpendBundle":
+    def compress(cls, bundle: "SpendBundle", version=LATEST_VERSION) -> "SpendBundle":
         compressed_spends: List[CoinSpend] = [CoinSpend.compress(cs) for cs in bundle.coin_spends]
         return cls(
             compressed_spends,
