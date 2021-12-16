@@ -109,9 +109,11 @@ class PlotRefreshTester:
                         log.error(f"{name} invalid: actual {actual_value} expected {expected_value}")
                         return
 
-                self.expected_result_matched = True
             except AttributeError as error:
                 log.error(f"{error}")
+                return
+
+        self.expected_result_matched = True
 
     async def run(self, expected_result: PlotRefreshResult):
         self.expected_result = expected_result
