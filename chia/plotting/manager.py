@@ -399,6 +399,8 @@ class PlotManager:
                         if not self.open_no_key_filenames:
                             return None
 
+                    # If a plot is in `no_key_filenames` the keys were missing in earlier refresh cycles. We can remove
+                    # the current plot from that list if its in there since we passed the key checks above.
                     if file_path in self.no_key_filenames:
                         self.no_key_filenames.remove(file_path)
 
