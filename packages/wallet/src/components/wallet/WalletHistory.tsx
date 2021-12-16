@@ -3,7 +3,7 @@ import { Trans } from '@lingui/macro';
 import moment from 'moment';
 import { Box, IconButton, Table as TableBase, TableBody, TableCell, TableRow, Tooltip, Typography, Chip } from '@material-ui/core';
 import { CallReceived as CallReceivedIcon, CallMade as CallMadeIcon, ExpandLess as ExpandLessIcon, ExpandMore as ExpandMoreIcon } from '@material-ui/icons';
-import { Card, CardKeyValue, CopyToClipboard, Flex, Loading, TableControlled } from '@chia/core';
+import { Card, CardKeyValue, CopyToClipboard, Flex, Loading, StateColor, TableControlled } from '@chia/core';
 import styled from 'styled-components';
 import type { Row } from '../core/components/Table/Table';
 import {
@@ -27,6 +27,10 @@ const StyledTableCellSmall = styled(TableCell)`
 const StyledTableCellSmallRight = styled(StyledTableCellSmall)`
   width: 100%;
   padding-left: 1rem;
+`;
+
+const StyledWarning = styled(Box)`
+  color: ${StateColor.WARNING};
 `;
 
 const getCols = (type: WalletType) => [
@@ -56,19 +60,34 @@ const getCols = (type: WalletType) => [
       const { confirmed: isConfirmed, memos  } = row;
       const hasMemos = !!memos && !!Object.values(memos).length;
       const isRetire = row.toAddress === metadata.retireAddress;
+      const isOffer = row.toAddress === metadata.offerTakerAddress;
+      const shouldObscureAddress = isRetire || isOffer;
 
       return (
         <Flex flexDirection="column" gap={1}>
           <Tooltip
             title={
-              <Flex alignItems="center" gap={1}>
-                <Box maxWidth={200}>{row.toAddress}</Box>
-                <CopyToClipboard value={row.toAddress} fontSize="small" />
+              <Flex flexDirection="column" gap={1}>
+                {shouldObscureAddress && (
+                  <StyledWarning>
+                    <Trans>This is not a valid address for sending funds to</Trans>
+                  </StyledWarning>
+                )}
+                <Flex flexDirection="row" alignItems="center" gap={1}>
+                  <Box maxWidth={200}>{row.toAddress}</Box>
+                  {!shouldObscureAddress && (
+                    <CopyToClipboard value={row.toAddress} fontSize="small" />
+                  )}
+                </Flex>
               </Flex>
             }
             interactive
           >
-            <span>{row.toAddress}</span>
+            <span>{shouldObscureAddress ?
+                (row.toAddress.slice(0, 20) + '...')
+              :
+                row.toAddress
+            }</span>
           </Tooltip>
           <Flex gap={0.5}>
             {isConfirmed ? (
@@ -81,6 +100,9 @@ const getCols = (type: WalletType) => [
             )}
             {isRetire && (
               <Chip size="small" variant="outlined" label={<Trans>Retire</Trans>} />
+            )}
+            {isOffer && (
+              <Chip size="small" variant="outlined" label={<Trans>Offer Accepted</Trans>} />
             )}
           </Flex>
         </Flex>
@@ -168,7 +190,12 @@ export default function WalletHistory(props: Props) {
 
   const metadata = useMemo(() => {
     const retireAddress = feeUnit && toBech32m(
-      '0000000000000000000000000000000000000000000000000000000000000000', 
+      '0000000000000000000000000000000000000000000000000000000000000000',
+      feeUnit,
+    );
+
+    const offerTakerAddress = feeUnit && toBech32m(
+      '1111111111111111111111111111111111111111111111111111111111111111',
       feeUnit,
     );
 
@@ -176,6 +203,7 @@ export default function WalletHistory(props: Props) {
       unit,
       feeUnit,
       retireAddress,
+      offerTakerAddress,
     };
   }, [unit, feeUnit]);
 
