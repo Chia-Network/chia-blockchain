@@ -429,6 +429,7 @@ async def test_keys_missing(test_environment: TestEnvironment) -> None:
     dir_not_in_keychain.drop(drop_plot)
     drop_plot.unlink()
     assert drop_plot in env.refresh_tester.plot_manager.no_key_filenames
+    expected_result.processed -= 1
     await env.refresh_tester.run(expected_result)
     assert drop_plot not in env.refresh_tester.plot_manager.no_key_filenames
     # Now add the missing keys to the plot manager's key lists and make sure the plots are getting loaded
