@@ -2,8 +2,7 @@
   NFT_MOD_HASH
   SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (NFT_SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
   CURRENT_OWNER_DID
-  OPTIONAL_CREATOR_FEE_PUZHASH
-  OPTIONAL_CREATOR_FEE_CALCULATOR
+  NFT_TRANSFER_PROGRAM_HASH
   my_puzhash  ; not used for transfer TODO optimise
   my_amount
   my_did_inner_hash
@@ -14,7 +13,8 @@
   new_did_inner_hash
   new_did_amount
   trade_price
-  fee_calculator_solution
+  transfer_program_reveal
+  transfer_program_solution
 )
 
   (include condition_codes.clvm)
@@ -26,10 +26,9 @@
             (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
             (sha256 ONE TREE)))
 
-  (defun-inline nft_puzzle_hash (NFT_MOD_HASH SINGLETON_STRUCT OPTIONAL_CREATOR_FEE_PUZHASH OPTIONAL_CREATOR_FEE_CALCULATOR next_owner_did)
+  (defun-inline nft_puzzle_hash (NFT_MOD_HASH SINGLETON_STRUCT NFT_TRANSFER_PROGRAM_HASH next_owner_did)
     (puzzle-hash-of-curried-function NFT_MOD_HASH
-                                     (sha256tree1 OPTIONAL_CREATOR_FEE_CALCULATOR)
-                                     (sha256 ONE OPTIONAL_CREATOR_FEE_PUZHASH)
+                                     (sha256tree1 NFT_TRANSFER_PROGRAM_HASH)
                                      (sha256 ONE next_owner_did)
                                      (sha256tree1 SINGLETON_STRUCT)
                                      NFT_MOD_HASH
@@ -55,11 +54,11 @@
     (c (list CREATE_COIN_ANNOUNCEMENT trade_price)
       (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT new_did new_did_parent new_did_inner_hash new_did_amount) trade_price))
         (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT CURRENT_OWNER_DID my_did_parent my_did_inner_hash my_did_amount) trade_price new_did))
-          (c (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT OPTIONAL_CREATOR_FEE_PUZHASH OPTIONAL_CREATOR_FEE_CALCULATOR new_did) my_amount)
+          (c (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT NFT_TRANSFER_PROGRAM_HASH new_did) my_amount)
             (c (list ASSERT_MY_AMOUNT my_amount)
-              (if OPTIONAL_CREATOR_FEE_CALCULATOR
-                (list (list CREATE_COIN OPTIONAL_CREATOR_FEE_PUZHASH (a OPTIONAL_CREATOR_FEE_CALCULATOR (list trade_price fee_calculator_solution))))
-                ()
+              (if (= (sha256tree1 transfer_program_reveal) NFT_TRANSFER_PROGRAM_HASH)
+                  (a transfer_program_reveal (list CURRENT_OWNER_DID new_did trade_price transfer_program_solution))
+                  (x)
               )
             )
           )

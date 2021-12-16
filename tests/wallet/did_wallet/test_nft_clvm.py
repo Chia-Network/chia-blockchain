@@ -15,6 +15,7 @@ SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 NFT_MOD_HASH = NFT_MOD.get_tree_hash()
 LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 NFT_PERCENTAGE_MOD = load_clvm("nft_percentage_program.clvm")
+NFT_TRANSFER_PROGRAM = load_clvm("nft_transfer_program.clvm")
 
 
 def test_transfer_no_backpayments():
@@ -38,28 +39,30 @@ def test_transfer_no_backpayments():
     did_one_coin = Coin(did_one_parent, did_one_puzzle.get_tree_hash(), did_one_amount)
     did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
     # NFT_MOD_HASH
-    # SINGLETON_STRUCT
+    # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (NFT_SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
     # CURRENT_OWNER_DID
-    # OPTIONAL_CREATOR_FEE_PUZHASH
-    # OPTIONAL_CREATOR_FEE_CALCULATOR
-    # my_puzhash
+    # NFT_TRANSFER_PROGRAM_HASH
+    # my_puzhash  ; not used for transfer TODO optimise
     # my_amount
-    # my_did_inner
+    # my_did_inner_hash
     # my_did_amount
     # my_did_parent
     # new_did
     # new_did_parent
-    # new_did_inner
+    # new_did_inner_hash
     # new_did_amount
     # trade_price
+    # transfer_program_reveal
+    # transfer_program_solution
+
+    nft_program = Program.to(0)
     trade_price = 0
     solution = Program.to(
         [
             NFT_MOD_HASH,  # curried in params
             SINGLETON_STRUCT,
             did_one,
-            0,
-            0,  # below here is the solution
+            nft_program.get_tree_hash(),  # below here is the solution
             Program.to("my_puzzlehash").get_tree_hash(),
             uint64(1),
             did_one_innerpuz.get_tree_hash(),
@@ -70,7 +73,8 @@ def test_transfer_no_backpayments():
             did_two_innerpuz.get_tree_hash(),
             did_two_amount,
             trade_price,
-            0
+            nft_program,
+            0,
         ]
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
@@ -104,29 +108,31 @@ def test_transfer_with_backpayments():
     did_one_coin = Coin(did_one_parent, did_one_puzzle.get_tree_hash(), did_one_amount)
     did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
     # NFT_MOD_HASH
-    # SINGLETON_STRUCT
+    # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (NFT_SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
     # CURRENT_OWNER_DID
-    # OPTIONAL_CREATOR_FEE_PUZHASH
-    # OPTIONAL_CREATOR_FEE_CALCULATOR
-    # my_puzhash
+    # NFT_TRANSFER_PROGRAM_HASH
+    # my_puzhash  ; not used for transfer TODO optimise
     # my_amount
-    # my_did_inner
+    # my_did_inner_hash
     # my_did_amount
     # my_did_parent
     # new_did
     # new_did_parent
-    # new_did_inner
+    # new_did_inner_hash
     # new_did_amount
     # trade_price
-    trade_price = 20
+    # transfer_program_reveal
+    # transfer_program_solution
+
     nft_creator_address = Program.to("nft_creator_address").get_tree_hash()
+    nft_program = NFT_TRANSFER_PROGRAM.curry([nft_creator_address, 20])
+    trade_price = 20
     solution = Program.to(
         [
             NFT_MOD_HASH,  # curried in params
             SINGLETON_STRUCT,
             did_one,
-            nft_creator_address,
-            NFT_PERCENTAGE_MOD.curry(10),  # returns 10%
+            nft_program.get_tree_hash(),
             # below here is the solution
             Program.to("my_puzzlehash").get_tree_hash(),
             uint64(1),
@@ -138,6 +144,7 @@ def test_transfer_with_backpayments():
             did_two_innerpuz.get_tree_hash(),
             did_two_amount,
             trade_price,
+            nft_program,
             0
         ]
     )
@@ -175,28 +182,31 @@ def test_announcne():
     did_one_coin = Coin(did_one_parent, did_one_puzzle.get_tree_hash(), did_one_amount)
     did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
     # NFT_MOD_HASH
-    # SINGLETON_STRUCT
+    # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (NFT_SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
     # CURRENT_OWNER_DID
-    # OPTIONAL_CREATOR_FEE_PUZHASH
-    # OPTIONAL_CREATOR_FEE_CALCULATOR
-    # my_puzhash
+    # NFT_TRANSFER_PROGRAM_HASH
+    # my_puzhash  ; not used for transfer TODO optimise
     # my_amount
-    # my_did_inner
+    # my_did_inner_hash
     # my_did_amount
     # my_did_parent
     # new_did
     # new_did_parent
-    # new_did_inner
+    # new_did_inner_hash
     # new_did_amount
     # trade_price
+    # transfer_program_reveal
+    # transfer_program_solution
+
+    nft_creator_address = Program.to("nft_creator_address").get_tree_hash()
+    nft_program = NFT_TRANSFER_PROGRAM.curry([nft_creator_address, 20])
     trade_price = 0
     solution = Program.to(
         [
             NFT_MOD_HASH,  # curried in params
             SINGLETON_STRUCT,
             did_one,
-            0,
-            0,  # below here is the solution
+            nft_program.get_tree_hash(),  # below here is the solution
             did_one_puzzle.get_tree_hash(),  # this should actually be NFT puzzle
             uint64(1),
             did_one_innerpuz.get_tree_hash(),
@@ -207,7 +217,8 @@ def test_announcne():
             0,
             0,
             0,
-            0
+            0,
+            0,
         ]
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)

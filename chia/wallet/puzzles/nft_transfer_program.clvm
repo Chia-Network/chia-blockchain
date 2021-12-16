@@ -1,5 +1,7 @@
-(mod (OPTIONAL_CURRIED_ARGS current_owner new_owner current_state trade_price solution)
-    ; in this instance the curried arg is backpayment address and proportion of trade price
+(mod ((BACKPAYMENT_ADDRESS TRADE_PRICE_PERCENTAGE) current_owner new_owner trade_price solution)
+    ; in this instance the curried arg is (backpayment_address trade_price_divisor)
+    (include condition_codes.clvm)
+    (defconstant HUNDRED 100)
 
-
+    (list (list CREATE_COIN BACKPAYMENT_ADDRESS (f (divmod (* trade_price TRADE_PRICE_PERCENTAGE) 100))))
 )
