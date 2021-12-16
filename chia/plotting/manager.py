@@ -220,9 +220,8 @@ class PlotManager:
         self.last_refresh_time = 0
 
     def _refresh_task(self):
-        try:
-            while self._refreshing_enabled:
-
+        while self._refreshing_enabled:
+            try:
                 while not self.needs_refresh() and self._refreshing_enabled:
                     time.sleep(1)
 
@@ -309,9 +308,9 @@ class PlotManager:
                     f"total_result.removed {len(total_result.removed)}, "
                     f"total_duration {total_result.duration:.2f} seconds"
                 )
-        except Exception as e:
-            log.error(f"_refresh_callback raised: {e} with the traceback: {traceback.format_exc()}")
-            self.reset()
+            except Exception as e:
+                log.error(f"_refresh_callback raised: {e} with the traceback: {traceback.format_exc()}")
+                self.reset()
 
     def refresh_batch(self, plot_paths: List[Path], plot_directories: Set[Path]) -> PlotRefreshResult:
         start_time: float = time.time()
