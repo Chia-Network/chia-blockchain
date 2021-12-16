@@ -145,7 +145,7 @@ def test_transfer_with_backpayments():
             did_two_amount,
             trade_price,
             nft_program,
-            0
+            0,
         ]
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
@@ -222,7 +222,7 @@ def test_announcne():
         ]
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
-    ann = bytes('a', 'utf-8')
+    ann = bytes("a", "utf-8")
     announcement_one = Announcement(did_one_coin.name(), ann)
     assert res.rest().rest().rest().first().first().as_int() == 61
     assert res.rest().rest().rest().first().rest().first().as_atom() == announcement_one.name()

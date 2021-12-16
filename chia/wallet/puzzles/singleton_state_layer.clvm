@@ -1,3 +1,0 @@
-(mod (LIST_OF_CURRYED_STATE INNER_PUZZLE inner_solution)
-  (r (c LIST_OF_CURRYED_STATE (a INNER_PUZZLE inner_solution)))
-)
