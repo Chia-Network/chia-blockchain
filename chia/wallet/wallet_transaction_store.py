@@ -175,7 +175,7 @@ class WalletTransactionStore:
             removals=current.removals,
             wallet_id=current.wallet_id,
             sent_to=current.sent_to,
-            trade_id=None,
+            trade_id=current.trade_id,
             type=current.type,
             name=current.name,
             memos=current.memos,
