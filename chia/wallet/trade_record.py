@@ -32,7 +32,7 @@ class TradeRecord(Streamable):
         formatted = self.to_json_dict()
         formatted["status"] = TradeStatus(self.status).name
         offer_to_summarize: bytes = self.offer if self.taken_offer is None else self.taken_offer
-        offer = Offer.from_bytes(offer.offer_to_summarize)
+        offer = Offer.from_bytes(offer_to_summarize)
         offered, requested = offer.summary()
         formatted["summary"] = {
             "offered": offered,
