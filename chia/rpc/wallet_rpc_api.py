@@ -7,7 +7,6 @@ from typing import Callable, Dict, List, Optional, Tuple, Any
 from blspy import PrivateKey, G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.data_layer.data_layer_types import Side
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState

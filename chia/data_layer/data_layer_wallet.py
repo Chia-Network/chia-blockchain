@@ -316,6 +316,9 @@ class DataLayerWallet:
         current_root = self.dl_info.root_hash
         return current_full_puz, db_innerpuz_hash, current_root
 
+    def get_current_root(self) -> bytes32:
+        return self.dl_info.root_hash
+
     async def select_coins(self, amount: uint64, exclude: List[Coin] = []) -> Optional[Set[Coin]]:
         """Returns a set of coins that can be used for generating a new transaction."""
         if exclude is None:
