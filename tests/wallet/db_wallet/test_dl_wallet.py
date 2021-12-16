@@ -187,7 +187,7 @@ class TestDLWallet:
 
         dl_wallet_0: DataLayerWallet = creation_record.item
 
-        await full_node_api.process_transaction_records(records=creation_record.regular)
+        await full_node_api.process_transaction_records(records=creation_record.transaction_records)
 
         # Wallet1 sets up DLOWallet1
         async with wallet_node_1.wallet_state_manager.lock:
@@ -295,7 +295,7 @@ class TestDLWallet:
 
         dl_wallet_0: DataLayerWallet = creation_record.item
 
-        await full_node_api.process_transaction_records(records=creation_record.regular)
+        await full_node_api.process_transaction_records(records=creation_record.transaction_records)
 
         # Wallet1 sets up DLOWallet1
         async with wallet_node_1.wallet_state_manager.lock:
