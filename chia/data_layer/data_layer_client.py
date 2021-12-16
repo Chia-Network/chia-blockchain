@@ -27,8 +27,7 @@ class DataLayerClient:
             url = f"http://0.0.0.0:8080/get_tree_root?tree_id={tree_id}"
             async with session.get(url) as r:
                 root_json = await r.json()
-            node = root_json["node_hash"]
-            root_hash = root_json["node_hash"]
+            node = root_hash = root_json["node_hash"]
             print(f"Got root hash: {node}")
             t1 = time.time()
             internal_nodes = 0
@@ -52,7 +51,7 @@ class DataLayerClient:
                         if hash.hex() == node:
                             if verbose:
                                 print(f"Received terminal node {key} {value}.")
-                            await self.data_store._insert_node(node, NodeType.TERMINAL, None, None, key, value)
+                            await self.data_store._insert_node(node, NodeType.TERMINAL, None, None, key, value, tree_id)
                             if verbose:
                                 print(f"Added terminal node {hash} to DB.")
                             terminal_nodes += 1
@@ -61,7 +60,7 @@ class DataLayerClient:
                                 node, left_hash = add_to_db_cache[right_hash]
                                 del add_to_db_cache[right_hash]
                                 await self.data_store._insert_node(
-                                    node, NodeType.INTERNAL, left_hash, right_hash, None, None
+                                    node, NodeType.INTERNAL, left_hash, right_hash, None, None, tree_id
                                 )
                                 internal_nodes += 1
                                 if verbose:

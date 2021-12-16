@@ -26,7 +26,7 @@ class DataLayerServer:
         node_hash_bytes = bytes32.from_hexstr(node_hash)
         tree_id_bytes = bytes32.from_hexstr(tree_id)
         root_hash_bytes = bytes32.from_hexstr(root_hash)
-        root_changed, answer = await self.data_store.answer_server_query(
+        root_changed, answer = await self.data_store.get_left_to_right_ordering(
             node_hash_bytes, tree_id_bytes, root_hash_bytes
         )
         return web.json_response(

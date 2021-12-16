@@ -161,7 +161,9 @@ async def test_insert_internal_node_does_nothing_if_matching(data_store: DataSto
         before = await cursor.fetchall()
 
     async with data_store.db_wrapper.locked_transaction():
-        await data_store._insert_internal_node(left_hash=parent.left_hash, right_hash=parent.right_hash)
+        await data_store._insert_internal_node(
+            left_hash=parent.left_hash, right_hash=parent.right_hash, tree_id=tree_id
+        )
 
     async with data_store.db_wrapper.locked_transaction():
         cursor = await data_store.db.execute("SELECT * FROM node")
@@ -181,7 +183,7 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
         before = await cursor.fetchall()
 
     async with data_store.db_wrapper.locked_transaction():
-        await data_store._insert_terminal_node(key=kv_node.key, value=kv_node.value)
+        await data_store._insert_terminal_node(key=kv_node.key, value=kv_node.value, tree_id=tree_id)
 
     async with data_store.db_wrapper.locked_transaction():
         cursor = await data_store.db.execute("SELECT * FROM node")

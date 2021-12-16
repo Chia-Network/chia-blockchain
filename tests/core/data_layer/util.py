@@ -34,7 +34,7 @@ async def general_insert(
     value: bytes,
     reference_node_hash: bytes32,
     side: Optional[Side],
-    optimized: bool = False,
+    skip_expensive_checks: bool = False,
 ) -> bytes32:
     return await data_store.insert(
         key=key,
@@ -42,7 +42,7 @@ async def general_insert(
         tree_id=tree_id,
         reference_node_hash=reference_node_hash,
         side=side,
-        optimized=optimized,
+        skip_expensive_checks=skip_expensive_checks,
     )
 
 
@@ -119,7 +119,7 @@ async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Examp
 
 
 async def generate_big_datastore(data_store: DataStore, tree_id: bytes32, num_nodes: int = 10000) -> None:
-    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id, optimized=True)
+    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id, skip_expensive_checks=True)
     for i in range(num_nodes):
         key = i.to_bytes(4, byteorder="big")
         value = (2 * i).to_bytes(4, byteorder="big")

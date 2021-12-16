@@ -83,8 +83,10 @@ class DataStore:
             await self.db.execute(
                 """
                 CREATE TABLE IF NOT EXISTS ancestors(
-                    hash TEXT PRIMARY KEY NOT NULL,
-                    ancestor TEXT
+                    hash TEXT NOT NULL,
+                    ancestor TEXT,
+                    tree_id TEXT NOT NULL,
+                    PRIMARY KEY(hash, tree_id)
                 )
                 """
             )
@@ -122,6 +124,7 @@ class DataStore:
         right_hash: Optional[str],
         key: Optional[str],
         value: Optional[str],
+        tree_id: str,
     ) -> None:
         # TODO: can we get sqlite to do this check?
         values = {
@@ -148,22 +151,24 @@ class DataStore:
                 values = {
                     "hash": left_hash,
                     "ancestor": node_hash,
+                    "tree_id": tree_id,
                 }
                 await self.db.execute(
                     """
-                    INSERT OR REPLACE INTO ancestors(hash, ancestor)
-                    VALUES (:hash, :ancestor)
+                    INSERT OR REPLACE INTO ancestors(hash, ancestor, tree_id)
+                    VALUES (:hash, :ancestor, :tree_id)
                     """,
                     values,
                 )
                 values = {
                     "hash": right_hash,
                     "ancestor": node_hash,
+                    "tree_id": tree_id,
                 }
                 await self.db.execute(
                     """
-                    INSERT OR REPLACE INTO ancestors(hash, ancestor)
-                    VALUES (:hash, :ancestor)
+                    INSERT OR REPLACE INTO ancestors(hash, ancestor, tree_id)
+                    VALUES (:hash, :ancestor, :tree_id)
                     """,
                     values,
                 )
@@ -172,7 +177,7 @@ class DataStore:
             if result_dict != values:
                 raise Exception(f"Requested insertion of node with matching hash but other values differ: {node_hash}")
 
-    async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
+    async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32, tree_id: bytes32) -> bytes32:
         node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
 
         await self._insert_node(
@@ -182,11 +187,12 @@ class DataStore:
             right_hash=right_hash.hex(),
             key=None,
             value=None,
+            tree_id=tree_id.hex(),
         )
 
         return node_hash  # type: ignore[no-any-return]
 
-    async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
+    async def _insert_terminal_node(self, key: bytes, value: bytes, tree_id: bytes32) -> bytes32:
         node_hash = Program.to((key, value)).get_tree_hash()
 
         await self._insert_node(
@@ -196,6 +202,7 @@ class DataStore:
             right_hash=None,
             key=key.hex(),
             value=value.hex(),
+            tree_id=tree_id.hex(),
         )
 
         return node_hash  # type: ignore[no-any-return]
@@ -409,9 +416,12 @@ class DataStore:
                 cursor = await self.db.execute(
                     """
                     SELECT hash, ancestor FROM ancestors
-                    WHERE hash == :node_hash
+                    WHERE hash == :node_hash AND tree_id == :tree_id
                     """,
-                    {"node_hash": node_hash.hex()},
+                    {
+                        "node_hash": node_hash.hex(),
+                        "tree_id": tree_id.hex(),
+                    },
                 )
                 ancestor: List[bytes32] = [bytes32(bytes32.fromhex(row["ancestor"])) async for row in cursor]
                 if len(ancestor) == 0:
@@ -521,14 +531,14 @@ class DataStore:
         *,
         lock: bool = True,
         status: Status = Status.PENDING,
-        optimized: bool = False,
+        skip_expensive_checks: bool = False,
     ) -> bytes32:
         async with self.db_wrapper.locked_transaction(lock=lock):
             was_empty = await self.table_is_empty(tree_id=tree_id, lock=False)
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
-
-            # If `optimized`, skip this check.
-            if not was_empty and not optimized:
+            # If `skip_expensive_checks`, skip this check.
+            # NOTE: This check is still needed, disable it only if data is guaranteed to be correct.
+            if not was_empty and not skip_expensive_checks:
                 # TODO: is there any way the db can enforce this?
                 pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
                 if any(key == node.key for node in pairs):
@@ -543,7 +553,7 @@ class DataStore:
                     raise Exception("can not insert a new key/value on an internal node")
 
             # create new terminal node
-            new_terminal_node_hash = await self._insert_terminal_node(key=key, value=value)
+            new_terminal_node_hash = await self._insert_terminal_node(key=key, value=value, tree_id=tree_id)
 
             if was_empty:
                 if side is not None:
@@ -558,12 +568,15 @@ class DataStore:
                 if root.node_hash is None:
                     raise Exception("Internal error.")
 
-                if optimized:
-                    ancestors: List[InternalNode] = await self.get_ancestors_2(
+                ancestors: List[InternalNode] = await self.get_ancestors_2(
+                    node_hash=reference_node_hash, tree_id=tree_id, lock=False
+                )
+                # Check table `ancestors` produced the correct result.
+                # NOTE: This assertion is expensive.
+                if not skip_expensive_checks:
+                    assert ancestors == await self.get_ancestors(
                         node_hash=reference_node_hash, tree_id=tree_id, lock=False
                     )
-                else:
-                    ancestors = await self.get_ancestors(node_hash=reference_node_hash, tree_id=tree_id, lock=False)
 
                 if side == Side.LEFT:
                     left = new_terminal_node_hash
@@ -573,7 +586,7 @@ class DataStore:
                     right = new_terminal_node_hash
 
                 # create first new internal node
-                new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
+                new_hash = await self._insert_internal_node(left_hash=left, right_hash=right, tree_id=tree_id)
 
                 traversal_node_hash = reference_node_hash
 
@@ -591,7 +604,7 @@ class DataStore:
 
                     traversal_node_hash = ancestor.hash
 
-                    new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
+                    new_hash = await self._insert_internal_node(left_hash=left, right_hash=right, tree_id=tree_id)
 
                 await self._insert_root(tree_id=tree_id, node_hash=new_hash, status=status)
 
@@ -630,7 +643,9 @@ class DataStore:
                 else:
                     raise Exception("Internal error.")
 
-                new_child_hash = await self._insert_internal_node(left_hash=left_hash, right_hash=right_hash)
+                new_child_hash = await self._insert_internal_node(
+                    left_hash=left_hash, right_hash=right_hash, tree_id=tree_id
+                )
 
                 old_child_hash = ancestor.hash
 
@@ -735,14 +750,14 @@ class DataStore:
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             return await self.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id, lock=False)
 
-    async def answer_server_query(
+    async def get_left_to_right_ordering(
         self,
         node_hash: bytes32,
         tree_id: bytes32,
         root_hash: bytes32,
         *,
         lock: bool = True,
-        query_count: int = 2500,
+        num_nodes: int = 2500,
     ) -> Tuple[bool, List[Dict[str, Any]]]:
         ancestors = await self.get_ancestors_2(node_hash, tree_id, lock=True)
         # Root hash changed, abort the process and start over again.
@@ -758,7 +773,7 @@ class DataStore:
                 stack.append(ancestor.right_hash)
         count = 0
         nodes = []
-        while count < query_count:
+        while count < num_nodes:
             count += 1
             node = await self.get_node(node_hash)
             if node is None:
