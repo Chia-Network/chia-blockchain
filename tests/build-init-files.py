@@ -1,3 +1,14 @@
+#!/usr/bin/env python3
+
+# Create missing `__init__.py` files in the source code folders (in "chia/" and "tests/").
+#
+# They are required by the python interpreter to properly identify modules/packages so that tools like `mypy` or an IDE
+# can work with their full capabilities.
+#
+# See https://docs.python.org/3/tutorial/modules.html#packages.
+#
+# Note: This script is run in a `pre-commit` hook (which runs on CI) to make sure we don't miss out any folder.
+
 import logging
 import pathlib
 import sys
