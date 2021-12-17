@@ -10,7 +10,6 @@ from clvm.casts import int_from_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.util.puzzle_compression import PuzzleCompressor
 from chia.util.streamable import Streamable, dataclass_from_dict, recurse_jsonify, streamable
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 from .blockchain_format.program import Program
@@ -80,27 +79,6 @@ class SpendBundle(Streamable):
             result.append(add)
 
         return result
-
-    """
-    These compression methods should not be used for sending spendbundles or putting into blocks.
-    They exist for the purpose of making stored spend bundles (In a file or DB) smaller
-    """
-
-    @classmethod
-    def compress(cls, bundle: "SpendBundle", compressor=PuzzleCompressor()) -> "SpendBundle":
-        compressed_spends: List[CoinSpend] = [CoinSpend.compress(cs, compressor=compressor) for cs in bundle.coin_spends]
-        return cls(
-            compressed_spends,
-            bundle.aggregated_signature,
-        )
-
-    @classmethod
-    def decompress(cls, bundle: "SpendBundle", compressor=PuzzleCompressor()) -> "SpendBundle":
-        decompressed_spends: List[CoinSpend] = [CoinSpend.decompress(cs, compressor=compressor) for cs in bundle.coin_spends]
-        return cls(
-            decompressed_spends,
-            bundle.aggregated_signature,
-        )
 
     def get_memos(self) -> Dict[bytes32, List[bytes]]:
         """

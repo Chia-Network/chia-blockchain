@@ -6,7 +6,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.chain_utils import additions_for_solution, fee_for_solution
-from chia.wallet.util.puzzle_compression import PuzzleCompressor
 from chia.util.streamable import Streamable, streamable
 
 
@@ -51,24 +50,3 @@ class CoinSpend(Streamable):
                             h_list.append(condition.vars[2])
 
         return h_list
-
-    """
-    These compression methods should not be used for sending coin spends or putting them into blocks.
-    They exist for the purpose of making stored puzzles (In a file or DB) smaller
-    """
-
-    @classmethod
-    def compress(cls, coin_spend: "CoinSpend", compressor=PuzzleCompressor()) -> "CoinSpend":
-        return cls(
-            coin_spend.coin,
-            Program.to(compressor.serialize(coin_spend.puzzle_reveal.to_program())).to_serialized_program(),
-            coin_spend.solution,
-        )
-
-    @classmethod
-    def decompress(cls, coin_spend: "CoinSpend", compressor=PuzzleCompressor()) -> "CoinSpend":
-        return cls(
-            coin_spend.coin,
-            compressor.deserialize(coin_spend.puzzle_reveal.to_program().as_python()).to_serialized_program(),
-            coin_spend.solution,
-        )

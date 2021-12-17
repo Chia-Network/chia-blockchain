@@ -6,6 +6,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.wallet.util.puzzle_compression import PuzzleCompressor, CompressionVersionError
+from chia.wallet.util.compressed_types import CompressedCoinSpend, CompressedSpendBundle
 from chia.wallet.cc_wallet.cc_utils import CC_MOD, construct_cc_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 
@@ -36,7 +37,7 @@ class TestSingleton:
             puzzle_for_pk(G1Element()),
             SOLUTION,
         )
-        assert coin_spend == CoinSpend.decompress(CoinSpend.compress(coin_spend))
+        assert coin_spend == CompressedCoinSpend.compress(coin_spend).decompress()
 
     def test_cat_puzzle(self):
         coin_spend = CoinSpend(
@@ -44,7 +45,7 @@ class TestSingleton:
             construct_cc_puzzle(CC_MOD, Program.to([]).get_tree_hash(), Program.to(1)),
             SOLUTION,
         )
-        assert coin_spend == CoinSpend.decompress(CoinSpend.compress(coin_spend))
+        assert coin_spend == CompressedCoinSpend.compress(coin_spend).decompress()
 
     def test_nesting_puzzles(self):
         coin_spend = CoinSpend(
@@ -52,7 +53,7 @@ class TestSingleton:
             construct_cc_puzzle(CC_MOD, Program.to([]).get_tree_hash(), puzzle_for_pk(G1Element())),
             SOLUTION,
         )
-        assert coin_spend == CoinSpend.decompress(CoinSpend.compress(coin_spend))
+        assert coin_spend == CompressedCoinSpend.compress(coin_spend).decompress()
 
     def test_unknown_wrapper(self):
         unknown = Program.to([2, 2, []])  # (a 2 ())
@@ -61,7 +62,7 @@ class TestSingleton:
             unknown.curry(puzzle_for_pk(G1Element())),
             SOLUTION,
         )
-        assert bytes(coin_spend.puzzle_reveal).hex() in bytes(CoinSpend.compress(coin_spend).puzzle_reveal).hex()
+        assert bytes(coin_spend.puzzle_reveal).hex() in bytes(CompressedCoinSpend.compress(coin_spend).compressed_coin_spend.puzzle_reveal).hex()
 
     def test_version_override(self):
         coin_spend = CoinSpend(
@@ -73,13 +74,11 @@ class TestSingleton:
         new_version_dict = {ONE_32: DummyDriver}
         new_compressor = PuzzleCompressor(driver_dict=new_version_dict)
         # Our custom compression is super bad so the length should actually be greater
-        assert len(bytes(SpendBundle.compress(spend_bundle, compressor=new_compressor))) > len(bytes(spend_bundle))
-        assert spend_bundle == SpendBundle.decompress(
-            SpendBundle.compress(spend_bundle, compressor=new_compressor), compressor=new_compressor
-        )
+        assert len(bytes(CompressedSpendBundle.compress(spend_bundle, compressor=new_compressor))) > len(bytes(spend_bundle))
+        assert spend_bundle == CompressedSpendBundle.compress(spend_bundle, compressor=new_compressor).decompress(compressor=new_compressor)
 
         try:
-            SpendBundle.decompress(SpendBundle.compress(spend_bundle, compressor=new_compressor))
+            CompressedSpendBundle.compress(spend_bundle, compressor=new_compressor).decompress()
             assert False
         except CompressionVersionError:
             pass
