@@ -477,14 +477,14 @@ async def test_callback_event_raises(test_environment, event_to_raise: PlotRefre
     expected_result = PlotRefreshResult()
     # Load dir_1
     add_plot_directory(env.root_path, str(env.dir_1.path))
-    expected_result.loaded = env.dir_1.plot_info_list()
+    expected_result.loaded = env.dir_1.plot_info_list()  # type: ignore[assignment]
     expected_result.removed = []
     expected_result.processed = len(env.dir_1)
     expected_result.remaining = 0
     await env.refresh_tester.run(expected_result)
     # Load dir_2
     add_plot_directory(env.root_path, str(env.dir_2.path))
-    expected_result.loaded = env.dir_2.plot_info_list()
+    expected_result.loaded = env.dir_2.plot_info_list()  # type: ignore[assignment]
     expected_result.removed = []
     expected_result.processed = len(env.dir_1) + len(env.dir_2)
     expected_result.remaining = 0
@@ -504,7 +504,7 @@ async def test_callback_event_raises(test_environment, event_to_raise: PlotRefre
     assert len(env.refresh_tester.plot_manager.no_key_filenames) == 0
     # The next run without the valid callback should lead to re-loading of all plot
     env.refresh_tester.plot_manager.set_refresh_callback(default_callback)
-    expected_result.loaded = env.dir_1.plot_info_list() + env.dir_2.plot_info_list()
+    expected_result.loaded = env.dir_1.plot_info_list() + env.dir_2.plot_info_list()  # type: ignore[assignment]
     expected_result.removed = []
     expected_result.processed = len(env.dir_1) + len(env.dir_2)
     expected_result.remaining = 0
