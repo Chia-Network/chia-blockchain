@@ -17,8 +17,11 @@ from chia.util.keychain import supports_keyring_passphrase
 )
 @click.option("--testnet", is_flag=True, help="Configure this chia install to connect to the testnet")
 @click.option("--set-passphrase", "-s", is_flag=True, help="Protect your keyring with a passphrase")
+@click.option("--experimental-v2-db", is_flag=True, help="Initialize the blockchain database in experimental v2 format")
 @click.pass_context
-def init_cmd(ctx: click.Context, create_certs: str, fix_ssl_permissions: bool, testnet: bool, **kwargs):
+def init_cmd(
+    ctx: click.Context, create_certs: str, fix_ssl_permissions: bool, testnet: bool, experimental_v2_db: bool, **kwargs
+):
     """
     Create a new configuration or migrate from previous versions to current
 
@@ -39,7 +42,13 @@ def init_cmd(ctx: click.Context, create_certs: str, fix_ssl_permissions: bool, t
     if set_passphrase:
         initialize_passphrase()
 
-    init(Path(create_certs) if create_certs is not None else None, ctx.obj["root_path"], fix_ssl_permissions, testnet)
+    init(
+        Path(create_certs) if create_certs is not None else None,
+        ctx.obj["root_path"],
+        fix_ssl_permissions,
+        testnet,
+        experimental_v2_db,
+    )
 
 
 if not supports_keyring_passphrase():
