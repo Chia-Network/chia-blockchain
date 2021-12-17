@@ -45,7 +45,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -261,7 +261,7 @@ class CCWallet:
                 program,
                 self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
-                safe_mode=True,
+                mempool_mode=True,
             )
             cost_result: uint64 = calculate_cost_of_program(
                 program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
@@ -610,13 +610,13 @@ class CCWallet:
 
         total_amount = sum([x.amount for x in selected_coins])
         change = total_amount - total_outgoing
-        primaries = []
+        primaries: List[AmountWithPuzzlehash] = []
         for amount, puzzle_hash in zip(amounts, puzzle_hashes):
             primaries.append({"puzzlehash": puzzle_hash, "amount": amount})
 
         if change > 0:
             changepuzzlehash = await self.get_new_inner_hash()
-            primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
+            primaries.append({"puzzlehash": changepuzzlehash, "amount": uint64(change)})
 
         coin = list(selected_coins)[0]
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)

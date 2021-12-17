@@ -56,7 +56,7 @@ class TerminalNode:
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":
         return cls(
-            hash=bytes32.fromhex(row["hash"]),  # type: ignore[arg-type]
+            hash=bytes32.fromhex(row["hash"]),
             # generation=row["generation"],
             key=bytes.fromhex(row["key"]),
             value=bytes.fromhex(row["value"]),

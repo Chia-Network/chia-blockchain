@@ -20,6 +20,7 @@ class PeerRecord(Streamable):
     best_timestamp: uint64
     version: str
     handshake_time: uint64
+    tls_version: str
 
     def update_version(self, version, now):
         if version != "undefined":

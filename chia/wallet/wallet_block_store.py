@@ -191,16 +191,11 @@ class WalletBlockStore:
         peak: Optional[bytes32] = None
         for row in rows:
             header_hash_bytes, block_record_bytes, is_peak = row
-            header_hash = bytes.fromhex(header_hash_bytes)
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, BlockRecord]"; expected type "bytes32"  [index]
-            ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)  # type: ignore[index]
+            header_hash = bytes32.fromhex(header_hash_bytes)
+            ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)
             if is_peak:
                 assert peak is None  # Sanity check, only one peak
-                # TODO: address hint error and remove ignore
-                #       error: Incompatible types in assignment (expression has type "bytes", variable has type
-                #       "Optional[bytes32]")  [assignment]
-                peak = header_hash  # type: ignore[assignment]
+                peak = header_hash
         return ret, peak
 
     def rollback_cache_block(self, header_hash: bytes32):
@@ -238,10 +233,8 @@ class WalletBlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
             header_hash_bytes, block_record_bytes = row
-            header_hash = bytes.fromhex(header_hash_bytes)
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, BlockRecord]"; expected type "bytes32"  [index]
-            ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)  # type: ignore[index]
+            header_hash = bytes32.fromhex(header_hash_bytes)
+            ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)
         return ret, peak
 
     async def get_header_blocks_in_range(
@@ -258,10 +251,8 @@ class WalletBlockStore:
         ret: Dict[bytes32, HeaderBlock] = {}
         for row in rows:
             header_hash_bytes, block_record_bytes = row
-            header_hash = bytes.fromhex(header_hash_bytes)
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, HeaderBlock]"; expected type "bytes32"  [index]
-            ret[header_hash] = HeaderBlock.from_bytes(block_record_bytes)  # type: ignore[index]
+            header_hash = bytes32.fromhex(header_hash_bytes)
+            ret[header_hash] = HeaderBlock.from_bytes(block_record_bytes)
 
         return ret
 
@@ -283,10 +274,8 @@ class WalletBlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
             header_hash_bytes, block_record_bytes = row
-            header_hash = bytes.fromhex(header_hash_bytes)
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, BlockRecord]"; expected type "bytes32"  [index]
-            ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)  # type: ignore[index]
+            header_hash = bytes32.fromhex(header_hash_bytes)
+            ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)
 
         return ret
 
@@ -302,10 +291,7 @@ class WalletBlockStore:
         if row is None:
             return {}, {}
 
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        peak: bytes32 = bytes.fromhex(row[0])  # type: ignore[assignment]
+        peak: bytes32 = bytes32.fromhex(row[0])
         cursor = await self.db.execute("SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records")
         rows = await cursor.fetchall()
         await cursor.close()
@@ -314,19 +300,10 @@ class WalletBlockStore:
         hash_to_summary: Dict[bytes32, SubEpochSummary] = {}
 
         for row in rows:
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, bytes32]"; expected type "bytes32"  [index]
-            #       error: Incompatible types in assignment (expression has type "bytes", target has type "bytes32")
-            #       [assignment]
-            hash_to_prev_hash[bytes.fromhex(row[0])] = bytes.fromhex(row[1])  # type: ignore[index,assignment]
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, uint32]"; expected type "bytes32"  [index]
-            hash_to_height[bytes.fromhex(row[0])] = row[2]  # type: ignore[index]
+            hash_to_prev_hash[bytes32.fromhex(row[0])] = bytes32.fromhex(row[1])
+            hash_to_height[bytes32.fromhex(row[0])] = row[2]
             if row[3] is not None:
-                # TODO: address hint error and remove ignore
-                #       error: Invalid index type "bytes" for "Dict[bytes32, SubEpochSummary]"; expected type "bytes32"
-                #       [index]
-                hash_to_summary[bytes.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])  # type: ignore[index]
+                hash_to_summary[bytes32.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])
 
         height_to_hash: Dict[uint32, bytes32] = {}
         sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}

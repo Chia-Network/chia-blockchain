@@ -1568,7 +1568,7 @@ def get_full_block_and_block_record(
 def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Optional[uint16], uint64]:
     try:
         block_program, block_program_args = setup_generator_args(generator)
-        clvm_cost, result = GENERATOR_MOD.run_safe_with_cost(INFINITE_COST, block_program, block_program_args)
+        clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, block_program, block_program_args)
         size_cost = len(bytes(generator.program)) * cost_per_byte
         condition_cost = 0
 

@@ -77,6 +77,7 @@ class Crawler:
 
     async def connect_task(self, peer):
         async def peer_action(peer: ws.WSChiaConnection):
+
             peer_info = peer.get_peer_info()
             version = peer.get_version()
             if peer_info is not None and version is not None:
@@ -136,6 +137,7 @@ class Crawler:
                     uint64(0),
                     "undefined",
                     uint64(0),
+                    tls_version="unknown",
                 )
                 new_peer_reliability = PeerReliability(peer)
                 self.crawl_store.maybe_add_peer(new_peer, new_peer_reliability)
@@ -184,14 +186,15 @@ class Crawler:
                                 uint64(response_peer.timestamp),
                                 "undefined",
                                 uint64(0),
+                                tls_version="unknown",
                             )
                             new_peer_reliability = PeerReliability(response_peer.host)
                             if self.crawl_store is not None:
                                 self.crawl_store.maybe_add_peer(new_peer, new_peer_reliability)
-                            await self.crawl_store.update_best_timestamp(
-                                response_peer.host,
-                                self.best_timestamp_per_peer[response_peer.host],
-                            )
+                        await self.crawl_store.update_best_timestamp(
+                            response_peer.host,
+                            self.best_timestamp_per_peer[response_peer.host],
+                        )
                 for host, version in self.version_cache:
                     self.handshake_time[host] = int(time.time())
                     self.host_to_version[host] = version
@@ -303,11 +306,14 @@ class Crawler:
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
         try:
             peer_info = peer.get_peer_info()
+            tls_version = peer.get_tls_version()
+            if tls_version is None:
+                tls_version = "unknown"
             if peer_info is None:
                 return
             if request.height >= self.minimum_height:
                 if self.crawl_store is not None:
-                    await self.crawl_store.peer_connected_hostname(peer_info.host, True)
+                    await self.crawl_store.peer_connected_hostname(peer_info.host, True, tls_version)
             self.with_peak.add(peer_info)
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
