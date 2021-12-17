@@ -129,7 +129,6 @@ class WalletStateManager:
         name: str = None,
     ):
         self = WalletStateManager()
-        self.new_wallet = False
         self.config = config
         self.constants = constants
         self.server = server
@@ -283,10 +282,7 @@ class WalletStateManager:
                 # This handles the case where the database is empty
                 unused = uint32(0)
 
-        if self.new_wallet:
-            to_generate = self.config["initial_num_public_keys_new_wallet"]
-        else:
-            to_generate = self.config["initial_num_public_keys"]
+        to_generate = self.config["initial_num_public_keys"]
 
         for wallet_id in targets:
             target_wallet = self.wallets[wallet_id]
@@ -758,6 +754,8 @@ class WalletStateManager:
             derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin.puzzle_hash)
             if derivation_index is not None:
                 await self.puzzle_store.set_used_up_to(derivation_index, True)
+
+        await self.create_more_puzzle_hashes(False, True)
 
         return trade_adds, added
 
