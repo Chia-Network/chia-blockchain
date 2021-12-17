@@ -118,7 +118,7 @@ async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Examp
     return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash, e_hash, f_hash, g_hash, h_hash])
 
 
-async def generate_big_datastore(data_store: DataStore, tree_id: bytes32, num_nodes: int = 100) -> None:
+async def generate_big_datastore(data_store: DataStore, tree_id: bytes32, num_nodes: int = 1000) -> None:
     insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id, skip_expensive_checks=False)
     insertions = 0
     deletions = 0

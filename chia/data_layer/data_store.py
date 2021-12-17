@@ -880,7 +880,7 @@ class DataStore:
         self,
         tree_id: bytes32,
         generation_begin: int,
-        num_generations: int = 2500,
+        num_generations: int = 100,
         *,
         lock: bool = True,
     ) -> List[Dict[str, Any]]:

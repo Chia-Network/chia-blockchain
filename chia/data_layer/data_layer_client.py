@@ -116,7 +116,7 @@ class DataLayerClient:
             async with session.get(url) as r:
                 root_json = await r.json()
             generation = root_json["generation"]
-            added_generation = 0
+            added_generation = 1
             t1 = time.time()
             while added_generation < generation:
                 url = f"http://0.0.0.0:8080/get_operations?tree_id={tree_id}&generation={added_generation}"
@@ -128,8 +128,12 @@ class DataLayerClient:
                             bytes.fromhex(row["key"]),
                             bytes.fromhex(row["value"]),
                             bytes32.from_hexstr(tree_id),
-                            None if added_generation == 0 else bytes32.from_hexstr(row["reference_node_hash"]),
-                            None if added_generation == 0 else (Side.RIGHT if row["side"] == "right" else Side.LEFT),
+                            None
+                            if row["reference_node_hash"] == "None"
+                            else (bytes32.from_hexstr(row["reference_node_hash"])),
+                            None
+                            if row["reference_node_hash"] == "None"
+                            else (Side.RIGHT if row["side"] == "right" else Side.LEFT),
                             status=Status(row["root_status"]),
                             skip_expensive_checks=True,
                         )
