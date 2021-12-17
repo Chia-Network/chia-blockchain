@@ -22,6 +22,7 @@ class TradeRecord(Streamable):
     is_my_offer: bool
     sent: uint32
     offer: bytes
+    taken_offer: Optional[bytes]
     coins_of_interest: List[Coin]
     trade_id: bytes32
     status: uint32  # TradeStatus, enum not streamable
@@ -30,7 +31,8 @@ class TradeRecord(Streamable):
     def to_json_dict_convenience(self) -> Dict[str, Any]:
         formatted = self.to_json_dict()
         formatted["status"] = TradeStatus(self.status).name
-        offer = Offer.from_bytes(self.offer)
+        offer_to_summarize: bytes = self.offer if self.taken_offer is None else self.taken_offer
+        offer = Offer.from_bytes(offer_to_summarize)
         offered, requested = offer.summary()
         formatted["summary"] = {
             "offered": offered,
