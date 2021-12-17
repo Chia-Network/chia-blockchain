@@ -49,6 +49,7 @@ class TestBlockStore:
                 assert block == await store.get_full_block(block.header_hash)
                 assert block == await store.get_full_block(block.header_hash)
                 assert block_record == (await store.get_block_record(block_record_hh))
+                await store.set_in_chain([(block_record.header_hash,)])
                 await store.set_peak(block_record.header_hash)
                 await store.set_peak(block_record.header_hash)
 
@@ -93,3 +94,46 @@ class TestBlockStore:
                 if random.random() < 0.5:
                     tasks.append(asyncio.create_task(store.get_full_block(blocks[rand_i].header_hash)))
             await asyncio.gather(*tasks)
+
+    @pytest.mark.asyncio
+    async def test_rollback(self, tmp_dir):
+        blocks = bt.get_consecutive_blocks(10)
+
+        async with DBConnection(2) as db_wrapper:
+
+            # Use a different file for the blockchain
+            coin_store = await CoinStore.create(db_wrapper)
+            block_store = await BlockStore.create(db_wrapper)
+            hint_store = await HintStore.create(db_wrapper)
+            bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, tmp_dir)
+
+            # insert all blocks
+            count = 0
+            for block in blocks:
+                await bc.receive_block(block)
+                count += 1
+                ret = await block_store.get_random_not_compactified(count)
+                assert len(ret) == count
+                # make sure all block heights are unique
+                assert len(set(ret)) == count
+
+            for block in blocks:
+                async with db_wrapper.db.execute(
+                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=?", (block.header_hash,)
+                ) as cursor:
+                    rows = await cursor.fetchall()
+                    assert len(rows) == 1
+                    assert rows[0][0]
+
+            await block_store.rollback(5)
+
+            count = 0
+            for block in blocks:
+                async with db_wrapper.db.execute(
+                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=? ORDER BY height", (block.header_hash,)
+                ) as cursor:
+                    rows = await cursor.fetchall()
+                    print(count, rows)
+                    assert len(rows) == 1
+                    assert rows[0][0] == (count <= 5)
+                count += 1
