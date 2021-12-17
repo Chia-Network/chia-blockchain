@@ -185,7 +185,7 @@ class TestWalletRpc:
             assert len(tx_res.additions) == 2  # The output and the change
             assert any([addition.amount == signed_tx_amount for addition in tx_res.additions])
 
-            push_res = await client_node.push_tx(tx_res.spend_bundle)
+            push_res = await client.push_tx(tx_res.spend_bundle)
             assert push_res["success"]
             assert (await client.get_wallet_balance("1"))[
                 "confirmed_wallet_balance"

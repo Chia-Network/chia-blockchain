@@ -13,6 +13,7 @@ from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
@@ -62,6 +63,7 @@ class WalletRpcApi:
             # Wallet node
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
+            "/push_tx": self.push_tx,
             "/farm_block": self.farm_block,  # Only when node simulator is running
             # this function is just here for backwards-compatibility. It will probably
             # be removed in the future
@@ -361,6 +363,11 @@ class WalletRpcApi:
         network_name = self.service.config["selected_network"]
         address_prefix = self.service.config["network_overrides"]["config"][network_name]["address_prefix"]
         return {"network_name": network_name, "network_prefix": address_prefix}
+
+    async def push_tx(self, request: Dict):
+        assert self.service.wallet_state_manager is not None
+        await self.service.push_tx(SpendBundle.from_bytes(hexstr_to_bytes(request["spend_bundle"])))
+        return {}
 
     async def farm_block(self, request):
         raw_puzzle_hash = decode_puzzle_hash(request["address"])
