@@ -1,14 +1,32 @@
-from blspy import G1Element
+from blspy import G1Element, G2Element
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.coin import Coin
+from chia.types.spend_bundle import SpendBundle
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
+from chia.util.puzzle_compression import CompressorVersion, CompressionVersionError
 from chia.wallet.cc_wallet.cc_utils import CC_MOD, construct_cc_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 
-COIN = Coin(bytes([0] * 32), bytes([0] * 32), uint64(0))
+ZERO_32 = bytes([0] * 32)
+ONE_32 = bytes([17] * 32)
+COIN = Coin(ZERO_32, ZERO_32, uint64(0))
 SOLUTION = Program.to([])
+
+
+class DummyDriver:
+    @staticmethod
+    def match(puzzle, version):
+        return True, [puzzle]
+
+    @staticmethod
+    def construct(driver_dict, args):
+        return args[0]
+
+    @staticmethod
+    def solve(driver_dict, args, solution_dict):
+        return Program.to([])
 
 
 class TestSingleton:
@@ -44,3 +62,24 @@ class TestSingleton:
             SOLUTION,
         )
         assert bytes(coin_spend.puzzle_reveal).hex() in bytes(CoinSpend.compress(coin_spend).puzzle_reveal).hex()
+
+    def test_version_override(self):
+        coin_spend = CoinSpend(
+            COIN,
+            Program.to([]),
+            SOLUTION,
+        )
+        spend_bundle = SpendBundle([coin_spend], G2Element())
+        new_version_dict = {ONE_32: DummyDriver}
+        new_version = CompressorVersion(driver_dict=new_version_dict)
+        # Our custom compression is super bad so the length should actually be greater
+        assert len(bytes(SpendBundle.compress(spend_bundle, version=new_version))) > len(bytes(spend_bundle))
+        assert spend_bundle == SpendBundle.decompress(
+            SpendBundle.compress(spend_bundle, version=new_version), version=new_version
+        )
+
+        try:
+            SpendBundle.decompress(SpendBundle.compress(spend_bundle, version=new_version))
+            assert False
+        except CompressionVersionError:
+            pass
