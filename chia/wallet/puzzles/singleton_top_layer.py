@@ -127,13 +127,9 @@ MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 #
 #     - A way to compute its own puzzle has for each of I' and so on. This can
 #       be accomplished by giving it its uncurried puzzle hash and using
-#       puzzle-hash-of-curried-function to compute it for input to
-#       calculate_full_puzzle_hash. The "full puzzle hash" being referred to is
-#       the puzzle hash of the to-be-created singleton at its outermost layer.
-#
-#     - SINGLETON_MOD_HASH (as it appears here)
-#
-#     - LAUNCHER_PUZZLE_HASH (as it appears here)
+#       puzzle-hash-of-curried-function to compute it.  Although full_puzzle_hash
+#       is used for some arguments, the inputs to all singleton_top_layer
+#       functions is the inner puzzle.
 #
 #     - the name() of the Launcher coin (which you can compute from a Coin
 #       object) if you're not already using it in I puzzle for some other
@@ -147,26 +143,8 @@ MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 #    be itself a singleton, and the singleton does not change the puzzle hash
 #    in an outgoing CREATE_COIN to cause it to be one.
 #
-#    With those modifications of the program I done, I and descendants must
-#    produce a singleton to function, so it is necessary for the puzzle to use
-#    the curried in SINGLETON_MOD_HASH and LAUNCHER_PUZZLE_HASH, along with
-#    this function:
-#
-#       ;; return the full puzzlehash for a singleton with the innerpuzzle
-#       ;; curried in puzzle-hash-of-curried-function is imported from
-#       ;; curry-and-treehash.clinc
-#       (defun-inline calculate_full_puzzle_hash
-#          (SINGLETON_MOD_HASH
-#           LAUNCHER_ID
-#           LAUNCHER_PUZZLE_HASH
-#           inner_puzzle_hash
-#          )
-#          (puzzle-hash-of-curried-function
-#             SINGLETON_MOD_HASH
-#             inner_puzzle_hash
-#             (sha256tree (c SINGLETON_MOD_HASH (c LAUNCHER_ID LAUNCHER_PUZZLE_HASH)))
-#             )
-#           )
+#    With this modification of the program I done, I and descendants will
+#    continue to produce I', I'' etc.
 #
 #    The actual CREATE_COIN puzzle hash will be the result of
 #    this.  The Launcher ID referred to here is the name() of
