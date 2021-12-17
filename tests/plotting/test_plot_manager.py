@@ -109,9 +109,11 @@ class PlotRefreshTester:
                         log.error(f"{name} invalid: actual {actual_value} expected {expected_value}")
                         return
 
-                self.expected_result_matched = True
             except AttributeError as error:
                 log.error(f"{error}")
+                return
+
+        self.expected_result_matched = True
 
     async def run(self, expected_result: PlotRefreshResult):
         self.expected_result = expected_result
@@ -373,12 +375,14 @@ async def test_invalid_plots(test_environment):
     # Give it a non .plot ending and make sure it gets removed from the invalid list on the next refresh
     retry_test_plot_unload = Path(env.dir_1.path / ".unload").resolve()
     move(retry_test_plot, retry_test_plot_unload)
+    expected_result.processed -= 1
     expected_result.loaded = []
     await env.refresh_tester.run(expected_result)
     assert len(env.refresh_tester.plot_manager.failed_to_open_filenames) == 0
     assert retry_test_plot not in env.refresh_tester.plot_manager.failed_to_open_filenames
     # Recover the name and make sure it reappears in the invalid list
     move(retry_test_plot_unload, retry_test_plot)
+    expected_result.processed += 1
     await env.refresh_tester.run(expected_result)
     assert len(env.refresh_tester.plot_manager.failed_to_open_filenames) == 1
     assert retry_test_plot in env.refresh_tester.plot_manager.failed_to_open_filenames
