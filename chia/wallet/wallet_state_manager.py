@@ -755,8 +755,6 @@ class WalletStateManager:
             if derivation_index is not None:
                 await self.puzzle_store.set_used_up_to(derivation_index, True)
 
-        await self.create_more_puzzle_hashes(False, True)
-
         return trade_adds, added
 
     async def coins_of_interest_removed(
