@@ -18,7 +18,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
-from chia.util.puzzle_compression import CompressionVersionError
+from chia.wallet.util.puzzle_compression import CompressionVersionError
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cc_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cc_wallet.cc_wallet import CCWallet

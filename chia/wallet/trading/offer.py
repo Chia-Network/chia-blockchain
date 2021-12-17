@@ -9,7 +9,7 @@ from chia.types.announcement import Announcement
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
-from chia.util.puzzle_compression import PuzzleCompressor, CompressorVersion
+from chia.wallet.util.puzzle_compression import PuzzleCompressor
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     SpendableCC,
@@ -375,18 +375,18 @@ class Offer:
     def name(self) -> bytes32:
         return self.to_spend_bundle().name()
 
-    def compress(self, version=None) -> bytes:
+    def compress(self, compressor=None) -> bytes:
         as_spend_bundle = self.to_spend_bundle()
-        if version is None:
+        if compressor is None:
             matched_puzzles = [
-                PuzzleCompressor.match_puzzle(cs.puzzle_reveal.to_program())[1] for cs in as_spend_bundle.coin_spends
+                PuzzleCompressor().match_puzzle(cs.puzzle_reveal.to_program())[1] for cs in as_spend_bundle.coin_spends
             ]
-            version = CompressorVersion.lowest_compatible_version(matched_puzzles)
-        return bytes(SpendBundle.compress(as_spend_bundle, version=version))
+            compressor = PuzzleCompressor.lowest_compatible_version(matched_puzzles)
+        return bytes(SpendBundle.compress(as_spend_bundle, compressor=compressor))
 
     @classmethod
-    def from_compressed(cls, compressed_bytes: bytes, version=CompressorVersion()) -> "Offer":
-        return cls.from_spend_bundle(SpendBundle.decompress(SpendBundle.from_bytes(compressed_bytes), version=version))
+    def from_compressed(cls, compressed_bytes: bytes, compressor=PuzzleCompressor()) -> "Offer":
+        return cls.from_spend_bundle(SpendBundle.decompress(SpendBundle.from_bytes(compressed_bytes), compressor=compressor))
 
     # Methods to make this a valid Streamable member
     # We basically hijack the SpendBundle versions for most of it

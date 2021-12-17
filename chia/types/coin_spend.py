@@ -6,7 +6,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.chain_utils import additions_for_solution, fee_for_solution
-from chia.util.puzzle_compression import PuzzleCompressor, CompressorVersion
+from chia.wallet.util.puzzle_compression import PuzzleCompressor
 from chia.util.streamable import Streamable, streamable
 
 
@@ -58,21 +58,17 @@ class CoinSpend(Streamable):
     """
 
     @classmethod
-    def compress(cls, coin_spend: "CoinSpend", version=CompressorVersion()) -> "CoinSpend":
+    def compress(cls, coin_spend: "CoinSpend", compressor=PuzzleCompressor()) -> "CoinSpend":
         return cls(
             coin_spend.coin,
-            Program.to(
-                PuzzleCompressor.serialize(coin_spend.puzzle_reveal.to_program(), version=version)
-            ).to_serialized_program(),
+            Program.to(compressor.serialize(coin_spend.puzzle_reveal.to_program())).to_serialized_program(),
             coin_spend.solution,
         )
 
     @classmethod
-    def decompress(cls, coin_spend: "CoinSpend", version=CompressorVersion()) -> "CoinSpend":
+    def decompress(cls, coin_spend: "CoinSpend", compressor=PuzzleCompressor()) -> "CoinSpend":
         return cls(
             coin_spend.coin,
-            PuzzleCompressor.deserialize(
-                coin_spend.puzzle_reveal.to_program().as_python(), version=version
-            ).to_serialized_program(),
+            compressor.deserialize(coin_spend.puzzle_reveal.to_program().as_python()).to_serialized_program(),
             coin_spend.solution,
         )

@@ -5,7 +5,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.spend_bundle import SpendBundle
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
-from chia.util.puzzle_compression import CompressorVersion, CompressionVersionError
+from chia.wallet.util.puzzle_compression import PuzzleCompressor, CompressionVersionError
 from chia.wallet.cc_wallet.cc_utils import CC_MOD, construct_cc_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 
@@ -71,15 +71,15 @@ class TestSingleton:
         )
         spend_bundle = SpendBundle([coin_spend], G2Element())
         new_version_dict = {ONE_32: DummyDriver}
-        new_version = CompressorVersion(driver_dict=new_version_dict)
+        new_compressor = PuzzleCompressor(driver_dict=new_version_dict)
         # Our custom compression is super bad so the length should actually be greater
-        assert len(bytes(SpendBundle.compress(spend_bundle, version=new_version))) > len(bytes(spend_bundle))
+        assert len(bytes(SpendBundle.compress(spend_bundle, compressor=new_compressor))) > len(bytes(spend_bundle))
         assert spend_bundle == SpendBundle.decompress(
-            SpendBundle.compress(spend_bundle, version=new_version), version=new_version
+            SpendBundle.compress(spend_bundle, compressor=new_compressor), compressor=new_compressor
         )
 
         try:
-            SpendBundle.decompress(SpendBundle.compress(spend_bundle, version=new_version))
+            SpendBundle.decompress(SpendBundle.compress(spend_bundle, compressor=new_compressor))
             assert False
         except CompressionVersionError:
             pass
