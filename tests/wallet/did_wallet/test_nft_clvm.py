@@ -125,7 +125,7 @@ def test_transfer_with_backpayments():
     # transfer_program_solution
 
     nft_creator_address = Program.to("nft_creator_address").get_tree_hash()
-    nft_program = NFT_TRANSFER_PROGRAM.curry([nft_creator_address, 20])
+    nft_program = NFT_TRANSFER_PROGRAM.curry([nft_creator_address, 20, "http://chia.net"])
     trade_price = 20
     solution = Program.to(
         [
@@ -199,7 +199,7 @@ def test_announcne():
     # transfer_program_solution
 
     nft_creator_address = Program.to("nft_creator_address").get_tree_hash()
-    nft_program = NFT_TRANSFER_PROGRAM.curry([nft_creator_address, 20])
+    nft_program = NFT_TRANSFER_PROGRAM.curry([nft_creator_address, 20, "http://chia.net"])
     trade_price = 0
     solution = Program.to(
         [
