@@ -36,6 +36,12 @@ class DataLayerServer:
             }
         )
 
+    async def handle_operations(self, request: web.Request) -> web.Response:
+        tree_id = request.rel_url.query["tree_id"]
+        generation = request.rel_url.query["generation"]
+        tree_id_bytes = bytes32.from_hexstr(tree_id)
+        return web.json_response(await self.data_store.get_operations(tree_id_bytes, int(generation)))
+
     async def init_example_data_store(self) -> None:
         tree_id = bytes32(b"\0" * 32)
         await self.data_store.create_tree(tree_id=tree_id)
@@ -54,6 +60,7 @@ class DataLayerServer:
             [
                 web.get("/get_tree_root", self.handle_tree_root),
                 web.get("/get_tree_nodes", self.handle_tree_nodes),
+                web.get("/get_operations", self.handle_operations),
             ]
         )
         return app

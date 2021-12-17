@@ -118,8 +118,10 @@ async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Examp
     return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash, e_hash, f_hash, g_hash, h_hash])
 
 
-async def generate_big_datastore(data_store: DataStore, tree_id: bytes32, num_nodes: int = 10000) -> None:
-    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id, skip_expensive_checks=True)
+async def generate_big_datastore(data_store: DataStore, tree_id: bytes32, num_nodes: int = 100) -> None:
+    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id, skip_expensive_checks=False)
+    insertions = 0
+    deletions = 0
     for i in range(num_nodes):
         key = i.to_bytes(4, byteorder="big")
         value = (2 * i).to_bytes(4, byteorder="big")
@@ -142,10 +144,22 @@ async def generate_big_datastore(data_store: DataStore, tree_id: bytes32, num_no
             side = Side.LEFT if random.randint(0, 1) == 0 else Side.RIGHT
             assert height <= 60
 
-        t1 = time.time()
-        _ = await insert(key=key, value=value, reference_node_hash=reference_node_hash, side=side)
-        t2 = time.time()
-        print(f"Insertion of node {i} took {t2 - t1}.")
+        if random.randint(0, 4) > 0 or insertions - 1 <= deletions:
+            insertions += 1
+            t1 = time.time()
+            _ = await insert(key=key, value=value, reference_node_hash=reference_node_hash, side=side)
+            t2 = time.time()
+            print(f"Insertion of node {i} took {t2 - t1}.")
+        else:
+            deletions += 1
+            t1 = time.time()
+            assert reference_node_hash is not None
+            node = await data_store.get_node(reference_node_hash)
+            assert isinstance(node, TerminalNode)
+            await data_store.delete(key=node.key, tree_id=tree_id, skip_expensive_checks=True)
+            t2 = time.time()
+            print(f"Deletion of node {node.key.hex()} took {t2 - t1}.")
+    print(f"Insertions: {insertions} Deletions: {deletions}")
 
 
 @dataclass
