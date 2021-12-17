@@ -4,6 +4,7 @@ from pathlib import Path
 from shutil import copy, move
 from typing import Callable, Iterator, List, Optional
 import pytest
+from blspy import G1Element
 
 from dataclasses import dataclass
 from chia.plotting.util import (
@@ -19,6 +20,7 @@ from chia.util.config import create_default_chia_config
 from chia.util.path import mkdir
 from chia.plotting.manager import PlotManager
 from tests.block_tools import get_plot_dir
+from tests.plotting.util import get_test_plots
 from tests.setup_nodes import bt
 from tests.time_out_assert import time_out_assert
 
@@ -135,7 +137,7 @@ class TestEnvironment:
 def test_environment(tmp_path) -> Iterator[TestEnvironment]:
     dir_1_count: int = 7
     dir_2_count: int = 3
-    plots: List[Path] = list(sorted(get_plot_dir().glob("*.plot")))
+    plots: List[Path] = get_test_plots()
     assert len(plots) >= dir_1_count + dir_2_count
 
     dir_1: TestDirectory = TestDirectory(tmp_path / "plots" / "1", plots[0:dir_1_count])
@@ -400,6 +402,44 @@ async def test_invalid_plots(test_environment):
     await env.refresh_tester.run(expected_result)
     assert len(env.refresh_tester.plot_manager.failed_to_open_filenames) == 0
     assert retry_test_plot not in env.refresh_tester.plot_manager.failed_to_open_filenames
+
+
+@pytest.mark.asyncio
+async def test_keys_missing(test_environment: TestEnvironment) -> None:
+    env: TestEnvironment = test_environment
+    not_in_keychain_plots: List[Path] = get_test_plots("not_in_keychain")
+    dir_not_in_keychain: TestDirectory = TestDirectory(
+        env.root_path / "plots" / "not_in_keychain", not_in_keychain_plots
+    )
+    expected_result = PlotRefreshResult()
+    # The plots in "not_in_keychain" directory have infinity g1 elements as farmer/pool key so they should be plots
+    # with missing keys for now
+    add_plot_directory(env.root_path, str(dir_not_in_keychain.path))
+    expected_result.loaded = []
+    expected_result.removed = []
+    expected_result.processed = len(dir_not_in_keychain)
+    expected_result.remaining = 0
+    for i in range(2):
+        await env.refresh_tester.run(expected_result)
+        assert len(env.refresh_tester.plot_manager.no_key_filenames) == len(dir_not_in_keychain)
+        for path in env.refresh_tester.plot_manager.no_key_filenames:
+            assert path in dir_not_in_keychain.plots
+    # Delete one of the plots and make sure it gets dropped from the no key filenames list
+    drop_plot = dir_not_in_keychain.path_list()[0]
+    dir_not_in_keychain.drop(drop_plot)
+    drop_plot.unlink()
+    assert drop_plot in env.refresh_tester.plot_manager.no_key_filenames
+    expected_result.processed -= 1
+    await env.refresh_tester.run(expected_result)
+    assert drop_plot not in env.refresh_tester.plot_manager.no_key_filenames
+    # Now add the missing keys to the plot manager's key lists and make sure the plots are getting loaded
+    env.refresh_tester.plot_manager.farmer_public_keys.append(G1Element())
+    env.refresh_tester.plot_manager.pool_public_keys.append(G1Element())
+    expected_result.loaded = dir_not_in_keychain.plot_info_list()  # type: ignore[assignment]
+    expected_result.processed = len(dir_not_in_keychain)
+    await env.refresh_tester.run(expected_result)
+    # And make sure they are dropped from the list of plots with missing keys
+    assert len(env.refresh_tester.plot_manager.no_key_filenames) == 0
 
 
 @pytest.mark.asyncio

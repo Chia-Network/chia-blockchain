@@ -247,6 +247,10 @@ class PlotManager:
                     if plot_removed(path):
                         del self.failed_to_open_filenames[path]
 
+                for path in self.no_key_filenames.copy():
+                    if plot_removed(path):
+                        self.no_key_filenames.remove(path)
+
                 filenames_to_remove: List[str] = []
                 for plot_filename, paths_entry in self.plot_filename_paths.items():
                     loaded_path, duplicated_paths = paths_entry
@@ -394,6 +398,11 @@ class PlotManager:
                         self.no_key_filenames.add(file_path)
                         if not self.open_no_key_filenames:
                             return None
+
+                    # If a plot is in `no_key_filenames` the keys were missing in earlier refresh cycles. We can remove
+                    # the current plot from that list if its in there since we passed the key checks above.
+                    if file_path in self.no_key_filenames:
+                        self.no_key_filenames.remove(file_path)
 
                     local_sk = master_sk_to_local_sk(local_master_sk)
 
