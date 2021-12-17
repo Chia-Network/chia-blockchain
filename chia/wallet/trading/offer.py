@@ -387,7 +387,9 @@ class Offer:
 
     @classmethod
     def from_compressed(cls, compressed_bytes: bytes, compressor=PuzzleCompressor()) -> "Offer":
-        return cls.from_spend_bundle(CompressedSpendBundle.from_bytes(compressed_bytes).decompress(compressor=compressor))
+        return cls.from_spend_bundle(
+            CompressedSpendBundle.from_bytes(compressed_bytes).decompress(compressor=compressor)
+        )
 
     # Methods to make this a valid Streamable member
     # We basically hijack the SpendBundle versions for most of it

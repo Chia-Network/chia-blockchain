@@ -2,7 +2,7 @@ from typing import Dict, Tuple, List, Union, Any
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint16, uint32
+from chia.util.ints import uint16
 from chia.wallet.util.puzzle_representation import PuzzleRepresentation
 
 # These imports should be temporary
@@ -31,7 +31,9 @@ structure below.  They must all have three methods implemented:
 
 class StandardPuzzle:
     @staticmethod
-    def match(puzzle: Program, compressor: "PuzzleCompressor") -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
+    def match(
+        puzzle: Program, compressor: "PuzzleCompressor"
+    ) -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
         uncurried_mod, curried_args = puzzle.uncurry()
         if standard_puzzle.MOD == uncurried_mod:
             synthetic_pubkey = curried_args.first()
@@ -63,7 +65,9 @@ class StandardPuzzle:
 
 class CATPuzzle:
     @staticmethod
-    def match(puzzle: Program, compressor: "PuzzleCompressor") -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
+    def match(
+        puzzle: Program, compressor: "PuzzleCompressor"
+    ) -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
         uncurried_mod, curried_args = puzzle.uncurry()
         if CC_MOD == uncurried_mod:
             tail_hash = curried_args.rest().first()
@@ -89,7 +93,9 @@ class CATPuzzle:
 
 class OfferPuzzle:
     @staticmethod
-    def match(puzzle: Program, compressor: "PuzzleCompressor") -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
+    def match(
+        puzzle: Program, compressor: "PuzzleCompressor"
+    ) -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
         if OFFER_MOD == puzzle:
             return True, []
         else:
@@ -123,8 +129,10 @@ HASH_TO_DRIVER: Dict[uint16, Dict[bytes32, Any]] = {
 
 LATEST_VERSION: uint16 = uint16(max(HASH_TO_DRIVER.keys()))
 
+
 class CompressionVersionError(Exception):
     pass
+
 
 class PuzzleCompressor:
     """

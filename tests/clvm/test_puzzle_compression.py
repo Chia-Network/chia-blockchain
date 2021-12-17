@@ -62,7 +62,10 @@ class TestSingleton:
             unknown.curry(puzzle_for_pk(G1Element())),
             SOLUTION,
         )
-        assert bytes(coin_spend.puzzle_reveal).hex() in bytes(CompressedCoinSpend.compress(coin_spend).compressed_coin_spend.puzzle_reveal).hex()
+        assert (
+            bytes(coin_spend.puzzle_reveal).hex()
+            in bytes(CompressedCoinSpend.compress(coin_spend).compressed_coin_spend.puzzle_reveal).hex()
+        )
 
     def test_version_override(self):
         coin_spend = CoinSpend(
@@ -74,8 +77,12 @@ class TestSingleton:
         new_version_dict = {ONE_32: DummyDriver}
         new_compressor = PuzzleCompressor(driver_dict=new_version_dict)
         # Our custom compression is super bad so the length should actually be greater
-        assert len(bytes(CompressedSpendBundle.compress(spend_bundle, compressor=new_compressor))) > len(bytes(spend_bundle))
-        assert spend_bundle == CompressedSpendBundle.compress(spend_bundle, compressor=new_compressor).decompress(compressor=new_compressor)
+        assert len(bytes(CompressedSpendBundle.compress(spend_bundle, compressor=new_compressor))) > len(
+            bytes(spend_bundle)
+        )
+        assert spend_bundle == CompressedSpendBundle.compress(spend_bundle, compressor=new_compressor).decompress(
+            compressor=new_compressor
+        )
 
         try:
             CompressedSpendBundle.compress(spend_bundle, compressor=new_compressor).decompress()

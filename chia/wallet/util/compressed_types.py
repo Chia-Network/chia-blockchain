@@ -63,6 +63,9 @@ class CompressedSpendBundle(Streamable):
 
     def decompress(self, compressor=PuzzleCompressor()) -> SpendBundle:
         return SpendBundle(
-            [CompressedCoinSpend(cs).decompress(compressor=compressor) for cs in self.compressed_spend_bundle.coin_spends],
+            [
+                CompressedCoinSpend(cs).decompress(compressor=compressor)
+                for cs in self.compressed_spend_bundle.coin_spends
+            ],
             self.compressed_spend_bundle.aggregated_signature,
         )
