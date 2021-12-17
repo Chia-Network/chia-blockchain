@@ -75,6 +75,8 @@ class PlotRefreshTester:
     expected_result_matched: bool
 
     def __init__(self, root_path: Path):
+        self.expected_result = PlotRefreshResult()
+        self.expected_result_matched = False
         self.plot_manager = PlotManager(root_path, self.refresh_callback)
         self.plot_manager.start_refreshing()
 
