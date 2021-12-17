@@ -130,6 +130,7 @@ async def setup_wallet_node(
     introducer_port=None,
     key_seed=None,
     starting_height=None,
+    initial_num_public_keys=5,
 ):
     with TempKeyring() as keychain:
         config = bt.config["wallet"]
@@ -137,7 +138,7 @@ async def setup_wallet_node(
         config["rpc_port"] = port + 1000
         if starting_height is not None:
             config["starting_height"] = starting_height
-        config["initial_num_public_keys"] = 5
+        config["initial_num_public_keys"] = initial_num_public_keys
 
         entropy = token_bytes(32)
         if key_seed is None:
@@ -413,6 +414,7 @@ async def setup_simulators_and_wallets(
     starting_height=None,
     key_seed=None,
     starting_port=50000,
+    initial_num_public_keys=5,
 ):
     with TempKeyring() as keychain1, TempKeyring() as keychain2:
         simulators: List[FullNodeAPI] = []
@@ -452,6 +454,7 @@ async def setup_simulators_and_wallets(
                 None,
                 key_seed=seed,
                 starting_height=starting_height,
+                initial_num_public_keys=initial_num_public_keys,
             )
             wallets.append(await wlt.__anext__())
             node_iters.append(wlt)

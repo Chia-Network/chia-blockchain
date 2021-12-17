@@ -198,7 +198,6 @@ class WalletNode:
         if backup_settings.user_initialized is False:
             if new_wallet is True:
                 await self.wallet_state_manager.user_settings.user_created_new_wallet()
-                self.wallet_state_manager.new_wallet = True
             elif skip_backup_import is True:
                 await self.wallet_state_manager.user_settings.user_skipped_backup_import()
             elif backup_file is not None:
