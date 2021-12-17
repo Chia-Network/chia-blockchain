@@ -142,7 +142,10 @@ class DataLayerClient:
                         )
                     print(f"Operation: {row}")
                     current_root = await self.data_store.get_tree_root(bytes32.from_hexstr(tree_id))
-                    assert current_root.node_hash is not None and current_root.node_hash.hex() == row["hash"]
+                    if current_root.node_hash is None:
+                        assert row["hash"] == "None"
+                    else:
+                        assert current_root.node_hash.hex() == row["hash"]
                     added_generation += 1
 
         t2 = time.time()
@@ -152,4 +155,4 @@ class DataLayerClient:
 
 if __name__ == "__main__":
     data_layer_client = DataLayerClient()
-    asyncio.run(data_layer_client.download_data_layer())
+    asyncio.run(data_layer_client.download_data_layer_history())

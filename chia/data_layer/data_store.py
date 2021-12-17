@@ -793,12 +793,33 @@ class DataStore:
     # Returns the operation that got us from `root_hash_1` to `root_hash_2`.
     async def get_single_operation(
         self,
-        root_hash_begin: bytes32,
-        root_hash_end: bytes32,
+        root_hash_begin: Optional[bytes32],
+        root_hash_end: Optional[bytes32],
         *,
         lock: bool = False,
     ) -> Dict[str, Any]:
         async with self.db_wrapper.locked_transaction(lock=lock):
+            if root_hash_begin is None:
+                assert root_hash_end is not None
+                node = await self.get_node(root_hash_end, lock=False)
+                assert isinstance(node, TerminalNode)
+                return {
+                    "hash": node.hash.hex(),
+                    "is_insert": True,
+                    "key": node.key.hex(),
+                    "value": node.value.hex(),
+                    "reference_node_hash": "None",
+                    "side": "None",
+                }
+            if root_hash_end is None:
+                assert root_hash_begin is not None
+                node = await self.get_node(root_hash_begin, lock=False)
+                assert isinstance(node, TerminalNode)
+                return {
+                    "hash": "None",
+                    "is_insert": False,
+                    "key": node.key.hex(),
+                }
             copy_root_hash_end = root_hash_end
             while True:
                 node_1 = await self.get_node(root_hash_begin, lock=False)
@@ -875,29 +896,11 @@ class DataStore:
                 if previous_root is None:
                     previous_root = current_root
                     continue
-                if previous_root.node_hash is None:
-                    assert current_root.node_hash is not None
-                    node = await self.get_node(current_root.node_hash, lock=False)
-                    assert isinstance(node, TerminalNode)
-                    result.append(
-                        {
-                            "hash": node.hash.hex(),
-                            "is_insert": True,
-                            "key": node.key.hex(),
-                            "value": node.value.hex(),
-                            "reference_node_hash": "None",
-                            "side": "None",
-                            "root_status": roots[1].status.value,
-                        }
-                    )
                 else:
                     change = await self.get_single_operation(
                         previous_root.node_hash, current_root.node_hash, lock=False
                     )
                     change["root_status"] = current_root.status.value
-                    isInsert = "insert" if change["is_insert"] else "delete"
-                    key = change["key"]
-                    print(f"{isInsert} {key}")
                     result.append(change)
                 previous_root = current_root
 
