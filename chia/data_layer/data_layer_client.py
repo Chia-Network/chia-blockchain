@@ -107,8 +107,6 @@ class DataLayerClient:
             t2 = time.time()
             print("Finished validating tree.")
             print(f"Time taken: {t2 - t1}. Terminal nodes: {terminal_nodes} Internal nodes: {internal_nodes}.")
-            # Disable this check as it keeps every hash in memory. Use it to test only small trees.
-            # await self.data_store.check_tree_is_complete()
 
     async def download_data_layer_history(self) -> None:
         await self.init_db()
@@ -154,4 +152,4 @@ class DataLayerClient:
 
 if __name__ == "__main__":
     data_layer_client = DataLayerClient()
-    asyncio.run(data_layer_client.download_data_layer_history())
+    asyncio.run(data_layer_client.download_data_layer())

@@ -123,35 +123,6 @@ class DataStore:
                 {"node_hash": node_hash.hex()},
             )
 
-    async def _update_ancestor_table(
-        self, node_hash: str, left_hash: Optional[str], right_hash: Optional[str], tree_id: str
-    ) -> None:
-        if left_hash is not None and right_hash is not None:
-            values = {
-                "hash": left_hash,
-                "ancestor": node_hash,
-                "tree_id": tree_id,
-            }
-            await self.db.execute(
-                """
-                INSERT OR REPLACE INTO ancestors(hash, ancestor, tree_id)
-                VALUES (:hash, :ancestor, :tree_id)
-                """,
-                values,
-            )
-            values = {
-                "hash": right_hash,
-                "ancestor": node_hash,
-                "tree_id": tree_id,
-            }
-            await self.db.execute(
-                """
-                INSERT OR REPLACE INTO ancestors(hash, ancestor, tree_id)
-                VALUES (:hash, :ancestor, :tree_id)
-                """,
-                values,
-            )
-
     async def _insert_node(
         self,
         node_hash: str,
@@ -183,10 +154,8 @@ class DataStore:
                 """,
                 values,
             )
-            await self._update_ancestor_table(node_hash, left_hash, right_hash, tree_id)
         else:
             result_dict = dict(result)
-            await self._update_ancestor_table(node_hash, left_hash, right_hash, tree_id)
             if result_dict != values:
                 raise Exception(f"Requested insertion of node with matching hash but other values differ: {node_hash}")
 
@@ -202,6 +171,20 @@ class DataStore:
             value=None,
             tree_id=tree_id.hex(),
         )
+        # Update ancestors table.
+        for hash in (left_hash, right_hash):
+            values = {
+                "hash": hash.hex(),
+                "ancestor": node_hash.hex(),
+                "tree_id": tree_id.hex(),
+            }
+            await self.db.execute(
+                """
+                INSERT OR REPLACE INTO ancestors(hash, ancestor, tree_id)
+                VALUES (:hash, :ancestor, :tree_id)
+                """,
+                values,
+            )
 
         return node_hash  # type: ignore[no-any-return]
 
@@ -314,21 +297,6 @@ class DataStore:
 
         if len(bad_node_hashes) > 0:
             raise NodeHashError(node_hashes=bad_node_hashes)
-
-    async def check_tree_is_complete(self, *, lock: bool = True) -> None:
-        cursor = await self.db.execute("SELECT * FROM node")
-        to_check = []
-        hashes = set()
-        async for row in cursor:
-            node = row_to_node(row=row)
-            hashes.add(node.hash)
-            if isinstance(node, InternalNode):
-                if node.left_hash is not None:
-                    to_check.append(node.left_hash)
-                if node.right_hash is not None:
-                    to_check.append(node.right_hash)
-        for hash in to_check:
-            assert hash in hashes
 
     _checks: Tuple[Callable[["DataStore"], Awaitable[None]], ...] = (
         _check_internal_key_value_are_null,
@@ -790,15 +758,11 @@ class DataStore:
         self,
         node_hash: bytes32,
         tree_id: bytes32,
-        root_hash: bytes32,
         *,
         lock: bool = True,
         num_nodes: int = 2500,
-    ) -> Tuple[bool, List[Dict[str, Any]]]:
+    ) -> List[Node]:
         ancestors = await self.get_ancestors_2(node_hash, tree_id, lock=True)
-        # Root hash changed, abort the process and start over again.
-        if root_hash != node_hash and root_hash != ancestors[-1].hash:
-            return (True, [])
         stack = []
         path_hashes = []
         for ancestor in ancestors:
@@ -808,35 +772,23 @@ class DataStore:
             if ancestor.right_hash not in path_hashes and ancestor.right_hash != node_hash:
                 stack.append(ancestor.right_hash)
         count = 0
-        nodes = []
+        nodes: List[Node] = []
         while count < num_nodes:
             count += 1
             node = await self.get_node(node_hash)
             if node is None:
                 return []
             if isinstance(node, TerminalNode):
-                nodes.append(
-                    {
-                        "key": node.key.hex(),
-                        "value": node.value.hex(),
-                        "is_terminal": True,
-                    }
-                )
+                nodes.append(node)
                 if len(stack) > 0:
                     node_hash = stack.pop()
                 else:
                     break
-            if isinstance(node, InternalNode):
-                nodes.append(
-                    {
-                        "left": str(node.left_hash),
-                        "right": str(node.right_hash),
-                        "is_terminal": False,
-                    }
-                )
+            elif isinstance(node, InternalNode):
+                nodes.append(node)
                 stack.append(node.right_hash)
                 node_hash = node.left_hash
-        return (False, nodes)
+        return nodes
 
     # Returns the operation that got us from `root_hash_1` to `root_hash_2`.
     async def get_single_operation(

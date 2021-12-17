@@ -4,6 +4,7 @@ from chia.data_layer.data_store import DataStore
 from chia.util.db_wrapper import DBWrapper
 from chia.types.blockchain_format.tree_hash import bytes32
 from tests.core.data_layer.util import generate_big_datastore
+from chia.data_layer.data_layer_types import TerminalNode
 
 
 class DataLayerServer:
@@ -25,10 +26,27 @@ class DataLayerServer:
         root_hash = request.rel_url.query["root_hash"]
         node_hash_bytes = bytes32.from_hexstr(node_hash)
         tree_id_bytes = bytes32.from_hexstr(tree_id)
-        root_hash_bytes = bytes32.from_hexstr(root_hash)
-        root_changed, answer = await self.data_store.get_left_to_right_ordering(
-            node_hash_bytes, tree_id_bytes, root_hash_bytes
-        )
+        nodes = await self.data_store.get_left_to_right_ordering(node_hash_bytes, tree_id_bytes)
+        answer = []
+        for node in nodes:
+            if isinstance(node, TerminalNode):
+                answer.append(
+                    {
+                        "key": node.key.hex(),
+                        "value": node.value.hex(),
+                        "is_terminal": True,
+                    }
+                )
+            else:
+                answer.append(
+                    {
+                        "left": str(node.left_hash),
+                        "right": str(node.right_hash),
+                        "is_terminal": False,
+                    }
+                )
+        current_tree_root = await self.data_store.get_tree_root(tree_id_bytes)
+        root_changed = False if str(current_tree_root.node_hash) == root_hash else False
         return web.json_response(
             {
                 "root_changed": root_changed,
