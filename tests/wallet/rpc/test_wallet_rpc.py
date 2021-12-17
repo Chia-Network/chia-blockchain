@@ -1,4 +1,5 @@
 import asyncio
+from typing import AsyncIterator
 
 from operator import attrgetter
 from chia.util.config import load_config, save_config
@@ -21,7 +22,7 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
-from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
+from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname, SimulatorsAndWallets
 from tests.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
 
@@ -30,12 +31,12 @@ log = logging.getLogger(__name__)
 
 class TestWalletRpc:
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
+    async def two_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction(self, two_wallet_nodes):
+    async def test_wallet_make_transaction(self, two_wallet_nodes: SimulatorsAndWallets):
         test_rpc_port = uint16(21529)
         test_rpc_port_node = uint16(21530)
         num_blocks = 5

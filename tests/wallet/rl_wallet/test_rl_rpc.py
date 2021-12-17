@@ -1,4 +1,5 @@
 import asyncio
+from typing import AsyncIterator
 
 import pytest
 
@@ -11,7 +12,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16
 from chia.wallet.util.wallet_types import WalletType
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, SimulatorsAndWallets
 from tests.time_out_assert import time_out_assert
 from tests.wallet.sync.test_wallet_sync import wallet_height_at_least
 
@@ -52,13 +53,13 @@ async def check_balance(api, wallet_id):
 
 class TestRLWallet:
     @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
+    async def three_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 3, {}):
             yield _
 
     @pytest.mark.asyncio
     @pytest.mark.skip
-    async def test_create_rl_coin(self, three_wallet_nodes):
+    async def test_create_rl_coin(self, three_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 4
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]

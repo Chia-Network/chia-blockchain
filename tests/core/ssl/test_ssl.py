@@ -1,4 +1,5 @@
 import asyncio
+from typing import AsyncIterator
 
 import aiohttp
 import pytest
@@ -18,6 +19,7 @@ from tests.setup_nodes import (
     setup_introducer,
     setup_simulators_and_wallets,
     setup_timelord,
+    SimulatorsAndWallets,
 )
 
 
@@ -57,7 +59,7 @@ class TestSSL:
             yield _
 
     @pytest.fixture(scope="function")
-    async def wallet_node(self):
+    async def wallet_node(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
@@ -72,7 +74,7 @@ class TestSSL:
             yield _
 
     @pytest.mark.asyncio
-    async def test_public_connections(self, wallet_node):
+    async def test_public_connections(self, wallet_node: SimulatorsAndWallets):
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
@@ -120,7 +122,7 @@ class TestSSL:
         assert connected is False
 
     @pytest.mark.asyncio
-    async def test_full_node(self, wallet_node):
+    async def test_full_node(self, wallet_node: SimulatorsAndWallets):
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
@@ -141,7 +143,7 @@ class TestSSL:
         assert connected is True
 
     @pytest.mark.asyncio
-    async def test_wallet(self, wallet_node):
+    async def test_wallet(self, wallet_node: SimulatorsAndWallets):
         full_nodes, wallets = wallet_node
         wallet_node, wallet_server = wallets[0]
 

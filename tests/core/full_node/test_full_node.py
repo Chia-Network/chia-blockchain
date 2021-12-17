@@ -5,7 +5,7 @@ import logging
 import random
 import time
 from secrets import token_bytes
-from typing import Dict, Optional, List
+from typing import AsyncIterator, Dict, Optional, List
 
 import pytest
 
@@ -46,7 +46,7 @@ from tests.core.full_node.test_coin_store import get_future_reward_coins
 from tests.core.full_node.test_mempool_performance import wallet_height_at_least
 from tests.core.make_block_generator import make_spend_bundle
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
+from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants, SimulatorsAndWallets
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 
 log = logging.getLogger(__name__)
@@ -115,19 +115,19 @@ async def wallet_nodes():
 
 
 @pytest.fixture(scope="function")
-async def setup_four_nodes():
+async def setup_four_nodes() -> AsyncIterator[SimulatorsAndWallets]:
     async for _ in setup_simulators_and_wallets(5, 0, {}, starting_port=51000):
         yield _
 
 
 @pytest.fixture(scope="function")
-async def setup_two_nodes():
+async def setup_two_nodes() -> AsyncIterator[SimulatorsAndWallets]:
     async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=51100):
         yield _
 
 
 @pytest.fixture(scope="function")
-async def setup_two_nodes_and_wallet():
+async def setup_two_nodes_and_wallet() -> AsyncIterator[SimulatorsAndWallets]:
     async for _ in setup_simulators_and_wallets(2, 1, {}, starting_port=51200):
         yield _
 
@@ -152,7 +152,7 @@ class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("test_reorgs", [False, True])
     @pytest.mark.parametrize("tx_size", [10000, 3000000000000])
-    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
+    async def test_block_compression(self, setup_two_nodes_and_wallet: SimulatorsAndWallets, empty_blockchain, tx_size, test_reorgs):
         nodes, wallets = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -402,7 +402,7 @@ class TestFullNodeProtocol:
         assert bytes(sb) == bytes(protocol_message)
 
     @pytest.mark.asyncio
-    async def test_inbound_connection_limit(self, setup_four_nodes):
+    async def test_inbound_connection_limit(self, setup_four_nodes: SimulatorsAndWallets):
         nodes, _ = setup_four_nodes
         server_1 = nodes[0].full_node.server
         server_1.config["target_peer_count"] = 2
@@ -1376,7 +1376,7 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is not None
 
     @pytest.mark.asyncio
-    async def test_slot_catch_up_genesis(self, setup_two_nodes):
+    async def test_slot_catch_up_genesis(self, setup_two_nodes: SimulatorsAndWallets):
         nodes, _ = setup_two_nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -1468,7 +1468,7 @@ class TestFullNodeProtocol:
         assert error is None
 
     @pytest.mark.asyncio
-    async def test_compact_protocol(self, setup_two_nodes):
+    async def test_compact_protocol(self, setup_two_nodes: SimulatorsAndWallets):
         nodes, _ = setup_two_nodes
         full_node_1 = nodes[0]
         full_node_2 = nodes[1]
@@ -1584,7 +1584,7 @@ class TestFullNodeProtocol:
             assert full_node_2.full_node.blockchain.get_peak().height == height
 
     @pytest.mark.asyncio
-    async def test_compact_protocol_invalid_messages(self, setup_two_nodes):
+    async def test_compact_protocol_invalid_messages(self, setup_two_nodes: SimulatorsAndWallets):
         nodes, _ = setup_two_nodes
         full_node_1 = nodes[0]
         full_node_2 = nodes[1]

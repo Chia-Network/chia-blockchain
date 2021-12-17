@@ -1,6 +1,6 @@
 # flake8: noqa: F811, F401
 import logging
-from typing import List
+from typing import AsyncIterator, List
 
 import pytest
 from blspy import AugSchemeMPL
@@ -20,19 +20,19 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint8
 from tests.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
-from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
+from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants, SimulatorsAndWallets
 from tests.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
 
 
 class TestRpc:
     @pytest.fixture(scope="function")
-    async def two_nodes(self):
+    async def two_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(2, 0, {}):
             yield _
 
     @pytest.mark.asyncio
-    async def test1(self, two_nodes):
+    async def test1(self, two_nodes: SimulatorsAndWallets):
         num_blocks = 5
         test_rpc_port = uint16(21522)
         nodes, _ = two_nodes
@@ -228,7 +228,7 @@ class TestRpc:
             await rpc_cleanup()
 
     @pytest.mark.asyncio
-    async def test_signage_points(self, two_nodes, empty_blockchain):
+    async def test_signage_points(self, two_nodes: SimulatorsAndWallets, empty_blockchain):
         test_rpc_port = uint16(21522)
         nodes, _ = two_nodes
         full_node_api_1, full_node_api_2 = nodes

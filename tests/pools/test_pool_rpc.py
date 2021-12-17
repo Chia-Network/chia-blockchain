@@ -2,7 +2,7 @@ import asyncio
 import logging
 from pathlib import Path
 from shutil import rmtree
-from typing import Optional, List, Dict
+from typing import AsyncIterator, Optional, List, Dict
 
 import pytest
 from blspy import G1Element
@@ -24,7 +24,7 @@ from chia.util.config import load_config
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt, SimulatorsAndWallets
 from tests.time_out_assert import time_out_assert
 
 
@@ -51,7 +51,7 @@ def event_loop():
 
 class TestPoolWalletRpc:
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
+    async def two_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
@@ -96,7 +96,7 @@ class TestPoolWalletRpc:
             await rpc_cleanup()
 
     @pytest.fixture(scope="function")
-    async def setup(self, two_wallet_nodes):
+    async def setup(self, two_wallet_nodes: SimulatorsAndWallets):
         rmtree(get_pool_plot_dir(), ignore_errors=True)
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]

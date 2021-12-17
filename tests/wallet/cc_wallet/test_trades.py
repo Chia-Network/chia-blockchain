@@ -1,6 +1,7 @@
 import asyncio
 from pathlib import Path
 from secrets import token_bytes
+from typing import AsyncIterator
 
 import pytest
 
@@ -10,7 +11,7 @@ from chia.util.ints import uint16, uint64
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
-from tests.setup_nodes import setup_simulators_and_wallets
+from tests.setup_nodes import setup_simulators_and_wallets, SimulatorsAndWallets
 from tests.time_out_assert import time_out_assert
 from tests.wallet.sync.test_wallet_sync import wallet_height_at_least
 
@@ -22,7 +23,7 @@ def event_loop():
 
 
 @pytest.fixture(scope="module")
-async def two_wallet_nodes():
+async def two_wallet_nodes() -> AsyncIterator[SimulatorsAndWallets]:
     async for _ in setup_simulators_and_wallets(1, 2, {}):
         yield _
 
@@ -31,7 +32,7 @@ buffer_blocks = 4
 
 
 @pytest.fixture(scope="module")
-async def wallets_prefarm(two_wallet_nodes):
+async def wallets_prefarm(two_wallet_nodes: SimulatorsAndWallets):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.
     """

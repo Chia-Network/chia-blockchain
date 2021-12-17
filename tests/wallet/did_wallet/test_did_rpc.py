@@ -1,5 +1,7 @@
 import asyncio
 import logging
+from typing import AsyncIterator
+
 import pytest
 
 from chia.rpc.rpc_server import start_rpc_server
@@ -9,7 +11,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
 from chia.wallet.util.wallet_types import WalletType
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt, SimulatorsAndWallets
 from tests.time_out_assert import time_out_assert
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 
@@ -27,12 +29,12 @@ def event_loop():
 
 class TestDIDWallet:
     @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
+    async def three_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 3, {}):
             yield _
 
     @pytest.mark.asyncio
-    async def test_create_did(self, three_wallet_nodes):
+    async def test_create_did(self, three_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 4
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]

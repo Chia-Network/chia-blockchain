@@ -1,5 +1,6 @@
 # flake8: noqa: F811, F401
 import asyncio
+from typing import AsyncIterator
 
 import pytest
 from colorlog import logging
@@ -11,7 +12,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import disconnect_all_and_reconnect
-from tests.setup_nodes import bt, self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants
+from tests.setup_nodes import bt, self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants, SimulatorsAndWallets
 from tests.time_out_assert import time_out_assert
 
 
@@ -38,7 +39,7 @@ class TestWalletSync:
             yield _
 
     @pytest.fixture(scope="function")
-    async def wallet_node_simulator(self):
+    async def wallet_node_simulator(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
@@ -139,7 +140,7 @@ class TestWalletSync:
         )
 
     @pytest.mark.asyncio
-    async def test_wallet_reorg_sync(self, wallet_node_simulator, default_400_blocks):
+    async def test_wallet_reorg_sync(self, wallet_node_simulator: SimulatorsAndWallets, default_400_blocks):
         num_blocks = 5
         full_nodes, wallets = wallet_node_simulator
         full_node_api = full_nodes[0]
@@ -183,7 +184,7 @@ class TestWalletSync:
         await time_out_assert(5, wallet.get_confirmed_balance, 0)
 
     @pytest.mark.asyncio
-    async def test_wallet_reorg_get_coinbase(self, wallet_node_simulator, default_400_blocks):
+    async def test_wallet_reorg_get_coinbase(self, wallet_node_simulator: SimulatorsAndWallets, default_400_blocks):
         full_nodes, wallets = wallet_node_simulator
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]

@@ -3,11 +3,12 @@ import atexit
 import signal
 
 from secrets import token_bytes
-from typing import Dict, List, Optional
+from typing import AsyncIterator, Dict, Iterable, List, Optional, Tuple, Union
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, create_server_for_daemon, daemon_launch_lock_path, singleton
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.server.server import ChiaServer
 from chia.server.start_farmer import service_kwargs_for_farmer
 from chia.server.start_full_node import service_kwargs_for_full_node
 from chia.server.start_harvester import service_kwargs_for_harvester
@@ -15,16 +16,21 @@ from chia.server.start_introducer import service_kwargs_for_introducer
 from chia.server.start_service import Service
 from chia.server.start_timelord import service_kwargs_for_timelord
 from chia.server.start_wallet import service_kwargs_for_wallet
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.start_simulator import service_kwargs_for_full_node_simulator
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
+from chia.wallet.wallet_node import WalletNode
 from tests.block_tools import create_block_tools, create_block_tools_async, test_constants
 from tests.util.keyring import TempKeyring
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import bytes_to_mnemonic
 from tests.time_out_assert import time_out_assert_custom_interval
+
+
+SimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]
 
 
 def cleanup_keyring(keyring: TempKeyring):
@@ -43,7 +49,7 @@ def constants_for_dic(dic):
     return test_constants.replace(**dic)
 
 
-async def _teardown_nodes(node_aiters: List) -> None:
+async def _teardown_nodes(node_aiters: Iterable[AsyncIterator[object]]) -> None:
     awaitables = [node_iter.__anext__() for node_iter in node_aiters]
     for sublist_awaitable in asyncio.as_completed(awaitables):
         try:
@@ -80,7 +86,7 @@ async def setup_full_node(
     send_uncompact_interval=0,
     sanitize_weight_proof_only=False,
     connect_to_daemon=False,
-):
+) -> Union[AsyncIterator[FullNodeSimulator], AsyncIterator[FullNodeAPI]]:
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()
@@ -114,6 +120,12 @@ async def setup_full_node(
 
     await service.start()
 
+    # TODO: fixup the hinting behind this instead of just asserting this
+    if simulator:
+        assert isinstance(service._api, FullNodeSimulator)
+    else:
+        assert isinstance(service._api, FullNodeAPI)
+
     yield service._api
 
     service.stop()
@@ -130,7 +142,7 @@ async def setup_wallet_node(
     introducer_port=None,
     key_seed=None,
     starting_height=None,
-):
+) -> AsyncIterator[Tuple[WalletNode, ChiaServer]]:
     with TempKeyring() as keychain:
         config = bt.config["wallet"]
         config["port"] = port
@@ -178,6 +190,10 @@ async def setup_wallet_node(
         service = Service(**kwargs)
 
         await service.start(new_wallet=True)
+
+        # TODO: fixup the hinting behind this instead of just asserting this
+        assert isinstance(service._node, WalletNode)
+        assert isinstance(service._node.server, ChiaServer)
 
         yield service._node, service._node.server
 
@@ -391,12 +407,12 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int):
 async def setup_node_and_wallet(consensus_constants: ConsensusConstants, starting_height=None, key_seed=None):
     with TempKeyring() as keychain:
         btools = await create_block_tools_async(constants=test_constants, keychain=keychain)
-        node_iters = [
+        node_iters = (
             setup_full_node(consensus_constants, "blockchain_test.db", 21234, btools, simulator=False),
             setup_wallet_node(
                 21235, consensus_constants, btools, None, starting_height=starting_height, key_seed=key_seed
             ),
-        ]
+        )
 
         full_node_api = await node_iters[0].__anext__()
         wallet, s2 = await node_iters[1].__anext__()
@@ -413,11 +429,11 @@ async def setup_simulators_and_wallets(
     starting_height=None,
     key_seed=None,
     starting_port=50000,
-):
+) -> AsyncIterator[SimulatorsAndWallets]:
     with TempKeyring() as keychain1, TempKeyring() as keychain2:
-        simulators: List[FullNodeAPI] = []
+        simulators: List[FullNodeSimulator] = []
         wallets = []
-        node_iters = []
+        node_iters: List[AsyncIterator[object]] = []
 
         consensus_constants = constants_for_dic(dic)
         for index in range(0, simulator_count):
@@ -433,7 +449,11 @@ async def setup_simulators_and_wallets(
                 bt_tools,
                 simulator=True,
             )
-            simulators.append(await sim.__anext__())
+            simulator = await sim.__anext__()
+            # TODO: fix hinting so we don't need to assert this
+            assert isinstance(simulator, FullNodeSimulator)
+            simulators.append(simulator)
+            # simulators.append(await sim.__anext__())
             node_iters.append(sim)
 
         for index in range(0, wallet_count):

@@ -1,5 +1,5 @@
 import asyncio
-from typing import List
+from typing import AsyncIterator, List
 
 import pytest
 
@@ -15,7 +15,7 @@ from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.puzzles.cc_loader import CC_MOD
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from tests.setup_nodes import setup_simulators_and_wallets
+from tests.setup_nodes import setup_simulators_and_wallets, SimulatorsAndWallets
 from tests.time_out_assert import time_out_assert
 
 
@@ -34,22 +34,22 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
 
 class TestCCWallet:
     @pytest.fixture(scope="function")
-    async def wallet_node(self):
+    async def wallet_node(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
+    async def two_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
+    async def three_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 3, {}):
             yield _
 
     @pytest.mark.asyncio
-    async def test_colour_creation(self, two_wallet_nodes):
+    async def test_colour_creation(self, two_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -85,7 +85,7 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
     @pytest.mark.asyncio
-    async def test_cc_spend(self, two_wallet_nodes):
+    async def test_cc_spend(self, two_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -163,7 +163,7 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 55)
 
     @pytest.mark.asyncio
-    async def test_get_wallet_for_colour(self, two_wallet_nodes):
+    async def test_get_wallet_for_colour(self, two_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -196,7 +196,7 @@ class TestCCWallet:
         assert await wallet_node.wallet_state_manager.get_wallet_for_colour(colour) == cc_wallet
 
     @pytest.mark.asyncio
-    async def test_generate_zero_val(self, two_wallet_nodes):
+    async def test_generate_zero_val(self, two_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 4
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -258,7 +258,7 @@ class TestCCWallet:
         assert unspent.pop().coin.amount == 0
 
     @pytest.mark.asyncio
-    async def test_cc_spend_uncoloured(self, two_wallet_nodes):
+    async def test_cc_spend_uncoloured(self, two_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -335,7 +335,7 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
 
     @pytest.mark.asyncio
-    async def test_cc_spend_multiple(self, three_wallet_nodes):
+    async def test_cc_spend_multiple(self, three_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 3
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -437,7 +437,7 @@ class TestCCWallet:
         await time_out_assert(30, cc_wallet_2.get_unconfirmed_balance, 0)
 
     @pytest.mark.asyncio
-    async def test_cc_max_amount_send(self, two_wallet_nodes):
+    async def test_cc_max_amount_send(self, two_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]

@@ -1,6 +1,7 @@
 # flake8: noqa: F811, F401
 import asyncio
 import logging
+from typing import AsyncIterator
 
 import pytest
 from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, WSMessage, WSMsgType
@@ -16,7 +17,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
 from chia.util.errors import Err
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, SimulatorsAndWallets
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ def event_loop():
 
 
 @pytest.fixture(scope="function")
-async def setup_two_nodes():
+async def setup_two_nodes() -> AsyncIterator[SimulatorsAndWallets]:
     async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=60000):
         yield _
 

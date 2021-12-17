@@ -1,6 +1,8 @@
 import asyncio
 import pytest
 import time
+from typing import AsyncIterator
+
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.server.server import ChiaServer
@@ -11,7 +13,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, SimulatorsAndWallets
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.wallet.cc_wallet.test_cc_wallet import tx_in_pool
 
@@ -24,27 +26,27 @@ def event_loop():
 
 class TestWalletSimulator:
     @pytest.fixture(scope="function")
-    async def wallet_node(self):
+    async def wallet_node(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
+    async def two_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes_five_freeze(self):
+    async def two_wallet_nodes_five_freeze(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def three_sim_two_wallets(self):
+    async def three_sim_two_wallets(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(3, 2, {}):
             yield _
 
     @pytest.mark.asyncio
-    async def test_wallet_coinbase(self, wallet_node):
+    async def test_wallet_coinbase(self, wallet_node: SimulatorsAndWallets):
         num_blocks = 10
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
@@ -92,7 +94,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction(self, two_wallet_nodes):
+    async def test_wallet_make_transaction(self, two_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -139,7 +141,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_unconfirmed_balance, new_funds - 10)
 
     @pytest.mark.asyncio
-    async def test_wallet_coinbase_reorg(self, wallet_node):
+    async def test_wallet_coinbase_reorg(self, wallet_node: SimulatorsAndWallets):
         num_blocks = 5
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
@@ -170,7 +172,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.asyncio
-    async def test_wallet_send_to_three_peers(self, three_sim_two_wallets):
+    async def test_wallet_send_to_three_peers(self, three_sim_two_wallets: SimulatorsAndWallets):
         num_blocks = 10
         full_nodes, wallets = three_sim_two_wallets
 
@@ -223,7 +225,7 @@ class TestWalletSimulator:
         await time_out_assert_not_none(5, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze):
+    async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze: SimulatorsAndWallets):
         num_blocks = 10
         full_nodes, wallets = two_wallet_nodes_five_freeze
         full_node_api_0 = full_nodes[0]
@@ -335,7 +337,7 @@ class TestWalletSimulator:
     #     await _teardown_nodes(node_iters)
 
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction_with_fee(self, two_wallet_nodes):
+    async def test_wallet_make_transaction_with_fee(self, two_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
@@ -389,7 +391,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_unconfirmed_balance, new_funds - tx_amount - tx_fee)
 
     @pytest.mark.asyncio
-    async def test_wallet_create_hit_max_send_amount(self, two_wallet_nodes):
+    async def test_wallet_create_hit_max_send_amount(self, two_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
@@ -472,7 +474,7 @@ class TestWalletSimulator:
         assert above_limit_tx is None
 
     @pytest.mark.asyncio
-    async def test_wallet_prevent_fee_theft(self, two_wallet_nodes):
+    async def test_wallet_prevent_fee_theft(self, two_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
@@ -544,7 +546,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_confirmed_balance, funds + outstanding_coinbase_rewards)
 
     @pytest.mark.asyncio
-    async def test_wallet_tx_reorg(self, two_wallet_nodes):
+    async def test_wallet_tx_reorg(self, two_wallet_nodes: SimulatorsAndWallets):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]

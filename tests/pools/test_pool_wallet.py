@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import List
+from typing import AsyncIterator, List
 
 import pytest
 from blspy import PrivateKey
@@ -14,7 +14,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, SimulatorsAndWallets
 
 
 log = logging.getLogger(__name__)
@@ -28,12 +28,12 @@ def event_loop():
 
 class TestPoolWallet2:
     @pytest.fixture(scope="function")
-    async def one_wallet_node(self):
+    async def one_wallet_node(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
     @pytest.mark.asyncio
-    async def test_create_new_pool_wallet(self, one_wallet_node):
+    async def test_create_new_pool_wallet(self, one_wallet_node: SimulatorsAndWallets):
         full_nodes, wallets = one_wallet_node
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server

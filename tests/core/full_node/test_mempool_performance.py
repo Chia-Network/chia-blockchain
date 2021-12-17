@@ -2,6 +2,7 @@
 
 import asyncio
 import time
+from typing import AsyncIterator
 
 import pytest
 import logging
@@ -11,7 +12,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
 from tests.connection_utils import connect_and_get_peer
-from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, SimulatorsAndWallets
 from tests.time_out_assert import time_out_assert
 
 
@@ -33,13 +34,13 @@ def event_loop():
 
 class TestMempoolPerformance:
     @pytest.fixture(scope="module")
-    async def wallet_nodes(self):
+    async def wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         key_seed = bt.farmer_master_sk_entropy
         async for _ in setup_simulators_and_wallets(2, 1, {}, key_seed=key_seed):
             yield _
 
     @pytest.mark.asyncio
-    async def test_mempool_update_performance(self, wallet_nodes, default_400_blocks):
+    async def test_mempool_update_performance(self, wallet_nodes: SimulatorsAndWallets, default_400_blocks):
         blocks = default_400_blocks
         full_nodes, wallets = wallet_nodes
         wallet_node = wallets[0][0]

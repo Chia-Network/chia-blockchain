@@ -1,6 +1,6 @@
 import asyncio
 from secrets import token_bytes
-from typing import Optional
+from typing import AsyncIterator, List, Optional, Tuple
 
 import pytest
 
@@ -11,7 +11,7 @@ from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, SimulatorsAndWallets
 from tests.time_out_assert import time_out_assert
 
 
@@ -23,22 +23,22 @@ def event_loop():
 
 class TestTransactions:
     @pytest.fixture(scope="function")
-    async def wallet_node(self):
+    async def wallet_node(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
+    async def two_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def three_nodes_two_wallets(self):
+    async def three_nodes_two_wallets(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(3, 2, {}):
             yield _
 
     @pytest.mark.asyncio
-    async def test_wallet_coinbase(self, wallet_node):
+    async def test_wallet_coinbase(self, wallet_node: SimulatorsAndWallets):
         num_blocks = 5
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
@@ -60,7 +60,7 @@ class TestTransactions:
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.asyncio
-    async def test_tx_propagation(self, three_nodes_two_wallets):
+    async def test_tx_propagation(self, three_nodes_two_wallets: SimulatorsAndWallets):
         num_blocks = 5
         full_nodes, wallets = three_nodes_two_wallets
 
@@ -142,7 +142,7 @@ class TestTransactions:
         await time_out_assert(15, wallet_1.wallet_state_manager.main_wallet.get_confirmed_balance, 10)
 
     @pytest.mark.asyncio
-    async def test_mempool_tx_sync(self, three_nodes_two_wallets):
+    async def test_mempool_tx_sync(self, three_nodes_two_wallets: SimulatorsAndWallets):
         num_blocks = 5
         full_nodes, wallets = three_nodes_two_wallets
 
