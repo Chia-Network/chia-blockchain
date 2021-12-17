@@ -637,14 +637,12 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_address_sliding_window(self, wallet_node_100_pk):
-        num_blocks = 10
         full_nodes, wallets = wallet_node_100_pk
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
 
         wallet = wallet_node.wallet_state_manager.main_wallet
-        ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
