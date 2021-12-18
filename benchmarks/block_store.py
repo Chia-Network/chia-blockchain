@@ -50,7 +50,7 @@ with open("clvm_generator.bin", "rb") as f:
     clvm_generator = f.read()
 
 
-async def run_add_block_benchmark(version: int):
+async def run_add_block_benchmark(version: int) -> None:
 
     verbose: bool = "--verbose" in sys.argv
     db_wrapper: DBWrapper = await setup_db("block-store-benchmark.db", version)

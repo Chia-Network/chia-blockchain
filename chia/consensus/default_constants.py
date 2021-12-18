@@ -1,6 +1,8 @@
 from chia.util.ints import uint64
 
-from .constants import ConsensusConstants
+import chia.consensus.constants
+
+ConsensusConstants = chia.consensus.constants.ConsensusConstants
 
 testnet_kwargs = {
     "SLOT_BLOCKS_TARGET": 32,

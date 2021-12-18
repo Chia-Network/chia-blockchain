@@ -23,7 +23,7 @@ def rewards(height: uint32) -> Tuple[Coin, Coin]:
     return farmer_coin, pool_coin
 
 
-def rand_bytes(num) -> bytes:
+def rand_bytes(num: int) -> bytes:
     ret = bytearray(num)
     for i in range(num):
         ret[i] = random.getrandbits(8)
@@ -54,7 +54,7 @@ async def setup_db(name: str, db_version: int) -> DBWrapper:
         pass
     connection = await aiosqlite.connect(db_filename)
 
-    def sql_trace_callback(req: str):
+    def sql_trace_callback(req: str) -> None:
         sql_log_path = "sql.log"
         timestamp = datetime.now().strftime("%H:%M:%S.%f")
         log = open(sql_log_path, "a")

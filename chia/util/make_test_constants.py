@@ -1,6 +1,10 @@
 from typing import Dict
 
-from chia.consensus.default_constants import DEFAULT_CONSTANTS, ConsensusConstants
+import chia.consensus.default_constants
+
+
+DEFAULT_CONSTANTS = chia.consensus.default_constants.DEFAULT_CONSTANTS
+ConsensusConstants = chia.consensus.default_constants.ConsensusConstants
 
 
 def make_test_constants(test_constants_overrides: Dict) -> ConsensusConstants:
