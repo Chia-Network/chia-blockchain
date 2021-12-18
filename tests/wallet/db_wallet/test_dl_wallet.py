@@ -1,6 +1,8 @@
 import asyncio
 import pytest
 import time
+from typing import AsyncIterator, Iterator
+
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
@@ -15,50 +17,52 @@ from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 
+from tests.setup_nodes import SimulatorsAndWallets
 
 pytestmark = pytest.mark.data_layer
 
 
 @pytest.fixture(scope="module")
-def event_loop():
+def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
     loop = asyncio.get_event_loop()
     yield loop
 
 
 class TestDLWallet:
     @pytest.fixture(scope="function")
-    async def wallet_node(self):
+    async def wallet_node(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
+    async def two_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
+    async def three_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 3, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes_five_freeze(self):
+    async def two_wallet_nodes_five_freeze(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def three_sim_two_wallets(self):
+    async def three_sim_two_wallets(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(3, 2, {}):
             yield _
 
     @pytest.mark.asyncio
-    async def test_update_coin(self, three_wallet_nodes):
+    async def test_update_coin(self, three_wallet_nodes: SimulatorsAndWallets) -> None:
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
         wallet_node_1, server_1 = wallets[1]
         wallet_node_2, server_2 = wallets[2]
+        assert wallet_node_0.wallet_state_manager is not None
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
 
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
@@ -74,6 +78,7 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
+        assert wallet_node_0.wallet_state_manager is not None
         # Wallet1 sets up DLWallet1 without any backup set
         async with wallet_node_0.wallet_state_manager.lock:
             creation_record = await DataLayerWallet.create_new_dl_wallet(
@@ -98,8 +103,11 @@ class TestDLWallet:
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
 
         assert dl_wallet_0.dl_info.root_hash == new_merkle_tree.calculate_root()
-        coins = await dl_wallet_0.select_coins(1)
+        coins = await dl_wallet_0.select_coins(uint64(1))
+        assert coins is not None
         coin = coins.pop()
+        assert dl_wallet_0.dl_info.current_inner_inner is not None
+        assert dl_wallet_0.dl_info.origin_coin is not None
         assert (
             coin.puzzle_hash
             == create_host_fullpuz(
@@ -110,13 +118,16 @@ class TestDLWallet:
         )
 
     @pytest.mark.asyncio
-    async def test_announce_coin(self, three_wallet_nodes) -> None:
+    async def test_announce_coin(self, three_wallet_nodes: SimulatorsAndWallets) -> None:
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
         wallet_node_1, server_1 = wallets[1]
         wallet_node_2, server_2 = wallets[2]
+        assert wallet_node_0.wallet_state_manager is not None
+        assert wallet_node_1.wallet_state_manager is not None
+        assert wallet_node_2.wallet_state_manager is not None
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
@@ -153,7 +164,7 @@ class TestDLWallet:
         sb = await dl_wallet_0.create_report_spend()
         ann = Announcement(sb.coin_spends[0].coin.puzzle_hash, current_root)
         announcements = {ann.name()}
-        tr = await wallet_1.generate_signed_transaction(200, ph2, puzzle_announcements_to_consume=announcements)
+        tr = await wallet_1.generate_signed_transaction(uint64(200), ph2, puzzle_announcements_to_consume=announcements)
         sb = SpendBundle.aggregate([tr.spend_bundle, sb])
         tr = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -179,8 +190,8 @@ class TestDLWallet:
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 200)
 
     @pytest.mark.asyncio
-    async def test_dlo_wallet(self, three_wallet_nodes) -> None:
-        time_lock = 10
+    async def test_dlo_wallet(self, three_wallet_nodes: SimulatorsAndWallets) -> None:
+        time_lock = uint64(10)
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_api.time_per_block = 2 * time_lock
@@ -188,6 +199,9 @@ class TestDLWallet:
         wallet_node_0, server_0 = wallets[0]
         wallet_node_1, server_1 = wallets[1]
         wallet_node_2, server_2 = wallets[2]
+        assert wallet_node_0.wallet_state_manager is not None
+        assert wallet_node_1.wallet_state_manager is not None
+        assert wallet_node_2.wallet_state_manager is not None
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
@@ -291,8 +305,8 @@ class TestDLWallet:
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 201)
 
     @pytest.mark.asyncio
-    async def test_dlo_wallet_reclaim(self, three_wallet_nodes) -> None:
-        time_lock = 10
+    async def test_dlo_wallet_reclaim(self, three_wallet_nodes: SimulatorsAndWallets) -> None:
+        time_lock = uint64(10)
 
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -301,6 +315,9 @@ class TestDLWallet:
         wallet_node_0, server_0 = wallets[0]
         wallet_node_1, server_1 = wallets[1]
         wallet_node_2, server_2 = wallets[2]
+        assert wallet_node_0.wallet_state_manager is not None
+        assert wallet_node_1.wallet_state_manager is not None
+        assert wallet_node_2.wallet_state_manager is not None
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
