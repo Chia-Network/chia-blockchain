@@ -3,6 +3,8 @@ import time
 from typing import Dict, List, Optional
 from clvm_rs import STRICT_MODE as MEMPOOL_MODE
 
+from clvm.casts import int_from_bytes
+
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.generator import create_generator_args, setup_generator_args
 from chia.types.blockchain_format.program import NIL
@@ -10,7 +12,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
 from chia.types.name_puzzle_condition import NPC
-from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint16

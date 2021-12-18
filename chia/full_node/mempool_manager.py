@@ -8,6 +8,8 @@ from typing import Dict, List, Optional, Set, Tuple
 from blspy import G1Element, GTElement
 from chiabip158 import PyBIP158
 
+from clvm.casts import int_from_bytes
+
 from chia.util import cached_bls
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
@@ -27,7 +29,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.cached_bls import LOCAL_CACHE
-from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import additions_for_npc

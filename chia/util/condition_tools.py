@@ -1,5 +1,7 @@
 from typing import Dict, List, Optional, Tuple, Set
 
+from clvm.casts import int_from_bytes
+
 from chia.types.announcement import Announcement
 from chia.types.name_puzzle_condition import NPC
 from chia.types.blockchain_format.coin import Coin
@@ -7,7 +9,6 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.clvm import int_from_bytes
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
 
