@@ -90,10 +90,10 @@ class DLOWallet:
         if self.dlo_info.leaf_reveal is not None:
             return create_offer_fullpuz(
                 self.dlo_info.leaf_reveal,
-                self.dlo_info.host_genesis_id,
-                self.dlo_info.claim_target,
-                self.dlo_info.recovery_target,
-                self.dlo_info.recovery_timelock,
+                self.dlo_info.host_genesis_id,  # type: ignore[arg-type]
+                self.dlo_info.claim_target,  # type: ignore[arg-type]
+                self.dlo_info.recovery_target,  # type: ignore[arg-type]
+                self.dlo_info.recovery_timelock,  # type: ignore[arg-type]
             )
         return Program.to(pubkey)  # type: ignore[no-any-return]
 
@@ -199,7 +199,7 @@ class DLOWallet:
             recovery_target = self.dlo_info.recovery_target
             recovery_timelock = self.dlo_info.recovery_timelock
         full_puzzle: Program = create_offer_fullpuz(
-            leaf_reveal, host_genesis_id, claim_target, recovery_target, recovery_timelock
+            leaf_reveal, host_genesis_id, claim_target, recovery_target, recovery_timelock  # type: ignore[arg-type]
         )
         coin_spend = CoinSpend(coin, full_puzzle, solution)
         sb = SpendBundle([coin_spend], AugSchemeMPL.aggregate([]))
