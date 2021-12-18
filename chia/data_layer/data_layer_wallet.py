@@ -264,7 +264,7 @@ class DataLayerWallet:
         )
         future_parent = LineageProof(
             my_coin.name(),
-            create_host_layer_puzzle(self.dl_info.current_inner_inner, self.dl_info.root_hash).get_tree_hash(),  # type: ignore[arg-type]
+            create_host_layer_puzzle(self.dl_info.current_inner_inner, self.dl_info.root_hash).get_tree_hash(),  # type: ignore[arg-type]  # noqa: E501
             my_coin.amount,
         )
         await self.add_parent(my_coin.name(), future_parent, False)
@@ -334,7 +334,7 @@ class DataLayerWallet:
         )
         future_parent = LineageProof(
             my_coin.name(),
-            create_host_layer_puzzle(self.dl_info.current_inner_inner, self.dl_info.root_hash).get_tree_hash(),  # type: ignore[arg-type]
+            create_host_layer_puzzle(self.dl_info.current_inner_inner, self.dl_info.root_hash).get_tree_hash(),  # type: ignore[arg-type]  # noqa: E501
             my_coin.amount,
         )
         await self.add_parent(my_coin.name(), future_parent, False)
