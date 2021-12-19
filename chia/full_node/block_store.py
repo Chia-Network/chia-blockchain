@@ -493,8 +493,6 @@ class BlockStore:
             ) as cursor:
                 rows = await cursor.fetchall()
 
-            heights = []
-            for row in rows:
-                heights.append(int(row[0]))
+        heights = [int(row[0]) for row in rows]
 
         return heights
