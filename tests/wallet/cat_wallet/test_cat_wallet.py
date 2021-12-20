@@ -157,7 +157,9 @@ class TestCATWallet:
         assert cat_wallet.cat_info.limitations_program_hash is not None
         asset_id = cat_wallet.get_asset_id()
 
-        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(wallet_node_2.wallet_state_manager, wallet2, asset_id)
+        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
+            wallet_node_2.wallet_state_manager, wallet2, asset_id
+        )
 
         assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
@@ -304,7 +306,9 @@ class TestCATWallet:
         assert cat_wallet.cat_info.limitations_program_hash is not None
         asset_id = cat_wallet.get_asset_id()
 
-        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(wallet_node_2.wallet_state_manager, wallet2, asset_id)
+        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
+            wallet_node_2.wallet_state_manager, wallet2, asset_id
+        )
 
         assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
@@ -567,7 +571,9 @@ class TestCATWallet:
             spendable_name_set = set()
             for record in spendable:
                 spendable_name_set.add(record.coin.name())
-            puzzle_hash = construct_cat_puzzle(CAT_MOD, cat_wallet.cat_info.limitations_program_hash, cat_2).get_tree_hash()
+            puzzle_hash = construct_cat_puzzle(
+                CAT_MOD, cat_wallet.cat_info.limitations_program_hash, cat_2
+            ).get_tree_hash()
             for i in range(1, 50):
                 coin = Coin(spent_coint.name(), puzzle_hash, i)
                 if coin.name() not in spendable_name_set:
