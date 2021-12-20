@@ -36,10 +36,11 @@ def validate_additions(
         for i in range(len(coins)):
             assert coins[i][0] == proofs[i][0]
             coin_list_1: List[Coin] = coins[i][1]
-            puzzle_hash_proof: bytes32 = bytes32(proofs[i][1])
-            coin_list_proof: bytes32 = bytes32(proofs[i][2])
+            puzzle_hash_proof: Optional[bytes] = proofs[i][1]
+            coin_list_proof: Optional[bytes] = proofs[i][2]
             if len(coin_list_1) == 0:
                 # Verify exclusion proof for puzzle hash
+                assert puzzle_hash_proof is not None
                 not_included = confirm_not_included_already_hashed(
                     root,
                     coins[i][0],
@@ -50,6 +51,7 @@ def validate_additions(
             else:
                 try:
                     # Verify inclusion proof for coin list
+                    assert coin_list_proof is not None
                     included = confirm_included_already_hashed(
                         root,
                         hash_coin_list(coin_list_1),
@@ -61,6 +63,7 @@ def validate_additions(
                     return False
                 try:
                     # Verify inclusion proof for puzzle hash
+                    assert puzzle_hash_proof is not None
                     included = confirm_included_already_hashed(
                         root,
                         coins[i][0],
