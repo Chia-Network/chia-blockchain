@@ -199,6 +199,13 @@ class MempoolManager:
         # 0.00001 XCH
         return 10000000
 
+    ###
+    # There used to be logic in this function that banned replacements if the new item wasn't a superset of the old item
+    # That logic was removed because when spendbundles are distributed outside of the mempool there's a possible
+    # minor attack in which someone could push your spend bundle with an additional coin of their own and a
+    # low or zero fee.  This would mean you can never replace-by-fee your own coins because you can never spend a
+    # superset and your coins would remain locked until the low fee transaction goes through.
+    ###
     def can_replace(
         self,
         conflicting_items: Dict[bytes32, MempoolItem],
