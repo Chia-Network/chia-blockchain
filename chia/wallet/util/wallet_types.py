@@ -1,4 +1,5 @@
 from enum import IntEnum
+from typing import List
 
 from typing_extensions import TypedDict
 
@@ -23,3 +24,4 @@ class WalletType(IntEnum):
 class AmountWithPuzzlehash(TypedDict):
     amount: uint64
     puzzlehash: bytes32
+    memos: List[bytes]

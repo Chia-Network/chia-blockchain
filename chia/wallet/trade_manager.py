@@ -213,7 +213,7 @@ class TradeManager:
         await self.trade_store.add_trade_record(trade, False)
 
     async def create_offer_for_ids(
-        self, offer: Dict[int, int], fee: uint64 = uint64(0), validate_only: bool = False
+        self, offer: Dict[Union[int, bytes32], int], fee: uint64 = uint64(0), validate_only: bool = False
     ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         success, created_offer, error = await self._create_offer_for_ids(offer, fee=fee)
         if not success or created_offer is None:
@@ -258,7 +258,7 @@ class TradeManager:
                             key: Optional[bytes32] = None
                             memos: Optional[List[Optional[bytes]]] = None
                         elif wallet.type() == WalletType.CAT:
-                            key = bytes32(bytes.fromhex(wallet.get_asset_id()))
+                            key = bytes32(bytes.fromhex(wallet.get_colour()))
                             memos = [p2_ph]
                         else:
                             raise ValueError(f"Offers are not implemented for {wallet.type()}")
@@ -268,6 +268,7 @@ class TradeManager:
                         memos = [p2_ph]
                     requested_payments[key] = [Payment(p2_ph, uint64(amount), memos)]
                 elif amount < 0:
+                    assert isinstance(id, int)
                     wallet_id = uint32(id)
                     wallet = self.wallet_state_manager.wallets[wallet_id]
                     balance = await wallet.get_confirmed_balance()
@@ -327,7 +328,7 @@ class TradeManager:
             wallet: Wallet = wsm.main_wallet
             if key is None:
                 continue
-            exists: Optional[Wallet] = await wsm.get_wallet_for_asset_id(key.hex())
+            exists: Optional[Wallet] = await wsm.get_wallet_for_colour(key.hex())
             if exists is None:
                 self.log.info(f"Creating wallet for asset ID: {key}")
                 await CATWallet.create_wallet_for_cat(wsm, wallet, key.hex())
@@ -343,14 +344,14 @@ class TradeManager:
         return not any([cs.spent_height is not None for cs in coin_states])
 
     async def respond_to_offer(self, offer: Offer, fee=uint64(0)) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        take_offer_dict: Dict[int, int] = {}
+        take_offer_dict: Dict[Union[bytes32, int], int] = {}
         arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
         for asset_id, amount in arbitrage.items():
             if asset_id is None:
                 wallet = self.wallet_state_manager.main_wallet
-                key = int(wallet.id())
+                key: Union[bytes32, int] = int(wallet.id())
             else:
-                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+                wallet = await self.wallet_state_manager.get_wallet_for_colour(asset_id.hex())
                 if wallet is None and amount < 0:
                     return False, None, f"Do not have a CAT of asset ID: {asset_id} to fulfill offer"
                 elif wallet is None:

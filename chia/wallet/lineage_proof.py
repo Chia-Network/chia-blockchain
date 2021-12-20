@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Any, List
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
@@ -15,7 +15,7 @@ class LineageProof(Streamable):
     amount: Optional[uint64] = None
 
     def to_program(self) -> Program:
-        final_list = []
+        final_list: List[Any] = []
         if self.parent_name is not None:
             final_list.append(self.parent_name)
         if self.inner_puzzle_hash is not None:

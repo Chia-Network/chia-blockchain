@@ -198,7 +198,7 @@ class Wallet:
 
     def make_solution(
         self,
-        primaries: Optional[List[AmountWithPuzzlehash]] = None,
+        primaries: List[AmountWithPuzzlehash] = None,
         min_time=0,
         me=None,
         coin_announcements: Optional[Set[bytes32]] = None,
@@ -340,11 +340,12 @@ class Wallet:
             change = max(0, change)
 
         assert change >= 0
-
+        coin_announcements_names = None
+        puzzle_announcements_names = None
         if coin_announcements_to_consume is not None:
-            coin_announcements_to_consume = {a.name() for a in coin_announcements_to_consume}
+            coin_announcements_names = {a.name() for a in coin_announcements_to_consume}
         if puzzle_announcements_to_consume is not None:
-            puzzle_announcements_to_consume = {a.name() for a in puzzle_announcements_to_consume}
+            puzzle_announcements_names = {a.name() for a in puzzle_announcements_to_consume}
 
         spends: List[CoinSpend] = []
         primary_announcement_hash: Optional[bytes32] = None
@@ -354,13 +355,15 @@ class Wallet:
             all_primaries_list = [(p["puzzlehash"], p["amount"]) for p in primaries] + [(newpuzzlehash, amount)]
             if len(set(all_primaries_list)) != len(all_primaries_list):
                 raise ValueError("Cannot create two identical coins")
-
+        if memos is None:
+            memos = []
         for coin in coins:
             self.log.info(f"coin from coins: {coin.name()} {coin}")
             puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             # Only one coin creates outputs
             if primary_announcement_hash is None and origin_id in (None, coin.name()):
                 if primaries is None:
+
                     if amount > 0:
                         primaries = [{"puzzlehash": newpuzzlehash, "amount": amount, "memos": memos}]
                     else:
@@ -369,7 +372,7 @@ class Wallet:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": amount, "memos": memos})
                 if change > 0:
                     change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
-                    primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change)})
+                    primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change), "memos": []})
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
@@ -378,11 +381,12 @@ class Wallet:
                     primaries=primaries,
                     fee=fee,
                     coin_announcements={message},
-                    coin_announcements_to_assert=coin_announcements_to_consume,
-                    puzzle_announcements_to_assert=puzzle_announcements_to_consume,
+                    coin_announcements_to_assert=coin_announcements_names,
+                    puzzle_announcements_to_assert=puzzle_announcements_names,
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
+                assert primary_announcement_hash is not None
                 solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})
 
             spends.append(
@@ -509,7 +513,9 @@ class Wallet:
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             if output_created is None:
                 newpuzhash = await self.get_new_puzzlehash()
-                primaries: List[AmountWithPuzzlehash] = [{"puzzlehash": newpuzhash, "amount": uint64(chia_amount)}]
+                primaries: List[AmountWithPuzzlehash] = [
+                    {"puzzlehash": newpuzhash, "amount": uint64(chia_amount), "memos": []}
+                ]
                 solution = self.make_solution(primaries=primaries)
                 output_created = coin
             list_of_solutions.append(CoinSpend(coin, puzzle, solution))

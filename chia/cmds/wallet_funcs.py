@@ -119,7 +119,7 @@ async def delete_unconfirmed_transactions(args: dict, wallet_client: WalletRpcCl
 
 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
-    if typ == WalletType.COLOURED_COIN:
+    if typ == WalletType.CAT:
         return "", units["colouredcoin"]
     if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG, WalletType.RATE_LIMITED]:
         return address_prefix, units["chia"]

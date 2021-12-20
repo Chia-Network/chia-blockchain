@@ -15,7 +15,7 @@ class Announcement:
         if self.morph_bytes is not None:
             message = std_hash(self.morph_bytes + self.message)
         else:
-            message = self.message
+            message = bytes32(self.message)
         return std_hash(bytes(self.origin_info + message))
 
     def __str__(self):
