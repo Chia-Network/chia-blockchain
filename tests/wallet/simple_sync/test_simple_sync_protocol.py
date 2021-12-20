@@ -4,7 +4,7 @@ from typing import List, Optional
 
 import pytest
 from clvm.casts import int_to_bytes
-from colorlog import logging
+from colorlog import getLogger
 
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from chia.protocols import wallet_protocol, full_node_protocol
@@ -36,7 +36,7 @@ def wallet_height_at_least(wallet_node, h):
     return False
 
 
-log = logging.getLogger(__name__)
+log = getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
