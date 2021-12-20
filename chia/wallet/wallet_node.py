@@ -419,9 +419,8 @@ class WalletNode:
 
         all_coins: Set[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_coins_to_check(request_height)
         all_coin_names: List[bytes32] = [coin_record.name() for coin_record in all_coins]
-        removed_dict, added_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+        removed_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
         all_coin_names.extend(removed_dict.keys())
-        all_coin_names.extend(added_dict.keys())
 
         one_k_chunks = chunks(all_coin_names, 1000)
         for chunk in one_k_chunks:
@@ -797,7 +796,6 @@ class WalletNode:
         if self.wallet_state_manager is None:
             return None
         all_outgoing_per_wallet: Dict[int, List[TransactionRecord]] = {}
-        trade_removals, trade_additions = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
 
         for block in header_blocks:
             if block.is_transaction_block:
@@ -826,11 +824,11 @@ class WalletNode:
                         all_outgoing = all_outgoing_per_wallet[wallet_id]
                     else:
                         all_outgoing = await self.wallet_state_manager.tx_store.get_all_transactions_for_wallet(
-                            wallet_id, TransactionType.OUTGOING_TX
+                            wallet_id
                         )
                         all_outgoing_per_wallet[wallet_id] = all_outgoing
                     await self.wallet_state_manager.coin_added(
-                        added_coin, block.height, all_outgoing, wallet_id, wallet_type, trade_additions
+                        added_coin, block.height, all_outgoing, wallet_id, wallet_type
                     )
 
                 all_unconfirmed: List[
@@ -838,9 +836,17 @@ class WalletNode:
                 ] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
 
                 all_removed_coins = None
+                trade_removals = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+
                 for removed_coin in removed_coins:
+                    self.log.info(f"coin removed {removed_coin}")
+                    if removed_coin.name() in trade_removals:
+                        await self.wallet_state_manager.trade_manager.coins_of_interest_farmed(
+                            CoinState(removed_coin, block.height, None)  # `None` is a lie but it shouldn't matter
+                        )
                     for unconfirmed_record in all_unconfirmed:
                         if removed_coin in unconfirmed_record.removals:
+                            self.log.info(f"Setting tx_id: {unconfirmed_record.name} to confirmed")
                             await self.wallet_state_manager.tx_store.set_confirmed(
                                 unconfirmed_record.name, block.height
                             )
@@ -863,7 +869,6 @@ class WalletNode:
                                 [],
                                 uint32(removed_record.wallet_id),
                                 removed_record.wallet_type,
-                                [],
                             )
                             pool_wallet = self.wallet_state_manager.wallets[removed_record.wallet_id]
                             await pool_wallet.apply_state_transitions([pool_spend], block.height)
@@ -877,7 +882,6 @@ class WalletNode:
                                         [],
                                         uint32(removed_record.wallet_id),
                                         removed_record.wallet_type,
-                                        [],
                                     )
                                     pool_wallet = self.wallet_state_manager.wallets[removed_record.wallet_id]
                                     await pool_wallet.apply_state_transitions([pool_spend_2], block.height)
@@ -912,7 +916,6 @@ class WalletNode:
                             [],
                             uint32(pool_wallet.wallet_id),
                             WalletType(pool_wallet.type()),
-                            [],
                         )
 
         await self.update_ui()
@@ -1124,9 +1127,8 @@ class WalletNode:
             # Get state for coins ids
             all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(uint32(0))
             all_coin_names = [coin_record.name() for coin_record in all_coins]
-            removed_dict, added_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+            removed_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
             all_coin_names.extend(removed_dict.keys())
-            all_coin_names.extend(added_dict.keys())
 
             to_check: List[bytes32] = []
             for coin_name in all_coin_names:
