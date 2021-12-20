@@ -10,7 +10,7 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 def cost_of_spend_bundle(spend_bundle: SpendBundle) -> int:
     program: BlockGenerator = simple_solution_generator(spend_bundle)
     npc_result: NPCResult = get_name_puzzle_conditions(
-        program, INFINITE_COST, cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE, safe_mode=True
+        program, INFINITE_COST, cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE, mempool_mode=True
     )
     cost: int = calculate_cost_of_program(program.program, npc_result, DEFAULT_CONSTANTS.COST_PER_BYTE)
     return cost

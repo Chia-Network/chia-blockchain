@@ -102,7 +102,7 @@ class TestOfferLifecycle:
         await sim.farm_block()
 
         # Search for all of the coins and put them into a dictionary
-        coin_dict: Dict[Optional[bytes32], List[Coin]] = {}
+        coin_dict: Dict[Optional[str], List[Coin]] = {}
         for tail_str, _ in requested_coins.items():
             if tail_str:
                 tail_hash: bytes32 = str_to_tail_hash(tail_str)
