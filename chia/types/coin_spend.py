@@ -39,7 +39,7 @@ class CoinSpend(Streamable):
         generator = simple_solution_generator(bundle)
 
         npc_result = get_name_puzzle_conditions(
-            generator, INFINITE_COST, cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE, safe_mode=False
+            generator, INFINITE_COST, cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE, mempool_mode=False
         )
         h_list = []
         for npc in npc_result.npc_list:
