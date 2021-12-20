@@ -248,7 +248,7 @@ class CATWallet:
                 program,
                 self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
-                safe_mode=True,
+                mempool_mode=True,
             )
             cost_result: uint64 = calculate_cost_of_program(
                 program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
