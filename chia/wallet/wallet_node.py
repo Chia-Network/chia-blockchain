@@ -325,7 +325,7 @@ class WalletNode:
             already_sent = set()
             for peer, status, _ in record.sent_to:
                 if status == MempoolInclusionStatus.SUCCESS.value:
-                    already_sent.add(hexstr_to_bytes(peer))
+                    already_sent.add(bytes32(hexstr_to_bytes(peer)))
             messages.append((msg, already_sent))
 
         return messages
@@ -857,7 +857,7 @@ class WalletNode:
                     await self.wallet_state_manager.coin_store.set_spent(removed_coin.name(), block.height)
                     removed_record = await self.wallet_state_manager.coin_store.get_coin_record(removed_coin.name())
 
-                    if removed_record.wallet_type == WalletType.POOLING_WALLET:
+                    if removed_record is not None and removed_record.wallet_type == WalletType.POOLING_WALLET:
                         if all_removed_coins is None:
                             all_removed_coins = await self.get_removals(peer, block, added_coins, removals, True)
                         pool_spend = await self.fetch_puzzle_solution(peer, block.height, removed_coin)
@@ -870,8 +870,9 @@ class WalletNode:
                                 uint32(removed_record.wallet_id),
                                 removed_record.wallet_type,
                             )
-                            pool_wallet = self.wallet_state_manager.wallets[removed_record.wallet_id]
+                            pool_wallet = self.wallet_state_manager.wallets[uint32(removed_record.wallet_id)]
                             await pool_wallet.apply_state_transitions([pool_spend], block.height)
+                            assert all_removed_coins is not None
                             if pool_added_coin in all_removed_coins:
                                 pool_spend_2 = await self.fetch_puzzle_solution(peer, block.height, pool_added_coin)
                                 if len(pool_spend_2.additions()) > 0:
@@ -883,7 +884,7 @@ class WalletNode:
                                         uint32(removed_record.wallet_id),
                                         removed_record.wallet_type,
                                     )
-                                    pool_wallet = self.wallet_state_manager.wallets[removed_record.wallet_id]
+                                    pool_wallet = self.wallet_state_manager.wallets[uint32(removed_record.wallet_id)]
                                     await pool_wallet.apply_state_transitions([pool_spend_2], block.height)
 
                     # Check if we have created a pool wallet
@@ -899,6 +900,7 @@ class WalletNode:
                         except Exception as e:
                             self.log.debug(f"Not a pool wallet launcher {e}")
                             continue
+                        assert child.spent_height is not None
                         pool_wallet = await PoolWallet.create(
                             self.wallet_state_manager,
                             self.wallet_state_manager.main_wallet,
@@ -1046,6 +1048,7 @@ class WalletNode:
         return valid, weight_proof, summaries, block_records
 
     async def get_puzzle_hashes_to_subscribe(self) -> List[bytes32]:
+        assert self.wallet_state_manager is not None
         all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
         # Get all phs from interested store
         interested_puzzle_hashes = [
@@ -1143,6 +1146,7 @@ class WalletNode:
             msg1 = wallet_protocol.RegisterForCoinUpdates(to_check, uint32(0))
             new_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg1)
 
+            assert new_state is not None
             if syncing:
                 # If syncing, completely change over to this peer's information
                 coin_state_before_fork: List[CoinState] = new_state.coin_states

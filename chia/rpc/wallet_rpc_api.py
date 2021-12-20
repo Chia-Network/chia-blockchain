@@ -529,7 +529,7 @@ class WalletRpcApi:
                     try:
                         delayed_address = None
                         if "p2_singleton_delayed_ph" in request:
-                            delayed_address = hexstr_to_bytes(request["p2_singleton_delayed_ph"])
+                            delayed_address = bytes32(hexstr_to_bytes(request["p2_singleton_delayed_ph"]))
                         tr, p2_singleton_puzzle_hash, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
                             wallet_state_manager,
                             main_wallet,
