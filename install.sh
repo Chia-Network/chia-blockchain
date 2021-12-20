@@ -28,7 +28,7 @@ UBUNTU=false
 DEBIAN=false
 if [ "$(uname)" = "Linux" ]; then
 	#LINUX=1
-	if type apt-get; then
+	if command -v apt-get &> /dev/null; then
 		OS_ID=$(lsb_release -is)
 		if [ "$OS_ID" = "Debian" ]; then
 			DEBIAN=true
@@ -55,7 +55,9 @@ UBUNTU_PRE_2004=false
 if $UBUNTU; then
 	LSB_RELEASE=$(lsb_release -rs)
 	# In case Ubuntu minimal does not come with bc
-	if [ "$(which bc |wc -l)" -eq 0 ]; then sudo apt install bc -y; fi
+	if ! command -v bc &> /dev/null; then
+		sudo apt install bc -y
+	fi
 	# Mint 20.04 repsonds with 20 here so 20 instead of 20.04
 	UBUNTU_PRE_2004=$(echo "$LSB_RELEASE<20" | bc)
 	UBUNTU_2100=$(echo "$LSB_RELEASE>=21" | bc)
@@ -80,15 +82,30 @@ if [ "$(uname)" = "Linux" ]; then
 	elif [ "$DEBIAN" = "true" ]; then
 		echo "Installing on Debian."
 		sudo apt-get update
-		sudo apt-get install -y python3-venv
+		sudo apt-get install -y python3-venv=3.9*
 	elif type pacman && [ -f "/etc/arch-release" ]; then
 		# Arch Linux
 		echo "Installing on Arch Linux."
-		sudo pacman -S --needed python git
+		echo "Python <= 3.9.9 is required. Installing python-3.9.9-1"
+		case $(uname -m) in
+			x86_64)
+				sudo pacman -U --needed https://archive.archlinux.org/packages/p/python/python-3.9.9-1-x86_64.pkg.tar.zst
+				;;
+			aarch64)
+				sudo pacman -U --needed http://tardis.tiny-vps.com/aarm/packages/p/python/python-3.9.9-1-aarch64.pkg.tar.xz
+				;;
+			*)
+				echo "Incompatible CPU architecture. Must be x86_64 or aarch64."
+				exit 1
+				;;
+			esac
+		sudo pacman -S --needed git
 	elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
 		# AMZN 2
 		echo "Installing on Amazon Linux 2."
-		sudo yum install -y python3 git
+		AMZN2_PY_LATEST=$(yum --showduplicates list python3 | expand | grep -P '(?!.*3.10.*)x86_64|(?!.*3.10.*)aarch64' | tail -n 1 | awk '{print $2}')
+		AMZN2_ARCH=$(uname -m)
+		sudo yum install -y python3-"$AMZN2_PY_LATEST"."$AMZN2_ARCH" git
 	elif type yum && [ -f "/etc/redhat-release" ] || [ -f "/etc/centos-release" ] || [ -f "/etc/fedora-release" ]; then
 		# CentOS or Redhat or Fedora
 		echo "Installing on CentOS/Redhat/Fedora."
@@ -107,9 +124,17 @@ find_python() {
 	set +e
 	unset BEST_VERSION
 	for V in 39 3.9 38 3.8 37 3.7 3; do
-		if which python$V >/dev/null; then
+		if command -v python$V >/dev/null; then
 			if [ "$BEST_VERSION" = "" ]; then
 				BEST_VERSION=$V
+				if [ "$BEST_VERSION" = "3" ]; then
+					PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
+					if [[ "$PY3_VERSION" =~ 3.10.* ]]; then
+						echo "Chia requires Python version <= 3.9.9"
+						echo "Current Python version = $PY3_VERSION"
+						exit 1
+					fi
+				fi
 			fi
 		fi
 	done
