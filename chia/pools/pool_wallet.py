@@ -273,9 +273,7 @@ class PoolWallet:
         """
         coin_name_to_spend: Dict[bytes32, CoinSpend] = {cs.coin.name(): cs for cs in block_spends}
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
-        tip_height = tip[0]
         tip_spend = tip[1]
-        assert block_height >= tip_height  # We should not have a spend with a lesser block height
 
         while True:
             tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
@@ -312,11 +310,6 @@ class PoolWallet:
             await self.wallet_state_manager.pool_store.rollback(block_height, self.wallet_id)
 
             if len(history) > 0 and history[0][0] > block_height:
-                # If we have no entries in the DB, we have no singleton, so we should not have a wallet either
-                # The PoolWallet object becomes invalid after this.
-                await self.wallet_state_manager.interested_store.remove_interested_puzzle_hash(
-                    prev_state.p2_singleton_puzzle_hash, in_transaction=True
-                )
                 return True
             else:
                 if await self.get_current_state() != prev_state:
@@ -361,10 +354,7 @@ class PoolWallet:
         await self.update_pool_config(True)
 
         p2_puzzle_hash: bytes32 = (await self.get_current_state()).p2_singleton_puzzle_hash
-        await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
-            p2_puzzle_hash, self.wallet_id, False
-        )
-
+        await self.wallet_state_manager.add_interested_puzzle_hash(p2_puzzle_hash, self.wallet_id, False)
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, create_puzzle_hashes=False)
         return self
 
