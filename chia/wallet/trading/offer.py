@@ -38,7 +38,9 @@ class NotarizedPayment(Payment):
 
 @dataclass(frozen=True)
 class Offer:
-    requested_payments: Dict[bytes32, List[NotarizedPayment]]  # The key is the asset id of the asset being requested
+    requested_payments: Dict[
+        Optional[bytes32], List[NotarizedPayment]
+    ]  # The key is the asset id of the asset being requested
     bundle: SpendBundle
 
     @staticmethod
@@ -71,7 +73,7 @@ class Offer:
     ) -> List[Announcement]:
         announcements: List[Announcement] = []
         for tail, payments in notarized_payments.items():
-            if tail:
+            if tail is not None:
                 settlement_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail, OFFER_MOD).get_tree_hash()
             else:
                 settlement_ph = OFFER_MOD.get_tree_hash()
@@ -105,9 +107,10 @@ class Offer:
 
             # Determine it's TAIL (or lack of)
             matched, curried_args = match_cat_puzzle(parent_puzzle)
+            tail_hash: Optional[bytes32] = None
             if matched:
                 _, tail_hash_program, _ = curried_args
-                tail_hash: Optional[bytes32] = bytes32(tail_hash_program.as_python())
+                tail_hash = bytes32(tail_hash_program.as_python())
                 offer_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD).get_tree_hash()
             else:
                 tail_hash = None
@@ -123,13 +126,13 @@ class Offer:
         return offered_coins
 
     def get_offered_amounts(self) -> Dict[Optional[bytes32], int]:
-        offered_coins: Dict[bytes32, List[Coin]] = self.get_offered_coins()
+        offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
         offered_amounts: Dict[Optional[bytes32], int] = {}
         for asset_id, coins in offered_coins.items():
             offered_amounts[asset_id] = uint64(sum([c.amount for c in coins]))
         return offered_amounts
 
-    def get_requested_payments(self) -> Dict[bytes32, List[NotarizedPayment]]:
+    def get_requested_payments(self) -> Dict[Optional[bytes32], List[NotarizedPayment]]:
         return self.requested_payments
 
     def get_requested_amounts(self) -> Dict[Optional[bytes32], int]:
@@ -266,6 +269,7 @@ class Offer:
             all_payments: List[NotarizedPayment] = payments.copy()
             if arbitrage_amount > 0:
                 assert arbitrage_amount is not None
+                assert arbitrage_ph is not None
                 all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount)))
 
             for coin in offered_coins:
@@ -345,7 +349,7 @@ class Offer:
     @classmethod
     def from_spend_bundle(cls, bundle: SpendBundle) -> "Offer":
         # Because of the `to_spend_bundle` method, we need to parse the dummy CoinSpends as `requested_payments`
-        requested_payments: Dict[bytes32, List[NotarizedPayment]] = {}
+        requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
         leftover_coin_spends: List[CoinSpend] = []
         for coin_spend in bundle.coin_spends:
             if coin_spend.coin.parent_coin_info == ZERO_32:
@@ -363,7 +367,7 @@ class Offer:
                     notarized_payments.extend(
                         [NotarizedPayment.from_condition_and_nonce(condition, nonce) for condition in payment_args_list]
                     )
-
+                assert tail_hash is not None
                 requested_payments[tail_hash] = notarized_payments
 
             else:

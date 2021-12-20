@@ -36,8 +36,8 @@ def validate_additions(
         for i in range(len(coins)):
             assert coins[i][0] == proofs[i][0]
             coin_list_1: List[Coin] = coins[i][1]
-            puzzle_hash_proof: bytes32 = proofs[i][1]
-            coin_list_proof: Optional[bytes32] = proofs[i][2]
+            puzzle_hash_proof: bytes32 = bytes32(proofs[i][1])
+            coin_list_proof: bytes32 = bytes32(proofs[i][2])
             if len(coin_list_1) == 0:
                 # Verify exclusion proof for puzzle hash
                 not_included = confirm_not_included_already_hashed(

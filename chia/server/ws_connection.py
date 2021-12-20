@@ -89,9 +89,9 @@ class WSChiaConnection:
         self.session = session
         self.close_callback = close_callback
 
-        self.pending_requests: Dict[bytes32, asyncio.Event] = {}
-        self.pending_timeouts: Dict[bytes32, asyncio.Task] = {}
-        self.request_results: Dict[bytes32, Message] = {}
+        self.pending_requests: Dict[uint16, asyncio.Event] = {}
+        self.pending_timeouts: Dict[uint16, asyncio.Task] = {}
+        self.request_results: Dict[uint16, Message] = {}
         self.closed = False
         self.connection_type: Optional[NodeType] = None
         if is_outbound:
@@ -342,7 +342,7 @@ class WSChiaConnection:
             )
 
         message = Message(message_no_id.type, request_id, message_no_id.data)
-
+        assert message.id is not None
         self.pending_requests[message.id] = event
         await self.outgoing_queue.put(message)
 
@@ -367,7 +367,7 @@ class WSChiaConnection:
             result = self.request_results[message.id]
             assert result is not None
             self.log.debug(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
-            self.request_results.pop(result.id)
+            self.request_results.pop(message.id)
 
         return result
 
