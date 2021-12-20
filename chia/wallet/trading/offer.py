@@ -410,3 +410,10 @@ class Offer:
         # Because of the __bytes__ method, we need to parse the dummy CoinSpends as `requested_payments`
         bundle = SpendBundle.from_bytes(as_bytes)
         return cls.from_spend_bundle(bundle)
+
+def try_offer_decompression(offer_bytes: bytes) -> Offer:
+    try:
+        return Offer.from_compressed(offer_bytes)
+    except TypeError:
+        pass
+    return Offer.from_bytes(offer_bytes)

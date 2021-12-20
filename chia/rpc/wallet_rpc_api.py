@@ -27,7 +27,7 @@ from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, try_offer_decompression
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -850,13 +850,7 @@ class WalletRpcApi:
     async def get_offer_summary(self, request):
         assert self.service.wallet_state_manager is not None
         offer_hex: str = request["offer"]
-        try:
-            offer_hex = bytes(Offer.from_compressed(hexstr_to_bytes(request["offer"]))).hex()
-        except CompressionVersionError:
-            raise "This offer file is incompatible with your version of software.  Upgrade your software and try again."
-        except Exception:
-            pass
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+        offer = try_offer_decompression(hexstr_to_bytes(offer_hex))
         offered, requested = offer.summary()
 
         return {"summary": {"offered": offered, "requested": requested}}
@@ -864,26 +858,14 @@ class WalletRpcApi:
     async def check_offer_validity(self, request):
         assert self.service.wallet_state_manager is not None
         offer_hex: str = request["offer"]
-        try:
-            offer_hex = bytes(Offer.from_compressed(hexstr_to_bytes(request["offer"]))).hex()
-        except CompressionVersionError:
-            raise "This offer file is incompatible with your version of software.  Upgrade your software and try again."
-        except Exception:
-            pass
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+        offer = try_offer_decompression(hexstr_to_bytes(offer_hex))
 
         return {"valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer))}
 
     async def take_offer(self, request):
         assert self.service.wallet_state_manager is not None
         offer_hex: str = request["offer"]
-        try:
-            offer_hex = bytes(Offer.from_compressed(hexstr_to_bytes(request["offer"]))).hex()
-        except CompressionVersionError:
-            raise "This offer file is incompatible with your version of software.  Upgrade your software and try again."
-        except Exception:
-            pass
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+        offer = try_offer_decompression(hexstr_to_bytes(offer_hex))
         fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:

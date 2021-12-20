@@ -1,6 +1,9 @@
+import pytest
+
 from blspy import G1Element, G2Element
 
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
 from chia.types.spend_bundle import SpendBundle
 from chia.types.coin_spend import CoinSpend
@@ -10,8 +13,8 @@ from chia.wallet.util.compressed_types import CompressedCoinSpend, CompressedSpe
 from chia.wallet.cc_wallet.cc_utils import CC_MOD, construct_cc_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 
-ZERO_32 = bytes([0] * 32)
-ONE_32 = bytes([17] * 32)
+ZERO_32 = bytes32([0] * 32)
+ONE_32 = bytes32([17] * 32)
 COIN = Coin(ZERO_32, ZERO_32, uint64(0))
 SOLUTION = Program.to([])
 
@@ -30,7 +33,7 @@ class DummyDriver:
         return Program.to([])
 
 
-class TestSingleton:
+class TestPuzzleCompression:
     def test_standard_puzzle(self):
         coin_spend = CoinSpend(
             COIN,
@@ -63,8 +66,8 @@ class TestSingleton:
             SOLUTION,
         )
         assert (
-            bytes(coin_spend.puzzle_reveal).hex()
-            in bytes(CompressedCoinSpend.compress(coin_spend).compressed_coin_spend.puzzle_reveal).hex()
+            bytes(coin_spend.puzzle_reveal)
+            in bytes(CompressedCoinSpend.compress(coin_spend).compressed_coin_spend.puzzle_reveal)
         )
 
     def test_version_override(self):
@@ -76,7 +79,8 @@ class TestSingleton:
         spend_bundle = SpendBundle([coin_spend], G2Element())
         new_version_dict = {ONE_32: DummyDriver}
         new_compressor = PuzzleCompressor(driver_dict=new_version_dict)
-        # Our custom compression is super bad so the length should actually be greater
+        # Our custom compression is doesn't actually compress
+        # so the length should actually be greater because of the length prefix
         assert len(bytes(CompressedSpendBundle.compress(spend_bundle, compressor=new_compressor))) > len(
             bytes(spend_bundle)
         )
@@ -84,8 +88,5 @@ class TestSingleton:
             compressor=new_compressor
         )
 
-        try:
+        with pytest.raises(CompressionVersionError):
             CompressedSpendBundle.compress(spend_bundle, compressor=new_compressor).decompress()
-            assert False
-        except CompressionVersionError:
-            pass

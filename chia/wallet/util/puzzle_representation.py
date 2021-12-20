@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Dict, List, Union
 
 from chia.types.blockchain_format.program import Program
@@ -5,7 +6,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 
 from chia.util.ints import uint32
 
-
+@dataclass(frozen=True)
 class PuzzleRepresentation:
     """
     This class is intended to be vehicle for compression and serialization of an arbitrary configuration of
@@ -17,10 +18,6 @@ class PuzzleRepresentation:
 
     base: bytes32
     args: List[Union["PuzzleRepresentation", Program]]
-
-    def __init__(self, base, args):
-        self.base = base
-        self.args = args
 
     def construct(self, driver_dict) -> Program:
         driver = driver_dict[self.base]
@@ -38,20 +35,20 @@ class PuzzleRepresentation:
 
     def stream(self, f):
         blob = bytes(self)
-        prefixed_blob = bytes.fromhex(bytes(uint32(len(blob))).hex() + blob.hex())
+        prefixed_blob = bytes(uint32(len(blob))) + blob
         f.write(prefixed_blob)
 
     def __bytes__(self) -> bytes:
-        total_bytes = self.base.hex()
+        total_bytes = self.base
         for arg in self.args:
             byte_output = bytes(arg)
             if type(arg) == type(self):
-                total_bytes += "00"
+                total_bytes += b"\x00"
             else:
-                total_bytes += "01"
-            total_bytes += bytes(uint32(len(byte_output))).hex()
-            total_bytes += byte_output.hex()
-        return bytes.fromhex(total_bytes)
+                total_bytes += b"\x01"
+            total_bytes += bytes(uint32(len(byte_output)))
+            total_bytes += byte_output
+        return total_bytes
 
     @classmethod
     def from_bytes(cls, as_bytes: bytes) -> "PuzzleRepresentation":

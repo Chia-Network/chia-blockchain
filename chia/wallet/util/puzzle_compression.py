@@ -1,11 +1,11 @@
-from typing import Dict, Tuple, List, Union, Any
+from typing import Dict, Tuple, List, Union, Any, Type, TypeVar
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16
 from chia.wallet.util.puzzle_representation import PuzzleRepresentation
 
-# These imports should be temporary
+# TODO: Delete these imports when the example classes are moved to other files
 from blspy import G1Element
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle as standard_puzzle
@@ -15,7 +15,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 
 """
-The following are example classes.
+The following three classes are example classes.  The actual compression is below (pretend these are imported for now).
 Ideally, all of our current driver code would be put into a puzzle driver class and registered with the PuzzleCompressor
 structure below.  They must all have three methods implemented:
 - match: Take the result of a uncurry() call and return the relevant list of args that will be put into the
@@ -47,8 +47,7 @@ class StandardPuzzle:
 
     @staticmethod
     def solve(driver_dict, args: List[Union[PuzzleRepresentation, Program]], solution_dict: Dict[str, str]) -> Program:
-        assert "hidden_reveal" in solution_dict
-        if solution_dict["hidden_reveal"]:
+        if "hidden_reveal" in solution_dict and solution_dict["hidden_reveal"]:
             assert all(arg in solution_dict for arg in ["hidden_public_key", "hidden_puzzle", "solution"])
             return standard_puzzle.solution_for_hidden_puzzle(
                 G1Element.from_bytes(hexstr_to_bytes(solution_dict["hidden_public_key"])),
@@ -131,8 +130,10 @@ LATEST_VERSION: uint16 = uint16(max(HASH_TO_DRIVER.keys()))
 
 
 class CompressionVersionError(Exception):
-    pass
+    def __init__(self, version_number: int):
+        self.message = f"The puzzle is compressed with version {version_number} and cannot be parsed. Update software and try again."
 
+_T_PuzzleCompressor = TypeVar("_T_PuzzleCompressor", bound="PuzzleCompressor")
 
 class PuzzleCompressor:
     """
@@ -169,8 +170,9 @@ class PuzzleCompressor:
         return bytes(self.version_number) + bytes(rep)
 
     def deserialize(self, object_bytes: bytes) -> Program:
-        if int.from_bytes(object_bytes[0:2], "big") > self.version_number:
-            raise CompressionVersionError()
+        parsed_version = int.from_bytes(object_bytes[0:2], "big")
+        if parsed_version > self.version_number:
+            raise CompressionVersionError(parsed_version)
         else:
             deversioned_bytes = object_bytes[2:]
             try:
@@ -180,7 +182,7 @@ class PuzzleCompressor:
             return program
 
     @classmethod
-    def get_identifier_version(cls, identifier: bytes32) -> "PuzzleCompressor":
+    def get_identifier_version(cls: Type[_T_PuzzleCompressor], identifier: bytes32) -> _T_PuzzleCompressor:
         for id, driver_dict in HASH_TO_DRIVER.items():
             if identifier in driver_dict:
                 return cls(id)
@@ -188,8 +190,8 @@ class PuzzleCompressor:
 
     @classmethod
     def lowest_compatible_version(
-        cls, matched_puzzles: List[Union[PuzzleRepresentation, Program]]
-    ) -> "PuzzleCompressor":
+        cls: Type[_T_PuzzleCompressor], matched_puzzles: List[Union[PuzzleRepresentation, Program]]
+    ) -> _T_PuzzleCompressor:
         highest_version = uint16(0)
         for puz in matched_puzzles:
             if isinstance(puz, PuzzleRepresentation):
