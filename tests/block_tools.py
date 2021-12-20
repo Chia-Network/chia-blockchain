@@ -265,7 +265,7 @@ class BlockTools:
         args.num = 1
         args.buffer = 100
         args.tmp_dir = self.temp_dir
-        args.tmp2_dir = final_dir
+        args.tmp2_dir = self.temp_dir
         args.final_dir = final_dir
         args.plotid = None
         args.memo = None
@@ -320,7 +320,7 @@ class BlockTools:
             return plot_id_new
 
         except KeyboardInterrupt:
-            shutil.rmtree(self.plot_dir, ignore_errors=True)
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
             sys.exit(1)
 
     async def refresh_plots(self):
