@@ -238,15 +238,17 @@ class WalletRpcClient(RpcClient):
         }
         return bytes.fromhex((await self.fetch("cc_get_colour", request))["colour"])
 
-    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[Tuple[uint32, str]]:
+    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[Tuple[Optional[uint32], str]]:
         request: Dict[str, Any] = {
             "asset_id": asset_id.hex(),
         }
         try:
             res = await self.fetch("cat_asset_id_to_name", request)
-            return uint32(int(res["wallet_id"])), res["name"]
-        except Exception:
+        except ValueError:
             return None
+
+        wallet_id: Optional[uint32] = None if res["wallet_id"] is None else uint32(int(res["wallet_id"]))
+        return wallet_id, res["name"]
 
     async def get_cat_name(self, wallet_id: str) -> str:
         request: Dict[str, Any] = {

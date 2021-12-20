@@ -816,7 +816,10 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet = await self.service.wallet_state_manager.get_wallet_for_colour(request["asset_id"])
         if wallet is None:
-            raise ValueError("The asset ID specified does not belong to a wallet")
+            if request["asset_id"] in DEFAULT_CATS:
+                return {"wallet_id": None, "name": DEFAULT_CATS[request["asset_id"]]["name"]}
+            else:
+                raise ValueError("The asset ID specified does not belong to a wallet")
         else:
             return {"wallet_id": wallet.id(), "name": (await wallet.get_name())}
 
