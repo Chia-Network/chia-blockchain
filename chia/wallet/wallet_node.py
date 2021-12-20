@@ -1170,9 +1170,8 @@ class WalletNode:
 
             all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(uint32(0))
             all_coin_names = [coin_record.name() for coin_record in all_coins]
-            removed_dict, added_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+            removed_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
             all_coin_names.extend(removed_dict.keys())
-            all_coin_names.extend(added_dict.keys())
 
             checked_call_coins = True
             for coin_name in all_coin_names:

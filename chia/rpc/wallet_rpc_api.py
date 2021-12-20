@@ -28,7 +28,6 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.trade_utils import trade_record_to_dict
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_info import WalletInfo
@@ -882,7 +881,7 @@ class WalletRpcApi:
 
         trade_id = hexstr_to_bytes(request["trade_id"])
         file_contents: bool = request.get("file_contents", False)
-        trade_record: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
+        trade_record: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(bytes32(trade_id))
         if trade_record is None:
             raise ValueError(f"No trade with trade id: {trade_id.hex()}")
 
@@ -922,9 +921,9 @@ class WalletRpcApi:
 
         async with self.service.wallet_state_manager.lock:
             if secure:
-                await wsm.trade_manager.cancel_pending_offer_safely(trade_id, fee=fee)
+                await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), fee=fee)
             else:
-                await wsm.trade_manager.cancel_pending_offer(trade_id)
+                await wsm.trade_manager.cancel_pending_offer(bytes32(trade_id))
         return {}
 
     ##########################################################################################
@@ -1151,13 +1150,13 @@ class WalletRpcApi:
 
         additional_outputs: List[AmountWithPuzzlehash] = []
         for addition in additions[1:]:
-            receiver_ph = hexstr_to_bytes(addition["puzzle_hash"])
+            receiver_ph = bytes32(hexstr_to_bytes(addition["puzzle_hash"]))
             if len(receiver_ph) != 32:
                 raise ValueError(f"Address must be 32 bytes. {receiver_ph.hex()}")
             amount = uint64(addition["amount"])
             if amount > self.service.constants.MAX_COIN_AMOUNT:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
-            memos = None if "memos" not in addition else [mem.encode("utf-8") for mem in addition["memos"]]
+            memos = [] if "memos" not in addition else [mem.encode("utf-8") for mem in addition["memos"]]
             additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount, "memos": memos})
 
         fee = uint64(0)
@@ -1180,7 +1179,7 @@ class WalletRpcApi:
             async with self.service.wallet_state_manager.lock:
                 signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
                     amount_0,
-                    puzzle_hash_0,
+                    bytes32(puzzle_hash_0),
                     fee,
                     coins=coins,
                     ignore_max_send_amount=True,
@@ -1191,7 +1190,7 @@ class WalletRpcApi:
         else:
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
                 amount_0,
-                puzzle_hash_0,
+                bytes32(puzzle_hash_0),
                 fee,
                 coins=coins,
                 ignore_max_send_amount=True,
@@ -1219,6 +1218,7 @@ class WalletRpcApi:
 
         if "target_puzzlehash" in request:
             target_puzzlehash = bytes32(hexstr_to_bytes(request["target_puzzlehash"]))
+        assert target_puzzlehash is not None
         new_target_state: PoolState = create_pool_state(
             FARMING_TO_POOL,
             target_puzzlehash,

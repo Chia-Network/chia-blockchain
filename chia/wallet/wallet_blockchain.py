@@ -132,7 +132,7 @@ class WalletBlockchain(BlockchainInterface):
             curr_record: BlockRecord = block_record
             latest_timestamp = self._latest_timestamp
             while curr_record.height > fork_height:
-                self._height_to_hash[curr_record.height] = curr_record
+                self._height_to_hash[curr_record.height] = curr_record.header_hash
                 if curr_record.timestamp is not None and curr_record.timestamp > latest_timestamp:
                     latest_timestamp = curr_record.timestamp
                 if curr_record.height == 0:

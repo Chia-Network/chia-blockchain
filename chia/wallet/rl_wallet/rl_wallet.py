@@ -233,8 +233,8 @@ class RLWallet:
 
         assert self.rl_info.user_pubkey is not None
         origin = Coin(
-            hexstr_to_bytes(origin_parent_id),
-            hexstr_to_bytes(origin_puzzle_hash),
+            bytes32(hexstr_to_bytes(origin_parent_id)),
+            bytes32(hexstr_to_bytes(origin_puzzle_hash)),
             origin_amount,
         )
         rl_puzzle = rl_puzzle_for_pk(
@@ -303,6 +303,7 @@ class RLWallet:
 
         rl_coin = await self._get_rl_coin()
         puzzle_hash = rl_coin.puzzle_hash if rl_coin is not None else None
+        assert puzzle_hash is not None
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),

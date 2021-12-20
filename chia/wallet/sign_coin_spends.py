@@ -7,6 +7,7 @@ from blspy import AugSchemeMPL
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
+from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 async def sign_coin_spends(
@@ -46,7 +47,7 @@ async def sign_coin_spends(
 
         # Create signature
         for pk_bytes, msg in pkm_pairs_for_conditions_dict(
-            conditions_dict, bytes(coin_spend.coin.name()), additional_data
+            conditions_dict, bytes32(bytes(coin_spend.coin.name())), additional_data
         ):
             pk = blspy.G1Element.from_bytes(pk_bytes)
             pk_list.append(pk)
