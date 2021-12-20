@@ -394,14 +394,7 @@ class WalletNode:
         continue_while: bool = True
         while continue_while:
             # Get all phs from puzzle store
-            all_puzzle_hashes: List[bytes32] = list(
-                await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes()
-            )
-            # Get all phs from interested store
-            interested_puzzle_hashes = [
-                t[0] for t in await self.wallet_state_manager.interested_store.get_interested_puzzle_hashes()
-            ]
-            all_puzzle_hashes.extend(interested_puzzle_hashes)
+            all_puzzle_hashes: List[bytes32] = await self.get_puzzle_hashes_to_subscribe()
             to_check: List[bytes32] = []
             for ph in all_puzzle_hashes:
                 if ph in already_checked:
@@ -415,10 +408,7 @@ class WalletNode:
             await self.subscribe_to_phs(to_check, full_node, request_height)
 
             # Check if new puzzle hashed have been created
-            check_again = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
-            self.log.debug(f"already_checked {len(already_checked)}")
-            self.log.debug(f"check_again {len(check_again)}")
-            self.log.debug(f"all_puzzle_hashes {len(all_puzzle_hashes)}")
+            check_again = await self.get_puzzle_hashes_to_subscribe()
             await self.wallet_state_manager.create_more_puzzle_hashes()
 
             continue_while = False
@@ -433,8 +423,6 @@ class WalletNode:
         all_coin_names.extend(removed_dict.keys())
         all_coin_names.extend(added_dict.keys())
 
-        # TODO: loop here in order to support singletons for pooling
-        all_coin_names.extend(await self.wallet_state_manager.interested_store.get_interested_coin_ids())
         one_k_chunks = chunks(all_coin_names, 1000)
         for chunk in one_k_chunks:
             await self.subscribe_to_coin_updates(chunk, full_node, request_height)
@@ -517,14 +505,6 @@ class WalletNode:
                             coin_state.coin.puzzle_hash
                         )
                         if coin_state.created_height is None or info is not None:
-                            continue
-
-                        interested_phs = await self.wallet_state_manager.interested_store.get_interested_puzzle_hashes()
-                        interested_coin_ids = await self.wallet_state_manager.interested_store.get_interested_coin_ids()
-                        if (
-                            coin_state.coin.name() in interested_coin_ids
-                            or coin_state.coin.puzzle_hash in interested_phs
-                        ):
                             continue
 
                         # We need to check the hints and see if there is a new CAT sent to us, so we can create
@@ -857,44 +837,7 @@ class WalletNode:
                     TransactionRecord
                 ] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
 
-                removed_dict = {}
-                for removed_coin in removed_coins:
-                    removed_dict[removed_coin.name()] = removed_coin
-
-                keep_searching = True
-                all_coin_spends = []
-                all_checked = set()
-                while keep_searching:
-                    keep_searching = False
-
-                    interested_ids: List[
-                        bytes32
-                    ] = await self.wallet_state_manager.interested_store.get_interested_coin_ids()
-                    for coin_id in interested_ids:
-                        interested_states = await self.get_coin_state([coin_id])
-                        if len(interested_states) == 0:
-                            continue
-                        state = interested_states[0]
-                        if state.spent_height is not None and state.coin not in all_checked:
-                            coin = state.coin
-                            all_checked.add(coin)
-                            cs = await self.fetch_puzzle_solution(peer, state.spent_height, coin)
-                            await self.wallet_state_manager.get_next_interesting_coin_ids(cs, False)
-                            all_coin_spends.append(cs)
-                            keep_searching = True
-                            break
-
-                for wallet_id, wallet in self.wallet_state_manager.wallets.items():
-                    if wallet.type() == uint8(WalletType.POOLING_WALLET):
-                        await wallet.apply_state_transitions(all_coin_spends, block.height)
-
-                for spent in all_coin_spends:
-                    for unconfirmed_record in all_unconfirmed:
-                        if spent.coin in unconfirmed_record.removals:
-                            await self.wallet_state_manager.tx_store.set_confirmed(
-                                unconfirmed_record.name, block.height
-                            )
-
+                all_removed_coins = None
                 for removed_coin in removed_coins:
                     for unconfirmed_record in all_unconfirmed:
                         if removed_coin in unconfirmed_record.removals:
@@ -906,6 +849,38 @@ class WalletNode:
                     if record is None:
                         continue
                     await self.wallet_state_manager.coin_store.set_spent(removed_coin.name(), block.height)
+                    removed_record = await self.wallet_state_manager.coin_store.get_coin_record(removed_coin.name())
+
+                    if removed_record.wallet_type == WalletType.POOLING_WALLET:
+                        if all_removed_coins is None:
+                            all_removed_coins = await self.get_removals(peer, block, added_coins, removals, True)
+                        pool_spend = await self.fetch_puzzle_solution(peer, block.height, removed_coin)
+                        if len(pool_spend.additions()) > 0:
+                            pool_added_coin = pool_spend.additions()[0]
+                            await self.wallet_state_manager.coin_added(
+                                pool_added_coin,
+                                block.height,
+                                [],
+                                uint32(removed_record.wallet_id),
+                                removed_record.wallet_type,
+                                [],
+                            )
+                            pool_wallet = self.wallet_state_manager.wallets[removed_record.wallet_id]
+                            await pool_wallet.apply_state_transitions([pool_spend], block.height)
+                            if pool_added_coin in all_removed_coins:
+                                pool_spend_2 = await self.fetch_puzzle_solution(peer, block.height, pool_added_coin)
+                                if len(pool_spend_2.additions()) > 0:
+                                    pool_added_coin_2 = pool_spend_2.additions()[0]
+                                    await self.wallet_state_manager.coin_added(
+                                        pool_added_coin_2,
+                                        block.height,
+                                        [],
+                                        uint32(removed_record.wallet_id),
+                                        removed_record.wallet_type,
+                                        [],
+                                    )
+                                    pool_wallet = self.wallet_state_manager.wallets[removed_record.wallet_id]
+                                    await pool_wallet.apply_state_transitions([pool_spend_2], block.height)
 
                     # Check if we have created a pool wallet
                     children: List[CoinState] = await self.fetch_children(peer, removed_coin.name(), None)
@@ -930,11 +905,15 @@ class WalletNode:
                             "pool_wallet",
                         )
                         await pool_wallet.apply_state_transitions([launcher_spend], block.height)
-                        interested = await self.wallet_state_manager.get_next_interesting_coin_ids(
-                            launcher_spend, False
+                        pool_added_coin = launcher_spend.additions()[0]
+                        await self.wallet_state_manager.coin_added(
+                            pool_added_coin,
+                            block.height,
+                            [],
+                            uint32(pool_wallet.wallet_id),
+                            WalletType(pool_wallet.type()),
+                            [],
                         )
-                        interested_state = await self.get_coin_state(interested)
-                        self.log.info(f"interested {interested}")
 
         await self.update_ui()
 
@@ -1063,6 +1042,15 @@ class WalletNode:
         self.log.info(f"It took {end_validation - start_validation} time to validate the weight proof")
         return valid, weight_proof, summaries, block_records
 
+    async def get_puzzle_hashes_to_subscribe(self) -> List[bytes32]:
+        all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+        # Get all phs from interested store
+        interested_puzzle_hashes = [
+            t[0] for t in await self.wallet_state_manager.interested_store.get_interested_puzzle_hashes()
+        ]
+        all_puzzle_hashes.extend(interested_puzzle_hashes)
+        return all_puzzle_hashes
+
     async def untrusted_subscribe_to_puzzle_hashes(
         self,
         peer: WSChiaConnection,
@@ -1074,7 +1062,7 @@ class WalletNode:
         already_checked = set()
         continue_while = True
         while continue_while:
-            all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+            all_puzzle_hashes = await self.get_puzzle_hashes_to_subscribe()
             to_check = []
             for ph in all_puzzle_hashes:
                 if ph in already_checked:
@@ -1097,9 +1085,7 @@ class WalletNode:
                 await self.wallet_state_manager.new_coin_state(validated_state, peer, weight_proof=weight_proof)
 
             # Check if new puzzle hashed have been created
-            check_again = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
-            self.log.debug(f"Check_again len: {len(check_again)}")
-            self.log.debug(f"Already_checked len: {len(already_checked)}")
+            check_again = await self.get_puzzle_hashes_to_subscribe()
 
             continue_while = False
             for ph in check_again:
@@ -1132,41 +1118,62 @@ class WalletNode:
         await self.untrusted_subscribe_to_puzzle_hashes(peer, True, peer_request_cache, weight_proof)
         self.log.debug(f"End untrusted_subscribe_to_puzzle_hashes  ")
 
-        # Get state for coins ids
-        all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(uint32(0))
-        all_coin_names = [coin_record.name() for coin_record in all_coins]
-        removed_dict, added_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
-        all_coin_names.extend(removed_dict.keys())
-        all_coin_names.extend(added_dict.keys())
+        checked_call_coins = False
+        checked_coins: Set[bytes32] = set()
+        while not checked_call_coins:
+            # Get state for coins ids
+            all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(uint32(0))
+            all_coin_names = [coin_record.name() for coin_record in all_coins]
+            removed_dict, added_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+            all_coin_names.extend(removed_dict.keys())
+            all_coin_names.extend(added_dict.keys())
 
-        one_k_chunks = chunks(all_coin_names, 1000)
-        all_coins_state: List[CoinState] = []
-        for chunk in one_k_chunks:
-            msg1 = wallet_protocol.RegisterForCoinUpdates(chunk, uint32(0))
+            to_check: List[bytes32] = []
+            for coin_name in all_coin_names:
+                if coin_name in checked_coins:
+                    continue
+                else:
+                    to_check.append(coin_name)
+                    checked_coins.add(coin_name)
+                    if len(to_check) == 1000:
+                        break
+
+            msg1 = wallet_protocol.RegisterForCoinUpdates(to_check, uint32(0))
             new_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg1)
-            assert new_state is not None
-            all_coins_state.extend(new_state.coin_states)
 
-        if syncing:
-            # If syncing, completely change over to this peer's information
-            coin_state_before_fork: List[CoinState] = all_coins_state
-        else:
-            # Otherwise, we only want to apply changes before the fork point, since we are synced to another peer
-            # We are just validating that there is no missing information
-            coin_state_before_fork = []
-            for coin_state_entry in all_coins_state:
-                if coin_state_entry.spent_height is not None:
-                    if coin_state_entry.spent_height <= fork_height:
-                        coin_state_before_fork.append(coin_state_entry)
-                elif coin_state_entry.created_height is not None:
-                    if coin_state_entry.created_height <= fork_height:
-                        coin_state_before_fork.append(coin_state_entry)
+            if syncing:
+                # If syncing, completely change over to this peer's information
+                coin_state_before_fork: List[CoinState] = new_state.coin_states
+            else:
+                # Otherwise, we only want to apply changes before the fork point, since we are synced to another peer
+                # We are just validating that there is no missing information
+                coin_state_before_fork = []
+                for coin_state_entry in new_state.coin_states:
+                    if coin_state_entry.spent_height is not None:
+                        if coin_state_entry.spent_height <= fork_height:
+                            coin_state_before_fork.append(coin_state_entry)
+                    elif coin_state_entry.created_height is not None:
+                        if coin_state_entry.created_height <= fork_height:
+                            coin_state_before_fork.append(coin_state_entry)
 
-        validated_state = await self.validate_received_state_from_peer(
-            coin_state_before_fork, peer, weight_proof, peer_request_cache, False
-        )
-        # Apply validated state
-        await self.wallet_state_manager.new_coin_state(validated_state, peer, weight_proof=weight_proof)
+            validated_state = await self.validate_received_state_from_peer(
+                coin_state_before_fork, peer, weight_proof, peer_request_cache, False
+            )
+            # Apply validated state
+            await self.wallet_state_manager.new_coin_state(validated_state, peer, weight_proof=weight_proof)
+
+            all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(uint32(0))
+            all_coin_names = [coin_record.name() for coin_record in all_coins]
+            removed_dict, added_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+            all_coin_names.extend(removed_dict.keys())
+            all_coin_names.extend(added_dict.keys())
+
+            checked_call_coins = True
+            for coin_name in all_coin_names:
+                if coin_name not in checked_coins:
+                    checked_call_coins = False
+                    break
+
         end_time = time.time()
         duration = end_time - start_time
         self.log.info(f"Sync duration was: {duration}")
