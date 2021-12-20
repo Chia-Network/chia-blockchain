@@ -175,7 +175,7 @@ class WalletTransactionStore:
             removals=current.removals,
             wallet_id=current.wallet_id,
             sent_to=current.sent_to,
-            trade_id=None,
+            trade_id=current.trade_id,
             type=current.type,
             name=current.name,
             memos=current.memos,
@@ -441,6 +441,18 @@ class WalletTransactionStore:
         cursor = await self.db_connection.execute(
             "SELECT * from transaction_record WHERE confirmed_at_height>?", (height,)
         )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            record = TransactionRecord.from_bytes(row[0])
+            records.append(record)
+
+        return records
+
+    async def get_transactions_by_trade_id(self, trade_id: bytes32) -> List[TransactionRecord]:
+        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE trade_id=?", (trade_id,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
