@@ -55,12 +55,10 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.types.weight_proof import WeightProof, SubEpochData
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64, uint8
+from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyringIsLocked
 from chia.util.path import mkdir, path_from_root
-from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import (
     validate_additions,
     validate_removals,
@@ -895,11 +893,13 @@ class WalletNode:
                         if await self.wallet_state_manager.have_a_pool_wallet_with_launched_id(child.coin.name()):
                             continue
                         launcher_spend: CoinSpend = await self.fetch_puzzle_solution(peer, block.height, child.coin)
+                        pool_state = None
                         try:
                             pool_state = solution_to_pool_state(launcher_spend)
                         except Exception as e:
                             self.log.debug(f"Not a pool wallet launcher {e}")
                             continue
+                        assert pool_state is not None
                         assert child.spent_height is not None
                         pool_wallet = await PoolWallet.create(
                             self.wallet_state_manager,
@@ -1120,9 +1120,9 @@ class WalletNode:
         self.untrusted_caches[peer.peer_node_id] = peer_request_cache
         # Always sync fully from untrusted
         # Get state for puzzle hashes
-        self.log.debug(f"Start untrusted_subscribe_to_puzzle_hashes  ")
+        self.log.debug("Start untrusted_subscribe_to_puzzle_hashes  ")
         await self.untrusted_subscribe_to_puzzle_hashes(peer, True, peer_request_cache, weight_proof)
-        self.log.debug(f"End untrusted_subscribe_to_puzzle_hashes  ")
+        self.log.debug("End untrusted_subscribe_to_puzzle_hashes  ")
 
         checked_call_coins = False
         checked_coins: Set[bytes32] = set()

@@ -648,9 +648,8 @@ class WalletStateManager:
         for coin_state_idx, coin_state in enumerate(coin_states):
             info = await self.get_wallet_id_for_puzzle_hash(coin_state.coin.puzzle_hash)
             local_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_state.coin.name())
-            self.log.info(
-                f"new_coin_state received ({coin_state_idx + 1} / {len(coin_states)}): {coin_state.coin.name()} {coin_state}"
-            )
+            self.log.info(f"new_coin_state received ({coin_state_idx + 1} / {len(coin_states)})")
+            self.log.debug(f"{coin_state.coin.name()}: {coin_state}")
 
             wallet_id = None
             wallet_type = None
@@ -688,9 +687,7 @@ class WalletStateManager:
                 if added_coin_record is not None:
                     added.append(added_coin_record)
             elif coin_state.created_height is not None and coin_state.spent_height is not None:
-                self.log.info(f"")
                 self.log.info(f"Coin Removed: {coin_state}")
-                self.log.info(f"")
                 record = await self.coin_store.get_coin_record(coin_state.coin.name())
                 if coin_state.coin.name() in trade_removals:
                     trade_coin_removed.append(coin_state)
@@ -845,11 +842,13 @@ class WalletStateManager:
                     launcher_spend: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
                         peer, coin_state.spent_height, child.coin
                     )
+                    pool_state = None
                     try:
                         pool_state = solution_to_pool_state(launcher_spend)
                     except Exception as e:
                         self.log.debug(f"Not a pool wallet launcher {e}")
                         continue
+                    assert pool_state is not None
                     assert child.spent_height is not None
                     pool_wallet = await PoolWallet.create(
                         self,
