@@ -52,6 +52,7 @@ def event_loop():
 
 PREFARMED_BLOCKS = 4
 
+
 class TestPoolWalletRpc:
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):
@@ -160,8 +161,9 @@ class TestPoolWalletRpc:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)),
-                                                None)
+        await wallet_node_0.server.start_client(
+            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+        )
         total_block_rewards = await self.get_total_block_rewards(PREFARMED_BLOCKS)
         await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
         await time_out_assert(10, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
@@ -234,8 +236,9 @@ class TestPoolWalletRpc:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)),
-                                                None)
+        await wallet_node_0.server.start_client(
+            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+        )
         total_block_rewards = await self.get_total_block_rewards(PREFARMED_BLOCKS)
         await time_out_assert(10, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
 
@@ -308,8 +311,9 @@ class TestPoolWalletRpc:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)),
-                                                None)
+        await wallet_node_0.server.start_client(
+            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+        )
         total_block_rewards = await self.get_total_block_rewards(PREFARMED_BLOCKS)
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
@@ -376,7 +380,6 @@ class TestPoolWalletRpc:
         with pytest.raises(ValueError):
             await client.pw_status(3)
 
-
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True])
     @pytest.mark.parametrize("fee", [0])
@@ -389,8 +392,9 @@ class TestPoolWalletRpc:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)),
-                                                None)
+        await wallet_node_0.server.start_client(
+            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+        )
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         total_block_rewards = await self.get_total_block_rewards(PREFARMED_BLOCKS)
         await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
@@ -502,8 +506,9 @@ class TestPoolWalletRpc:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)),
-                                                None)
+        await wallet_node_0.server.start_client(
+            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+        )
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         total_block_rewards = await self.get_total_block_rewards(PREFARMED_BLOCKS)
         await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
@@ -612,8 +617,9 @@ class TestPoolWalletRpc:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)),
-                                                None)
+        await wallet_node_0.server.start_client(
+            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+        )
 
         try:
             total_blocks += await self.farm_blocks(full_node_api, our_ph, num_blocks)
@@ -744,8 +750,9 @@ class TestPoolWalletRpc:
         else:
             wallet_nodes[0].config["trusted_peers"] = {}
 
-        await wallet_nodes[0].server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)),
-                                                None)
+        await wallet_nodes[0].server.start_client(
+            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+        )
 
         WAIT_SECS = 200
 
@@ -861,8 +868,9 @@ class TestPoolWalletRpc:
         else:
             wallet_nodes[0].config["trusted_peers"] = {}
 
-        await wallet_nodes[0].server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)),
-                                                None)
+        await wallet_nodes[0].server.start_client(
+            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+        )
 
         WAIT_SECS = 200
         try:
@@ -961,8 +969,9 @@ class TestPoolWalletRpc:
         else:
             wallet_nodes[0].config["trusted_peers"] = {}
 
-        await wallet_nodes[0].server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)),
-                                                None)
+        await wallet_nodes[0].server.start_client(
+            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+        )
 
         try:
             summaries_response = await client.get_wallets()
@@ -1082,7 +1091,6 @@ class TestPoolWalletRpc:
             full_node_api.use_current_time = True
             await self.farm_blocks(full_node_api, our_ph, 5)
 
-
             if trusted:
                 wallet_node_0.config["trusted_peers"] = {
                     full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
@@ -1094,7 +1102,9 @@ class TestPoolWalletRpc:
                 wallet_node_0.config["trusted_peers"] = {}
                 wallet_node_1.config["trusted_peers"] = {}
 
-            await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None)
+            await wallet_node_0.server.start_client(
+                PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+            )
             await asyncio.sleep(5)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
@@ -1145,6 +1155,7 @@ class TestPoolWalletRpc:
                 return pw_status.current.state == PoolSingletonState.LEAVING_POOL.value
 
             await time_out_assert(timeout=60, function=status_is_leaving)
+
             async def status_is_self_pooling():
                 # Farm enough blocks to wait for relative_lock_height
                 await self.farm_blocks(full_node_api, our_ph, 1)
@@ -1164,16 +1175,22 @@ class TestPoolWalletRpc:
             await wallet_node_0._start(logged_in_fingerprint)
             summaries_response = await client.get_wallets()
             assert len(summaries_response) == 1
-            await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None)
+            await wallet_node_0.server.start_client(
+                PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+            )
 
             await asyncio.sleep(4)
+
             async def wallet_synced():
                 return wallet_node_0.wallet_state_manager.blockchain.get_peak_height() > 1000
+
             await time_out_assert(timeout=60, function=wallet_synced)
             await asyncio.sleep(1)
+
             async def state_restored():
                 pw_status: PoolWalletInfo = (await client.pw_status(2))[0]
                 return pw_status == status_pool
+
             await time_out_assert(timeout=60, function=state_restored)
         finally:
             client.close()
