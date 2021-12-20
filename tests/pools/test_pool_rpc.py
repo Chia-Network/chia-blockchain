@@ -65,7 +65,6 @@ class TestPoolWalletRpc:
         async for nodes in setup_simulators_and_wallets(1, 1, {}):
             full_nodes, wallets = nodes
             full_node_api = full_nodes[0]
-            full_node_server = full_node_api.server
             wallet_node_0, wallet_server_0 = wallets[0]
 
             wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
@@ -100,12 +99,8 @@ class TestPoolWalletRpc:
     async def setup(self, two_wallet_nodes):
         rmtree(get_pool_plot_dir(), ignore_errors=True)
         full_nodes, wallets = two_wallet_nodes
-        full_node_api = full_nodes[0]
-        full_node_server = full_node_api.server
         wallet_node_0, wallet_server_0 = wallets[0]
         wallet_node_1, wallet_server_1 = wallets[1]
-        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         our_ph_record = await wallet_node_0.wallet_state_manager.get_unused_derivation_record(1, False, True)
         pool_ph_record = await wallet_node_1.wallet_state_manager.get_unused_derivation_record(1, False, True)
         our_ph = our_ph_record.puzzle_hash
@@ -363,9 +358,6 @@ class TestPoolWalletRpc:
         full_config: Dict = load_config(wallet_0.wallet_state_manager.root_path, "config.yaml")
         pool_list: List[Dict] = full_config["pool"]["pool_list"]
         assert len(pool_list) == 2
-
-        p2_singleton_ph_2: bytes32 = status_2.p2_singleton_puzzle_hash
-        p2_singleton_ph_3: bytes32 = status_3.p2_singleton_puzzle_hash
 
         assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
         assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(3)) == 0
@@ -805,7 +797,7 @@ class TestPoolWalletRpc:
             status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
-            assert status.current.pool_url == None
+            assert status.current.pool_url is None
             assert status.current.relative_lock_height == 0
             assert status.current.state == 1
             assert status.current.version == 1
@@ -1147,7 +1139,7 @@ class TestPoolWalletRpc:
             assert status_pool.current.relative_lock_height == 5
             assert status_pool.current.version == 1
 
-            leave_pool_tx: TransactionRecord = await client.pw_self_pool(2, 0)
+            await client.pw_self_pool(2, 0)
 
             async def status_is_leaving():
                 await self.farm_blocks(full_node_api, our_ph, 1)

@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List
 
 from blspy import AugSchemeMPL, G1Element
 from clvm import KEYWORD_FROM_ATOM
@@ -6,7 +6,6 @@ from clvm_tools.binutils import disassemble as bu_disassemble
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, INFINITE_COST
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
