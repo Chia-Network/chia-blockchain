@@ -353,7 +353,7 @@ def confirm_included(root: Node, val: bytes, proof: bytes32) -> bool:
     return confirm_not_included_already_hashed(root, sha256(val).digest(), proof)
 
 
-def confirm_included_already_hashed(root: Node, val: bytes, proof: bytes32) -> bool:
+def confirm_included_already_hashed(root: Node, val: bytes, proof: bytes) -> bool:
     return _confirm(root, val, proof, True)
 
 
@@ -361,11 +361,11 @@ def confirm_not_included(root: Node, val: bytes, proof: bytes32) -> bool:
     return confirm_not_included_already_hashed(root, sha256(val).digest(), proof)
 
 
-def confirm_not_included_already_hashed(root: Node, val: bytes, proof: bytes32) -> bool:
+def confirm_not_included_already_hashed(root: Node, val: bytes, proof: bytes) -> bool:
     return _confirm(root, val, proof, False)
 
 
-def _confirm(root: Node, val: bytes, proof: bytes32, expected: bool) -> bool:
+def _confirm(root: Node, val: bytes, proof: bytes, expected: bool) -> bool:
     try:
         p = deserialize_proof(proof)
         if p.get_root() != root:
@@ -376,7 +376,7 @@ def _confirm(root: Node, val: bytes, proof: bytes32, expected: bool) -> bool:
         return False
 
 
-def deserialize_proof(proof: bytes32) -> MerkleSet:
+def deserialize_proof(proof: bytes) -> MerkleSet:
     try:
         r, pos = _deserialize(proof, 0, [])
         if pos != len(proof):
@@ -386,7 +386,7 @@ def deserialize_proof(proof: bytes32) -> MerkleSet:
         raise SetError()
 
 
-def _deserialize(proof: bytes32, pos: int, bits: List[int]) -> Tuple[Node, int]:
+def _deserialize(proof: bytes, pos: int, bits: List[int]) -> Tuple[Node, int]:
     t = proof[pos : pos + 1]  # flake8: noqa
     if t == EMPTY:
         return _empty, pos + 1
