@@ -725,13 +725,20 @@ class TestWalletSimulator:
         assert add_2_coin_record_full_node is not None
         assert add_2_coin_record_full_node.confirmed_block_index > 0
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_address_sliding_window(self, wallet_node_100_pk):
+    async def test_address_sliding_window(self, wallet_node_100_pk, trusted):
         full_nodes, wallets = wallet_node_100_pk
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
-
+        if trusted:
+            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+        else:
+            wallet_node.config["trusted_peers"] = {}
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
@@ -743,7 +750,6 @@ class TestWalletSimulator:
             puzzle_hash: bytes32 = puzzle.get_tree_hash()
             puzzle_hashes.append(puzzle_hash)
 
-        # TODO: fix after merging new wallet. These 210 and 114 should be found
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[0]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[210]))
@@ -752,12 +758,19 @@ class TestWalletSimulator:
 
         await time_out_assert(5, wallet.get_confirmed_balance, 2 * 10 ** 12)
 
+        # TODO: fix after merging new wallet. These 210 and 114 should be found
+        # TODO: This is fixed in trusted mode, needs to work in untrusted too.
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[50]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
-        await time_out_assert(5, wallet.get_confirmed_balance, 4 * 10 ** 12)
+        if trusted:
+            await time_out_assert(15, wallet.get_confirmed_balance, 8 * 10 ** 12)
+        else:
+            await time_out_assert(15, wallet.get_confirmed_balance, 4 * 10 ** 12)
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[113]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[209]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
-
-        await time_out_assert(5, wallet.get_confirmed_balance, 8 * 10 ** 12)
+        if trusted:
+            await time_out_assert(15, wallet.get_confirmed_balance, 12 * 10 ** 12)
+        else:
+            await time_out_assert(15, wallet.get_confirmed_balance, 8 * 10 ** 12)

@@ -1019,6 +1019,7 @@ class WalletStateManager:
             wallet = self.wallets[wallet_id]
             await wallet.coin_added(coin, height)
 
+        await self.create_more_puzzle_hashes()
         return coin_record_1
 
     async def add_pending_transaction(self, tx_record: TransactionRecord):
