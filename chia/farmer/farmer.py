@@ -60,30 +60,10 @@ log = logging.getLogger(__name__)
 
 UPDATE_POOL_INFO_INTERVAL: int = 3600
 UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
-UPDATE_HARVESTER_CACHE_INTERVAL: int = 90
 
 """
 HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 """
-
-
-class HarvesterCacheEntry:
-    def __init__(self):
-        self.data: Optional[dict] = None
-        self.last_update: float = 0
-
-    def bump_last_update(self):
-        self.last_update = time.time()
-
-    def set_data(self, data):
-        self.data = data
-        self.bump_last_update()
-
-    def needs_update(self, update_interval: int):
-        return time.time() - self.last_update > update_interval
-
-    def expired(self, update_interval: int):
-        return time.time() - self.last_update > update_interval * 10
 
 
 class Farmer:
@@ -115,9 +95,6 @@ class Farmer:
         # A dictionary of keys to time added. These keys refer to keys in the above 4 dictionaries. This is used
         # to periodically clear the memory
         self.cache_add_time: Dict[bytes32, uint64] = {}
-
-        # Interval to request plots from connected harvesters
-        self.update_harvester_cache_interval = UPDATE_HARVESTER_CACHE_INTERVAL
 
         self.plot_sync_receivers: Dict[bytes32, Receiver] = {}
 
@@ -185,8 +162,6 @@ class Farmer:
 
         # Last time we updated pool_state based on the config file
         self.last_config_access_time: uint64 = uint64(0)
-
-        self.harvester_cache: Dict[str, Dict[str, HarvesterCacheEntry]] = {}
 
         return True
 
@@ -637,65 +612,6 @@ class Farmer:
 
         return None
 
-    async def update_cached_harvesters(self) -> bool:
-        # First remove outdated cache entries
-        self.log.debug(f"update_cached_harvesters cache entries: {len(self.harvester_cache)}")
-        remove_hosts = []
-        for host, host_cache in self.harvester_cache.items():
-            remove_peers = []
-            for peer_id, peer_cache in host_cache.items():
-                # If the peer cache is expired it means the harvester didn't respond for too long
-                if peer_cache.expired(self.update_harvester_cache_interval):
-                    remove_peers.append(peer_id)
-            for key in remove_peers:
-                del host_cache[key]
-            if len(host_cache) == 0:
-                self.log.debug(f"update_cached_harvesters remove host: {host}")
-                remove_hosts.append(host)
-        for key in remove_hosts:
-            del self.harvester_cache[key]
-        # Now query each harvester and update caches
-        updated = False
-        for connection in self.server.get_connections(NodeType.HARVESTER):
-            cache_entry = await self.get_cached_harvesters(connection)
-            if cache_entry.needs_update(self.update_harvester_cache_interval):
-                self.log.debug(f"update_cached_harvesters update harvester: {connection.peer_node_id}")
-                cache_entry.bump_last_update()
-                response = await connection.request_plots(
-                    harvester_protocol.RequestPlots(), timeout=self.update_harvester_cache_interval
-                )
-                if response is not None:
-                    if isinstance(response, harvester_protocol.RespondPlots):
-                        new_data: Dict = response.to_json_dict()
-                        if cache_entry.data != new_data:
-                            updated = True
-                            self.log.debug(f"update_cached_harvesters cache updated: {connection.peer_node_id}")
-                        else:
-                            self.log.debug(f"update_cached_harvesters no changes for: {connection.peer_node_id}")
-                        cache_entry.set_data(new_data)
-                    else:
-                        self.log.error(
-                            f"Invalid response from harvester:"
-                            f"peer_host {connection.peer_host}, peer_node_id {connection.peer_node_id}"
-                        )
-                else:
-                    self.log.error(
-                        f"Harvester '{connection.peer_host}/{connection.peer_node_id}' did not respond: "
-                        f"(version mismatch or time out {UPDATE_HARVESTER_CACHE_INTERVAL}s)"
-                    )
-        return updated
-
-    async def get_cached_harvesters(self, connection: WSChiaConnection) -> HarvesterCacheEntry:
-        host_cache = self.harvester_cache.get(connection.peer_host)
-        if host_cache is None:
-            host_cache = {}
-            self.harvester_cache[connection.peer_host] = host_cache
-        node_cache = host_cache.get(connection.peer_node_id.hex())
-        if node_cache is None:
-            node_cache = HarvesterCacheEntry()
-            host_cache[connection.peer_node_id.hex()] = node_cache
-        return node_cache
-
     async def get_harvesters(self) -> Dict:
         harvesters: List = []
         for connection in self.server.get_connections(NodeType.HARVESTER):
@@ -704,7 +620,9 @@ class Farmer:
             if receiver is not None:
                 harvesters.append(receiver.to_dict())
             else:
-                self.log.debug(f"get_harvesters no cache: {connection.peer_host}, node_id: {connection.peer_node_id}")
+                self.log.debug(
+                    f"get_harvesters invalid peer: {connection.peer_host}, node_id: {connection.peer_node_id}"
+                )
 
         return {"harvesters": harvesters}
 
@@ -755,9 +673,6 @@ class Farmer:
                     self.state_changed("add_connection", {})
                     refresh_slept = 0
 
-                # Handles harvester plots cache cleanup and updates
-                if await self.update_cached_harvesters():
-                    self.state_changed("new_plots", await self.get_harvesters())
             except Exception:
                 log.error(f"_periodically_clear_cache_and_refresh_task failed: {traceback.format_exc()}")
 
