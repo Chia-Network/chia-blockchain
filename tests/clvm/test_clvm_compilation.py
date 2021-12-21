@@ -39,7 +39,7 @@ wallet_program_files = set(
         "chia/wallet/puzzles/everything_with_signature.clvm",
         "chia/wallet/puzzles/delegated_tail.clvm",
         "chia/wallet/puzzles/settlement_payments.clvm",
-        "chia/wallet/puzzles/genesis_by_coin_id.clvm"
+        "chia/wallet/puzzles/genesis_by_coin_id.clvm",
     ]
 )
 

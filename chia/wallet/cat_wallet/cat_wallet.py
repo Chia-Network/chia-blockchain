@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from dataclasses import replace
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -139,7 +138,7 @@ class CATWallet:
             name=bytes32(token_bytes()),
             memos=[],
         )
-        chia_tx = replace(chia_tx, spend_bundle=spend_bundle)
+        chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)
         await self.standard_wallet.push_transaction(chia_tx)
         await self.standard_wallet.push_transaction(cat_record)
         return self
@@ -258,7 +257,7 @@ class CATWallet:
         return self.wallet_info.name
 
     async def set_name(self, new_name: str):
-        new_info = replace(self.wallet_info, name=new_name)
+        new_info = dataclasses.replace(self.wallet_info, name=new_name)
         self.wallet_info = new_info
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info, False)
 
@@ -515,7 +514,6 @@ class CATWallet:
         if fee > amount_to_claim:
             chia_coins = await self.standard_wallet.select_coins(fee)
             origin_id = list(chia_coins)[0].name()
-            selected_amount = sum([c.amount for c in chia_coins])
             chia_tx = await self.standard_wallet.generate_signed_transaction(
                 uint64(0),
                 (await self.standard_wallet.get_new_puzzlehash()),
