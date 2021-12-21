@@ -140,20 +140,30 @@ class WalletRpcClient(RpcClient):
         return (await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))["address"]
 
     async def send_transaction(
-        self, wallet_id: str, amount: uint64, address: str, fee: uint64 = uint64(0)
+        self, wallet_id: str, amount: uint64, address: str, fee: uint64 = uint64(0), memos: Optional[List[str]] = None
     ) -> TransactionRecord:
-
-        res = await self.fetch(
-            "send_transaction",
-            {"wallet_id": wallet_id, "amount": amount, "address": address, "fee": fee},
-        )
+        if memos is None:
+            send_dict: Dict = {"wallet_id": wallet_id, "amount": amount, "address": address, "fee": fee}
+        else:
+            send_dict = {
+                "wallet_id": wallet_id,
+                "amount": amount,
+                "address": address,
+                "fee": fee,
+                "memos": memos,
+            }
+        res = await self.fetch("send_transaction", send_dict)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
 
     async def send_transaction_multi(
         self, wallet_id: str, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
     ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
-        additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
+        additions_hex = []
+        for ad in additions:
+            additions_hex.append({"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()})
+            if "memos" in ad:
+                additions_hex[-1]["memos"] = ad["memos"]
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
             response: Dict = await self.fetch(
@@ -164,7 +174,8 @@ class WalletRpcClient(RpcClient):
             response = await self.fetch(
                 "send_transaction_multi", {"wallet_id": wallet_id, "additions": additions_hex, "fee": fee}
             )
-        return TransactionRecord.from_json_dict(response["transaction"])
+
+        return TransactionRecord.from_json_dict_convenience(response["transaction"])
 
     async def delete_unconfirmed_transactions(self, wallet_id: str) -> None:
         await self.fetch(
@@ -183,7 +194,11 @@ class WalletRpcClient(RpcClient):
         self, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
     ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
-        additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
+        additions_hex = []
+        for ad in additions:
+            additions_hex.append({"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()})
+            if "memos" in ad:
+                additions_hex[-1]["memos"] = ad["memos"]
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
             response: Dict = await self.fetch(
@@ -191,7 +206,8 @@ class WalletRpcClient(RpcClient):
             )
         else:
             response = await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})
-        return TransactionRecord.from_json_dict(response["signed_tx"])
+
+        return TransactionRecord.from_json_dict_convenience(response["signed_tx"])
 
     async def create_new_did_wallet(self, amount):
         request: Dict[str, Any] = {
@@ -297,3 +313,69 @@ class WalletRpcClient(RpcClient):
             PoolWalletInfo.from_json_dict(json_dict["state"]),
             [TransactionRecord.from_json_dict(tr) for tr in json_dict["unconfirmed_transactions"]],
         )
+
+    # CATS
+    async def create_new_cat_and_wallet(self, amount: uint64) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_type": "cat_wallet",
+            "mode": "new",
+            "amount": amount,
+            "host": f"{self.hostname}:{self.port}",
+        }
+        return await self.fetch("create_new_wallet", request)
+
+    async def create_wallet_for_existing_cat(self, asset_id: bytes) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_type": "cat_wallet",
+            "asset_id": asset_id.hex(),
+            "mode": "existing",
+            "host": f"{self.hostname}:{self.port}",
+        }
+        return await self.fetch("create_new_wallet", request)
+
+    async def get_cat_asset_id(self, wallet_id: str) -> bytes:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+        }
+        return bytes.fromhex((await self.fetch("cat_get_asset_id", request))["asset_id"])
+
+    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[Tuple[uint32, str]]:
+        request: Dict[str, Any] = {
+            "asset_id": asset_id.hex(),
+        }
+        try:
+            res = await self.fetch("cat_asset_id_to_name", request)
+            return uint32(int(res["wallet_id"])), res["name"]
+        except Exception:
+            return None
+
+    async def get_cat_name(self, wallet_id: str) -> str:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+        }
+        return (await self.fetch("cat_get_name", request))["name"]
+
+    async def set_cat_name(self, wallet_id: str, name: str) -> None:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "name": name,
+        }
+        await self.fetch("cat_set_name", request)
+
+    async def cat_spend(
+        self,
+        wallet_id: str,
+        amount: uint64,
+        inner_address: str,
+        fee: uint64 = uint64(0),
+        memos: Optional[List[str]] = None,
+    ) -> TransactionRecord:
+        send_dict = {
+            "wallet_id": wallet_id,
+            "amount": amount,
+            "inner_address": inner_address,
+            "fee": fee,
+            "memos": memos if memos else [],
+        }
+        res = await self.fetch("cat_spend", send_dict)
+        return TransactionRecord.from_json_dict_convenience(res["transaction"])
