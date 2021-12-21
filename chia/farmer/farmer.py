@@ -18,6 +18,7 @@ from chia.daemon.keychain_proxy import (
     connect_to_keychain_and_validate,
     wrap_local_keychain,
 )
+from chia.plot_sync.receiver import Receiver, Delta
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
@@ -117,6 +118,8 @@ class Farmer:
 
         # Interval to request plots from connected harvesters
         self.update_harvester_cache_interval = UPDATE_HARVESTER_CACHE_INTERVAL
+
+        self.plot_sync_receivers: Dict[bytes32, Receiver] = {}
 
         self.cache_clear_task: Optional[asyncio.Task] = None
         self.update_pool_state_task: Optional[asyncio.Task] = None
@@ -244,6 +247,7 @@ class Farmer:
             self.harvester_handshake_task = None
 
         if peer.connection_type is NodeType.HARVESTER:
+            self.plot_sync_receivers[peer.peer_node_id] = Receiver(peer, self.plot_sync_callback)
             self.harvester_handshake_task = asyncio.create_task(handshake_task())
 
     def set_server(self, server):
@@ -262,6 +266,13 @@ class Farmer:
     def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self.state_changed("close_connection", {})
+        if connection.connection_type is NodeType.HARVESTER:
+            del self.plot_sync_receivers[connection.peer_node_id]
+
+    async def plot_sync_callback(self, peer_id: bytes32, delta: Delta):
+        log.info(f"plot_sync_callback: peer_id {peer_id}, delta {delta}")
+        if not delta.empty():
+            self.state_changed("new_plots", await self.get_harvesters())
 
     async def _pool_get_pool_info(self, pool_config: PoolWalletConfig) -> Optional[Dict]:
         try:
@@ -689,15 +700,9 @@ class Farmer:
         harvesters: List = []
         for connection in self.server.get_connections(NodeType.HARVESTER):
             self.log.debug(f"get_harvesters host: {connection.peer_host}, node_id: {connection.peer_node_id}")
-            cache_entry = await self.get_cached_harvesters(connection)
-            if cache_entry.data is not None:
-                harvester_object: dict = dict(cache_entry.data)
-                harvester_object["connection"] = {
-                    "node_id": connection.peer_node_id.hex(),
-                    "host": connection.peer_host,
-                    "port": connection.peer_port,
-                }
-                harvesters.append(harvester_object)
+            receiver = self.plot_sync_receivers.get(connection.peer_node_id)
+            if receiver is not None:
+                harvesters.append(receiver.to_dict())
             else:
                 self.log.debug(f"get_harvesters no cache: {connection.peer_host}, node_id: {connection.peer_node_id}")
 

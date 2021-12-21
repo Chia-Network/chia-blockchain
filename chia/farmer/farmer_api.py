@@ -10,6 +10,7 @@ from chia import __version__
 from chia.consensus.network_type import NetworkType
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.farmer.farmer import Farmer
+from chia.protocols.plot_sync_protocol import Start, PlotList, PathList, Done
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import PoolDifficulty
 from chia.protocols.pool_protocol import (
@@ -515,3 +516,33 @@ class FarmerAPI:
     @peer_required
     async def respond_plots(self, _: harvester_protocol.RespondPlots, peer: ws.WSChiaConnection):
         self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
+
+    @api_request
+    @peer_required
+    async def plot_sync_start(self, message: Start, peer: ws.WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_started(message)
+
+    @api_request
+    @peer_required
+    async def plot_sync_loaded(self, message: PlotList, peer: ws.WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded(message)
+
+    @api_request
+    @peer_required
+    async def plot_sync_removed(self, message: PathList, peer: ws.WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_removed(message)
+
+    @api_request
+    @peer_required
+    async def plot_sync_invalid(self, message: PathList, peer: ws.WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_invalid(message)
+
+    @api_request
+    @peer_required
+    async def plot_sync_keys_missing(self, message: PathList, peer: ws.WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_keys_missing(message)
+
+    @api_request
+    @peer_required
+    async def plot_sync_done(self, message: Done, peer: ws.WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_done(message)

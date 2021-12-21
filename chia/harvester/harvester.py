@@ -7,6 +7,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.constants import ConsensusConstants
+from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
     add_plot_directory,
@@ -24,6 +25,7 @@ log = logging.getLogger(__name__)
 
 class Harvester:
     plot_manager: PlotManager
+    plot_sync_sender: Sender
     root_path: Path
     _is_shutdown: bool
     executor: ThreadPoolExecutor
@@ -49,6 +51,7 @@ class Harvester:
         self.plot_manager = PlotManager(
             root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback
         )
+        self.plot_sync_sender = Sender(self.plot_manager)
         self._is_shutdown = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
         self.state_changed_callback = None
@@ -66,9 +69,10 @@ class Harvester:
         self._is_shutdown = True
         self.executor.shutdown(wait=True)
         self.plot_manager.stop_refreshing()
+        self.plot_sync_sender.stop()
 
     async def _await_closed(self):
-        pass
+        await self.plot_sync_sender.await_closed()
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -86,12 +90,18 @@ class Harvester:
             f"duration: {update_result.duration:.2f} seconds, "
             f"total plots: {len(self.plot_manager.plots)}"
         )
-        if len(update_result.loaded) > 0:
-            self.event_loop.call_soon_threadsafe(self._state_changed, "plots")
+        if event == PlotRefreshEvents.started:
+            self.plot_sync_sender.sync_start(update_result.remaining, self.plot_manager.initial_refresh())
+        if event == PlotRefreshEvents.batch_processed:
+            self.plot_sync_sender.process_batch(update_result.loaded, update_result.remaining)
+        if event == PlotRefreshEvents.done:
+            self.plot_sync_sender.sync_done(update_result.removed, update_result.duration)
 
     def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self._state_changed("close_connection")
+        self.plot_manager.stop_refreshing()
+        self.plot_sync_sender.stop()
 
     def get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:
         self.log.debug(f"get_plots prover items: {self.plot_manager.plot_count()}")
