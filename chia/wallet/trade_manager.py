@@ -328,7 +328,7 @@ class TradeManager:
             wallet: Wallet = wsm.main_wallet
             if key is None:
                 continue
-            exists: Optional[Wallet] = await wsm.get_wallet_for_colour(key.hex())
+            exists: Optional[Wallet] = await wsm.get_wallet_for_asset_id(key.hex())
             if exists is None:
                 self.log.info(f"Creating wallet for asset ID: {key}")
                 await CATWallet.create_wallet_for_cat(wsm, wallet, key.hex())
@@ -351,7 +351,7 @@ class TradeManager:
                 wallet = self.wallet_state_manager.main_wallet
                 key: Union[bytes32, int] = int(wallet.id())
             else:
-                wallet = await self.wallet_state_manager.get_wallet_for_colour(asset_id.hex())
+                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                 if wallet is None and amount < 0:
                     return False, None, f"Do not have a CAT of asset ID: {asset_id} to fulfill offer"
                 elif wallet is None:
