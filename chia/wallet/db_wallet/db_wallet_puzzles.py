@@ -1,5 +1,3 @@
-from typing import Tuple
-
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
 from chia.util.ints import uint64
