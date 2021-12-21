@@ -788,7 +788,6 @@ class WalletNode:
 
         # Add new coins and transactions
         await self.complete_blocks(blocks, peer)
-        await self.wallet_state_manager.create_more_puzzle_hashes()
 
     async def complete_blocks(self, header_blocks: List[HeaderBlock], peer: WSChiaConnection):
         if self.wallet_state_manager is None:
@@ -825,6 +824,11 @@ class WalletNode:
                             wallet_id
                         )
                         all_outgoing_per_wallet[wallet_id] = all_outgoing
+                    derivation_index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
+                        added_coin.puzzle_hash
+                    )
+                    if derivation_index is not None:
+                        await self.wallet_state_manager.puzzle_store.set_used_up_to(derivation_index, False)
                     await self.wallet_state_manager.coin_added(
                         added_coin, block.height, all_outgoing, wallet_id, wallet_type
                     )
