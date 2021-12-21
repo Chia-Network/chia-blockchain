@@ -6,7 +6,10 @@ from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
+from chia.wallet.trade_record import TradeRecord
+from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 
@@ -128,13 +131,17 @@ class WalletRpcClient(RpcClient):
             "get_transactions",
             request,
         )
-        reverted_tx: List[TransactionRecord] = []
-        for modified_tx in res["transactions"]:
-            # Server returns address instead of ph, but TransactionRecord requires ph
-            modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
-            del modified_tx["to_address"]
-            reverted_tx.append(TransactionRecord.from_json_dict(modified_tx))
-        return reverted_tx
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in res["transactions"]]
+
+    async def get_transaction_count(
+        self,
+        wallet_id: str,
+    ) -> List[TransactionRecord]:
+        res = await self.fetch(
+            "get_transaction_count",
+            {"wallet_id": wallet_id},
+        )
+        return res["count"]
 
     async def get_next_address(self, wallet_id: str, new_address: bool) -> str:
         return (await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))["address"]
@@ -379,3 +386,56 @@ class WalletRpcClient(RpcClient):
         }
         res = await self.fetch("cat_spend", send_dict)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
+
+    # Offers
+    async def create_offer_for_ids(
+        self, offer_dict: Dict[uint32, int], fee=uint64(0), validate_only: bool = False
+    ) -> Tuple[Optional[Offer], TradeRecord]:
+        send_dict: Dict[str, int] = {}
+        for key in offer_dict:
+            send_dict[str(key)] = offer_dict[key]
+
+        res = await self.fetch("create_offer_for_ids", {"offer": send_dict, "validate_only": validate_only, "fee": fee})
+        offer: Optional[Offer] = None if validate_only else Offer.from_bytes(hexstr_to_bytes(res["offer"]))
+        return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], res["offer"])
+
+    async def get_offer_summary(self, offer: Offer) -> Dict[str, Dict[str, int]]:
+        res = await self.fetch("get_offer_summary", {"offer": bytes(offer).hex()})
+        return res["summary"]
+
+    async def check_offer_validity(self, offer: Offer) -> bool:
+        res = await self.fetch("check_offer_validity", {"offer": bytes(offer).hex()})
+        return res["valid"]
+
+    async def take_offer(self, offer: Offer, fee=uint64(0)) -> TradeRecord:
+        res = await self.fetch("take_offer", {"offer": bytes(offer).hex(), "fee": fee})
+        return TradeRecord.from_json_dict_convenience(res["trade_record"])
+
+    async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:
+        res = await self.fetch("get_offer", {"trade_id": trade_id.hex(), "file_contents": file_contents})
+        offer_str = res["offer"] if file_contents else ""
+        return TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
+
+    async def get_all_offers(
+        self, start: int = 0, end: int = 50, sort_key: str = None, reverse: bool = False, file_contents: bool = False
+    ) -> List[TradeRecord]:
+        res = await self.fetch(
+            "get_all_offers",
+            {
+                "start": start,
+                "end": end,
+                "sort_key": sort_key,
+                "reverse": reverse,
+                "file_contents": file_contents,
+            },
+        )
+
+        records = []
+        optional_offers = res["offers"] if file_contents else ([""] * len(res["trade_records"]))
+        for record, offer in zip(res["trade_records"], optional_offers):
+            records.append(TradeRecord.from_json_dict_convenience(record, offer))
+
+        return records
+
+    async def cancel_offer(self, trade_id: bytes32, fee=uint64(0), secure: bool = True):
+        await self.fetch("cancel_offer", {"trade_id": trade_id.hex(), "secure": secure, "fee": fee})

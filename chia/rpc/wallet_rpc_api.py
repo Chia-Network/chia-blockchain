@@ -83,6 +83,7 @@ class WalletRpcApi:
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
             # Coloured coins and trading
             "/cat_set_name": self.cat_set_name,
+            "/cat_asset_id_to_name": self.cat_asset_id_to_name,
             "/cat_get_name": self.cat_get_name,
             "/cat_spend": self.cat_spend,
             "/cat_get_asset_id": self.cat_get_asset_id,
@@ -631,15 +632,8 @@ class WalletRpcApi:
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
             wallet_id, start, end, sort_key=sort_key, reverse=reverse
         )
-        formatted_transactions = []
-        selected = self.service.config["selected_network"]
-        prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
-        for tx in transactions:
-            formatted = tx.to_json_dict()
-            formatted["to_address"] = encode_puzzle_hash(tx.to_puzzle_hash, prefix)
-            formatted_transactions.append(formatted)
         return {
-            "transactions": formatted_transactions,
+            "transactions": [tr.to_json_dict_convenience(self.service.config) for tr in transactions],
             "wallet_id": wallet_id,
         }
 
@@ -777,6 +771,14 @@ class WalletRpcApi:
         wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
         name: str = await wallet.get_name()
         return {"wallet_id": wallet_id, "name": name}
+
+    async def cat_asset_id_to_name(self, request):
+        assert self.service.wallet_state_manager is not None
+        wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request["asset_id"])
+        if wallet is None:
+            raise ValueError("The asset ID specified does not belong to a wallet")
+        else:
+            return {"wallet_id": wallet.id(), "name": (await wallet.get_name())}
 
     async def cat_spend(self, request):
         assert self.service.wallet_state_manager is not None

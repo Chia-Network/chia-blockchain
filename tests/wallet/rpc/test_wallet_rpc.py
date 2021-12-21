@@ -1,6 +1,4 @@
 import asyncio
-
-from operator import attrgetter
 from typing import Optional
 
 from blspy import G2Element
@@ -9,6 +7,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.config import load_config, save_config
+from operator import attrgetter
 import logging
 
 import pytest
@@ -24,7 +23,8 @@ from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from chia.util.ints import uint16, uint32
+from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
@@ -63,8 +63,8 @@ class TestWalletRpc:
         await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
@@ -265,92 +265,11 @@ class TestWalletRpc:
             new_balance = new_balance - 555 - 666 - 200
             await time_out_assert(5, eventual_balance, new_balance)
 
-            # Checks that the memo can be retrieved
-            tx_confirmed = await client.get_transaction("1", send_tx_res.name)
-            assert tx_confirmed.confirmed
-            assert len(tx_confirmed.get_memos()) == 2
-            print(tx_confirmed.get_memos())
-            assert [b"FiMemo"] in tx_confirmed.get_memos().values()
-            assert [b"SeMemo"] in tx_confirmed.get_memos().values()
-            assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
-            assert list(tx_confirmed.get_memos().keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
-
-            ##############
-            # CATS       #
-            ##############
-
-            # Creates a wallet and a CAT with 20 mojos
-            res = await client.create_new_cat_and_wallet(20)
-            assert res["success"]
-            cat_0_id = res["wallet_id"]
-            asset_id = bytes.fromhex(res["asset_id"])
-            assert len(asset_id) > 0
-
-            bal_0 = await client.get_wallet_balance(cat_0_id)
-            assert bal_0["confirmed_wallet_balance"] == 0
-            assert bal_0["pending_coin_removal_count"] == 1
-            col = await client.get_cat_asset_id(cat_0_id)
-            assert col == asset_id
-            assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"
-            await client.set_cat_name(cat_0_id, "My cat")
-            assert (await client.get_cat_name(cat_0_id)) == "My cat"
-
-            await asyncio.sleep(1)
-            for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
-                await asyncio.sleep(0.5)
-
-            bal_0 = await client.get_wallet_balance(cat_0_id)
-            assert bal_0["confirmed_wallet_balance"] == 20
-            assert bal_0["pending_coin_removal_count"] == 0
-            assert bal_0["unspent_coin_count"] == 1
-
-            # Creates a second wallet with the same CAT
-            res = await client_2.create_wallet_for_existing_cat(asset_id)
-            assert res["success"]
-            cat_1_id = res["wallet_id"]
-            asset_id_1 = bytes.fromhex(res["asset_id"])
-            assert asset_id_1 == asset_id
-
-            await asyncio.sleep(1)
-            for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
-                await asyncio.sleep(0.5)
-            bal_1 = await client_2.get_wallet_balance(cat_1_id)
-            assert bal_1["confirmed_wallet_balance"] == 0
-
-            addr_0 = await client.get_next_address(cat_0_id, False)
-            addr_1 = await client_2.get_next_address(cat_1_id, False)
-
-            assert addr_0 != addr_1
-
-            await client.cat_spend(cat_0_id, 4, addr_1, 0, ["the cat memo"])
-
-            await asyncio.sleep(1)
-            for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
-                await asyncio.sleep(0.5)
-
-            bal_0 = await client.get_wallet_balance(cat_0_id)
-            bal_1 = await client_2.get_wallet_balance(cat_1_id)
-
-            assert bal_0["confirmed_wallet_balance"] == 16
-            assert bal_1["confirmed_wallet_balance"] == 4
-
-            # Keys and addresses
-
             address = await client.get_next_address("1", True)
             assert len(address) > 10
 
-            all_transactions = await client.get_transactions("1")
-            some_transactions = await client.get_transactions("1", 0, 5)
-            some_transactions_2 = await client.get_transactions("1", 5, 10)
-            assert len(all_transactions) > 1
-            assert some_transactions == all_transactions[len(all_transactions) - 5 : len(all_transactions)]
-            assert some_transactions_2 == all_transactions[len(all_transactions) - 10 : len(all_transactions) - 5]
-
-            transaction_count = await client.get_transaction_count("1")
-            assert transaction_count == len(all_transactions)
+            transactions = await client.get_transactions("1")
+            assert len(transactions) > 1
 
             all_transactions = await client.get_transactions("1")
             # Test transaction pagination
@@ -380,6 +299,168 @@ class TestWalletRpc:
             sorted_transactions = sorted(sorted_transactions, key=attrgetter("confirmed"), reverse=True)
             assert all_transactions == sorted_transactions
 
+            # Checks that the memo can be retrieved
+            tx_confirmed = await client.get_transaction("1", send_tx_res.name)
+            assert tx_confirmed.confirmed
+            assert len(tx_confirmed.get_memos()) == 2
+            print(tx_confirmed.get_memos())
+            assert [b"FiMemo"] in tx_confirmed.get_memos().values()
+            assert [b"SeMemo"] in tx_confirmed.get_memos().values()
+            assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
+            assert list(tx_confirmed.get_memos().keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
+
+            ##############
+            # CATS       #
+            ##############
+
+            # Creates a wallet and a CAT with 20 mojos
+            res = await client.create_new_cat_and_wallet(20)
+            assert res["success"]
+            cat_0_id = res["wallet_id"]
+            asset_id = bytes.fromhex(res["asset_id"])
+            assert len(asset_id) > 0
+
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            assert bal_0["confirmed_wallet_balance"] == 0
+            assert bal_0["pending_coin_removal_count"] == 1
+            col = await client.get_cat_asset_id(cat_0_id)
+            assert col == asset_id
+            assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"
+            await client.set_cat_name(cat_0_id, "My cat")
+            assert (await client.get_cat_name(cat_0_id)) == "My cat"
+            wid, name = await client.cat_asset_id_to_name(col)
+            assert wid == cat_0_id
+            assert name == "My cat"
+            should_be_none = await client.cat_asset_id_to_name(bytes([0] * 32))
+            assert should_be_none is None
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            assert bal_0["confirmed_wallet_balance"] == 20
+            assert bal_0["pending_coin_removal_count"] == 0
+            assert bal_0["unspent_coin_count"] == 1
+
+            # Creates a second wallet with the same CAT
+            res = await client_2.create_wallet_for_existing_cat(asset_id)
+            assert res["success"]
+            cat_1_id = res["wallet_id"]
+            colour_1 = bytes.fromhex(res["asset_id"])
+            assert colour_1 == asset_id
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+            bal_1 = await client_2.get_wallet_balance(cat_1_id)
+            assert bal_1["confirmed_wallet_balance"] == 0
+
+            addr_0 = await client.get_next_address(cat_0_id, False)
+            addr_1 = await client_2.get_next_address(cat_1_id, False)
+
+            assert addr_0 != addr_1
+
+            await client.cat_spend(cat_0_id, 4, addr_1, 0, ["the cat memo"])
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            bal_1 = await client_2.get_wallet_balance(cat_1_id)
+
+            assert bal_0["confirmed_wallet_balance"] == 16
+            assert bal_1["confirmed_wallet_balance"] == 4
+
+            ##########
+            # Offers #
+            ##########
+
+            # Create an offer of 5 chia for one CAT
+            offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, validate_only=True)
+            all_offers = await client.get_all_offers()
+            assert len(all_offers) == 0
+            assert offer is None
+
+            offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, fee=uint64(1))
+
+            summary = await client.get_offer_summary(offer)
+            assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}}
+
+            assert await client.check_offer_validity(offer)
+
+            all_offers = await client.get_all_offers(file_contents=True)
+            assert len(all_offers) == 1
+            assert TradeStatus(all_offers[0].status) == TradeStatus.PENDING_ACCEPT
+            assert all_offers[0].offer == bytes(offer)
+
+            trade_record = await client_2.take_offer(offer, fee=uint64(1))
+            assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CONFIRM
+
+            await client.cancel_offer(offer.name(), secure=False)
+
+            trade_record = await client.get_offer(offer.name(), file_contents=True)
+            assert trade_record.offer == bytes(offer)
+            assert TradeStatus(trade_record.status) == TradeStatus.CANCELLED
+
+            await client.cancel_offer(offer.name(), fee=uint64(1), secure=True)
+
+            trade_record = await client.get_offer(offer.name())
+            assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
+
+            new_offer, new_trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, fee=uint64(1))
+            all_offers = await client.get_all_offers()
+            assert len(all_offers) == 2
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+
+            # Test trade sorting
+            def only_ids(trades):
+                return [t.trade_id for t in trades]
+
+            trade_record = await client.get_offer(offer.name())
+            all_offers = await client.get_all_offers()  # confirmed at index descending
+            assert len(all_offers) == 2
+            assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
+            all_offers = await client.get_all_offers(reverse=True)  # confirmed at index ascending
+            assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
+            all_offers = await client.get_all_offers(sort_key="RELEVANCE")  # most relevant
+            assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
+            all_offers = await client.get_all_offers(sort_key="RELEVANCE", reverse=True)  # least relevant
+            assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
+            # Test pagination
+            all_offers = await client.get_all_offers(start=0, end=1)
+            assert len(all_offers) == 1
+            all_offers = await client.get_all_offers(start=-1, end=1)
+            assert len(all_offers) == 1
+            all_offers = await client.get_all_offers(start=50)
+            assert len(all_offers) == 0
+            all_offers = await client.get_all_offers(start=0, end=50)
+            assert len(all_offers) == 2
+
+            # Keys and addresses
+
+            address = await client.get_next_address("1", True)
+            assert len(address) > 10
+
+            all_transactions = await client.get_transactions("1")
+
+            some_transactions = await client.get_transactions("1", 0, 5)
+            some_transactions_2 = await client.get_transactions("1", 5, 10)
+            assert len(all_transactions) > 1
+            assert some_transactions == all_transactions[0:5]
+            assert some_transactions_2 == all_transactions[5:10]
+
+            transaction_count = await client.get_transaction_count("1")
+            assert transaction_count == len(all_transactions)
+
             pks = await client.get_public_keys()
             assert len(pks) == 1
 
@@ -392,7 +473,7 @@ class TestWalletRpc:
                 return tx.is_in_mempool()
 
             await time_out_assert(5, tx_in_mempool_2, True)
-            assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 2
+            assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 1
             await client.delete_unconfirmed_transactions("1")
             assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 0
 
