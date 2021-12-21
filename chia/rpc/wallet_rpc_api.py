@@ -8,6 +8,7 @@ from blspy import PrivateKey, G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_types import Side
+from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -113,6 +114,9 @@ class WalletRpcApi:
             "/pw_self_pool": self.pw_self_pool,
             "/pw_absorb_rewards": self.pw_absorb_rewards,
             "/pw_status": self.pw_status,
+            # DL Wallet
+            "/dl_current_root": self.dl_current_root,
+            "/dl_update_root": self.dl_update_root,
         }
 
     async def _state_changed(self, *args) -> List[WsRpcMessage]:
@@ -448,7 +452,7 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_state_manager = self.service.wallet_state_manager
         main_wallet = wallet_state_manager.main_wallet
-        host = request["host"]
+        host = request.get("host", None)
         fee = uint64(request.get("fee", 0))
 
         if request["wallet_type"] == "cc_wallet":
@@ -610,6 +614,18 @@ class WalletRpcApi:
                     }
             elif request["mode"] == "recovery":
                 raise ValueError("Need upgraded singleton for on-chain recovery")
+
+        elif request["wallet_type"] == "dl_wallet":
+            root: bytes32 = bytes32(hexstr_to_bytes(request["root"]))
+            fee = request.get("fee", uint64(0))
+            name: str = request.get("name", "DL Wallet")
+
+            async with wallet_state_manager.lock:
+                creation_item = await DataLayerWallet.create_new_dl_wallet(
+                    wallet_state_manager, main_wallet, root, fee, name
+                )
+                json_txs: List[Dict] = [tx.to_json_dict() for tx in creation_item.transaction_records]
+                return {"wallet_id": creation_item.item.id(), "transactions": json_txs}
 
         else:  # undefined wallet_type
             pass
@@ -1270,3 +1286,27 @@ class WalletRpcApi:
             "state": state.to_json_dict(),
             "unconfirmed_transactions": unconfirmed_transactions,
         }
+
+    ##########################################################################################
+    # DataLayer Wallet
+    ##########################################################################################
+    async def dl_current_root(self, request) -> Dict:
+        """Get the current merkle root stored in the data layer singleton"""
+        if self.service.wallet_state_manager is None:
+            return {"success": False, "error": "not_initialized"}
+        wallet_id = uint32(request["wallet_id"])
+        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if WalletType(wallet.type()) != WalletType.DATA_LAYER:
+            raise ValueError(f"wallet_id {wallet_id} is not a data layer wallet")
+        return {"wallet_id": wallet_id, "root": wallet.get_current_root()}
+
+    async def dl_update_root(self, request) -> Dict:
+        """Update the merkle root stored in the data layer singleton"""
+        if self.service.wallet_state_manager is None:
+            return {"success": False, "error": "not_initialized"}
+        wallet_id = uint32(request["wallet_id"])
+        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if WalletType(wallet.type()) != WalletType.DATA_LAYER:
+            raise ValueError(f"wallet_id {wallet_id} is not a data layer wallet")
+        root: bytes32 = bytes32(hexstr_to_bytes(request["root"]))
+        return {"wallet_id": wallet_id, "transaction": (await wallet.create_update_state_spend(root)).to_json_dict()}

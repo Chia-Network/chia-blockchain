@@ -48,7 +48,7 @@ def test_create_db_update():
     new_root = new_tree.calculate_root()
     host_puz = create_host_layer_puzzle(innerpuz, new_root)
     inner_solution = Program.to([[51, host_puz.get_tree_hash(), 201]])
-    db_solution = Program.to([0, inner_solution])
+    db_solution = Program.to([0, inner_solution, innerpuz])
     # lineage_proof my_amount inner_solution
     launcher_amount = 201
     lineage_proof = Program.to([current_root, launcher_amount])

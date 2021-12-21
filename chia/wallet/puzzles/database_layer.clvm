@@ -1,19 +1,35 @@
 (mod (
   DB_LAYER_MOD_HASH  ; This mod file - used to update our state
   CURRENT_STATE  ; 32 byte merkle root
-  INNER_PUZZLE  ; Our inner inner puzzle
+  INNER_PUZZLE_HASH  ; Our inner inner puzzle hash
   spend_type
   inner_solution  ; if spend_type is 1 this is (my_puzhash . my_amount)
+  inner_puzzle ; Useless in the report case, should hash to the curried in hash if doing update
 )
 
   ; spend_type 1 is REPORT current state
   ; spend_type 0 is UPDATE the current state
   (include condition_codes.clvm)
 
+  (defun sha256tree
+      (TREE)
+      (if (l TREE)
+          (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+          (sha256 1 TREE)
+      )
+  )
+
+  (defmacro assert items
+      (if (r items)
+          (list if (f items) (c assert (r items)) (q . (x)))
+          (f items)
+      )
+  )
+
   (if spend_type
     ; REPORT
     (list (list CREATE_PUZZLE_ANNOUNCEMENT CURRENT_STATE) (list CREATE_COIN (f inner_solution) (r inner_solution)) (list ASSERT_MY_PUZZLEHASH (f inner_solution)) (list ASSERT_MY_AMOUNT (r inner_solution)))
     ; UPDATE
-    (a INNER_PUZZLE inner_solution)
+    (assert (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH) (a inner_puzzle inner_solution))
   )
 )

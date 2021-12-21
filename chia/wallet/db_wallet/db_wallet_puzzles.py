@@ -25,7 +25,7 @@ def create_host_fullpuz(innerpuz: Program, current_root: bytes32, genesis_id: by
 
 def create_host_layer_puzzle(innerpuz: Program, current_root: bytes32) -> Program:
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
-    db_layer = DB_HOST_MOD.curry(DB_HOST_MOD.get_tree_hash(), current_root, innerpuz)
+    db_layer = DB_HOST_MOD.curry(DB_HOST_MOD.get_tree_hash(), current_root, innerpuz.get_tree_hash())
     return db_layer
 
 

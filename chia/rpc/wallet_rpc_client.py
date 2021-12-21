@@ -6,6 +6,7 @@ from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 
@@ -282,3 +283,19 @@ class WalletRpcClient(RpcClient):
             PoolWalletInfo.from_json_dict(json_dict["state"]),
             [TransactionRecord.from_json_dict(tr) for tr in json_dict["unconfirmed_transactions"]],
         )
+
+    async def create_new_dl_wallet(self, root: bytes32, fee: uint64) -> Tuple[uint32, List[TransactionRecord]]:
+        request = {"wallet_type": "dl_wallet", "root": root.hex(), "fee": fee}
+        response = await self.fetch("create_new_wallet", request)
+        txs: List[TransactionRecord] = [TransactionRecord.from_json_dict(tx) for tx in response["transactions"]]
+        return uint32(response["wallet_id"]), txs
+
+    async def dl_current_root(self, wallet_id: str) -> bytes32:
+        request = {"wallet_id": int(wallet_id)}
+        response = await self.fetch("dl_current_root", request)
+        return bytes32(hexstr_to_bytes(response["root"]))
+
+    async def dl_update_root(self, wallet_id: str, root: bytes32) -> TransactionRecord:
+        request = {"wallet_id": int(wallet_id), "root": root.hex()}
+        response = await self.fetch("dl_update_root", request)
+        return TransactionRecord.from_json_dict(response["transaction"])
