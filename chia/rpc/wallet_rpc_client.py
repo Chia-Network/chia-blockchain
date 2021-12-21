@@ -87,6 +87,9 @@ class WalletRpcClient(RpcClient):
     async def get_height_info(self) -> uint32:
         return (await self.fetch("get_height_info", {}))["height"]
 
+    async def push_tx(self, spend_bundle):
+        return (await self.fetch("push_tx", {"spend_bundle": bytes(spend_bundle).hex()}))
+
     async def farm_block(self, address: str) -> None:
         return await self.fetch("farm_block", {"address": address})
 

@@ -1389,3 +1389,13 @@ class WalletNode:
             return validated_states
 
         return response.coin_states
+
+    # For RPC only.  You should use wallet_state_manager.add_pending_transaction for normal wallet business.
+    async def push_tx(self, spend_bundle):
+        msg = make_msg(
+            ProtocolMessageTypes.send_transaction,
+            wallet_protocol.SendTransaction(spend_bundle),
+        )
+        full_nodes = self.server.get_full_node_connections()
+        for peer in full_nodes:
+            await peer.send_message(msg)
