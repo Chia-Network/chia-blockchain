@@ -44,6 +44,7 @@ from chia.protocols.wallet_protocol import (
 )
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
+from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
@@ -55,6 +56,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.types.weight_proof import WeightProof, SubEpochData
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyringIsLocked
 from chia.util.path import mkdir, path_from_root
@@ -341,14 +343,20 @@ class WalletNode:
         if connect_to_unknown_peers:
             self.wallet_peers = WalletPeers(
                 self.server,
-                self.root_path,
                 self.config["target_peer_count"],
-                self.config["wallet_peers_path"],
+                PeerStoreResolver(
+                    self.root_path,
+                    self.config,
+                    selected_network=network_name,
+                    peers_file_path_key="wallet_peers_file_path",
+                    legacy_peer_db_path_key=WALLET_PEERS_PATH_KEY_DEPRECATED,
+                    default_peers_file_path="wallet/db/wallet_peers.dat",
+                ),
                 self.config["introducer_peer"],
                 self.config["dns_servers"],
                 self.config["peer_connect_interval"],
-                self.config["selected_network"],
-                default_port,
+                network_name,
+                None,
                 self.log,
             )
             asyncio.create_task(self.wallet_peers.start())
@@ -525,7 +533,6 @@ class WalletNode:
                                 # re-check the block filter for any new addition /removals, for all of the blocks
                                 # that have been added to the blockchain since this CAT was created
                                 await self.complete_blocks(header_blocks.header_blocks, peer)
-                    pass
 
     def get_full_node_peer(self):
         nodes = self.server.get_full_node_connections()
