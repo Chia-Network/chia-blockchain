@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Generic, List, Optional, Tuple, TypeVar
+from typing import Generic, List, Optional, Tuple, TypeVar, Dict
 
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.types.blockchain_format.coin import Coin
@@ -22,9 +22,7 @@ T = TypeVar("T")
 class ItemAndTransactionRecords(Generic[T]):
     item: T
     # TODO: this seems better but needs a WalletProtocol or similar developed
-    # records: Dict["Wallet", List["TransactionRecord"]]
-    regular: List["TransactionRecord"]
-    data_layer: List["TransactionRecord"]
+    transaction_records: Dict["Wallet", List["TransactionRecord"]]
 
 
 @dataclass(frozen=True)

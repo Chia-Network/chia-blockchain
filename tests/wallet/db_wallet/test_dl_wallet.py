@@ -136,7 +136,7 @@ class TestDLWallet:
 
         dl_wallet_0: DataLayerWallet = creation_record.item
 
-        await full_node_api.process_transaction_records(records=creation_record.regular)
+        await full_node_api.process_transaction_records(records=creation_record.transaction_records)
 
         await full_node_api.farm_blocks(count=1, wallet=wallet_1)
 
