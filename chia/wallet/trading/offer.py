@@ -367,7 +367,6 @@ class Offer:
                     notarized_payments.extend(
                         [NotarizedPayment.from_condition_and_nonce(condition, nonce) for condition in payment_args_list]
                     )
-                assert tail_hash is not None
                 requested_payments[tail_hash] = notarized_payments
 
             else:
