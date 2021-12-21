@@ -35,6 +35,8 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
+      - uses: Chia-Network/actions/git-ssh-to-https@main
+
       - name: Cleanup any leftovers that exist from previous runs
         run: bash build_scripts/clean-runner.sh || true
 
@@ -104,9 +106,9 @@ jobs:
         run: |
           arch -arm64 sh install.sh
 
-      - name: Install node 14.x
+      - name: Install node 16.x
         run: |
-          arch -arm64 brew install node@14
+          arch -arm64 brew install node@16
 
       - name: Build MacOS DMG
         env:
@@ -114,7 +116,7 @@ jobs:
           APPLE_NOTARIZE_USERNAME: "${{ secrets.APPLE_NOTARIZE_USERNAME }}"
           APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
         run: |
-          export PATH=$(brew --prefix node@14)/bin:$PATH
+          export PATH=$(brew --prefix node@16)/bin:$PATH
           . ./activate
           cd ./chia-blockchain-gui
           arch -arm64 git status

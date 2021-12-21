@@ -150,7 +150,9 @@ async def wallet_nodes_mainnet():
 
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
-    async def do_test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
+    @pytest.mark.parametrize("test_reorgs", [False, True])
+    @pytest.mark.parametrize("tx_size", [10000, 3000000000000])
+    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
         nodes, wallets = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -390,14 +392,6 @@ class TestFullNodeBlockCompression:
             for block in reog_blocks:
                 await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
             assert full_node_1.full_node.full_node_store.previous_generator is None
-
-    @pytest.mark.asyncio
-    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
-        await self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000, True)
-
-    @pytest.mark.asyncio
-    async def test_block_compression_2(self, setup_two_nodes_and_wallet, empty_blockchain):
-        await self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000, False)
 
 
 class TestFullNodeProtocol:

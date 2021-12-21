@@ -130,6 +130,7 @@ async def setup_wallet_node(
     introducer_port=None,
     key_seed=None,
     starting_height=None,
+    initial_num_public_keys=5,
 ):
     with TempKeyring() as keychain:
         config = bt.config["wallet"]
@@ -137,7 +138,7 @@ async def setup_wallet_node(
         config["rpc_port"] = port + 1000
         if starting_height is not None:
             config["starting_height"] = starting_height
-        config["initial_num_public_keys"] = 5
+        config["initial_num_public_keys"] = initial_num_public_keys
 
         entropy = token_bytes(32)
         if key_seed is None:
@@ -188,7 +189,9 @@ async def setup_wallet_node(
         keychain.delete_all_keys()
 
 
-async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConstants, b_tools):
+async def setup_harvester(
+    port, farmer_port, consensus_constants: ConsensusConstants, b_tools, start_service: bool = True
+):
     kwargs = service_kwargs_for_harvester(b_tools.root_path, b_tools.config["harvester"], consensus_constants)
     kwargs.update(
         server_listen_ports=[port],
@@ -200,9 +203,10 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
 
     service = Service(**kwargs)
 
-    await service.start()
+    if start_service:
+        await service.start()
 
-    yield service._node, service._node.server
+    yield service
 
     service.stop()
     await service.wait_closed()
@@ -213,6 +217,7 @@ async def setup_farmer(
     consensus_constants: ConsensusConstants,
     b_tools,
     full_node_port: Optional[uint16] = None,
+    start_service: bool = True,
 ):
     config = bt.config["farmer"]
     config_pool = bt.config["pool"]
@@ -238,9 +243,10 @@ async def setup_farmer(
 
     service = Service(**kwargs)
 
-    await service.start()
+    if start_service:
+        await service.start()
 
-    yield service._api, service._node.server
+    yield service
 
     service.stop()
     await service.wait_closed()
@@ -268,7 +274,7 @@ async def setup_introducer(port):
 
 
 async def setup_vdf_client(port):
-    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1))
+    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, bt.config.get("prefer_ipv6")))
 
     def stop():
         asyncio.create_task(kill_processes())
@@ -281,9 +287,9 @@ async def setup_vdf_client(port):
 
 
 async def setup_vdf_clients(port):
-    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1))
-    vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2))
-    vdf_task_3 = asyncio.create_task(spawn_process(self_hostname, port, 3))
+    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, bt.config.get("prefer_ipv6")))
+    vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2, bt.config.get("prefer_ipv6")))
+    vdf_task_3 = asyncio.create_task(spawn_process(self_hostname, port, 3, bt.config.get("prefer_ipv6")))
 
     def stop():
         asyncio.create_task(kill_processes())
@@ -300,7 +306,7 @@ async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: C
     config = b_tools.config["timelord"]
     config["port"] = port
     config["full_node_peer"]["port"] = full_node_port
-    config["sanitizer_mode"] = sanitizer
+    config["bluebox_mode"] = sanitizer
     config["fast_algorithm"] = False
     if sanitizer:
         config["vdf_server"]["port"] = 7999
@@ -408,6 +414,7 @@ async def setup_simulators_and_wallets(
     starting_height=None,
     key_seed=None,
     starting_port=50000,
+    initial_num_public_keys=5,
 ):
     with TempKeyring() as keychain1, TempKeyring() as keychain2:
         simulators: List[FullNodeAPI] = []
@@ -447,6 +454,7 @@ async def setup_simulators_and_wallets(
                 None,
                 key_seed=seed,
                 starting_height=starting_height,
+                initial_num_public_keys=initial_num_public_keys,
             )
             wallets.append(await wlt.__anext__())
             node_iters.append(wlt)
@@ -456,16 +464,16 @@ async def setup_simulators_and_wallets(
         await _teardown_nodes(node_iters)
 
 
-async def setup_farmer_harvester(consensus_constants: ConsensusConstants):
+async def setup_farmer_harvester(consensus_constants: ConsensusConstants, start_services: bool = True):
     node_iters = [
-        setup_harvester(21234, 21235, consensus_constants, bt),
-        setup_farmer(21235, consensus_constants, bt),
+        setup_harvester(21234, 21235, consensus_constants, bt, start_services),
+        setup_farmer(21235, consensus_constants, bt, start_service=start_services),
     ]
 
-    harvester, harvester_server = await node_iters[0].__anext__()
-    farmer, farmer_server = await node_iters[1].__anext__()
+    harvester_service = await node_iters[0].__anext__()
+    farmer_service = await node_iters[1].__anext__()
 
-    yield harvester, farmer
+    yield harvester_service, farmer_service
 
     await _teardown_nodes(node_iters)
 
@@ -495,8 +503,10 @@ async def setup_full_system(
         ]
 
         introducer, introducer_server = await node_iters[0].__anext__()
-        harvester, harvester_server = await node_iters[1].__anext__()
-        farmer, farmer_server = await node_iters[2].__anext__()
+        harvester_service = await node_iters[1].__anext__()
+        harvester = harvester_service._node
+        farmer_service = await node_iters[2].__anext__()
+        farmer = farmer_service._node
 
         async def num_connections():
             count = len(harvester.server.all_connections.items())

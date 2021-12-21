@@ -50,14 +50,19 @@ def validate_clvm_and_signature(
         bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
         program = simple_solution_generator(bundle)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        result: NPCResult = get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True)
+        result: NPCResult = get_name_puzzle_conditions(
+            program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True
+        )
 
         if result.error is not None:
             return Err(result.error), b"", {}
 
         pks: List[G1Element] = []
         msgs: List[bytes32] = []
-        pks, msgs = pkm_pairs(result.npc_list, additional_data)
+        # TODO: address hint error and remove ignore
+        #       error: Incompatible types in assignment (expression has type "List[bytes]", variable has type
+        #       "List[bytes32]")  [assignment]
+        pks, msgs = pkm_pairs(result.npc_list, additional_data)  # type: ignore[assignment]
 
         # Verify aggregated signature
         cache: LRUCache = LRUCache(10000)

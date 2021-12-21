@@ -75,7 +75,9 @@ class WalletTool:
 
     def get_new_puzzlehash(self) -> bytes32:
         puzzle = self.get_new_puzzle()
-        return puzzle.get_tree_hash()
+        # TODO: address hint error and remove ignore
+        #       error: "bytes32" has no attribute "get_tree_hash"  [attr-defined]
+        return puzzle.get_tree_hash()  # type: ignore[attr-defined]
 
     def sign(self, value: bytes, pubkey: bytes) -> G2Element:
         privatekey: PrivateKey = master_sk_to_wallet_sk(self.private_key, self.pubkey_num_lookup[pubkey])
@@ -139,7 +141,14 @@ class WalletTool:
             if n == 0:
                 message_list = [c.name() for c in coins]
                 for outputs in condition_dic[ConditionOpcode.CREATE_COIN]:
-                    message_list.append(Coin(coin.name(), outputs.vars[0], int_from_bytes(outputs.vars[1])).name())
+                    # TODO: address hint error and remove ignore
+                    #       error: Argument 2 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+                    coin_to_append = Coin(
+                        coin.name(),
+                        outputs.vars[0],  # type: ignore[arg-type]
+                        int_from_bytes(outputs.vars[1]),
+                    )
+                    message_list.append(coin_to_append.name())
                 message = std_hash(b"".join(message_list))
                 condition_dic[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT].append(
                     ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [message])
@@ -158,7 +167,7 @@ class WalletTool:
         signatures = []
         solution: Program
         puzzle: Program
-        for coin_spend in coin_spends:  # type: ignore # noqa
+        for coin_spend in coin_spends:  # noqa
             secret_key = self.get_private_key_for_puzzle_hash(coin_spend.coin.puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
             err, con, cost = conditions_for_solution(

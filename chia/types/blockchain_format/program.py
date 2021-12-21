@@ -7,7 +7,7 @@ from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.operators import OP_REWRITE, OPERATOR_LOOKUP
 from clvm.serialize import sexp_from_stream, sexp_to_stream
-from clvm_rs import STRICT_MODE, deserialize_and_run_program2, serialized_length, run_generator
+from clvm_rs import STRICT_MODE as MEMPOOL_MODE, deserialize_and_run_program2, serialized_length, run_generator
 from clvm_tools.curry import curry, uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -51,7 +51,7 @@ class Program(SExp):
     @classmethod
     def from_bytes(cls, blob: bytes) -> "Program":
         f = io.BytesIO(blob)
-        result = cls.parse(f)  # type: ignore # noqa
+        result = cls.parse(f)  # noqa
         assert f.read() == b""
         return result
 
@@ -68,7 +68,7 @@ class Program(SExp):
 
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
-        self.stream(f)  # type: ignore # noqa
+        self.stream(f)  # noqa
         return f.getvalue()
 
     def __str__(self) -> str:
@@ -93,7 +93,7 @@ class Program(SExp):
                 raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
         return v
 
-    def get_tree_hash(self, *args: List[bytes32]) -> bytes32:
+    def get_tree_hash(self, *args: bytes32) -> bytes32:
         """
         Any values in `args` that appear in the tree
         are presumed to have been hashed already.
@@ -229,7 +229,7 @@ class SerializedProgram:
             return True
         return self._buf != other._buf
 
-    def get_tree_hash(self, *args: List[bytes32]) -> bytes32:
+    def get_tree_hash(self, *args: bytes32) -> bytes32:
         """
         Any values in `args` that appear in the tree
         are presumed to have been hashed already.
@@ -237,8 +237,8 @@ class SerializedProgram:
         tmp = sexp_from_stream(io.BytesIO(self._buf), SExp.to)
         return _tree_hash(tmp, set(args))
 
-    def run_safe_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
-        return self._run(max_cost, STRICT_MODE, *args)
+    def run_mempool_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
+        return self._run(max_cost, MEMPOOL_MODE, *args)
 
     def run_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
         return self._run(max_cost, 0, *args)

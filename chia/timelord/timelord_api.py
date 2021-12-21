@@ -24,7 +24,7 @@ class TimelordAPI:
         if self.timelord.last_state is None:
             return None
         async with self.timelord.lock:
-            if self.timelord.sanitizer_mode:
+            if self.timelord.bluebox_mode:
                 return None
             if new_peak.reward_chain_block.weight > self.timelord.last_state.get_weight():
                 log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
@@ -49,7 +49,7 @@ class TimelordAPI:
         if self.timelord.last_state is None:
             return None
         async with self.timelord.lock:
-            if self.timelord.sanitizer_mode:
+            if self.timelord.bluebox_mode:
                 return None
             try:
                 sp_iters, ip_iters = iters_from_block(
@@ -79,7 +79,7 @@ class TimelordAPI:
     @api_request
     async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime):
         async with self.timelord.lock:
-            if not self.timelord.sanitizer_mode:
+            if not self.timelord.bluebox_mode:
                 return None
             now = time.time()
             # work older than 5s can safely be assumed to be from the previous batch, and needs to be cleared

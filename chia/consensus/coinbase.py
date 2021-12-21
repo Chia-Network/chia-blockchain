@@ -14,7 +14,7 @@ def pool_parent_id(block_height: uint32, genesis_challenge: bytes32) -> bytes32:
     return bytes32(genesis_challenge[:16] + block_height.to_bytes(16, "big"))
 
 
-def farmer_parent_id(block_height: uint32, genesis_challenge: bytes32) -> uint32:
+def farmer_parent_id(block_height: uint32, genesis_challenge: bytes32) -> bytes32:
     return bytes32(genesis_challenge[16:] + block_height.to_bytes(16, "big"))
 
 

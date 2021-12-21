@@ -19,18 +19,18 @@ from tests.setup_nodes import bt
 blockchain_db_counter: int = 0
 
 
-async def create_blockchain(constants: ConsensusConstants):
+async def create_blockchain(constants: ConsensusConstants, db_version: int):
     global blockchain_db_counter
     db_path = Path(f"blockchain_test-{blockchain_db_counter}.db")
     if db_path.exists():
         db_path.unlink()
     blockchain_db_counter += 1
     connection = await aiosqlite.connect(db_path)
-    wrapper = DBWrapper(connection)
+    wrapper = DBWrapper(connection, False, db_version)
     coin_store = await CoinStore.create(wrapper)
     store = await BlockStore.create(wrapper)
     hint_store = await HintStore.create(wrapper)
-    bc1 = await Blockchain.create(coin_store, store, constants, hint_store)
+    bc1 = await Blockchain.create(coin_store, store, constants, hint_store, Path("."))
     assert bc1.get_peak() is None
     return bc1, connection, db_path
 

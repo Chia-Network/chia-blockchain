@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import socket
 import time
 import traceback
 from pathlib import Path
@@ -47,12 +46,13 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.check_fork_next_block import check_fork_next_block
-from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
+from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, load_config
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint128
 from chia.util.keychain import Keychain
 from chia.util.lru_cache import LRUCache
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
+from chia.util.network import get_host_addr
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.derivation_record import DerivationRecord
@@ -103,6 +103,7 @@ class WalletNode:
         self.keychain_proxy = None
         self.local_keychain = local_keychain
         self.root_path = root_path
+        self.base_config = load_config(root_path, "config.yaml")
         self.log = logging.getLogger(name if name else __name__)
         # Normal operation data
         self.cached_blocks: Dict = {}
@@ -197,7 +198,6 @@ class WalletNode:
         if backup_settings.user_initialized is False:
             if new_wallet is True:
                 await self.wallet_state_manager.user_settings.user_created_new_wallet()
-                self.wallet_state_manager.new_wallet = True
             elif skip_backup_import is True:
                 await self.wallet_state_manager.user_settings.user_skipped_backup_import()
             elif backup_file is not None:
@@ -346,7 +346,7 @@ class WalletNode:
             already_sent = set()
             for peer, status, _ in record.sent_to:
                 if status == MempoolInclusionStatus.SUCCESS.value:
-                    already_sent.add(hexstr_to_bytes(peer))
+                    already_sent.add(bytes32.from_hexstr(peer))
             messages.append((msg, already_sent))
 
         return messages
@@ -412,7 +412,9 @@ class WalletNode:
             if full_node_peer.is_valid():
                 full_node_resolved = full_node_peer
             else:
-                full_node_resolved = PeerInfo(socket.gethostbyname(full_node_peer.host), full_node_peer.port)
+                full_node_resolved = PeerInfo(
+                    get_host_addr(full_node_peer.host, self.base_config.get("prefer_ipv6")), full_node_peer.port
+                )
             if full_node_peer in peers or full_node_resolved in peers:
                 self.log.info(f"Will not attempt to connect to other nodes, already connected to {full_node_peer}")
                 for connection in self.server.get_full_node_connections():
@@ -801,8 +803,14 @@ class WalletNode:
             for i in range(len(coins)):
                 assert coins[i][0] == proofs[i][0]
                 coin_list_1: List[Coin] = coins[i][1]
-                puzzle_hash_proof: bytes32 = proofs[i][1]
-                coin_list_proof: Optional[bytes32] = proofs[i][2]
+                # TODO: address hint error and remove ignore
+                #       error: Incompatible types in assignment (expression has type "bytes", variable has type
+                #       "bytes32")  [assignment]
+                puzzle_hash_proof: bytes32 = proofs[i][1]  # type: ignore[assignment]
+                # TODO: address hint error and remove ignore
+                #       error: Incompatible types in assignment (expression has type "Optional[bytes]", variable has
+                #       type "Optional[bytes32]")  [assignment]
+                coin_list_proof: Optional[bytes32] = proofs[i][2]  # type: ignore[assignment]
                 if len(coin_list_1) == 0:
                     # Verify exclusion proof for puzzle hash
                     not_included = confirm_not_included_already_hashed(
@@ -815,10 +823,13 @@ class WalletNode:
                 else:
                     try:
                         # Verify inclusion proof for coin list
+                        # TODO: address hint error and remove ignore
+                        #       error: Argument 3 to "confirm_included_already_hashed" has incompatible type
+                        #       "Optional[bytes32]"; expected "bytes32"  [arg-type]
                         included = confirm_included_already_hashed(
                             root,
                             hash_coin_list(coin_list_1),
-                            coin_list_proof,
+                            coin_list_proof,  # type: ignore[arg-type]
                         )
                         if included is False:
                             return False

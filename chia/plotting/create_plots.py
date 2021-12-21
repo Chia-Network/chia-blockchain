@@ -42,10 +42,10 @@ class PlotKeys:
 class PlotKeysResolver:
     def __init__(
         self,
-        farmer_public_key: str,
-        alt_fingerprint: int,
-        pool_public_key: str,
-        pool_contract_address: str,
+        farmer_public_key: Optional[str],
+        alt_fingerprint: Optional[int],
+        pool_public_key: Optional[str],
+        pool_contract_address: Optional[str],
         root_path: Path,
         log: logging.Logger,
         connect_to_daemon=False,
@@ -128,10 +128,10 @@ class PlotKeysResolver:
 
 
 async def resolve_plot_keys(
-    farmer_public_key: str,
-    alt_fingerprint: int,
-    pool_public_key: str,
-    pool_contract_address: str,
+    farmer_public_key: Optional[str],
+    alt_fingerprint: Optional[int],
+    pool_public_key: Optional[str],
+    pool_contract_address: Optional[str],
     root_path: Path,
     log: logging.Logger,
     connect_to_daemon=False,
@@ -216,7 +216,7 @@ async def create_plots(
 
         if args.memo is not None:
             log.info(f"Debug memo: {args.memo}")
-            plot_memo = bytes.fromhex(args.memo)
+            plot_memo = bytes32.fromhex(args.memo)
 
         # Uncomment next two lines if memo is needed for dev debug
         plot_memo_str: str = plot_memo.hex()

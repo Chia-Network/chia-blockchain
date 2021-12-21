@@ -28,7 +28,7 @@ def add_dummy_key_to_cryptfilekeyring(crypt_file_keyring: CryptFileKeyring):
     """
     Add a fake key to the CryptFileKeyring
     """
-    crypt_file_keyring.keyring_key = "your keyring password"  # type: ignore
+    crypt_file_keyring.keyring_key = "your keyring password"
     user: str = get_private_key_user(default_keychain_user(), 0)
     crypt_file_keyring.set_password(default_keychain_service(), user, "abc123")
 

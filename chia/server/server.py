@@ -148,8 +148,8 @@ class ChiaServer:
         self.chia_ca_crt_path, self.chia_ca_key_path = chia_ca_crt_key
         self.node_id = self.my_id()
 
-        self.incoming_task = asyncio.create_task(self.incoming_api_task())
-        self.gc_task: asyncio.Task = asyncio.create_task(self.garbage_collect_connections_task())
+        self.incoming_task: Optional[asyncio.Task] = None
+        self.gc_task: Optional[asyncio.Task] = None
         self.app: Optional[Application] = None
         self.runner: Optional[web.AppRunner] = None
         self.site: Optional[TCPSite] = None
@@ -187,13 +187,18 @@ class ChiaServer:
         Periodically checks for connections with no activity (have not sent us any data), and removes them,
         to allow room for other peers.
         """
+        is_crawler = getattr(self.node, "crawl", None)
         while True:
-            await asyncio.sleep(600)
+            await asyncio.sleep(600 if is_crawler is None else 2)
             to_remove: List[WSChiaConnection] = []
             for connection in self.all_connections.values():
                 if self._local_type == NodeType.FULL_NODE and connection.connection_type == NodeType.FULL_NODE:
-                    if time.time() - connection.last_message_time > 1800:
-                        to_remove.append(connection)
+                    if is_crawler is not None:
+                        if time.time() - connection.creation_time > 5:
+                            to_remove.append(connection)
+                    else:
+                        if time.time() - connection.last_message_time > 1800:
+                            to_remove.append(connection)
             for connection in to_remove:
                 self.log.debug(f"Garbage collecting connection {connection.peer_host} due to inactivity")
                 await connection.close()
@@ -207,6 +212,11 @@ class ChiaServer:
                 del self.banned_peers[peer_ip]
 
     async def start_server(self, on_connect: Callable = None):
+        if self.incoming_task is None:
+            self.incoming_task = asyncio.create_task(self.incoming_api_task())
+        if self.gc_task is None:
+            self.gc_task = asyncio.create_task(self.garbage_collect_connections_task())
+
         if self._local_type in [NodeType.WALLET, NodeType.HARVESTER, NodeType.TIMELORD]:
             return None
 
@@ -243,6 +253,9 @@ class ChiaServer:
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
+        if getattr(self.node, "crawl", None) is not None:
+            return
+
         if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:
             self.log.warning(f"Peer {request.remote} is banned, refusing connection")
             return None
@@ -405,7 +418,7 @@ class ChiaServer:
                 return False
 
             assert ws._response.connection is not None and ws._response.connection.transport is not None
-            transport = ws._response.connection.transport  # type: ignore
+            transport = ws._response.connection.transport
             cert_bytes = transport._ssl_protocol._extra["ssl_object"].getpeercert(True)  # type: ignore
             der_cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
             peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
@@ -581,7 +594,7 @@ class ChiaServer:
 
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
-                        await connection.reply_to_request(response_message)
+                        await connection.send_message(response_message)
                 except TimeoutError:
                     connection.log.error(f"Timeout error for: {message_type}")
                 except Exception as e:
@@ -605,10 +618,14 @@ class ChiaServer:
 
             task_id = token_bytes()
             api_task = asyncio.create_task(api_call(payload_inc, connection_inc, task_id))
-            self.api_tasks[task_id] = api_task
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "bytes" for "Dict[bytes32, Task[Any]]"; expected type "bytes32"  [index]
+            self.api_tasks[task_id] = api_task  # type: ignore[index]
             if connection_inc.peer_node_id not in self.tasks_from_peer:
                 self.tasks_from_peer[connection_inc.peer_node_id] = set()
-            self.tasks_from_peer[connection_inc.peer_node_id].add(task_id)
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "add" of "set" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+            self.tasks_from_peer[connection_inc.peer_node_id].add(task_id)  # type: ignore[arg-type]
 
     async def send_to_others(
         self,
@@ -703,8 +720,12 @@ class ChiaServer:
             task.cancel()
 
         self.shut_down_event.set()
-        self.incoming_task.cancel()
-        self.gc_task.cancel()
+        if self.incoming_task is not None:
+            self.incoming_task.cancel()
+            self.incoming_task = None
+        if self.gc_task is not None:
+            self.gc_task.cancel()
+            self.gc_task = None
 
     async def await_closed(self) -> None:
         self.log.debug("Await Closed")

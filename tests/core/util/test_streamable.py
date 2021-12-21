@@ -42,7 +42,7 @@ class TestStreamable(unittest.TestCase):
             f: Optional[uint32]
             g: Tuple[uint32, str, bytes]
 
-        a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, (383, "hello", b"goodbye"))  # type: ignore
+        a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, (383, "hello", b"goodbye"))
 
         b: bytes = bytes(a)
         assert a == TestClass.from_bytes(b)

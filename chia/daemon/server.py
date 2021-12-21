@@ -100,6 +100,9 @@ if getattr(sys, "frozen", False):
         "chia_timelord": "start_timelord",
         "chia_timelord_launcher": "timelord_launcher",
         "chia_full_node_simulator": "start_simulator",
+        "chia_seeder": "chia_seeder",
+        "chia_seeder_crawler": "chia_seeder_crawler",
+        "chia_seeder_dns": "chia_seeder_dns",
     }
 
     def executable_for_service(service_name: str) -> str:
@@ -1268,7 +1271,7 @@ async def kill_process(
     if sys.platform == "win32" or sys.platform == "cygwin":
         log.info("sending CTRL_BREAK_EVENT signal to %s", service_name)
         # pylint: disable=E1101
-        kill(process.pid, signal.SIGBREAK)  # type: ignore
+        kill(process.pid, signal.SIGBREAK)
 
     else:
         log.info("sending term signal to %s", service_name)

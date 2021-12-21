@@ -1,5 +1,7 @@
 import io
-from typing import Any, BinaryIO
+from typing import BinaryIO, Type, TypeVar, TYPE_CHECKING
+
+_T_SizedBytes = TypeVar("_T_SizedBytes", bound="SizedBytes")
 
 
 def hexstr_to_bytes(input_str: str) -> bytes:
@@ -11,37 +13,44 @@ def hexstr_to_bytes(input_str: str) -> bytes:
     return bytes.fromhex(input_str)
 
 
-def make_sized_bytes(size: int):
+class SizedBytes(bytes):
+    """A streamable type that subclasses "bytes" but requires instances
+    to be a certain, fixed size specified by the `._size` class attribute.
     """
-    Create a streamable type that subclasses "bytes" but requires instances
-    to be a certain, fixed size.
-    """
-    name = "bytes%d" % size
 
-    def __new__(cls, v):
+    _size = 0
+
+    @staticmethod
+    def __new__(cls: Type[_T_SizedBytes], v) -> _T_SizedBytes:
         v = bytes(v)
-        if not isinstance(v, bytes) or len(v) != size:
-            raise ValueError("bad %s initializer %s" % (name, v))
-        return bytes.__new__(cls, v)  # type: ignore
+        if not isinstance(v, bytes) or len(v) != cls._size:
+            raise ValueError("bad %s initializer %s" % (cls.__name__, v))
+        return bytes.__new__(cls, v)
 
-    @classmethod  # type: ignore
-    def parse(cls, f: BinaryIO) -> Any:
-        b = f.read(size)
-        assert len(b) == size
+    @classmethod
+    def parse(cls: Type[_T_SizedBytes], f: BinaryIO) -> _T_SizedBytes:
+        b = f.read(cls._size)
+        assert len(b) == cls._size
         return cls(b)
 
     def stream(self, f):
         f.write(self)
 
-    @classmethod  # type: ignore
-    def from_bytes(cls: Any, blob: bytes) -> Any:
+    @classmethod
+    def from_bytes(cls: Type[_T_SizedBytes], blob: bytes) -> _T_SizedBytes:
         # pylint: disable=no-member
         f = io.BytesIO(blob)
         result = cls.parse(f)
         assert f.read() == b""
         return result
 
-    def __bytes__(self: Any) -> bytes:
+    @classmethod
+    def from_hexstr(cls: Type[_T_SizedBytes], input_str: str) -> _T_SizedBytes:
+        if input_str.startswith("0x") or input_str.startswith("0X"):
+            return cls.fromhex(input_str[2:])
+        return cls.fromhex(input_str)
+
+    def __bytes__(self) -> bytes:
         f = io.BytesIO()
         self.stream(f)
         return bytes(f.getvalue())
@@ -52,14 +61,10 @@ def make_sized_bytes(size: int):
     def __repr__(self):
         return "<%s: %s>" % (self.__class__.__name__, str(self))
 
-    namespace = dict(
-        __new__=__new__,
-        parse=parse,
-        stream=stream,
-        from_bytes=from_bytes,
-        __bytes__=__bytes__,
-        __str__=__str__,
-        __repr__=__repr__,
-    )
-
-    return type(name, (bytes,), namespace)
+    if TYPE_CHECKING:
+        # TODO: This stub implements a fix already merged into typeshed but not yet
+        #       released in a new mypy version.  Once released this should be removed.
+        #       https://github.com/python/typeshed/pull/6201
+        @classmethod
+        def fromhex(cls: Type[_T_SizedBytes], __s: str) -> _T_SizedBytes:
+            ...

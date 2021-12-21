@@ -22,7 +22,7 @@
 # https://github.com/sipa/bips/blob/bip-bech32m/bip-bech32m.mediawiki
 
 """Reference implementation for Bech32m and segwit addresses."""
-from typing import List, Optional, Tuple
+from typing import List, Iterable, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -82,7 +82,7 @@ def bech32_decode(bech: str) -> Tuple[Optional[str], Optional[List[int]]]:
     return hrp, data[:-6]
 
 
-def convertbits(data: List[int], frombits: int, tobits: int, pad: bool = True) -> List[int]:
+def convertbits(data: Iterable[int], frombits: int, tobits: int, pad: bool = True) -> List[int]:
     """General power-of-2 base conversion."""
     acc = 0
     bits = 0
@@ -115,5 +115,5 @@ def decode_puzzle_hash(address: str) -> bytes32:
     if data is None:
         raise ValueError("Invalid Address")
     decoded = convertbits(data, 5, 8, False)
-    decoded_bytes = bytes(decoded)
+    decoded_bytes = bytes32(decoded)
     return decoded_bytes
