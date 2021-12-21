@@ -1,4 +1,3 @@
-import enum
 from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Dict, List, Optional, Tuple, Type, Union
@@ -10,7 +9,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
 
-class Status(enum.Enum):
+class Status(IntEnum):
     PENDING = 1
     COMMITTED = 2
 
