@@ -664,15 +664,22 @@ class WalletStateManager:
             if coin_state.created_height is None:
                 # TODO implements this coin got reorged
                 pass
+            # if the new coin has not been spent (i.e not ephemeral)
             elif coin_state.created_height is not None and coin_state.spent_height is None:
                 added_coin_record = await self.coin_added(
                     coin_state.coin, coin_state.created_height, all_outgoing, wallet_id, wallet_type, trade_additions
                 )
                 if added_coin_record is not None:
                     added.append(added_coin_record)
-                derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin_state.coin.puzzle_hash)
-                if derivation_index is not None:
-                    await self.puzzle_store.set_used_up_to(derivation_index, True)
+                if wallet_type == WalletType.NFT:
+                    # call on full node for info
+                    # await self.wallet_node.fetch_puzzle_solution()
+                    await self.wallets[wallet_id].add_nft_coin(coin_state.coin, coin_state.spent_height)
+                else:
+                    derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin_state.coin.puzzle_hash)
+                    if derivation_index is not None:
+                        await self.puzzle_store.set_used_up_to(derivation_index, True)
+            # elseif coin was ephemeral
             elif coin_state.created_height is not None and coin_state.spent_height is not None:
                 if info is None:
                     continue

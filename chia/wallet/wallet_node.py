@@ -431,6 +431,7 @@ class WalletNode:
             self.wallet_state_manager.state_changed("coin_added", wallet_id)
         self.synced_peers.add(full_node.peer_node_id)
 
+    # This function is also used for hints
     async def subscribe_to_phs(self, puzzle_hashes: List[bytes32], peer: WSChiaConnection, height=uint32(0)):
         """
         Tell full nodes that we are interested in puzzle hashes, and for trusted connections, add the new coin state
