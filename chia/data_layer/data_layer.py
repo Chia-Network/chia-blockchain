@@ -52,7 +52,7 @@ class DataLayer:
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
 
-    async def create(self, amount: uint64, fee: uint64) -> Tuple[TransactionRecord, TransactionRecord]:
+    async def create(self, amount: uint64, fee: uint64) -> List[TransactionRecord]:
         # create the store (db) and data store instance
         assert self.wallet_state_manager
         self.connection = await aiosqlite.connect(self.db_path)
@@ -61,14 +61,12 @@ class DataLayer:
         assert self.wallet_node.wallet_state_manager
         main_wallet = self.wallet_node.wallet_state_manager.main_wallet
         async with self.wallet_node.wallet_state_manager.lock:
-            creation_record = await self.wallet.create_new_dl_wallet(
+            creation_record = await DataLayerWallet.create_new_dl_wallet(
                 self.wallet_node.wallet_state_manager, main_wallet, None, fee=fee
             )
             self.wallet = creation_record.item
-            [regular_spend] = creation_record.regular
-            [dl_spend] = creation_record.data_layer
         self.initialized = True  # todo do this on the callback after tx is buried
-        return regular_spend, dl_spend
+        return creation_record.transaction_records
 
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
