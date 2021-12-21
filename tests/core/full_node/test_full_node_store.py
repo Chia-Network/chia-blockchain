@@ -47,11 +47,17 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="function", params=[1, 2])
 async def empty_blockchain(request):
+    print(f" ==== empty_blockchain A")
     bc1, connection, db_path = await create_blockchain(test_constants, request.param)
+    print(f" ==== empty_blockchain B")
     yield bc1
+    print(f" ==== empty_blockchain C")
     await connection.close()
+    print(f" ==== empty_blockchain D")
     bc1.shut_down()
+    print(f" ==== empty_blockchain E")
     db_path.unlink()
+    print(f" ==== empty_blockchain F")
 
 
 @pytest.fixture(scope="function", params=[1, 2])
