@@ -291,9 +291,10 @@ class TestFullNodeBlockCompression:
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
 
         # Creates a cc wallet
-        cc_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
-            wallet_node_1.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
-        )
+        async with wallet_node_1.wallet_state_manager.lock:
+            cc_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+                    wallet_node_1.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+                )
         tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
         tr = tx_queue[0]
         await time_out_assert(
@@ -321,14 +322,15 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_2, 10)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 10)
 
-        # Confirm generator is compressed
-        program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+        # Confirm generator is not compressed, #CAT creation has a cat spend
+        all_blocks = await full_node_1.get_all_full_blocks()
+        program: Optional[SerializedProgram] = all_blocks[-1].transactions_generator
         assert program is not None
-        assert detect_potential_template_generator(uint32(10), program) is None
-        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+        assert len(all_blocks[-1].transactions_generator_ref_list) == 0
 
         # Make a cc transaction
-        tr: TransactionRecord = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
+        tr_list: List[TransactionRecord] = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
+        tr = tr_list[0]
         await wallet.wallet_state_manager.add_pending_transaction(tr)
         await time_out_assert(
             10,
