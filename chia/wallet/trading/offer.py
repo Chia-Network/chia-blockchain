@@ -380,7 +380,7 @@ class Offer:
         as_spend_bundle = self.to_spend_bundle()
         if compressor is None:
             matched_puzzles = [
-                PuzzleCompressor().match_puzzle(cs.puzzle_reveal.to_program())[1] for cs in as_spend_bundle.coin_spends
+                PuzzleCompressor().match_puzzle(cs.puzzle_reveal.to_program()) for cs in as_spend_bundle.coin_spends
             ]
             compressor = PuzzleCompressor.lowest_compatible_version(matched_puzzles)
         return bytes(CompressedSpendBundle.compress(as_spend_bundle, compressor=compressor))
@@ -410,6 +410,7 @@ class Offer:
         # Because of the __bytes__ method, we need to parse the dummy CoinSpends as `requested_payments`
         bundle = SpendBundle.from_bytes(as_bytes)
         return cls.from_spend_bundle(bundle)
+
 
 def try_offer_decompression(offer_bytes: bytes) -> Offer:
     try:

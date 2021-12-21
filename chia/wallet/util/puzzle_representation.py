@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 from chia.util.ints import uint32
+
 
 @dataclass(frozen=True)
 class PuzzleRepresentation:
@@ -16,16 +17,24 @@ class PuzzleRepresentation:
     drivers to work together as if it were a driver for the whole puzzle.
     """
 
-    base: bytes32
-    args: List[Union["PuzzleRepresentation", Program]]
+    base: Optional[bytes32]
+    args: Union[Program, List["PuzzleRepresentation"]]
 
     def construct(self, driver_dict) -> Program:
-        driver = driver_dict[self.base]
-        return driver.construct(driver_dict, self.args)
+        if self.base is None:
+            assert isinstance(self.args, Program)
+            return self.args
+        else:
+            driver = driver_dict[self.base]
+            return driver.construct(driver_dict, self.args)
 
     def solve(self, driver_dict, solution_dict: Dict[str, str]) -> Program:
-        driver = driver_dict[self.base]
-        return driver.solve(driver_dict, self.args, solution_dict)
+        if self.base is None:
+            assert "solution" in solution_dict
+            return Program.fromhex(solution_dict["solution"])
+        else:
+            driver = driver_dict[self.base]
+            return driver.solve(driver_dict, self.args, solution_dict)
 
     @classmethod
     def parse(cls, f) -> "PuzzleRepresentation":
@@ -39,31 +48,33 @@ class PuzzleRepresentation:
         f.write(prefixed_blob)
 
     def __bytes__(self) -> bytes:
-        total_bytes = self.base
-        for arg in self.args:
-            byte_output = bytes(arg)
-            if type(arg) == type(self):
-                total_bytes += b"\x00"
-            else:
-                total_bytes += b"\x01"
+        if self.base is None:
+            total_bytes = b"\x00"
+            assert isinstance(self.args, Program)
+            arg_list: List[Union[Program, PuzzleRepresentation]] = [self.args]
+        else:
+            total_bytes = b"\x01" + self.base
+            arg_list = self.args
+        for arg in arg_list:
+            byte_output = arg.__bytes__()
             total_bytes += bytes(uint32(len(byte_output)))
             total_bytes += byte_output
         return total_bytes
 
     @classmethod
     def from_bytes(cls, as_bytes: bytes) -> "PuzzleRepresentation":
-        as_hex = as_bytes.hex()
-        base = bytes32(bytes.fromhex(as_hex[0:64]))
-        as_hex = as_hex[64:]
-        args = []
-        while as_hex != "":
-            num_bytes = int.from_bytes(bytes.fromhex(as_hex[2:10]), "big")
-            end_index = 10 + num_bytes * 2
-            next_bytes = bytes.fromhex(as_hex[10:end_index])
-            if as_hex[0:2] == "00":
-                args.append(cls.from_bytes(next_bytes))
+        base = None if as_bytes[0:1] == b"\x00" else bytes32(as_bytes[1:33])
+        arg_bytes = as_bytes[1:] if base is None else as_bytes[33:]
+        args: Union[Program, List["PuzzleRepresentation"]] = []
+        while arg_bytes != b"":
+            num_bytes = int.from_bytes(arg_bytes[0:4], "big")
+            end_index = 4 + num_bytes
+            next_bytes = arg_bytes[4:end_index]
+            if base is None:
+                args = Program.from_bytes(next_bytes)
+                break
             else:
-                args.append(Program.from_bytes(next_bytes))
-            as_hex = as_hex[end_index:]
+                args.append(cls.from_bytes(next_bytes))
+                arg_bytes = arg_bytes[end_index:]
 
         return cls(base, args)

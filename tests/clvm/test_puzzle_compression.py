@@ -21,12 +21,12 @@ SOLUTION = Program.to([])
 
 class DummyDriver:
     @staticmethod
-    def match(puzzle, version):
-        return True, [puzzle]
+    def match(puzzle):
+        return False, []
 
     @staticmethod
     def construct(driver_dict, args):
-        return args[0]
+        return args[0].construct()
 
     @staticmethod
     def solve(driver_dict, args, solution_dict):
@@ -65,9 +65,8 @@ class TestPuzzleCompression:
             unknown.curry(puzzle_for_pk(G1Element())),
             SOLUTION,
         )
-        assert (
-            bytes(coin_spend.puzzle_reveal)
-            in bytes(CompressedCoinSpend.compress(coin_spend).compressed_coin_spend.puzzle_reveal)
+        assert bytes(coin_spend.puzzle_reveal) in bytes(
+            CompressedCoinSpend.compress(coin_spend).compressed_coin_spend.puzzle_reveal
         )
 
     def test_version_override(self):

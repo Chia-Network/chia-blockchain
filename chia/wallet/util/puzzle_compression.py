@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List, Union, Any, Type, TypeVar
+from typing import Dict, Tuple, List, Any, Type, TypeVar
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -31,9 +31,7 @@ structure below.  They must all have three methods implemented:
 
 class StandardPuzzle:
     @staticmethod
-    def match(
-        puzzle: Program, compressor: "PuzzleCompressor"
-    ) -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
+    def match(puzzle: Program) -> Tuple[bool, List[Program]]:
         uncurried_mod, curried_args = puzzle.uncurry()
         if standard_puzzle.MOD == uncurried_mod:
             synthetic_pubkey = curried_args.first()
@@ -42,11 +40,11 @@ class StandardPuzzle:
             return False, []
 
     @staticmethod
-    def construct(driver_dict, args: List[Union[PuzzleRepresentation, Program]]) -> Program:
-        return standard_puzzle.MOD.curry(args[0])
+    def construct(driver_dict, args: List[PuzzleRepresentation]) -> Program:
+        return standard_puzzle.MOD.curry(args[0].construct(driver_dict))
 
     @staticmethod
-    def solve(driver_dict, args: List[Union[PuzzleRepresentation, Program]], solution_dict: Dict[str, str]) -> Program:
+    def solve(driver_dict, args: List[PuzzleRepresentation], solution_dict: Dict[str, str]) -> Program:
         if "hidden_reveal" in solution_dict and solution_dict["hidden_reveal"]:
             assert all(arg in solution_dict for arg in ["hidden_public_key", "hidden_puzzle", "solution"])
             return standard_puzzle.solution_for_hidden_puzzle(
@@ -64,48 +62,41 @@ class StandardPuzzle:
 
 class CATPuzzle:
     @staticmethod
-    def match(
-        puzzle: Program, compressor: "PuzzleCompressor"
-    ) -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
+    def match(puzzle: Program) -> Tuple[bool, List[Program]]:
         uncurried_mod, curried_args = puzzle.uncurry()
         if CC_MOD == uncurried_mod:
             tail_hash = curried_args.rest().first()
             innerpuz = curried_args.rest().rest().first()
-            _, matched_inner = compressor.match_puzzle(innerpuz)
-            return True, [tail_hash, matched_inner]
+            return True, [tail_hash, innerpuz]
         else:
             return False, []
 
     @staticmethod
-    def construct(driver_dict, args: List[Union[PuzzleRepresentation, Program]]) -> Program:
-        assert isinstance(args[0], Program)
-        innerpuz = args[1]
-        if isinstance(args[1], PuzzleRepresentation):
-            innerpuz = args[1].construct(driver_dict)
-        return CC_MOD.curry(CC_MOD.get_tree_hash(), args[0].as_python(), innerpuz)
+    def construct(driver_dict, args: List[PuzzleRepresentation]) -> Program:
+        return CC_MOD.curry(
+            CC_MOD.get_tree_hash(), args[0].construct(driver_dict).as_python(), args[1].construct(driver_dict)
+        )
 
     @staticmethod
-    def solve(driver_dict, args: List[Union[PuzzleRepresentation, Program]], solution_dict: Dict[str, str]) -> Program:
+    def solve(driver_dict, args: List[PuzzleRepresentation], solution_dict: Dict[str, str]) -> Program:
         # TODO: implement this
         return Program.to([])
 
 
 class OfferPuzzle:
     @staticmethod
-    def match(
-        puzzle: Program, compressor: "PuzzleCompressor"
-    ) -> Tuple[bool, List[Union[PuzzleRepresentation, Program]]]:
+    def match(puzzle: Program) -> Tuple[bool, List[Program]]:
         if OFFER_MOD == puzzle:
             return True, []
         else:
             return False, []
 
     @staticmethod
-    def construct(driver_dict, args: List[Union[PuzzleRepresentation, Program]]) -> Program:
+    def construct(driver_dict, args: List[PuzzleRepresentation]) -> Program:
         return OFFER_MOD
 
     @staticmethod
-    def solve(driver_dict, args: List[Union[PuzzleRepresentation, Program]], solution_dict: Dict[str, str]) -> Program:
+    def solve(driver_dict, args: List[PuzzleRepresentation], solution_dict: Dict[str, str]) -> Program:
         # TODO: implement this
         return Program.to([])
 
@@ -131,9 +122,12 @@ LATEST_VERSION: uint16 = uint16(max(HASH_TO_DRIVER.keys()))
 
 class CompressionVersionError(Exception):
     def __init__(self, version_number: int):
-        self.message = f"The puzzle is compressed with version {version_number} and cannot be parsed. Update software and try again."
+        self.message = f"The puzzle is compressed with version {version_number} and cannot be parsed. "
+        self.message += "Update software and try again."
+
 
 _T_PuzzleCompressor = TypeVar("_T_PuzzleCompressor", bound="PuzzleCompressor")
+
 
 class PuzzleCompressor:
     """
@@ -158,15 +152,17 @@ class PuzzleCompressor:
             self.version_number = uint16(65535)  # Just set it to max so it always passes any version checks
             self.driver_dict = driver_dict
 
-    def match_puzzle(self, puzzle: Program) -> Tuple[bool, Union[PuzzleRepresentation, Program]]:
+    def match_puzzle(self, puzzle: Program) -> PuzzleRepresentation:
         for identifier, driver in self.driver_dict.items():
-            matched, args = driver.match(puzzle, self)
+            matched, args = driver.match(puzzle)
             if matched:
-                return True, PuzzleRepresentation(identifier, args)
-        return False, puzzle
+                return PuzzleRepresentation(identifier, [self.match_puzzle(arg) for arg in args])
+            else:
+                return PuzzleRepresentation(None, puzzle)
+        raise ValueError("No entries in driver dict")
 
     def serialize(self, puzzle: Program) -> bytes:
-        _, rep = self.match_puzzle(puzzle)
+        rep = self.match_puzzle(puzzle)
         return bytes(self.version_number) + bytes(rep)
 
     def deserialize(self, object_bytes: bytes) -> Program:
@@ -175,11 +171,8 @@ class PuzzleCompressor:
             raise CompressionVersionError(parsed_version)
         else:
             deversioned_bytes = object_bytes[2:]
-            try:
-                program = PuzzleRepresentation.from_bytes(deversioned_bytes).construct(self.driver_dict)
-            except Exception:
-                program = Program.from_bytes(deversioned_bytes)
-            return program
+            rep = PuzzleRepresentation.from_bytes(deversioned_bytes)
+            return rep.construct(self.driver_dict)
 
     @classmethod
     def get_identifier_version(cls: Type[_T_PuzzleCompressor], identifier: bytes32) -> _T_PuzzleCompressor:
@@ -190,11 +183,11 @@ class PuzzleCompressor:
 
     @classmethod
     def lowest_compatible_version(
-        cls: Type[_T_PuzzleCompressor], matched_puzzles: List[Union[PuzzleRepresentation, Program]]
+        cls: Type[_T_PuzzleCompressor], puzzle_representations: List[PuzzleRepresentation]
     ) -> _T_PuzzleCompressor:
         highest_version = uint16(0)
-        for puz in matched_puzzles:
-            if isinstance(puz, PuzzleRepresentation):
+        for puz in puzzle_representations:
+            if puz.base is not None:
                 highest_version = uint16(
                     max(
                         highest_version,
