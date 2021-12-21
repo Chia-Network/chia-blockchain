@@ -293,8 +293,8 @@ class TestFullNodeBlockCompression:
         # Creates a cc wallet
         async with wallet_node_1.wallet_state_manager.lock:
             cc_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
-                    wallet_node_1.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
-                )
+                wallet_node_1.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+            )
         tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
         tr = tx_queue[0]
         await time_out_assert(

@@ -626,9 +626,7 @@ class WalletStateManager:
         fork_height: Optional[uint32] = None,
         current_height: Optional[uint32] = None,
         weight_proof: Optional[WeightProof] = None,
-    ) -> Tuple[List[WalletCoinRecord], List[CoinState]]:
-        added: List[WalletCoinRecord] = []
-        removed = []
+    ):
         created_h_none = []
         for coin_st in coin_states.copy():
             if coin_st.created_height is None:
@@ -681,11 +679,7 @@ class WalletStateManager:
                 # TODO implements this coin got reorged
                 pass
             elif coin_state.created_height is not None and coin_state.spent_height is None:
-                added_coin_record = await self.coin_added(
-                    coin_state.coin, coin_state.created_height, all_outgoing, wallet_id, wallet_type
-                )
-                if added_coin_record is not None:
-                    added.append(added_coin_record)
+                await self.coin_added(coin_state.coin, coin_state.created_height, all_outgoing, wallet_id, wallet_type)
             elif coin_state.created_height is not None and coin_state.spent_height is not None:
                 self.log.info(f"Coin Removed: {coin_state}")
                 record = await self.coin_store.get_coin_record(coin_state.coin.name())
@@ -821,7 +815,7 @@ class WalletStateManager:
                     await wallet.apply_state_transitions([cs], coin_state.spent_height)
                     if len(cs.additions()) > 0:
                         added_pool_coin = cs.additions()[0]
-                        added_coin_record = await self.coin_added(
+                        await self.coin_added(
                             added_pool_coin,
                             coin_state.spent_height,
                             [],
@@ -861,19 +855,16 @@ class WalletStateManager:
                     )
                     await pool_wallet.apply_state_transitions([launcher_spend], coin_state.spent_height)
                     coin_added = launcher_spend.additions()[0]
-                    added_coin_record = await self.coin_added(
+                    await self.coin_added(
                         coin_added, coin_state.spent_height, [], pool_wallet.id(), WalletType(pool_wallet.type())
                     )
                     await self.add_interested_coin_id(coin_added.name())
 
-                removed.append(coin_state)
             else:
                 raise RuntimeError("All cases already handled")  # Logic error, all cases handled
 
         for coin_state_removed in trade_coin_removed:
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed)
-
-        return added, removed
 
     async def have_a_pool_wallet_with_launched_id(self, launcher_id: bytes32) -> bool:
         for wallet_id, wallet in self.wallets.items():
