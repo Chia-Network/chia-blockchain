@@ -1,6 +1,7 @@
 import pytest
 import tempfile
 from pathlib import Path
+from tests.setup_nodes import setup_farmer_multi_harvester, test_constants
 
 
 # TODO: tests.setup_nodes (which is also imported by tests.util.blockchain) creates a
@@ -93,3 +94,10 @@ async def default_10000_blocks_compact():
 async def tmp_dir():
     with tempfile.TemporaryDirectory() as folder:
         yield Path(folder)
+
+
+@pytest.fixture(scope="function")
+async def farmer_multi_harvester(request):
+    marker = request.node.get_closest_marker("harvesters")
+    async for _ in setup_farmer_multi_harvester(marker.kwargs["count"], test_constants):
+        yield _
