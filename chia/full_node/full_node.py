@@ -893,7 +893,7 @@ class FullNode:
                         if peer.closed:
                             peers_with_peak.remove(peer)
                             continue
-                        response = await peer.request_blocks(request, timeout=10)
+                        response = await peer.request_blocks(request, timeout=30)
                         if response is None:
                             await peer.close()
                             peers_with_peak.remove(peer)
