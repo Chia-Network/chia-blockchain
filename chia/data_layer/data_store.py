@@ -400,30 +400,25 @@ class DataStore:
         return ancestors
 
     async def get_ancestors_2(self, node_hash: bytes32, tree_id: bytes32, lock: bool = True) -> List[InternalNode]:
-        # TODO: implement with RECURSIVE.
         nodes = []
         async with self.db_wrapper.locked_transaction(lock=lock):
-            root = await self.get_tree_root(tree_id=tree_id, lock=False)
-            if root.node_hash is None:
-                raise Exception(f"Root hash is unspecified for tree ID: {tree_id.hex()}")
-            while node_hash != root.node_hash:
-                cursor = await self.db.execute(
-                    """
-                    SELECT hash, ancestor FROM ancestors
-                    WHERE hash == :node_hash AND tree_id == :tree_id
-                    """,
-                    {
-                        "node_hash": node_hash.hex(),
-                        "tree_id": tree_id.hex(),
-                    },
-                )
-                ancestor: List[bytes32] = [bytes32(bytes32.fromhex(row["ancestor"])) async for row in cursor]
-                if len(ancestor) == 0:
-                    break
-                node = await self.get_node(ancestor[0], lock=False)
-                assert isinstance(node, InternalNode)
-                nodes.append(node)
-                node_hash = ancestor[0]
+            cursor = await self.db.execute(
+                """
+                WITH RECURSIVE
+                    get_ancestors_hash(hash, depth) AS (
+                        SELECT :reference_hash, 0 AS depth
+                        UNION ALL
+                        SELECT ancestors.ancestor, get_ancestors_hash.depth + 1 FROM ancestors, get_ancestors_hash
+                        WHERE ancestors.tree_id == :tree_id AND ancestors.hash == get_ancestors_hash.hash
+                    )
+                SELECT node.* FROM node, get_ancestors_hash
+                WHERE node.hash == get_ancestors_hash.hash AND get_ancestors_hash.depth > 0
+                ORDER BY get_ancestors_hash.depth ASC
+                """,
+                {"reference_hash": node_hash.hex(), "tree_id": tree_id.hex()},
+            )
+            nodes = [InternalNode.from_row(row=row) async for row in cursor]
+
         return nodes
 
     async def get_pairs(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
