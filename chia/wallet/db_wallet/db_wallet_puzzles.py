@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
 from chia.util.ints import uint64
@@ -49,33 +51,3 @@ def create_offer_fullpuz(
         DB_HOST_MOD_HASH, singleton_struct, leaf_reveal, claim_target, recovery_target, recovery_timelock
     )
     return full_puz
-
-
-# TODO: maybe delete this?
-# def uncurry_fullpuz(full_puz: Program):
-#     r = full_puz.uncurry()
-#     if r is None:
-#         return r
-#     inner_f, args = r
-#
-#     singleton_mod_hash, datalayer_puzzle = list(args.as_iter())
-#     r = datalayer_puzzle.uncurry()
-#     inner_f, args = r
-#     db_mod, current_root, innerpuz = list(args.as_iter())
-#     return db_mod, current_root, innerpuz
-
-
-# TODO: maybe delete this?
-# def uncurry_offer_puzzle(puzzle: Program):
-#     r = puzzle.uncurry()
-#     inner_f, args = r
-#     DB_HOST_MOD_HASH, singleton_struct, leaf_reveal, claim_target, recovery_target, recovery_timelock = list(
-#         args.as_iter()
-#     )
-#     return (
-#         singleton_struct,
-#         leaf_reveal.as_atom(),
-#         claim_target.as_atom(),
-#         recovery_target.as_atom(),
-#         recovery_timelock.as_int(),
-#     )
