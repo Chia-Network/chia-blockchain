@@ -152,7 +152,6 @@ async def generate_big_datastore(data_store: DataStore, tree_id: bytes32, num_no
                 value=value,
                 reference_node_hash=reference_node_hash,
                 side=side,
-                skip_expensive_checks=False,
             )
             t2 = time.time()
             print(f"Insertion of node {i} took {t2 - t1}.")
