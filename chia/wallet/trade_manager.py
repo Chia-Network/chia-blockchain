@@ -258,7 +258,7 @@ class TradeManager:
                             key: Optional[bytes32] = None
                             memos: Optional[List[Optional[bytes]]] = None
                         elif wallet.type() == WalletType.CAT:
-                            key = bytes32(bytes.fromhex(wallet.get_colour()))
+                            key = bytes32(bytes.fromhex(wallet.get_asset_id()))
                             memos = [p2_ph]
                         else:
                             raise ValueError(f"Offers are not implemented for {wallet.type()}")
