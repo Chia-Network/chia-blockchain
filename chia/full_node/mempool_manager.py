@@ -211,8 +211,11 @@ class MempoolManager:
             conflicting_fees += item.fee
             conflicting_cost += item.cost
 
-            # All coins spent in all conflicting items must also be spent in
-            # the new item
+            # All coins spent in all conflicting items must also be spent in the new item. (superset rule). This is
+            # important because otherwise there exists an attack. A user spends coin A. An attacker replaces the
+            # bundle with AB with a higher fee. An attacker then replaces the bundle with just B with a higher
+            # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
+            # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
             for coin in item.removals:
                 if coin.name() not in removals:
                     log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
