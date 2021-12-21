@@ -1,7 +1,8 @@
 import logging
 import time
 import json
-
+from dataclasses import dataclass
+from chia.util.streamable import streamable, Streamable
 from typing import Dict, Optional, List, Any, Set, Tuple
 from blspy import AugSchemeMPL, G1Element
 from secrets import token_bytes
@@ -25,17 +26,23 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.util.json_util import dict_to_json_str
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse
+from chia.server.outbound_message import NodeType
+from chia.server.ws_connection import WSChiaConnection
 
 
-class NFTCoinInfo:
+@dataclass(frozen=True)
+@streamable
+class NFTCoinInfo(Streamable):
     coin: Coin
     lineage_proof: LineageProof
     transfer_program: Program
 
 
-class NFTWalletInfo:
+@dataclass(frozen=True)
+@streamable
+class NFTWalletInfo(Streamable):
     my_did: bytes32
-    did_wallet_id: int
+    did_wallet_id: uint64
     my_nft_coins: List[NFTCoinInfo]
 
 
@@ -64,7 +71,8 @@ class NFTWallet:
         self.log = logging.getLogger(name if name else __name__)
         std_wallet_id = self.standard_wallet.wallet_id
         self.wallet_state_manager = wallet_state_manager
-        my_did: bytes32 = await self.wallet_state_manager.wallets[did_wallet_id].did_info.origin_coin.name()
+        did_wallet = self.wallet_state_manager.wallets[did_wallet_id]
+        my_did = did_wallet.did_info.origin_coin.name()
         self.nft_wallet_info = NFTWalletInfo(my_did, did_wallet_id, [])
         info_as_string = json.dumps(self.nft_wallet_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -76,8 +84,10 @@ class NFTWallet:
         # std_wallet_id = self.standard_wallet.wallet_id
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         # TODO: check if I need both
-        await self.wallet_state_manager.add_interested_puzzle_hash(my_did)
-        await self.wallet_state_manager.wallet_node.subscribe_to_phs(my_did)
+        full_nodes: Dict[bytes32, WSChiaConnection] = self.wallet_state_manager.wallet_node.server.connection_by_type.get(NodeType.FULL_NODE, {})
+        for node_id, node in full_nodes.copy().items():
+            await self.wallet_state_manager.wallet_node.subscribe_to_phs([my_did], node)
+        await self.wallet_state_manager.add_interested_puzzle_hash(my_did, self.wallet_id)
 
     @classmethod
     def type(cls) -> uint8:
@@ -167,6 +177,10 @@ class NFTWallet:
         new_nft_wallet_info = NFTWalletInfo(self.nft_wallet_info.my_did, self.nft_wallet_info.did_wallet_id, my_nft_coins)
         await self.save_info(new_nft_wallet_info)
         return
+
+    def puzzle_for_pk(self, pk):
+        # we don't use puzzle - this program is '(x pubkey)'
+        return Program.to([8, pk])
 
     async def save_info(self, nft_info: NFTWalletInfo, in_transaction):
         self.nft_wallet_info = nft_info
