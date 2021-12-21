@@ -892,6 +892,9 @@ class WalletNode:
                             continue
                         if await self.wallet_state_manager.have_a_pool_wallet_with_launched_id(child.coin.name()):
                             continue
+                        if child.spent_height is None:
+                            continue
+
                         launcher_spend: CoinSpend = await self.fetch_puzzle_solution(peer, block.height, child.coin)
                         pool_state = None
                         try:
