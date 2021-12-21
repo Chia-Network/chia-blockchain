@@ -327,7 +327,7 @@ class Wallet:
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
             if total_amount > max_send:
-                raise ValueError(f"Can't send more than {max_send} in a single transaction")
+                raise ValueError(f"Can't send more than {max_send} {total_amount}in a single transaction")
 
         if coins is None:
             coins = await self.select_coins(total_amount)
