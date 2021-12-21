@@ -32,6 +32,7 @@ from chia.util.ints import uint32, uint64, uint128, uint8
 from chia.util.db_synchronous import db_synchronous_on
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.key_val_store import KeyValStore
@@ -160,6 +161,7 @@ class WalletStateManager:
         self.user_settings = await UserSettings.create(self.basic_store)
         self.pool_store = await WalletPoolStore.create(self.db_wrapper)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
+        self.default_cats = DEFAULT_CATS
 
         self.wallet_node = wallet_node
         self.sync_mode = False
@@ -612,10 +614,11 @@ class WalletStateManager:
                 cat_puzzle = construct_cat_puzzle(CAT_MOD, bytes32(bytes(tail_hash)[1:]), our_inner_puzzle)
                 if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                     return None, None
-                cat_wallet = await CATWallet.create_wallet_for_cat(self, self.main_wallet, bytes(tail_hash).hex()[2:])
-                wallet_id = cat_wallet.id()
-                wallet_type = WalletType(cat_wallet.type())
-                self.state_changed("wallet_created")
+                if bytes(tail_hash).hex()[2:] in self.default_cats:
+                    cat_wallet = await CATWallet.create_wallet_for_cat(self, self.main_wallet, bytes(tail_hash).hex()[2:])
+                    wallet_id = cat_wallet.id()
+                    wallet_type = WalletType(cat_wallet.type())
+                    self.state_changed("wallet_created")
 
         return wallet_id, wallet_type
 
