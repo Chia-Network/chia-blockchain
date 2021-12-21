@@ -564,8 +564,8 @@ class CATWallet:
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
-        coin_announcements_names = None
-        puzzle_announcements_names = None
+        coin_announcements_names: Optional[Set[bytes]] = None
+        puzzle_announcements_names: Optional[Set[bytes]] = None
         if coin_announcements_to_consume is not None:
             coin_announcements_names = {a.name() for a in coin_announcements_to_consume}
         if puzzle_announcements_to_consume is not None:
@@ -626,7 +626,7 @@ class CATWallet:
                         )
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
-                            coin_announcements={bytes32(announcement.message)},
+                            coin_announcements={announcement.message},
                             coin_announcements_to_assert=coin_announcements_names,
                             puzzle_announcements_to_assert=puzzle_announcements_names,
                         )
