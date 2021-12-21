@@ -201,10 +201,10 @@ class Wallet:
         primaries: List[AmountWithPuzzlehash] = None,
         min_time=0,
         me=None,
-        coin_announcements: Optional[Set[bytes32]] = None,
-        coin_announcements_to_assert: Optional[Set[bytes32]] = None,
-        puzzle_announcements: Optional[Set[bytes32]] = None,
-        puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
+        coin_announcements: Optional[Set[bytes]] = None,
+        coin_announcements_to_assert: Optional[Set[bytes]] = None,
+        puzzle_announcements: Optional[Set[bytes]] = None,
+        puzzle_announcements_to_assert: Optional[Set[bytes]] = None,
         fee=0,
     ) -> Program:
         assert fee >= 0
@@ -340,8 +340,8 @@ class Wallet:
             change = max(0, change)
 
         assert change >= 0
-        coin_announcements_names = None
-        puzzle_announcements_names = None
+        coin_announcements_names: Optional[Set[bytes]] = None
+        puzzle_announcements_names: Optional[Set[bytes]] = None
         if coin_announcements_to_consume is not None:
             coin_announcements_names = {a.name() for a in coin_announcements_to_consume}
         if puzzle_announcements_to_consume is not None:
