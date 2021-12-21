@@ -5,9 +5,10 @@ import logging
 import random
 import time
 import traceback
+import os
 from typing import Callable, Dict, List, Optional, Tuple, Set
-
-from chiavdf import create_discriminant
+from chia.util.streamable import Streamable, streamable
+from chiavdf import create_discriminant, prove
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
@@ -30,9 +31,29 @@ from chia.types.blockchain_format.slots import (
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from concurrent.futures import ProcessPoolExecutor
 
 log = logging.getLogger(__name__)
+
+
+@dataclasses.dataclass(frozen=True)
+@streamable
+class BlueboxProcessData(Streamable):
+    challenge: bytes32
+    size_bits: uint16
+    iters: uint64
+
+
+def prove_bluebox_slow(payload):
+    bluebox_process_data = BlueboxProcessData.from_bytes(payload)
+    initial_el = b"\x08" + (b"\x00" * 99)
+    return prove(
+        bluebox_process_data.challenge,
+        initial_el,
+        bluebox_process_data.size_bits,
+        bluebox_process_data.iters,
+    )
 
 
 class Timelord:
@@ -88,9 +109,13 @@ class Timelord:
         self.total_unfinished: int = 0
         self.total_infused: int = 0
         self.state_changed_callback: Optional[Callable] = None
-        self.sanitizer_mode = self.config["sanitizer_mode"]
+        self.bluebox_mode = self.config.get("bluebox_mode", False)
+        # Support backwards compatibility for the old `config.yaml` that has field `sanitizer_mode`.
+        if not self.bluebox_mode:
+            self.bluebox_mode = self.config.get("sanitizer_mode", False)
         self.pending_bluebox_info: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
+        self.bluebox_pool: Optional[ProcessPoolExecutor] = None
 
     async def _start(self):
         self.lock: asyncio.Lock = asyncio.Lock()
@@ -100,10 +125,19 @@ class Timelord:
             self.config["vdf_server"]["port"],
         )
         self.last_state: LastState = LastState(self.constants)
-        if not self.sanitizer_mode:
+        slow_bluebox = self.config.get("slow_bluebox", False)
+        if not self.bluebox_mode:
             self.main_loop = asyncio.create_task(self._manage_chains())
         else:
-            self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
+            if os.name == "nt" or slow_bluebox:
+                # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
+                workers = self.config.get("slow_bluebox_process_count", 1)
+                self.bluebox_pool = ProcessPoolExecutor(max_workers=workers)
+                self.main_loop = asyncio.create_task(
+                    self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
+                )
+            else:
+                self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
         log.info("Started timelord.")
 
     def _close(self):
@@ -112,6 +146,8 @@ class Timelord:
             task.cancel()
         if self.main_loop is not None:
             self.main_loop.cancel()
+        if self.bluebox_pool is not None:
+            self.bluebox_pool.shutdown()
 
     async def _await_closed(self):
         pass
@@ -703,12 +739,14 @@ class Timelord:
             icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = (
                 None if icc_ip_vdf is None else InfusedChallengeChainSubSlot(icc_ip_vdf)
             )
+            icc_sub_slot_hash: Optional[bytes32]
             if self.last_state.get_deficit() == 0:
                 assert icc_sub_slot is not None
                 icc_sub_slot_hash = icc_sub_slot.get_hash()
             else:
                 icc_sub_slot_hash = None
             next_ses: Optional[SubEpochSummary] = self.last_state.get_next_sub_epoch_summary()
+            ses_hash: Optional[bytes32]
             if next_ses is not None:
                 log.info(f"Including sub epoch summary{next_ses}")
                 ses_hash = next_ses.get_hash()
@@ -844,10 +882,10 @@ class Timelord:
         disc: int = create_discriminant(challenge, self.constants.DISCRIMINANT_SIZE_BITS)
 
         try:
-            # Depending on the flags 'fast_algorithm' and 'sanitizer_mode',
+            # Depending on the flags 'fast_algorithm' and 'bluebox_mode',
             # the timelord tells the vdf_client what to execute.
             async with self.lock:
-                if self.sanitizer_mode:
+                if self.bluebox_mode:
                     writer.write(b"S")
                 else:
                     if self.config["fast_algorithm"]:
@@ -884,7 +922,7 @@ class Timelord:
                 return None
 
             log.debug("Got handshake with VDF client.")
-            if not self.sanitizer_mode:
+            if not self.bluebox_mode:
                 async with self.lock:
                     self.allows_iters.append(chain)
             else:
@@ -953,7 +991,7 @@ class Timelord:
                     # Verifies our own proof just in case
                     form_size = ClassgroupElement.get_size(self.constants)
                     output = ClassgroupElement.from_bytes(y_bytes[:form_size])
-                    if not self.sanitizer_mode:
+                    if not self.bluebox_mode:
                         time_taken = time.time() - self.chain_start_time[chain]
                         ips = int(iterations_needed / time_taken * 10) / 10
                         log.info(
@@ -970,12 +1008,12 @@ class Timelord:
                     vdf_proof: VDFProof = VDFProof(
                         witness_type,
                         proof_bytes,
-                        self.sanitizer_mode,
+                        self.bluebox_mode,
                     )
 
                     if not vdf_proof.is_valid(self.constants, initial_form, vdf_info):
                         log.error("Invalid proof of time!")
-                    if not self.sanitizer_mode:
+                    if not self.bluebox_mode:
                         async with self.lock:
                             assert proof_label is not None
                             self.proofs_finished.append((chain, vdf_info, vdf_proof, proof_label))
@@ -1032,4 +1070,83 @@ class Timelord:
                         self.free_clients = self.free_clients[1:]
                 except Exception as e:
                     log.error(f"Exception manage discriminant queue: {e}")
+            await asyncio.sleep(0.1)
+
+    async def _start_manage_discriminant_queue_sanitizer_slow(self, pool: ProcessPoolExecutor, counter: int):
+        tasks = []
+        for _ in range(counter):
+            tasks.append(asyncio.create_task(self._manage_discriminant_queue_sanitizer_slow(pool)))
+        for task in tasks:
+            await task
+
+    async def _manage_discriminant_queue_sanitizer_slow(self, pool: ProcessPoolExecutor):
+        log.info("Started task for managing bluebox queue.")
+        while not self._shut_down:
+            picked_info = None
+            async with self.lock:
+                try:
+                    if len(self.pending_bluebox_info) > 0:
+                        # Select randomly the field_vdf we're creating a compact vdf for.
+                        # This is done because CC_SP and CC_IP are more frequent than
+                        # CC_EOS and ICC_EOS. This guarantees everything is picked uniformly.
+                        target_field_vdf = random.randint(1, 4)
+                        info = next(
+                            (info for info in self.pending_bluebox_info if info[1].field_vdf == target_field_vdf),
+                            None,
+                        )
+                        if info is None:
+                            # Nothing found with target_field_vdf, just pick the first VDFInfo.
+                            info = self.pending_bluebox_info[0]
+                        self.pending_bluebox_info.remove(info)
+                        picked_info = info[1]
+                except Exception as e:
+                    log.error(f"Exception manage discriminant queue: {e}")
+            if picked_info is not None:
+                try:
+                    t1 = time.time()
+                    log.info(
+                        f"Working on compact proof for height: {picked_info.height}. "
+                        f"Iters: {picked_info.new_proof_of_time.number_of_iterations}."
+                    )
+                    bluebox_process_data = BlueboxProcessData(
+                        picked_info.new_proof_of_time.challenge,
+                        uint16(self.constants.DISCRIMINANT_SIZE_BITS),
+                        picked_info.new_proof_of_time.number_of_iterations,
+                    )
+                    proof = await asyncio.get_running_loop().run_in_executor(
+                        pool,
+                        prove_bluebox_slow,
+                        bytes(bluebox_process_data),
+                    )
+                    t2 = time.time()
+                    delta = t2 - t1
+                    if delta > 0:
+                        ips = picked_info.new_proof_of_time.number_of_iterations / delta
+                    else:
+                        ips = 0
+                    log.info(f"Finished compact proof: {picked_info.height}. Time: {delta}s. IPS: {ips}.")
+                    output = proof[:100]
+                    proof_part = proof[100:200]
+                    if ClassgroupElement.from_bytes(output) != picked_info.new_proof_of_time.output:
+                        log.error("Expected vdf output different than produced one. Stopping.")
+                        return
+                    vdf_proof = VDFProof(uint8(0), proof_part, True)
+                    initial_form = ClassgroupElement.get_default_element()
+                    if not vdf_proof.is_valid(self.constants, initial_form, picked_info.new_proof_of_time):
+                        log.error("Invalid compact proof of time!")
+                        return
+                    response = timelord_protocol.RespondCompactProofOfTime(
+                        picked_info.new_proof_of_time,
+                        vdf_proof,
+                        picked_info.header_hash,
+                        picked_info.height,
+                        picked_info.field_vdf,
+                    )
+                    if self.server is not None:
+                        message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
+                        await self.server.send_to_all([message], NodeType.FULL_NODE)
+                except Exception as e:
+                    log.error(f"Exception manage discriminant queue: {e}")
+                    tb = traceback.format_exc()
+                    log.error(f"Error while handling message: {tb}")
             await asyncio.sleep(0.1)

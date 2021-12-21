@@ -29,6 +29,10 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
+    - name: Set git urls to https instead of ssh
+      run: |
+        git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+
     - name: Get npm cache directory
       id: npm-cache
       run: |
@@ -60,6 +64,11 @@ jobs:
       name: Install Python 3.9
       with:
         python-version: "3.9"
+
+    - name: Setup Node 16.x
+      uses: actions/setup-node@v2.4.1
+      with:
+        node-version: '16.x'
 
     - name: Test for secrets access
       id: check_secrets
@@ -155,7 +164,6 @@ jobs:
       with:
         name: Windows-Installers
         path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\
-
 
     - name: Install AWS CLI
       if: steps.check_secrets.outputs.HAS_AWS_SECRET

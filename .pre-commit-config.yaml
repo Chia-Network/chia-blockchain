@@ -1,4 +1,12 @@
 repos:
+-   repo: local
+    hooks:
+    -   id: init_py_files
+        name: __init__.py files
+        entry: python3 tests/build-init-files.py -v --root .
+        language: python
+        pass_filenames: false
+        additional_dependencies: [click~=7.1]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:
@@ -21,4 +29,8 @@ repos:
     rev: v0.910
     hooks:
     - id: mypy
-      additional_dependencies: [types-setuptools, types-PyYAML]
+      additional_dependencies: [types-aiofiles, types-click, types-setuptools, types-PyYAML]
+      # This intentionally counters the settings in mypy.ini to allow a loose local
+      # check and a strict CI check. This difference may or may not be retained long
+      # term.
+      args: [--no-warn-unused-ignores]

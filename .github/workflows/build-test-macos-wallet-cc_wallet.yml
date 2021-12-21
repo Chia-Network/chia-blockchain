@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS TEST_NAME Tests
+name: MacOS wallet-cc_wallet Tests
 
 on:
   push:
@@ -15,9 +15,9 @@ on:
 
 jobs:
   build:
-    name: MacOS TEST_NAME Tests
+    name: MacOS wallet-cc_wallet Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: JOB_TIMEOUT
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -63,7 +63,20 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-CHECKOUT_TEST_BLOCKS_AND_PLOTS
+    - name: Checkout test blocks and plots
+      uses: actions/checkout@v2
+      with:
+        repository: 'Chia-Network/test-cache'
+        path: '.chia'
+        ref: '0.28.0'
+        fetch-depth: 1
+
+    - name: Link home directory
+      run: |
+        cd $HOME
+        ln -s $GITHUB_WORKSPACE/.chia
+        echo "$HOME/.chia"
+        ls -al $HOME/.chia
 
     - name: Run install script
       env:
@@ -71,19 +84,18 @@ CHECKOUT_TEST_BLOCKS_AND_PLOTS
         BUILD_VDF_CLIENT: "N"
       run: |
         brew install boost
-        sh install.sh
+        sh install.sh -d
 
-INSTALL_TIMELORD
-
-    - name: Install developer requirements
+    - name: Install timelord
       run: |
         . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
+        sh install-timelord.sh
+        ./vdf_bench square_asm 400000
 
-    - name: Test TEST_NAME code with pytest
+    - name: Test wallet-cc_wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test TEST_DIR -s -v --durations 0PYTEST_PARALLEL_ARGS
+        ./venv/bin/py.test tests/wallet/cc_wallet/test_*.py -s -v --durations 0
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

@@ -191,7 +191,7 @@ class WalletBlockStore:
         peak: Optional[bytes32] = None
         for row in rows:
             header_hash_bytes, block_record_bytes, is_peak = row
-            header_hash = bytes.fromhex(header_hash_bytes)
+            header_hash = bytes32.fromhex(header_hash_bytes)
             ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)
             if is_peak:
                 assert peak is None  # Sanity check, only one peak
@@ -233,7 +233,7 @@ class WalletBlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
             header_hash_bytes, block_record_bytes = row
-            header_hash = bytes.fromhex(header_hash_bytes)
+            header_hash = bytes32.fromhex(header_hash_bytes)
             ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)
         return ret, peak
 
@@ -251,7 +251,7 @@ class WalletBlockStore:
         ret: Dict[bytes32, HeaderBlock] = {}
         for row in rows:
             header_hash_bytes, block_record_bytes = row
-            header_hash = bytes.fromhex(header_hash_bytes)
+            header_hash = bytes32.fromhex(header_hash_bytes)
             ret[header_hash] = HeaderBlock.from_bytes(block_record_bytes)
 
         return ret
@@ -274,7 +274,7 @@ class WalletBlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
             header_hash_bytes, block_record_bytes = row
-            header_hash = bytes.fromhex(header_hash_bytes)
+            header_hash = bytes32.fromhex(header_hash_bytes)
             ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)
 
         return ret
@@ -291,7 +291,7 @@ class WalletBlockStore:
         if row is None:
             return {}, {}
 
-        peak: bytes32 = bytes.fromhex(row[0])
+        peak: bytes32 = bytes32.fromhex(row[0])
         cursor = await self.db.execute("SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records")
         rows = await cursor.fetchall()
         await cursor.close()
@@ -300,10 +300,10 @@ class WalletBlockStore:
         hash_to_summary: Dict[bytes32, SubEpochSummary] = {}
 
         for row in rows:
-            hash_to_prev_hash[bytes.fromhex(row[0])] = bytes.fromhex(row[1])
-            hash_to_height[bytes.fromhex(row[0])] = row[2]
+            hash_to_prev_hash[bytes32.fromhex(row[0])] = bytes32.fromhex(row[1])
+            hash_to_height[bytes32.fromhex(row[0])] = row[2]
             if row[3] is not None:
-                hash_to_summary[bytes.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])
+                hash_to_summary[bytes32.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])
 
         height_to_hash: Dict[uint32, bytes32] = {}
         sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}

@@ -30,7 +30,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.backup_utils import download_backup, get_backup_info, upload_backup
 from chia.wallet.util.trade_utils import trade_record_to_dict
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.util.config import load_config
@@ -52,6 +52,7 @@ class WalletRpcApi:
         return {
             # Key management
             "/log_in": self.log_in,
+            "/get_logged_in_fingerprint": self.get_logged_in_fingerprint,
             "/get_public_keys": self.get_public_keys,
             "/get_private_key": self.get_private_key,
             "/generate_mnemonic": self.generate_mnemonic,
@@ -194,6 +195,9 @@ class WalletRpcApi:
             return response
 
         return {"success": False, "error": "Unknown Error"}
+
+    async def get_logged_in_fingerprint(self, request: Dict):
+        return {"fingerprint": self.service.logged_in_fingerprint}
 
     async def get_public_keys(self, request: Dict):
         try:
@@ -586,7 +590,7 @@ class WalletRpcApi:
                     try:
                         delayed_address = None
                         if "p2_singleton_delayed_ph" in request:
-                            delayed_address = hexstr_to_bytes(request["p2_singleton_delayed_ph"])
+                            delayed_address = bytes32.from_hexstr(request["p2_singleton_delayed_ph"])
                         tr, p2_singleton_puzzle_hash, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
                             wallet_state_manager,
                             main_wallet,
@@ -660,16 +664,15 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
 
         wallet_id = int(request["wallet_id"])
-        if "start" in request:
-            start = request["start"]
-        else:
-            start = 0
-        if "end" in request:
-            end = request["end"]
-        else:
-            end = 50
 
-        transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(wallet_id, start, end)
+        start = request.get("start", 0)
+        end = request.get("end", 50)
+        sort_key = request.get("sort_key", None)
+        reverse = request.get("reverse", False)
+
+        transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
+            wallet_id, start, end, sort_key=sort_key, reverse=reverse
+        )
         formatted_transactions = []
         selected = self.service.config["selected_network"]
         prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
@@ -677,7 +680,6 @@ class WalletRpcApi:
             formatted = tx.to_json_dict()
             formatted["to_address"] = encode_puzzle_hash(tx.to_puzzle_hash, prefix)
             formatted_transactions.append(formatted)
-
         return {
             "transactions": formatted_transactions,
             "wallet_id": wallet_id,
@@ -887,7 +889,7 @@ class WalletRpcApi:
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
-        trade_id = hexstr_to_bytes(request["trade_id"])
+        trade_id = bytes32.from_hexstr(request["trade_id"])
         trade: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
         if trade is None:
             raise ValueError(f"No trade with trade id: {trade_id.hex()}")
@@ -912,7 +914,7 @@ class WalletRpcApi:
 
         wsm = self.service.wallet_state_manager
         secure = request["secure"]
-        trade_id = hexstr_to_bytes(request["trade_id"])
+        trade_id = bytes32.from_hexstr(request["trade_id"])
 
         async with self.service.wallet_state_manager.lock:
             if secure:
@@ -1165,7 +1167,7 @@ class WalletRpcApi:
         if len(puzzle_hash_0) != 32:
             raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0}")
 
-        additional_outputs = []
+        additional_outputs: List[AmountWithPuzzlehash] = []
         for addition in additions[1:]:
             receiver_ph = hexstr_to_bytes(addition["puzzle_hash"])
             if len(receiver_ph) != 32:
@@ -1208,9 +1210,12 @@ class WalletRpcApi:
         target_puzzlehash = None
         if "target_puzzlehash" in request:
             target_puzzlehash = bytes32(hexstr_to_bytes(request["target_puzzlehash"]))
+        # TODO: address hint error and remove ignore
+        #       error: Argument 2 to "create_pool_state" has incompatible type "Optional[bytes32]"; expected "bytes32"
+        #       [arg-type]
         new_target_state: PoolState = create_pool_state(
             FARMING_TO_POOL,
-            target_puzzlehash,
+            target_puzzlehash,  # type: ignore[arg-type]
             owner_pubkey,
             request["pool_url"],
             uint32(request["relative_lock_height"]),

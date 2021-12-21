@@ -5,6 +5,7 @@ import multiprocessing
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple, Union
+from pathlib import Path
 
 from clvm.casts import int_from_bytes
 
@@ -43,6 +44,7 @@ from chia.util.errors import Err, ConsensusError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.streamable import recurse_jsonify
+from chia.full_node.block_height_map import BlockHeightMap
 
 log = logging.getLogger(__name__)
 
@@ -71,11 +73,9 @@ class Blockchain(BlockchainInterface):
     __block_records: Dict[bytes32, BlockRecord]
     # all hashes of blocks in block_record by height, used for garbage collection
     __heights_in_cache: Dict[uint32, Set[bytes32]]
-    # Defines the path from genesis to the peak, no orphan blocks
-    __height_to_hash: Dict[uint32, bytes32]
-    # All sub-epoch summaries that have been included in the blockchain from the beginning until and including the peak
-    # (height_included, SubEpochSummary). Note: ONLY for the blocks in the path to the peak
-    __sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
+    # maps block height (of the current heaviest chain) to block hash and sub
+    # epoch summaries
+    __height_map: BlockHeightMap
     # Unspent Store
     coin_store: CoinStore
     # Store
@@ -95,7 +95,11 @@ class Blockchain(BlockchainInterface):
 
     @staticmethod
     async def create(
-        coin_store: CoinStore, block_store: BlockStore, consensus_constants: ConsensusConstants, hint_store: HintStore
+        coin_store: CoinStore,
+        block_store: BlockStore,
+        consensus_constants: ConsensusConstants,
+        hint_store: HintStore,
+        blockchain_dir: Path,
     ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -117,7 +121,7 @@ class Blockchain(BlockchainInterface):
         self.block_store = block_store
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
         self._shut_down = False
-        await self._load_chain_from_store()
+        await self._load_chain_from_store(blockchain_dir)
         self._seen_compact_proofs = set()
         self.hint_store = hint_store
         return self
@@ -126,13 +130,11 @@ class Blockchain(BlockchainInterface):
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self) -> None:
+    async def _load_chain_from_store(self, blockchain_dir):
         """
         Initializes the state of the Blockchain class from the database.
         """
-        height_to_hash, sub_epoch_summaries = await self.block_store.get_peak_height_dicts()
-        self.__height_to_hash = height_to_hash
-        self.__sub_epoch_summaries = sub_epoch_summaries
+        self.__height_map = await BlockHeightMap.create(blockchain_dir, self.block_store.db_wrapper)
         self.__block_records = {}
         self.__heights_in_cache = {}
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
@@ -142,11 +144,12 @@ class Blockchain(BlockchainInterface):
         if len(block_records) == 0:
             assert peak is None
             self._peak_height = None
-            return None
+            return
 
         assert peak is not None
         self._peak_height = self.block_record(peak).height
-        assert len(self.__height_to_hash) == self._peak_height + 1
+        assert self.__height_map.contains_height(self._peak_height)
+        assert not self.__height_map.contains_height(self._peak_height + 1)
 
     def get_peak(self) -> Optional[BlockRecord]:
         """
@@ -160,7 +163,10 @@ class Blockchain(BlockchainInterface):
         if self._peak_height is None:
             return None
         """ Return list of FullBlocks that are peaks"""
-        block = await self.block_store.get_full_block(self.height_to_hash(self._peak_height))
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
+        #       expected "bytes32"  [arg-type]
+        block = await self.block_store.get_full_block(self.height_to_hash(self._peak_height))  # type: ignore[arg-type]
         assert block is not None
         return block
 
@@ -216,7 +222,7 @@ class Blockchain(BlockchainInterface):
                         block_generator,
                         min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
                         cost_per_byte=self.constants.COST_PER_BYTE,
-                        safe_mode=False,
+                        mempool_mode=False,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 else:
@@ -279,13 +285,14 @@ class Blockchain(BlockchainInterface):
                 # Then update the memory cache. It is important that this task is not cancelled and does not throw
                 self.add_block_record(block_record)
                 for fetched_block_record in records:
-                    self.__height_to_hash[fetched_block_record.height] = fetched_block_record.header_hash
-                    if fetched_block_record.sub_epoch_summary_included is not None:
-                        self.__sub_epoch_summaries[
-                            fetched_block_record.height
-                        ] = fetched_block_record.sub_epoch_summary_included
+                    self.__height_map.update_height(
+                        fetched_block_record.height,
+                        fetched_block_record.header_hash,
+                        fetched_block_record.sub_epoch_summary_included,
+                    )
                 if peak_height is not None:
                     self._peak_height = peak_height
+                    await self.__height_map.maybe_flush()
             except BaseException:
                 self.block_store.rollback_cache_block(header_hash)
                 await self.block_store.db_wrapper.rollback_transaction()
@@ -307,7 +314,10 @@ class Blockchain(BlockchainInterface):
                         if len(condition.vars) > 2 and condition.vars[2] != b"":
                             puzzle_hash, amount_bin = condition.vars[0], condition.vars[1]
                             amount = int_from_bytes(amount_bin)
-                            coin_id = Coin(npc.coin_name, puzzle_hash, amount).name()
+                            # TODO: address hint error and remove ignore
+                            #       error: Argument 2 to "Coin" has incompatible type "bytes"; expected "bytes32"
+                            #       [arg-type]
+                            coin_id = Coin(npc.coin_name, puzzle_hash, amount).name()  # type: ignore[arg-type]
                             h_list.append((coin_id, condition.vars[2]))
         return h_list
 
@@ -331,7 +341,7 @@ class Blockchain(BlockchainInterface):
         """
         peak = self.get_peak()
         lastest_coin_state: Dict[bytes32, CoinRecord] = {}
-        hint_coin_state: Dict[bytes32, Dict[bytes32, CoinRecord]] = {}
+        hint_coin_state: Dict[bytes, Dict[bytes32, CoinRecord]] = {}
 
         if genesis:
             if peak is None:
@@ -353,6 +363,7 @@ class Blockchain(BlockchainInterface):
                     )
                 else:
                     added, _ = [], []
+                await self.block_store.set_in_chain([(block_record.header_hash,)])
                 await self.block_store.set_peak(block_record.header_hash)
                 return uint32(0), uint32(0), [block_record], (added, {})
             return None, None, [], ([], {})
@@ -374,13 +385,8 @@ class Blockchain(BlockchainInterface):
                     lastest_coin_state[coin_record.name] = coin_record
 
             # Rollback sub_epoch_summaries
-            heights_to_delete = []
-            for ses_included_height in self.__sub_epoch_summaries.keys():
-                if ses_included_height > fork_height:
-                    heights_to_delete.append(ses_included_height)
-            for height in heights_to_delete:
-                log.info(f"delete ses at height {height}")
-                del self.__sub_epoch_summaries[height]
+            self.__height_map.rollback(fork_height)
+            await self.block_store.rollback(fork_height)
 
             # Collect all blocks from fork point to new peak
             blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
@@ -442,6 +448,8 @@ class Blockchain(BlockchainInterface):
                                 hint_coin_state[key] = {}
                             hint_coin_state[key][coin_id] = lastest_coin_state[coin_id]
 
+            await self.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
+
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
             return (
@@ -466,7 +474,7 @@ class Blockchain(BlockchainInterface):
                         block_generator,
                         self.constants.MAX_BLOCK_COST_CLVM,
                         cost_per_byte=self.constants.COST_PER_BYTE,
-                        safe_mode=False,
+                        mempool_mode=False,
                     )
                 tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 return tx_removals, tx_additions, npc_result
@@ -671,19 +679,22 @@ class Blockchain(BlockchainInterface):
 
     def height_to_block_record(self, height: uint32) -> BlockRecord:
         header_hash = self.height_to_hash(height)
-        return self.block_record(header_hash)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "block_record" of "Blockchain" has incompatible type "Optional[bytes32]"; expected
+        #       "bytes32"  [arg-type]
+        return self.block_record(header_hash)  # type: ignore[arg-type]
 
     def get_ses_heights(self) -> List[uint32]:
-        return sorted(self.__sub_epoch_summaries.keys())
+        return self.__height_map.get_ses_heights()
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
-        return self.__sub_epoch_summaries[height]
+        return self.__height_map.get_ses(height)
 
     def height_to_hash(self, height: uint32) -> Optional[bytes32]:
-        return self.__height_to_hash[height]
+        return self.__height_map.get_hash(height)
 
     def contains_height(self, height: uint32) -> bool:
-        return height in self.__height_to_hash
+        return self.__height_map.contains_height(height)
 
     def get_peak_height(self) -> Optional[uint32]:
         return self._peak_height
@@ -748,7 +759,10 @@ class Blockchain(BlockchainInterface):
         hashes = []
         for height in range(start, stop + 1):
             if self.contains_height(uint32(height)):
-                header_hash: bytes32 = self.height_to_hash(uint32(height))
+                # TODO: address hint error and remove ignore
+                #       error: Incompatible types in assignment (expression has type "Optional[bytes32]", variable has
+                #       type "bytes32")  [assignment]
+                header_hash: bytes32 = self.height_to_hash(uint32(height))  # type: ignore[assignment]
                 hashes.append(header_hash)
 
         blocks: List[FullBlock] = []
@@ -798,12 +812,18 @@ class Blockchain(BlockchainInterface):
         for height in heights:
             hashes.append(self.height_to_hash(height))
             if len(hashes) > batch_size:
-                res = await self.block_store.get_block_records_by_hash(hashes)
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to "get_block_records_by_hash" of "BlockStore" has incompatible type
+                #       "List[Optional[bytes32]]"; expected "List[bytes32]"  [arg-type]
+                res = await self.block_store.get_block_records_by_hash(hashes)  # type: ignore[arg-type]
                 records.extend(res)
                 hashes = []
 
         if len(hashes) > 0:
-            res = await self.block_store.get_block_records_by_hash(hashes)
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "get_block_records_by_hash" of "BlockStore" has incompatible type
+            #       "List[Optional[bytes32]]"; expected "List[bytes32]"  [arg-type]
+            res = await self.block_store.get_block_records_by_hash(hashes)  # type: ignore[arg-type]
             records.extend(res)
         return records
 
@@ -827,12 +847,22 @@ class Blockchain(BlockchainInterface):
             self.__heights_in_cache[block_record.height] = set()
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
 
-    async def persist_sub_epoch_challenge_segments(
+    # TODO: address hint error and remove ignore
+    #       error: Argument 1 of "persist_sub_epoch_challenge_segments" is incompatible with supertype
+    #       "BlockchainInterface"; supertype defines the argument type as "uint32"  [override]
+    #       note: This violates the Liskov substitution principle
+    #       note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+    async def persist_sub_epoch_challenge_segments(  # type: ignore[override]
         self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ):
         return await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
-    async def get_sub_epoch_challenge_segments(
+    # TODO: address hint error and remove ignore
+    #       error: Argument 1 of "get_sub_epoch_challenge_segments" is incompatible with supertype
+    #       "BlockchainInterface"; supertype defines the argument type as "uint32"  [override]
+    #       note: This violates the Liskov substitution principle
+    #       note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+    async def get_sub_epoch_challenge_segments(  # type: ignore[override]
         self,
         ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
@@ -875,7 +905,10 @@ class Blockchain(BlockchainInterface):
             # We are not in a reorg, no need to look up alternate header hashes (we can get them from height_to_hash)
             for ref_height in block.transactions_generator_ref_list:
                 header_hash = self.height_to_hash(ref_height)
-                ref_block = await self.get_full_block(header_hash)
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to "get_full_block" of "Blockchain" has incompatible type "Optional[bytes32]";
+                #       expected "bytes32"  [arg-type]
+                ref_block = await self.get_full_block(header_hash)  # type: ignore[arg-type]
                 assert ref_block is not None
                 if ref_block.transactions_generator is None:
                     raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
@@ -922,7 +955,10 @@ class Blockchain(BlockchainInterface):
                         ref_block = additional_height_dict[ref_height]
                     else:
                         header_hash = self.height_to_hash(ref_height)
-                        ref_block = await self.get_full_block(header_hash)
+                        # TODO: address hint error and remove ignore
+                        #       error: Argument 1 to "get_full_block" of "Blockchain" has incompatible type
+                        #       "Optional[bytes32]"; expected "bytes32"  [arg-type]
+                        ref_block = await self.get_full_block(header_hash)  # type: ignore[arg-type]
                     assert ref_block is not None
                     if ref_block.transactions_generator is None:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)

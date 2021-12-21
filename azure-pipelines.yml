@@ -22,12 +22,17 @@ variables:
   - group: Apple-Notarize-Variables
   - group: AWS-Upload-Credentials
   - group: GlueVariables
+  - group: GitHub
 
 steps:
   - checkout: self  # self represents the repo where the initial Azure Pipelines YAML file was found
     submodules: recursive
     fetchDepth: 0
     displayName: "Checkout code"
+
+  - script: |
+      git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+    displayName: "Use https for git instead of ssh"
 
   - task: UsePythonVersion@0
     inputs:
@@ -54,7 +59,8 @@ steps:
     displayName: Create installer version number
 
   - script: |
-      MADMAX_VERSION=$(curl --silent "https://api.github.com/repos/Chia-Network/chia-plotter-madmax/releases/latest" | jq -r '.tag_name')
+      set -o errexit -o pipefail
+      MADMAX_VERSION=$(curl -u "$(GithubUsername):$(GithubToken)" --fail --silent "https://api.github.com/repos/Chia-Network/chia-plotter-madmax/releases/latest" | jq -r '.tag_name')
 
       mkdir "$(System.DefaultWorkingDirectory)/madmax"
       wget -O "$(System.DefaultWorkingDirectory)/madmax/chia_plot" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${MADMAX_VERSION}/chia_plot-${MADMAX_VERSION}-macos-intel
@@ -69,8 +75,8 @@ steps:
 
   - task: NodeTool@0
     inputs:
-      versionSpec: '14.x'
-    displayName: "Setup Node 14.x"
+      versionSpec: '16.x'
+    displayName: "Setup Node 16.x"
 
   - bash: |
       . ./activate

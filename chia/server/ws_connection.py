@@ -57,6 +57,7 @@ class WSChiaConnection:
         self.peer_host = peer_host
 
         peername = self.ws._writer.transport.get_extra_info("peername")
+
         if peername is None:
             raise ValueError(f"Was not able to get peername from {self.peer_host}")
 
@@ -105,7 +106,7 @@ class WSChiaConnection:
         self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
         self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
 
-        # Used by crawler/dns introducer
+        # Used by the Chia Seeder.
         self.version = None
 
     async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
@@ -187,7 +188,7 @@ class WSChiaConnection:
 
     async def close(self, ban_time: int = 0, ws_close_code: WSCloseCode = WSCloseCode.OK, error: Optional[Err] = None):
         """
-        Closes the connection, and finally calls the close_callback on the server, so the connections gets removed
+        Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
         from the global list.
         """
 
@@ -274,11 +275,12 @@ class WSChiaConnection:
             self.log.error(f"Exception: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    async def send_message(self, message: Message):
+    async def send_message(self, message: Message) -> bool:
         """Send message sends a message with no tracking / callback."""
         if self.closed:
-            return None
+            return False
         await self.outgoing_queue.put(message)
+        return True
 
     def __getattr__(self, attr_name: str):
         # TODO KWARGS
@@ -341,7 +343,10 @@ class WSChiaConnection:
 
         message = Message(message_no_id.type, request_id, message_no_id.data)
 
-        self.pending_requests[message.id] = event
+        # TODO: address hint error and remove ignore
+        #       error: Invalid index type "Optional[uint16]" for "Dict[bytes32, Event]"; expected type "bytes32"
+        #       [index]
+        self.pending_requests[message.id] = event  # type: ignore[index]
         await self.outgoing_queue.put(message)
 
         # If the timeout passes, we set the event
@@ -356,23 +361,36 @@ class WSChiaConnection:
                 raise
 
         timeout_task = asyncio.create_task(time_out(message.id, timeout))
-        self.pending_timeouts[message.id] = timeout_task
+        # TODO: address hint error and remove ignore
+        #       error: Invalid index type "Optional[uint16]" for "Dict[bytes32, Task[Any]]"; expected type "bytes32"
+        #       [index]
+        self.pending_timeouts[message.id] = timeout_task  # type: ignore[index]
         await event.wait()
 
-        self.pending_requests.pop(message.id)
+        # TODO: address hint error and remove ignore
+        #       error: No overload variant of "pop" of "MutableMapping" matches argument type "Optional[uint16]"
+        #       [call-overload]
+        #       note: Possible overload variants:
+        #       note:     def pop(self, key: bytes32) -> Event
+        #       note:     def [_T] pop(self, key: bytes32, default: Union[Event, _T] = ...) -> Union[Event, _T]
+        self.pending_requests.pop(message.id)  # type: ignore[call-overload]
         result: Optional[Message] = None
         if message.id in self.request_results:
-            result = self.request_results[message.id]
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "Optional[uint16]" for "Dict[bytes32, Message]"; expected type "bytes32"
+            #       [index]
+            result = self.request_results[message.id]  # type: ignore[index]
             assert result is not None
             self.log.debug(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
-            self.request_results.pop(result.id)
+            # TODO: address hint error and remove ignore
+            #       error: No overload variant of "pop" of "MutableMapping" matches argument type "Optional[uint16]"
+            #       [call-overload]
+            #       note: Possible overload variants:
+            #       note:     def pop(self, key: bytes32) -> Message
+            #       note:     def [_T] pop(self, key: bytes32, default: Union[Message, _T] = ...) -> Union[Message, _T]
+            self.request_results.pop(result.id)  # type: ignore[call-overload]
 
         return result
-
-    async def reply_to_request(self, response: Message):
-        if self.closed:
-            return None
-        await self.outgoing_queue.put(response)
 
     async def send_messages(self, messages: List[Message]):
         if self.closed:
@@ -490,9 +508,16 @@ class WSChiaConnection:
             await asyncio.sleep(3)
         return None
 
-    # Used by crawler/dns introducer
+    # Used by the Chia Seeder.
     def get_version(self):
         return self.version
+
+    def get_tls_version(self) -> str:
+        ssl_obj = self.ws._writer.transport.get_extra_info("ssl_object")
+        if ssl_obj is not None:
+            return ssl_obj.version()
+        else:
+            return "unknown"
 
     def get_peer_info(self) -> Optional[PeerInfo]:
         result = self.ws._writer.transport.get_extra_info("peername")

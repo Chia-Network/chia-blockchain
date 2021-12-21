@@ -5,8 +5,11 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.server.server import ChiaServer
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
@@ -26,6 +29,11 @@ class TestWalletSimulator:
     @pytest.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
+            yield _
+
+    @pytest.fixture(scope="function")
+    async def wallet_node_100_pk(self):
+        async for _ in setup_simulators_and_wallets(1, 1, {}, initial_num_public_keys=100):
             yield _
 
     @pytest.fixture(scope="function")
@@ -626,3 +634,40 @@ class TestWalletSimulator:
         add_2_coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(added_1.name())
         assert add_2_coin_record_full_node is not None
         assert add_2_coin_record_full_node.confirmed_block_index > 0
+
+    @pytest.mark.asyncio
+    async def test_address_sliding_window(self, wallet_node_100_pk):
+        full_nodes, wallets = wallet_node_100_pk
+        full_node_api = full_nodes[0]
+        server_1: ChiaServer = full_node_api.full_node.server
+        wallet_node, server_2 = wallets[0]
+
+        wallet = wallet_node.wallet_state_manager.main_wallet
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+        puzzle_hashes = []
+        for i in range(211):
+            pubkey = master_sk_to_wallet_sk(wallet_node.wallet_state_manager.private_key, i).get_g1()
+            puzzle: Program = wallet.puzzle_for_pk(bytes(pubkey))
+            puzzle_hash: bytes32 = puzzle.get_tree_hash()
+            puzzle_hashes.append(puzzle_hash)
+
+        # TODO: fix after merging new wallet. These 210 and 114 should be found
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[0]))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[210]))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[114]))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        await time_out_assert(5, wallet.get_confirmed_balance, 2 * 10 ** 12)
+
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[50]))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+        await time_out_assert(5, wallet.get_confirmed_balance, 4 * 10 ** 12)
+
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[113]))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[209]))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        await time_out_assert(5, wallet.get_confirmed_balance, 8 * 10 ** 12)

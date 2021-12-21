@@ -45,7 +45,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -115,6 +115,9 @@ class CCWallet:
         if cc_coin is None:
             raise ValueError("Internal Error, unable to generate new coloured coin")
 
+        # TODO: address hint error and remove ignore
+        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
         regular_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -130,8 +133,11 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=token_bytes(),  # type: ignore[arg-type]
         )
+        # TODO: address hint error and remove ignore
+        #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+        #       [arg-type]
         cc_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -147,7 +153,7 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),
+            name=token_bytes(),  # type: ignore[arg-type]
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(cc_record)
@@ -255,7 +261,7 @@ class CCWallet:
                 program,
                 self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
-                safe_mode=True,
+                mempool_mode=True,
             )
             cost_result: uint64 = calculate_cost_of_program(
                 program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
@@ -390,7 +396,7 @@ class CCWallet:
         origin_id = origin.name()
 
         cc_inner = await self.get_new_inner_hash()
-        cc_puzzle_hash: Program = cc_puzzle_hash_for_inner_puzzle_hash(
+        cc_puzzle_hash: bytes32 = cc_puzzle_hash_for_inner_puzzle_hash(
             CC_MOD, self.cc_info.my_genesis_checker, cc_inner
         )
 
@@ -416,6 +422,9 @@ class CCWallet:
         await self.add_lineage(eve_coin.parent_coin_info, Program.to((0, [origin.as_list(), 1])))
 
         if send:
+            # TODO: address hint error and remove ignore
+            #       error: Argument "name" to "TransactionRecord" has incompatible type "bytes"; expected "bytes32"
+            #       [arg-type]
             regular_record = TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
@@ -431,7 +440,7 @@ class CCWallet:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(TransactionType.INCOMING_TX.value),
-                name=token_bytes(),
+                name=token_bytes(),  # type: ignore[arg-type]
             )
             cc_record = TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -601,13 +610,13 @@ class CCWallet:
 
         total_amount = sum([x.amount for x in selected_coins])
         change = total_amount - total_outgoing
-        primaries = []
+        primaries: List[AmountWithPuzzlehash] = []
         for amount, puzzle_hash in zip(amounts, puzzle_hashes):
             primaries.append({"puzzlehash": puzzle_hash, "amount": amount})
 
         if change > 0:
             changepuzzlehash = await self.get_new_inner_hash()
-            primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
+            primaries.append({"puzzlehash": changepuzzlehash, "amount": uint64(change)})
 
         coin = list(selected_coins)[0]
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
@@ -634,7 +643,10 @@ class CCWallet:
             innersol_list.append(innersol)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
-            spendable_cc_list.append(SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "SpendableCC" has incompatible type "Optional[bytes32]"; expected "bytes32"
+            #       [arg-type]
+            spendable_cc_list.append(SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof))  # type: ignore[arg-type]  # noqa: E501
             sigs = sigs + await self.get_sigs(coin_inner_puzzle, innersol, coin.name())
 
         spend_bundle = spend_bundle_for_spendable_ccs(

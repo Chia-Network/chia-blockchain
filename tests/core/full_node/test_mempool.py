@@ -92,12 +92,14 @@ async def two_nodes():
 
 def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
     spend_bundle_name = bytes([idx] * 32)
+    # TODO: address hint error and remove ignore
+    #       error: Argument 5 to "MempoolItem" has incompatible type "bytes"; expected "bytes32"  [arg-type]
     return MempoolItem(
         SpendBundle([], G2Element()),
         uint64(0),
         NPCResult(None, [], cost),
         cost,
-        spend_bundle_name,
+        spend_bundle_name,  # type: ignore[arg-type]
         [],
         [],
         SerializedProgram(),
@@ -1686,7 +1688,7 @@ MAX_BLOCK_COST_CLVM = 11000000000
 def generator_condition_tester(
     conditions: str,
     *,
-    safe_mode: bool = False,
+    mempool_mode: bool = False,
     quote: bool = True,
     max_cost: int = MAX_BLOCK_COST_CLVM,
 ) -> NPCResult:
@@ -1696,7 +1698,7 @@ def generator_condition_tester(
     generator = BlockGenerator(program, [])
     print(f"len: {len(bytes(program))}")
     npc_result: NPCResult = get_name_puzzle_conditions(
-        generator, max_cost, cost_per_byte=COST_PER_BYTE, safe_mode=safe_mode
+        generator, max_cost, cost_per_byte=COST_PER_BYTE, mempool_mode=mempool_mode
     )
     return npc_result
 
@@ -1861,7 +1863,7 @@ class TestGeneratorConditions:
         )
         generator = BlockGenerator(program, [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, MAX_BLOCK_COST_CLVM, cost_per_byte=COST_PER_BYTE, safe_mode=False
+            generator, MAX_BLOCK_COST_CLVM, cost_per_byte=COST_PER_BYTE, mempool_mode=False
         )
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 2
@@ -1922,14 +1924,14 @@ class TestGeneratorConditions:
         )
 
     @pytest.mark.parametrize(
-        "safe_mode",
+        "mempool_mode",
         [True, False],
     )
-    def test_unknown_condition(self, safe_mode):
+    def test_unknown_condition(self, mempool_mode):
         for c in ['(1 100 "foo" "bar")', "(100)", "(1 1) (2 2) (3 3)", '("foobar")']:
-            npc_result = generator_condition_tester(c, safe_mode=safe_mode)
+            npc_result = generator_condition_tester(c, mempool_mode=mempool_mode)
             print(npc_result)
-            if safe_mode:
+            if mempool_mode:
                 assert npc_result.error == Err.INVALID_CONDITION.value
                 assert npc_result.npc_list == []
             else:

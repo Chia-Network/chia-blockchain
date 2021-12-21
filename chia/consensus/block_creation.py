@@ -35,6 +35,9 @@ from chia.util.recursive_replace import recursive_replace
 log = logging.getLogger(__name__)
 
 
+# TODO: address hint error and remove ignore
+#       error: Incompatible default for argument "seed" (default has type "bytes", argument has type "bytes32")
+#       [assignment]
 def create_foliage(
     constants: ConsensusConstants,
     reward_block_unfinished: RewardChainBlockUnfinished,
@@ -50,7 +53,7 @@ def create_foliage(
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
-    seed: bytes32 = b"",
+    seed: bytes32 = b"",  # type: ignore[assignment]
 ) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo]]:
     """
     Creates a foliage for a given reward chain block. This may or may not be a tx block. In the case of a tx block,
@@ -85,7 +88,7 @@ def create_foliage(
 
     random.seed(seed)
     # Use the extension data to create different blocks based on header hash
-    extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")
+    extension_data: bytes32 = bytes32(random.randint(0, 100000000).to_bytes(32, "big"))
     if prev_block is None:
         height: uint32 = uint32(0)
     else:
@@ -120,6 +123,8 @@ def create_foliage(
 
     generator_block_heights_list: List[uint32] = []
 
+    foliage_transaction_block_hash: Optional[bytes32]
+
     if is_transaction_block:
         cost = uint64(0)
 
@@ -130,7 +135,7 @@ def create_foliage(
                 block_generator,
                 constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=constants.COST_PER_BYTE,
-                safe_mode=True,
+                mempool_mode=True,
             )
             cost = calculate_cost_of_program(block_generator.program, result, constants.COST_PER_BYTE)
 
@@ -187,10 +192,16 @@ def create_foliage(
         additions.extend(reward_claims_incorporated.copy())
         for coin in additions:
             tx_additions.append(coin)
-            byte_array_tx.append(bytearray(coin.puzzle_hash))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
+            #       [arg-type]
+            byte_array_tx.append(bytearray(coin.puzzle_hash))  # type: ignore[arg-type]
         for coin in removals:
             tx_removals.append(coin.name())
-            byte_array_tx.append(bytearray(coin.name()))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
+            #       [arg-type]
+            byte_array_tx.append(bytearray(coin.name()))  # type: ignore[arg-type]
 
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded = bytes(bip158.GetEncoded())
@@ -254,7 +265,7 @@ def create_foliage(
         )
         assert foliage_transaction_block is not None
 
-        foliage_transaction_block_hash: Optional[bytes32] = foliage_transaction_block.get_hash()
+        foliage_transaction_block_hash = foliage_transaction_block.get_hash()
         foliage_transaction_block_signature: Optional[G2Element] = get_plot_signature(
             foliage_transaction_block_hash, reward_block_unfinished.proof_of_space.plot_public_key
         )
@@ -278,6 +289,9 @@ def create_foliage(
     return foliage, foliage_transaction_block, transactions_info
 
 
+# TODO: address hint error and remove ignore
+#       error: Incompatible default for argument "seed" (default has type "bytes", argument has type "bytes32")
+#       [assignment]
 def create_unfinished_block(
     constants: ConsensusConstants,
     sub_slot_start_total_iters: uint128,
@@ -294,7 +308,7 @@ def create_unfinished_block(
     signage_point: SignagePoint,
     timestamp: uint64,
     blocks: BlockchainInterface,
-    seed: bytes32 = b"",
+    seed: bytes32 = b"",  # type: ignore[assignment]
     block_generator: Optional[BlockGenerator] = None,
     aggregate_sig: G2Element = G2Element(),
     additions: Optional[List[Coin]] = None,
@@ -343,7 +357,7 @@ def create_unfinished_block(
 
     new_sub_slot: bool = len(finished_sub_slots) > 0
 
-    cc_sp_hash: Optional[bytes32] = slot_cc_challenge
+    cc_sp_hash: bytes32 = slot_cc_challenge
 
     # Only enters this if statement if we are in testing mode (making VDF proofs here)
     if signage_point.cc_vdf is not None:

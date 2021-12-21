@@ -39,6 +39,7 @@ from chia.util.path import mkdir
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
+from chia import __version__
 
 io_pool_exc = ThreadPoolExecutor()
 
@@ -99,6 +100,9 @@ if getattr(sys, "frozen", False):
         "chia_timelord": "start_timelord",
         "chia_timelord_launcher": "timelord_launcher",
         "chia_full_node_simulator": "start_simulator",
+        "chia_seeder": "chia_seeder",
+        "chia_seeder_crawler": "chia_seeder_crawler",
+        "chia_seeder_dns": "chia_seeder_dns",
     }
 
     def executable_for_service(service_name: str) -> str:
@@ -330,6 +334,8 @@ class WebSocketServer:
             response = await self.register_service(websocket, cast(Dict[str, Any], data))
         elif command == "get_status":
             response = self.get_status()
+        elif command == "get_version":
+            response = self.get_version()
         elif command == "get_plotters":
             response = await self.get_plotters()
         else:
@@ -567,6 +573,10 @@ class WebSocketServer:
 
     def get_status(self) -> Dict[str, Any]:
         response = {"success": True, "genesis_initialized": True}
+        return response
+
+    def get_version(self) -> Dict[str, Any]:
+        response = {"success": True, "version": __version__}
         return response
 
     async def get_plotters(self) -> Dict[str, Any]:
@@ -1262,7 +1272,7 @@ async def kill_process(
     if sys.platform == "win32" or sys.platform == "cygwin":
         log.info("sending CTRL_BREAK_EVENT signal to %s", service_name)
         # pylint: disable=E1101
-        kill(process.pid, signal.SIGBREAK)  # type: ignore
+        kill(process.pid, signal.SIGBREAK)
 
     else:
         log.info("sending term signal to %s", service_name)

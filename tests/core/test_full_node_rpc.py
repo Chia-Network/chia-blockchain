@@ -1,5 +1,6 @@
 # flake8: noqa: F811, F401
 import logging
+from typing import List
 
 import pytest
 from blspy import AugSchemeMPL
@@ -10,7 +11,8 @@ from chia.protocols import full_node_protocol
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import NodeType, start_rpc_server
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from tests.block_tools import get_signage_point
@@ -20,6 +22,7 @@ from tests.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
+from tests.util.rpc import validate_get_routes
 
 
 class TestRpc:
@@ -60,6 +63,7 @@ class TestRpc:
 
         try:
             client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+            await validate_get_routes(client, full_node_rpc_api)
             state = await client.get_blockchain_state()
             assert state["peak"] is None
             assert not state["sync"]["sync_mode"]
@@ -202,6 +206,21 @@ class TestRpc:
             assert len(await client.get_connections(NodeType.FARMER)) == 0
             await client.close_connection(connections[0]["node_id"])
             await time_out_assert(10, num_connections, 0)
+
+            blocks: List[FullBlock] = await client.get_blocks(0, 5)
+            assert len(blocks) == 5
+
+            await full_node_api_1.reorg_from_index_to_new_index(ReorgProtocol(2, 55, bytes([0x2] * 32)))
+            new_blocks_0: List[FullBlock] = await client.get_blocks(0, 5)
+            assert len(new_blocks_0) == 7
+
+            new_blocks: List[FullBlock] = await client.get_blocks(0, 5, exclude_reorged=True)
+            assert len(new_blocks) == 5
+            assert blocks[0].header_hash == new_blocks[0].header_hash
+            assert blocks[1].header_hash == new_blocks[1].header_hash
+            assert blocks[2].header_hash == new_blocks[2].header_hash
+            assert blocks[3].header_hash != new_blocks[3].header_hash
+
         finally:
             # Checks that the RPC manages to stop the node
             client.close()

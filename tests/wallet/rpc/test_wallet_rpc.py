@@ -1,4 +1,6 @@
 import asyncio
+
+from operator import attrgetter
 from chia.util.config import load_config, save_config
 import logging
 from pathlib import Path
@@ -18,8 +20,10 @@ from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_sorting import SortKey
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
+from tests.util.rpc import validate_get_routes
 
 log = logging.getLogger(__name__)
 
@@ -96,6 +100,7 @@ class TestWalletRpc:
         await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
 
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+        await validate_get_routes(client, wallet_rpc_api)
         client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
         try:
             addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")
@@ -211,6 +216,34 @@ class TestWalletRpc:
             transactions = await client.get_transactions("1")
             assert len(transactions) > 1
 
+            all_transactions = await client.get_transactions("1")
+            # Test transaction pagination
+            some_transactions = await client.get_transactions("1", 0, 5)
+            some_transactions_2 = await client.get_transactions("1", 5, 10)
+            assert some_transactions == all_transactions[0:5]
+            assert some_transactions_2 == all_transactions[5:10]
+
+            # Testing sorts
+            # Test the default sort (CONFIRMED_AT_HEIGHT)
+            assert all_transactions == sorted(all_transactions, key=attrgetter("confirmed_at_height"))
+            all_transactions = await client.get_transactions("1", reverse=True)
+            assert all_transactions == sorted(all_transactions, key=attrgetter("confirmed_at_height"), reverse=True)
+
+            # Test RELEVANCE
+            await client.send_transaction("1", 1, encode_puzzle_hash(ph_2, "xch"))  # Create a pending tx
+
+            all_transactions = await client.get_transactions("1", sort_key=SortKey.RELEVANCE)
+            sorted_transactions = sorted(all_transactions, key=attrgetter("created_at_time"), reverse=True)
+            sorted_transactions = sorted(sorted_transactions, key=attrgetter("confirmed_at_height"), reverse=True)
+            sorted_transactions = sorted(sorted_transactions, key=attrgetter("confirmed"))
+            assert all_transactions == sorted_transactions
+
+            all_transactions = await client.get_transactions("1", sort_key=SortKey.RELEVANCE, reverse=True)
+            sorted_transactions = sorted(all_transactions, key=attrgetter("created_at_time"))
+            sorted_transactions = sorted(sorted_transactions, key=attrgetter("confirmed_at_height"))
+            sorted_transactions = sorted(sorted_transactions, key=attrgetter("confirmed"), reverse=True)
+            assert all_transactions == sorted_transactions
+
             pks = await client.get_public_keys()
             assert len(pks) == 1
 
@@ -223,7 +256,7 @@ class TestWalletRpc:
                 return tx.is_in_mempool()
 
             await time_out_assert(5, tx_in_mempool_2, True)
-            assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 1
+            assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 2
             await client.delete_unconfirmed_transactions("1")
             assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 0
 
@@ -244,6 +277,8 @@ class TestWalletRpc:
             await client.log_in_and_skip(pks[1])
             sk_dict = await client.get_private_key(pks[1])
             assert sk_dict["fingerprint"] == pks[1]
+            fingerprint = await client.get_logged_in_fingerprint()
+            assert fingerprint == pks[1]
 
             # Add in reward addresses into farmer and pool for testing delete key checks
             # set farmer to first private key

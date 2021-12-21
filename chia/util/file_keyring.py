@@ -167,12 +167,10 @@ class FileKeyring(FileSystemEventHandler):
         self.setup_keyring_file_watcher()
 
     def setup_keyring_file_watcher(self):
-        observer = Observer()
-        # recursive=True necessary for macOS support
-        observer.schedule(self, self.keyring_path.parent, recursive=True)
-        observer.start()
-
         self.keyring_observer = Observer()
+        # recursive=True necessary for macOS support
+        self.keyring_observer.schedule(self, self.keyring_path.parent, recursive=True)
+        self.keyring_observer.start()
 
     def cleanup_keyring_file_watcher(self):
         if getattr(self, "keyring_observer"):

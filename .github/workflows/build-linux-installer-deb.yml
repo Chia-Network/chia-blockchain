@@ -36,6 +36,8 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
+    - uses: Chia-Network/actions/git-ssh-to-https@main
+
     - name: Cleanup any leftovers that exist from previous runs
       run: bash build_scripts/clean-runner.sh || true
 
@@ -139,10 +141,10 @@ jobs:
       run: |
         sh install.sh
 
-    - name: Setup Node 12.x
+    - name: Setup Node 16.x
       uses: actions/setup-node@v2.4.1
       with:
-        node-version: '12.x'
+        node-version: '16.x'
 
     - name: Add jq
       run: |

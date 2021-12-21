@@ -45,18 +45,18 @@ def event_loop():
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="function")
-async def empty_blockchain():
-    bc1, connection, db_path = await create_blockchain(test_constants)
+@pytest.fixture(scope="function", params=[1, 2])
+async def empty_blockchain(request):
+    bc1, connection, db_path = await create_blockchain(test_constants, request.param)
     yield bc1
     await connection.close()
     bc1.shut_down()
     db_path.unlink()
 
 
-@pytest.fixture(scope="function")
-async def empty_blockchain_original():
-    bc1, connection, db_path = await create_blockchain(test_constants_original)
+@pytest.fixture(scope="function", params=[1, 2])
+async def empty_blockchain_original(request):
+    bc1, connection, db_path = await create_blockchain(test_constants_original, request.param)
     yield bc1
     await connection.close()
     bc1.shut_down()
@@ -418,7 +418,10 @@ class TestFullNodeStore:
         )
 
         # Get signage point by hash
-        assert store.get_signage_point(saved_sp_hash) is not None
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "get_signage_point" of "FullNodeStore" has incompatible type "Optional[bytes32]";
+        #       expected "bytes32"  [arg-type]
+        assert store.get_signage_point(saved_sp_hash) is not None  # type: ignore[arg-type]
         assert store.get_signage_point(std_hash(b"2")) is None
 
         # Test adding signage points before genesis
