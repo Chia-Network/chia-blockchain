@@ -12,6 +12,8 @@ class bytes8(SizedBytes):
 class bytes32(SizedBytes):
     _size = 32
 
+class bytes33(SizedBytes):
+    _size = 33
 
 class bytes48(SizedBytes):
     _size = 48

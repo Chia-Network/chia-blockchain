@@ -68,6 +68,10 @@ class WalletNodeAPI:
     async def respond_proof_of_weight(self, response: full_node_protocol.RespondProofOfWeight):
         pass
 
+    @api_request
+    async def respond_proof_of_weight_v2(self, response: full_node_protocol.RespondProofOfWeightV2):
+        pass
+
     @peer_required
     @api_request
     async def transaction_ack(self, ack: wallet_protocol.TransactionAck, peer: WSChiaConnection):

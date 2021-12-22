@@ -2,11 +2,14 @@
 import asyncio
 
 import pytest
+from typing import List
 from colorlog import getLogger
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols import full_node_protocol
+from chia.protocols.shared_protocol import Capability
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -40,6 +43,11 @@ class TestWalletSync:
     @pytest.fixture(scope="function")
     async def wallet_node_simulator(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
+            yield _
+
+    @pytest.fixture(scope="function")
+    async def two_nodes_two_wallets(self):
+        async for _ in setup_simulators_and_wallets(2, 2, {}):
             yield _
 
     @pytest.fixture(scope="function")
@@ -229,3 +237,28 @@ class TestWalletSync:
 
         await time_out_assert(10, get_tx_count, 2, 1)
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
+
+    @pytest.mark.asyncio
+    async def test_wallet_wp_backwards_comp(self, two_nodes_two_wallets, default_1000_blocks):
+        full_nodes, wallets = two_nodes_two_wallets
+        blocks: List[FullBlock] = default_1000_blocks
+        full_node_1, full_node_2 = full_nodes
+        wallet_1, wallet_2 = wallets
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+        wallet_node_1, wallet_server_1 = wallet_1
+        wallet_node_2, wallet_server_2 = wallet_2
+        # no capabilities
+        server_2.capabilities = [(uint16(Capability.BASE.value), "1")]
+
+        for block in blocks[:800]:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+
+        # The second node should eventually catch up to the first one, and have the
+        # same tip at height num_blocks - 1.
+        await time_out_assert(600, wallet_height_at_least, True, wallet_node_1, 799)
+        await time_out_assert(600, wallet_height_at_least, True, wallet_node_2, 799)

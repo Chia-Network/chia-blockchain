@@ -97,3 +97,5 @@ class ProtocolMessageTypes(Enum):
     respond_children = 75
     request_ses_hashes = 76
     respond_ses_hashes = 77
+    request_proof_of_weight_v2 = 78
+    respond_proof_of_weight_v2 = 79

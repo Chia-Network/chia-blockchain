@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
+from chia.types.blockchain_format.classgroup import ClassgroupElement, CompressedClassgroupElement
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -99,4 +100,105 @@ class ProofBlockHeader(Streamable):
 class WeightProof(Streamable):
     sub_epochs: List[SubEpochData]
     sub_epoch_segments: List[SubEpochChallengeSegment]  # sampled sub epoch
+    recent_chain_data: List[HeaderBlock]
+
+
+@dataclass(frozen=True)
+@streamable
+class SubSlotDataV2(Streamable):
+    proof_of_space: Optional[ProofOfSpace]  # if challenge block
+    # VDF to signage point
+    cc_signage_point: Optional[VDFProof]  # if block
+    # VDF from signage to infusion point
+    cc_infusion_point: Optional[VDFProof]  # if block
+    signage_point_index: Optional[uint8]  # if block
+    cc_slot_end: Optional[VDFProof]  # if is end of slot
+    cc_sp_vdf_output: Optional[CompressedClassgroupElement]  # if is end of slot
+    cc_ip_vdf_output: Optional[CompressedClassgroupElement]  # if is end of slot
+    cc_slot_end_output: Optional[ClassgroupElement]  # if is end of slot
+    icc_slot_end_info_hash: Optional[bytes32]  # if is end of slot
+    # needed to find correct sp input and iterations
+    ip_iters: Optional[uint64]  # if block
+    total_iters: Optional[uint128]  # if block
+
+    def is_challenge(self):
+        if self.proof_of_space is not None:
+            return True
+        return False
+
+    def is_end_of_slot(self):
+        if self.cc_slot_end is not None:
+            return True
+        return False
+
+
+def create_block_sub_slot_data(
+    proof_of_space: Optional[ProofOfSpace],
+    cc_signage_point: Optional[VDFProof],
+    cc_infusion_point: Optional[VDFProof],
+    signage_point_index: uint8,
+    cc_sp_vdf_output: Optional[CompressedClassgroupElement],
+    cc_ip_vdf_output: CompressedClassgroupElement,
+    ip_iters: uint64,
+    total_iters: uint128,
+) -> SubSlotDataV2:
+    return SubSlotDataV2(
+        proof_of_space,
+        cc_signage_point,
+        cc_infusion_point,
+        signage_point_index,
+        None,
+        cc_sp_vdf_output,
+        cc_ip_vdf_output,
+        None,
+        None,
+        ip_iters,
+        total_iters,
+    )
+
+
+def create_block_no_proofs(
+    signage_point_index: uint8,
+    cc_ip_vdf_output: CompressedClassgroupElement,
+    cc_sp_vdf_output: Optional[CompressedClassgroupElement],
+    total_iters: uint128,
+) -> SubSlotDataV2:
+    return SubSlotDataV2(
+        None, None, None, signage_point_index, None, cc_sp_vdf_output, cc_ip_vdf_output, None, None, None, total_iters
+    )
+
+
+def create_slot_sub_slot_data(
+    cc_slot_end: Optional[VDFProof],
+    cc_slot_end_output: Optional[ClassgroupElement],
+    icc_slot_end_info_hash: Optional[bytes32],
+) -> SubSlotDataV2:
+
+    return SubSlotDataV2(
+        None, None, None, None, cc_slot_end, None, None, cc_slot_end_output, icc_slot_end_info_hash, None, None
+    )
+
+
+@dataclass(frozen=True)
+@streamable
+class SubEpochChallengeSegmentV2(Streamable):
+    sub_epoch_n: uint32
+    sub_slot_data: List[SubSlotDataV2]
+    # only in first segment of each sub_epoch
+    rc_slot_end_info: Optional[VDFInfo]
+    cc_slot_end_info: Optional[VDFInfo]
+
+
+@dataclass(frozen=True)
+@streamable
+# this is used only for serialization to database
+class SubEpochSegmentsV2(Streamable):
+    challenge_segments: List[SubEpochChallengeSegmentV2]
+
+
+@dataclass(frozen=True)
+@streamable
+class WeightProofV2(Streamable):
+    sub_epochs: List[SubEpochData]
+    sub_epoch_segments: List[SubEpochChallengeSegmentV2]  # sampled sub epoch
     recent_chain_data: List[HeaderBlock]

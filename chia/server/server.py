@@ -20,7 +20,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS, API_EXCEPTION_BAN_SECONDS
-from chia.protocols.shared_protocol import protocol_version
+from chia.protocols.shared_protocol import protocol_version, Capability
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
@@ -134,7 +134,7 @@ class ChiaServer:
         self.on_connect: Optional[Callable] = None
         self.incoming_messages: asyncio.Queue = asyncio.Queue()
         self.shut_down_event = asyncio.Event()
-
+        self.capabilities: List[Tuple[uint16, str]] = [(uint16(Capability.BASE.value), "1")]
         if self._local_type is NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()
 
@@ -181,6 +181,9 @@ class ChiaServer:
 
     def set_received_message_callback(self, callback: Callable):
         self.received_message_callback = callback
+
+    def set_capabilities(self, capabilities: List[Tuple[uint16, str]]):
+        self.capabilities = capabilities
 
     async def garbage_collect_connections_task(self) -> None:
         """
@@ -285,10 +288,7 @@ class ChiaServer:
                 close_event,
             )
             handshake = await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self._port,
-                self._local_type,
+                self._network_id, protocol_version, self._port, self._local_type, self.capabilities
             )
 
             assert handshake is True
@@ -441,10 +441,7 @@ class ChiaServer:
                 session=session,
             )
             handshake = await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self._port,
-                self._local_type,
+                self._network_id, protocol_version, self._port, self._local_type, self.capabilities
             )
             assert handshake is True
             await self.connection_added(connection, on_connect)
