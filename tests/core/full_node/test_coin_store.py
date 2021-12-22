@@ -57,7 +57,6 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0])
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_basic_coin_store(self, cache_size: uint32, db_version):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
@@ -155,7 +154,6 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_set_spent(self, cache_size: uint32, db_version):
         blocks = bt.get_consecutive_blocks(9, [])
 
@@ -190,7 +188,6 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_rollback(self, cache_size: uint32, db_version):
         blocks = bt.get_consecutive_blocks(20)
 
@@ -243,7 +240,6 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_basic_reorg(self, cache_size: uint32, tmp_dir, db_version):
 
         async with DBConnection(db_version) as db_wrapper:
@@ -304,7 +300,6 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_get_puzzle_hash(self, cache_size: uint32, tmp_dir, db_version):
         async with DBConnection(db_version) as db_wrapper:
             num_blocks = 20

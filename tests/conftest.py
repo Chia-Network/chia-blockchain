@@ -30,6 +30,11 @@ async def empty_blockchain(request):
     db_path.unlink()
 
 
+@pytest.fixture(scope="function", params=[1, 2])
+async def db_version(request):
+    yield request.param
+
+
 block_format_version = "rc4"
 
 

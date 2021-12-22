@@ -23,7 +23,6 @@ def event_loop():
 
 class TestBlockStore:
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_block_store(self, tmp_dir, db_version):
         assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(10)
@@ -62,7 +61,6 @@ class TestBlockStore:
             assert len(block_record_records) == len(blocks)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_deadlock(self, tmp_dir, db_version):
         """
         This test was added because the store was deadlocking in certain situations, when fetching and

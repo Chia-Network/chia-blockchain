@@ -31,9 +31,9 @@ def event_loop():
 
 
 class TestBlockchainTransactions:
-    @pytest.fixture(scope="function", params=[1, 2])
-    async def two_nodes(self, request):
-        async for _ in setup_two_nodes(test_constants, db_version=request.param):
+    @pytest.fixture(scope="function")
+    async def two_nodes(self, db_version):
+        async for _ in setup_two_nodes(test_constants, db_version=db_version):
             yield _
 
     @pytest.mark.asyncio

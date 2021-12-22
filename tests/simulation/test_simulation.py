@@ -25,18 +25,27 @@ test_constants_modified = test_constants.replace(
 
 
 class TestSimulation:
-    @pytest.fixture(scope="function", params=[1, 2])
-    async def extra_node(self, request):
+
+    # TODO: Ideally, the db_version should be the (parameterized) db_version
+    # fixture, to test all versions of the database schema. This doesn't work
+    # because of a hack in shutting down the full node, which means you can run
+    # more than one simulations per process.
+    @pytest.fixture(scope="function")
+    async def extra_node(self):
         with TempKeyring() as keychain:
             b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
             async for _ in setup_full_node(
-                test_constants_modified, "blockchain_test_3.db", 21240, b_tools, db_version=request.param
+                test_constants_modified,
+                "blockchain_test_3.db",
+                21240,
+                b_tools,
+                db_version=1,
             ):
                 yield _
 
-    @pytest.fixture(scope="function", params=[1, 2])
-    async def simulation(self, request):
-        async for _ in setup_full_system(test_constants_modified, db_version=request.param):
+    @pytest.fixture(scope="function")
+    async def simulation(self):
+        async for _ in setup_full_system(test_constants_modified, db_version=1):
             yield _
 
     @pytest.mark.asyncio
