@@ -237,6 +237,8 @@ class TestFullNodeBlockCompression:
 
         # Farm a block
         print(f" ==== IC")
+        # TODO: see if it hangs from here
+        return
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         print(f" ==== ID")
         await time_out_assert(10, node_height_at_least, True, full_node_1, 6)
@@ -246,7 +248,7 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 6)
         print(f" ==== IG")
         # TODO: see if it hangs from here
-        return
+        # return  # hung
 
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
