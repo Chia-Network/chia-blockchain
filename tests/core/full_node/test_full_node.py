@@ -177,6 +177,8 @@ class TestFullNodeBlockCompression:
         _ = await connect_and_get_peer(server_1, server_3)
 
         print(f" ==== D")
+        # TODO: see if it hangs from here
+        return
         ph = await wallet.get_new_puzzlehash()
 
         print(f" ==== F")
@@ -250,7 +252,7 @@ class TestFullNodeBlockCompression:
 
         print(f" ==== J")
         # TODO: see if it hangs from here
-        return
+        # return # yep, hung
         # Send another 2 tx
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
