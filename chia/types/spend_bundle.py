@@ -80,6 +80,27 @@ class SpendBundle(Streamable):
 
         return result
 
+    """
+    These compression methods should not be used for sending spendbundles or putting into blocks.
+    They exist for the purpose of making stored spend bundles (In a file or DB) smaller
+    """
+
+    @classmethod
+    def compress(cls, bundle: "SpendBundle") -> "SpendBundle":
+        compressed_spends: List[CoinSpend] = [CoinSpend.compress(cs) for cs in bundle.coin_spends]
+        return cls(
+            compressed_spends,
+            bundle.aggregated_signature,
+        )
+
+    @classmethod
+    def decompress(cls, bundle: "SpendBundle") -> "SpendBundle":
+        decompressed_spends: List[CoinSpend] = [CoinSpend.decompress(cs) for cs in bundle.coin_spends]
+        return cls(
+            decompressed_spends,
+            bundle.aggregated_signature,
+        )
+
     def get_memos(self) -> Dict[bytes32, List[bytes]]:
         """
         Retrieves the memos for additions in this spend_bundle, which are formatted as a list in the 3rd parameter of

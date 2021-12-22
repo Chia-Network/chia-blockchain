@@ -3,9 +3,10 @@ from typing import List
 
 from blspy import G2Element
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import SerializedProgram, INFINITE_COST
+from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.chain_utils import additions_for_solution, fee_for_solution
+from chia.util.puzzle_compression import KnownPuzzles, PuzzleRepresentation
 from chia.util.streamable import Streamable, streamable
 
 
@@ -50,3 +51,31 @@ class CoinSpend(Streamable):
                             h_list.append(condition.vars[2])
 
         return h_list
+
+    """
+    These compression methods should not be used for sending coin spends or putting them into blocks.
+    They exist for the purpose of making stored puzzles (In a file or DB) smaller
+    """
+
+    @classmethod
+    def compress(cls, coin_spend: "CoinSpend") -> "CoinSpend":
+        _, new_puzzle_rep = KnownPuzzles.match_puzzle(coin_spend.puzzle_reveal.to_program())
+        return cls(
+            coin_spend.coin,
+            Program.to(bytes(new_puzzle_rep)).to_serialized_program(),
+            coin_spend.solution,
+        )
+
+    @classmethod
+    def decompress(cls, coin_spend: "CoinSpend") -> "CoinSpend":
+        program = Program.to([])
+        try:
+            program = PuzzleRepresentation.from_bytes(coin_spend.puzzle_reveal.to_program().as_python()).construct()
+        except Exception:
+            program = Program.from_bytes(coin_spend.puzzle_reveal.to_program().as_python())
+
+        return cls(
+            coin_spend.coin,
+            program.to_serialized_program(),
+            coin_spend.solution,
+        )

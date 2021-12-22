@@ -374,6 +374,13 @@ class Offer:
     def name(self) -> bytes32:
         return self.to_spend_bundle().name()
 
+    def compress(self) -> bytes:
+        return bytes(SpendBundle.compress(self.to_spend_bundle()))
+
+    @classmethod
+    def from_compressed(cls, compressed_bytes: bytes) -> "Offer":
+        return cls.from_spend_bundle(SpendBundle.decompress(SpendBundle.from_bytes(compressed_bytes)))
+
     # Methods to make this a valid Streamable member
     # We basically hijack the SpendBundle versions for most of it
     @classmethod
