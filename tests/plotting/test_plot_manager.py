@@ -359,6 +359,17 @@ async def test_plot_refreshing(test_environment):
 
 
 @pytest.mark.asyncio
+async def test_initial_refresh_flag(test_environment: TestEnvironment) -> None:
+    env: TestEnvironment = test_environment
+    assert env.refresh_tester.plot_manager.initial_refresh()
+    for _ in range(2):
+        await env.refresh_tester.run(PlotRefreshResult())
+        assert not env.refresh_tester.plot_manager.initial_refresh()
+    env.refresh_tester.plot_manager.reset()
+    assert env.refresh_tester.plot_manager.initial_refresh()
+
+
+@pytest.mark.asyncio
 async def test_invalid_plots(test_environment):
     env: TestEnvironment = test_environment
     expected_result = PlotRefreshResult()
