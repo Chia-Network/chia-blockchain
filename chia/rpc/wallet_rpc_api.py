@@ -613,19 +613,6 @@ class WalletRpcApi:
                     }
             elif request["mode"] == "recovery":
                 raise ValueError("Need upgraded singleton for on-chain recovery")
-
-        elif request["wallet_type"] == "dl_wallet":
-            root: bytes32 = bytes32(hexstr_to_bytes(request["root"]))
-            fee = request.get("fee", uint64(0))
-            name: str = request.get("name", "DL Wallet")
-
-            async with wallet_state_manager.lock:
-                creation_item = await DataLayerWallet.create_new_dl_wallet(
-                    wallet_state_manager, main_wallet, root, fee, name
-                )
-                json_txs: List[Dict] = [tx.to_json_dict() for tx in creation_item.transaction_records]
-                return {"wallet_id": creation_item.item.id(), "transactions": json_txs}
-
         else:  # undefined wallet_type
             pass
 

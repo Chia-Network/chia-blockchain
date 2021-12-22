@@ -55,9 +55,8 @@ class DataLayerRpcApi:
         ##########################################################################################
 
     async def create_data_layer(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        amount = request["amount"]
         fee = request["fee"]
-        value = await self.service.create(amount, fee)
+        value = await self.service.create( fee)
         return {"result": value}
 
     async def create_kv_store(self, request: Dict[str, Any] = None) -> Dict[str, Any]:
