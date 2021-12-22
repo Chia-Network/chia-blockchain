@@ -22,7 +22,7 @@ T = TypeVar("T")
 class ItemAndTransactionRecords(Generic[T]):
     item: T
     # TODO: this seems better but needs a WalletProtocol or similar developed
-    transaction_records: Dict["Wallet", List["TransactionRecord"]]
+    transaction_records: List["TransactionRecord"]
 
 
 @dataclass(frozen=True)
