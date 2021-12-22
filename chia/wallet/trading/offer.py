@@ -8,6 +8,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.announcement import Announcement
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
+from chia.util.bech32m import bech32_encode, bech32_decode, convertbits
 from chia.util.ints import uint64
 from chia.wallet.util.compressed_types import CompressedSpendBundle
 from chia.wallet.util.puzzle_compression import LATEST_VERSION
@@ -413,3 +414,15 @@ def try_offer_decompression(offer_bytes: bytes) -> Offer:
     except TypeError:
         pass
     return Offer.from_bytes(offer_bytes)
+
+def encode_offer_bytes(offer_bytes: bytes, prefix: str = "offer") -> str:
+    encoded = bech32_encode(prefix, convertbits(offer_bytes, 8, 5))
+    return encoded
+
+def decode_offer_bytes(offer_bech32: str) -> bytes:
+    hrpgot, data = bech32_decode(offer_bech32, max_length=len(offer_bech32))
+    if data is None:
+        raise ValueError("Invalid Offer")
+    decoded = convertbits(data, 5, 8, False)
+    decoded_bytes = bytes(decoded)
+    return decoded_bytes

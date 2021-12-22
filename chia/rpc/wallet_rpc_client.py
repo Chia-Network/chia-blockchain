@@ -7,7 +7,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, encode_offer_bytes, decode_offer_bytes
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -289,33 +289,25 @@ class WalletRpcClient(RpcClient):
             send_dict[str(key)] = offer_dict[key]
 
         res = await self.fetch("create_offer_for_ids", {"offer": send_dict, "validate_only": validate_only, "fee": fee})
-        offer: Optional[Offer] = (
-            None
-            if validate_only
-            else Offer.from_compressed(hexstr_to_bytes(res["offer"]))
-        )
+        offer: Optional[Offer] = None if validate_only else Offer.from_compressed(decode_offer_bytes(res["offer"]))
         offer_str: str = "" if offer is None else bytes(offer).hex()
         return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
     async def get_offer_summary(self, offer: Offer) -> Dict[str, Dict[str, int]]:
-        res = await self.fetch("get_offer_summary", {"offer": offer.compress(LATEST_VERSION).hex()})
+        res = await self.fetch("get_offer_summary", {"offer": encode_offer_bytes(offer.compress(LATEST_VERSION))})
         return res["summary"]
 
     async def check_offer_validity(self, offer: Offer) -> bool:
-        res = await self.fetch("check_offer_validity", {"offer": offer.compress(LATEST_VERSION).hex()})
+        res = await self.fetch("check_offer_validity", {"offer": encode_offer_bytes(offer.compress(LATEST_VERSION))})
         return res["valid"]
 
     async def take_offer(self, offer: Offer, fee=uint64(0)) -> TradeRecord:
-        res = await self.fetch("take_offer", {"offer": offer.compress(LATEST_VERSION).hex(), "fee": fee})
+        res = await self.fetch("take_offer", {"offer": encode_offer_bytes(offer.compress(LATEST_VERSION)), "fee": fee})
         return TradeRecord.from_json_dict_convenience(res["trade_record"])
 
     async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:
         res = await self.fetch("get_offer", {"trade_id": trade_id.hex(), "file_contents": file_contents})
-        offer_str = (
-            bytes(Offer.from_compressed(hexstr_to_bytes(res["offer"]))).hex()
-            if file_contents
-            else ""
-        )
+        offer_str = bytes(Offer.from_compressed(decode_offer_bytes(res["offer"]))).hex() if file_contents else ""
         return TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
     async def get_all_offers(
@@ -334,10 +326,7 @@ class WalletRpcClient(RpcClient):
 
         records = []
         if file_contents:
-            optional_offers = [
-                bytes(Offer.from_compressed(hexstr_to_bytes(o))).hex()
-                for o in res["offers"]
-            ]
+            optional_offers = [bytes(Offer.from_compressed(decode_offer_bytes(o))).hex() for o in res["offers"]]
         else:
             optional_offers = [""] * len(res["trade_records"])
         for record, offer in zip(res["trade_records"], optional_offers):
