@@ -359,7 +359,6 @@ async def validate_block_body(
                 rem_coin,
                 height,
                 height,
-                True,
                 False,
                 block.foliage_transaction_block.timestamp,
             )
@@ -384,7 +383,6 @@ async def validate_block_body(
                     new_coin,
                     confirmed_height,
                     uint32(0),
-                    False,
                     False,
                     confirmed_timestamp,
                 )

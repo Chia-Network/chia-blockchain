@@ -351,7 +351,6 @@ class MempoolManager:
                     uint32(self.peak.height + 1),  # In mempool, so will be included in next height
                     uint32(0),
                     False,
-                    False,
                     uint64(self.peak.timestamp + 1),
                 )
 
