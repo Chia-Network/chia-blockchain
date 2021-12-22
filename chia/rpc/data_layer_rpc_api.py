@@ -1,5 +1,4 @@
-from typing import Any, Callable, Dict
-
+from typing import Any, Callable, Dict, Optional
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_types import Side
@@ -8,6 +7,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
 # todo input assertions for all rpc's
+from chia.wallet.transaction_record import TransactionRecord
 
 
 def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
@@ -59,9 +59,9 @@ class DataLayerRpcApi:
         value = await self.service.create(fee)
         return {"result": value}
 
-    async def create_kv_store(self, request: Dict[str, Any] = None) -> Dict[str, Any]:
-        # if self.service.data_layer is None:
-        #     raise Exception("Data layer not created")
+    async def create_kv_store(self, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        if self.service is None:
+            raise Exception("Data layer not created")
         value = await self.service.create_store()
         return {"id": value.hex()}
 
@@ -79,7 +79,7 @@ class DataLayerRpcApi:
         #     raise Exception("Data layer not created")
         value = await self.service.get_pairs(store_id)
         # TODO: fix
-        return {"data": value}  # type: ignore[attr-defined]
+        return {"data": value}
 
     async def get_ancestors(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
@@ -88,9 +88,9 @@ class DataLayerRpcApi:
         #     raise Exception("Data layer not created")
         value = await self.service.get_ancestors(node_hash, store_id)
         # TODO: fix
-        return {"data": value}  # type: ignore[attr-defined]
+        return {"data": value}
 
-    async def update_kv_store(self, request: Dict[str, Any]):
+    async def update_kv_store(self, request: Dict[str, Any]) -> TransactionRecord:
         """
         rows_to_add a list of clvm objects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove

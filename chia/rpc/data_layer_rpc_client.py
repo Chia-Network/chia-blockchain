@@ -13,10 +13,10 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("create_kv_store", {})
         return response
 
-    async def get_value(self, tree_id: bytes32, key: bytes) -> Dict:
+    async def get_value(self, tree_id: bytes32, key: bytes) -> Dict[str, Any]:
         return await self.fetch("get_value", {"tree_id": tree_id.hex(), "key": key.hex()})
 
-    async def update_kv_store(self, tree_id: bytes32, changelist: Dict[str, str]) -> Dict:
+    async def update_kv_store(self, tree_id: bytes32, changelist: Dict[str, str]) -> Dict[str, Any]:
         response = await self.fetch("update_kv_store", {"tree_id": tree_id, "changelist": changelist})
         return response
 

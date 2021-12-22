@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 
 
 def service_kwargs_for_data_layer(
-    root_path: pathlib.Path, config: Dict, constants, keychain: Optional[Keychain] = None
+    root_path: pathlib.Path, constants, keychain: Optional[Keychain] = None
 ) -> Dict[str, Any]:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "wallet")
 
@@ -38,7 +38,8 @@ def service_kwargs_for_data_layer(
         consensus_constants=constants,
         local_keychain=keychain,
     )
-    data_layer = DataLayer(root_path=root_path, wallet_node=node)
+    assert node.wallet_state_manager
+    data_layer = DataLayer(root_path=root_path, wallet_state_manager=node.wallet_state_manager)
     api = DataLayerAPI(data_layer)
     network_id = config["selected_network"]
     kwargs: Dict[str, Any] = dict(
@@ -62,8 +63,7 @@ def service_kwargs_for_data_layer(
 
 
 def main() -> None:
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    kwargs = service_kwargs_for_data_layer(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
+    kwargs = service_kwargs_for_data_layer(DEFAULT_ROOT_PATH, DEFAULT_CONSTANTS)
     return run_service(**kwargs)
 
 

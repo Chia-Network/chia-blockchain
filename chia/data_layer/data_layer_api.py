@@ -13,9 +13,9 @@ class DataLayerAPI:
     # def _set_state_changed_callback(self, callback: Callable):
     #     self.full_node.state_changed_callback = callback
 
-    @property
-    def server(self) -> Any:
-        return self.data_layer.server
+    # @property
+    # def server(self) -> Any:
+    #     return self.data_layer.server
 
     @property
     def log(self) -> logging.Logger:
