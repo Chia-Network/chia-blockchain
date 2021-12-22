@@ -16,7 +16,7 @@ class BlockCache(BlockchainInterface):
         blocks: Dict[bytes32, BlockRecord],
         headers: Dict[bytes32, HeaderBlock] = None,
         height_to_hash: Dict[uint32, bytes32] = None,
-        sub_epoch_summaries: Dict[bytes32, SubEpochSummary] = None,
+        sub_epoch_summaries: Dict[uint32, SubEpochSummary] = None,
     ):
         if sub_epoch_summaries is None:
             sub_epoch_summaries = {}
