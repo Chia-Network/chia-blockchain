@@ -13,10 +13,10 @@ class CompressedPuzzle(Streamable):
     compressed_puzzle: Program
 
     @classmethod
-    def compress(cls, puzzle: Program, compressor=PuzzleCompressor()):
+    def compress(cls, puzzle: Program, compressor: PuzzleCompressor):
         return cls(Program.to(compressor.serialize(puzzle)))
 
-    def decompress(self, compressor=PuzzleCompressor()) -> Program:
+    def decompress(self, compressor: PuzzleCompressor) -> Program:
         return compressor.deserialize(self.compressed_puzzle.as_python())
 
 
@@ -26,7 +26,7 @@ class CompressedCoinSpend(Streamable):
     compressed_coin_spend: CoinSpend
 
     @classmethod
-    def compress(cls, coin_spend: CoinSpend, compressor=PuzzleCompressor()):
+    def compress(cls, coin_spend: CoinSpend, compressor: PuzzleCompressor):
         return cls(
             CoinSpend(
                 coin_spend.coin,
@@ -37,7 +37,7 @@ class CompressedCoinSpend(Streamable):
             )
         )
 
-    def decompress(self, compressor=PuzzleCompressor()) -> CoinSpend:
+    def decompress(self, compressor: PuzzleCompressor) -> CoinSpend:
         return CoinSpend(
             self.compressed_coin_spend.coin,
             CompressedPuzzle(self.compressed_coin_spend.puzzle_reveal.to_program())
@@ -53,7 +53,7 @@ class CompressedSpendBundle(Streamable):
     compressed_spend_bundle: SpendBundle
 
     @classmethod
-    def compress(cls, spend_bundle: SpendBundle, compressor=PuzzleCompressor()):
+    def compress(cls, spend_bundle: SpendBundle, compressor: PuzzleCompressor):
         return cls(
             SpendBundle(
                 [CompressedCoinSpend.compress(cs, compressor=compressor) for cs in spend_bundle.coin_spends],
@@ -61,7 +61,7 @@ class CompressedSpendBundle(Streamable):
             )
         )
 
-    def decompress(self, compressor=PuzzleCompressor()) -> SpendBundle:
+    def decompress(self, compressor: PuzzleCompressor) -> SpendBundle:
         return SpendBundle(
             [
                 CompressedCoinSpend(cs).decompress(compressor=compressor)

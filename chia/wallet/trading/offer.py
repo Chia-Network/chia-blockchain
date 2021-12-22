@@ -386,7 +386,7 @@ class Offer:
         return bytes(CompressedSpendBundle.compress(as_spend_bundle, compressor=compressor))
 
     @classmethod
-    def from_compressed(cls, compressed_bytes: bytes, compressor=PuzzleCompressor()) -> "Offer":
+    def from_compressed(cls, compressed_bytes: bytes, compressor: PuzzleCompressor) -> "Offer":
         return cls.from_spend_bundle(
             CompressedSpendBundle.from_bytes(compressed_bytes).decompress(compressor=compressor)
         )
@@ -414,7 +414,7 @@ class Offer:
 
 def try_offer_decompression(offer_bytes: bytes) -> Offer:
     try:
-        return Offer.from_compressed(offer_bytes)
+        return Offer.from_compressed(offer_bytes, compressor=PuzzleCompressor())
     except TypeError:
         pass
     return Offer.from_bytes(offer_bytes)

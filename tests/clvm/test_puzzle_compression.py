@@ -40,7 +40,9 @@ class TestPuzzleCompression:
             puzzle_for_pk(G1Element()),
             SOLUTION,
         )
-        assert coin_spend == CompressedCoinSpend.compress(coin_spend).decompress()
+        assert coin_spend == CompressedCoinSpend.compress(coin_spend, compressor=PuzzleCompressor()).decompress(
+            compressor=PuzzleCompressor()
+        )
 
     def test_cat_puzzle(self):
         coin_spend = CoinSpend(
@@ -48,7 +50,9 @@ class TestPuzzleCompression:
             construct_cc_puzzle(CC_MOD, Program.to([]).get_tree_hash(), Program.to(1)),
             SOLUTION,
         )
-        assert coin_spend == CompressedCoinSpend.compress(coin_spend).decompress()
+        assert coin_spend == CompressedCoinSpend.compress(coin_spend, compressor=PuzzleCompressor()).decompress(
+            compressor=PuzzleCompressor()
+        )
 
     def test_nesting_puzzles(self):
         coin_spend = CoinSpend(
@@ -56,7 +60,9 @@ class TestPuzzleCompression:
             construct_cc_puzzle(CC_MOD, Program.to([]).get_tree_hash(), puzzle_for_pk(G1Element())),
             SOLUTION,
         )
-        assert coin_spend == CompressedCoinSpend.compress(coin_spend).decompress()
+        assert coin_spend == CompressedCoinSpend.compress(coin_spend, compressor=PuzzleCompressor()).decompress(
+            compressor=PuzzleCompressor()
+        )
 
     def test_unknown_wrapper(self):
         unknown = Program.to([2, 2, []])  # (a 2 ())
@@ -66,7 +72,7 @@ class TestPuzzleCompression:
             SOLUTION,
         )
         assert bytes(coin_spend.puzzle_reveal) in bytes(
-            CompressedCoinSpend.compress(coin_spend).compressed_coin_spend.puzzle_reveal
+            CompressedCoinSpend.compress(coin_spend, compressor=PuzzleCompressor()).compressed_coin_spend.puzzle_reveal
         )
 
     def test_version_override(self):
@@ -88,4 +94,6 @@ class TestPuzzleCompression:
         )
 
         with pytest.raises(CompressionVersionError):
-            CompressedSpendBundle.compress(spend_bundle, compressor=new_compressor).decompress()
+            CompressedSpendBundle.compress(spend_bundle, compressor=new_compressor).decompress(
+                compressor=PuzzleCompressor()
+            )

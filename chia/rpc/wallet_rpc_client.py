@@ -11,6 +11,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.puzzle_compression import PuzzleCompressor
 
 
 class WalletRpcClient(RpcClient):
@@ -288,7 +289,11 @@ class WalletRpcClient(RpcClient):
             send_dict[str(key)] = offer_dict[key]
 
         res = await self.fetch("create_offer_for_ids", {"offer": send_dict, "validate_only": validate_only, "fee": fee})
-        offer: Optional[Offer] = None if validate_only else Offer.from_compressed(hexstr_to_bytes(res["offer"]))
+        offer: Optional[Offer] = (
+            None
+            if validate_only
+            else Offer.from_compressed(hexstr_to_bytes(res["offer"]), compressor=PuzzleCompressor())
+        )
         offer_str: str = "" if offer is None else bytes(offer).hex()
         return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
@@ -306,7 +311,11 @@ class WalletRpcClient(RpcClient):
 
     async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:
         res = await self.fetch("get_offer", {"trade_id": trade_id.hex(), "file_contents": file_contents})
-        offer_str = bytes(Offer.from_compressed(hexstr_to_bytes(res["offer"]))).hex() if file_contents else ""
+        offer_str = (
+            bytes(Offer.from_compressed(hexstr_to_bytes(res["offer"]), compressor=PuzzleCompressor())).hex()
+            if file_contents
+            else ""
+        )
         return TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
     async def get_all_offers(
@@ -325,7 +334,10 @@ class WalletRpcClient(RpcClient):
 
         records = []
         if file_contents:
-            optional_offers = [bytes(Offer.from_compressed(hexstr_to_bytes(o))).hex() for o in res["offers"]]
+            optional_offers = [
+                bytes(Offer.from_compressed(hexstr_to_bytes(o), compressor=PuzzleCompressor())).hex()
+                for o in res["offers"]
+            ]
         else:
             optional_offers = [""] * len(res["trade_records"])
         for record, offer in zip(res["trade_records"], optional_offers):
