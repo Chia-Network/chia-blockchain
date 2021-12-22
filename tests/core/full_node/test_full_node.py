@@ -178,7 +178,7 @@ class TestFullNodeBlockCompression:
 
         print(f" ==== D")
         # TODO: see if it hangs from here
-        return
+        # return # did not hang
         ph = await wallet.get_new_puzzlehash()
 
         print(f" ==== F")
@@ -218,6 +218,8 @@ class TestFullNodeBlockCompression:
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
         print(f" ==== I")
+        # TODO: see if it hangs from here
+        return
         # Send another tx
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             20000,
