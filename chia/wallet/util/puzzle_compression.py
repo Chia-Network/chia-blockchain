@@ -157,9 +157,7 @@ class PuzzleCompressor:
             matched, args = driver.match(puzzle)
             if matched:
                 return PuzzleRepresentation(identifier, [self.match_puzzle(arg) for arg in args])
-            else:
-                return PuzzleRepresentation(None, puzzle)
-        raise ValueError("No entries in driver dict")
+        return PuzzleRepresentation(None, puzzle)
 
     def serialize(self, puzzle: Program) -> bytes:
         rep = self.match_puzzle(puzzle)
