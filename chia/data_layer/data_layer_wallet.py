@@ -190,8 +190,8 @@ class DataLayerWallet:
             confirmed=False,
             sent=uint32(10),
             spend_bundle=full_spend,
-            additions=launcher_sb.additions(),
-            removals=launcher_sb.removals(),
+            additions=full_spend.additions(),
+            removals=full_spend.removals(),
             wallet_id=uint32(0),  # This is being called before the wallet is created so we're using a temp ID of 0
             sent_to=[],
             trade_id=None,
@@ -226,7 +226,7 @@ class DataLayerWallet:
             ]
         )
         future_parent = LineageProof(
-            self.tip_coin.name(),
+            self.tip_coin.parent_coin_info,
             create_host_layer_puzzle(self.dl_info.current_inner_inner, self.dl_info.root_hash).get_tree_hash(),
             self.tip_coin.amount,
         )
@@ -403,7 +403,8 @@ class DataLayerWallet:
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof], in_transaction: bool) -> None:
         self.log.info(f"Adding parent {name}: {parent}")
         current_list = self.dl_info.parent_info.copy()
-        current_list.append((name, parent))
+        if not (name, parent) in current_list:
+            current_list.append((name, parent))
         dl_info: DataLayerInfo = DataLayerInfo(
             self.dl_info.origin_coin,
             self.dl_info.root_hash,

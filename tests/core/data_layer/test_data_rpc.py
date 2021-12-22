@@ -28,7 +28,7 @@ nodes = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]
 async def init_data_layer(full_node_api, num_blocks, ph, wallet_node, wallet_rpc_api) -> DataLayerRpcApi:
     data_layer = DataLayer(wallet_node.root_path, wallet_node.wallet_state_manager)
     data_rpc_api = DataLayerRpcApi(data_layer)
-    res = await data_rpc_api.create_data_layer({"amount": 101, "fee": 1})
+    res = await data_rpc_api.create_data_layer({"fee": 1})
     await asyncio.sleep(1)
     assert res["result"]
     tx0: TransactionRecord = res["result"][0]
@@ -47,8 +47,6 @@ async def one_wallet_node() -> AsyncIterator[nodes]:
         yield _
 
 
-# TODO: fix this
-@pytest.mark.xfail(reason="incomplete, needs caught up", strict=True)
 @pytest.mark.asyncio
 async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     root = chia_root.path
