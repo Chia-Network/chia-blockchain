@@ -328,7 +328,7 @@ class WeightProofHandlerV2:
             recent_chain.insert(0, header_block)
             if block_rec.sub_epoch_summary_included:
                 ses_count += 1
-            curr_height = uint32(curr_height - 1)  # type: ignore
+            curr_height = uint32(curr_height - 1)
             blocks_n += 1
 
         header_block = headers[self.blockchain.height_to_hash(curr_height)]
@@ -884,7 +884,7 @@ def _validate_sub_epoch_segments(
             sampled = sampled_seg_index == idx
             log.info(f"validate segment {idx} sampled:{sampled}")
             res = _validate_segment(
-                constants, segment, curr_ssi, curr_difficulty, prev_ses, sampled, cc_sub_slot_hash, prover
+                constants, segment, curr_ssi, curr_difficulty, prev_ses, True, cc_sub_slot_hash, prover
             )
             if res is None:
                 log.error(f"failed to validate sub_epoch {segment.sub_epoch_n} segment {idx} slots")
@@ -945,6 +945,7 @@ def _validate_segment(
                     return None
                 pospace_challenge = cc_sub_slot_hash
                 if is_overflow_block(constants, ssd.signage_point_index):
+                    assert prev_hash
                     pospace_challenge = prev_hash
                 required_iters = __validate_pospace(
                     constants, sub_slot_data, idx, curr_difficulty, pospace_challenge, ssi, long_outputs
@@ -1008,7 +1009,7 @@ def _validate_segment(
             prev_hash = cc_sub_slot_hash
             cc_sub_slot_hash = cc_sub_slot.get_hash()
             curr_ssi = ssi
-            slot_iters = slot_iters + curr_ssi  # type: ignore
+            slot_iters = slot_iters + curr_ssi
             slots = uint64(slots + 1)
         else:
             first_block = False
@@ -1038,7 +1039,7 @@ def _validate_challenge_sub_slot_data(
     sub_slots: List[SubSlotDataV2],
     ssi: uint64,
     challenge: bytes32,
-    prev_challenge: bytes32,
+    prev_challenge: Optional[bytes32],
     long_outputs,
     prover: VDFAsyncProver,
 ) -> bool:
@@ -1056,6 +1057,7 @@ def _validate_challenge_sub_slot_data(
         assert sub_slot_data.cc_sp_vdf_output
         input = ClassgroupElement.get_default_element()
         if is_overflow:
+            assert prev_challenge
             sp_challenge = prev_challenge
         if sub_slot_idx > 0 and not sub_slot_data.cc_signage_point.normalized_to_identity:
             sp_total_iters = get_sp_total_iters(sp_iters, is_overflow, ssi, sub_slot_data)
@@ -1109,7 +1111,7 @@ def _validate_sub_slot_data(
     sub_slots: List[SubSlotDataV2],
     ssi: uint64,
     cc_sub_slot_hash: bytes32,
-    prev_cc_sub_slot_hash: bytes32,
+    prev_cc_sub_slot_hash: Optional[bytes32],
     long_outputs: Dict[CompressedClassgroupElement, ClassgroupElement],
     prover: VDFAsyncProver,
 ) -> bool:
@@ -1139,6 +1141,7 @@ def _validate_sub_slot_data(
         iterations = sp_iters
         challenge = cc_sub_slot_hash
         if is_overflow:
+            assert prev_cc_sub_slot_hash
             challenge = prev_cc_sub_slot_hash
         if not sub_slot_data.cc_signage_point.normalized_to_identity:
             sp_total_iters = get_sp_total_iters(sp_iters, is_overflow, ssi, sub_slot_data)
@@ -1180,7 +1183,7 @@ def _validate_sub_slot_data(
         long_outputs[sub_slot_data.cc_sp_vdf_output] = sp_output
     ip_valid, ip_output = get_vdf_result(ip_res)
     if not ip_valid:
-        log.error(f"failed cc infusion point vdf validation {prev_cc_sub_slot_hash}")
+        log.error(f"failed cc infusion point vdf validation {cc_sub_slot_hash}")
         return False
     long_outputs[sub_slot_data.cc_ip_vdf_output] = ip_output
     return True
@@ -1388,9 +1391,9 @@ def __get_rc_sub_slot_hash(
     slots_n = 1
     assert first.signage_point_index is not None
     overflow = is_overflow_block(constants, first.signage_point_index)
-    new_diff = None if ses is None else ses.new_difficulty
-    new_ssi = None if ses is None else ses.new_sub_slot_iters
-    ses_hash = None if ses is None else ses.get_hash()
+    new_diff: Optional[uint64] = None if ses is None else ses.new_difficulty
+    new_ssi: Optional[uint64] = None if ses is None else ses.new_sub_slot_iters
+    ses_hash: Optional[bytes32] = None if ses is None else ses.get_hash()
 
     if overflow and first_idx >= 2:
         if slots[first_idx - 2].is_end_of_slot() is False:

@@ -22,12 +22,6 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
 from tests.block_tools import test_constants
 from tests.setup_nodes import bt
-from tests.core.fixtures import default_400_blocks  # noqa: F401; noqa: F401
-from tests.core.fixtures import default_1000_blocks  # noqa: F401
-from tests.core.fixtures import default_10000_blocks  # noqa: F401
-from tests.core.fixtures import default_10000_blocks_compact  # noqa: F401
-from tests.core.fixtures import pre_genesis_empty_slots_1000_blocks  # noqa: F401
-
 try:
     from reprlib import repr
 except ImportError:
@@ -35,7 +29,7 @@ except ImportError:
 
 
 from chia.consensus.pot_iterations import calculate_iterations_quality
-from chia.full_node.weight_proof import (  # type: ignore
+from chia.full_node.weight_proof import (
     WeightProofHandler,
     _map_sub_epoch_summaries,
     _validate_sub_epoch_segments,
@@ -118,7 +112,7 @@ async def load_blocks_dont_validate(
         )
 
         sub_block = block_to_block_record(
-            test_constants, BlockCache(sub_blocks, height_to_hash), required_iters, block, None
+            test_constants, BlockCache(sub_blocks, height_to_hash=height_to_hash), required_iters, block, None
         )
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.height] = block.header_hash

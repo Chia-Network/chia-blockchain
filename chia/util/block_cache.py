@@ -16,7 +16,7 @@ class BlockCache(BlockchainInterface):
         blocks: Dict[bytes32, BlockRecord],
         headers: Dict[bytes32, HeaderBlock] = None,
         height_to_hash: Dict[uint32, bytes32] = None,
-        sub_epoch_summaries: Dict[uint32, SubEpochSummary] = None,
+        sub_epoch_summaries: Dict[bytes32, SubEpochSummary] = None,
     ):
         if sub_epoch_summaries is None:
             sub_epoch_summaries = {}
@@ -28,7 +28,7 @@ class BlockCache(BlockchainInterface):
         self._headers = headers
         self._height_to_hash = height_to_hash
         self._sub_epoch_summaries = sub_epoch_summaries
-        self._sub_epoch_segments: Dict[uint32, SubEpochSegments] = {}
+        self._sub_epoch_segments: Dict[bytes32, SubEpochSegments] = {}
         self.log = logging.getLogger(__name__)
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
@@ -83,15 +83,15 @@ class BlockCache(BlockchainInterface):
         return self._headers
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegment]
+        self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ):
-        self._sub_epoch_segments[sub_epoch_summary_height] = SubEpochSegments(segments)
+        self._sub_epoch_segments[ses_block_hash] = SubEpochSegments(segments)
 
     async def get_sub_epoch_challenge_segments(
         self,
-        sub_epoch_summary_height: uint32,
+        ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
-        segments = self._sub_epoch_segments.get(sub_epoch_summary_height)
+        segments = self._sub_epoch_segments.get(ses_block_hash)
         if segments is None:
             return None
         return segments.challenge_segments
