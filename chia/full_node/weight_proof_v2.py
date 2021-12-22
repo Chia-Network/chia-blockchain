@@ -884,7 +884,7 @@ def _validate_sub_epoch_segments(
             sampled = sampled_seg_index == idx
             log.info(f"validate segment {idx} sampled:{sampled}")
             res = _validate_segment(
-                constants, segment, curr_ssi, curr_difficulty, prev_ses, True, cc_sub_slot_hash, prover
+                constants, segment, curr_ssi, curr_difficulty, prev_ses, sampled, cc_sub_slot_hash, prover
             )
             if res is None:
                 log.error(f"failed to validate sub_epoch {segment.sub_epoch_n} segment {idx} slots")
