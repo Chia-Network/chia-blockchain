@@ -39,10 +39,10 @@ class TestDaemon:
         async for _ in setup_daemon(btools=b_tools):
             yield _
 
-    @pytest.fixture(scope="function")
-    async def simulation(self):
+    @pytest.fixture(scope="function", params=[1, 2])
+    async def simulation(self, request):
         async for _ in setup_full_system(
-            b_tools_1.constants, b_tools=b_tools, b_tools_1=b_tools_1, connect_to_daemon=True
+            b_tools_1.constants, b_tools=b_tools, b_tools_1=b_tools_1, connect_to_daemon=True, db_version=request.param
         ):
             yield _
 

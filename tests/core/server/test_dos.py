@@ -38,9 +38,9 @@ def event_loop():
     yield loop
 
 
-@pytest.fixture(scope="function")
-async def setup_two_nodes():
-    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=60000):
+@pytest.fixture(scope="function", params=[1, 2])
+async def setup_two_nodes(request):
+    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=60000, db_version=request.param):
         yield _
 
 
