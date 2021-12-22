@@ -27,6 +27,8 @@ def subdirs(per: str) -> List[Path]:
         raise Exception(f"Unrecognized per: {per!r}")
 
     paths = [path for path in root_path.rglob(glob_pattern) if not skip(path=path)]
+    # TODO: remove
+    paths = [path for path in paths if path.name == "test_full_node.py"]
 
     if per == "directory":
         filtered_paths = []

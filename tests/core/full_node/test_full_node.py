@@ -157,8 +157,10 @@ async def wallet_nodes_mainnet():
 
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("test_reorgs", [False, True])
-    @pytest.mark.parametrize("tx_size", [10000, 3000000000000])
+    # @pytest.mark.parametrize("test_reorgs", [False, True])
+    # @pytest.mark.parametrize("tx_size", [10000, 3000000000000])
+    @pytest.mark.parametrize("test_reorgs", [True])
+    @pytest.mark.parametrize("tx_size", [3000000000000])
     async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
         print(f" ==== A")
         nodes, wallets = setup_two_nodes_and_wallet
@@ -417,7 +419,7 @@ class TestFullNodeBlockCompression:
         print(f" ==== P")
 
 
-class TestFullNodeProtocol:
+class disabled_TestFullNodeProtocol:
     @pytest.mark.asyncio
     async def test_spendbundle_serialization(self):
         sb: SpendBundle = make_spend_bundle(1)
