@@ -219,13 +219,15 @@ class TestFullNodeBlockCompression:
 
         print(f" ==== I")
         # TODO: see if it hangs from here
-        return
+        # return  # did not hang
         # Send another tx
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             20000,
             ph,
         )
+        print(f" ==== IA")
         await wallet.push_transaction(tx=tr)
+        print(f" ==== IB")
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -234,22 +236,37 @@ class TestFullNodeBlockCompression:
         )
 
         # Farm a block
+        print(f" ==== IC")
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        print(f" ==== ID")
         await time_out_assert(10, node_height_at_least, True, full_node_1, 6)
+        print(f" ==== IE")
         await time_out_assert(10, node_height_at_least, True, full_node_2, 6)
+        print(f" ==== IF")
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 6)
+        print(f" ==== IG")
+        # TODO: see if it hangs from here
+        return
 
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+        print(f" ==== IH")
         assert program is not None
+        print(f" ==== II")
         assert detect_potential_template_generator(uint32(6), program) is None
+        print(f" ==== IJ")
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+        print(f" ==== IK")
 
         # Farm two empty blocks
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        print(f" ==== IL")
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        print(f" ==== IM")
         await time_out_assert(10, node_height_at_least, True, full_node_1, 8)
+        print(f" ==== IN")
         await time_out_assert(10, node_height_at_least, True, full_node_2, 8)
+        print(f" ==== IO")
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 8)
 
         print(f" ==== J")
