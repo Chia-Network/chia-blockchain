@@ -116,6 +116,7 @@ class WalletRpcApi:
             # DL Wallet
             "/dl_current_root": self.dl_current_root,
             "/dl_update_root": self.dl_update_root,
+            "/dl_history": self.dl_history,
         }
 
     async def _state_changed(self, *args) -> List[WsRpcMessage]:
@@ -613,6 +614,19 @@ class WalletRpcApi:
                     }
             elif request["mode"] == "recovery":
                 raise ValueError("Need upgraded singleton for on-chain recovery")
+
+        elif request["wallet_type"] == "dl_wallet":
+            root: bytes32 = bytes32(hexstr_to_bytes(request["root"]))
+            fee = request.get("fee", uint64(0))
+            name: str = request.get("name", "DL Wallet")
+
+            async with wallet_state_manager.lock:
+                creation_item = await DataLayerWallet.create_new_dl_wallet(
+                    wallet_state_manager, main_wallet, root, fee, name
+                )
+                json_txs: List[Dict] = [tx.to_json_dict() for tx in creation_item.transaction_records]
+                return {"wallet_id": creation_item.item.id(), "transactions": json_txs}
+
         else:  # undefined wallet_type
             pass
 
@@ -1296,3 +1310,13 @@ class WalletRpcApi:
             raise ValueError(f"wallet_id {wallet_id} is not a data layer wallet")
         root: bytes32 = bytes32(hexstr_to_bytes(request["root"]))
         return {"wallet_id": wallet_id, "transaction": (await wallet.create_update_state_spend(root)).to_json_dict()}
+
+    async def dl_history(self, request) -> Dict:
+        """Get the history of merkle roots that have been stored in the data layer singleton"""
+        if self.service.wallet_state_manager is None:
+            return {"success": False, "error": "not_initialized"}
+        wallet_id = uint32(request["wallet_id"])
+        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if WalletType(wallet.type()) != WalletType.DATA_LAYER:
+            raise ValueError(f"wallet_id {wallet_id} is not a data layer wallet")
+        return {"wallet_id": wallet_id, "history": wallet.get_history()}

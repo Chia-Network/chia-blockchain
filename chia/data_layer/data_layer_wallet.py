@@ -40,6 +40,7 @@ class DataLayerInfo(Streamable):
     root_hash: bytes32
     # TODO: should this be a dict for quick lookup?
     parent_info: List[Tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
+    previous_states: List[Tuple[bytes32, bytes32]]  # {coin.name(): merkle_root}
     current_inner_inner: Optional[Program]  # represents a Program as bytes
 
 
@@ -97,7 +98,9 @@ class DataLayerWallet:
 
         txs, parents, launcher_coin, inner_inner_puz = await self.generate_launcher_spend(uint64(1), root_hash)
 
-        self.dl_info = DataLayerInfo(launcher_coin, root_hash, parents, inner_inner_puz)
+        self.dl_info = DataLayerInfo(
+            launcher_coin, root_hash, parents, [(self.tip_coin.name(), root_hash)], inner_inner_puz
+        )
         info_as_string = json.dumps(self.dl_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DataLayer Wallet", WalletType.DATA_LAYER.value, info_as_string
@@ -231,6 +234,7 @@ class DataLayerWallet:
             self.tip_coin.amount,
         )
         await self.add_parent(self.tip_coin.name(), future_parent, False)
+        await self.add_history(self.tip_coin.name(), root_hash, False)
         coin_spend = CoinSpend(
             self.tip_coin, SerializedProgram.from_program(current_full_puz), SerializedProgram.from_program(full_sol)
         )
@@ -240,6 +244,7 @@ class DataLayerWallet:
             origin_coin=self.dl_info.origin_coin,
             root_hash=root_hash,
             parent_info=self.dl_info.parent_info,
+            previous_states=self.dl_info.previous_states,
             current_inner_inner=new_inner_inner_puzzle,
         )
         await self.save_info(new_info, False)  # todo in_transaction false ?
@@ -295,6 +300,7 @@ class DataLayerWallet:
             self.tip_coin.amount,
         )
         await self.add_parent(self.tip_coin.name(), future_parent, False)
+        await self.add_history(self.tip_coin.name(), self.dl_info.root_hash, False)
         self.tip_coin = Coin(self.tip_coin.name(), self.tip_coin.puzzle_hash, self.tip_coin.amount)
         spend_bundle = SpendBundle([coin_spend], AugSchemeMPL.aggregate([]))
 
@@ -317,6 +323,9 @@ class DataLayerWallet:
 
     def get_current_root(self) -> bytes32:
         return self.dl_info.root_hash
+
+    def get_history(self) -> List[bytes32]:
+        return [root for _, root in self.dl_info.previous_states]
 
     async def select_coins(self, amount: uint64, exclude: List[Coin] = []) -> Optional[Set[Coin]]:
         """Returns a set of coins that can be used for generating a new transaction."""
@@ -408,6 +417,21 @@ class DataLayerWallet:
         dl_info: DataLayerInfo = DataLayerInfo(
             self.dl_info.origin_coin,
             self.dl_info.root_hash,
+            current_list,
+            self.dl_info.previous_states,
+            self.dl_info.current_inner_inner,
+        )
+        await self.save_info(dl_info, in_transaction)
+
+    async def add_history(self, name: bytes32, root: bytes32, in_transaction: bool) -> None:
+        self.log.info(f"Adding history {name}: {root}")
+        current_list = self.dl_info.previous_states.copy()
+        if not (name, root) in current_list:
+            current_list.append((name, root))
+        dl_info: DataLayerInfo = DataLayerInfo(
+            self.dl_info.origin_coin,
+            self.dl_info.root_hash,
+            self.dl_info.parent_info,
             current_list,
             self.dl_info.current_inner_inner,
         )

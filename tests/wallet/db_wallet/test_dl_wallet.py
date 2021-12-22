@@ -100,6 +100,7 @@ class TestDLWallet:
                 dl_wallet_0.dl_info.origin_coin.name(),
             ).get_tree_hash()
         )
+        assert dl_wallet_0.get_history() == [current_root, new_merkle_tree.calculate_root()]
 
     @pytest.mark.asyncio
     async def test_announce_coin(self, three_wallet_nodes) -> None:

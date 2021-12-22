@@ -94,7 +94,6 @@ async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) ->
         val = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
 
 
-@pytest.mark.xfail(reason="incomplete, needs caught up", strict=True)
 @pytest.mark.asyncio
 async def test_create_double_insert(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     root = chia_root.path

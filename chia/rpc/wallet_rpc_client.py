@@ -299,3 +299,8 @@ class WalletRpcClient(RpcClient):
         request = {"wallet_id": int(wallet_id), "root": root.hex()}
         response = await self.fetch("dl_update_root", request)
         return TransactionRecord.from_json_dict(response["transaction"])
+
+    async def dl_history(self, wallet_id: str) -> List[bytes32]:
+        request = {"wallet_id": int(wallet_id)}
+        response = await self.fetch("dl_history", request)
+        return [bytes32(hexstr_to_bytes(root)) for root in response["history"]]

@@ -98,6 +98,8 @@ class TestWalletRpc:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
             time_out_assert(15, client.dl_current_root, new_root, dl_wallet_id)
+
+            assert await client.dl_history(dl_wallet_id) == [current_root, new_root]
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
