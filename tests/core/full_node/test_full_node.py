@@ -229,7 +229,7 @@ class TestFullNodeBlockCompression:
         await wallet.push_transaction(tx=tr)
         print(f" ==== IB")
         # TODO: see if it hangs from here
-        return
+        # return # did not hang
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -240,7 +240,7 @@ class TestFullNodeBlockCompression:
         # Farm a block
         print(f" ==== IC")
         # TODO: see if it hangs from here
-        # return  # hung
+        return  # hung
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         print(f" ==== ID")
         await time_out_assert(10, node_height_at_least, True, full_node_1, 6)
