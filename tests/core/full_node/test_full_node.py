@@ -445,7 +445,7 @@ class TestFullNodeBlockCompression:
             assert full_node_1.full_node.full_node_store.previous_generator is None
         import objgraph
         import sys
-        objgraph.show_refs([*locals().values()], output=sys.stdout)
+        objgraph.show_refs([*locals().values()], max_depth=20, too_many=500, output=sys.stdout)
         print(f" ==== P")
 
 
