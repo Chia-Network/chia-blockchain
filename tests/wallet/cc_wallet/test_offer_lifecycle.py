@@ -20,7 +20,6 @@ from chia.wallet.cc_wallet.cc_utils import (
 )
 from chia.wallet.payment import Payment
 from chia.wallet.trading.offer import Offer, NotarizedPayment
-from chia.wallet.util.puzzle_compression import LATEST_VERSION
 
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 

@@ -5,13 +5,11 @@ from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
 from chia.wallet.trading.offer import Offer, encode_offer_bytes, decode_offer_bytes
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
-from chia.wallet.util.puzzle_compression import LATEST_VERSION
 
 
 class WalletRpcClient(RpcClient):

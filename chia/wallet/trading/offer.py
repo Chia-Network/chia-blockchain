@@ -10,8 +10,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_encode, bech32_decode, convertbits
 from chia.util.ints import uint64
-from chia.wallet.util.compressed_types import CompressedSpendBundle
-from chia.wallet.util.puzzle_compression import LATEST_VERSION, lowest_compatible_version
+from chia.wallet.util.puzzle_compression import compress_object_with_puzzles, decompress_object_with_puzzles, lowest_compatible_version
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     SpendableCC,
@@ -381,13 +380,13 @@ class Offer:
         as_spend_bundle = self.to_spend_bundle()
         mods: List[bytes] = [bytes(cs.puzzle_reveal.to_program().uncurry()[0]) for cs in as_spend_bundle.coin_spends]
         highest_version = max(lowest_compatible_version(mods), 2)  # 2 is the version where OFFER_MOD lives
-        return bytes(CompressedSpendBundle.compress(as_spend_bundle, highest_version))
+        return b"OFFR" + compress_object_with_puzzles(bytes(as_spend_bundle), highest_version)
 
     @classmethod
     def from_compressed(cls, compressed_bytes: bytes) -> "Offer":
-        return cls.from_spend_bundle(
-            CompressedSpendBundle.from_bytes(compressed_bytes).decompress()
-        )
+        if compressed_bytes[0:4] != b"OFFR":
+            raise ValueError("The compressed object is not an Offer")
+        return Offer.from_bytes(decompress_object_with_puzzles(compressed_bytes[4:]))
 
     # Methods to make this a valid Streamable member
     # We basically hijack the SpendBundle versions for most of it
@@ -417,14 +416,16 @@ def try_offer_decompression(offer_bytes: bytes) -> Offer:
         pass
     return Offer.from_bytes(offer_bytes)
 
+
 def encode_offer_bytes(offer_bytes: bytes, prefix: str = "offer") -> str:
-    encoded = bech32_encode(prefix, convertbits(offer_bytes, 8, 5))
+    encoded = bech32_encode(prefix, convertbits(list(offer_bytes), 8, 5))
     return encoded
+
 
 def decode_offer_bytes(offer_bech32: str) -> bytes:
     hrpgot, data = bech32_decode(offer_bech32, max_length=len(offer_bech32))
     if data is None:
         raise ValueError("Invalid Offer")
-    decoded = convertbits(data, 5, 8, False)
+    decoded = convertbits(list(data), 5, 8, False)
     decoded_bytes = bytes(decoded)
     return decoded_bytes
