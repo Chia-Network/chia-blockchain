@@ -99,7 +99,7 @@ class MempoolManager:
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
-        self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 5)
+        self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1)
         self.seen_cache_size = 10000
         self.pool = ProcessPoolExecutor(max_workers=2)
 
@@ -524,31 +524,16 @@ class MempoolManager:
         self.peak = new_peak
 
         if use_optimization:
-            changed_coins_set: Set[bytes32] = set()
+            # We don't reinitialize a mempool, just kick removed items
             for coin_record in coin_changes:
-                changed_coins_set.add(coin_record.coin.name())
-
-        old_pool = self.mempool
-        self.mempool = Mempool(self.mempool_max_total_cost)
-
-        for item in old_pool.spends.values():
-            if use_optimization:
-                # If use_optimization, we will automatically re-add all bundles where none of it's removals were
-                # spend (since we only advanced 1 transaction block). This is a nice benefit of the coin set model
-                # vs account model, all spends are guaranteed to succeed.
-                failed = False
-                for removed_coin in item.removals:
-                    if removed_coin.name() in changed_coins_set:
-                        failed = True
-                        break
-                if not failed:
-                    self.mempool.add_to_pool(item)
-                else:
-                    # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
-                    # successfully added to the new mempool. In this case, remove it from seen, so in the case of a
-                    # reorg, it can be resubmitted
+                if coin_record.name in self.mempool.removals:
+                    item = self.mempool.removals[coin_record.name]
+                    self.mempool.remove_from_pool(item)
                     self.remove_seen(item.spend_bundle_name)
-            else:
+        else:
+            old_pool = self.mempool
+            self.mempool = Mempool(self.mempool_max_total_cost)
+            for item in old_pool.spends.values():
                 _, result, _ = await self.add_spendbundle(
                     item.spend_bundle, item.npc_result, item.spend_bundle_name, item.program
                 )
