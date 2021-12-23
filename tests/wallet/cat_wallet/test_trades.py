@@ -1,5 +1,6 @@
 import asyncio
 from secrets import token_bytes
+from typing import List
 
 import pytest
 
@@ -10,6 +11,8 @@ from chia.util.ints import uint16, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -71,7 +74,7 @@ async def wallets_prefarm(two_wallet_nodes):
 
 @pytest.mark.parametrize(
     "trusted",
-    [True, False],
+    [True],
 )
 class TestCATTrades:
     @pytest.mark.asyncio
@@ -108,9 +111,9 @@ class TestCATTrades:
         await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, 100)
 
         # Add the taker's CAT to the maker's wallet
-        assert cat_wallet_maker.cat_info.my_tail is not None
-        assert new_cat_wallet_taker.cat_info.my_tail is not None
-        new_cat_wallet_maker: CATWallet = await CATWallet.create_wallet_for_cat(
+        assert cat_wallet_maker.cc_info.my_genesis_checker is not None
+        assert new_cat_wallet_taker.cc_info.my_genesis_checker is not None
+        new_cat_wallet_maker: CATWallet = await CATWallet.create_wallet_for_cc(
             wallet_node_maker.wallet_state_manager, wallet_maker, new_cat_wallet_taker.get_asset_id()
         )
 
@@ -185,7 +188,7 @@ class TestCATTrades:
         await time_out_assert(15, new_cat_wallet_maker.get_confirmed_balance, MAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, new_cat_wallet_maker.get_unconfirmed_balance, MAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, wallet_taker.get_confirmed_balance, TAKER_CHIA_BALANCE)
-
+        breakpoint()
         await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
         await time_out_assert(15, new_cat_wallet_taker.get_confirmed_balance, TAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
@@ -385,8 +388,8 @@ class TestCATTrades:
         wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
         if trusted:
-            wallet_node_maker.config["trusted_peers"] = {full_node.server.node_id: full_node.server.node_id}
-            wallet_node_taker.config["trusted_peers"] = {full_node.server.node_id: full_node.server.node_id}
+            wallet_node_maker.config["trusted_peers"] = {full_node.server.node_id.hex(): full_node.server.node_id.hex()}
+            wallet_node_taker.config["trusted_peers"] = {full_node.server.node_id.hex(): full_node.server.node_id.hex()}
         else:
             wallet_node_maker.config["trusted_peers"] = {}
             wallet_node_taker.config["trusted_peers"] = {}
@@ -396,7 +399,13 @@ class TestCATTrades:
                 wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, uint64(100)
             )
             await asyncio.sleep(1)
-
+        tx_queue: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
+        breakpoint()
+        debug_spend_bundle(tx_queue[0].spend_bundle)
+        breakpoint()
+        await time_out_assert(
+            15, tx_in_pool, True, full_node.full_node.mempool_manager, tx_queue[0].spend_bundle.name()
+        )
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 

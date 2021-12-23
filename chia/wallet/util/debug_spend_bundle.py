@@ -76,7 +76,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             print(f"*** error {error}")
         elif conditions is not None:
             for pk, m in pkm_pairs_for_conditions_dict(conditions, coin_name, agg_sig_additional_data):
-                pks.append(G1Element.from_bytes(pk))
+                pks.append(pk)
                 msgs.append(m)
             print()
             cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)  # type: ignore
