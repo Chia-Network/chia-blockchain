@@ -376,17 +376,38 @@ class Offer:
     def name(self) -> bytes32:
         return self.to_spend_bundle().name()
 
-    def compress(self) -> bytes:
+    def compress(self, version = None) -> bytes:
         as_spend_bundle = self.to_spend_bundle()
-        mods: List[bytes] = [bytes(cs.puzzle_reveal.to_program().uncurry()[0]) for cs in as_spend_bundle.coin_spends]
-        highest_version = max(lowest_best_version(mods), 2)  # 2 is the version where OFFER_MOD lives
-        return b"OFFR" + compress_object_with_puzzles(bytes(as_spend_bundle), highest_version)
+        if version is None:
+            mods: List[bytes] = [bytes(s.puzzle_reveal.to_program().uncurry()[0]) for s in as_spend_bundle.coin_spends]
+            version = max(lowest_best_version(mods), 2)  # 2 is the version where OFFER_MOD lives
+        return compress_object_with_puzzles(bytes(as_spend_bundle), version)
 
     @classmethod
     def from_compressed(cls, compressed_bytes: bytes) -> "Offer":
-        if compressed_bytes[0:4] != b"OFFR":
-            raise ValueError("The compressed object is not an Offer")
-        return Offer.from_bytes(decompress_object_with_puzzles(compressed_bytes[4:]))
+        return Offer.from_bytes(decompress_object_with_puzzles(compressed_bytes))
+
+    @classmethod
+    def try_offer_decompression(cls, offer_bytes: bytes) -> "Offer":
+        try:
+            return cls.from_compressed(offer_bytes)
+        except TypeError:
+            pass
+        return cls.from_bytes(offer_bytes)
+
+    def to_bech32(self, prefix: str = "offer", compression_version = None) -> str:
+        offer_bytes = self.compress(version=compression_version)
+        encoded = bech32_encode(prefix, convertbits(list(offer_bytes), 8, 5))
+        return encoded
+
+    @classmethod
+    def from_bech32(cls, offer_bech32: str) -> "Offer":
+        hrpgot, data = bech32_decode(offer_bech32, max_length=len(offer_bech32))
+        if data is None:
+            raise ValueError("Invalid Offer")
+        decoded = convertbits(list(data), 5, 8, False)
+        decoded_bytes = bytes(decoded)
+        return cls.try_offer_decompression(decoded_bytes)
 
     # Methods to make this a valid Streamable member
     # We basically hijack the SpendBundle versions for most of it
@@ -407,25 +428,3 @@ class Offer:
         # Because of the __bytes__ method, we need to parse the dummy CoinSpends as `requested_payments`
         bundle = SpendBundle.from_bytes(as_bytes)
         return cls.from_spend_bundle(bundle)
-
-
-def try_offer_decompression(offer_bytes: bytes) -> Offer:
-    try:
-        return Offer.from_compressed(offer_bytes)
-    except TypeError:
-        pass
-    return Offer.from_bytes(offer_bytes)
-
-
-def encode_offer_bytes(offer_bytes: bytes, prefix: str = "offer") -> str:
-    encoded = bech32_encode(prefix, convertbits(list(offer_bytes), 8, 5))
-    return encoded
-
-
-def decode_offer_bytes(offer_bech32: str) -> bytes:
-    hrpgot, data = bech32_decode(offer_bech32, max_length=len(offer_bech32))
-    if data is None:
-        raise ValueError("Invalid Offer")
-    decoded = convertbits(list(data), 5, 8, False)
-    decoded_bytes = bytes(decoded)
-    return decoded_bytes
