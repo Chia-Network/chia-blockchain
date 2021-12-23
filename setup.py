@@ -39,6 +39,7 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    "objgraph",
     "pre-commit",
     "pytest",
     "pytest-asyncio",

@@ -155,291 +155,6 @@ async def wallet_nodes_mainnet():
         yield _
 
 
-async def go(setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
-    print(f" ==== A")
-    nodes, wallets = setup_two_nodes_and_wallet
-    server_1 = nodes[0].full_node.server
-    server_2 = nodes[1].full_node.server
-    server_3 = wallets[0][1]
-    full_node_1 = nodes[0]
-    full_node_2 = nodes[1]
-    wallet_node_1 = wallets[0][0]
-    wallet = wallet_node_1.wallet_state_manager.main_wallet
-    print(f" ==== B")
-    _ = await connect_and_get_peer(server_1, server_2)
-    print(f" ==== C")
-    _ = await connect_and_get_peer(server_1, server_3)
-
-    print(f" ==== D")
-    # TODO: see if it hangs from here
-    # return # did not hang
-    ph = await wallet.get_new_puzzlehash()
-
-    print(f" ==== F")
-    for i in range(4):
-        print(f" ==== F {i}")
-        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-
-    print(f" ==== G")
-    await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 4)
-    await time_out_assert(10, node_height_at_least, True, full_node_1, 4)
-    await time_out_assert(10, node_height_at_least, True, full_node_2, 4)
-
-    print(f" ==== H")
-    # Send a transaction to mempool
-    tr: TransactionRecord = await wallet.generate_signed_transaction(
-        tx_size,
-        ph,
-    )
-    await wallet.push_transaction(tx=tr)
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
-
-    # Farm a block
-    await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(10, node_height_at_least, True, full_node_1, 5)
-    await time_out_assert(10, node_height_at_least, True, full_node_2, 5)
-    await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 5)
-
-    # Confirm generator is not compressed
-    program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
-    assert program is not None
-    assert detect_potential_template_generator(uint32(5), program) is not None
-    assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
-
-    print(f" ==== I")
-    # TODO: see if it hangs from here
-    # return  # did not hang
-    # Send another tx
-    tr: TransactionRecord = await wallet.generate_signed_transaction(
-        20000,
-        ph,
-    )
-    print(f" ==== IA")
-    await wallet.push_transaction(tx=tr)
-    print(f" ==== IB")
-    # TODO: see if it hangs from here
-    # return # did not hang
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
-
-    # Farm a block
-    print(f" ==== IC")
-    # TODO: see if it hangs from here
-    # return  # hung
-    await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    print(f" ==== ID")
-    await time_out_assert(10, node_height_at_least, True, full_node_1, 6)
-    print(f" ==== IE")
-    await time_out_assert(10, node_height_at_least, True, full_node_2, 6)
-    print(f" ==== IF")
-    await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 6)
-    print(f" ==== IG")
-    # TODO: see if it hangs from here
-    # return  # hung
-
-    # Confirm generator is compressed
-    program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
-    print(f" ==== IH")
-    assert program is not None
-    print(f" ==== II")
-    assert detect_potential_template_generator(uint32(6), program) is None
-    print(f" ==== IJ")
-    assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
-    print(f" ==== IK")
-
-    # Farm two empty blocks
-    await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    print(f" ==== IL")
-    await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    print(f" ==== IM")
-    await time_out_assert(10, node_height_at_least, True, full_node_1, 8)
-    print(f" ==== IN")
-    await time_out_assert(10, node_height_at_least, True, full_node_2, 8)
-    print(f" ==== IO")
-    await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 8)
-
-    print(f" ==== J")
-    # TODO: see if it hangs from here
-    # return # yep, hung
-    # Send another 2 tx
-    tr: TransactionRecord = await wallet.generate_signed_transaction(
-        30000,
-        ph,
-    )
-    await wallet.push_transaction(tx=tr)
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
-    tr: TransactionRecord = await wallet.generate_signed_transaction(
-        40000,
-        ph,
-    )
-    await wallet.push_transaction(tx=tr)
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
-
-    print(f" ==== K")
-    tr: TransactionRecord = await wallet.generate_signed_transaction(
-        50000,
-        ph,
-    )
-    await wallet.push_transaction(tx=tr)
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
-
-    tr: TransactionRecord = await wallet.generate_signed_transaction(
-        3000000000000,
-        ph,
-    )
-    await wallet.push_transaction(tx=tr)
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
-
-    print(f" ==== L")
-    # Farm a block
-    await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(10, node_height_at_least, True, full_node_1, 9)
-    await time_out_assert(10, node_height_at_least, True, full_node_2, 9)
-    await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 9)
-
-    # Confirm generator is compressed
-    program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
-    assert program is not None
-    assert detect_potential_template_generator(uint32(9), program) is None
-    assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
-
-    # Creates a cc wallet
-    cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_1.wallet_state_manager, wallet, uint64(100))
-    tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
-    tr = tx_queue[0]
-    await time_out_assert(
-        10,
-        full_node_1.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.spend_bundle.name(),
-    )
-
-    tr: TransactionRecord = await wallet.generate_signed_transaction(
-        30000,
-        ph,
-    )
-    await wallet.push_transaction(tx=tr)
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
-
-    print(f" ==== M")
-    # Farm a block
-    await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(10, node_height_at_least, True, full_node_1, 10)
-    await time_out_assert(10, node_height_at_least, True, full_node_2, 10)
-    await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 10)
-
-    # Confirm generator is compressed
-    program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
-    assert program is not None
-    assert detect_potential_template_generator(uint32(10), program) is None
-    assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
-
-    # Make a cc transaction
-    tr: TransactionRecord = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
-    await wallet.wallet_state_manager.add_pending_transaction(tr)
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
-    # Make a standard transaction
-    tr: TransactionRecord = await wallet.generate_signed_transaction(
-        30000,
-        ph,
-    )
-    await wallet.push_transaction(tx=tr)
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
-
-    print(f" ==== N")
-    # Farm a block
-    await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(10, node_height_at_least, True, full_node_1, 11)
-    await time_out_assert(10, node_height_at_least, True, full_node_2, 11)
-    await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 11)
-
-    # Confirm generator is not compressed
-    program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
-    assert program is not None
-    assert detect_potential_template_generator(uint32(11), program) is not None
-    assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
-
-    height = full_node_1.full_node.blockchain.get_peak().height
-
-    blockchain = empty_blockchain
-    all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
-    assert height == len(all_blocks) - 1
-
-    print(f" ==== O")
-    assert full_node_1.full_node.full_node_store.previous_generator is not None
-    if test_reorgs:
-        reog_blocks = bt.get_consecutive_blocks(14)
-        for r in range(0, len(reog_blocks), 3):
-            for reorg_block in reog_blocks[:r]:
-                assert (await blockchain.receive_block(reorg_block))[1] is None
-            for i in range(1, height):
-                for batch_size in range(1, height):
-                    results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
-                    assert results is not None
-                    for result in results:
-                        assert result.error is None
-
-        for r in range(0, len(all_blocks), 3):
-            for block in all_blocks[:r]:
-                assert (await blockchain.receive_block(block))[1] is None
-            for i in range(1, height):
-                for batch_size in range(1, height):
-                    results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
-                    assert results is not None
-                    for result in results:
-                        assert result.error is None
-
-        # Test revert previous_generator
-        for block in reog_blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-        assert full_node_1.full_node.full_node_store.previous_generator is None
-    print(f" ==== P")
-
-
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
     # @pytest.mark.parametrize("test_reorgs", [False, True])
@@ -447,9 +162,291 @@ class TestFullNodeBlockCompression:
     @pytest.mark.parametrize("test_reorgs", [True])
     @pytest.mark.parametrize("tx_size", [3000000000000])
     async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
-        print(f" ==== before go")
-        await go(setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs)
-        print(f" ==== after go")
+        print(f" ==== A")
+        nodes, wallets = setup_two_nodes_and_wallet
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+        server_3 = wallets[0][1]
+        full_node_1 = nodes[0]
+        full_node_2 = nodes[1]
+        wallet_node_1 = wallets[0][0]
+        wallet = wallet_node_1.wallet_state_manager.main_wallet
+        print(f" ==== B")
+        _ = await connect_and_get_peer(server_1, server_2)
+        print(f" ==== C")
+        _ = await connect_and_get_peer(server_1, server_3)
+
+        print(f" ==== D")
+        # TODO: see if it hangs from here
+        # return # did not hang
+        ph = await wallet.get_new_puzzlehash()
+
+        print(f" ==== F")
+        for i in range(4):
+            print(f" ==== F {i}")
+            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        print(f" ==== G")
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 4)
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 4)
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 4)
+
+        print(f" ==== H")
+        # Send a transaction to mempool
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            tx_size,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
+        # Farm a block
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 5)
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 5)
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 5)
+
+        # Confirm generator is not compressed
+        program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+        assert program is not None
+        assert detect_potential_template_generator(uint32(5), program) is not None
+        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
+
+        print(f" ==== I")
+        # TODO: see if it hangs from here
+        # return  # did not hang
+        # Send another tx
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            20000,
+            ph,
+        )
+        print(f" ==== IA")
+        await wallet.push_transaction(tx=tr)
+        print(f" ==== IB")
+        # TODO: see if it hangs from here
+        # return # did not hang
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
+        # Farm a block
+        print(f" ==== IC")
+        # TODO: see if it hangs from here
+        # return  # hung
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        print(f" ==== ID")
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 6)
+        print(f" ==== IE")
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 6)
+        print(f" ==== IF")
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 6)
+        print(f" ==== IG")
+        # TODO: see if it hangs from here
+        # return  # hung
+
+        # Confirm generator is compressed
+        program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+        print(f" ==== IH")
+        assert program is not None
+        print(f" ==== II")
+        assert detect_potential_template_generator(uint32(6), program) is None
+        print(f" ==== IJ")
+        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+        print(f" ==== IK")
+
+        # Farm two empty blocks
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        print(f" ==== IL")
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        print(f" ==== IM")
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 8)
+        print(f" ==== IN")
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 8)
+        print(f" ==== IO")
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 8)
+
+        print(f" ==== J")
+        # TODO: see if it hangs from here
+        # return # yep, hung
+        # Send another 2 tx
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            30000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            40000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
+        print(f" ==== K")
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            50000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            3000000000000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
+        print(f" ==== L")
+        # Farm a block
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 9)
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 9)
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 9)
+
+        # Confirm generator is compressed
+        program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+        assert program is not None
+        assert detect_potential_template_generator(uint32(9), program) is None
+        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+
+        # Creates a cc wallet
+        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_1.wallet_state_manager, wallet, uint64(100))
+        tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
+        tr = tx_queue[0]
+        await time_out_assert(
+            10,
+            full_node_1.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.spend_bundle.name(),
+        )
+
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            30000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
+        print(f" ==== M")
+        # Farm a block
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 10)
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 10)
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 10)
+
+        # Confirm generator is compressed
+        program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+        assert program is not None
+        assert detect_potential_template_generator(uint32(10), program) is None
+        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+
+        # Make a cc transaction
+        tr: TransactionRecord = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
+        await wallet.wallet_state_manager.add_pending_transaction(tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+        # Make a standard transaction
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            30000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
+        print(f" ==== N")
+        # Farm a block
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 11)
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 11)
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 11)
+
+        # Confirm generator is not compressed
+        program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+        assert program is not None
+        assert detect_potential_template_generator(uint32(11), program) is not None
+        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
+
+        height = full_node_1.full_node.blockchain.get_peak().height
+
+        blockchain = empty_blockchain
+        all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
+        assert height == len(all_blocks) - 1
+
+        print(f" ==== O")
+        assert full_node_1.full_node.full_node_store.previous_generator is not None
+        if test_reorgs:
+            reog_blocks = bt.get_consecutive_blocks(14)
+            for r in range(0, len(reog_blocks), 3):
+                for reorg_block in reog_blocks[:r]:
+                    assert (await blockchain.receive_block(reorg_block))[1] is None
+                for i in range(1, height):
+                    for batch_size in range(1, height):
+                        results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
+                        assert results is not None
+                        for result in results:
+                            assert result.error is None
+
+            for r in range(0, len(all_blocks), 3):
+                for block in all_blocks[:r]:
+                    assert (await blockchain.receive_block(block))[1] is None
+                for i in range(1, height):
+                    for batch_size in range(1, height):
+                        results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
+                        assert results is not None
+                        for result in results:
+                            assert result.error is None
+
+            # Test revert previous_generator
+            for block in reog_blocks:
+                await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            assert full_node_1.full_node.full_node_store.previous_generator is None
+        import objgraph
+        import sys
+        objgraph.show_refs([*locals().values()], output=sys.stdout)
+        print(f" ==== P")
 
 
 class disabled_TestFullNodeProtocol:
