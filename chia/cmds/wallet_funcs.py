@@ -301,7 +301,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     fee: int = int(Decimal(args["fee"]) * units["chia"])
 
     try:
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+        offer = Offer.from_bech32(offer_hex)
     except ValueError:
         print("Please enter a valid offer file or hex blob")
         return
