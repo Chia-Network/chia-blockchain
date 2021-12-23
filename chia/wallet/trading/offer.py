@@ -10,7 +10,11 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_encode, bech32_decode, convertbits
 from chia.util.ints import uint64
-from chia.wallet.util.puzzle_compression import compress_object_with_puzzles, decompress_object_with_puzzles, lowest_best_version
+from chia.wallet.util.puzzle_compression import (
+    compress_object_with_puzzles,
+    decompress_object_with_puzzles,
+    lowest_best_version,
+)
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     SpendableCC,
@@ -376,7 +380,7 @@ class Offer:
     def name(self) -> bytes32:
         return self.to_spend_bundle().name()
 
-    def compress(self, version = None) -> bytes:
+    def compress(self, version=None) -> bytes:
         as_spend_bundle = self.to_spend_bundle()
         if version is None:
             mods: List[bytes] = [bytes(s.puzzle_reveal.to_program().uncurry()[0]) for s in as_spend_bundle.coin_spends]
@@ -395,7 +399,7 @@ class Offer:
             pass
         return cls.from_bytes(offer_bytes)
 
-    def to_bech32(self, prefix: str = "offer", compression_version = None) -> str:
+    def to_bech32(self, prefix: str = "offer", compression_version=None) -> str:
         offer_bytes = self.compress(version=compression_version)
         encoded = bech32_encode(prefix, convertbits(list(offer_bytes), 8, 5))
         return encoded
