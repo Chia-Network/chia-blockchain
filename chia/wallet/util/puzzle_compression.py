@@ -1,5 +1,7 @@
 import zlib
 
+from typing import List
+
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle as standard_puzzle
 from chia.wallet.puzzles.cc_loader import CC_MOD
@@ -48,3 +50,11 @@ def compress_object_with_puzzles(object_bytes: bytes, version: int) -> bytes:
     zdict = zdict_for_version(version)
     compressed_object_blob = compress_with_zdict(object_bytes, zdict)
     return version_blob + compressed_object_blob
+
+def lowest_compatible_version(puzzle_list: List[bytes]) -> int:
+    highest_version = 1
+    for mod in puzzle_list:
+        for version, dict in enumerate(ZDICT):
+            if bytes(mod) in dict:
+                highest_version = max(highest_version, version+1)
+    return highest_version

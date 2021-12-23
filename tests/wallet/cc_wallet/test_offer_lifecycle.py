@@ -277,7 +277,7 @@ class TestOfferLifecycle:
             assert Offer.from_bytes(bytes(new_offer)) == new_offer
 
             # Test compression
-            assert Offer.from_compressed(new_offer.compress(LATEST_VERSION)) == new_offer
+            assert Offer.from_compressed(new_offer.compress()) == new_offer
 
             # Make sure we can actually spend the offer once it's valid
             arbitrage_ph: bytes32 = Program.to([3, [], [], 1]).get_tree_hash()

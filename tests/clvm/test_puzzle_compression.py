@@ -9,7 +9,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.wallet.trading.offer import OFFER_MOD
-from chia.wallet.util.puzzle_compression import LATEST_VERSION, CompressionVersionError
+from chia.wallet.util.puzzle_compression import LATEST_VERSION, CompressionVersionError, lowest_compatible_version
 from chia.wallet.util.compressed_types import CompressedCoinSpend, CompressedSpendBundle
 from chia.wallet.cc_wallet.cc_utils import CC_MOD, construct_cc_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
@@ -79,12 +79,9 @@ class TestPuzzleCompression:
         assert coin_spend == compressed.decompress()
         self.compression_factors["unknown_and_standard"] = len(bytes(compressed)) / len(bytes(coin_spend))
 
-    def test_compression_factors(self):
-        import json
-        import logging
-
-        log = logging.getLogger(__name__)
-        log.warning(json.dumps(self.compression_factors))
+    def test_lowest_compatible_version(self):
+        assert lowest_compatible_version([bytes(CC_MOD)]) == 1
+        assert lowest_compatible_version([bytes(OFFER_MOD)]) == 2
 
     def test_version_override(self):
         coin_spend = CoinSpend(
@@ -99,3 +96,10 @@ class TestPuzzleCompression:
         assert spend_bundle == compressed.decompress()
         assert spend_bundle == compressed_earlier.decompress()
         assert len(bytes(compressed_earlier)) > len(bytes(compressed))
+
+    def test_compression_factors(self):
+        import json
+        import logging
+
+        log = logging.getLogger(__name__)
+        log.warning(json.dumps(self.compression_factors))

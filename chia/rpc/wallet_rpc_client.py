@@ -294,15 +294,15 @@ class WalletRpcClient(RpcClient):
         return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
     async def get_offer_summary(self, offer: Offer) -> Dict[str, Dict[str, int]]:
-        res = await self.fetch("get_offer_summary", {"offer": encode_offer_bytes(offer.compress(LATEST_VERSION))})
+        res = await self.fetch("get_offer_summary", {"offer": encode_offer_bytes(offer.compress())})
         return res["summary"]
 
     async def check_offer_validity(self, offer: Offer) -> bool:
-        res = await self.fetch("check_offer_validity", {"offer": encode_offer_bytes(offer.compress(LATEST_VERSION))})
+        res = await self.fetch("check_offer_validity", {"offer": encode_offer_bytes(offer.compress())})
         return res["valid"]
 
     async def take_offer(self, offer: Offer, fee=uint64(0)) -> TradeRecord:
-        res = await self.fetch("take_offer", {"offer": encode_offer_bytes(offer.compress(LATEST_VERSION)), "fee": fee})
+        res = await self.fetch("take_offer", {"offer": encode_offer_bytes(offer.compress()), "fee": fee})
         return TradeRecord.from_json_dict_convenience(res["trade_record"])
 
     async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:

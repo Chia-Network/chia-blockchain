@@ -842,7 +842,7 @@ class WalletRpcApi:
             )
         if success:
             return {
-                "offer": encode_offer_bytes(Offer.from_bytes(trade_record.offer).compress(LATEST_VERSION)),
+                "offer": encode_offer_bytes(Offer.from_bytes(trade_record.offer).compress()),
                 "trade_record": trade_record.to_json_dict_convenience(),
             }
         raise ValueError(error)
@@ -890,7 +890,7 @@ class WalletRpcApi:
             raise ValueError(f"No trade with trade id: {trade_id.hex()}")
 
         offer_to_return: bytes = trade_record.offer if trade_record.taken_offer is None else trade_record.taken_offer
-        offer_value: Optional[str] = encode_offer_bytes(Offer.from_bytes(trade_record.offer).compress(LATEST_VERSION)) if file_contents else None
+        offer_value: Optional[str] = encode_offer_bytes(Offer.from_bytes(trade_record.offer).compress()) if file_contents else None
         return {"trade_record": trade_record.to_json_dict_convenience(), "offer": offer_value}
 
     async def get_all_offers(self, request: Dict):
@@ -911,7 +911,7 @@ class WalletRpcApi:
             result.append(trade.to_json_dict_convenience())
             if file_contents and offer_values is not None:
                 offer_to_return: bytes = trade.offer if trade.taken_offer is None else trade.taken_offer
-                offer_values.append(encode_offer_bytes(Offer.from_bytes(trade.offer).compress(LATEST_VERSION)))
+                offer_values.append(encode_offer_bytes(Offer.from_bytes(trade.offer).compress()))
 
         return {"trade_records": result, "offers": offer_values}
 
