@@ -10,7 +10,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_encode, bech32_decode, convertbits
 from chia.util.ints import uint64
-from chia.wallet.util.puzzle_compression import compress_object_with_puzzles, decompress_object_with_puzzles, lowest_compatible_version
+from chia.wallet.util.puzzle_compression import compress_object_with_puzzles, decompress_object_with_puzzles, lowest_best_version
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     SpendableCC,
@@ -379,7 +379,7 @@ class Offer:
     def compress(self) -> bytes:
         as_spend_bundle = self.to_spend_bundle()
         mods: List[bytes] = [bytes(cs.puzzle_reveal.to_program().uncurry()[0]) for cs in as_spend_bundle.coin_spends]
-        highest_version = max(lowest_compatible_version(mods), 2)  # 2 is the version where OFFER_MOD lives
+        highest_version = max(lowest_best_version(mods), 2)  # 2 is the version where OFFER_MOD lives
         return b"OFFR" + compress_object_with_puzzles(bytes(as_spend_bundle), highest_version)
 
     @classmethod

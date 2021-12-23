@@ -8,7 +8,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.wallet.trading.offer import OFFER_MOD
-from chia.wallet.util.puzzle_compression import LATEST_VERSION, lowest_compatible_version, compress_object_with_puzzles, decompress_object_with_puzzles
+from chia.wallet.util.puzzle_compression import LATEST_VERSION, lowest_best_version, compress_object_with_puzzles, decompress_object_with_puzzles
 from chia.wallet.cc_wallet.cc_utils import CC_MOD, construct_cc_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 
@@ -77,9 +77,9 @@ class TestPuzzleCompression:
         assert coin_spend == CoinSpend.from_bytes(decompress_object_with_puzzles(compressed))
         self.compression_factors["unknown_and_standard"] = len(bytes(compressed)) / len(bytes(coin_spend))
 
-    def test_lowest_compatible_version(self):
-        assert lowest_compatible_version([bytes(CC_MOD)]) == 1
-        assert lowest_compatible_version([bytes(OFFER_MOD)]) == 2
+    def test_lowest_best_version(self):
+        assert lowest_best_version([bytes(CC_MOD)]) == 1
+        assert lowest_best_version([bytes(OFFER_MOD)]) == 2
 
     def test_version_override(self):
         coin_spend = CoinSpend(

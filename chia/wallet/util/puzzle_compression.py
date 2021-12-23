@@ -58,10 +58,12 @@ def compress_object_with_puzzles(object_bytes: bytes, version: int) -> bytes:
     return version_blob + compressed_object_blob
 
 
-def lowest_compatible_version(puzzle_list: List[bytes]) -> int:
+def lowest_best_version(puzzle_list: List[bytes], max_version: int = len(ZDICT)) -> int:
     highest_version = 1
     for mod in puzzle_list:
         for version, dict in enumerate(ZDICT):
+            if version > max_version:
+                break
             if bytes(mod) in dict:
                 highest_version = max(highest_version, version + 1)
     return highest_version
