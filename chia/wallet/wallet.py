@@ -37,7 +37,7 @@ from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
@@ -198,13 +198,13 @@ class Wallet:
 
     def make_solution(
         self,
-        primaries: List[AmountWithPuzzlehash] = None,
+        primaries: Optional[List[Dict[str, Any]]] = None,
         min_time=0,
         me=None,
-        coin_announcements: Optional[Set[bytes]] = None,
-        coin_announcements_to_assert: Optional[Set[bytes]] = None,
-        puzzle_announcements: Optional[Set[bytes]] = None,
-        puzzle_announcements_to_assert: Optional[Set[bytes]] = None,
+        coin_announcements: Optional[Set[bytes32]] = None,
+        coin_announcements_to_assert: Optional[Set[bytes32]] = None,
+        puzzle_announcements: Optional[Set[bytes32]] = None,
+        puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
         fee=0,
     ) -> Program:
         assert fee >= 0
@@ -302,7 +302,7 @@ class Wallet:
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-        primaries_input: Optional[List[AmountWithPuzzlehash]] = None,
+        primaries_input: Optional[List[Dict[str, Any]]] = None,
         ignore_max_send_amount: bool = False,
         coin_announcements_to_consume: Set[Announcement] = None,
         puzzle_announcements_to_consume: Set[Announcement] = None,
@@ -313,9 +313,8 @@ class Wallet:
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
         Note: this must be called under a wallet state manager lock
         """
-        primaries: Optional[List[AmountWithPuzzlehash]]
         if primaries_input is None:
-            primaries = None
+            primaries: Optional[List[Dict]] = None
             total_amount = amount + fee
         else:
             primaries = primaries_input.copy()
@@ -327,7 +326,7 @@ class Wallet:
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
             if total_amount > max_send:
-                raise ValueError(f"Can't send more than {max_send} {total_amount}in a single transaction")
+                raise ValueError(f"Can't send more than {max_send} in a single transaction")
 
         if coins is None:
             coins = await self.select_coins(total_amount)
@@ -340,12 +339,11 @@ class Wallet:
             change = max(0, change)
 
         assert change >= 0
-        coin_announcements_names: Optional[Set[bytes]] = None
-        puzzle_announcements_names: Optional[Set[bytes]] = None
+
         if coin_announcements_to_consume is not None:
-            coin_announcements_names = {a.name() for a in coin_announcements_to_consume}
+            coin_announcements_to_consume = {a.name() for a in coin_announcements_to_consume}
         if puzzle_announcements_to_consume is not None:
-            puzzle_announcements_names = {a.name() for a in puzzle_announcements_to_consume}
+            puzzle_announcements_to_consume = {a.name() for a in puzzle_announcements_to_consume}
 
         spends: List[CoinSpend] = []
         primary_announcement_hash: Optional[bytes32] = None
@@ -355,15 +353,13 @@ class Wallet:
             all_primaries_list = [(p["puzzlehash"], p["amount"]) for p in primaries] + [(newpuzzlehash, amount)]
             if len(set(all_primaries_list)) != len(all_primaries_list):
                 raise ValueError("Cannot create two identical coins")
-        if memos is None:
-            memos = []
+
         for coin in coins:
             self.log.info(f"coin from coins: {coin.name()} {coin}")
             puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             # Only one coin creates outputs
             if primary_announcement_hash is None and origin_id in (None, coin.name()):
                 if primaries is None:
-
                     if amount > 0:
                         primaries = [{"puzzlehash": newpuzzlehash, "amount": amount, "memos": memos}]
                     else:
@@ -372,7 +368,7 @@ class Wallet:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": amount, "memos": memos})
                 if change > 0:
                     change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
-                    primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change), "memos": []})
+                    primaries.append({"puzzlehash": change_puzzle_hash, "amount": change})
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
@@ -381,12 +377,11 @@ class Wallet:
                     primaries=primaries,
                     fee=fee,
                     coin_announcements={message},
-                    coin_announcements_to_assert=coin_announcements_names,
-                    puzzle_announcements_to_assert=puzzle_announcements_names,
+                    coin_announcements_to_assert=coin_announcements_to_consume,
+                    puzzle_announcements_to_assert=puzzle_announcements_to_consume,
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
-                assert primary_announcement_hash is not None
                 solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})
 
             spends.append(
@@ -413,7 +408,7 @@ class Wallet:
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-        primaries: Optional[List[AmountWithPuzzlehash]] = None,
+        primaries: Optional[List[Dict[str, Any]]] = None,
         ignore_max_send_amount: bool = False,
         coin_announcements_to_consume: Set[Announcement] = None,
         puzzle_announcements_to_consume: Set[Announcement] = None,
@@ -513,9 +508,7 @@ class Wallet:
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             if output_created is None:
                 newpuzhash = await self.get_new_puzzlehash()
-                primaries: List[AmountWithPuzzlehash] = [
-                    {"puzzlehash": newpuzhash, "amount": uint64(chia_amount), "memos": []}
-                ]
+                primaries = [{"puzzlehash": newpuzhash, "amount": chia_amount}]
                 solution = self.make_solution(primaries=primaries)
                 output_created = coin
             list_of_solutions.append(CoinSpend(coin, puzzle, solution))
