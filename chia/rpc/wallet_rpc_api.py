@@ -26,8 +26,9 @@ from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, try_offer_decompression
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.puzzle_compression import LATEST_VERSION
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
@@ -841,7 +842,7 @@ class WalletRpcApi:
             )
         if success:
             return {
-                "offer": trade_record.offer.hex(),
+                "offer": Offer.from_bytes(trade_record.offer).compress(LATEST_VERSION).hex(),
                 "trade_record": trade_record.to_json_dict_convenience(),
             }
         raise ValueError(error)
@@ -849,7 +850,7 @@ class WalletRpcApi:
     async def get_offer_summary(self, request):
         assert self.service.wallet_state_manager is not None
         offer_hex: str = request["offer"]
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+        offer = try_offer_decompression(hexstr_to_bytes(offer_hex))
         offered, requested = offer.summary()
 
         return {"summary": {"offered": offered, "requested": requested}}
@@ -857,14 +858,14 @@ class WalletRpcApi:
     async def check_offer_validity(self, request):
         assert self.service.wallet_state_manager is not None
         offer_hex: str = request["offer"]
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+        offer = try_offer_decompression(hexstr_to_bytes(offer_hex))
 
         return {"valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer))}
 
     async def take_offer(self, request):
         assert self.service.wallet_state_manager is not None
-        offer_hex = request["offer"]
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+        offer_hex: str = request["offer"]
+        offer = try_offer_decompression(hexstr_to_bytes(offer_hex))
         fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
@@ -889,7 +890,7 @@ class WalletRpcApi:
             raise ValueError(f"No trade with trade id: {trade_id.hex()}")
 
         offer_to_return: bytes = trade_record.offer if trade_record.taken_offer is None else trade_record.taken_offer
-        offer_value: Optional[str] = offer_to_return.hex() if file_contents else None
+        offer_value: Optional[str] = Offer.from_bytes(offer_to_return).compress(LATEST_VERSION).hex() if file_contents else None
         return {"trade_record": trade_record.to_json_dict_convenience(), "offer": offer_value}
 
     async def get_all_offers(self, request: Dict):
@@ -910,7 +911,7 @@ class WalletRpcApi:
             result.append(trade.to_json_dict_convenience())
             if file_contents and offer_values is not None:
                 offer_to_return: bytes = trade.offer if trade.taken_offer is None else trade.taken_offer
-                offer_values.append(offer_to_return.hex())
+                offer_values.append(Offer.from_bytes(offer_to_return).compress(LATEST_VERSION).hex())
 
         return {"trade_records": result, "offers": offer_values}
 

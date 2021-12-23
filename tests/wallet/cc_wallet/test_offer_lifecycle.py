@@ -20,6 +20,7 @@ from chia.wallet.cc_wallet.cc_utils import (
 )
 from chia.wallet.payment import Payment
 from chia.wallet.trading.offer import Offer, NotarizedPayment
+from chia.wallet.util.puzzle_compression import LATEST_VERSION
 
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 
@@ -274,6 +275,9 @@ class TestOfferLifecycle:
 
             # Test (de)serialization
             assert Offer.from_bytes(bytes(new_offer)) == new_offer
+
+            # Test compression
+            assert Offer.from_compressed(new_offer.compress(LATEST_VERSION)) == new_offer
 
             # Make sure we can actually spend the offer once it's valid
             arbitrage_ph: bytes32 = Program.to([3, [], [], 1]).get_tree_hash()

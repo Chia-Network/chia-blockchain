@@ -9,6 +9,8 @@ from chia.types.announcement import Announcement
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
+from chia.wallet.util.compressed_types import CompressedSpendBundle
+from chia.wallet.util.puzzle_compression import LATEST_VERSION
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     SpendableCC,
@@ -374,6 +376,16 @@ class Offer:
     def name(self) -> bytes32:
         return self.to_spend_bundle().name()
 
+    def compress(self, version: int) -> bytes:
+        as_spend_bundle = self.to_spend_bundle()
+        return bytes(CompressedSpendBundle.compress(as_spend_bundle, version))
+
+    @classmethod
+    def from_compressed(cls, compressed_bytes: bytes) -> "Offer":
+        return cls.from_spend_bundle(
+            CompressedSpendBundle.from_bytes(compressed_bytes).decompress()
+        )
+
     # Methods to make this a valid Streamable member
     # We basically hijack the SpendBundle versions for most of it
     @classmethod
@@ -393,3 +405,11 @@ class Offer:
         # Because of the __bytes__ method, we need to parse the dummy CoinSpends as `requested_payments`
         bundle = SpendBundle.from_bytes(as_bytes)
         return cls.from_spend_bundle(bundle)
+
+
+def try_offer_decompression(offer_bytes: bytes) -> Offer:
+    try:
+        return Offer.from_compressed(offer_bytes)
+    except TypeError:
+        pass
+    return Offer.from_bytes(offer_bytes)
