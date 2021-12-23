@@ -305,6 +305,46 @@ class FullNodeAPI:
         return None
 
     @api_request
+    async def request_proof_of_weight_v2(
+            self,
+            request: full_node_protocol.RequestProofOfWeightV2,
+    ) -> Optional[Message]:
+
+        if self.full_node.weight_proof_handler_v2 is None:
+            return None
+        if not self.full_node.blockchain.contains_block(request.tip):
+            self.log.error(f"got weight proof request for unknown peak {request.tip}")
+            return None
+
+        # Serialization of wp is slow
+        if (
+                self.full_node.full_node_store.serialized_wp_message_tip is not None
+                and self.full_node.full_node_store.serialized_wp_message_tip == request.tip
+                and self.full_node.full_node_store.serialized_wp_is_v2 is True
+        ):
+            return self.full_node.full_node_store.serialized_wp_message
+
+        wp = await self.full_node.weight_proof_handler_v2.get_proof_of_weight(request.tip)
+
+        if wp is None:
+            self.log.error(f"failed creating weight proof for peak {request.tip}")
+            return None
+
+        message = make_msg(
+            ProtocolMessageTypes.respond_proof_of_weight_v2, full_node_protocol.RespondProofOfWeightV2(wp, request.tip)
+        )
+        self.full_node.full_node_store.serialized_wp_message_tip = request.tip
+        self.full_node.full_node_store.serialized_wp_message = message
+        self.full_node.full_node_store.serialized_wp_is_v2 = True
+        return message
+
+    @api_request
+    async def respond_proof_of_weight_v2(self, request: full_node_protocol.RespondProofOfWeightV2) -> Optional[Message]:
+        self.log.warning("Received proof of weight too late.")
+        return None
+
+
+    @api_request
     @reply_type([ProtocolMessageTypes.respond_block, ProtocolMessageTypes.reject_block])
     async def request_block(self, request: full_node_protocol.RequestBlock) -> Optional[Message]:
         if not self.full_node.blockchain.contains_height(request.height):

@@ -73,6 +73,9 @@ class WeightProofHandlerV2:
             log.debug("need at least 3 sub epochs for weight proof")
             return None
 
+        if tip == self.tip:
+            return self.proof
+
         async with self.lock:
             wp = await self._create_proof_of_weight(tip)
             if wp is None:

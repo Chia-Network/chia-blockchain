@@ -95,7 +95,13 @@ class BlockStore:
 
             # Sub epoch segments for weight proofs
             await self.db.execute(
-                "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3(ses_block_hash text PRIMARY KEY,"
+                "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, challenge_segments blob)"
+            )
+
+            # backward compatible Sub epoch segments for weight proofs
+            await self.db.execute(
+                "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
+                "ses_block_hash blob PRIMARY KEY,"
                 "challenge_segments blob)"
             )
 
