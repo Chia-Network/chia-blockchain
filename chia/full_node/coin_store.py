@@ -120,7 +120,6 @@ class CoinStore:
                 height,
                 uint32(0),
                 False,
-                False,
                 timestamp,
             )
             additions.append(record)
@@ -135,7 +134,6 @@ class CoinStore:
                 coin,
                 height,
                 uint32(0),
-                False,
                 True,
                 timestamp,
             )
@@ -167,9 +165,8 @@ class CoinStore:
         ) as cursor:
             row = await cursor.fetchone()
             if row is not None:
-                spent: bool = bool(row[1] != 0)
                 coin = self.row_to_coin(row)
-                record = CoinRecord(coin, row[0], row[1], spent, row[2], row[6])
+                record = CoinRecord(coin, row[0], row[1], row[2], row[6])
                 self.coin_record_cache.put(record.coin.name(), record)
                 return record
         return None
@@ -183,9 +180,8 @@ class CoinStore:
             rows = await cursor.fetchall()
             coins = []
             for row in rows:
-                spent: bool = bool(row[1] != 0)
                 coin = self.row_to_coin(row)
-                coins.append(CoinRecord(coin, row[0], row[1], spent, row[2], row[6]))
+                coins.append(CoinRecord(coin, row[0], row[1], row[2], row[6]))
             return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
@@ -199,10 +195,9 @@ class CoinStore:
         ) as cursor:
             coins = []
             for row in await cursor.fetchall():
-                spent: bool = bool(row[1] != 0)
-                if spent:
+                if row[1] != 0:
                     coin = self.row_to_coin(row)
-                    coin_record = CoinRecord(coin, row[0], row[1], spent, row[2], row[6])
+                    coin_record = CoinRecord(coin, row[0], row[1], row[2], row[6])
                     coins.append(coin_record)
             return coins
 
@@ -226,9 +221,8 @@ class CoinStore:
         ) as cursor:
 
             for row in await cursor.fetchall():
-                spent: bool = bool(row[1] != 0)
                 coin = self.row_to_coin(row)
-                coins.add(CoinRecord(coin, row[0], row[1], spent, row[2], row[6]))
+                coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
             return list(coins)
 
     async def get_coin_records_by_puzzle_hashes(
@@ -257,9 +251,8 @@ class CoinStore:
         ) as cursor:
 
             for row in await cursor.fetchall():
-                spent: bool = bool(row[1] != 0)
                 coin = self.row_to_coin(row)
-                coins.add(CoinRecord(coin, row[0], row[1], spent, row[2], row[6]))
+                coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
             return list(coins)
 
     async def get_coin_records_by_names(
@@ -287,9 +280,8 @@ class CoinStore:
         ) as cursor:
 
             for row in await cursor.fetchall():
-                spent: bool = bool(row[1] != 0)
                 coin = self.row_to_coin(row)
-                coins.add(CoinRecord(coin, row[0], row[1], spent, row[2], row[6]))
+                coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
 
         return list(coins)
 
@@ -360,9 +352,8 @@ class CoinStore:
         ) as cursor:
 
             for row in await cursor.fetchall():
-                spent: bool = bool(row[1] != 0)
                 coin = self.row_to_coin(row)
-                coins.add(CoinRecord(coin, row[0], row[1], spent, row[2], row[6]))
+                coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
             return list(coins)
 
     async def get_coin_state_by_ids(
@@ -406,7 +397,6 @@ class CoinStore:
                     coin_record.coin,
                     coin_record.confirmed_block_index,
                     uint32(0),
-                    False,
                     coin_record.coinbase,
                     coin_record.timestamp,
                 )
@@ -424,9 +414,8 @@ class CoinStore:
             (block_index,),
         ) as cursor:
             for row in await cursor.fetchall():
-                spent: bool = bool(row[1] != 0)
                 coin = self.row_to_coin(row)
-                record = CoinRecord(coin, uint32(0), row[1], spent, row[2], uint64(0))
+                record = CoinRecord(coin, uint32(0), row[1], row[2], uint64(0))
                 coin_changes[record.name] = record
 
         # Delete from storage
@@ -439,7 +428,7 @@ class CoinStore:
         ) as cursor:
             for row in await cursor.fetchall():
                 coin = self.row_to_coin(row)
-                record = CoinRecord(coin, row[0], uint32(0), False, row[2], row[6])
+                record = CoinRecord(coin, row[0], uint32(0), row[2], row[6])
                 if record.name not in coin_changes:
                     coin_changes[record.name] = record
 
@@ -460,7 +449,6 @@ class CoinStore:
             values2 = []
             for record in records:
                 self.coin_record_cache.put(record.coin.name(), record)
-                assert record.spent == (record.spent_block_index != 0)
                 values2.append(
                     (
                         record.coin.name(),
@@ -481,7 +469,6 @@ class CoinStore:
             values = []
             for record in records:
                 self.coin_record_cache.put(record.coin.name(), record)
-                assert record.spent == (record.spent_block_index != 0)
                 values.append(
                     (
                         record.coin.name().hex(),
@@ -510,7 +497,7 @@ class CoinStore:
             r = self.coin_record_cache.get(coin_name)
             if r is not None:
                 self.coin_record_cache.put(
-                    r.name, CoinRecord(r.coin, r.confirmed_block_index, index, True, r.coinbase, r.timestamp)
+                    r.name, CoinRecord(r.coin, r.confirmed_block_index, index, r.coinbase, r.timestamp)
                 )
             updates.append((index, self.maybe_to_hex(coin_name)))
 
