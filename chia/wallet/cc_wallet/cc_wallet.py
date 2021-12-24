@@ -684,7 +684,7 @@ class CCWallet:
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
         payment_sum = sum([p.amount for p in payments])
-        if not ignore_max_send_amount:
+        if not ignore_max_send_amount and coins is None:
             max_send = await self.get_max_send_amount()
             if payment_sum > max_send:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
@@ -710,7 +710,7 @@ class CCWallet:
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=spend_bundle.name(),
-                memos=list(spend_bundle.get_memos().items()),
+                memos=[],
             )
         ]
 
