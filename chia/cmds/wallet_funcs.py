@@ -221,7 +221,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                 offer, trade_record = await wallet_client.create_offer_for_ids(offer_dict, fee=fee)
                 if offer is not None:
                     with open(pathlib.Path(filepath), "w") as file:
-                        file.write(bytes(offer).hex())
+                        file.write(offer.to_bech32())
                     print(f"Created offer with ID {trade_record.trade_id}")
                     print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view status")
                 else:
@@ -280,7 +280,7 @@ async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         records = [await wallet_client.get_offer(hexstr_to_bytes(id), file_contents)]
         if filepath is not None:
             with open(pathlib.Path(filepath), "w") as file:
-                file.write(records[0].offer.hex())
+                file.write(Offer.from_bytes(records[0].offer).to_bech32())
                 file.close()
 
     for record in records:
@@ -301,7 +301,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     fee: int = int(Decimal(args["fee"]) * units["chia"])
 
     try:
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+        offer = Offer.from_bech32(offer_hex)
     except ValueError:
         print("Please enter a valid offer file or hex blob")
         return
