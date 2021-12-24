@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useHistory } from 'react-router-dom';
+import { useLocalStorage } from '@rehooks/local-storage';
 import { Trans, t } from '@lingui/macro';
 import {
   Back,
   ButtonLoading,
   Flex,
   Form,
+  useOpenDialog,
   useShowError,
 } from '@chia/core';
 import { useCreateOfferForIdsMutation } from '@chia/api-react';
@@ -15,13 +17,16 @@ import {
   Divider,
   Grid,
 } from '@material-ui/core';
-import type OfferRowData from './OfferRowData';
+import type OfferEditorRowData from './OfferEditorRowData';
 import { suggestedFilenameForOffer } from './utils';
 import WalletType from '../../../constants/WalletType';
 import OfferEditorConditionsPanel from './OfferEditorConditionsPanel';
+import OfferShareDialog from './OfferShareDialog';
+import OfferLocalStorageKeys from './OfferLocalStorage';
 import styled from 'styled-components';
 import { chia_to_mojo, colouredcoin_to_mojo } from '../../../util/chia';
 import fs from 'fs';
+import { Remote } from 'electron';
 
 const StyledEditorBox = styled.div`
   padding: ${({ theme }) => `${theme.spacing(4)}px`};
@@ -29,8 +34,8 @@ const StyledEditorBox = styled.div`
 
 type FormData = {
   selectedTab: number;
-  makerRows: OfferRowData[];
-  takerRows: OfferRowData[];
+  makerRows: OfferEditorRowData[];
+  takerRows: OfferEditorRowData[];
 };
 
 function OfferEditor(): JSX.Element {
@@ -44,11 +49,13 @@ function OfferEditor(): JSX.Element {
     shouldUnregister: false,
     defaultValues,
   });
+  const openDialog = useOpenDialog();
   const errorDialog = useShowError();
+  const [suppressShareOnCreate] = useLocalStorage<boolean>(OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE);
   const [createOfferForIds] = useCreateOfferForIdsMutation();
   const [processing, setIsProcessing] = useState<boolean>(false);
 
-  function updateOffer(offer: { [key: string]: number | string }, row: OfferRowData, debit: boolean) {
+  function updateOffer(offer: { [key: string]: number | string }, row: OfferEditorRowData, debit: boolean) {
     const { amount, assetWalletId, walletType } = row;
     if (assetWalletId) {
       let mojoAmount = 0;
@@ -68,22 +75,39 @@ function OfferEditor(): JSX.Element {
   async function onSubmit(formData: FormData) {
     const offer: { [key: string]: number | string } = {};
     let missingAssetSelection = false;
+    let missingAmount = false;
+    let amountExceedsSpendableBalance = false;
 
-    formData.makerRows.forEach((row: OfferRowData) => {
+    formData.makerRows.forEach((row: OfferEditorRowData) => {
       updateOffer(offer, row, true);
       if (!row.assetWalletId) {
         missingAssetSelection = true;
       }
+      else if (!row.amount) {
+        missingAmount = true;
+      }
+      else if (Number.parseFloat(row.amount as string) > Number.parseFloat(row.spendableBalance as string)) {
+        amountExceedsSpendableBalance = true;
+      }
     });
-    formData.takerRows.forEach((row: OfferRowData) => {
+    formData.takerRows.forEach((row: OfferEditorRowData) => {
       updateOffer(offer, row, false);
       if (!row.assetWalletId) {
         missingAssetSelection = true;
       }
     });
 
-    if (missingAssetSelection) {
-      errorDialog(new Error("Please select an asset for each row"));
+    if (missingAssetSelection || missingAmount || amountExceedsSpendableBalance) {
+      if (missingAssetSelection) {
+        errorDialog(new Error(t`Please select an asset for each row`));
+      }
+      else if (missingAmount) {
+        errorDialog(new Error(t`Please enter an amount for each row`));
+      }
+      else if (amountExceedsSpendableBalance) {
+        errorDialog(new Error(t`Amount exceeds spendable balance`));
+      }
+
       return;
     }
 
@@ -99,7 +123,8 @@ function OfferEditor(): JSX.Element {
       }
       else {
         const dialogOptions = { defaultPath: suggestedFilenameForOffer(response.tradeRecord.summary) };
-        const result = await window.remote.dialog.showSaveDialog(dialogOptions);
+        const remote: Remote = (window as any).remote;
+        const result = await remote.dialog.showSaveDialog(dialogOptions);
         const { filePath, canceled } = result;
 
         if (!canceled && filePath) {
@@ -109,11 +134,21 @@ function OfferEditor(): JSX.Element {
             errorDialog(error);
           }
           else {
-            const { offer: offerData } = response;
+            const { offer: offerData, tradeRecord: offerRecord } = response;
 
             try {
               fs.writeFileSync(filePath, offerData);
               history.goBack();
+
+              if (!suppressShareOnCreate) {
+                openDialog((
+                  <OfferShareDialog
+                    offerRecord={offerRecord}
+                    offerData={offerData}
+                    showSuppressionCheckbox={true}
+                  />
+                ));
+              }
             }
             catch (err) {
               console.error(err);

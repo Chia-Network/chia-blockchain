@@ -5,7 +5,7 @@ import { useGetCatListQuery, useGetWalletsQuery } from '@chia/api-react';
 import { Trans } from '@lingui/macro';
 import { FormControl, InputLabel, MenuItem } from '@material-ui/core';
 import { Select } from '@chia/core';
-import type OfferRowData from './OfferRowData';
+import type OfferEditorRowData from './OfferEditorRowData';
 import type CATToken from '../../../types/CATToken';
 
 type WalletOfferAssetSelection = {
@@ -21,8 +21,8 @@ type WalletOfferAssetSelection = {
 function buildAssetSelectorList(
   wallets: Wallet[],
   catList: CATToken[],
-  rows: OfferRowData[],
-  otherRows: OfferRowData[],
+  rows: OfferEditorRowData[],
+  otherRows: OfferEditorRowData[],
   selectedWalletId: number): WalletOfferAssetSelection[]
 {
   const list: WalletOfferAssetSelection[] = [];

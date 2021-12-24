@@ -66,6 +66,7 @@ export const {
   useTakeOfferMutation,
   useGetOfferSummaryMutation,
   useGetOfferDataMutation,
+  useGetOfferRecordMutation,
 
   // CAT
   useCreateNewCATWalletMutation,

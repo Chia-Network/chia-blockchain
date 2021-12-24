@@ -285,6 +285,13 @@ export default class Wallet extends Service {
     });
   }
 
+  async getOfferRecord(offerId: string) {
+    return this.command('get_offer', {
+      trade_id: offerId,
+      file_contents: false,
+    });
+  }
+
   onSyncChanged(callback: (data: any, message: Message) => void) {
     return this.onStateChanged('sync_changed', callback);
   }

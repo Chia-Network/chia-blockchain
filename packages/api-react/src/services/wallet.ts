@@ -768,6 +768,13 @@ export const walletApi = createApi({
       }),
     }),
 
+    getOfferRecord: build.mutation<any, OfferTradeRecord>({
+      query: (offerId: string) => ({
+        command: 'getOfferRecord',
+        args: [offerId],
+      }),
+    }),
+
     // CAT
     createNewCATWallet: build.mutation<any, {
       amount: string;
@@ -1151,6 +1158,7 @@ export const {
   useTakeOfferMutation,
   useGetOfferSummaryMutation,
   useGetOfferDataMutation,
+  useGetOfferRecordMutation,
 
   // CAT
   useCreateNewCATWalletMutation,

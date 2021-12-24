@@ -1,5 +1,5 @@
 import type OfferCoinOfInterest from './OfferCoinOfInterest';
-import type OfferSummary from './OfferSummary';
+import type OfferSummaryRecord from './OfferSummaryRecord';
 
 type OfferTradeRecord = {
   confirmed_at_index: number;
@@ -11,7 +11,7 @@ type OfferTradeRecord = {
   trade_id: string;
   status: string;
   sent_to: any[];
-  summary: OfferSummary;
+  summary: OfferSummaryRecord;
   offer_data?: string;
 };
 

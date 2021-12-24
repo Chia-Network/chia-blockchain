@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
+import { useHistory } from 'react-router-dom';
 import { Trans } from '@lingui/macro';
 import moment from 'moment';
 import { Box, IconButton, Table as TableBase, TableBody, TableCell, TableRow, Tooltip, Typography, Chip } from '@material-ui/core';
 import { CallReceived as CallReceivedIcon, CallMade as CallMadeIcon, ExpandLess as ExpandLessIcon, ExpandMore as ExpandMoreIcon } from '@material-ui/icons';
 import { Card, CardKeyValue, CopyToClipboard, Flex, Loading, StateColor, TableControlled } from '@chia/core';
+import { useGetOfferRecordMutation, useGetSyncStatusQuery } from '@chia/api-react';
 import styled from 'styled-components';
 import type { Row } from '../core/components/Table/Table';
 import {
@@ -33,7 +35,23 @@ const StyledWarning = styled(Box)`
   color: ${StateColor.WARNING};
 `;
 
-const getCols = (type: WalletType) => [
+async function handleRowClick(event: React.MouseEvent<HTMLTableRowElement>, row: Row, getOfferRecord, history) {
+  if (row.tradeId) {
+    try {
+      const { data: response } = await getOfferRecord(row.tradeId);
+      const { tradeRecord, success } = response;
+
+      if (success === true && tradeRecord) {
+        history.push('/dashboard/wallets/offers/view', { tradeRecord: tradeRecord });
+      }
+    }
+    catch (e) {
+      console.error(e);
+    }
+  }
+}
+
+const getCols = (type: WalletType, isSyncing, getOfferRecord, history) => [
   {
     field: (row: Row) => {
       const isOutgoing = [
@@ -64,7 +82,11 @@ const getCols = (type: WalletType) => [
       const shouldObscureAddress = isRetire || isOffer;
 
       return (
-        <Flex flexDirection="column" gap={1}>
+        <Flex flexDirection="column" gap={1} onClick={(event) => {
+            if (!isSyncing) {
+              handleRowClick(event, row, getOfferRecord, history);
+            }
+          }}>
           <Tooltip
             title={
               <Flex flexDirection="column" gap={1}>
@@ -175,9 +197,10 @@ type Props = {
 export default function WalletHistory(props: Props) {
   const { walletId } = props;
 
+  const { data: walletState, isLoading: isWalletSyncLoading } = useGetSyncStatusQuery();
   const { wallet, loading: isWalletLoading, unit } = useWallet(walletId);
-  const { 
-    transactions, 
+  const {
+    transactions,
     isLoading: isWalletTransactionsLoading,
     page,
     rowsPerPage,
@@ -185,8 +208,11 @@ export default function WalletHistory(props: Props) {
     pageChange,
   } = useWalletTransactions(walletId, 10, 0, 'RELEVANCE');
   const feeUnit = useCurrencyCode();
+  const [getOfferRecord] = useGetOfferRecordMutation();
+  const history = useHistory();
 
   const isLoading = isWalletTransactionsLoading || isWalletLoading;
+  const isSyncing = isWalletSyncLoading || walletState.syncing;
 
   const metadata = useMemo(() => {
     const retireAddress = feeUnit && toBech32m(
@@ -195,7 +221,7 @@ export default function WalletHistory(props: Props) {
     );
 
     const offerTakerAddress = feeUnit && toBech32m(
-      '1111111111111111111111111111111111111111111111111111111111111111',
+      '0101010101010101010101010101010101010101010101010101010101010101',
       feeUnit,
     );
 
@@ -212,7 +238,7 @@ export default function WalletHistory(props: Props) {
       return [];
     }
 
-    return getCols(wallet.type);
+    return getCols(wallet.type, isSyncing, getOfferRecord, history);
   }, [wallet?.type]);
 
   return (

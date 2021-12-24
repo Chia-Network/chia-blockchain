@@ -3,9 +3,9 @@ type OfferSummaryAssetAndAmount = {
   [key: string]: string;
 };
 
-type OfferSummary = {
+type OfferSummaryRecord = {
   offered: OfferSummaryAssetAndAmount;
   requested: OfferSummaryAssetAndAmount;
 };
 
-export default OfferSummary;
+export default OfferSummaryRecord;

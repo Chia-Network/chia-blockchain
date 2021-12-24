@@ -8,6 +8,7 @@ import {
   Back,
   ButtonLoading,
   Card,
+  ConfirmDialog,
   CopyToClipboard,
   Fee,
   Flex,
@@ -33,7 +34,7 @@ import {
   Tooltip,
   Typography
 } from '@material-ui/core';
-import { OfferSummary, OfferTradeRecord } from '@chia/api';
+import { OfferSummaryRecord, OfferTradeRecord } from '@chia/api';
 import { useCheckOfferValidityMutation, useTakeOfferMutation } from '@chia/api-react';
 import {
   colorForOfferState,
@@ -46,6 +47,7 @@ import WalletType from '../../../constants/WalletType';
 import { chia_to_mojo, mojo_to_chia_string, mojo_to_colouredcoin_string } from '../../../util/chia';
 import OfferCoinOfInterest from 'types/OfferCoinOfInterest';
 import OfferState from './OfferState';
+import OfferSummary from './OfferSummary';
 import styled from 'styled-components';
 
 const StyledViewerBox = styled.div`
@@ -107,7 +109,7 @@ OfferMojoAmount.defaultProps = {
 type OfferDetailsProps = {
   tradeRecord?: OfferTradeRecord;
   offerData?: string;
-  offerSummary?: OfferSummary;
+  offerSummary?: OfferSummaryRecord;
   imported?: boolean;
 };
 
@@ -128,7 +130,7 @@ type OfferDetailsRow = {
 function OfferDetails(props: OfferDetailsProps) {
   const { tradeRecord, offerData, offerSummary, imported } = props;
   const summary = tradeRecord?.summary || offerSummary;
-  const lookupAssetId = useAssetIdName();
+  const { lookupByAssetId } = useAssetIdName();
   const openExternal = useOpenExternal();
   const history = useHistory();
   const openDialog = useOpenDialog();
@@ -279,6 +281,56 @@ function OfferDetails(props: OfferDetailsProps) {
   async function handleAcceptOffer(formData: any) {
     const { fee } = formData;
     const feeInMojos = fee ? Number.parseFloat(chia_to_mojo(fee)) : 0;
+    const offeredUnknownCATs: string[] = Object.entries(summary.offered).filter(([assetId]) => lookupByAssetId(assetId) === undefined).map(([assetId]) => assetId);
+
+    const confirmedAccept = await openDialog(
+      <ConfirmDialog
+        title={<Trans>Accept Offer</Trans>}
+        confirmTitle={<Trans>Accept Offer</Trans>}
+        confirmColor="secondary"
+        cancelTitle={<Trans>Cancel</Trans>}
+      >
+        <Flex flexDirection="column" gap={3}>
+          {offeredUnknownCATs.length > 0 && (
+            <>
+            <Flex flexDirection="column" gap={1}>
+              <Typography variant="h6"><Trans>Warning</Trans></Typography>
+              <Typography variant="body1">
+                <Trans>
+                  One or more unknown tokens are being offered. Please verify that the asset IDs of the tokens listed below match the asset IDs of the tokens you expect to receive.
+                </Trans>
+              </Typography>
+              <Typography variant="subtitle1">
+                Unknown CATs:
+              </Typography>
+              <StyledSummaryBox>
+                <Flex flexDirection="column">
+                  {offeredUnknownCATs.map((assetId) => (
+                    <Flex alignItems="center" justifyContent="space-between" gap={1}>
+                      <Typography variant="caption">{assetId.toLowerCase()}</Typography>
+                      <CopyToClipboard value={assetId.toLowerCase()} fontSize="small" />
+                    </Flex>
+                  ))}
+                </Flex>
+              </StyledSummaryBox>
+
+            </Flex>
+            <Divider />
+            </>
+          )}
+          <Typography>
+          <Trans>
+            Once you accept this offer, you will not be able to cancel the transaction.
+            Are you sure you want to accept this offer?
+          </Trans>
+          </Typography>
+        </Flex>
+      </ConfirmDialog>
+    );
+
+    if (!confirmedAccept) {
+      return;
+    }
 
     try {
       setIsAccepting(true);
@@ -354,7 +406,7 @@ function OfferDetails(props: OfferDetailsProps) {
   };
 
   function OfferSummaryEntry({ assetId, amount, ...rest}: { assetId: string, amount: number }) {
-    const assetIdInfo = lookupAssetId(assetId);
+    const assetIdInfo = lookupByAssetId(assetId);
     const displayAmount = assetIdInfo ? formatAmountForWalletType(amount as number, assetIdInfo.walletType) : mojo_to_colouredcoin_string(amount);
     const displayName = assetIdInfo?.displayName ?? t`Unknown CAT`;
 
@@ -396,58 +448,50 @@ function OfferDetails(props: OfferDetailsProps) {
         />
         {summary && (
           <Card title={<Trans>Summary</Trans>}>
-            <StyledSummaryBox>
-              <Flex flexDirection="column" flexGrow={1} gap={3}>
-                <Typography variant="h6">In exchange for</Typography>
-                {Object.entries(summary.requested).map(([assetId, amount]) => (
-                  <OfferSummaryEntry assetId={assetId} amount={amount as number} />
-                ))}
-                <Divider />
-                <Typography variant="h6">You will receive</Typography>
-                {Object.entries(summary.offered).map(([assetId, amount]) => (
-                  <OfferSummaryEntry assetId={assetId} amount={amount as number} />
-                ))}
-                {imported && (
-                  <Form methods={methods} onSubmit={handleAcceptOffer}>
-                    <Flex flexDirection="column" gap={3}>
-                      <Divider />
-                      {isValid && (
-                        <Grid direction="column" md={6} container>
-                          <Fee
-                            id="filled-secondary"
-                            variant="filled"
-                            name="fee"
-                            color="secondary"
-                            label={<Trans>Fee</Trans>}
-                            disabled={isAccepting}
-                            fullwidth
-                          />
-                        </Grid>
-                      )}
-                      <Flex flexDirection="row" gap={3}>
-                        <Button
-                          variant="contained"
-                          color="secondary"
-                          onClick={() => history.goBack()}
-                          disabled={isAccepting}
-                        >
-                          <Trans>Back</Trans>
-                        </Button>
-                        <ButtonLoading
-                          variant="contained"
-                          color="primary"
-                          type="submit"
-                          disabled={!isValid}
-                          loading={isAccepting}
-                        >
-                          <Trans>Accept Offer</Trans>
-                        </ButtonLoading>
-                      </Flex>
-                    </Flex>
-                  </Form>
-                )}
-              </Flex>
-            </StyledSummaryBox>
+            <OfferSummary
+              isMyOffer={tradeRecord?.isMyOffer}
+              summary={summary}
+              makerTitle={<Typography variant="h6"><Trans>In exchange for</Trans></Typography>}
+              takerTitle={<Typography variant="h6"><Trans>You will receive</Trans></Typography>}
+            />
+            {imported && (
+              <Form methods={methods} onSubmit={handleAcceptOffer}>
+                <Flex flexDirection="column" gap={3}>
+                  <Divider />
+                  {isValid && (
+                    <Grid direction="column" xs={4} container>
+                      <Fee
+                        id="filled-secondary"
+                        variant="filled"
+                        name="fee"
+                        color="secondary"
+                        label={<Trans>Fee</Trans>}
+                        disabled={isAccepting}
+                      />
+                    </Grid>
+                  )}
+                  <Flex flexDirection="row" gap={3}>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      onClick={() => history.goBack()}
+                      disabled={isAccepting}
+                    >
+                      <Trans>Back</Trans>
+                    </Button>
+                    <ButtonLoading
+                      variant="contained"
+                      color="primary"
+                      type="submit"
+                      disabled={!isValid}
+                      loading={isAccepting}
+                    >
+                      <Trans>Accept Offer</Trans>
+                    </ButtonLoading>
+                  </Flex>
+                </Flex>
+              </Form>
+            )}
           </Card>
         )}
         {tradeRecord && (
@@ -489,7 +533,7 @@ function OfferDetails(props: OfferDetailsProps) {
 type OfferViewerProps = {
   tradeRecord?: OfferTradeRecord;
   offerData?: string;
-  offerSummary?: OfferSummary;
+  offerSummary?: OfferSummaryRecord;
   offerFilePath?: string;
   imported?: boolean;
 };
