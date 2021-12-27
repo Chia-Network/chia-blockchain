@@ -852,49 +852,33 @@ class WalletNode:
     def validate_removals(self, coins, proofs, root):
         if proofs is None:
             # If there are no proofs, it means all removals were returned in the response.
-            # we must find the ones relevant to our wallets.
-
-            # Verify removals root
+            # We must find the ones relevant to our wallets. Verify removals root.
+            # TODO: review all verification
             removals_merkle_set = MerkleSet()
-            for name_coin in coins:
-                # TODO review all verification
-                name, coin = name_coin
+            for _name, coin in coins:
                 if coin is not None:
                     removals_merkle_set.add_already_hashed(coin.name())
-            removals_root = removals_merkle_set.get_root()
-            if root != removals_root:
+            return removals_merkle_set.get_root() == root
+
+        if len(proofs) != len(coins):
+            return False
+
+        def is_valid(coin_name, coin, proof_name, proof):
+            if proof_name != coin_name:
                 return False
-        else:
-            # This means the full node has responded only with the relevant removals
-            # for our wallet. Each merkle proof must be verified.
-            if len(coins) != len(proofs):
+            if coin is None:  # Verifies merkle proof of exclusion
+                return confirm_not_included_already_hashed(root, coin_name, proof)
+            if coin.name() != coin_name:
                 return False
-            for i in range(len(coins)):
-                # Coins are in the same order as proofs
-                if coins[i][0] != proofs[i][0]:
-                    return False
-                coin = coins[i][1]
-                if coin is None:
-                    # Verifies merkle proof of exclusion
-                    not_included = confirm_not_included_already_hashed(
-                        root,
-                        coins[i][0],
-                        proofs[i][1],
-                    )
-                    if not_included is False:
-                        return False
-                else:
-                    # Verifies merkle proof of inclusion of coin name
-                    if coins[i][0] != coin.name():
-                        return False
-                    included = confirm_included_already_hashed(
-                        root,
-                        coin.name(),
-                        proofs[i][1],
-                    )
-                    if included is False:
-                        return False
-        return True
+            # Verifies merkle proof of inclusion of coin name
+            return confirm_included_already_hashed(root, coin_name, proof)
+
+        validities = (
+            is_valid(coin_name, coin, proof_name, proof)
+            for (coin_name, coin), (proof_name, proof) in zip(coins, proofs)
+        )
+
+        return all(validities)
 
     async def fetch_puzzle_solution(self, peer, height: uint32, coin: Coin) -> CoinSpend:
         solution_response = await peer.request_puzzle_solution(
