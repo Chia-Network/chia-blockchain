@@ -18,8 +18,9 @@ from chia.plotting.util import (
     remove_plot_directory,
 )
 from chia.util.config import create_default_chia_config
+from chia.util.ints import uint16
 from chia.util.path import mkdir
-from chia.plotting.manager import PlotManager
+from chia.plotting.manager import Cache, CURRENT_VERSION, DiskCacheVersion0, DiskCache, PlotManager
 from tests.block_tools import get_plot_dir
 from tests.plotting.util import get_test_plots
 from tests.setup_nodes import bt
@@ -186,7 +187,6 @@ async def test_plot_refreshing(test_environment):
         assert len(get_plot_directories(env.root_path)) == expected_directories
         await env.refresh_tester.run(expected_result)
         assert len(env.refresh_tester.plot_manager.plots) == expect_total_plots
-        assert len(env.refresh_tester.plot_manager.cache) == expect_total_plots
         assert len(env.refresh_tester.plot_manager.get_duplicates()) == expect_duplicates
         assert len(env.refresh_tester.plot_manager.failed_to_open_filenames) == 0
 
@@ -498,6 +498,96 @@ async def test_plot_info_caching(test_environment):
     await refresh_tester.run(expected_result)
     assert len(plot_manager.plots) == len(plot_manager.plots)
     plot_manager.stop_refreshing()
+
+
+@pytest.mark.asyncio
+async def test_cache_lifetime(test_environment: TestEnvironment) -> None:
+    # Load a directory to produce a cache file
+    env: TestEnvironment = test_environment
+    expected_result = PlotRefreshResult()
+    add_plot_directory(env.root_path, str(env.dir_1.path))
+    expected_result.loaded = env.dir_1.plot_info_list()  # type: ignore[assignment]
+    expected_result.removed = []
+    expected_result.processed = len(env.dir_1)
+    expected_result.remaining = 0
+    await env.refresh_tester.run(expected_result)
+    expected_result.loaded = []
+    cache_v1: Cache = env.refresh_tester.plot_manager.cache
+    assert len(cache_v1) > 0
+    count_before = len(cache_v1)
+    # Remove half of the plots in dir1
+    for path in env.dir_1.path_list()[0 : int(len(env.dir_1) / 2)]:
+        expected_result.processed -= 1
+        expected_result.removed.append(path)
+        unlink(path)
+    # Modify the `last_use` timestamp of all cache entries to let them expire
+    last_use_before = time.time() - Cache.expiry_seconds - 1
+    for cache_entry in cache_v1.values():
+        cache_entry.last_use = last_use_before
+        assert cache_entry.expired(Cache.expiry_seconds)
+    # The next refresh cycle will now lead to half of the cache entries being removed because they are expired and
+    # the related plots do not longer exist.
+    await env.refresh_tester.run(expected_result)
+    assert len(cache_v1) == count_before - len(expected_result.removed)
+    # The other half of the cache entries should have a different `last_use` value now.
+    for cache_entry in cache_v1.values():
+        assert cache_entry.last_use != last_use_before
+
+
+@pytest.mark.asyncio
+async def test_cache_upgrade(test_environment: TestEnvironment) -> None:
+    # Load a directory and produce a cache file with the current version
+    env: TestEnvironment = test_environment
+    expected_result = PlotRefreshResult()
+    add_plot_directory(env.root_path, str(env.dir_1.path))
+    expected_result.loaded = env.dir_1.plot_info_list()  # type: ignore[assignment]
+    expected_result.removed = []
+    expected_result.processed = len(env.dir_1)
+    expected_result.remaining = 0
+    await env.refresh_tester.run(expected_result)
+    env.refresh_tester.plot_manager.stop_refreshing()
+    cache_v1: Cache = env.refresh_tester.plot_manager.cache
+    assert len(cache_v1) > 0
+    # Make sure the saved file has the current version (1)
+    serialized_v1: bytes = cache_v1.path().read_bytes()
+    stored_version_v1 = uint16.from_bytes(serialized_v1[0:2])
+    assert stored_version_v1 == CURRENT_VERSION
+    # Deserializing the saved cache into the v0 cache structure should fail
+    with pytest.raises(ValueError):
+        DiskCacheVersion0.from_bytes(serialized_v1)
+    # But it should work with the current cache structure
+    DiskCache.from_bytes(serialized_v1)
+    # Create a new `Cache` object with a different path but the same data
+    cache_v0: Cache = Cache(Path(cache_v1.path().parent / "v0"))
+    cache_v0._data = cache_v1._data
+    # Saving with an invalid version should raise
+    with pytest.raises(ValueError):
+        cache_v0.save(CURRENT_VERSION + 1)
+    # Save it in version 0 format and validate the v0 file
+    cache_v0.save(0)
+    serialized_v0: bytes = cache_v0.path().read_bytes()
+    stored_version_v0 = uint16.from_bytes(serialized_v0[0:2])
+    assert stored_version_v0 == 0
+    disk_cache_v0: DiskCacheVersion0 = DiskCacheVersion0.from_bytes(serialized_v0)
+    assert disk_cache_v0.version == stored_version_v0
+    assert len(disk_cache_v0.data) == len(cache_v1)
+    # Re-load the cache file to trigger the cache upgrade.
+    cache_v0.load()
+    # Read the v0 cache file and validate its upgraded to v1
+    serialized_upgraded: bytes = cache_v0.path().read_bytes()
+    stored_version_upgraded = uint16.from_bytes(serialized_upgraded[0:2])
+    assert stored_version_upgraded == CURRENT_VERSION
+    # Validate the data is the same and `last_use` contains a recent timestamp
+    disk_cache_upgraded: DiskCache = DiskCache.from_bytes(serialized_upgraded)
+    assert disk_cache_upgraded.version == stored_version_upgraded
+    assert len(disk_cache_upgraded.data) == len(cache_v1)
+    for plot_id, cache_entry in cache_v0._data.items():
+        v1_entry = cache_v1.get(plot_id)
+        assert v1_entry is not None
+        assert v1_entry.pool_public_key == cache_entry.pool_public_key
+        assert v1_entry.pool_contract_puzzle_hash == cache_entry.pool_contract_puzzle_hash
+        assert v1_entry.plot_public_key == cache_entry.plot_public_key
+        assert time.time() - cache_entry.last_use < 10
 
 
 @pytest.mark.parametrize(
