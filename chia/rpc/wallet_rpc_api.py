@@ -779,22 +779,43 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced.")
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
-
-        puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
-
-        memos: List[bytes] = []
-        if "memos" in request:
-            memos = [mem.encode("utf-8") for mem in request["memos"]]
-        if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
-        amount: uint64 = uint64(request["amount"])
+        
+        #To support send multi address with different amount and memo at one time.
+        inner_address = request["inner_address"]
+        inner_address_array = inner_address.split(',')        
+        puzzle_hash_array: List[bytes32] = []
+        for inner_address_key in inner_address_array:
+            puzzle_hash_array.append(decode_puzzle_hash(inner_address_key))
+        
+        amount = str(request["amount"])
+        amount_array = amount.split(',')
+        amount_int_array: List[uint64] = []
+        for amount_key in amount_array:
+            amount_int_array.append(uint64(int(amount_key)))
+        
+        memos = str(request["memos"])
+        memos_array = memos.split(',')
+        memos_key_array: List[bytes] = []
+        for memos_key in memos_array:
+            memos_key_array.append(memos_key.encode("utf-8"))
+            
+        if len(puzzle_hash_array) != len(amount_int_array):
+            raise ValueError("The number of addresses and amounts must be equal. Multiple addresses and amounts are separated by commas")
+        
+        if len(puzzle_hash_array) != len(memos_key_array):
+            raise ValueError("The number of addresses and memos must be equal. Multiple addresses and memos are separated by commas")
+        
+        #if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
+        #    raise ValueError("An integer amount or fee is required (too many decimals)")
+        #amount: uint64 = uint64(request["amount"])
+        
         if "fee" in request:
             fee = uint64(request["fee"])
         else:
             fee = uint64(0)
         async with self.service.wallet_state_manager.lock:
-            txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
-                [amount], [puzzle_hash], fee, memos=[memos]
+            txs: TransactionRecord = await wallet.generate_signed_transaction(
+                amount_int_array, puzzle_hash_array, fee, memos=memos_key_array
             )
             for tx in txs:
                 await wallet.standard_wallet.push_transaction(tx)
