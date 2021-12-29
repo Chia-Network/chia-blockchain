@@ -131,6 +131,7 @@ class PlotManager:
     _refresh_thread: Optional[threading.Thread]
     _refreshing_enabled: bool
     _refresh_callback: Callable
+    _initial: bool
 
     def __init__(
         self,
@@ -158,6 +159,7 @@ class PlotManager:
         self._refresh_thread = None
         self._refreshing_enabled = False
         self._refresh_callback = refresh_callback  # type: ignore
+        self._initial = True
 
     def __enter__(self):
         self._lock.acquire()
@@ -172,6 +174,7 @@ class PlotManager:
             self.plot_filename_paths.clear()
             self.failed_to_open_filenames.clear()
             self.no_key_filenames.clear()
+            self._initial = True
 
     def set_refresh_callback(self, callback: Callable):
         self._refresh_callback = callback  # type: ignore
@@ -179,6 +182,9 @@ class PlotManager:
     def set_public_keys(self, farmer_public_keys: List[G1Element], pool_public_keys: List[G1Element]):
         self.farmer_public_keys = farmer_public_keys
         self.pool_public_keys = pool_public_keys
+
+    def initial_refresh(self):
+        return self._initial
 
     def public_keys_available(self):
         return len(self.farmer_public_keys) and len(self.pool_public_keys)
@@ -289,6 +295,9 @@ class PlotManager:
 
                 if self._refreshing_enabled:
                     self._refresh_callback(PlotRefreshEvents.done, total_result)
+
+                # Reset the initial refresh indication
+                self._initial = False
 
                 # Cleanup unused cache
                 available_ids = set([plot_info.prover.get_id() for plot_info in self.plots.values()])
