@@ -9,6 +9,8 @@ import tempfile
 
 from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_nodes
 
+from typing import Any, AsyncIterator, Dict
+
 # Set spawn after stdlib imports, but before other imports
 from chia.clvm.spend_sim import SimClient, SpendSim
 from chia.protocols import full_node_protocol
@@ -156,6 +158,15 @@ def default_10000_blocks_compact(bt):
 def tmp_dir():
     with tempfile.TemporaryDirectory() as folder:
         yield Path(folder)
+
+
+@pytest.fixture(scope="function")
+async def farmer_multi_harvester(request: pytest.FixtureRequest, tmp_path: Path, bt: BlockTools) -> AsyncIterator:
+    from tests.setup_nodes import setup_farmer_multi_harvester, test_constants
+
+    marker = request.node.get_closest_marker("harvesters")
+    async for _ in setup_farmer_multi_harvester(bt, self_hostname, marker.kwargs["count"], tmp_path, test_constants):
+        yield _
 
 
 # For the below see https://stackoverflow.com/a/62563106/15133773
