@@ -158,14 +158,14 @@ jobs:
           BUILD_VDF_CLIENT: "N"
         run: |
           brew install boost
-          sh install.sh
+          sh install.sh -d
 
       - name: Run install script (Ubuntu)
         if: matrix.os.matrix == 'ubuntu'
         env:
           INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
         run: |
-          sh install.sh
+          sh install.sh -d
 
       - name: Install timelord
         if: matrix.configuration.install_timelord
@@ -173,13 +173,6 @@ jobs:
           . ./activate
           sh install-timelord.sh
           ./vdf_bench square_asm 400000
-
-      - name: Install developer requirements
-        run: |
-          . ./activate
-          # TODO: remove the psutil probably
-          venv/bin/python -m pip install pytest pytest-asyncio coverage psutil
-          # venv/bin/python -m pip install pytest pytest-asyncio coverage pytest-cov psutil
 
       - name: Test blockchain code with pytest
         run: |
