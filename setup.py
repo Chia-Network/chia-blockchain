@@ -47,7 +47,7 @@ dev_dependencies = [
     "pytest",
     "pytest-asyncio",
     # "pytest-asyncio @ git+https://github.com/altendky/pytest-asyncio@chia_debug",
-    # "pytest-monitor; sys_platform == 'linux'",
+    "pytest-monitor; sys_platform == 'linux'",
     # "pytest-xdist",
     "flake8",
     "mypy",
