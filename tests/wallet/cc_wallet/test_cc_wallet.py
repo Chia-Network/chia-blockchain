@@ -51,6 +51,7 @@ class TestCCWallet:
 
     @pytest.mark.asyncio
     async def test_colour_creation(self, two_wallet_nodes):
+        print(f"==== test_colour_creation A")
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -84,9 +85,11 @@ class TestCCWallet:
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
+        print(f"==== test_colour_creation Z")
 
     @pytest.mark.asyncio
     async def test_cc_spend(self, two_wallet_nodes):
+        print(f"==== test_cc_spend A")
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -162,9 +165,11 @@ class TestCCWallet:
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 55)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 55)
+        print(f"==== test_cc_spend Z")
 
     @pytest.mark.asyncio
     async def test_get_wallet_for_colour(self, two_wallet_nodes):
+        print(f"==== test_get_wallet_for_colour A")
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -195,11 +200,13 @@ class TestCCWallet:
 
         colour = cc_wallet.get_colour()
         assert await wallet_node.wallet_state_manager.get_wallet_for_colour(colour) == cc_wallet
+        print(f"==== test_get_wallet_for_colour Z")
 
     # TODO: review how this should be handled or fixed
     @pytest.mark.skipif(condition=sys.platform == 'darwin', reason='temporary skip')
     @pytest.mark.asyncio
     async def test_generate_zero_val(self, two_wallet_nodes):
+        print(f"==== test_generate_zero_val A")
         num_blocks = 4
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -259,9 +266,11 @@ class TestCCWallet:
             await cc_wallet_2.wallet_state_manager.get_spendable_coins_for_wallet(cc_wallet_2.id())
         )
         assert unspent.pop().coin.amount == 0
+        print(f"==== test_generate_zero_val Z")
 
     @pytest.mark.asyncio
     async def test_cc_spend_uncoloured(self, two_wallet_nodes):
+        print(f"==== test_cc_spend_uncoloured A")
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -336,9 +345,11 @@ class TestCCWallet:
         await time_out_assert(15, wsm.get_confirmed_balance_for_wallet, 70, id)
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 60)
         await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
+        print(f"==== test_cc_spend_uncoloured Z")
 
     @pytest.mark.asyncio
     async def test_cc_spend_multiple(self, three_wallet_nodes):
+        print(f"==== test_cc_spend_multiple A")
         num_blocks = 3
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -439,8 +450,11 @@ class TestCCWallet:
         await time_out_assert(30, cc_wallet_2.get_confirmed_balance, 0)
         await time_out_assert(30, cc_wallet_2.get_unconfirmed_balance, 0)
 
+        print(f"==== test_cc_spend_multiple Z")
+
     @pytest.mark.asyncio
     async def test_cc_max_amount_send(self, two_wallet_nodes):
+        print(f"==== test_cc_max_amount_send A")
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -550,3 +564,4 @@ class TestCCWallet:
             pass
 
         assert above_limit_tx is None
+        print(f"==== test_cc_max_amount_send Z")
