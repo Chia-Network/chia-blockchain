@@ -1,6 +1,7 @@
 # flake8: noqa: F811, F401
 import asyncio
 import dataclasses
+import gc
 import logging
 import random
 import time
@@ -442,6 +443,10 @@ async def test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, t
         for block in reog_blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
         assert full_node_1.full_node.full_node_store.previous_generator is None
+    print(f" ==== OZ")
+    gc.collect()
+    gc.collect()
+    gc.collect()
     # import objgraph
     # with open("objgraph_out.dot", "w", encoding="utf-8") as the_file:
     #     objgraph.show_refs([*locals().values()], max_depth=20, too_many=500, output=the_file)
