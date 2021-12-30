@@ -162,6 +162,10 @@ async def wallet_nodes_mainnet():
 @pytest.mark.parametrize("test_reorgs", [True])
 @pytest.mark.parametrize("tx_size", [3000000000000])
 async def test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
+    x(setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs)
+
+
+async def x(setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
     print(f" ==== A")
     nodes, wallets = setup_two_nodes_and_wallet
     server_1 = nodes[0].full_node.server
