@@ -37,7 +37,7 @@ from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
@@ -81,7 +81,7 @@ class Wallet:
                 program,
                 self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
-                safe_mode=True,
+                mempool_mode=True,
             )
             cost_result: uint64 = calculate_cost_of_program(
                 program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
@@ -199,7 +199,7 @@ class Wallet:
 
     def make_solution(
         self,
-        primaries: Optional[List[Dict[str, Any]]] = None,
+        primaries: Optional[List[AmountWithPuzzlehash]] = None,
         min_time=0,
         me=None,
         coin_announcements: Optional[Set[bytes32]] = None,
@@ -294,7 +294,7 @@ class Wallet:
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-        primaries_input: Optional[List[Dict[str, Any]]] = None,
+        primaries_input: Optional[List[AmountWithPuzzlehash]] = None,
         ignore_max_send_amount: bool = False,
         coin_announcements_to_consume: Set[bytes32] = None,
         puzzle_announcements_to_consume: Set[bytes32] = None,
@@ -303,8 +303,9 @@ class Wallet:
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
         Note: this must be called under a wallet state manager lock
         """
+        primaries: Optional[List[AmountWithPuzzlehash]]
         if primaries_input is None:
-            primaries: Optional[List[Dict]] = None
+            primaries = None
             total_amount = amount + fee
         else:
             primaries = primaries_input.copy()
@@ -348,7 +349,7 @@ class Wallet:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": amount})
                 if change > 0:
                     change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
-                    primaries.append({"puzzlehash": change_puzzle_hash, "amount": change})
+                    primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change)})
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
@@ -391,7 +392,7 @@ class Wallet:
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-        primaries: Optional[List[Dict[str, bytes32]]] = None,
+        primaries: Optional[List[AmountWithPuzzlehash]] = None,
         ignore_max_send_amount: bool = False,
         coin_announcements_to_consume: Set[bytes32] = None,
         puzzle_announcements_to_consume: Set[bytes32] = None,
@@ -403,9 +404,7 @@ class Wallet:
         if primaries is None:
             non_change_amount = amount
         else:
-            # TODO: address hint error and remove ignore
-            #       error: Generator has incompatible item type "bytes32"; expected "int"  [misc]
-            non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))  # type: ignore[misc]
+            non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
 
         transaction = await self._generate_unsigned_transaction(
             amount,
@@ -480,7 +479,7 @@ class Wallet:
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             if output_created is None:
                 newpuzhash = await self.get_new_puzzlehash()
-                primaries = [{"puzzlehash": newpuzhash, "amount": chia_amount}]
+                primaries: List[AmountWithPuzzlehash] = [{"puzzlehash": newpuzhash, "amount": uint64(chia_amount)}]
                 solution = self.make_solution(primaries=primaries)
                 output_created = coin
             list_of_solutions.append(CoinSpend(coin, puzzle, solution))

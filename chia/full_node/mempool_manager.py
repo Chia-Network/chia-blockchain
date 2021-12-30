@@ -50,7 +50,9 @@ def validate_clvm_and_signature(
         bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
         program = simple_solution_generator(bundle)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        result: NPCResult = get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True)
+        result: NPCResult = get_name_puzzle_conditions(
+            program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True
+        )
 
         if result.error is not None:
             return Err(result.error), b"", {}
@@ -64,10 +66,7 @@ def validate_clvm_and_signature(
 
         # Verify aggregated signature
         cache: LRUCache = LRUCache(10000)
-        # TODO: address hint error and remove ignore
-        #       error: Argument 2 to "aggregate_verify" has incompatible type "List[bytes32]"; expected "List[bytes]"
-        #       [arg-type]
-        if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):  # type: ignore[arg-type]  # noqa: E501
+        if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):
             return Err.BAD_AGGREGATE_SIGNATURE, b"", {}
         new_cache_entries: Dict[bytes, bytes] = {}
         for k, v in cache.cache.items():

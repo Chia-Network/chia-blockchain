@@ -62,9 +62,9 @@ def setup_generator_args(self: BlockGenerator) -> Tuple[SerializedProgram, Progr
     return self.program, args
 
 
-def run_generator(self: BlockGenerator, max_cost: int) -> Tuple[int, SerializedProgram]:
+def run_generator_mempool(self: BlockGenerator, max_cost: int) -> Tuple[int, SerializedProgram]:
     program, args = setup_generator_args(self)
-    return GENERATOR_MOD.run_safe_with_cost(max_cost, program, args)
+    return GENERATOR_MOD.run_mempool_with_cost(max_cost, program, args)
 
 
 def run_generator_unsafe(self: BlockGenerator, max_cost: int) -> Tuple[int, SerializedProgram]:
