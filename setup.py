@@ -41,6 +41,7 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    "coverage",
     "objgraph",
     "pre-commit",
     "pytest",
