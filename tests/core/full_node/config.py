@@ -1,5 +1,5 @@
 # flake8: noqa: E501
-job_timeout = 15
+job_timeout = 30
 CHECK_RESOURCE_USAGE = """
     - name: Check resource usage
       run: |
