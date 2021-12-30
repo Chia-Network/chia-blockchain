@@ -209,6 +209,12 @@ jobs:
           path: coverage_reports/*
           if-no-files-found: error
 
+      - name: Publish Coverage
+        uses: actions/upload-artifact@v2
+        with:
+          name: dot
+          path: ./*.dot
+
   coverage:
     name: Coverage - ${{ matrix.os.name }} ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}

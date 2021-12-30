@@ -444,8 +444,8 @@ class TestFullNodeBlockCompression:
                 await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
             assert full_node_1.full_node.full_node_store.previous_generator is None
         import objgraph
-        import sys
-        objgraph.show_refs([*locals().values()], max_depth=20, too_many=500, output=sys.stdout)
+        with open("objgraph_out.dot", "w", encoding="utf-8") as the_file:
+            objgraph.show_refs([*locals().values()], max_depth=20, too_many=500, output=the_file)
         print(f" ==== P")
 
 
