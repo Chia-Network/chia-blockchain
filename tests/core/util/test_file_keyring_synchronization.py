@@ -302,7 +302,7 @@ class TestFileKeyringSynchronization:
                 res.get(timeout=2)
 
             # Expect: Reacquiring the lock should succeed after the child exits, automatically releasing the lock
-            assert lock.acquire_write_lock(timeout=(2)) is True
+            assert lock.acquire_write_lock(timeout=(10)) is True
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
