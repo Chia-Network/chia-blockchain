@@ -39,7 +39,8 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "coverage",
+    # TODO: >=5 seems to trigger a deadlock down in a pluggy .flush() on stdout.
+    "coverage<5",
     "pre-commit",
     "pytest",
     "pytest-asyncio",
