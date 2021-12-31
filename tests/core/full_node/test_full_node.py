@@ -153,14 +153,6 @@ class TestFullNodeBlockCompression:
     @pytest.mark.parametrize("test_reorgs", [False, True])
     @pytest.mark.parametrize("tx_size", [10000, 3000000000000])
     async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
-        # When adding coverage collection this test started usually hanging
-        # right after the function finishes.  It did not reach any of the
-        # related fixture teardown code.  Locating the actual code in a
-        # separate function alleviated this issue.  Certainly it would be good
-        # to identify the core cause and remove the two-layer test definition.
-        await self.block_compression(setup_two_nodes_and_wallet=setup_two_nodes_and_wallet, empty_blockchain=empty_blockchain, tx_size=tx_size, test_reorgs=test_reorgs)
-
-    async def block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
         nodes, wallets = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
