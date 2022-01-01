@@ -210,4 +210,4 @@ class TestConfig:
         # read failures are detected, the failing process will assert.
         with Pool(processes=num_workers) as pool:
             res = pool.starmap_async(run_reader_and_writer_tasks, args)
-            res.get(timeout=10)
+            res.get(timeout=30)
