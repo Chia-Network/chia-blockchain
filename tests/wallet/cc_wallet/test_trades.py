@@ -75,6 +75,9 @@ class TestCCTrades:
 
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
+            await asyncio.sleep(0.2)
+            if await cc_wallet.get_confirmed_balance() == 100:
+                break
         await time_out_assert(15, wallet_height_at_least, True, wallet_node_0, 27)
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
@@ -291,6 +294,9 @@ class TestCCTrades:
         assert success is True
         for i in range(0, 10):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
+            await asyncio.sleep(0.2)
+            if await cc_b_3.get_confirmed_balance() == 50:
+                break
 
         await time_out_assert(15, cc_b_3.get_confirmed_balance, 50)
         await time_out_assert(15, cc_b_3.get_unconfirmed_balance, 50)
@@ -388,7 +394,7 @@ class TestCCTrades:
         offer_dict = {1: 10, 2: -30, 3: 30}
 
         success, trade_offer, error = await trade_manager_a.create_offer_for_ids(offer_dict, file)
-        await asyncio.sleep(1)
+        await asyncio.sleep(5)
 
         spendable_chia_after = await wallet_a.get_spendable_balance()
 
@@ -436,7 +442,7 @@ class TestCCTrades:
         offer_dict = {1: 10, 2: -30, 3: 30}
 
         success, trade_offer, error = await trade_manager_a.create_offer_for_ids(offer_dict, file)
-        await asyncio.sleep(1)
+        await asyncio.sleep(5)
 
         spendable_chia_after = await wallet_a.get_spendable_balance()
 
