@@ -212,6 +212,7 @@ class TestCCWallet:
         await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
 
         funds = sum(
             [
@@ -227,6 +228,7 @@ class TestCCWallet:
         ph = await wallet2.get_new_puzzlehash()
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
@@ -244,6 +246,7 @@ class TestCCWallet:
         await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, spend_bundle.name())
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
 
         async def unspent_count():
             unspent: List[WalletCoinRecord] = list(
