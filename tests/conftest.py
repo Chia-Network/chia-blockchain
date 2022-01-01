@@ -1,9 +1,10 @@
 import multiprocessing
-multiprocessing.set_start_method("spawn")
-
 import pytest
 import tempfile
 from pathlib import Path
+
+
+multiprocessing.set_start_method("spawn")
 
 
 # TODO: tests.setup_nodes (which is also imported by tests.util.blockchain) creates a
