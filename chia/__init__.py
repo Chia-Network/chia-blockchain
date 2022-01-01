@@ -1,4 +1,8 @@
+import multiprocessing
+
 from pkg_resources import DistributionNotFound, get_distribution, resource_filename
+
+multiprocessing.set_start_method("spawn")
 
 try:
     __version__ = get_distribution("chia-blockchain").version
