@@ -75,6 +75,10 @@ class TestCCTrades:
 
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
+            await asyncio.sleep(0.2)
+            if wallet_height_at_least(wallet_node_0, 27):
+                if await cc_wallet.get_confirmed_balance() == 100:
+                    break
         await time_out_assert(15, wallet_height_at_least, True, wallet_node_0, 27)
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
