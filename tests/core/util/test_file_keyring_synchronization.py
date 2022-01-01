@@ -327,7 +327,7 @@ class TestFileKeyringSynchronization:
 
             # Expect: lock acquisition times out (raises as FileKeyringLockTimeout)
             with pytest.raises(FileKeyringLockTimeout):
-                res.get(timeout=2)
+                res.get(timeout=10)
 
         lock.release_read_lock()
 
