@@ -1,4 +1,3 @@
-import multiprocessing
 from pkg_resources import DistributionNotFound, get_distribution, resource_filename
 
 try:
@@ -8,5 +7,3 @@ except DistributionNotFound:
     __version__ = "unknown"
 
 PYINSTALLER_SPEC_PATH = resource_filename("chia", "pyinstaller.spec")
-
-multiprocessing.set_start_method("spawn")
