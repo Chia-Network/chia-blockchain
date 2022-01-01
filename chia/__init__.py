@@ -2,7 +2,12 @@ import multiprocessing
 
 from pkg_resources import DistributionNotFound, get_distribution, resource_filename
 
-multiprocessing.set_start_method("spawn")
+start_method = "spawn"
+try:
+    multiprocessing.set_start_method(start_method)
+except RuntimeError:
+    if multiprocessing.get_start_method(allow_none=True) != start_method:
+        raise
 
 try:
     __version__ = get_distribution("chia-blockchain").version
