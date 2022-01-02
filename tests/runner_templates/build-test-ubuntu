@@ -24,6 +24,8 @@ jobs:
       matrix:
         python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest]
+    env:
+      JOB_NAME: Ubuntu TEST_NAME Tests
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -84,6 +86,26 @@ INSTALL_TIMELORD
       run: |
         . ./activate
         venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test TEST_DIR -s -v --durations 0PYTEST_PARALLEL_ARGS
+
+    - name: Coverage results
+      run: |
+        venv/bin/coverage report --rcfile=.coveragerc --show-missing
+
+    - name: Process coverage data
+      run: |
+        venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
+        venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
+        mkdir coverage_reports
+        cp .coverage "coverage_reports/.coverage.${{ env.JOB_NAME }}"
+        cp coverage.xml "coverage_reports/coverage.${{ env.JOB_NAME }}.xml"
+        venv/bin/coverage report --rcfile=.coveragerc --show-missing
+
+    - name: Publish coverage
+      uses: actions/upload-artifact@v2
+      with:
+        name: coverage
+        path: coverage_reports/*
+        if-no-files-found: error
 
 CHECK_RESOURCE_USAGE
 #

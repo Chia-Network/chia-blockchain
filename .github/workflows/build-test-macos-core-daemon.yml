@@ -24,6 +24,8 @@ jobs:
       matrix:
         python-version: [3.8, 3.9]
         os: [macOS-latest]
+    env:
+      JOB_NAME: MacOS core-daemon Tests
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -96,6 +98,22 @@ jobs:
       run: |
         . ./activate
         venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/daemon/test_*.py -s -v --durations 0
+
+    - name: Process coverage data
+      run: |
+        venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
+        venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
+        mkdir coverage_reports
+        cp .coverage "coverage_reports/.coverage.${{ env.JOB_NAME }}"
+        cp coverage.xml "coverage_reports/coverage.${{ env.JOB_NAME }}.xml"
+        venv/bin/coverage report --rcfile=.coveragerc --show-missing
+
+    - name: Publish coverage
+      uses: actions/upload-artifact@v2
+      with:
+        name: coverage
+        path: coverage_reports/*
+        if-no-files-found: error
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
