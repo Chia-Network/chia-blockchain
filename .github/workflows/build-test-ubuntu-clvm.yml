@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: Ubuntu clvm Test
+    name: Ubuntu clvm Test (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -25,7 +25,7 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest]
     env:
-      JOB_NAME: Ubuntu clvm Tests
+      JOB_NAME: Ubuntu clvm Tests (${{ matrix.python-version }}, ${{ matrix.os }})
 
     steps:
     - name: Cancel previous runs on the same branch

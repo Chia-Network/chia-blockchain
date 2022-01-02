@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: Ubuntu simulation Test
+    name: Ubuntu simulation Test (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -25,7 +25,7 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest]
     env:
-      JOB_NAME: Ubuntu simulation Tests
+      JOB_NAME: Ubuntu simulation Tests (${{ matrix.python-version }}, ${{ matrix.os }})
 
     steps:
     - name: Cancel previous runs on the same branch

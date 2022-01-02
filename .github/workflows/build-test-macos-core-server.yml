@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: MacOS core-server Tests
+    name: MacOS core-server Tests (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -25,7 +25,7 @@ jobs:
         python-version: [3.8, 3.9]
         os: [macOS-latest]
     env:
-      JOB_NAME: MacOS core-server Tests
+      JOB_NAME: MacOS core-server Tests (${{ matrix.python-version }}, ${{ matrix.os }})
 
     steps:
     - name: Cancel previous runs on the same branch
