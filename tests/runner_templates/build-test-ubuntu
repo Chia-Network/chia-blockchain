@@ -87,10 +87,6 @@ INSTALL_TIMELORD
         . ./activate
         venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test TEST_DIR -s -v --durations 0PYTEST_PARALLEL_ARGS
 
-    - name: Coverage results
-      run: |
-        venv/bin/coverage report --rcfile=.coveragerc --show-missing
-
     - name: Process coverage data
       run: |
         venv/bin/coverage combine --rcfile=.coveragerc .coverage.*

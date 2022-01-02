@@ -104,10 +104,6 @@ jobs:
         . ./activate
         venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/generator/test_*.py -s -v --durations 0
 
-    - name: Coverage results
-      run: |
-        venv/bin/coverage report --rcfile=.coveragerc --show-missing
-
     - name: Process coverage data
       run: |
         venv/bin/coverage combine --rcfile=.coveragerc .coverage.*

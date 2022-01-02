@@ -87,10 +87,6 @@ jobs:
         . ./activate
         venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/clvm/test_*.py -s -v --durations 0 -n auto
 
-    - name: Coverage results
-      run: |
-        venv/bin/coverage report --rcfile=.coveragerc --show-missing
-
     - name: Process coverage data
       run: |
         venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
