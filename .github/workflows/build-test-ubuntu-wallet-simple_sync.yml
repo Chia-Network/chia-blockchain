@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: Ubuntu wallet-simple_sync Test (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Ubuntu wallet-simple_sync Test
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -25,7 +25,7 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest]
     env:
-      JOB_NAME: Ubuntu wallet-simple_sync Tests (${{ matrix.python-version }}, ${{ matrix.os }})
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet-simple_sync
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -109,8 +109,8 @@ jobs:
         venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
         venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
         mkdir coverage_reports
-        cp .coverage "coverage_reports/.coverage.${{ env.JOB_NAME }}"
-        cp coverage.xml "coverage_reports/coverage.${{ env.JOB_NAME }}.xml"
+        cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
+        cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
         venv/bin/coverage report --rcfile=.coveragerc --show-missing
 
     - name: Publish coverage

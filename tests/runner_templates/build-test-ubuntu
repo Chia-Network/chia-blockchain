@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: Ubuntu TEST_NAME Test (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Ubuntu TEST_NAME Test
     runs-on: ${{ matrix.os }}
     timeout-minutes: JOB_TIMEOUT
     strategy:
@@ -25,7 +25,7 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest]
     env:
-      JOB_NAME: Ubuntu TEST_NAME Tests (${{ matrix.python-version }}, ${{ matrix.os }})
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_TEST_NAME
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -92,8 +92,8 @@ INSTALL_TIMELORD
         venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
         venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
         mkdir coverage_reports
-        cp .coverage "coverage_reports/.coverage.${{ env.JOB_NAME }}"
-        cp coverage.xml "coverage_reports/coverage.${{ env.JOB_NAME }}.xml"
+        cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
+        cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
         venv/bin/coverage report --rcfile=.coveragerc --show-missing
 
     - name: Publish coverage
