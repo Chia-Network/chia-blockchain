@@ -2,7 +2,7 @@
 import asyncio
 
 import pytest
-from colorlog import logging
+from colorlog import getLogger
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols import full_node_protocol
@@ -22,7 +22,7 @@ def wallet_height_at_least(wallet_node, h):
     return False
 
 
-log = logging.getLogger(__name__)
+log = getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
