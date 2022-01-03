@@ -337,7 +337,6 @@ class WalletNode:
     def initialize_wallet_peers(self):
         self.server.on_connect = self.on_connect
         network_name = self.config["selected_network"]
-        default_port = self.config["network_overrides"]["config"][network_name]["default_full_node_port"]
 
         connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", False)
         if connect_to_unknown_peers:

@@ -612,10 +612,6 @@ class CATWallet:
         change = selected_cat_amount - starting_amount
         primaries: List[AmountWithPuzzlehash] = []
         for payment in payments:
-            if payment.memos is None:
-                memos = set()
-            else:
-                memos = payment.memos
             primaries.append({"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos})
 
         if change > 0:
