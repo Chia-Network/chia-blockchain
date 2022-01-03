@@ -254,10 +254,11 @@ class MempoolManager:
         #     self.constants.COST_PER_BYTE,
         #     self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         # )
-        err, cached_result_bytes, new_cache_entries = validate_clvm_and_signature(new_spend_bytes,
-                                                                                  int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM),
-        self.constants.COST_PER_BYTE,
-        self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+        err, cached_result_bytes, new_cache_entries = validate_clvm_and_signature(
+            new_spend_bytes,
+            int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM),
+            self.constants.COST_PER_BYTE,
+            self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
         if err is not None:
             raise ValidationError(err)

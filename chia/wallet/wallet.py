@@ -213,6 +213,8 @@ class Wallet:
             for primary in primaries:
                 if "memos" in primary:
                     memos = primary["memos"]
+                    if memos is not None and len(memos) == 0:
+                        memos = None
                 else:
                     memos = None
                 condition_list.append(make_create_coin_condition(primary["puzzlehash"], primary["amount"], memos))
