@@ -57,11 +57,8 @@ def validate_clvm_and_signature(
             return Err(result.error), b"", {}
 
         pks: List[G1Element] = []
-        msgs: List[bytes32] = []
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "List[bytes]", variable has type
-        #       "List[bytes32]")  [assignment]
-        pks, msgs = pkm_pairs(result.npc_list, additional_data)  # type: ignore[assignment]
+        msgs: List[bytes] = []
+        pks, msgs = pkm_pairs(result.npc_list, additional_data)
 
         # Verify aggregated signature
         cache: LRUCache = LRUCache(10000)
