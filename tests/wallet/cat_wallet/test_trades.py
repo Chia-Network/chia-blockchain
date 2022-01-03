@@ -399,6 +399,7 @@ class TestCATTrades:
 
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
+            await asyncio.sleep(0.5)
 
         await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, 100)
         await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, 100)
@@ -460,6 +461,7 @@ class TestCATTrades:
 
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
+            await asyncio.sleep(0.5)
 
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
         # await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, trade_take)
@@ -497,5 +499,6 @@ class TestCATTrades:
 
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
+            await asyncio.sleep(0.5)
 
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
