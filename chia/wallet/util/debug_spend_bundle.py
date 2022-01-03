@@ -1,6 +1,6 @@
 from typing import List
 
-from blspy import AugSchemeMPL, G1Element
+from blspy import AugSchemeMPL
 from clvm import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble
 
