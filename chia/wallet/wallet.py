@@ -201,7 +201,7 @@ class Wallet:
         primaries: List[AmountWithPuzzlehash],
         min_time=0,
         me=None,
-        coin_announcements: Optional[Set[bytes32]] = None,
+        coin_announcements: Optional[Set[bytes]] = None,
         coin_announcements_to_assert: Optional[Set[bytes32]] = None,
         puzzle_announcements: Optional[Set[bytes32]] = None,
         puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
