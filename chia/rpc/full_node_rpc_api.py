@@ -549,13 +549,14 @@ class FullNodeRpcApi:
         }
 
     async def get_puzzle_and_solution(self, request: Dict) -> Optional[Dict]:
-        coin_name: bytes32 = hexstr_to_bytes(request["coin_id"])
+        coin_name: bytes32 = bytes32(hexstr_to_bytes(request["coin_id"]))
         height = request["height"]
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
         if coin_record is None or not coin_record.spent or coin_record.spent_block_index != height:
             raise ValueError(f"Invalid height {height}. coin record {coin_record}")
 
         header_hash = self.service.blockchain.height_to_hash(height)
+        assert header_hash is not None
         block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
 
         if block is None or block.transactions_generator is None:
