@@ -2,7 +2,7 @@
 
 import sqlite3
 import sys
-from typing import List
+from typing import Any, List, Optional, Tuple
 from time import time
 
 from clvm_rs import run_generator
@@ -23,7 +23,7 @@ native_opcode_names_by_opcode = dict(
 )
 
 
-def run_gen(env_data: bytes, block_program_args: bytes):
+def run_gen(env_data: bytes, block_program_args: bytes) -> Tuple[Optional[int], List[Any], Optional[int]]:
     max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
     cost_per_byte = DEFAULT_CONSTANTS.COST_PER_BYTE
 
@@ -34,7 +34,7 @@ def run_gen(env_data: bytes, block_program_args: bytes):
     env_data = b"\xff" + env_data + b"\xff" + block_program_args + b"\x80"
 
     try:
-        return run_generator(
+        return run_generator(  # type: ignore[no-any-return]
             GENERATOR_ROM,
             env_data,
             KEYWORD_TO_ATOM["q"][0],
