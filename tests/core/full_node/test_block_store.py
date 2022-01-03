@@ -34,7 +34,7 @@ class TestBlockStore:
             coin_store_2 = await CoinStore.create(db_wrapper_2)
             store_2 = await BlockStore.create(db_wrapper_2)
             hint_store = await HintStore.create(db_wrapper_2)
-            bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir)
+            bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir, 2)
 
             store = await BlockStore.create(db_wrapper)
             await BlockStore.create(db_wrapper_2)
@@ -76,7 +76,7 @@ class TestBlockStore:
             coin_store_2 = await CoinStore.create(wrapper_2)
             store_2 = await BlockStore.create(wrapper_2)
             hint_store = await HintStore.create(wrapper_2)
-            bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir)
+            bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir, 2)
             block_records = []
             for block in blocks:
                 await bc.receive_block(block)
@@ -105,7 +105,7 @@ class TestBlockStore:
             coin_store = await CoinStore.create(db_wrapper)
             block_store = await BlockStore.create(db_wrapper)
             hint_store = await HintStore.create(db_wrapper)
-            bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, tmp_dir)
+            bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, tmp_dir, 2)
 
             # insert all blocks
             count = 0
