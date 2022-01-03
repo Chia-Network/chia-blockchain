@@ -104,9 +104,9 @@ class GenesisById(LimitationsProgram):
         )
         signed_eve_spend = await wallet.sign(eve_spend)
 
-        if wallet.cc_info.my_tail is None:
+        if wallet.cat_info.my_tail is None:
             await wallet.save_info(
-                CATInfo(genesis_coin_checker.get_tree_hash(), genesis_coin_checker, wallet.cc_info.lineage_proofs),
+                CATInfo(genesis_coin_checker.get_tree_hash(), genesis_coin_checker, wallet.cat_info.lineage_proofs),
                 False,
             )
 
