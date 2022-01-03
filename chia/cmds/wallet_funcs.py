@@ -275,7 +275,7 @@ async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     id, filepath, all, summaries = tuple(list(args.values())[0:4])
     file_contents: bool = (filepath is not None) or summaries
     if id is None:
-        records = await wallet_client.get_all_offers(file_contents)
+        records = await wallet_client.get_all_offers(file_contents=file_contents)
     else:
         records = [await wallet_client.get_offer(hexstr_to_bytes(id), file_contents)]
         if filepath is not None:
