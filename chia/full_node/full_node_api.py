@@ -306,8 +306,8 @@ class FullNodeAPI:
 
     @api_request
     async def request_proof_of_weight_v2(
-            self,
-            request: full_node_protocol.RequestProofOfWeightV2,
+        self,
+        request: full_node_protocol.RequestProofOfWeightV2,
     ) -> Optional[Message]:
 
         if self.full_node.weight_proof_handler_v2 is None:
@@ -318,9 +318,9 @@ class FullNodeAPI:
 
         # Serialization of wp is slow
         if (
-                self.full_node.full_node_store.serialized_wp_message_tip is not None
-                and self.full_node.full_node_store.serialized_wp_message_tip == request.tip
-                and self.full_node.full_node_store.serialized_wp_is_v2 is True
+            self.full_node.full_node_store.serialized_wp_message_tip is not None
+            and self.full_node.full_node_store.serialized_wp_message_tip == request.tip
+            and self.full_node.full_node_store.serialized_wp_is_v2 is True
         ):
             return self.full_node.full_node_store.serialized_wp_message
 
@@ -342,7 +342,6 @@ class FullNodeAPI:
     async def respond_proof_of_weight_v2(self, request: full_node_protocol.RespondProofOfWeightV2) -> Optional[Message]:
         self.log.warning("Received proof of weight too late.")
         return None
-
 
     @api_request
     @reply_type([ProtocolMessageTypes.respond_block, ProtocolMessageTypes.reject_block])

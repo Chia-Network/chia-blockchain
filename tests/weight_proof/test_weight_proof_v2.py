@@ -22,6 +22,7 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
 from tests.block_tools import test_constants
 from tests.setup_nodes import bt
+
 try:
     from reprlib import repr
 except ImportError:
