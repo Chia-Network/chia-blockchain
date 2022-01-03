@@ -20,7 +20,7 @@ from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.util.ints import uint16, uint32, uint64
@@ -378,6 +378,25 @@ class TestWalletRpc:
 
             assert bal_0["confirmed_wallet_balance"] == 16
             assert bal_1["confirmed_wallet_balance"] == 4
+
+            await client.send_transaction_multi(
+                cat_0_id,
+                [
+                    {"puzzle_hash": decode_puzzle_hash(addr_1), "amount": 1, "memos": ["a cat memo"]},
+                    {"puzzle_hash": decode_puzzle_hash(addr_1), "amount": 2, "memos": ["another memo"]},
+                ],
+            )
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            bal_1 = await client_2.get_wallet_balance(cat_1_id)
+
+            assert bal_0["confirmed_wallet_balance"] == 13
+            assert bal_1["confirmed_wallet_balance"] == 7
 
             ##########
             # Offers #

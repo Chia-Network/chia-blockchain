@@ -732,13 +732,10 @@ class WalletRpcApi:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
 
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.wallets[wallet_id]
-
         async with self.service.wallet_state_manager.lock:
             transaction: Dict = (await self.create_signed_transaction(request, hold_lock=False))["signed_tx"]
             tr: TransactionRecord = TransactionRecord.from_json_dict_convenience(transaction)
-            await wallet.push_transaction(tr)
+            await self.service.wallet_state_manager.main_wallet.push_transaction(tr)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {"transaction": transaction, "transaction_id": tr.name}
@@ -798,6 +795,7 @@ class WalletRpcApi:
         if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
+
         if "fee" in request:
             fee = uint64(request["fee"])
         else:
@@ -1182,28 +1180,40 @@ class WalletRpcApi:
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
+        wallet_id: uint32 = uint32(request.get("wallet_id", 1))
+        kwargs: Dict = {"coins": coins, "ignore_max_send_amount": True}
+
+        # TODO: The generate_signed_transaction method should have the same API for all wallets which would
+        #       remove the need for this logic branching.
+        if wallet_id == 1:
+            kwargs["primaries"] = additional_outputs
+            kwargs["memos"] = memos_0
+            args = [amount_0, puzzle_hash_0, fee]
+        else:
+            kwargs["memos"] = [memos_0, *[output["memos"] for output in additional_outputs]]
+            args = [
+                [amount_0, *[output["amount"] for output in additional_outputs]],
+                [puzzle_hash_0, *[output["puzzlehash"] for output in additional_outputs]],
+                fee,
+            ]
+
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
-                signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
-                    amount_0,
-                    puzzle_hash_0,
-                    fee,
-                    coins=coins,
-                    ignore_max_send_amount=True,
-                    primaries=additional_outputs,
-                    memos=memos_0,
+                signed_txs = await self.service.wallet_state_manager.wallets[wallet_id].generate_signed_transaction(
+                    *args,
+                    **kwargs,
                 )
         else:
-            signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
-                amount_0,
-                puzzle_hash_0,
-                fee,
-                coins=coins,
-                ignore_max_send_amount=True,
-                primaries=additional_outputs,
-                memos=memos_0,
+            signed_txs = await self.service.wallet_state_manager.wallets[wallet_id].generate_signed_transaction(
+                *args,
+                **kwargs,
             )
-        return {"signed_tx": signed_tx.to_json_dict_convenience(self.service.config)}
+
+        # TODO: Same as the todo above
+        if wallet_id == 1:
+            return {"signed_tx": signed_txs.to_json_dict_convenience(self.service.config)}
+        else:
+            return {"signed_tx": signed_txs[0].to_json_dict_convenience(self.service.config)}
 
     ##########################################################################################
     # Pool Wallet
