@@ -103,7 +103,7 @@ npm install -g electron-packager
 npm install -g lerna
 
 lerna clean -y
-npm install
+npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
 # npm audit fix
 
