@@ -29,7 +29,7 @@ def event_loop():
     yield loop
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 async def two_wallet_nodes():
     async for _ in setup_simulators_and_wallets(1, 2, {}):
         yield _
@@ -38,7 +38,7 @@ async def two_wallet_nodes():
 buffer_blocks = 4
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 async def wallets_prefarm(two_wallet_nodes):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.
@@ -73,7 +73,7 @@ async def wallets_prefarm(two_wallet_nodes):
 
 @pytest.mark.parametrize(
     "trusted",
-    [True],
+    [False],
 )
 class TestCATTrades:
     @pytest.mark.asyncio
@@ -117,12 +117,12 @@ class TestCATTrades:
         )
 
         # Create the trade parameters
-        MAKER_CHIA_BALANCE = await wallet_maker.get_confirmed_balance()
-        MAKER_CAT_BALANCE = await cat_wallet_maker.get_confirmed_balance()
-        MAKER_NEW_CAT_BALANCE = await new_cat_wallet_maker.get_confirmed_balance()
-        TAKER_CHIA_BALANCE = await wallet_taker.get_confirmed_balance()
+        MAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
+        MAKER_CAT_BALANCE = 100
+        MAKER_NEW_CAT_BALANCE = 0
+        TAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
         TAKER_CAT_BALANCE = 0
-        TAKER_NEW_CAT_BALANCE = await new_cat_wallet_taker.get_confirmed_balance()
+        TAKER_NEW_CAT_BALANCE = 100
 
         chia_for_cat = {
             wallet_maker.id(): -1,
@@ -396,20 +396,20 @@ class TestCATTrades:
             cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
                 wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, uint64(100)
             )
-            await asyncio.sleep(1)
-        tx_queue: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
-        await time_out_assert(
-            15, tx_in_pool, True, full_node.full_node.mempool_manager, tx_queue[0].spend_bundle.name()
-        )
+            tx_queue: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
+            await time_out_assert(
+                15, tx_in_pool, True, full_node.full_node.mempool_manager, tx_queue[0].spend_bundle.name()
+            )
+
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
         await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, 100)
         await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, 100)
-
-        MAKER_CHIA_BALANCE = await wallet_maker.get_confirmed_balance()
-        MAKER_CAT_BALANCE = await cat_wallet_maker.get_confirmed_balance()
-        TAKER_CHIA_BALANCE = await wallet_taker.get_confirmed_balance()
+        MAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
+        MAKER_CAT_BALANCE = 100
+        TAKER_CHIA_BALANCE = 20 * 1000000000000
+        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
 
         cat_for_chia = {
             wallet_maker.id(): 1,
@@ -467,7 +467,6 @@ class TestCATTrades:
 
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
         # await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, trade_take)
-
         await time_out_assert(15, wallet_maker.get_pending_change_balance, 0)
         await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE - FEE)
         await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, MAKER_CAT_BALANCE)
