@@ -214,7 +214,7 @@ async def test_root_generation_must_not_be_less_than_zero(
     }
 
     async with data_store.db_wrapper.locked_transaction():
-        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed: root$"):
+        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await data_store.db.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
@@ -272,7 +272,7 @@ async def test_root_status_must_be_valid(data_store: DataStore, tree_id: bytes32
     }
 
     async with data_store.db_wrapper.locked_transaction():
-        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed: root$"):
+        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await data_store.db.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
