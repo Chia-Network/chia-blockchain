@@ -40,7 +40,7 @@ async def test_schema_checks_node_hash_must_be_32(
     valid_node_values["hash"] = bytes([0] * length)
 
     async with data_store.db_wrapper.locked_transaction():
-        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed: node\b"):
+        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await data_store.db.execute(
                 """
                 INSERT INTO node(hash, node_type, left, right, key, value)
@@ -60,7 +60,7 @@ async def test_node_type_must_be_valid(
     valid_node_values["node_type"] = bad_node_type
 
     async with data_store.db_wrapper.locked_transaction():
-        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed: node\b"):
+        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await data_store.db.execute(
                 """
                 INSERT INTO node(hash, node_type, left, right, key, value)
@@ -89,7 +89,7 @@ async def test_internal_child_not_null(
         values["right"] = None
 
     async with data_store.db_wrapper.locked_transaction():
-        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed: node\b"):
+        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await data_store.db.execute(
                 """
                 INSERT INTO node(hash, node_type, left, right, key, value)
@@ -145,7 +145,7 @@ async def test_terminal_key_value_not_null(
     values[key_or_value] = None
 
     async with data_store.db_wrapper.locked_transaction():
-        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed: node\b"):
+        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await data_store.db.execute(
                 """
                 INSERT INTO node(hash, node_type, left, right, key, value)
