@@ -59,53 +59,26 @@ class DataStore:
                 CREATE TABLE IF NOT EXISTS node(
                     hash BLOB PRIMARY KEY NOT NULL CHECK(length(hash) == 32),
                     node_type INTEGER NOT NULL CHECK(
-                        node_type == {int(NodeType.INTERNAL)}
-                        OR node_type == {int(NodeType.TERMINAL)}
-                    ),
-                    left BLOB REFERENCES node CHECK(
                         (
                             node_type == {int(NodeType.INTERNAL)}
                             AND left IS NOT NULL
+                            AND right IS NOT NULL
+                            AND key IS NULL
+                            AND value IS NULL
                         )
                         OR
                         (
                             node_type == {int(NodeType.TERMINAL)}
                             AND left IS NULL
-                        )
-                    ),
-                    right BLOB REFERENCES node CHECK(
-                        (
-                            node_type == {int(NodeType.INTERNAL)}
-                            AND right IS NOT NULL
-                        )
-                        OR
-                        (
-                            node_type == {int(NodeType.TERMINAL)}
                             AND right IS NULL
-                        )
-                    ),
-                    key BLOB CHECK(
-                        (
-                            node_type == {int(NodeType.TERMINAL)}
                             AND key IS NOT NULL
-                        )
-                        OR
-                        (
-                            node_type == {int(NodeType.INTERNAL)}
-                            AND key IS NULL
-                        )
-                    ),
-                    value BLOB CHECK(
-                        (
-                            node_type == {int(NodeType.TERMINAL)}
                             AND value IS NOT NULL
                         )
-                        OR
-                        (
-                            node_type == {int(NodeType.INTERNAL)}
-                            AND value IS NULL
-                        )
-                    )
+                    ),
+                    left BLOB REFERENCES node,
+                    right BLOB REFERENCES node,
+                    key BLOB,
+                    value BLOB
                 )
                 """
             )
