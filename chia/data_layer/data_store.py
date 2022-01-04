@@ -50,10 +50,6 @@ class DataStore:
         await self.db.execute("PRAGMA foreign_keys=ON")
 
         async with self.db_wrapper.locked_transaction():
-            # TODO: add tests for the sql checks
-            # TODO: maybe checks can be consolidated to avoid repetition
-            # TODO: probably don't need to check length on references to fields that
-            #       are already themselves length checked
             await self.db.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS node(
