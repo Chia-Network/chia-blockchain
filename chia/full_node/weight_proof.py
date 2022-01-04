@@ -37,6 +37,7 @@ from chia.types.weight_proof import (
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.setproctitle import setproctitle
 from chia.util.streamable import dataclass_from_dict, recurse_jsonify
 
 log = logging.getLogger(__name__)
@@ -619,7 +620,7 @@ class WeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0), []
 
-        executor = ProcessPoolExecutor(1)
+        executor = ProcessPoolExecutor(max_workers=1, initializer=setproctitle, initargs=("chia_full_node",))
         constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
             self.constants, summaries, weight_proof
         )

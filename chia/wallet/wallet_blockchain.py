@@ -21,6 +21,7 @@ from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint64
+from chia.util.setproctitle import setproctitle
 from chia.util.streamable import recurse_jsonify
 from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.wallet_block_store import WalletBlockStore
@@ -103,7 +104,7 @@ class WalletBlockchain(BlockchainInterface):
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
         num_workers = max(cpu_count - 2, 1)
-        self.pool = ProcessPoolExecutor(max_workers=num_workers)
+        self.pool = ProcessPoolExecutor(max_workers=num_workers, initializer=setproctitle, initargs=("chia_wallet",))
         log.info(f"Started {num_workers} processes for block validation")
         self.constants = consensus_constants
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))

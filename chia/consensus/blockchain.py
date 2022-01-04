@@ -43,6 +43,7 @@ from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.errors import Err, ConsensusError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.util.setproctitle import setproctitle
 from chia.util.streamable import recurse_jsonify
 from chia.full_node.block_height_map import BlockHeightMap
 
@@ -113,7 +114,7 @@ class Blockchain(BlockchainInterface):
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
         num_workers = max(cpu_count - 2, 1)
-        self.pool = ProcessPoolExecutor(max_workers=num_workers)
+        self.pool = ProcessPoolExecutor(max_workers=num_workers, initializer=setproctitle, initargs=("chia_full_node",))
         log.info(f"Started {num_workers} processes for block validation")
 
         self.constants = consensus_constants
