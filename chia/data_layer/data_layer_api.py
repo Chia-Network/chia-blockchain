@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, Callable
 
 from chia.data_layer.data_layer import DataLayer
 
@@ -10,12 +10,12 @@ class DataLayerAPI:
     def __init__(self, data_layer: DataLayer) -> None:
         self.data_layer = data_layer
 
-    # def _set_state_changed_callback(self, callback: Callable):
-    #     self.full_node.state_changed_callback = callback
+    def _set_state_changed_callback(self, callback: Callable):
+        self.data_layer.state_changed_callback = callback
 
-    # @property
-    # def server(self) -> Any:
-    #     return self.data_layer.server
+    @property
+    def server(self) -> Any:
+        return self.data_layer.server
 
     @property
     def log(self) -> logging.Logger:

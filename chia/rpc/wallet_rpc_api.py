@@ -113,10 +113,6 @@ class WalletRpcApi:
             "/pw_self_pool": self.pw_self_pool,
             "/pw_absorb_rewards": self.pw_absorb_rewards,
             "/pw_status": self.pw_status,
-            # DL Wallet
-            "/dl_current_root": self.dl_current_root,
-            "/dl_update_root": self.dl_update_root,
-            "/dl_history": self.dl_history,
         }
 
     async def _state_changed(self, *args) -> List[WsRpcMessage]:
@@ -1286,37 +1282,3 @@ class WalletRpcApi:
             "state": state.to_json_dict(),
             "unconfirmed_transactions": unconfirmed_transactions,
         }
-
-    ##########################################################################################
-    # DataLayer Wallet
-    ##########################################################################################
-    async def dl_current_root(self, request) -> Dict:
-        """Get the current merkle root stored in the data layer singleton"""
-        if self.service.wallet_state_manager is None:
-            return {"success": False, "error": "not_initialized"}
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        if WalletType(wallet.type()) != WalletType.DATA_LAYER:
-            raise ValueError(f"wallet_id {wallet_id} is not a data layer wallet")
-        return {"wallet_id": wallet_id, "root": wallet.get_current_root()}
-
-    async def dl_update_root(self, request) -> Dict:
-        """Update the merkle root stored in the data layer singleton"""
-        if self.service.wallet_state_manager is None:
-            return {"success": False, "error": "not_initialized"}
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        if WalletType(wallet.type()) != WalletType.DATA_LAYER:
-            raise ValueError(f"wallet_id {wallet_id} is not a data layer wallet")
-        root: bytes32 = bytes32(hexstr_to_bytes(request["root"]))
-        return {"wallet_id": wallet_id, "transaction": (await wallet.create_update_state_spend(root)).to_json_dict()}
-
-    async def dl_history(self, request) -> Dict:
-        """Get the history of merkle roots that have been stored in the data layer singleton"""
-        if self.service.wallet_state_manager is None:
-            return {"success": False, "error": "not_initialized"}
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        if WalletType(wallet.type()) != WalletType.DATA_LAYER:
-            raise ValueError(f"wallet_id {wallet_id} is not a data layer wallet")
-        return {"wallet_id": wallet_id, "history": wallet.get_history()}

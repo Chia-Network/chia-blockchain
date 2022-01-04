@@ -1,5 +1,5 @@
 import asyncio
-from typing import AsyncIterator, Dict, List, Tuple
+from typing import AsyncIterator, Dict, List, Tuple, Any
 import pytest
 
 # flake8: noqa: F401
@@ -25,7 +25,10 @@ pytestmark = pytest.mark.data_layer
 nodes = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]
 
 
-async def init_data_layer(full_node_api, num_blocks, ph, wallet_node, wallet_rpc_api) -> DataLayerRpcApi:
+async def init_data_layer(
+    full_node_api: Any, num_blocks: int, ph: bytes32, wallet_node: WalletNode, wallet_rpc_api: WalletRpcApi
+) -> DataLayerRpcApi:
+    assert wallet_node.wallet_state_manager
     data_layer = DataLayer(wallet_node.root_path, wallet_node.wallet_state_manager)
     data_rpc_api = DataLayerRpcApi(data_layer)
     res = await data_rpc_api.create_data_layer({"fee": 1})

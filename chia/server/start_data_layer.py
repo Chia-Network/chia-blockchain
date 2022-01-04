@@ -12,6 +12,7 @@ from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
+from chia.server.start_wallet import service_kwargs_for_wallet
 
 from chia.util.config import load_config_cli, load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -27,18 +28,24 @@ log = logging.getLogger(__name__)
 
 
 def service_kwargs_for_data_layer(
-    root_path: pathlib.Path, constants, keychain: Optional[Keychain] = None
+    root_path: pathlib.Path, constants: ConsensusConstants, keychain: Optional[Keychain] = None
 ) -> Dict[str, Any]:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "wallet")
+    # This is simulator
+    local_test = config["testing"]
+    if local_test is True:
+        from tests.block_tools import test_constants
 
-    # add local node to trusted peers if old config
-    node = WalletNode(
-        config,
-        root_path,
-        consensus_constants=constants,
-        local_keychain=keychain,
-    )
-    assert node.wallet_state_manager
+        constants = test_constants
+        current = config["database_path"]
+        config["database_path"] = f"{current}_simulation"
+        config["selected_network"] = "testnet0"
+    else:
+        constants = DEFAULT_CONSTANTS
+    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants)
+    node = kwargs["node"]
+    run_service(**kwargs)
+    # assert node.wallet_state_manager
     data_layer = DataLayer(root_path=root_path, wallet_state_manager=node.wallet_state_manager)
     api = DataLayerAPI(data_layer)
     network_id = config["selected_network"]

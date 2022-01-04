@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, create_server_for_daemon, daemon_launch_lock_path, singleton
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.server.start_data_layer import service_kwargs_for_data_layer
 from chia.server.start_farmer import service_kwargs_for_farmer
 from chia.server.start_full_node import service_kwargs_for_full_node
 from chia.server.start_harvester import service_kwargs_for_harvester
@@ -120,6 +121,50 @@ async def setup_full_node(
     await service.wait_closed()
     if db_path.exists():
         db_path.unlink()
+
+
+async def setup_data_layer(
+    consensus_constants: ConsensusConstants,
+    # db_name,
+    port,
+    local_bt,
+    # simulator=False,
+    # connect_to_daemon=False,
+):
+    # db_path = local_bt.root_path / f"{db_name}"
+    # if db_path.exists():
+    #     db_path.unlink()
+    config = local_bt.config["data_layer"]
+    # config["database_path"] = db_name
+    # if introducer_port is not None:
+    #     config["introducer_peer"]["host"] = self_hostname
+    #     config["introducer_peer"]["port"] = introducer_port
+    # else:
+    #     config["introducer_peer"] = None
+    # config["dns_servers"] = []
+    config["port"] = port
+    # config["rpc_port"] = port + 1000
+    # overrides = config["network_overrides"]["constants"][config["selected_network"]]
+    # updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    # if simulator:
+    #     kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
+    # else:
+    #     kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
+
+    kwargs = service_kwargs_for_data_layer(local_bt.root_path, config, consensus_constants)
+    kwargs.update(
+        parse_cli_args=False,
+        connect_to_daemon=False,
+    )
+
+    service = Service(**kwargs)
+
+    await service.start()
+
+    yield service._api
+
+    service.stop()
+    await service.wait_closed()
 
 
 async def setup_wallet_node(

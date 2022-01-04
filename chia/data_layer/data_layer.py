@@ -6,6 +6,7 @@ import aiosqlite
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.data_layer_types import InternalNode, TerminalNode
 from chia.data_layer.data_store import DataStore
+from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
@@ -13,11 +14,6 @@ from chia.util.ints import uint64
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
-
-
-def init_data_wallet() -> DataLayerWallet:
-    # todo implement
-    pass
 
 
 class DataLayer:
@@ -52,6 +48,9 @@ class DataLayer:
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
 
+    async def _start(self):
+        self.log.info("start data layer")
+
     async def create(self, fee: uint64) -> List[TransactionRecord]:
         # create the store (db) and data store instance
         assert self.wallet_state_manager
@@ -68,9 +67,15 @@ class DataLayer:
         self.initialized = True  # todo do this on the callback after tx is buried
         return creation_record.transaction_records
 
+    def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
+        self.state_changed_callback = callback
+
+    def set_server(self, server: ChiaServer) -> None:
+        self.server = server
+
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
-        # self._shut_down = True
+        self._shut_down = True
         pass
 
     async def _await_closed(self) -> None:
