@@ -170,8 +170,8 @@ async def test_node_terminal_key_value_not_null(data_store: DataStore, tree_id: 
 @pytest.mark.asyncio
 async def test_root_tree_id_must_be_32(data_store: DataStore, tree_id: bytes32, length: int) -> None:
     example = await add_01234567_example(data_store=data_store, tree_id=tree_id)
-    tree_id = bytes([0] * length)
-    values = {"tree_id": tree_id, "generation": 0, "node_hash": example.terminal_nodes[0], "status": Status.PENDING}
+    bad_tree_id = bytes([0] * length)
+    values = {"tree_id": bad_tree_id, "generation": 0, "node_hash": example.terminal_nodes[0], "status": Status.PENDING}
 
     async with data_store.db_wrapper.locked_transaction():
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
@@ -202,7 +202,9 @@ async def test_root_tree_id_must_not_be_null(data_store: DataStore, tree_id: byt
 
 @pytest.mark.parametrize(argnames="generation", argvalues=[-200, -2, -1])
 @pytest.mark.asyncio
-async def test_root_generation_must_not_be_less_than_zero(data_store: DataStore, tree_id: bytes32, generation) -> None:
+async def test_root_generation_must_not_be_less_than_zero(
+    data_store: DataStore, tree_id: bytes32, generation: int
+) -> None:
     example = await add_01234567_example(data_store=data_store, tree_id=tree_id)
     values = {
         "tree_id": bytes32([0] * 32),
