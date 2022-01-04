@@ -674,6 +674,8 @@ class TestCATWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
+        await asyncio.sleep(2)
+
         await time_out_assert(15, cat_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 100)
         assert cat_wallet.cat_info.limitations_program_hash is not None
@@ -714,6 +716,8 @@ class TestCATWallet:
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        await asyncio.sleep(2)
 
         await time_out_assert(15, cat_wallet.get_confirmed_balance, 55)
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 55)
