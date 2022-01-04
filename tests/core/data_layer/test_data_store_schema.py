@@ -14,7 +14,7 @@ pytestmark = pytest.mark.data_layer
 
 
 @pytest.mark.asyncio
-async def test_schema_checks_node_update_fails(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_node_update_fails(data_store: DataStore, tree_id: bytes32) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
     node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
 
@@ -31,7 +31,7 @@ async def test_schema_checks_node_update_fails(data_store: DataStore, tree_id: b
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
 @pytest.mark.asyncio
-async def test_schema_checks_node_hash_must_be_32(
+async def test_node_hash_must_be_32(
     data_store: DataStore,
     tree_id: bytes32,
     length: int,
