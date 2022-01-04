@@ -230,9 +230,7 @@ class CATWallet:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
     async def get_max_send_amount(self, records=None):
-        spendable: List[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
-        )
+        spendable: List[WalletCoinRecord] = list(await self.get_cat_spendable_coins())
         if len(spendable) == 0:
             return 0
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
