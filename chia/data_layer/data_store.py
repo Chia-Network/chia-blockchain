@@ -92,13 +92,11 @@ class DataStore:
                 CREATE TABLE IF NOT EXISTS root(
                     tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
                     generation INTEGER NOT NULL CHECK(generation >= 0),
-                    node_hash BLOB CHECK(length(node_hash) == 32),
+                    node_hash BLOB REFERENCES node(hash),
                     status INTEGER NOT NULL CHECK(
-                        status == {int(Status.PENDING)}
-                        OR status == {int(Status.COMMITTED)}
+                        {" OR ".join(f"status == {status}" for status in Status)}
                     ),
-                    PRIMARY KEY(tree_id, generation),
-                    FOREIGN KEY(node_hash) REFERENCES node(hash)
+                    PRIMARY KEY(tree_id, generation)
                 )
                 """
             )
