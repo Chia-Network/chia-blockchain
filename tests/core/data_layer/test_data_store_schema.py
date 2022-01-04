@@ -148,8 +148,8 @@ async def test_terminal_key_value_not_null(
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed: node\b"):
             await data_store.db.execute(
                 """
-                    INSERT INTO node(hash, node_type, left, right, key, value)
-                    VALUES(:hash, :node_type, :left, :right, :key, :value)
-                    """,
+                INSERT INTO node(hash, node_type, left, right, key, value)
+                VALUES(:hash, :node_type, :left, :right, :key, :value)
+                """,
                 values,
             )
