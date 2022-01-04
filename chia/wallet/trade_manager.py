@@ -331,7 +331,8 @@ class TradeManager:
             exists: Optional[Wallet] = await wsm.get_wallet_for_asset_id(key.hex())
             if exists is None:
                 self.log.info(f"Creating wallet for asset ID: {key}")
-                await CATWallet.create_wallet_for_cat(wsm, wallet, key.hex())
+                async with wsm.lock:
+                    await CATWallet.create_wallet_for_cat(wsm, wallet, key.hex())
 
     async def check_offer_validity(self, offer: Offer) -> bool:
         all_removals: List[Coin] = offer.bundle.removals()

@@ -110,9 +110,11 @@ class TestCATTrades:
         # Add the taker's CAT to the maker's wallet
         assert cat_wallet_maker.cat_info.my_tail is not None
         assert new_cat_wallet_taker.cat_info.my_tail is not None
-        new_cat_wallet_maker: CATWallet = await CATWallet.create_wallet_for_cat(
-            wallet_node_maker.wallet_state_manager, wallet_maker, new_cat_wallet_taker.get_asset_id()
-        )
+
+        async with wallet_node_maker.wallet_state_manager.lock:
+            new_cat_wallet_maker: CATWallet = await CATWallet.create_wallet_for_cat(
+                wallet_node_maker.wallet_state_manager, wallet_maker, new_cat_wallet_taker.get_asset_id()
+            )
 
         # Create the trade parameters
         MAKER_CHIA_BALANCE = await wallet_maker.get_confirmed_balance()
