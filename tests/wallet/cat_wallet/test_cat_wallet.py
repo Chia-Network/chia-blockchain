@@ -689,17 +689,22 @@ class TestCATWallet:
         await time_out_assert(15, cat_wallet.get_confirmed_balance, 40)
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 40)
 
-        async def check_wallets(wallet_node):
-            return len(wallet_node.wallet_state_manager.wallets.keys())
+        # First we test that no wallet was created
+        asyncio.sleep(10)
+        assert len(wallet_node_2.wallet_state_manager.wallets.keys()) == 1
 
-        await time_out_assert(10, check_wallets, 2, wallet_node_2)
-        cat_wallet_2 = wallet_node_2.wallet_state_manager.wallets[2]
+        # Then we update the wallet's default CATs
+        wallet_node_2.wallet_state_manager.default_cats = {
+            cat_wallet.cat_info.limitations_program_hash.hex(): {
+                "asset_id": cat_wallet.cat_info.limitations_program_hash.hex(),
+                "name": "Test",
+                "symbol": "TST",
+            }
+        }
 
-        await time_out_assert(30, cat_wallet_2.get_confirmed_balance, 60)
-        await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 60)
+        # Then we send another transaction
+        tx_records = await cat_wallet.generate_signed_transaction([uint64(10)], [cat_2_hash], memos=[[cat_2_hash]])
 
-        cat_hash = await cat_wallet.get_new_inner_hash()
-        tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash])
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
@@ -710,8 +715,33 @@ class TestCATWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        await time_out_assert(15, cat_wallet.get_confirmed_balance, 55)
-        await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 55)
+        await time_out_assert(15, cat_wallet.get_confirmed_balance, 30)
+        await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 30)
+
+        # Now we check that another wallet WAS created
+        async def check_wallets(wallet_node):
+            return len(wallet_node.wallet_state_manager.wallets.keys())
+
+        await time_out_assert(10, check_wallets, 2, wallet_node_2)
+        cat_wallet_2 = wallet_node_2.wallet_state_manager.wallets[2]
+
+        await time_out_assert(30, cat_wallet_2.get_confirmed_balance, 10)
+        await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 10)
+
+        cat_hash = await cat_wallet.get_new_inner_hash()
+        tx_records = await cat_wallet_2.generate_signed_transaction([uint64(5)], [cat_hash])
+        for tx_record in tx_records:
+            await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+
+            await time_out_assert(
+                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+            )
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        await time_out_assert(15, cat_wallet.get_confirmed_balance, 35)
+        await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 35)
 
         # @pytest.mark.asyncio
 
