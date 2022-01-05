@@ -150,8 +150,8 @@ async def setup_data_layer(
     #     kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
     # else:
     #     kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
-
-    kwargs = service_kwargs_for_data_layer(local_bt.root_path, config, consensus_constants)
+    wallet_config = local_bt("wallet")
+    kwargs = service_kwargs_for_data_layer(local_bt.root_path, config, wallet_config, consensus_constants)
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=False,

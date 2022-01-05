@@ -81,7 +81,7 @@ def create_kv_store_name_option() -> "IdentityFunction":
 def create_rpc_port_option() -> "IdentityFunction":
     return click.option(
         "-wp",
-        "--wallet-data-port",
+        "--data_rpc_port",
         help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
         type=int,
         default=None,
@@ -89,38 +89,16 @@ def create_rpc_port_option() -> "IdentityFunction":
     )
 
 
-@data_cmd.command("start_data_layer", short_help="starts data layer wallet")
-@click.option(
-    "-w", "--wallet", help="ID of the wallet to use", type=int, default=None, show_default=True, required=False
-)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-@create_rpc_port_option()
-def start_data_layer(
-    fingerprint: int,
-    wallet_rpc_port: int,
-    # id:int,
-) -> None:
-    from chia.cmds.data_funcs import start_data_layer_cmd
-    from .wallet_funcs import execute_with_wallet
-
-    # extra_params = {"id": id}
-    run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, start_data_layer_cmd))
-
-
 @data_cmd.command("create_kv_store", short_help="Get a data row by its hash")
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-# @create_rpc_port_option()
+@create_rpc_port_option()
 def create_kv_store(
     # table_string: str,
     fingerprint: int,
-    # wallet_rpc_port: int,
-    # id: int,
+    data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import create_kv_store_cmd
-    from .wallet_funcs import execute_with_wallet
-
-    # extra_params = {"id": id}
-    run(create_kv_store_cmd(fingerprint=fingerprint))
+    run(create_kv_store_cmd(fingerprint, data_rpc_port))
 
 
 @data_cmd.command("update_kv_store", short_help="Update a table.")
@@ -132,14 +110,10 @@ def update_kv_store(
     id: str,
     changelist_string: str,
     fingerprint: int,
-    wallet_rpc_port: int,
+    data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import update_kv_store_cmd
-    from .wallet_funcs import execute_with_wallet
-
-    changelist = json.loads(changelist_string)
-    extra_params = {"tree_id": id, "changelist": changelist}
-    run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, update_kv_store_cmd))
+    run(update_kv_store_cmd(id, json.loads(changelist_string), fingerprint, data_rpc_port))
 
 
 @data_cmd.command("get_value", short_help="Get a data row by its hash")
@@ -151,10 +125,8 @@ def get_value(
     id: str,
     key: str,
     fingerprint: int,
-    wallet_rpc_port: int,
+    data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_value_cmd
-    from .wallet_funcs import execute_with_wallet
+    run(get_value_cmd(id, key, fingerprint, data_rpc_port))
 
-    extra_params = {"tree_id": id, "key": key}
-    run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_value_cmd))
