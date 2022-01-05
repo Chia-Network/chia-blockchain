@@ -10,7 +10,6 @@ if sys.version_info < (3, 8):
     def get_origin(t: Type[Any]) -> Optional[Type[Any]]:
         return getattr(t, "__origin__", None)
 
-
 else:
 
     from typing import get_args, get_origin
@@ -81,11 +80,11 @@ def strictdataclass(cls: Any):
 
         def __post_init__(self):
             try:
-                fields = self.__annotations__  # pylint: disable=no-member
+                fields = [(field.name, field.type) for field in self.__dataclass_fields__.values()]
             except Exception:
-                fields = {}
+                fields = []
             data = self.__dict__
-            for (f_name, f_type) in fields.items():
+            for (f_name, f_type) in fields:
                 if f_name not in data:
                     raise ValueError(f"Field {f_name} not present")
                 try:
@@ -94,6 +93,7 @@ def strictdataclass(cls: Any):
                 except TypeError:
                     # Throws a TypeError because we cannot call isinstance for subscripted generics like Optional[int]
                     object.__setattr__(self, f_name, self.parse_item(data[f_name], f_name, f_type))
+            object.__setattr__(self, "_cache", {})
 
     class NoTypeChecking:
         __no_type_check__ = True

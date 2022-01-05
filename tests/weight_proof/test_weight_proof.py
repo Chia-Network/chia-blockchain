@@ -127,7 +127,7 @@ async def load_blocks_dont_validate(
         height_to_hash[block.height] = block.header_hash
         header_cache[block.header_hash] = get_block_header(block, [], [])
         if sub_block.sub_epoch_summary_included is not None:
-            sub_epoch_summaries[block.height] = sub_block.sub_epoch_summary_included
+            sub_epoch_summaries[block.header_hash] = sub_block.sub_epoch_summary_included
         prev_block = block
     return header_cache, height_to_hash, sub_blocks, sub_epoch_summaries
 

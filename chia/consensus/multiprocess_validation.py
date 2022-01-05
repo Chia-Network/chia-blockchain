@@ -277,7 +277,7 @@ async def pre_validate_blocks_multiprocessing(
             # We ONLY add blocks which are in the past, based on header hashes (which are validated later) to the
             # prev blocks dict. This is important since these blocks are assumed to be valid and are used as previous
             # generator references
-            prev_blocks_dict: Dict[uint32, Union[FullBlock, HeaderBlock]] = {}
+            prev_blocks_dict: Dict[bytes32, Union[FullBlock, HeaderBlock]] = {}
             curr_b: Union[FullBlock, HeaderBlock] = block
 
             while curr_b.prev_header_hash in block_dict:

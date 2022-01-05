@@ -5,9 +5,10 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint128
 from chia.util.streamable import Streamable, streamable
 
 
@@ -31,25 +32,28 @@ class FullBlock(Streamable):
     ]  # List of block heights of previous generators referenced in this block
 
     @property
-    def prev_header_hash(self):
+    def prev_header_hash(self) -> bytes32:
         return self.foliage.prev_block_hash
 
     @property
-    def height(self):
+    def height(self) -> uint32:
         return self.reward_chain_block.height
 
     @property
-    def weight(self):
+    def weight(self) -> uint128:
         return self.reward_chain_block.weight
 
     @property
-    def total_iters(self):
+    def total_iters(self) -> uint128:
         return self.reward_chain_block.total_iters
 
     @property
-    @lru_cache(1)
-    def header_hash(self):
-        return self.foliage.get_hash()
+    def header_hash(self) -> bytes32:
+        if "header_hash" in self._cache:
+            return self._cache["header_hash"]
+        hh: bytes32 = self.foliage.get_hash()
+        self._cache["header_hash"] = hh
+        return hh
 
     def is_transaction_block(self) -> bool:
         return self.foliage_transaction_block is not None

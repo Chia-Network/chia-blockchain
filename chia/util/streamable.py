@@ -23,7 +23,6 @@ if sys.version_info < (3, 8):
     def get_args(t: Type[Any]) -> Tuple[Any, ...]:
         return getattr(t, "__args__", ())
 
-
 else:
 
     from typing import get_args
@@ -179,14 +178,18 @@ def streamable(cls: Any):
 
     parse_functions = []
     try:
-        fields = cls1.__annotations__  # pylint: disable=no-member
+        fields = [field.type for field in cls.__dataclass_fields__.values()]
     except Exception:
-        fields = {}
+        fields = []
 
-    for _, f_type in fields.items():
+    for f_type in fields:
         parse_functions.append(cls.function_to_parse_one_item(f_type))
 
     PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[t] = parse_functions
+
+    def __init__(self):
+        self.__cache = {}
+
     return t
 
 
@@ -259,6 +262,9 @@ def parse_str(f: BinaryIO) -> str:
 
 
 class Streamable:
+    def __init__(self):
+        self._cache = {}
+
     @classmethod
     def function_to_parse_one_item(cls: Type[cls.__name__], f_type: Type):  # type: ignore
         """
@@ -295,16 +301,15 @@ class Streamable:
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
         obj: Streamable = object.__new__(cls)
-        fields: Iterator[str] = iter(getattr(cls, "__annotations__", {}))
-        values: Iterator = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
+        fields = list(cls.__dataclass_fields__.keys())
+        values: List[Any] = [parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls]]
         for field, value in zip(fields, values):
             object.__setattr__(obj, field, value)
+        object.__setattr__(obj, "_cache", {})
 
         # Use -1 as a sentinel value as it's not currently serializable
-        if next(fields, -1) != -1:
+        if len(fields) != len(values):
             raise ValueError("Failed to parse incomplete Streamable object")
-        if next(values, -1) != -1:
-            raise ValueError("Failed to parse unknown data in Streamable object")
         return obj
 
     def stream_one_item(self, f_type: Type, item, f: BinaryIO) -> None:
@@ -347,10 +352,10 @@ class Streamable:
 
     def stream(self, f: BinaryIO) -> None:
         try:
-            fields = self.__annotations__  # pylint: disable=no-member
+            fields = [(field.name, field.type) for field in self.__dataclass_fields__.values()]  # type: ignore
         except Exception:
-            fields = {}
-        for f_name, f_type in fields.items():
+            fields = []
+        for f_name, f_type in fields:
             self.stream_one_item(f_type, getattr(self, f_name), f)
 
     def get_hash(self) -> bytes32:

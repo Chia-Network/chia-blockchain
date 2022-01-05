@@ -43,9 +43,16 @@ class TestStreamable(unittest.TestCase):
             g: Tuple[uint32, str, bytes]
 
         a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, (383, "hello", b"goodbye"))
+        c = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, (383, "hello", b"goodbye"))
 
         b: bytes = bytes(a)
         assert a == TestClass.from_bytes(b)
+
+        assert hasattr(a, "_cache")
+        assert hasattr(c, "_cache")
+        a._cache["k"] = "v"
+        assert "k" in a._cache
+        assert "k" not in c._cache
 
     def test_variablesize(self):
         @dataclass(frozen=True)
