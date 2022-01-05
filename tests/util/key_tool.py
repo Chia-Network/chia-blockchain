@@ -38,6 +38,6 @@ class KeyTool(dict):
             # TODO: address hint error and remove ignore
             #       error: Argument 2 to "sign" of "KeyTool" has incompatible type "bytes"; expected "bytes32"
             #       [arg-type]
-            signature = self.sign(public_key, message_hash)  # type: ignore[arg-type]
+            signature = self.sign(bytes(public_key), message_hash)  # type: ignore[arg-type]
             signatures.append(signature)
         return AugSchemeMPL.aggregate(signatures)
