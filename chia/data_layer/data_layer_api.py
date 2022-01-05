@@ -10,7 +10,7 @@ class DataLayerAPI:
     def __init__(self, data_layer: DataLayer) -> None:
         self.data_layer = data_layer
 
-    def _set_state_changed_callback(self, callback: Callable):
+    def _set_state_changed_callback(self, callback: Callable) -> None:
         self.data_layer.state_changed_callback = callback
 
     @property

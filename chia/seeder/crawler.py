@@ -77,6 +77,7 @@ class Crawler:
 
     async def connect_task(self, peer):
         async def peer_action(peer: ws.WSChiaConnection):
+
             peer_info = peer.get_peer_info()
             version = peer.get_version()
             if peer_info is not None and version is not None:
@@ -117,8 +118,6 @@ class Crawler:
             self.connection = await aiosqlite.connect(self.db_path)
             self.crawl_store = await CrawlStore.create(self.connection)
             self.log.info("Started")
-            await self.crawl_store.load_to_db()
-            await self.crawl_store.load_reliable_peers_to_db()
             t_start = time.time()
             total_nodes = 0
             self.seen_nodes = set()
@@ -136,6 +135,7 @@ class Crawler:
                     uint64(0),
                     "undefined",
                     uint64(0),
+                    tls_version="unknown",
                 )
                 new_peer_reliability = PeerReliability(peer)
                 self.crawl_store.maybe_add_peer(new_peer, new_peer_reliability)
@@ -184,14 +184,15 @@ class Crawler:
                                 uint64(response_peer.timestamp),
                                 "undefined",
                                 uint64(0),
+                                tls_version="unknown",
                             )
                             new_peer_reliability = PeerReliability(response_peer.host)
                             if self.crawl_store is not None:
                                 self.crawl_store.maybe_add_peer(new_peer, new_peer_reliability)
-                            await self.crawl_store.update_best_timestamp(
-                                response_peer.host,
-                                self.best_timestamp_per_peer[response_peer.host],
-                            )
+                        await self.crawl_store.update_best_timestamp(
+                            response_peer.host,
+                            self.best_timestamp_per_peer[response_peer.host],
+                        )
                 for host, version in self.version_cache:
                     self.handshake_time[host] = int(time.time())
                     self.host_to_version[host] = version
@@ -227,8 +228,18 @@ class Crawler:
                 self.server.banned_peers = {}
                 if len(peers_to_crawl) == 0:
                     continue
-                await self.crawl_store.load_to_db()
-                await self.crawl_store.load_reliable_peers_to_db()
+
+                # Try up to 5 times to write to the DB in case there is a lock that causes a timeout
+                for i in range(1, 5):
+                    try:
+                        await self.crawl_store.load_to_db()
+                        await self.crawl_store.load_reliable_peers_to_db()
+                    except Exception as e:
+                        self.log.error(f"Exception while saving to DB: {e}.")
+                        self.log.error("Waiting 5 seconds before retry...")
+                        await asyncio.sleep(5)
+                        continue
+                    break
                 total_records = self.crawl_store.get_total_records()
                 ipv6_count = self.crawl_store.get_ipv6_peers()
                 self.log.error("***")
@@ -303,11 +314,14 @@ class Crawler:
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
         try:
             peer_info = peer.get_peer_info()
+            tls_version = peer.get_tls_version()
+            if tls_version is None:
+                tls_version = "unknown"
             if peer_info is None:
                 return
             if request.height >= self.minimum_height:
                 if self.crawl_store is not None:
-                    await self.crawl_store.peer_connected_hostname(peer_info.host, True)
+                    await self.crawl_store.peer_connected_hostname(peer_info.host, True, tls_version)
             self.with_peak.add(peer_info)
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")

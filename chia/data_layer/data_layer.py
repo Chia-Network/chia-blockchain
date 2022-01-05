@@ -48,7 +48,7 @@ class DataLayer:
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
 
-    async def _start(self):
+    async def _start(self) -> None:
         self.log.info("start data layer")
 
     async def create(self, fee: uint64) -> List[TransactionRecord]:

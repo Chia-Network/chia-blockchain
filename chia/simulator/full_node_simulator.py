@@ -1,6 +1,6 @@
 import asyncio
 import itertools
-from typing import Any, Collection, Dict, List, Optional, Set
+from typing import Collection, List, Optional, Set
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
@@ -14,6 +14,7 @@ from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 
 
 async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet):
@@ -342,10 +343,10 @@ class FullNodeSimulator(FullNodeAPI):
         #       WalletRpcApi.create_signed_transaction().  Perhaps it should be moved
         #       somewhere more reusable.
 
-        outputs: List[Dict[str, Any]] = []
+        outputs: List[AmountWithPuzzlehash] = []
         for amount in amounts:
             puzzle_hash = await wallet.get_new_puzzlehash()
-            outputs.append({"puzzlehash": puzzle_hash, "amount": uint64(amount)})
+            outputs.append({"puzzlehash": puzzle_hash, "amount": uint64(amount), "memos": []})
 
         transaction_records: List[TransactionRecord] = []
         outputs_iterator = iter(outputs)

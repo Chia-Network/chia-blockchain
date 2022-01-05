@@ -28,7 +28,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.transaction_record import ItemAndTransactionRecords
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
 
@@ -144,9 +144,9 @@ class DataLayerWallet:
         full_puzzle: Program = create_host_fullpuz(inner_puzzle, initial_root, launcher_coin.name())
         puzzle_hash: bytes32 = full_puzzle.get_tree_hash()
 
-        announcement_set: Set[bytes32] = set()
+        announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([puzzle_hash, 1, initial_root]).get_tree_hash()
-        announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
+        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
         eve_coin = Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), uint64(1))
         future_parent = LineageProof(
             eve_coin.parent_coin_info,
@@ -155,7 +155,7 @@ class DataLayerWallet:
         )
         eve_parent = LineageProof(
             launcher_coin.parent_coin_info,
-            launcher_coin.puzzle_hash,
+            None,
             launcher_coin.amount,
         )
         parents: List[Tuple[bytes32, Optional[LineageProof]]] = []
@@ -183,7 +183,6 @@ class DataLayerWallet:
         full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
         # Delete from standard transaction so we don't push duplicate spends
         std_record: TransactionRecord = replace(create_launcher_tx_record, spend_bundle=None)
-        # TODO (Standalone merge): Add memos field
         dl_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -195,6 +194,7 @@ class DataLayerWallet:
             spend_bundle=full_spend,
             additions=full_spend.additions(),
             removals=full_spend.removals(),
+            memos=list(full_spend.get_memos().items()),
             wallet_id=uint32(0),  # This is being called before the wallet is created so we're using a temp ID of 0
             sent_to=[],
             trade_id=None,
@@ -209,11 +209,12 @@ class DataLayerWallet:
     ) -> TransactionRecord:
         new_inner_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         new_db_layer_puzzle = create_host_layer_puzzle(new_inner_inner_puzzle, root_hash)
-        primaries = [({"puzzlehash": new_db_layer_puzzle.get_tree_hash(), "amount": self.tip_coin.amount})]
+        primaries: List[AmountWithPuzzlehash] = [
+            {"puzzlehash": new_db_layer_puzzle.get_tree_hash(), "amount": self.tip_coin.amount, "memos": []}
+        ]
         inner_inner_sol = self.standard_wallet.make_solution(primaries=primaries)
         db_layer_sol = Program.to([0, inner_inner_sol, self.dl_info.current_inner_inner])
-        parent_info = await self.get_parent_for_coin(self.tip_coin)
-        assert parent_info is not None
+        parent_info = await self.get_lineage_for_coin(self.tip_coin)
 
         assert self.dl_info.origin_coin is not None
         current_full_puz = create_host_fullpuz(
@@ -223,7 +224,7 @@ class DataLayerWallet:
         )
         full_sol = Program.to(
             [
-                parent_info,
+                parent_info.to_program(),
                 self.tip_coin.amount,
                 db_layer_sol,
             ]
@@ -264,6 +265,7 @@ class DataLayerWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
+            memos=list(spend_bundle.get_memos().items()),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
@@ -276,8 +278,7 @@ class DataLayerWallet:
     async def create_report_spend(self) -> Tuple[SpendBundle, Announcement]:
         # (my_puzhash . my_amount)
         db_layer_sol = Program.to([1, (self.tip_coin.puzzle_hash, self.tip_coin.amount)])
-        parent_info = await self.get_parent_for_coin(self.tip_coin)
-        assert parent_info is not None
+        parent_info = await self.get_lineage_for_coin(self.tip_coin)
         assert self.dl_info.origin_coin is not None
         current_full_puz = create_host_fullpuz(
             self.dl_info.current_inner_inner,
@@ -286,7 +287,7 @@ class DataLayerWallet:
         )
         full_sol = Program.to(
             [
-                parent_info,
+                parent_info.to_program(),
                 self.tip_coin.amount,
                 db_layer_sol,
             ]
@@ -391,7 +392,7 @@ class DataLayerWallet:
             bytes((await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey)
         )
 
-    async def get_parent_for_coin(self, coin: Coin) -> Optional[List[Any]]:
+    async def get_lineage_for_coin(self, coin: Coin) -> LineageProof:
         parent_info = None
         for name, parent in self.dl_info.parent_info:
             if name == coin.parent_coin_info:
@@ -401,13 +402,7 @@ class DataLayerWallet:
             # TODO: is it ok to log the coin info
             raise ValueError("Unable to find parent info")
 
-        if self.dl_info.origin_coin is None:
-            ret = parent_info.as_list()
-        elif parent_info.parent_name == self.dl_info.origin_coin.parent_coin_info:
-            ret = [parent_info.parent_name, parent_info.amount]
-        else:
-            ret = parent_info.as_list()
-        return ret
+        return parent_info
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof], in_transaction: bool) -> None:
         self.log.info(f"Adding parent {name}: {parent}")
@@ -455,9 +450,7 @@ class DataLayerWallet:
 
         amount: uint64 = uint64(0)
         for record in record_list:
-            parent = await self.get_parent_for_coin(record.coin)
-            if parent is not None:
-                amount = uint64(amount + record.coin.amount)
+            amount = uint64(amount + record.coin.amount)
 
         self.log.info(f"Confirmed balance for dl wallet is {amount}")
         return uint64(amount)

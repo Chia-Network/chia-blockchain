@@ -65,7 +65,7 @@ class BlockHeightMap:
                 return self
 
             cursor_2 = await db.db.execute(
-                "SELECT header_hash,prev_hash,height,sub_epoch_summary FROM block_records WHERE header_hash=?",
+                "SELECT header_hash,prev_hash,height,sub_epoch_summary FROM full_blocks WHERE header_hash=?",
                 (peak_row[0],),
             )
             row = await cursor_2.fetchone()
@@ -103,14 +103,8 @@ class BlockHeightMap:
             peak = row[0]
             prev_hash = row[1]
         else:
-            # TODO: address hint errors and remove ignores
-            #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-            #       [assignment]
-            peak = bytes.fromhex(row[0])  # type: ignore[assignment]
-            # TODO: address hint errors and remove ignores
-            #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-            #       [assignment]
-            prev_hash = bytes.fromhex(row[1])  # type: ignore[assignment]
+            peak = bytes32.fromhex(row[0])
+            prev_hash = bytes32.fromhex(row[1])
         height = row[2]
 
         # allocate memory for height to hash map
@@ -168,11 +162,19 @@ class BlockHeightMap:
         while height > 0:
             # load 5000 blocks at a time
             window_end = max(0, height - 5000)
-            cursor = await self.db.db.execute(
-                "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records "
-                "INDEXED BY height WHERE height>=? AND height <?",
-                (window_end, height),
-            )
+
+            if self.db.db_version == 2:
+                cursor = await self.db.db.execute(
+                    "SELECT header_hash,prev_hash,height,sub_epoch_summary from full_blocks "
+                    "INDEXED BY height WHERE height>=? AND height <?",
+                    (window_end, height),
+                )
+            else:
+                cursor = await self.db.db.execute(
+                    "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records "
+                    "INDEXED BY height WHERE height>=? AND height <?",
+                    (window_end, height),
+                )
 
             rows = await cursor.fetchall()
             await cursor.close()
@@ -185,14 +187,7 @@ class BlockHeightMap:
                     ordered[r[0]] = (r[2], r[1], r[3])
             else:
                 for r in rows:
-                    # TODO: address hint errors and remove ignores
-                    #       error: Invalid index type "bytes" for "Dict[bytes32, Tuple[uint32, bytes32,
-                    #          Optional[bytes]]]";
-                    #       expected type "bytes32"  [index]
-                    #       error: Incompatible types in assignment (expression has type "Tuple[Any,
-                    #          bytes, Any]", target
-                    #       has type "Tuple[uint32, bytes32, Optional[bytes]]")  [assignment]
-                    ordered[bytes.fromhex(r[0])] = (r[2], bytes.fromhex(r[1]), r[3])  # type: ignore[index,assignment]
+                    ordered[bytes32.fromhex(r[0])] = (r[2], bytes32.fromhex(r[1]), r[3])
 
             while height > window_end:
                 entry = ordered[prev_hash]

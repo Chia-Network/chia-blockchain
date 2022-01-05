@@ -30,6 +30,9 @@ dependencies = [
     "dnspythonchia==2.2.0",  # Query DNS seeds
     "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.14",  # dns lib
+    "typing-extensions==4.0.1",  # typing backports like Protocol and TypedDict
+    "zstd==1.5.0.4",
+    "packaging==21.0"
 ]
 
 upnp_dependencies = [
@@ -41,6 +44,7 @@ upnp_dependencies = [
 #       release of mypy, 0.910.
 #       https://github.com/python/typeshed/commit/7a9a107a63c5f4b938563ed6f8d934dc4b1de2c3
 dev_dependencies = [
+    "pre-commit",
     "pytest",
     "pytest-asyncio",
     "pytest-monitor; sys_platform == 'linux'",
@@ -102,7 +106,7 @@ kwargs = dict(
         "chia.wallet",
         "chia.wallet.puzzles",
         "chia.wallet.rl_wallet",
-        "chia.wallet.cc_wallet",
+        "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
         "chia.wallet.settings",
         "chia.wallet.trading",

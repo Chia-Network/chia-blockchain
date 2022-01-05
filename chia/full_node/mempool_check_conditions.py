@@ -1,7 +1,7 @@
 import logging
 import time
 from typing import Dict, List, Optional
-from clvm_rs import STRICT_MODE
+from clvm_rs import STRICT_MODE as MEMPOOL_MODE
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.generator import create_generator_args, setup_generator_args
@@ -18,7 +18,6 @@ from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 
 GENERATOR_MOD = get_generator()
-
 
 log = logging.getLogger(__name__)
 
@@ -89,14 +88,14 @@ def mempool_assert_relative_time_exceeds(
 
 
 def get_name_puzzle_conditions(
-    generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, safe_mode: bool
+    generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, mempool_mode: bool
 ) -> NPCResult:
     block_program, block_program_args = setup_generator_args(generator)
     max_cost -= len(bytes(generator.program)) * cost_per_byte
     if max_cost < 0:
         return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), [], uint64(0))
 
-    flags = STRICT_MODE if safe_mode else 0
+    flags = MEMPOOL_MODE if mempool_mode else 0
     try:
         err, result, clvm_cost = GENERATOR_MOD.run_as_generator(max_cost, flags, block_program, block_program_args)
         if err is not None:

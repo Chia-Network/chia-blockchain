@@ -42,14 +42,14 @@ def service_kwargs_for_data_layer(
         config["selected_network"] = "testnet0"
     else:
         constants = DEFAULT_CONSTANTS
-    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants)
+    kwargs: Dict[str, Any] = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants)
     node = kwargs["node"]
     run_service(**kwargs)
     # assert node.wallet_state_manager
     data_layer = DataLayer(root_path=root_path, wallet_state_manager=node.wallet_state_manager)
     api = DataLayerAPI(data_layer)
     network_id = config["selected_network"]
-    kwargs: Dict[str, Any] = dict(
+    kwargs = dict(
         root_path=root_path,
         node=data_layer,
         # TODO: not for peers...
