@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from blspy import AugSchemeMPL
 import pytest
@@ -13,16 +13,20 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 pytestmark = pytest.mark.data_layer
+
+
+_T_DLOWallet = TypeVar("_T_DLOWallet", bound="DLOWallet")
 
 
 @dataclass(frozen=True)
@@ -38,7 +42,7 @@ class DLOInfo(Streamable):
 
 @dataclass
 class DLOWallet:
-    wallet_state_manager: Any
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_id: uint32
     wallet_info: WalletInfo
@@ -54,10 +58,10 @@ class DLOWallet:
 
     @classmethod
     async def create_new_dlo_wallet(
-        cls,
+        cls: Type[_T_DLOWallet],
         wallet_state_manager: Any,
         wallet: Wallet,
-    ):
+    ) -> _T_DLOWallet:
         dlo_info = DLOInfo(None, None, None, None, None, None)
         info_as_string = bytes(dlo_info).hex()
         wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -86,14 +90,14 @@ class DLOWallet:
         if self.dlo_info.leaf_reveal is not None:
             return create_offer_fullpuz(
                 self.dlo_info.leaf_reveal,
-                self.dlo_info.host_genesis_id,
-                self.dlo_info.claim_target,
-                self.dlo_info.recovery_target,
-                self.dlo_info.recovery_timelock,
+                self.dlo_info.host_genesis_id,  # type: ignore[arg-type]
+                self.dlo_info.claim_target,  # type: ignore[arg-type]
+                self.dlo_info.recovery_target,  # type: ignore[arg-type]
+                self.dlo_info.recovery_timelock,  # type: ignore[arg-type]
             )
-        return Program.to(pubkey)
+        return Program.to(pubkey)  # type: ignore[no-any-return]
 
-    def id(self):
+    def id(self) -> uint32:
         return self.wallet_info.id
 
     async def generate_datalayer_offer_spend(
@@ -104,7 +108,7 @@ class DLOWallet:
         claim_target: bytes32,
         recovery_target: bytes32,
         recovery_timelock: uint64,
-    ):
+    ) -> TransactionRecord:
         full_puzzle: Program = create_offer_fullpuz(
             leaf_reveal,
             host_genesis_id,
@@ -146,9 +150,9 @@ class DLOWallet:
         offer_full_puzzle: Program,
         db_innerpuz_hash: bytes32,
         current_root: bytes32,
-        inclusion_proof: Tuple,
+        inclusion_proof: Tuple[Optional[int], List[Optional[List[bytes32]]]],
         fee: uint64 = uint64(0),
-    ):
+    ) -> SpendBundle:
         solution = Program.to([1, offer_coin.amount, db_innerpuz_hash, current_root, inclusion_proof])
         sb = SpendBundle([CoinSpend(offer_coin, offer_full_puzzle, solution)], AugSchemeMPL.aggregate([]))
         # ret = uncurry_offer_puzzle(offer_full_puzzle)
@@ -175,13 +179,13 @@ class DLOWallet:
 
     async def create_recover_dl_offer_spend(
         self,
-        leaf_reveal: bytes = None,
-        host_genesis_id: bytes32 = None,
-        claim_target: bytes32 = None,
-        recovery_target: bytes32 = None,
-        recovery_timelock: uint64 = None,
-        fee=uint64(0),
-    ):
+        leaf_reveal: Optional[bytes] = None,
+        host_genesis_id: Optional[bytes32] = None,
+        claim_target: Optional[bytes32] = None,
+        recovery_target: Optional[bytes32] = None,
+        recovery_timelock: Optional[uint64] = None,
+        fee: uint64 = uint64(0),
+    ) -> TransactionRecord:
         coin = self.dlo_info.active_offer
         if coin is None:
             raise ValueError("Active offer coin unexpectedly None")
@@ -195,7 +199,7 @@ class DLOWallet:
             recovery_target = self.dlo_info.recovery_target
             recovery_timelock = self.dlo_info.recovery_timelock
         full_puzzle: Program = create_offer_fullpuz(
-            leaf_reveal, host_genesis_id, claim_target, recovery_target, recovery_timelock
+            leaf_reveal, host_genesis_id, claim_target, recovery_target, recovery_timelock  # type: ignore[arg-type]
         )
         coin_spend = CoinSpend(coin, full_puzzle, solution)
         sb = SpendBundle([coin_spend], AugSchemeMPL.aggregate([]))
@@ -236,7 +240,7 @@ class DLOWallet:
 
         return self.dlo_info.active_offer
 
-    async def get_confirmed_balance(self, record_list=None) -> uint64:
+    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint64:
         if record_list is None:
             record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
 
@@ -247,17 +251,19 @@ class DLOWallet:
         self.log.info(f"Confirmed balance for dlo wallet is {amount}")
         return uint64(amount)
 
-    async def get_unconfirmed_balance(self, record_list=None) -> uint64:
+    async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint64:
         confirmed = await self.get_confirmed_balance(record_list)
-        return await self.wallet_state_manager._get_unconfirmed_balance(self.id(), confirmed)
+        # TODO: should the uint128 be changed?
+        return await self.wallet_state_manager._get_unconfirmed_balance(self.id(), uint128(confirmed))  # type: ignore[return-value]  # noqa: E501
 
-    async def get_spendable_balance(self, unspent_records=None) -> uint64:
+    async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint64:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
             self.wallet_info.id, unspent_records
         )
-        return spendable_am
+        # TODO: should the uint128 be changed?
+        return spendable_am  # type: ignore[return-value]
 
-    async def select_coins(self, amount: uint64, exclude: List[Coin] = None) -> Set[Coin]:
+    async def select_coins(self, amount: uint64, exclude: Optional[List[Coin]] = None) -> Set[Coin]:
         """Returns a set of coins that can be used for generating a new transaction."""
         if exclude is None:
             exclude = []

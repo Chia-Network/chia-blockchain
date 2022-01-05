@@ -43,7 +43,7 @@ class FullNodeSimulator(FullNodeAPI):
         self.bt = block_tools
         self.full_node = full_node
         self.config = full_node.config
-        self.time_per_block = None
+        self.time_per_block: Optional[float] = None
         if "simulation" in self.config and self.config["simulation"] is True:
             self.use_current_time = True
         else:

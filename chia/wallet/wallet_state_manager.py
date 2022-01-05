@@ -353,7 +353,7 @@ class WalletStateManager:
         if unused > 0:
             await self.puzzle_store.set_used_up_to(uint32(unused - 1), in_transaction)
 
-    async def update_wallet_puzzle_hashes(self, wallet_id):
+    async def update_wallet_puzzle_hashes(self, wallet_id) -> None:
         derivation_paths: List[DerivationRecord] = []
         target_wallet = self.wallets[wallet_id]
         last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
@@ -364,7 +364,7 @@ class WalletStateManager:
             if unused is None:
                 # This handles the case where the database is empty
                 unused = uint32(0)
-        for index in range(unused, last):
+        for index in range(unused, last):  # type: ignore[arg-type]
             pubkey: G1Element = self.get_public_key(uint32(index))
             puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
             puzzlehash: bytes32 = puzzle.get_tree_hash()

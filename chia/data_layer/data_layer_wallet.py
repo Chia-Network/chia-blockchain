@@ -251,7 +251,7 @@ class DataLayerWallet:
 
         assert self.dl_info.origin_coin
         current_full_puz = create_host_fullpuz(
-            self.dl_info.current_inner_inner,
+            self.dl_info.current_inner_inner,  # type: ignore[arg-type]
             self.dl_info.root_hash,
             self.dl_info.origin_coin.name(),
         )
@@ -264,7 +264,7 @@ class DataLayerWallet:
         )
         future_parent = LineageProof(
             my_coin.name(),
-            create_host_layer_puzzle(self.dl_info.current_inner_inner, self.dl_info.root_hash).get_tree_hash(),
+            create_host_layer_puzzle(self.dl_info.current_inner_inner, self.dl_info.root_hash).get_tree_hash(),  # type: ignore[arg-type]  # noqa: E501
             my_coin.amount,
         )
         await self.add_parent(my_coin.name(), future_parent, False)
@@ -318,7 +318,7 @@ class DataLayerWallet:
         assert parent_info is not None
         assert self.dl_info.origin_coin is not None
         current_full_puz = create_host_fullpuz(
-            self.dl_info.current_inner_inner,
+            self.dl_info.current_inner_inner,  # type: ignore[arg-type]
             self.dl_info.root_hash,
             self.dl_info.origin_coin.name(),
         )
@@ -334,7 +334,7 @@ class DataLayerWallet:
         )
         future_parent = LineageProof(
             my_coin.name(),
-            create_host_layer_puzzle(self.dl_info.current_inner_inner, self.dl_info.root_hash).get_tree_hash(),
+            create_host_layer_puzzle(self.dl_info.current_inner_inner, self.dl_info.root_hash).get_tree_hash(),  # type: ignore[arg-type]  # noqa: E501
             my_coin.amount,
         )
         await self.add_parent(my_coin.name(), future_parent, False)
@@ -349,7 +349,7 @@ class DataLayerWallet:
         if origin_coin is None:
             raise ValueError("Non-None origin coin required")
         current_full_puz = create_host_fullpuz(
-            self.dl_info.current_inner_inner,
+            self.dl_info.current_inner_inner,  # type: ignore[arg-type]
             self.dl_info.root_hash,
             origin_coin.name(),
         )
@@ -406,15 +406,9 @@ class DataLayerWallet:
         inner_inner_puz = self.standard_wallet.puzzle_for_pk(pubkey)
         innerpuz = create_host_layer_puzzle(inner_inner_puz, self.dl_info.root_hash)
         if self.dl_info.origin_coin is not None:
-            # TODO: Remove ignore when done.
-            #       https://github.com/Chia-Network/clvm/pull/102
-            #       https://github.com/Chia-Network/clvm/pull/106
-            return create_singleton_fullpuz(self.dl_info.origin_coin.name(), innerpuz)  # type: ignore[no-any-return]
+            return create_singleton_fullpuz(self.dl_info.origin_coin.name(), innerpuz)
 
-        # TODO: Remove ignore when done.
-        #       https://github.com/Chia-Network/clvm/pull/102
-        #       https://github.com/Chia-Network/clvm/pull/106
-        return create_singleton_fullpuz(0x00, innerpuz)  # type: ignore[no-any-return]
+        return create_singleton_fullpuz(0x00, innerpuz)  # type: ignore[arg-type]
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
