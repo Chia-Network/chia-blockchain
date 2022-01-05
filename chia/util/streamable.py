@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, List, Tuple, Type, Callable, Optional, Iterator
+from typing import Any, BinaryIO, ClassVar, Dict, List, Tuple, Type, TypeVar, Callable, Optional, Iterator
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal
@@ -69,7 +70,7 @@ def dataclass_from_dict(klass, d):
         return tuple(klass_properties)
     elif dataclasses.is_dataclass(klass):
         # Type is a dataclass, data is a dictionary
-        fieldtypes = {f.name: f.type for f in dataclasses.fields(klass)}
+        fieldtypes = {f.name: f.annotation for f in klass._chia_streamable.fields}
         return klass(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
     elif is_type_List(klass):
         # Type is a list, data is a list
@@ -127,8 +128,55 @@ def recurse_jsonify(d):
 
 PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
 
+_field_metadata_key = "_chia_streamable"
 
-def streamable(cls: Any):
+
+@dataclasses.dataclass(frozen=True)
+class _FieldMetadata:
+    ignore: bool = False
+
+
+@functools.wraps(wrapped=dataclasses.field)
+def unstreamed_field(*args, **kwargs):
+    metadata = kwargs.setdefault("metadata", {})
+    metadata[_field_metadata_key] = _FieldMetadata(ignore=True)
+
+    return dataclasses.fields(*args, **kwargs)
+
+
+_T_Field = TypeVar("_T_Field", bound="_Field")
+
+
+@dataclasses.dataclass(frozen=True)
+class _Field:
+    name: str
+    annotation: Any
+
+    @classmethod
+    def from_dataclass_field(cls: Type[_T_Field], field: dataclasses.Field) -> _T_Field:
+        return cls(name=field.name, annotation=field.type)
+
+
+_T_ClassMetadata = TypeVar("_T_ClassMetadata", bound="_ClassMetadata")
+
+
+@dataclasses.dataclass(frozen=True)
+class _ClassMetadata:
+    fields: Tuple[_Field, ...] = ()
+
+    @classmethod
+    def from_dataclass(cls: Type[_T_ClassMetadata], dataclass) -> _T_ClassMetadata:
+        fields = []
+        for dataclass_field in dataclasses.fields(dataclass):
+            metadata = dataclass_field.metadata.get(_field_metadata_key, _FieldMetadata())
+            if metadata.ignore:
+                continue
+            fields.append(_Field.from_dataclass_field(field=dataclass_field))
+
+        return cls(fields=tuple(fields))
+
+
+def streamable(cls: Type["Streamable"]) -> Type["Streamable"]:
     """
     This is a decorator for class definitions. It applies the strictdataclass decorator,
     which checks all types at construction. It also defines a simple serialization format,
@@ -179,12 +227,14 @@ def streamable(cls: Any):
 
     parse_functions = []
     try:
-        fields = cls1.__annotations__  # pylint: disable=no-member
+        metadata = _ClassMetadata.from_dataclass(dataclass=cls1)
     except Exception:
-        fields = {}
+        metadata = _ClassMetadata()
 
-    for _, f_type in fields.items():
-        parse_functions.append(cls.function_to_parse_one_item(f_type))
+    cls1._chia_streamable = metadata
+
+    for field in cls1._chia_streamable.fields:
+        parse_functions.append(cls.function_to_parse_one_item(field.annotation))
 
     PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[t] = parse_functions
     return t
@@ -259,6 +309,8 @@ def parse_str(f: BinaryIO) -> str:
 
 
 class Streamable:
+    _chia_streamable: ClassVar[_ClassMetadata]
+
     @classmethod
     def function_to_parse_one_item(cls: Type[cls.__name__], f_type: Type):  # type: ignore
         """
@@ -347,11 +399,11 @@ class Streamable:
 
     def stream(self, f: BinaryIO) -> None:
         try:
-            fields = self.__annotations__  # pylint: disable=no-member
+            fields = self._chia_streamable.fields
         except Exception:
-            fields = {}
-        for f_name, f_type in fields.items():
-            self.stream_one_item(f_type, getattr(self, f_name), f)
+            fields = ()
+        for field in fields:
+            self.stream_one_item(field.annotation, getattr(self, field.name), f)
 
     def get_hash(self) -> bytes32:
         return bytes32(std_hash(bytes(self)))

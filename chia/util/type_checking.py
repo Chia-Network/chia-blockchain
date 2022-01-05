@@ -1,6 +1,10 @@
 import dataclasses
 import sys
-from typing import Any, List, Optional, Tuple, Type, Union
+from typing import Any, List, Optional, Tuple, Type, TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from chia.util.streamable import Streamable
+
 
 if sys.version_info < (3, 8):
 
@@ -31,7 +35,7 @@ def is_type_Tuple(f_type: Type) -> bool:
     return (get_origin(f_type) is not None and get_origin(f_type) == tuple) or f_type == tuple
 
 
-def strictdataclass(cls: Any):
+def strictdataclass(cls: Type["Streamable"]) -> Type["Streamable"]:
     class _Local:
         """
         Dataclass where all fields must be type annotated, and type checking is performed
@@ -81,19 +85,23 @@ def strictdataclass(cls: Any):
 
         def __post_init__(self):
             try:
-                fields = self.__annotations__  # pylint: disable=no-member
+                fields = self._chia_streamable.fields
             except Exception:
-                fields = {}
+                fields = []
             data = self.__dict__
-            for (f_name, f_type) in fields.items():
-                if f_name not in data:
-                    raise ValueError(f"Field {f_name} not present")
+            for field in fields:
+                if field.name not in data:
+                    raise ValueError(f"Field {field.name} not present")
                 try:
-                    if not isinstance(data[f_name], f_type):
-                        object.__setattr__(self, f_name, self.parse_item(data[f_name], f_name, f_type))
+                    if not isinstance(data[field.name], field.annotation):
+                        object.__setattr__(
+                            self, field.name, self.parse_item(data[field.name], field.name, field.annotation)
+                        )
                 except TypeError:
                     # Throws a TypeError because we cannot call isinstance for subscripted generics like Optional[int]
-                    object.__setattr__(self, f_name, self.parse_item(data[f_name], f_name, f_type))
+                    object.__setattr__(
+                        self, field.name, self.parse_item(data[field.name], field.name, field.annotation)
+                    )
 
     class NoTypeChecking:
         __no_type_check__ = True
