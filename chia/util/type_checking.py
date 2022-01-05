@@ -1,9 +1,6 @@
 import dataclasses
 import sys
-from typing import Any, List, Optional, Tuple, Type, TYPE_CHECKING, Union
-
-if TYPE_CHECKING:
-    from chia.util.streamable import Streamable
+from typing import Any, List, Optional, Tuple, Type, Union
 
 
 if sys.version_info < (3, 8):
