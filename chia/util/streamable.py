@@ -70,7 +70,11 @@ def dataclass_from_dict(klass, d):
         return tuple(klass_properties)
     elif dataclasses.is_dataclass(klass):
         # Type is a dataclass, data is a dictionary
-        fieldtypes = {f.name: f.annotation for f in klass._chia_streamable.fields}
+        metadata = getattr(klass, "_chia_streamable", None)
+        if metadata is not None:
+            fieldtypes = {f.name: f.annotation for f in metadata.fields}
+        else:
+            fieldtypes = {f.name: f.type for f in dataclasses.fields(klass)}
         return klass(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
     elif is_type_List(klass):
         # Type is a list, data is a list
