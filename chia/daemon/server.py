@@ -115,6 +115,7 @@ if getattr(sys, "frozen", False):
             path = f"{application_path}/{name_map[service_name]}"
             return path
 
+
 else:
     application_path = os.path.dirname(__file__)
 

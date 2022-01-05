@@ -116,6 +116,7 @@ class WalletStateManager:
     root_path: Path
     wallet_node: Any
     pool_store: WalletPoolStore
+    default_cats: Dict[str, Any]
 
     @staticmethod
     async def create(
