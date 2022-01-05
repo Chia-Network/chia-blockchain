@@ -316,7 +316,7 @@ class WalletStateManager:
                 # Unhardened
                 pubkey_unhardened: G1Element = self.get_public_key_unhardened(uint32(index))
                 puzzle_unhardened: Program = target_wallet.puzzle_for_pk(bytes(pubkey_unhardened))
-                if puzzle is None:
+                if puzzle_unhardened is None:
                     self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
                     break
                 puzzlehash_unhardened: bytes32 = puzzle_unhardened.get_tree_hash()
