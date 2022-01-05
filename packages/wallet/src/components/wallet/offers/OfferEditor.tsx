@@ -19,6 +19,7 @@ import {
 } from '@material-ui/core';
 import type OfferEditorRowData from './OfferEditorRowData';
 import { suggestedFilenameForOffer } from './utils';
+import useAssetIdName from '../../../hooks/useAssetIdName';
 import WalletType from '../../../constants/WalletType';
 import OfferEditorConditionsPanel from './OfferEditorConditionsPanel';
 import OfferShareDialog from './OfferShareDialog';
@@ -51,6 +52,7 @@ function OfferEditor(): JSX.Element {
   });
   const openDialog = useOpenDialog();
   const errorDialog = useShowError();
+  const { lookupByAssetId } = useAssetIdName();
   const [suppressShareOnCreate] = useLocalStorage<boolean>(OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE);
   const [createOfferForIds] = useCreateOfferForIdsMutation();
   const [processing, setIsProcessing] = useState<boolean>(false);
@@ -122,7 +124,7 @@ function OfferEditor(): JSX.Element {
         errorDialog(error);
       }
       else {
-        const dialogOptions = { defaultPath: suggestedFilenameForOffer(response.tradeRecord.summary) };
+        const dialogOptions = { defaultPath: suggestedFilenameForOffer(response.tradeRecord.summary, lookupByAssetId) };
         const remote: Remote = (window as any).remote;
         const result = await remote.dialog.showSaveDialog(dialogOptions);
         const { filePath, canceled } = result;

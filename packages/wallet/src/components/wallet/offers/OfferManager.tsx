@@ -159,11 +159,11 @@ function OfferList(props: OfferListProps) {
   }
 
   async function handleExportOffer(tradeId: string) {
-    const { data: response } = await getOfferData(tradeId);
+    const { data: response }: { data: { offer: string, tradeRecord: OfferTradeRecord, success: boolean } } = await getOfferData(tradeId);
     const { offer: offerData, tradeRecord, success } = response;
     if (success === true) {
       const dialogOptions = {
-        defaultPath: suggestedFilenameForOffer(tradeRecord),
+        defaultPath: suggestedFilenameForOffer(tradeRecord.summary, lookupByAssetId),
       }
       const remote: Remote = (window as any).remote;
       const result = await remote.dialog.showSaveDialog(dialogOptions);

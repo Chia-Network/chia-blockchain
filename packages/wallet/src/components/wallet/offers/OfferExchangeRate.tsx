@@ -34,7 +34,7 @@ export default function OfferExchangeRate(props: Props) {
         const fixed = rate.toFixed(walletType === WalletType.STANDARD_WALLET ? 9 : 12);
 
         // remove trailing zeros
-        displayRate = fixed.replace(/0+$/, '');
+        displayRate = fixed.replace(/\.0+$/, '');
       }
       return `${displayRate} ${counterCurrencyName}`;
     });

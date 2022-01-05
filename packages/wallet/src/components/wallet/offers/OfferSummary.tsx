@@ -34,7 +34,10 @@ export default function OfferSummary(props: Props) {
   const takerAmount = takerEntries[0][0].toLowerCase() === 'xch' ? Number(mojo_to_chia(takerEntries[0][1])) : Number(mojo_to_colouredcoin(takerEntries[0][1]));
   const makerExchangeRate = makerAssetInfo && takerAssetInfo ? takerAmount / makerAmount : undefined;
   const takerExchangeRate = makerAssetInfo && takerAssetInfo ? makerAmount / takerAmount : undefined;
-  const sections: { title: React.ReactElement | string, entries: [string, number][] }[] = [{title: makerTitle, entries: makerEntries}, {title: takerTitle, entries: takerEntries}];
+  const sections: { title: React.ReactElement | string, entries: [string, number][] }[] = [
+    {title: makerTitle, entries: isMyOffer ? makerEntries : takerEntries},
+    {title: takerTitle, entries: isMyOffer ? takerEntries : makerEntries}
+  ];
 
   if (!isMyOffer) {
     sections.reverse();

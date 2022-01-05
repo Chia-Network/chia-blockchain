@@ -4,13 +4,41 @@ import {
   mojo_to_colouredcoin_string,
 } from '../../../util/chia';
 import OfferState from './OfferState';
+import OfferSummaryRecord from '../../../types/OfferSummaryRecord';
+import { AssetIdMapEntry } from '../../../hooks/useAssetIdName';
 
 var filenameCounter = 0;
 
-export function suggestedFilenameForOffer(): string {
-  const filename = filenameCounter === 0 ? 'Untitled Offer.offer' : `Untitled Offer ${filenameCounter}.offer`;
-  filenameCounter++;
-  return filename;
+export function suggestedFilenameForOffer(summary: OfferSummaryRecord, lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined): string {
+  if (!summary) {
+    const filename = filenameCounter === 0 ? 'Untitled Offer.offer' : `Untitled Offer ${filenameCounter}.offer`;
+    filenameCounter++;
+    return filename;
+  }
+
+  const makerEntries: [string, string][] = Object.entries(summary.offered);
+  const takerEntries: [string, string][] = Object.entries(summary.requested);
+  const makerAssetInfoAndAmounts: [AssetIdMapEntry | undefined, string][] = makerEntries.map(([assetId, amount]) => [lookupByAssetId(assetId), amount]);
+  const takerAssetInfoAndAmounts: [AssetIdMapEntry | undefined, string][] = takerEntries.map(([assetId, amount]) => [lookupByAssetId(assetId), amount]);
+
+  function filenameBuilder(filename: string, args: [assetInfo: AssetIdMapEntry | undefined, amount: string]): string {
+    const [assetInfo, amount] = args;
+
+    if (filename) {
+      filename += '_';
+    }
+
+    if (assetInfo && amount !== undefined) {
+      filename += formatAmountForWalletType(amount, assetInfo.walletType) + assetInfo.displayName.replace(/\s/g, '').substring(0, 9);
+    }
+
+    return filename;
+  }
+
+  const makerString = makerAssetInfoAndAmounts.reduce(filenameBuilder, '');
+  const takerString = takerAssetInfoAndAmounts.reduce(filenameBuilder, '');
+
+  return `${makerString}_x_${takerString}.offer`;
 }
 
 export function displayStringForOfferState(state: OfferState): string {

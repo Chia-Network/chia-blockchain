@@ -5,6 +5,7 @@ import { Back, Card, Dropzone, Flex, useOpenDialog, useShowError } from '@chia/c
 import { Button, Grid, Typography } from '@material-ui/core';
 import { useGetOfferSummaryMutation } from '@chia/api-react';
 import OfferDataEntryDialog from './OfferDataEntryDialog';
+import OfferSummaryRecord from '../../../types/OfferSummaryRecord';
 import fs, { Stats } from 'fs';
 
 function SelectOfferFile() {
@@ -14,15 +15,33 @@ function SelectOfferFile() {
   const errorDialog = useShowError();
   const [isParsing, setIsParsing] = React.useState<boolean>(false);
 
-  async function parseOfferSummary(offerData: string, offerFilePath: string | undefined) {
-    const { data: response } = await getOfferSummary(offerData);
-    const { summary: offerSummary, success } = response;
+  function parseOfferData(data: string): [offerData: string | undefined, leadingText: string | undefined, trailingText: string | undefined] {
+    // Parse raw offer data looking for the bech32-encoded offer data and any surrounding text.
+    const matches = data.match(/(?<leading>.*)(?<offer>offer1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)(?<trailing>.*)/s)
+    return [matches?.groups?.offer, matches?.groups?.leading, matches?.groups?.trailing];
+  }
 
-    if (!success) {
-      errorDialog(new Error("Could not parse offer data"));
+  async function parseOfferSummary(rawOfferData: string, offerFilePath: string | undefined) {
+    const [offerData /*, leadingText, trailingText*/] = parseOfferData(rawOfferData);
+    let offerSummary: OfferSummaryRecord | undefined;
+
+    if (offerData) {
+      const { data: response } = await getOfferSummary(offerData);
+      const { summary, success } = response;
+
+      if (success) {
+        offerSummary = summary;
+      }
     }
     else {
+      console.warn("Unable to parse offer data");
+    }
+
+    if (offerSummary) {
       history.push('/dashboard/wallets/offers/view', { offerData, offerSummary, offerFilePath, imported: true });
+    }
+    else {
+      errorDialog(new Error("Could not parse offer data"));
     }
   }
 
