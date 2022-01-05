@@ -145,7 +145,7 @@ def unstreamed_field(*args, **kwargs):
     metadata = kwargs.setdefault("metadata", {})
     metadata[_field_metadata_key] = _FieldMetadata(ignore=True)
 
-    return dataclasses.fields(*args, **kwargs)
+    return dataclasses.field(*args, **kwargs)
 
 
 _T_Field = TypeVar("_T_Field", bound="_Field")
@@ -351,10 +351,20 @@ class Streamable:
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
         obj: Streamable = object.__new__(cls)
-        fields: Iterator[str] = iter(getattr(cls, "__annotations__", {}))
+        try:
+            bare_fields = cls._chia_streamable.fields
+        except AttributeError:
+            bare_fields = []
+        fields: Iterator[str] = iter(field.name for field in bare_fields)
         values: Iterator = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
         for field, value in zip(fields, values):
             object.__setattr__(obj, field, value)
+
+        # TODO: should we handle inheritance here?  Or should the post init super() for
+        #       itself?
+        post_init = getattr(cls, "__post_init__", None)
+        if post_init is not None:
+            post_init(obj)
 
         # Use -1 as a sentinel value as it's not currently serializable
         if next(fields, -1) != -1:
