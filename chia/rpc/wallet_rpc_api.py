@@ -1185,14 +1185,30 @@ class WalletRpcApi:
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
+        coin_announcements = None
+        if "coin_announcements" in request and len(request["coin_announcements"]) > 0:
+            coins = hexstr_to_bytes(request["coin_announcements"])
+
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
                 signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
-                    amount_0, puzzle_hash_0, fee, coins=coins, ignore_max_send_amount=True, primaries=additional_outputs
+                    amount_0,
+                    puzzle_hash_0,
+                    fee,
+                    coins=coins,
+                    ignore_max_send_amount=True,
+                    primaries=additional_outputs,
+                    announcements_to_consume=coin_announcements,
                 )
         else:
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
-                amount_0, puzzle_hash_0, fee, coins=coins, ignore_max_send_amount=True, primaries=additional_outputs
+                amount_0,
+                puzzle_hash_0,
+                fee,
+                coins=coins,
+                ignore_max_send_amount=True,
+                primaries=additional_outputs,
+                announcements_to_consume=coin_announcements,
             )
         return {"signed_tx": signed_tx}
 

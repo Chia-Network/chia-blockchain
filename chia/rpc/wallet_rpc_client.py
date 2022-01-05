@@ -180,17 +180,30 @@ class WalletRpcClient(RpcClient):
         return await self.fetch("get_farmed_amount", {})
 
     async def create_signed_transaction(
-        self, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
+        self,
+        additions: List[Dict],
+        coins: List[Coin] = None,
+        fee: uint64 = uint64(0),
+        coin_announcements: bytes32 = None,
     ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
         additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
             response: Dict = await self.fetch(
-                "create_signed_transaction", {"additions": additions_hex, "coins": coins_json, "fee": fee}
+                "create_signed_transaction",
+                {
+                    "additions": additions_hex,
+                    "coins": coins_json,
+                    "fee": fee,
+                    "coin_announcements": coin_announcements.hex(),
+                },
             )
         else:
-            response = await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})
+            response = await self.fetch(
+                "create_signed_transaction",
+                {"additions": additions_hex, "fee": fee, "coin_announcements": coin_announcements.hex()},
+            )
         return TransactionRecord.from_json_dict(response["signed_tx"])
 
     async def create_new_did_wallet(self, amount):
