@@ -573,7 +573,7 @@ class CATWallet:
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if coin_announcements_to_consume is not None:
-            coin_announcements_bytes = {a.name() for a in coin_announcements_to_consume}
+            coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
         else:
             coin_announcements_bytes = None
 
