@@ -196,7 +196,7 @@ class WalletRpcClient(RpcClient):
                     "additions": additions_hex,
                     "coins": coins_json,
                     "fee": fee,
-                    "coin_announcements": coin_announcements.hex() if coin_announcements is bytes32 else None,
+                    "coin_announcements": coin_announcements.hex() if coin_announcements is not None else None,
                 },
             )
         else:
@@ -205,7 +205,7 @@ class WalletRpcClient(RpcClient):
                 {
                     "additions": additions_hex,
                     "fee": fee,
-                    "coin_announcements": coin_announcements.hex() if coin_announcements is bytes32 else None,
+                    "coin_announcements": coin_announcements.hex() if coin_announcements is not None else None,
                 },
             )
         return TransactionRecord.from_json_dict(response["signed_tx"])
