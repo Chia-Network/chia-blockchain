@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import List, Optional, Set
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
@@ -46,6 +47,7 @@ class FullBlock(Streamable):
         return self.reward_chain_block.total_iters
 
     @property
+    @lru_cache(1)
     def header_hash(self):
         return self.foliage.get_hash()
 
