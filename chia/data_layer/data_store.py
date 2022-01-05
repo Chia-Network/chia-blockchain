@@ -758,18 +758,12 @@ class DataStore:
         num_nodes: int = 2500,
     ) -> List[Node]:
         ancestors = await self.get_ancestors_2(node_hash, tree_id, lock=True)
-        stack = []
-        path_hashes = []
-        for ancestor in ancestors:
-            path_hashes.append(ancestor.hash)
-        for ancestor in reversed(ancestors):
-            assert isinstance(ancestor, InternalNode)
-            if ancestor.right_hash not in path_hashes and ancestor.right_hash != node_hash:
-                stack.append(ancestor.right_hash)
-        count = 0
+        path_hashes = {node_hash, *(ancestor.hash for ancestor in ancestors)}
+        # The hashes that need to be traversed, initialized here as the hashes to the right of the ancestors
+        # ordered from shallowest (root) to deepest (leaves) so .pop() from the end gives the deepest first.
+        stack = [ancestor.right_hash for ancestor in reversed(ancestors) if ancestor.right_hash not in path_hashes]
         nodes: List[Node] = []
-        while count < num_nodes:
-            count += 1
+        while len(nodes) < num_nodes:
             node = await self.get_node(node_hash)
             if node is None:
                 return []

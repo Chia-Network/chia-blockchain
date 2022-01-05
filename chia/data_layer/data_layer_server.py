@@ -15,8 +15,8 @@ class DataLayerServer:
         result = {
             "tree_id": tree_id,
             "generation": tree_root.generation,
-            "node_hash": str(tree_root.node_hash),
-            "status": tree_root.status.value,
+            "node_hash": tree_root.node_hash.hex(),
+            "status": tree_root.status,
         }
         return web.json_response(result)
 
@@ -46,7 +46,7 @@ class DataLayerServer:
                     }
                 )
         current_tree_root = await self.data_store.get_tree_root(tree_id_bytes)
-        root_changed = False if str(current_tree_root.node_hash) == root_hash else False
+        root_changed = current_tree_root.node_hash != bytes32.from_hexstr(root_hash)
         return web.json_response(
             {
                 "root_changed": root_changed,
