@@ -5,7 +5,6 @@ import os
 import pathlib
 import subprocess
 from random import Random
-import time
 from typing import Any, Iterator, IO, List, Optional, TYPE_CHECKING, Union
 
 from chia.data_layer.data_layer_types import Side, TerminalNode
