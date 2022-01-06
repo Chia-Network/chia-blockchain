@@ -135,14 +135,12 @@ class DataLayerClient:
                             else (bytes32.from_hexstr(row["reference_node_hash"])),
                             None if row["side"] == "None" else Side(row["side"]),
                             status=Status(row["root_status"]),
-                            skip_expensive_checks=True,
                         )
                     else:
                         await self.data_store.delete(
                             bytes.fromhex(row["key"]),
                             bytes32.from_hexstr(tree_id),
                             status=Status(row["root_status"]),
-                            skip_expensive_checks=True,
                         )
                     print(f"Operation: {row}")
                     current_root = await self.data_store.get_tree_root(bytes32.from_hexstr(tree_id))

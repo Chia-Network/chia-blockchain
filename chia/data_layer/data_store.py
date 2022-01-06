@@ -82,16 +82,6 @@ class DataStore:
                 )
                 """
             )
-            await self.db.execute(
-                """
-                CREATE TABLE IF NOT EXISTS ancestors(
-                    hash TEXT NOT NULL,
-                    ancestor TEXT,
-                    tree_id TEXT NOT NULL,
-                    PRIMARY KEY(hash, tree_id)
-                )
-                """
-            )
 
         return self
 
@@ -117,13 +107,6 @@ class DataStore:
                 "status": status.value,
             },
         )
-        if node_hash is not None:
-            await self.db.execute(
-                """
-                DELETE FROM ancestors WHERE hash == :node_hash
-                """,
-                {"node_hash": node_hash.hex()},
-            )
 
     async def _insert_node(
         self,
@@ -173,20 +156,6 @@ class DataStore:
             value=None,
             tree_id=tree_id.hex(),
         )
-        # Update ancestors table.
-        for hash in (left_hash, right_hash):
-            values = {
-                "hash": hash.hex(),
-                "ancestor": node_hash.hex(),
-                "tree_id": tree_id.hex(),
-            }
-            await self.db.execute(
-                """
-                INSERT OR REPLACE INTO ancestors(hash, ancestor, tree_id)
-                VALUES (:hash, :ancestor, :tree_id)
-                """,
-                values,
-            )
 
         return node_hash  # type: ignore[no-any-return]
 
@@ -401,28 +370,6 @@ class DataStore:
 
         return ancestors
 
-    async def get_ancestors_2(self, node_hash: bytes32, tree_id: bytes32, lock: bool = True) -> List[InternalNode]:
-        nodes = []
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
-                """
-                WITH RECURSIVE
-                    get_ancestors_hash(hash, depth) AS (
-                        SELECT :reference_hash, 0 AS depth
-                        UNION ALL
-                        SELECT ancestors.ancestor, get_ancestors_hash.depth + 1 FROM ancestors, get_ancestors_hash
-                        WHERE ancestors.tree_id == :tree_id AND ancestors.hash == get_ancestors_hash.hash
-                    )
-                SELECT node.* FROM node, get_ancestors_hash
-                WHERE node.hash == get_ancestors_hash.hash AND get_ancestors_hash.depth > 0
-                ORDER BY get_ancestors_hash.depth ASC
-                """,
-                {"reference_hash": node_hash.hex(), "tree_id": tree_id.hex()},
-            )
-            nodes = [InternalNode.from_row(row=row) async for row in cursor]
-
-        return nodes
-
     async def get_pairs(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
@@ -522,14 +469,12 @@ class DataStore:
         *,
         lock: bool = True,
         status: Status = Status.PENDING,
-        skip_expensive_checks: bool = False,
     ) -> bytes32:
         async with self.db_wrapper.locked_transaction(lock=lock):
             was_empty = await self.table_is_empty(tree_id=tree_id, lock=False)
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
-            # If `skip_expensive_checks`, skip this check.
-            # NOTE: This check is still needed, disable it only if data is guaranteed to be correct.
-            if not was_empty and not skip_expensive_checks:
+
+            if not was_empty:
                 # TODO: is there any way the db can enforce this?
                 pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
                 if any(key == node.key for node in pairs):
@@ -559,15 +504,9 @@ class DataStore:
                 if root.node_hash is None:
                     raise Exception("Internal error.")
 
-                ancestors: List[InternalNode] = await self.get_ancestors_2(
+                ancestors: List[InternalNode] = await self.get_ancestors(
                     node_hash=reference_node_hash, tree_id=tree_id, lock=False
                 )
-                # Check table `ancestors` produced the correct result.
-                # NOTE: This assertion is expensive.
-                if not skip_expensive_checks:
-                    assert ancestors == await self.get_ancestors(
-                        node_hash=reference_node_hash, tree_id=tree_id, lock=False
-                    )
 
                 if side == Side.LEFT:
                     left = new_terminal_node_hash
@@ -608,13 +547,10 @@ class DataStore:
         *,
         lock: bool = True,
         status: Status = Status.PENDING,
-        skip_expensive_checks: bool = False,
     ) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
-            ancestors = await self.get_ancestors_2(node_hash=node.hash, tree_id=tree_id, lock=False)
-            if not skip_expensive_checks:
-                assert ancestors == await self.get_ancestors(node_hash=node.hash, tree_id=tree_id, lock=False)
+            ancestors = await self.get_ancestors(node_hash=node.hash, tree_id=tree_id, lock=False)
 
             if len(ancestors) == 0:
                 # the only node is being deleted
@@ -759,7 +695,7 @@ class DataStore:
         lock: bool = True,
         num_nodes: int = 2500,
     ) -> List[Node]:
-        ancestors = await self.get_ancestors_2(node_hash, tree_id, lock=True)
+        ancestors = await self.get_ancestors(node_hash, tree_id, lock=True)
         path_hashes = {node_hash, *(ancestor.hash for ancestor in ancestors)}
         # The hashes that need to be traversed, initialized here as the hashes to the right of the ancestors
         # ordered from shallowest (root) to deepest (leaves) so .pop() from the end gives the deepest first.
