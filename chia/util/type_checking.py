@@ -80,7 +80,10 @@ def strictdataclass(cls: Any):
                 raise ValueError(f"Wrong type for {f_name}")
             return item
 
-        def __post_init__(self):
+        def __post_init__(self, parsed=False):
+            if parsed:
+                return
+
             metadata = getattr(self, "_chia_streamable", None)
             if metadata is not None:
                 fields = {field.name: field.annotation for field in metadata.fields}
