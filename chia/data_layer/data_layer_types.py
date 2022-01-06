@@ -168,3 +168,20 @@ node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]
     NodeType.INTERNAL: InternalNode,
     NodeType.TERMINAL: TerminalNode,
 }
+
+
+@dataclass(frozen=True)
+class InsertionData:
+    hash: bytes32
+    key: bytes
+    value: bytes
+    reference_node_hash: Optional[bytes32]
+    side: Optional[Side]
+    root_status: Status
+
+
+@dataclass(frozen=True)
+class DeletionData:
+    hash: Optional[bytes32]
+    key: bytes
+    root_status: Status

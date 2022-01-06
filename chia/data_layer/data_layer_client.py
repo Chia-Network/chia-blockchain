@@ -9,8 +9,10 @@ from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.data_layer.data_layer_types import Status, NodeType, Side
 from typing import List, Any, Dict
+from dataclasses import dataclass
 
 
+@dataclass
 class DataLayerClient:
     async def init_db(self) -> None:
         self.db_connection = await aiosqlite.connect(":memory_client:")
@@ -131,9 +133,7 @@ class DataLayerClient:
                             None
                             if row["reference_node_hash"] == "None"
                             else (bytes32.from_hexstr(row["reference_node_hash"])),
-                            None
-                            if row["reference_node_hash"] == "None"
-                            else (Side.RIGHT if row["side"] == "right" else Side.LEFT),
+                            None if row["side"] == "None" else Side(row["side"]),
                             status=Status(row["root_status"]),
                             skip_expensive_checks=True,
                         )
@@ -159,4 +159,4 @@ class DataLayerClient:
 
 if __name__ == "__main__":
     data_layer_client = DataLayerClient()
-    asyncio.run(data_layer_client.download_data_layer_history())
+    asyncio.run(data_layer_client.download_data_layer())
