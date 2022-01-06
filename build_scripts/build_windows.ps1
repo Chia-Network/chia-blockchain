@@ -94,6 +94,7 @@ Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru
 npm ci
 $Env:Path = $(npm bin) + ";" + $Env:Path
+Set-Location -Path "..\" -PassThru
 
 Set-Location -Path "..\chia-blockchain-gui" -PassThru
 # We need the code sign cert in the gui subdirectory so we can actually sign the UI package
