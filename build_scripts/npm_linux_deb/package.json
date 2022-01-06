@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "electron-installer-debian": "^3.1.0",
-    "electron-package": "^0.1.0",
+    "electron-packager": "^15.4.0",
     "lerna": "^4.0.0"
   }
 }
