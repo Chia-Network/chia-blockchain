@@ -23,13 +23,15 @@ import {
   TextField,
   Typography,
 } from '@material-ui/core';
-import { suggestedFilenameForOffer } from './utils';
-import useAssetIdName from '../../../hooks/useAssetIdName';
+import { shortSummaryForOffer, suggestedFilenameForOffer } from './utils';
+import useAssetIdName, { AssetIdMapEntry } from '../../../hooks/useAssetIdName';
 import useOpenExternal from "../../../hooks/useOpenExternal";
 import { IncomingMessage, Shell, Remote } from 'electron';
 import OfferLocalStorageKeys from './OfferLocalStorage';
 import OfferSummary from './OfferSummary';
+import child_process from 'child_process';
 import fs from 'fs';
+import path from 'path';
 
 type CommonOfferProps = {
   offerRecord: OfferTradeRecord;
@@ -43,6 +45,17 @@ type CommonDialogProps = {
 
 type OfferShareOfferBinDialogProps = CommonOfferProps & CommonDialogProps;
 type OfferShareKeybaseDialogProps = CommonOfferProps & CommonDialogProps;
+
+async function writeTempOfferFile(offerData: string, filename: string): Promise<string> {
+  const remote: Remote = (window as any).remote;
+  const tempRoot = remote.app.getPath('temp');
+  const tempPath = fs.mkdtempSync(path.join(tempRoot, 'offer'));
+  const filePath = path.join(tempPath, filename);
+
+  fs.writeFileSync(filePath, offerData);
+
+  return filePath;
+}
 
 // Posts the offer data to OfferBin and returns a URL to the offer.
 async function postToOfferBin(offerData: string, sharePrivately: boolean): Promise<string> {
@@ -102,6 +115,42 @@ async function postToOfferBin(offerData: string, sharePrivately: boolean): Promi
       reject(error);
     }
   });
+}
+
+async function postToKeybase(
+  offerRecord: OfferTradeRecord,
+  offerData: string,
+  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined): Promise<boolean> {
+
+  const filename = suggestedFilenameForOffer(offerRecord.summary, lookupByAssetId);
+  const summary = shortSummaryForOffer(offerRecord.summary, lookupByAssetId);
+  const team = 'chia_offers';
+  const channel = 'offers-trading';
+  let filePath: string = '';
+  let success = false;
+
+  filePath = await writeTempOfferFile(offerData, filename);
+
+  try {
+    success = await new Promise((resolve, reject) => {
+      child_process.exec(
+        `keybase chat upload "${team}" --channel "${channel}" --title "${summary}" "${filePath}"`,
+        (error, _/*stdout*/, stderr) => {
+          if (error) {
+            console.error(`Keybase error: ${error}`);
+            reject(new Error(t`Failed to upload offer to Keybase: ${stderr}`));
+          }
+
+          resolve(true);
+      });
+    });
+  }
+  finally {
+    if (filePath) {
+      fs.unlinkSync(filePath);
+    }
+  }
+  return success;
 }
 
 function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
@@ -252,6 +301,8 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
   const { offerRecord, offerData, onClose, open } = props;
   const { lookupByAssetId } = useAssetIdName();
   const showError = useShowError();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [shared, setShared] = React.useState(false);
 
   function handleClose() {
     onClose(false);
@@ -287,22 +338,61 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
     }
   }
 
-  async function handleSaveOffer() {
-    const dialogOptions = {
-      defaultPath: suggestedFilenameForOffer(offerRecord.summary, lookupByAssetId),
-    }
-    const remote: Remote = (window as any).remote;
-    const result = await remote.dialog.showSaveDialog(dialogOptions);
-    const { filePath, canceled } = result;
+  async function handleKeybaseShare() {
+    let success = false;
 
-    if (!canceled && filePath) {
-      try {
-        fs.writeFileSync(filePath, offerData);
-      }
-      catch (err) {
-        console.error(err);
+    try {
+      setIsSubmitting(true);
+      success = await postToKeybase(offerRecord, offerData, lookupByAssetId);
+
+      if (success) {
+        setShared(true);
       }
     }
+    catch (e) {
+      showError(e);
+    }
+    finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (shared) {
+    return (
+      <Dialog
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+        maxWidth="xs"
+        open={open}
+        onClose={handleClose}
+        fullWidth
+      >
+        <DialogTitle>
+          <Trans>Offer Shared</Trans>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Flex flexDirection="column" gap={3}>
+            <Trans>Your offer has been successfully posted to Keybase.</Trans>
+          </Flex>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleKeybaseGoToChannel}
+            color="secondary"
+            variant="contained"
+          >
+            <Trans>Go to #offers-trading</Trans>
+          </Button>
+          <Button
+            onClick={handleClose}
+            color="primary"
+            variant="contained"
+          >
+            <Trans>Close</Trans>
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
   }
 
   return (
@@ -350,40 +440,33 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
               <Trans>Join chia_offers</Trans>
             </Button>
           </Flex>
-          <Divider />
-          <Typography variant="body2">
-            <Trans>
-              If you have already joined the chia_offers team, you can post your offer file to the
-              #offers-trading channel. When sharing an offer file, be sure to include a description
-              of which assets are being offered and requested.
-            </Trans>
-          </Typography>
-          <Flex justifyContent="center" flexGrow={0}>
-            <Button
-              onClick={handleKeybaseGoToChannel}
-              color="primary"
-              variant="contained"
-            >
-              <Trans>Go to #offers-trading</Trans>
-            </Button>
-          </Flex>
         </Flex>
       </DialogContent>
       <DialogActions>
         <Button
-          onClick={handleSaveOffer}
-          color="secondary"
+          onClick={handleKeybaseGoToChannel}
+          color="primary"
           variant="contained"
         >
-          <Trans>Save Offer File</Trans>
+          <Trans>Go to #offers-trading</Trans>
         </Button>
+        <Flex flexGrow={1}></Flex>
         <Button
           onClick={handleClose}
           color="primary"
           variant="contained"
+          disabled={isSubmitting}
         >
-          <Trans>Close</Trans>
+          <Trans>Cancel</Trans>
         </Button>
+        <ButtonLoading
+          onClick={handleKeybaseShare}
+          color="secondary"
+          variant="contained"
+          loading={isSubmitting}
+        >
+          <Trans>Share</Trans>
+        </ButtonLoading>
       </DialogActions>
     </Dialog>
   );

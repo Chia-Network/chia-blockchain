@@ -11,7 +11,7 @@ import WalletType from '../../../constants/WalletType';
 import OfferAssetSelector from './OfferAssetSelector';
 import OfferExchangeRate from './OfferExchangeRate';
 import useAssetIdName, { AssetIdMapEntry } from '../../../hooks/useAssetIdName';
-import { mojo_to_chia_string, mojo_to_colouredcoin_string } from '../../../util/chia';
+import { mojo_to_chia, mojo_to_chia_string, mojo_to_colouredcoin, mojo_to_colouredcoin_string } from '../../../util/chia';
 
 type OfferEditorConditionsRowProps = {
   namePrefix: string;
@@ -35,24 +35,28 @@ function OfferEditorConditionRow(props: OfferEditorConditionsRowProps) {
     setWalletId(selectedWalletId);
   }
   const spendableBalanceString: string | undefined = useMemo(() => {
-    let balance = undefined;
+    let balanceString = undefined;
+    let balance = 0;
 
     if (!isLoading && tradeSide === 'sell' && walletBalance && walletBalance.walletId == walletId) {
       switch (item.walletType) {
         case WalletType.STANDARD_WALLET:
-          balance = mojo_to_chia_string(walletBalance.spendableBalance);
+          balanceString = mojo_to_chia_string(walletBalance.spendableBalance);
+          balance = mojo_to_chia(walletBalance.spendableBalance);
           break;
         case WalletType.CAT:
-          balance = mojo_to_colouredcoin_string(walletBalance.spendableBalance);
+          balanceString = mojo_to_colouredcoin_string(walletBalance.spendableBalance);
+          balance = mojo_to_colouredcoin(walletBalance.spendableBalance);
           break;
         default:
           break;
       }
     }
 
+    setValue(`${namePrefix}.spendableBalanceString`, balanceString);
     setValue(`${namePrefix}.spendableBalance`, balance);
 
-    return balance;
+    return balanceString;
   }, [walletId, walletBalance, isLoading]);
 
   return (

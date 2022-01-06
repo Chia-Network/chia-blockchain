@@ -1,7 +1,8 @@
 import OfferRowData from './OfferRowData';
 
 type OfferEditorRowData = OfferRowData & {
-  spendableBalance?: string;
+  spendableBalance: number;
+  spendableBalanceString?: string;
 };
 
 export default OfferEditorRowData;

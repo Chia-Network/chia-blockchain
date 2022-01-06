@@ -88,7 +88,7 @@ function OfferEditor(): JSX.Element {
       else if (!row.amount) {
         missingAmount = true;
       }
-      else if (Number.parseFloat(row.amount as string) > Number.parseFloat(row.spendableBalance as string)) {
+      else if (Number.parseFloat(row.amount as string) > row.spendableBalance) {
         amountExceedsSpendableBalance = true;
       }
     });

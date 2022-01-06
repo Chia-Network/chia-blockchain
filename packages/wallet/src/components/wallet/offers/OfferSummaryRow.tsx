@@ -7,7 +7,6 @@ import {
   TooltipIcon,
 } from '@chia/core';
 import {
-  Avatar,
   Box,
   Typography,
 } from '@material-ui/core';
@@ -24,11 +23,6 @@ const StyledTitle = styled(Box)`
 
 const StyledValue = styled(Box)`
   word-break: break-all;
-`;
-
-const StyledStep = styled(Avatar)`
-  width: 1.5rem;
-  height: 1.5rem;
 `;
 
 type OfferMojoAmountProps = {
@@ -77,9 +71,7 @@ export default function OfferSummaryRow(props: Props) {
       <Typography variant="body1">
         <Flex flexDirection="row" alignItems="center" gap={1}>
           {rowNumber !== undefined && (
-            <StyledStep>
-              <Typography variant="body2" color="secondary">{rowNumber}</Typography>
-            </StyledStep>
+            <Typography variant="body1" color="secondary" style={{fontWeight: 'bold'}}>{`${rowNumber})`}</Typography>
           )}
           <Typography>{displayAmount} {displayName}</Typography>
         </Flex>

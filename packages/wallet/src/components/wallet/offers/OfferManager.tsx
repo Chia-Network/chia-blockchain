@@ -245,7 +245,7 @@ function OfferList(props: OfferListProps) {
           });
           return (
             resolvedOfferInfo.map((info) => (
-              <Flex flexDirection="row" gap={1}>
+              <Flex flexDirection="row" gap={0.5}>
                 <Typography variant="body2">{info.displayAmount}</Typography>
                 <Typography noWrap variant="body2">{info.displayName}</Typography>
               </Flex>
@@ -268,7 +268,7 @@ function OfferList(props: OfferListProps) {
           });
           return (
             resolvedOfferInfo.map((info) => (
-              <Flex flexDirection="row" gap={1}>
+              <Flex flexDirection="row" gap={0.5}>
                 <Typography variant="body2">{info.displayAmount}</Typography>
                 <Typography noWrap variant="body2">{info.displayName}</Typography>
               </Flex>

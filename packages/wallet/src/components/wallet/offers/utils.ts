@@ -9,17 +9,27 @@ import { AssetIdMapEntry } from '../../../hooks/useAssetIdName';
 
 var filenameCounter = 0;
 
+export function summaryStringsForOffer(
+  summary: OfferSummaryRecord,
+  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined,
+  builder: (filename: string, args: [assetInfo: AssetIdMapEntry | undefined, amount: string]) => string): [makerString: string, takerString: string] {
+    const makerEntries: [string, string][] = Object.entries(summary.offered);
+    const takerEntries: [string, string][] = Object.entries(summary.requested);
+    const makerAssetInfoAndAmounts: [AssetIdMapEntry | undefined, string][] = makerEntries.map(([assetId, amount]) => [lookupByAssetId(assetId), amount]);
+    const takerAssetInfoAndAmounts: [AssetIdMapEntry | undefined, string][] = takerEntries.map(([assetId, amount]) => [lookupByAssetId(assetId), amount]);
+
+    const makerString = makerAssetInfoAndAmounts.reduce(builder, '');
+    const takerString = takerAssetInfoAndAmounts.reduce(builder, '');
+
+    return [makerString, takerString];
+}
+
 export function suggestedFilenameForOffer(summary: OfferSummaryRecord, lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined): string {
   if (!summary) {
     const filename = filenameCounter === 0 ? 'Untitled Offer.offer' : `Untitled Offer ${filenameCounter}.offer`;
     filenameCounter++;
     return filename;
   }
-
-  const makerEntries: [string, string][] = Object.entries(summary.offered);
-  const takerEntries: [string, string][] = Object.entries(summary.requested);
-  const makerAssetInfoAndAmounts: [AssetIdMapEntry | undefined, string][] = makerEntries.map(([assetId, amount]) => [lookupByAssetId(assetId), amount]);
-  const takerAssetInfoAndAmounts: [AssetIdMapEntry | undefined, string][] = takerEntries.map(([assetId, amount]) => [lookupByAssetId(assetId), amount]);
 
   function filenameBuilder(filename: string, args: [assetInfo: AssetIdMapEntry | undefined, amount: string]): string {
     const [assetInfo, amount] = args;
@@ -35,10 +45,33 @@ export function suggestedFilenameForOffer(summary: OfferSummaryRecord, lookupByA
     return filename;
   }
 
-  const makerString = makerAssetInfoAndAmounts.reduce(filenameBuilder, '');
-  const takerString = takerAssetInfoAndAmounts.reduce(filenameBuilder, '');
+  const [makerString, takerString] = summaryStringsForOffer(summary, lookupByAssetId, filenameBuilder);
 
   return `${makerString}_x_${takerString}.offer`;
+}
+
+export function shortSummaryForOffer(summary: OfferSummaryRecord, lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined): string {
+  if (!summary) {
+    return '';
+  }
+
+  function summaryBuilder(shortSummary: string, args: [assetInfo: AssetIdMapEntry | undefined, amount: string]): string {
+    const [assetInfo, amount] = args;
+
+    if (shortSummary) {
+      shortSummary += ', ';
+    }
+
+    if (assetInfo && amount !== undefined) {
+      shortSummary += formatAmountForWalletType(amount, assetInfo.walletType) + ' ' + assetInfo.displayName.replace(/\s/g, '');
+    }
+
+    return shortSummary;
+  }
+
+  const [makerString, takerString] = summaryStringsForOffer(summary, lookupByAssetId, summaryBuilder);
+
+  return `Offering: [${makerString}], Requesting: [${takerString}]`;
 }
 
 export function displayStringForOfferState(state: OfferState): string {
