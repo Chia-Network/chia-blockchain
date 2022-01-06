@@ -153,8 +153,8 @@ class TestWalletRpc:
             try:
                 push_res = await client_node.push_tx(tx_res.spend_bundle)
             except ValueError as error:
-                if error.args[0]["error"].find("ASSERT_ANNOUNCE_CONSUMED_FAILED") == -1:  # noqa: E731,E123
-                    raise ValueError(error.args[0])
+                if error.args[0]["error"].find("ASSERT_ANNOUNCE_CONSUMED_FAILED") == -1:  # noqa:  # pylint: disable=E1126
+                    raise ValueError from error
 
             # Test basic transaction to one output
             signed_tx_amount = 888000
@@ -170,8 +170,8 @@ class TestWalletRpc:
             push_res = await client_node.push_tx(tx_res.spend_bundle)
             assert push_res["success"]
             assert (await client.get_wallet_balance("1"))[
-                "confirmed_wallet_balance"
-            ] == initial_funds_eventually - tx_amount
+                       "confirmed_wallet_balance"
+                   ] == initial_funds_eventually - tx_amount
 
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
@@ -217,8 +217,8 @@ class TestWalletRpc:
             assert any([addition.amount == 555 for addition in send_tx_res.additions])
             assert any([addition.amount == 666 for addition in send_tx_res.additions])
             assert (
-                sum([rem.amount for rem in send_tx_res.removals]) - sum([ad.amount for ad in send_tx_res.additions])
-                == 200
+                    sum([rem.amount for rem in send_tx_res.removals]) - sum([ad.amount for ad in send_tx_res.additions])
+                    == 200
             )
 
             await asyncio.sleep(3)
