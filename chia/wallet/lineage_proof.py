@@ -25,4 +25,4 @@ class LineageProof(Streamable):
         return Program.to(final_list)
 
     def is_none(self) -> bool:
-        return all([self.parent_name is None, self.inner_puzzle_hash is None, self.amount is None])
+        return self.parent_name is None or self.inner_puzzle_hash is None or self.amount is None
