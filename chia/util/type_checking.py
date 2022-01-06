@@ -2,7 +2,6 @@ import dataclasses
 import sys
 from typing import Any, List, Optional, Tuple, Type, Union
 
-
 if sys.version_info < (3, 8):
 
     def get_args(t: Type[Any]) -> Tuple[Any, ...]:
@@ -81,6 +80,8 @@ def strictdataclass(cls: Any):
             return item
 
         def __post_init__(self, parsed=False):
+            # TODO: rework to avoid attaching all this expensive work we only sometimes
+            #       want such that it is outside of the .__init__() path.
             if parsed:
                 return
 
