@@ -184,10 +184,12 @@ class WalletRpcClient(RpcClient):
         additions: List[Dict],
         coins: List[Coin] = None,
         fee: uint64 = uint64(0),
-        coin_announcements: bytes32 = None,
+        coin_announcements: List[bytes32] = None,
     ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
         additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
+        # Converts bytes to hex for coin announcements.
+        coin_announcements_hex = [announcement.hex() for announcement in coin_announcements]
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
             response: Dict = await self.fetch(
@@ -196,7 +198,7 @@ class WalletRpcClient(RpcClient):
                     "additions": additions_hex,
                     "coins": coins_json,
                     "fee": fee,
-                    "coin_announcements": coin_announcements.hex() if coin_announcements is not None else None,
+                    "coin_announcements": coin_announcements_hex,
                 },
             )
         else:
@@ -205,7 +207,7 @@ class WalletRpcClient(RpcClient):
                 {
                     "additions": additions_hex,
                     "fee": fee,
-                    "coin_announcements": coin_announcements.hex() if coin_announcements is not None else None,
+                    "coin_announcements": coin_announcements_hex,
                 },
             )
         return TransactionRecord.from_json_dict(response["signed_tx"])
