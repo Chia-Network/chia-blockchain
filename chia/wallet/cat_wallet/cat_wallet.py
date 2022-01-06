@@ -412,7 +412,12 @@ class CATWallet:
 
         for record in record_list:
             lineage = await self.get_lineage_proof_for_coin(record.coin)
-            if lineage is not None:
+            if (
+                lineage is not None
+                and lineage.parent_name is not None
+                and lineage.amount is not None
+                and lineage.inner_puzzle_hash is not None
+            ):
                 result.append(record)
 
         return result
