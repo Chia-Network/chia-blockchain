@@ -406,7 +406,7 @@ class TestStreamable(unittest.TestCase):
             o: Optional[uint32] = unstreamed_field(init=False)
 
             def __post_init__(self, parsed=False):
-                super().__post_init__(parsed=parsed)
+                super().__post_init__(parsed=parsed)  # pylint: disable=E1101
                 super().__setattr__("m", self.a + uint32(1))
                 super().__setattr__("n", self.c + [uint32(2)])
                 super().__setattr__("o", self.e + uint32(3))
