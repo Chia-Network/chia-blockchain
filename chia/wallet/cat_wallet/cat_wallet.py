@@ -578,7 +578,7 @@ class CATWallet:
             coin_announcements_bytes = None
 
         if puzzle_announcements_to_consume is not None:
-            puzzle_announcements_bytes = {a.name() for a in puzzle_announcements_to_consume}
+            puzzle_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in puzzle_announcements_to_consume}
         else:
             puzzle_announcements_bytes = None
 
