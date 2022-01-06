@@ -281,6 +281,9 @@ class FullNodeRpcApi:
         exclude_hh = False
         if "exclude_header_hash" in request:
             exclude_hh = request["exclude_header_hash"]
+        exclude_reorged = False
+        if "exclude_reorged" in request:
+            exclude_reorged = request["exclude_reorged"]
 
         start = int(request["start"])
         end = int(request["end"])
@@ -290,9 +293,13 @@ class FullNodeRpcApi:
         blocks: List[FullBlock] = await self.service.block_store.get_full_blocks_at(block_range)
         json_blocks = []
         for block in blocks:
+            hh: bytes32 = block.header_hash
+            if exclude_reorged and self.service.blockchain.height_to_hash(block.height) != hh:
+                # Don't include forked (reorged) blocks
+                continue
             json = block.to_json_dict()
             if not exclude_hh:
-                json["header_hash"] = block.header_hash.hex()
+                json["header_hash"] = hh.hex()
             json_blocks.append(json)
         return {"blocks": json_blocks}
 
@@ -542,17 +549,15 @@ class FullNodeRpcApi:
         }
 
     async def get_puzzle_and_solution(self, request: Dict) -> Optional[Dict]:
-        coin_name: bytes32 = bytes32.from_hexstr(request["coin_id"])
+        coin_name: bytes32 = bytes32(hexstr_to_bytes(request["coin_id"]))
         height = request["height"]
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
         if coin_record is None or not coin_record.spent or coin_record.spent_block_index != height:
             raise ValueError(f"Invalid height {height}. coin record {coin_record}")
 
         header_hash = self.service.blockchain.height_to_hash(height)
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
-        #       expected "bytes32"  [arg-type]
-        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
+        assert header_hash is not None
+        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
 
         if block is None or block.transactions_generator is None:
             raise ValueError("Invalid block or block generator")

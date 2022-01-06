@@ -149,8 +149,8 @@ class ChiaServer:
         self.chia_ca_crt_path, self.chia_ca_key_path = chia_ca_crt_key
         self.node_id = self.my_id()
 
-        self.incoming_task = asyncio.create_task(self.incoming_api_task())
-        self.gc_task: asyncio.Task = asyncio.create_task(self.garbage_collect_connections_task())
+        self.incoming_task: Optional[asyncio.Task] = None
+        self.gc_task: Optional[asyncio.Task] = None
         self.app: Optional[Application] = None
         self.runner: Optional[web.AppRunner] = None
         self.site: Optional[TCPSite] = None
@@ -213,6 +213,11 @@ class ChiaServer:
                 del self.banned_peers[peer_ip]
 
     async def start_server(self, on_connect: Callable = None):
+        if self.incoming_task is None:
+            self.incoming_task = asyncio.create_task(self.incoming_api_task())
+        if self.gc_task is None:
+            self.gc_task = asyncio.create_task(self.garbage_collect_connections_task())
+
         if self._local_type in [NodeType.WALLET, NodeType.HARVESTER, NodeType.TIMELORD]:
             return None
 
@@ -716,8 +721,12 @@ class ChiaServer:
             task.cancel()
 
         self.shut_down_event.set()
-        self.incoming_task.cancel()
-        self.gc_task.cancel()
+        if self.incoming_task is not None:
+            self.incoming_task.cancel()
+            self.incoming_task = None
+        if self.gc_task is not None:
+            self.gc_task.cancel()
+            self.gc_task = None
 
     async def await_closed(self) -> None:
         self.log.debug("Await Closed")
@@ -779,13 +788,9 @@ class ChiaServer:
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict) -> bool:
         if trusted_peers is None:
             return False
-        for trusted_peer in trusted_peers:
-            cert = self.root_path / trusted_peers[trusted_peer]
-            pem_cert = x509.load_pem_x509_certificate(cert.read_bytes())
-            cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
-            der_cert = x509.load_der_x509_certificate(cert_bytes)
-            peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
-            if peer_id == peer.peer_node_id:
-                self.log.debug(f"trusted node {peer.peer_node_id} {peer.peer_host}")
-                return True
-        return False
+        if not self.config["testing"] and peer.peer_host == "127.0.0.1":
+            return True
+        if peer.peer_node_id.hex() not in trusted_peers:
+            return False
+
+        return True

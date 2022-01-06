@@ -38,7 +38,7 @@ from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from tests.wallet_tools import WalletTool
-from chia.wallet.cc_wallet.cc_wallet import CCWallet
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.transaction_record import TransactionRecord
 
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
@@ -150,7 +150,9 @@ async def wallet_nodes_mainnet():
 
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
-    async def do_test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
+    @pytest.mark.parametrize("test_reorgs", [False, True])
+    @pytest.mark.parametrize("tx_size", [10000, 3000000000000])
+    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
         nodes, wallets = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -289,7 +291,10 @@ class TestFullNodeBlockCompression:
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
 
         # Creates a cc wallet
-        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_1.wallet_state_manager, wallet, uint64(100))
+        async with wallet_node_1.wallet_state_manager.lock:
+            cc_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+                wallet_node_1.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+            )
         tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
         tr = tx_queue[0]
         await time_out_assert(
@@ -317,14 +322,15 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_2, 10)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 10)
 
-        # Confirm generator is compressed
-        program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+        # Confirm generator is not compressed, #CAT creation has a cat spend
+        all_blocks = await full_node_1.get_all_full_blocks()
+        program: Optional[SerializedProgram] = all_blocks[-1].transactions_generator
         assert program is not None
-        assert detect_potential_template_generator(uint32(10), program) is None
-        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+        assert len(all_blocks[-1].transactions_generator_ref_list) == 0
 
         # Make a cc transaction
-        tr: TransactionRecord = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
+        tr_list: List[TransactionRecord] = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
+        tr = tr_list[0]
         await wallet.wallet_state_manager.add_pending_transaction(tr)
         await time_out_assert(
             10,
@@ -390,14 +396,6 @@ class TestFullNodeBlockCompression:
             for block in reog_blocks:
                 await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
             assert full_node_1.full_node.full_node_store.previous_generator is None
-
-    @pytest.mark.asyncio
-    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
-        await self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000, True)
-
-    @pytest.mark.asyncio
-    async def test_block_compression_2(self, setup_two_nodes_and_wallet, empty_blockchain):
-        await self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000, False)
 
 
 class TestFullNodeProtocol:

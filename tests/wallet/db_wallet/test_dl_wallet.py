@@ -2,6 +2,8 @@ import asyncio
 import dataclasses
 import pytest
 import time
+from typing import AsyncIterator, Iterator
+
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
@@ -15,51 +17,66 @@ from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 
+from tests.setup_nodes import SimulatorsAndWallets
 
 pytestmark = pytest.mark.data_layer
 
 
 @pytest.fixture(scope="module")
-def event_loop():
+def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
     loop = asyncio.get_event_loop()
     yield loop
 
 
 class TestDLWallet:
     @pytest.fixture(scope="function")
-    async def wallet_node(self):
+    async def wallet_node(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
+    async def two_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
+    async def three_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 3, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes_five_freeze(self):
+    async def two_wallet_nodes_five_freeze(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
     @pytest.fixture(scope="function")
-    async def three_sim_two_wallets(self):
+    async def three_sim_two_wallets(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(3, 2, {}):
             yield _
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_update_coin(self, three_wallet_nodes):
+    async def test_update_coin(self, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
         wallet_node_1, server_1 = wallets[1]
         wallet_node_2, server_2 = wallets[2]
+        assert wallet_node_0.wallet_state_manager is not None
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+
+        if trusted:
+            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_1.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_1.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
 
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
@@ -74,6 +91,7 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
+        assert wallet_node_0.wallet_state_manager is not None
         # Wallet1 sets up DLWallet1 without any backup set
         async with wallet_node_0.wallet_state_manager.lock:
             creation_record = await DataLayerWallet.create_new_dl_wallet(
@@ -102,19 +120,35 @@ class TestDLWallet:
         )
         assert dl_wallet_0.get_history() == [current_root, new_merkle_tree.calculate_root()]
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_announce_coin(self, three_wallet_nodes) -> None:
+    async def test_announce_coin(self, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
         wallet_node_1, server_1 = wallets[1]
         wallet_node_2, server_2 = wallets[2]
+        assert wallet_node_0.wallet_state_manager is not None
+        assert wallet_node_1.wallet_state_manager is not None
+        assert wallet_node_2.wallet_state_manager is not None
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
 
         ph2 = await wallet_2.get_new_puzzlehash()
+
+        if trusted:
+            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_1.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_1.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
 
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
@@ -142,7 +176,7 @@ class TestDLWallet:
         await full_node_api.farm_blocks(count=1, wallet=wallet_1)
 
         sb, ann = await dl_wallet_0.create_report_spend()
-        tr = await wallet_1.generate_signed_transaction(200, ph2, puzzle_announcements_to_consume={ann.name()})
+        tr = await wallet_1.generate_signed_transaction(uint64(200), ph2, puzzle_announcements_to_consume={ann})
         agg_sb = SpendBundle.aggregate([tr.spend_bundle, sb])
         new_tr = dataclasses.replace(tr, spend_bundle=agg_sb)
         await wallet_1.push_transaction(new_tr)
@@ -151,9 +185,13 @@ class TestDLWallet:
         await time_out_assert(15, wallet_2.get_confirmed_balance, 200)
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 200)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_dlo_wallet(self, three_wallet_nodes) -> None:
-        time_lock = 10
+    async def test_dlo_wallet(self, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
+        time_lock = uint64(10)
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_api.time_per_block = 2 * time_lock
@@ -161,11 +199,23 @@ class TestDLWallet:
         wallet_node_0, server_0 = wallets[0]
         wallet_node_1, server_1 = wallets[1]
         wallet_node_2, server_2 = wallets[2]
+        assert wallet_node_0.wallet_state_manager is not None
+        assert wallet_node_1.wallet_state_manager is not None
+        assert wallet_node_2.wallet_state_manager is not None
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
 
         ph2 = await wallet_2.get_new_puzzlehash()
+
+        if trusted:
+            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_1.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_1.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
 
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
@@ -224,7 +274,7 @@ class TestDLWallet:
             )
 
         offer_coin = await dlo_wallet_1.get_coin()
-        offer_full_puzzle = dlo_wallet_1.puzzle_for_pk(0x00)
+        offer_full_puzzle = dlo_wallet_1.puzzle_for_pk(0x00)  # type: ignore[arg-type]
         db_puzzle, db_innerpuz, current_root = await dl_wallet_0.get_info_for_offer_claim()
         inclusion_proof = current_tree.generate_proof(Program.to("thing").get_tree_hash())
         assert db_innerpuz is not None
@@ -248,6 +298,7 @@ class TestDLWallet:
             spend_bundle=sb,
             additions=sb.additions(),
             removals=sb.removals(),
+            memos=list(sb.get_memos().items()),
             wallet_id=dl_wallet_0.id(),
             sent_to=[],
             trade_id=None,
@@ -260,9 +311,13 @@ class TestDLWallet:
         await time_out_assert(15, wallet_2.get_confirmed_balance, 201)
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 201)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_dlo_wallet_reclaim(self, three_wallet_nodes) -> None:
-        time_lock = 10
+    async def test_dlo_wallet_reclaim(self, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
+        time_lock = uint64(10)
 
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -271,9 +326,21 @@ class TestDLWallet:
         wallet_node_0, server_0 = wallets[0]
         wallet_node_1, server_1 = wallets[1]
         wallet_node_2, server_2 = wallets[2]
+        assert wallet_node_0.wallet_state_manager is not None
+        assert wallet_node_1.wallet_state_manager is not None
+        assert wallet_node_2.wallet_state_manager is not None
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
+
+        if trusted:
+            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_1.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_1.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
 
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)

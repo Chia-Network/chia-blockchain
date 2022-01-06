@@ -1,6 +1,6 @@
 import asyncio
 import itertools
-from typing import Any, Collection, Dict, List, Optional, Set
+from typing import Collection, List, Optional, Set
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
@@ -13,6 +13,7 @@ from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
 
 
@@ -42,7 +43,7 @@ class FullNodeSimulator(FullNodeAPI):
         self.bt = block_tools
         self.full_node = full_node
         self.config = full_node.config
-        self.time_per_block = None
+        self.time_per_block: Optional[float] = None
         if "simulation" in self.config and self.config["simulation"] is True:
             self.use_current_time = True
         else:
@@ -342,10 +343,10 @@ class FullNodeSimulator(FullNodeAPI):
         #       WalletRpcApi.create_signed_transaction().  Perhaps it should be moved
         #       somewhere more reusable.
 
-        outputs: List[Dict[str, Any]] = []
+        outputs: List[AmountWithPuzzlehash] = []
         for amount in amounts:
             puzzle_hash = await wallet.get_new_puzzlehash()
-            outputs.append({"puzzlehash": puzzle_hash, "amount": uint64(amount)})
+            outputs.append({"puzzlehash": puzzle_hash, "amount": uint64(amount), "memos": []})
 
         transaction_records: List[TransactionRecord] = []
         outputs_iterator = iter(outputs)

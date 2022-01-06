@@ -50,24 +50,19 @@ def validate_clvm_and_signature(
         bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
         program = simple_solution_generator(bundle)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        result: NPCResult = get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True)
-
+        result: NPCResult = get_name_puzzle_conditions(
+            program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True
+        )
         if result.error is not None:
             return Err(result.error), b"", {}
 
         pks: List[G1Element] = []
-        msgs: List[bytes32] = []
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "List[bytes]", variable has type
-        #       "List[bytes32]")  [assignment]
-        pks, msgs = pkm_pairs(result.npc_list, additional_data)  # type: ignore[assignment]
+        msgs: List[bytes] = []
+        pks, msgs = pkm_pairs(result.npc_list, additional_data)
 
         # Verify aggregated signature
         cache: LRUCache = LRUCache(10000)
-        # TODO: address hint error and remove ignore
-        #       error: Argument 2 to "aggregate_verify" has incompatible type "List[bytes32]"; expected "List[bytes]"
-        #       [arg-type]
-        if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):  # type: ignore[arg-type]  # noqa: E501
+        if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):
             return Err.BAD_AGGREGATE_SIGNATURE, b"", {}
         new_cache_entries: Dict[bytes, bytes] = {}
         for k, v in cache.cache.items():
@@ -247,9 +242,16 @@ class MempoolManager:
         start_time = time.time()
         if new_spend_bytes is None:
             new_spend_bytes = bytes(new_spend)
-        err, cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
-            self.pool,
-            validate_clvm_and_signature,
+
+        # err, cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
+        #     self.pool,
+        #     validate_clvm_and_signature,
+        #     new_spend_bytes,
+        #     int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM),
+        #     self.constants.COST_PER_BYTE,
+        #     self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+        # )
+        err, cached_result_bytes, new_cache_entries = validate_clvm_and_signature(
             new_spend_bytes,
             int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM),
             self.constants.COST_PER_BYTE,

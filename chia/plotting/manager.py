@@ -220,9 +220,8 @@ class PlotManager:
         self.last_refresh_time = 0
 
     def _refresh_task(self):
-        try:
-            while self._refreshing_enabled:
-
+        while self._refreshing_enabled:
+            try:
                 while not self.needs_refresh() and self._refreshing_enabled:
                     time.sleep(1)
 
@@ -243,6 +242,14 @@ class PlotManager:
                 # First drop all plots we have in plot_filename_paths but not longer in the filesystem or set in config
                 def plot_removed(test_path: Path):
                     return not test_path.exists() or test_path.parent not in plot_directories
+
+                for path in list(self.failed_to_open_filenames.keys()):
+                    if plot_removed(path):
+                        del self.failed_to_open_filenames[path]
+
+                for path in self.no_key_filenames.copy():
+                    if plot_removed(path):
+                        self.no_key_filenames.remove(path)
 
                 filenames_to_remove: List[str] = []
                 for plot_filename, paths_entry in self.plot_filename_paths.items():
@@ -305,9 +312,9 @@ class PlotManager:
                     f"total_result.removed {len(total_result.removed)}, "
                     f"total_duration {total_result.duration:.2f} seconds"
                 )
-        except Exception as e:
-            log.error(f"_refresh_callback raised: {e} with the traceback: {traceback.format_exc()}")
-            self.reset()
+            except Exception as e:
+                log.error(f"_refresh_callback raised: {e} with the traceback: {traceback.format_exc()}")
+                self.reset()
 
     def refresh_batch(self, plot_paths: List[Path], plot_directories: Set[Path]) -> PlotRefreshResult:
         start_time: float = time.time()
@@ -391,6 +398,11 @@ class PlotManager:
                         self.no_key_filenames.add(file_path)
                         if not self.open_no_key_filenames:
                             return None
+
+                    # If a plot is in `no_key_filenames` the keys were missing in earlier refresh cycles. We can remove
+                    # the current plot from that list if its in there since we passed the key checks above.
+                    if file_path in self.no_key_filenames:
+                        self.no_key_filenames.remove(file_path)
 
                     local_sk = master_sk_to_local_sk(local_master_sk)
 
