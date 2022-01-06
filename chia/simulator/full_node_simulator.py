@@ -13,6 +13,7 @@ from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 
@@ -43,7 +44,7 @@ class FullNodeSimulator(FullNodeAPI):
         self.bt = block_tools
         self.full_node = full_node
         self.config = full_node.config
-        self.time_per_block = None
+        self.time_per_block: Optional[float] = None
         if "simulation" in self.config and self.config["simulation"] is True:
             self.use_current_time = True
         else:

@@ -1,8 +1,7 @@
 import itertools
 import logging
-from typing import AsyncIterable, Awaitable, Callable, Dict, List, Optional
+from typing import Awaitable, Callable, Dict, List, Optional
 
-import aiosqlite
 import pytest
 
 from chia.data_layer.data_layer_errors import (
@@ -22,51 +21,11 @@ from chia.util.db_wrapper import DBWrapper
 
 from tests.core.data_layer.util import add_0123_example, add_01234567_example, Example
 
-# from tests.setup_nodes import bt, test_constants
 
 log = logging.getLogger(__name__)
 
 
 pytestmark = pytest.mark.data_layer
-
-
-@pytest.fixture(name="db_connection", scope="function")
-async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
-    async with aiosqlite.connect(":memory:") as connection:
-        # make sure this is on for tests even if we disable it at run time
-        await connection.execute("PRAGMA foreign_keys = ON")
-        yield connection
-
-
-@pytest.fixture(name="db_wrapper", scope="function")
-def db_wrapper_fixture(db_connection: aiosqlite.Connection) -> DBWrapper:
-    return DBWrapper(db_connection)
-
-
-@pytest.fixture(name="tree_id", scope="function")
-def tree_id_fixture() -> bytes32:
-    base = b"a tree id"
-    pad = b"." * (32 - len(base))
-    return bytes32(pad + base)
-
-
-@pytest.fixture(name="raw_data_store", scope="function")
-async def raw_data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
-    return await DataStore.create(db_wrapper=db_wrapper)
-
-
-@pytest.fixture(name="data_store", scope="function")
-async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> AsyncIterable[DataStore]:
-    await raw_data_store.create_tree(tree_id=tree_id)
-
-    await raw_data_store.check()
-    yield raw_data_store
-    await raw_data_store.check()
-
-
-# @pytest.fixture(name="root", scope="function")
-# async def root_fixture(data_store: DataStore, tree_id: bytes32) -> Root:
-#     return await data_store.get_tree_root(tree_id=tree_id)
 
 
 table_columns: Dict[str, List[str]] = {
@@ -294,13 +253,23 @@ async def test_get_pairs_when_empty(data_store: DataStore, tree_id: bytes32) -> 
     assert pairs == []
 
 
+@pytest.mark.parametrize(
+    argnames=["first_value", "second_value"],
+    argvalues=[[b"\x06", b"\x06"], [b"\x06", b"\x07"]],
+    ids=["same values", "different values"],
+)
 @pytest.mark.asyncio()
-async def test_inserting_duplicate_key_fails(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_inserting_duplicate_key_fails(
+    data_store: DataStore,
+    tree_id: bytes32,
+    first_value: bytes,
+    second_value: bytes,
+) -> None:
     key = b"\x05"
 
     first_hash = await data_store.insert(
         key=key,
-        value=b"\x06",
+        value=first_value,
         tree_id=tree_id,
         reference_node_hash=None,
         side=None,
@@ -310,7 +279,7 @@ async def test_inserting_duplicate_key_fails(data_store: DataStore, tree_id: byt
     with pytest.raises(Exception):
         await data_store.insert(
             key=key,
-            value=b"\x07",
+            value=second_value,
             tree_id=tree_id,
             reference_node_hash=first_hash,
             side=Side.RIGHT,
@@ -544,18 +513,18 @@ async def test_proof_of_inclusion_by_hash(data_store: DataStore, tree_id: bytes3
     expected_layers = [
         ProofOfInclusionLayer(
             other_hash_side=Side.RIGHT,
-            other_hash=bytes32.fromhex("fb66fe539b3eb2020dfbfadfd601fa318521292b41f04c2057c16fca6b947ca1"),  # type: ignore[arg-type]  # noqa: E501
-            combined_hash=bytes32.fromhex("36cb1fc56017944213055da8cb0178fb0938c32df3ec4472f5edf0dff85ba4a3"),  # type: ignore[arg-type]  # noqa: E501
+            other_hash=bytes32.fromhex("fb66fe539b3eb2020dfbfadfd601fa318521292b41f04c2057c16fca6b947ca1"),
+            combined_hash=bytes32.fromhex("36cb1fc56017944213055da8cb0178fb0938c32df3ec4472f5edf0dff85ba4a3"),
         ),
         ProofOfInclusionLayer(
             other_hash_side=Side.RIGHT,
-            other_hash=bytes32.fromhex("6d3af8d93db948e8b6aa4386958e137c6be8bab726db86789594b3588b35adcd"),  # type: ignore[arg-type]  # noqa: E501
-            combined_hash=bytes32.fromhex("5f67a0ab1976e090b834bf70e5ce2a0f0a9cd474e19a905348c44ae12274d30b"),  # type: ignore[arg-type]  # noqa: E501
+            other_hash=bytes32.fromhex("6d3af8d93db948e8b6aa4386958e137c6be8bab726db86789594b3588b35adcd"),
+            combined_hash=bytes32.fromhex("5f67a0ab1976e090b834bf70e5ce2a0f0a9cd474e19a905348c44ae12274d30b"),
         ),
         ProofOfInclusionLayer(
             other_hash_side=Side.LEFT,
-            other_hash=bytes32.fromhex("c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2"),  # type: ignore[arg-type]  # noqa: E501
-            combined_hash=bytes32.fromhex("7a5193a4e31a0a72f6623dfeb2876022ab74a48abb5966088a1c6f5451cc5d81"),  # type: ignore[arg-type]  # noqa: E501
+            other_hash=bytes32.fromhex("c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2"),
+            combined_hash=bytes32.fromhex("7a5193a4e31a0a72f6623dfeb2876022ab74a48abb5966088a1c6f5451cc5d81"),
         ),
     ]
 
