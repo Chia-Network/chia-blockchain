@@ -1185,8 +1185,8 @@ class WalletRpcApi:
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
-        coin_announcements: Set[bytes32] = None
-        if "coin_announcements" in request and len(request["coin_announcements"]) > 0:
+        coin_announcements: Optional[Set[bytes32]] = None
+        if "coin_announcements" in request and request["coin_announcements"] is not None and len(request["coin_announcements"]) > 0:
             coin_announcements = set([hexstr_to_bytes(announcement) for announcement in request["coin_announcements"]])
 
         if hold_lock:
