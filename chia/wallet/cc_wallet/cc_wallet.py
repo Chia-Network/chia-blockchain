@@ -236,7 +236,7 @@ class CCWallet:
 
     async def get_max_send_amount(self, records=None):
         spendable: List[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
+            await self.get_cc_spendable_coins(records)
         )
         if len(spendable) == 0:
             return 0
@@ -417,7 +417,7 @@ class CCWallet:
 
         for record in record_list:
             lineage = await self.get_lineage_proof_for_coin(record.coin)
-            if lineage is not None:
+            if lineage is not None and lineage.is_none() is False:
                 result.append(record)
 
         return result
