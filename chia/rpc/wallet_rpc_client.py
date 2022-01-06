@@ -188,8 +188,10 @@ class WalletRpcClient(RpcClient):
     ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
         additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
-        # Converts bytes to hex for coin announcements.
-        coin_announcements_hex = [announcement.hex() for announcement in coin_announcements]
+        # Converts bytes to hex for coin announcements and does not if it is none.
+        coin_announcements_hex: Optional[List[str]] = None
+        if coin_announcements is not None and len(coin_announcements) > 0:
+            coin_announcements_hex = [announcement.hex() for announcement in coin_announcements]
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
             response: Dict = await self.fetch(
