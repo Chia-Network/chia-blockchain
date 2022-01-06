@@ -153,7 +153,7 @@ class TestWalletRpc:
             try:
                 push_res = await client_node.push_tx(tx_res.spend_bundle)
             except ValueError as error:
-                if error.args[0]["error"].find("ASSERT_ANNOUNCE_CONSUMED_FAILED") == -1: # type: ignore # noqa
+                if error.args[0]["error"].find("ASSERT_ANNOUNCE_CONSUMED_FAILED") == -1: # noqa: E731,E123
                     raise ValueError(error.args[0])
 
             # Test basic transaction to one output
