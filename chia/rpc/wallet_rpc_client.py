@@ -25,7 +25,11 @@ class WalletRpcClient(RpcClient):
         try:
             return await self.fetch(
                 "log_in",
-                {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "start"},
+                {
+                    "host": "https://backup.chia.net",
+                    "fingerprint": fingerprint,
+                    "type": "start",
+                },
             )
 
         except ValueError as e:
@@ -49,7 +53,11 @@ class WalletRpcClient(RpcClient):
         try:
             return await self.fetch(
                 "log_in",
-                {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "skip"},
+                {
+                    "host": "https://backup.chia.net",
+                    "fingerprint": fingerprint,
+                    "type": "skip",
+                },
             )
         except ValueError as e:
             return e.args[0]
@@ -137,20 +145,38 @@ class WalletRpcClient(RpcClient):
         return reverted_tx
 
     async def get_next_address(self, wallet_id: str, new_address: bool) -> str:
-        return (await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))["address"]
+        return (
+            await self.fetch(
+                "get_next_address",
+                {"wallet_id": wallet_id, "new_address": new_address},
+            )
+        )["address"]
 
     async def send_transaction(
-        self, wallet_id: str, amount: uint64, address: str, fee: uint64 = uint64(0)
+        self,
+        wallet_id: str,
+        amount: uint64,
+        address: str,
+        fee: uint64 = uint64(0),
     ) -> TransactionRecord:
 
         res = await self.fetch(
             "send_transaction",
-            {"wallet_id": wallet_id, "amount": amount, "address": address, "fee": fee},
+            {
+                "wallet_id": wallet_id,
+                "amount": amount,
+                "address": address,
+                "fee": fee,
+            },
         )
         return TransactionRecord.from_json_dict(res["transaction"])
 
     async def send_transaction_multi(
-        self, wallet_id: str, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
+        self,
+        wallet_id: str,
+        additions: List[Dict],
+        coins: List[Coin] = None,
+        fee: uint64 = uint64(0),
     ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
         additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
@@ -158,11 +184,21 @@ class WalletRpcClient(RpcClient):
             coins_json = [c.to_json_dict() for c in coins]
             response: Dict = await self.fetch(
                 "send_transaction_multi",
-                {"wallet_id": wallet_id, "additions": additions_hex, "coins": coins_json, "fee": fee},
+                {
+                    "wallet_id": wallet_id,
+                    "additions": additions_hex,
+                    "coins": coins_json,
+                    "fee": fee,
+                },
             )
         else:
             response = await self.fetch(
-                "send_transaction_multi", {"wallet_id": wallet_id, "additions": additions_hex, "fee": fee}
+                "send_transaction_multi",
+                {
+                    "wallet_id": wallet_id,
+                    "additions": additions_hex,
+                    "fee": fee,
+                },
             )
         return TransactionRecord.from_json_dict(response["transaction"])
 
@@ -294,7 +330,12 @@ class WalletRpcClient(RpcClient):
         )
 
     async def pw_join_pool(
-        self, wallet_id: str, target_puzzlehash: bytes32, pool_url: str, relative_lock_height: uint32, fee: uint64
+        self,
+        wallet_id: str,
+        target_puzzlehash: bytes32,
+        pool_url: str,
+        relative_lock_height: uint32,
+        fee: uint64,
     ) -> TransactionRecord:
         request = {
             "wallet_id": int(wallet_id),

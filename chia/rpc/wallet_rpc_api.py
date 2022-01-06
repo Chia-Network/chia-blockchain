@@ -8,7 +8,12 @@ from blspy import PrivateKey, G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
-from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
+from chia.pools.pool_wallet_info import (
+    create_pool_state,
+    FARMING_TO_POOL,
+    PoolWalletInfo,
+    PoolState,
+)
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -17,17 +22,29 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
-from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
+from chia.util.keychain import (
+    KeyringIsLocked,
+    bytes_to_mnemonic,
+    generate_mnemonic,
+)
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
-from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
+from chia.wallet.derive_keys import (
+    master_sk_to_farmer_sk,
+    master_sk_to_pool_sk,
+    master_sk_to_wallet_sk,
+)
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.backup_utils import download_backup, get_backup_info, upload_backup
+from chia.wallet.util.backup_utils import (
+    download_backup,
+    get_backup_info,
+    upload_backup,
+)
 from chia.wallet.util.trade_utils import trade_record_to_dict
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
@@ -203,7 +220,11 @@ class WalletRpcApi:
         try:
             assert self.service.keychain_proxy is not None  # An offering to the mypy gods
             fingerprints = [
-                sk.get_g1().get_fingerprint() for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
+                sk.get_g1().get_fingerprint()
+                for (
+                    sk,
+                    seed,
+                ) in await self.service.keychain_proxy.get_all_private_keys()
             ]
         except KeyringIsLocked:
             return {"keyring_is_locked": True}
@@ -322,7 +343,10 @@ class WalletRpcApi:
             if found_farmer and found_pool:
                 break
 
-            ph = encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()), prefix)
+            ph = encode_puzzle_hash(
+                create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()),
+                prefix,
+            )
 
             if ph == farmer_target:
                 found_farmer = True
@@ -343,7 +367,10 @@ class WalletRpcApi:
         fingerprint = request["fingerprint"]
         sk, _ = await self._get_private_key(fingerprint)
         if sk is not None:
-            used_for_farmer, used_for_pool = await self._check_key_used_for_rewards(self.service.root_path, sk, 100)
+            (
+                used_for_farmer,
+                used_for_pool,
+            ) = await self._check_key_used_for_rewards(self.service.root_path, sk, 100)
 
             if self.service.logged_in_fingerprint != fingerprint:
                 await self._stop_wallet()
@@ -389,7 +416,11 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         syncing = self.service.wallet_state_manager.sync_mode
         synced = await self.service.wallet_state_manager.synced()
-        return {"synced": synced, "syncing": syncing, "genesis_initialized": True}
+        return {
+            "synced": synced,
+            "syncing": syncing,
+            "genesis_initialized": True,
+        }
 
     async def get_height_info(self, request: Dict):
         assert self.service.wallet_state_manager is not None
@@ -454,7 +485,9 @@ class WalletRpcApi:
             if request["mode"] == "new":
                 async with self.service.wallet_state_manager.lock:
                     cc_wallet: CCWallet = await CCWallet.create_new_cc(
-                        wallet_state_manager, main_wallet, uint64(request["amount"])
+                        wallet_state_manager,
+                        main_wallet,
+                        uint64(request["amount"]),
                     )
                     colour = cc_wallet.get_colour()
                     asyncio.create_task(self._create_backup_and_upload(host))
@@ -539,7 +572,9 @@ class WalletRpcApi:
             elif request["did_type"] == "recovery":
                 async with self.service.wallet_state_manager.lock:
                     did_wallet = await DIDWallet.create_new_did_wallet_from_recovery(
-                        wallet_state_manager, main_wallet, request["filename"]
+                        wallet_state_manager,
+                        main_wallet,
+                        request["filename"],
                     )
                 assert did_wallet.did_info.temp_coin is not None
                 assert did_wallet.did_info.temp_puzhash is not None
@@ -568,7 +603,9 @@ class WalletRpcApi:
             if request["mode"] == "new":
                 owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(True)
 
-                from chia.pools.pool_wallet_info import initial_pool_state_from_dict
+                from chia.pools.pool_wallet_info import (
+                    initial_pool_state_from_dict,
+                )
 
                 async with self.service.wallet_state_manager.lock:
                     last_wallet: Optional[
@@ -578,12 +615,15 @@ class WalletRpcApi:
 
                     next_id = last_wallet.id + 1
                     owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
-                        self.service.wallet_state_manager.private_key, uint32(next_id)
+                        self.service.wallet_state_manager.private_key,
+                        uint32(next_id),
                     )
                     owner_pk: G1Element = owner_sk.get_g1()
 
                     initial_target_state = initial_pool_state_from_dict(
-                        request["initial_target_state"], owner_pk, owner_puzzle_hash
+                        request["initial_target_state"],
+                        owner_pk,
+                        owner_puzzle_hash,
                     )
                     assert initial_target_state is not None
 
@@ -591,7 +631,11 @@ class WalletRpcApi:
                         delayed_address = None
                         if "p2_singleton_delayed_ph" in request:
                             delayed_address = bytes32.from_hexstr(request["p2_singleton_delayed_ph"])
-                        tr, p2_singleton_puzzle_hash, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
+                        (
+                            tr,
+                            p2_singleton_puzzle_hash,
+                            launcher_id,
+                        ) = await PoolWallet.create_new_pool_wallet_transaction(
                             wallet_state_manager,
                             main_wallet,
                             initial_target_state,
@@ -980,7 +1024,12 @@ class WalletRpcApi:
             return {"success": True, "wallet_id": wallet_id, "my_did": my_did}
         else:
             coin = coins.pop()
-            return {"success": True, "wallet_id": wallet_id, "my_did": my_did, "coin_id": coin.name()}
+            return {
+                "success": True,
+                "wallet_id": wallet_id,
+                "my_did": my_did,
+                "coin_id": coin.name(),
+            }
 
     async def did_get_recovery_list(self, request):
         wallet_id = int(request["wallet_id"])
@@ -1043,7 +1092,10 @@ class WalletRpcApi:
             coin = hexstr_to_bytes(request["coin_name"])
             pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
             spend_bundle = await wallet.create_attestment(
-                coin, hexstr_to_bytes(request["puzhash"]), pubkey, request["filename"]
+                coin,
+                hexstr_to_bytes(request["puzhash"]),
+                pubkey,
+                request["filename"],
             )
         if spend_bundle is not None:
             return {
