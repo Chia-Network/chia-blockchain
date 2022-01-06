@@ -59,7 +59,7 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_update_coin(self, three_wallet_nodes: SimulatorsAndWallets, trusted) -> None:
+    async def test_update_coin(self, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -125,7 +125,7 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_announce_coin(self, three_wallet_nodes: SimulatorsAndWallets, trusted) -> None:
+    async def test_announce_coin(self, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -176,7 +176,7 @@ class TestDLWallet:
         await full_node_api.farm_blocks(count=1, wallet=wallet_1)
 
         sb, ann = await dl_wallet_0.create_report_spend()
-        tr = await wallet_1.generate_signed_transaction(200, ph2, puzzle_announcements_to_consume={ann})
+        tr = await wallet_1.generate_signed_transaction(uint64(200), ph2, puzzle_announcements_to_consume={ann})
         agg_sb = SpendBundle.aggregate([tr.spend_bundle, sb])
         new_tr = dataclasses.replace(tr, spend_bundle=agg_sb)
         await wallet_1.push_transaction(new_tr)
@@ -190,7 +190,7 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_dlo_wallet(self, three_wallet_nodes: SimulatorsAndWallets, trusted) -> None:
+    async def test_dlo_wallet(self, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
         time_lock = uint64(10)
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -316,7 +316,7 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_dlo_wallet_reclaim(self, three_wallet_nodes: SimulatorsAndWallets, trusted) -> None:
+    async def test_dlo_wallet_reclaim(self, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
         time_lock = uint64(10)
 
         full_nodes, wallets = three_wallet_nodes

@@ -15,7 +15,6 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 
 
 async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet):

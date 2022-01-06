@@ -36,12 +36,12 @@ from chia.wallet.wallet_info import WalletInfo
 @dataclass(frozen=True)
 @streamable
 class DataLayerInfo(Streamable):
-    origin_coin: Optional[Coin]  # Coin ID of this coin is our Singleton ID
+    origin_coin: Coin  # Coin ID of this coin is our Singleton ID
     root_hash: bytes32
     # TODO: should this be a dict for quick lookup?
     parent_info: List[Tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
     previous_states: List[Tuple[bytes32, bytes32]]  # {coin.name(): merkle_root}
-    current_inner_inner: Optional[Program]  # represents a Program as bytes
+    current_inner_inner: Program
 
 
 _T_DataLayerWallet = TypeVar("_T_DataLayerWallet", bound="DataLayerWallet")
@@ -108,8 +108,6 @@ class DataLayerWallet:
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
-        assert self.dl_info.origin_coin is not None
-        assert self.dl_info.current_inner_inner is not None
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
 
         for tx in txs:
@@ -218,7 +216,7 @@ class DataLayerWallet:
 
         assert self.dl_info.origin_coin is not None
         current_full_puz = create_host_fullpuz(
-            self.dl_info.current_inner_inner,  # type: ignore[arg-type]
+            self.dl_info.current_inner_inner,
             self.dl_info.root_hash,
             self.dl_info.origin_coin.name(),
         )
@@ -281,7 +279,7 @@ class DataLayerWallet:
         parent_info = await self.get_lineage_for_coin(self.tip_coin)
         assert self.dl_info.origin_coin is not None
         current_full_puz = create_host_fullpuz(
-            self.dl_info.current_inner_inner,  # type: ignore[arg-type]
+            self.dl_info.current_inner_inner,
             self.dl_info.root_hash,
             self.dl_info.origin_coin.name(),
         )
@@ -314,7 +312,7 @@ class DataLayerWallet:
         if origin_coin is None:
             raise ValueError("Non-None origin coin required")
         current_full_puz = create_host_fullpuz(
-            self.dl_info.current_inner_inner,  # type: ignore[arg-type]
+            self.dl_info.current_inner_inner,
             self.dl_info.root_hash,
             origin_coin.name(),
         )
@@ -379,7 +377,7 @@ class DataLayerWallet:
         if self.dl_info.origin_coin is not None:
             return create_singleton_fullpuz(self.dl_info.origin_coin.name(), innerpuz)
 
-        return create_singleton_fullpuz(0x00, innerpuz)  # type: ignore[arg-type]
+        return create_singleton_fullpuz(0x00, innerpuz)
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
