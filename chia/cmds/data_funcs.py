@@ -1,5 +1,4 @@
-from typing import Any, Optional, Dict
-
+from typing import Any, Optional, Dict, List
 
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -48,7 +47,7 @@ async def get_value_cmd(
 
 
 async def update_kv_store_cmd(
-    tree_id: str, changelist: Dict, fingerprint: int, rpc_port: Optional[int] = None
+    tree_id: str, changelist: List[Dict[str, Any]], fingerprint: int, rpc_port: Optional[int] = None
 ) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
     tree_id_bytes = bytes32(hexstr_to_bytes(tree_id))
