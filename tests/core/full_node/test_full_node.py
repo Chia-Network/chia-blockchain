@@ -328,6 +328,7 @@ class TestFullNodeBlockCompression:
         assert program is not None
         assert len(all_blocks[-1].transactions_generator_ref_list) == 0
 
+        await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         # Make a cc transaction
         tr_list: List[TransactionRecord] = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
         tr = tr_list[0]
