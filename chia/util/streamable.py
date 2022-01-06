@@ -364,7 +364,7 @@ class Streamable:
         #       itself?
         post_init = getattr(cls, "__post_init__", None)
         if post_init is not None:
-            post_init(obj, parsed=True)
+            post_init(obj, parsed=True)  # pylint: disable=E1102
 
         # Use -1 as a sentinel value as it's not currently serializable
         if next(fields, -1) != -1:
