@@ -1,0 +1,2758 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2021-02-08 18:51+0100\n"
+"Mime-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: he_IL\n"
+"Project-Id-Version: chia-blockchain\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: 2021-09-17 17:40\n"
+"Last-Translator: \n"
+"Language-Team: Hebrew\n"
+"Plural-Forms: nplurals=4; plural=n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n%100==4 ? 2 : 3;\n"
+"X-Crowdin-Project: chia-blockchain\n"
+"X-Crowdin-Project-ID: 440660\n"
+"X-Crowdin-Language: he\n"
+"X-Crowdin-File: /[Chia-Network.chia-blockchain-gui] main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 118\n"
+
+#: src/components/plot/add/PlotAddNFT.tsx:62
+msgid "(Optional)"
+msgstr "(אופציונלי)"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:64
+msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
+msgstr "* רוצה לחקור את הבלוקים של Chia עוד? בדוק את </0>Chia Explorer<0> שנבנה על ידי מפתח קוד פתוח."
+
+#: src/components/plot/add/PlotAddNFT.tsx:123
+msgid "+ Add New Plot NFT"
+msgstr "+ הוסף פלוט NFT חדש"
+
+#: src/components/wallet/Wallets.tsx:132
+msgid "+ Add Wallet"
+msgstr "הוספ/י ארנק"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
+#~ msgid "0 automatically chooses bucket count"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:148
+msgid "128 buckets is recommended"
+msgstr "מומלץ 128 דליים (Buckets)"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:98
+msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
+msgstr "חלקה (Harvester) הוא שירות המופעל במחשב בו מאוחסנים בפועל פלוטים. חקלאי יחד עם חלקה נוספת מדברים אל ה-Full Node כדי לראות את מצב השרשרת. צפה/י ברשת החלקות (Harvesters) המחוברים שלך למד/י עוד"
+
+#: src/electron/main.tsx:422
+#: src/electron/main.tsx:509
+msgid "About Chia Blockchain"
+msgstr "אודות Chia Blockchain"
+
+#: src/components/trading/ViewOffer.jsx:74
+msgid "Accept"
+msgstr "קבל"
+
+#: src/components/trading/TradingOverview.jsx:228
+msgid "Accepted at time:"
+msgstr "התקבל בשעה:"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:114
+#: src/components/plot/PlotsFailed.tsx:19
+#: src/components/plot/PlotsNotFound.tsx:19
+msgid "Action"
+msgstr "פעולה"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:67
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:67
+#: src/components/fullNode/FullNodeConnections.tsx:82
+#: src/components/pool/PoolOverview.tsx:69
+msgid "Actions"
+msgstr "פעולות"
+
+#: src/components/trading/CreateOffer.jsx:201
+msgid "Add"
+msgstr "הוסף"
+
+#: src/components/wallet/did/WalletDID.tsx:874
+#: src/components/wallet/did/WalletDIDCreate.tsx:205
+msgid "Add Backup ID"
+msgstr "הוספ/י מזהה גיבוי"
+
+#: src/components/plot/PlotHeader.tsx:91
+msgid "Add Plot Directory"
+msgstr "הוסף תיקיה לחלקות"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:70
+msgid "Add Plot to Queue"
+msgstr "הוסף חלקה לתור"
+
+#: src/components/wallet/Wallets.tsx:88
+#~ msgid "Add Wallet"
+#~ msgstr "Add Wallet"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:46
+#: src/components/plot/add/PlotAdd.tsx:160
+#: src/components/plot/overview/PlotOverviewHero.tsx:54
+#: src/components/plot/PlotHeader.tsx:63
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:230
+#: src/components/plotNFT/PlotNFTCard.tsx:272
+msgid "Add a Plot"
+msgstr "הוסף חלקה"
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:51
+msgid "Add a Plot NFT"
+msgstr "הוסף פלוט NFT"
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:68
+msgid "Add a plot"
+msgstr "הוסף חלקה"
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:107
+msgid "Add plot directory"
+msgstr "הוסף תיקיה לחלקות"
+
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:42
+msgid "Add {currencyCode} from the Faucet"
+msgstr "הוסף {currencyCode} מהברז (Faucet)"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:561
+#: src/components/wallet/coloured/WalletColoured.tsx:657
+#: src/components/wallet/standard/WalletStandard.tsx:596
+msgid "Address"
+msgstr "כתובת"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:701
+#: src/components/wallet/standard/WalletStandard.tsx:503
+msgid "Address / Puzzle hash"
+msgstr "כתובת hash / פאזל"
+
+#: src/components/core/components/Amount/Amount.tsx:99
+#: src/components/trading/CreateOffer.jsx:196
+#: src/components/trading/TradesTable.tsx:20
+#: src/components/wallet/create/createNewColouredCoin.jsx:119
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
+#: src/components/wallet/standard/WalletStandard.tsx:513
+#: src/components/wallet/WalletHistory.tsx:62
+msgid "Amount"
+msgstr "סכום"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:581
+msgid "Amount ({cc_unit})"
+msgstr "סכום ({cc_unit})"
+
+#: src/components/wallet/create/createRLAdmin.jsx:239
+msgid "Amount For Initial Coin"
+msgstr "סכום למטבע ראשוני"
+
+#: src/components/wallet/did/WalletDIDCreate.tsx:62
+msgid "Amount must be an even amount."
+msgstr "סכום צריך להיות סכום שווה."
+
+#: src/components/plot/PlotAction.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:46
+msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
+msgstr "האם אתה בטוח שברצונך למחוק את החלקה? חלקה שנמחקה אינה ניתנת לשיחזור."
+
+#: src/components/plotNFT/PlotNFTCard.tsx:125
+#: src/components/wallet/standard/WalletStandard.tsx:633
+msgid "Are you sure you want to delete unconfirmed transactions?"
+msgstr "האם אתה בטוח שברצונך למחוק עסקאות לא מאושרות?"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:25
+msgid "Are you sure you want to disconnect?"
+msgstr "האם אתה בטוח שברצונך להתנתק?"
+
+#: src/electron/main.tsx:197
+msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+msgstr "אתה בטוח שברצונך לפרוש? GUI תכנון וחקלאות יפסיקו."
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:31
+#~ msgid "Are you sure you want to use k={plotSize}"
+#~ msgstr "Are you sure you want to use k={plotSize}"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:38
+msgid "Are you sure you want to use k={plotSize}?"
+msgstr "האם אתה בטוח שברצונך להישתמש ב k={plotSize}?"
+
+#: src/components/plotNFT/PlotNFTName.tsx:39
+msgid "Autogenerated name from pool contract address"
+msgstr "שם שנוצר אוטומטית מכתובת חוזה הבריכה (Pool Contract Address)"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:46
+#: src/components/selectKey/SelectKey.tsx:68
+#: src/components/selectKey/SelectKey.tsx:110
+msgid "Back"
+msgstr "חזרה"
+
+#: src/components/backup/BackupCreate.tsx:45
+msgid "Backup file is used to restore smart wallets."
+msgstr "קובץ גיבוי משמש לשיחזור ארנקים חכמים."
+
+#: src/components/wallet/coloured/WalletColoured.tsx:377
+#: src/components/wallet/did/WalletDID.tsx:647
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:541
+msgid "Balance"
+msgstr "יתרה"
+
+#: src/components/block/Block.jsx:318
+msgid "Base Farmer Reward Amount"
+msgstr "סכום תגמול החקלאי הבסיסי"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:39
+#: src/components/farm/FarmLatestBlockChallenges.tsx:49
+msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
+msgstr "להלן אתגרי הבלוק הנוכחיים. יתכן ויהיה לך הוכחה למרחב לאתגרים אלה. חסימות אלה אינן מכילות כרגע הוכחת זמן."
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:17
+msgid "Best estimate over last 24 hours"
+msgstr "ההערכה הטובה ביותר במהלך 24 השעות האחרונות"
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+#~ msgid "Best estimate over last 5 hours"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:130
+#: src/components/block/Block.jsx:154
+#: src/components/block/Block.jsx:158
+#: src/components/block/Block.jsx:333
+msgid "Block"
+msgstr "גוש"
+
+#: src/components/block/Block.jsx:138
+msgid "Block Test"
+msgstr "בדיקת בלוק"
+
+#: src/components/block/Block.jsx:236
+msgid "Block VDF Iterations"
+msgstr "בלוק VDF איטרציות"
+
+#: src/components/block/Block.jsx:337
+msgid "Block at height {0} in the Chia blockchain"
+msgstr "בלוק בגובה {0} בבלוקצ'יין צ'יה"
+
+#: src/components/fullNode/FullNode.jsx:331
+#~ msgid "Block hash"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:142
+msgid "Block with hash {headerHash}"
+msgstr "בלוק אם גיבוב {headerHash}"
+
+#: src/components/block/Block.jsx:163
+msgid "Block with hash {headerHash} does not exist."
+msgstr "בלוק עם כותרת קוד {headerHash} לא קיימת."
+
+#: src/components/fullNode/FullNode.jsx:311
+msgid "Blocks"
+msgstr "גושים"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:91
+#~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
+#~ msgstr "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:61
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:79
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:110
+msgid "Browse"
+msgstr "עיון"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:73
+msgid "But you are currently farming <0/>"
+msgstr "אבל אתה כרגע farming <0/>"
+
+#: src/components/trading/CreateOffer.jsx:161
+#: src/components/trading/TradesTable.tsx:47
+#: src/components/trading/TradingOverview.jsx:288
+msgid "Buy"
+msgstr "רכוש"
+
+#: src/components/wallet/Wallets.tsx:49
+#~ msgid "CC Wallet"
+#~ msgstr "CC Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:182
+#~ msgid "CCListItems.title"
+#~ msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:170
+msgid "Can be backed up to mnemonic seed"
+msgstr "ניתן לגבות ל-Mnemonic Seed"
+
+#: src/components/backup/BackupCreate.tsx:50
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:86
+#: src/components/farm/FarmManageFarmingRewards.tsx:196
+#: src/components/fullNode/FullNodeAddConnection.tsx:89
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:123
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:87
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:30
+#: src/components/trading/CreateOffer.jsx:139
+#: src/components/trading/TradingOverview.jsx:400
+#: src/components/trading/ViewOffer.jsx:71
+msgid "Cancel"
+msgstr "בטל"
+
+#: src/components/trading/TradingOverview.jsx:389
+msgid "Cancel and Spend"
+msgstr "בטל ושלם"
+
+#: src/components/plot/PlotsNotFound.tsx:39
+msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
+msgstr "זהירות, מחיקת הפלוטים שנבחרו יסיר אותם לנצח. אנא בדוק שכל התקני האחסון מחוברים באופן תקין."
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:16
+msgid "Challenge"
+msgstr "אתגר"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:14
+msgid "Challenge Hash"
+msgstr "Challenge Hash"
+
+#: src/components/plotNFT/PlotNFTChangePool.tsx:111
+msgid "Change"
+msgstr "שנה/י"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:408
+#: src/components/plotNFT/PlotNFTChangePool.tsx:110
+#: src/components/pool/PoolOverview.tsx:115
+msgid "Change Pool"
+msgstr "שנה/י בריכה (Pool)"
+
+#: src/electron/main.tsx:401
+msgid "Chat on KeyBase"
+msgstr "צ'אט ב-KeyBase"
+
+#: src/electron/main.tsx:419
+msgid "Chia"
+msgstr "צ'יה"
+
+#: src/electron/main.tsx:358
+msgid "Chia Blockchain Wiki"
+msgstr "ארנק צ'יה"
+
+#: src/components/wallet/standard/WalletStandard.tsx:649
+msgid "Chia Wallet"
+msgstr "ארנק צ'יה"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:36
+msgid "Choose Number of Plots"
+msgstr "בחר מספר חלקות"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:61
+msgid "Choose Plot Size"
+msgstr "בחר גודל חלקה"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:384
+#: src/components/pool/PoolOverview.tsx:92
+msgid "Claim Rewards"
+msgstr "קבל/י תגמולים"
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:114
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:89
+msgid "Close"
+msgstr "סגור"
+
+#: src/components/app/AppRouter.tsx:27
+msgid "Closing down node and server"
+msgstr "סוגר צומת ושרת"
+
+#: src/components/wallet/did/WalletDID.tsx:984
+msgid "Coin Name"
+msgstr "שם מטבע"
+
+#: src/components/trading/TradingOverview.jsx:366
+msgid "Coins:"
+msgstr "מטבעות:"
+
+#: src/components/trading/CreateOffer.jsx:172
+#: src/components/trading/TradesTable.tsx:24
+msgid "Colour"
+msgstr "צבע"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:223
+msgid "Colour Info"
+msgstr "פרטי צבע"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:110
+msgid "Colour String"
+msgstr "מחרוזת צבע"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:228
+msgid "Colour:"
+msgstr "צבע:"
+
+#: src/components/wallet/create/WalletCreateList.tsx:34
+msgid "Coloured Coin"
+msgstr "מטבע בצבע"
+
+#: src/components/wallet/create/WalletCreate.jsx:122
+msgid "Coloured Coin Options"
+msgstr "אפשרויות מטבע בצבע"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:168
+#: src/electron/main.tsx:195
+#: src/hooks/useAbsorbRewards.tsx:46
+msgid "Confirm"
+msgstr "אשר"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:21
+msgid "Confirm Disconnect"
+msgstr "אשר התנתקות"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:121
+#: src/components/wallet/standard/WalletStandard.tsx:629
+msgid "Confirmation"
+msgstr "אימות"
+
+#: src/components/trading/TradingOverview.jsx:201
+msgid "Confirmed at block:"
+msgstr "אושר ב-Block:"
+
+#: src/components/wallet/WalletHistory.tsx:51
+msgid "Confirmed at height {0}"
+msgstr "אושר ב-Height"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:92
+msgid "Connect"
+msgstr "התחבר"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:68
+#: src/components/fullNode/FullNodeConnections.tsx:112
+msgid "Connect to other peers"
+msgstr "התחבר לעמיתים אחרים"
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:116
+msgid "Connect to pool"
+msgstr "התחבר לבריכה (Pool)"
+
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:51
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
+msgid "Connected"
+msgstr "מחובר"
+
+#: src/components/app/AppRouter.tsx:34
+msgid "Connecting to wallet"
+msgstr "מחובר לארנק"
+
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:15
+msgid "Connection Status"
+msgstr "מצב חיבור"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:111
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:109
+msgid "Connection Status:"
+msgstr "מצב חיבור:"
+
+#: src/components/fullNode/FullNodeConnections.tsx:75
+msgid "Connection type"
+msgstr "סוג חיבור"
+
+#: src/components/fullNode/FullNodeConnections.tsx:109
+msgid "Connections"
+msgstr "חיבורים"
+
+#: src/electron/main.tsx:382
+msgid "Contribute on GitHub"
+msgstr "תרום בגיטהאב"
+
+#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:31
+msgid "Copied"
+msgstr "הועתק"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:670
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:306
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:485
+msgid "Copy"
+msgstr "העתק"
+
+#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:33
+msgid "Copy to Clipboard"
+msgstr "העתק ללוח ההעתקה"
+
+#: src/components/backup/BackupCreate.tsx:58
+#: src/components/plot/add/PlotAdd.tsx:177
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:175
+#: src/components/wallet/create/createExistingColouredCoin.jsx:133
+#: src/components/wallet/create/createNewColouredCoin.jsx:142
+#: src/components/wallet/create/createRLAdmin.jsx:307
+#: src/components/wallet/create/createRLUser.jsx:99
+#: src/components/wallet/did/WalletDIDCreate.tsx:218
+msgid "Create"
+msgstr "צור"
+
+#: src/components/wallet/did/WalletDID.tsx:967
+msgid "Create An Attestation Packet"
+msgstr "צור/י חבילת אישור"
+
+#: src/components/wallet/create/WalletCreate.jsx:290
+#~ msgid "Create DID wallet"
+#~ msgstr "Create DID wallet"
+
+#: src/components/wallet/did/WalletDIDCreate.tsx:110
+msgid "Create Distributed Identity Wallet"
+msgstr "צור/י ארנק זהות מבוזר"
+
+#: src/components/wallet/did/WalletDIDSelect.tsx:32
+msgid "Create New Wallet"
+msgstr "צור/י ארנק חדש"
+
+#: src/components/trading/TradeManager.tsx:45
+msgid "Create Offer"
+msgstr "צור הצעה"
+
+#: src/components/plot/add/PlotAdd.tsx:92
+#~ msgid "Create Plot"
+#~ msgstr "Create Plot"
+
+#: src/components/wallet/create/createRLAdmin.jsx:188
+msgid "Create Rate Limited Admin Wallet"
+msgstr "צור ארנק מנהלים מוגבל"
+
+#: src/components/wallet/create/createRLUser.jsx:78
+msgid "Create Rate Limited User Wallet"
+msgstr "צור ארנק משתמש מוגבל"
+
+#: src/components/trading/TradeManager.tsx:22
+#~ msgid "Create Trade"
+#~ msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:135
+msgid "Create Trade Offer"
+msgstr "צור הצעה להחלפה"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:543
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:684
+#: src/components/wallet/standard/WalletStandard.tsx:483
+msgid "Create Transaction"
+msgstr "יצירת העברה"
+
+#: src/components/backup/BackupCreate.tsx:41
+msgid "Create a Backup"
+msgstr "צור גיבוי"
+
+#: src/components/plot/add/PlotAddNFT.tsx:42
+msgid "Create a Plot NFT"
+msgstr "צור פלוט NFT"
+
+#: src/components/selectKey/SelectKey.tsx:211
+msgid "Create a new private key"
+msgstr "יצירת מפתח פרטי"
+
+#: src/components/wallet/create/WalletCreate.jsx:186
+msgid "Create admin wallet"
+msgstr "צור ארנק מנהל"
+
+#: src/components/wallet/create/WalletCreate.jsx:132
+msgid "Create new coloured coin"
+msgstr "צור מטבע צבעוני חדש"
+
+#: src/components/wallet/create/WalletCreate.jsx:192
+msgid "Create user wallet"
+msgstr "צור ארנק משתמש"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:93
+msgid "Create wallet for colour"
+msgstr "צור ארנק לצבע"
+
+#: src/components/wallet/create/WalletCreate.jsx:139
+msgid "Create wallet for existing colour"
+msgstr "צור ארנק לצבע קיים"
+
+#: src/components/wallet/Wallets.tsx:81
+#~ msgid "CreateWallet.addWallet"
+#~ msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:186
+msgid "Created At:"
+msgstr "נוצר ב:"
+
+#: src/components/trading/TradingOverview.jsx:211
+msgid "Created by us:"
+msgstr "נוצר על ידינו:"
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:51
+msgid "Creating Plot NFT and Joining the Pool"
+msgstr "יצירה של פלוט NFT והצטרפות לבריכה (Pool)"
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:49
+msgid "Creating Plot NFT for Self Pooling"
+msgstr "יצירת פלוט NFT עבור בריכה עצמאית (Self Pooling)"
+
+#: src/components/plot/add/PlotAdd.tsx:86
+msgid "Currency code is not defined"
+msgstr "קוד המטבע אינו מוגדר"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:139
+#: src/components/plotNFT/PlotNFTCard.tsx:181
+msgid "Current Difficulty"
+msgstr "קושי נוכחי"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:156
+#: src/components/plotNFT/PlotNFTCard.tsx:198
+msgid "Current Points Balance"
+msgstr "סך הניקוד הנוכחי"
+
+#: src/components/trading/TradingOverview.jsx:182
+msgid "Current trade status"
+msgstr "מצב החלפה נוכחי"
+
+#: src/components/selectKey/SelectKey.tsx:185
+msgid "DANGER: permanently delete private key"
+msgstr "סכנה: ה-Private Key יוסר לצמיתות"
+
+#: src/components/wallet/Wallets.tsx:53
+#~ msgid "DID Wallet"
+#~ msgstr "DID Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:310
+#~ msgid "DIDListItems.title"
+#~ msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:32
+#: src/components/trading/TradingOverview.jsx:137
+#: src/components/wallet/WalletHistory.tsx:46
+msgid "Date"
+msgstr "תאריך"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
+msgid "Delay"
+msgstr "השהייה"
+
+#: src/components/plot/PlotAction.tsx:27
+#: src/components/plot/PlotAction.tsx:57
+#: src/components/plot/queue/PlotQueueActions.tsx:43
+#: src/components/plot/queue/PlotQueueActions.tsx:97
+#: src/components/plotNFT/PlotNFTCard.tsx:122
+#: src/components/selectKey/SelectKey.tsx:67
+#: src/components/selectKey/SelectKey.tsx:109
+#: src/components/wallet/did/WalletDID.tsx:449
+#: src/components/wallet/did/WalletDID.tsx:862
+#: src/components/wallet/did/WalletDIDCreate.tsx:194
+#: src/components/wallet/did/WalletDIDRecovery.tsx:101
+#: src/components/wallet/standard/WalletStandard.tsx:630
+msgid "Delete"
+msgstr "מחק"
+
+#: src/components/plot/PlotAction.tsx:26
+#: src/components/plot/queue/PlotQueueActions.tsx:42
+msgid "Delete Plot"
+msgstr "הסר פלוט"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:315
+#: src/components/wallet/standard/WalletStandard.tsx:674
+msgid "Delete Unconfirmed Transactions"
+msgstr "מחק עסקאות לא מאושרות"
+
+#: src/components/selectKey/SelectKey.tsx:108
+#: src/components/selectKey/SelectKey.tsx:229
+msgid "Delete all keys"
+msgstr "מחיקת כל המפתחות"
+
+#: src/components/selectKey/SelectKey.tsx:58
+#~ msgid "Delete key"
+#~ msgstr "Delete key"
+
+#: src/components/selectKey/SelectKey.tsx:66
+msgid "Delete key {fingerprint}"
+msgstr "מחוק/י מפתח {fingerprint}"
+
+#: src/components/selectKey/SelectKey.tsx:113
+msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
+msgstr "הסרה של כל המפתחות יגרום להסרה לצמיתות של כל המפתחות מהמחשב שלך, אנא ודא שיש לך גיבויים. האם אתה בטוח שאתה רוצה להמשיך?"
+
+#: src/components/selectKey/SelectKey.tsx:92
+msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
+msgstr "מחיקת המפתח תמחק את המפתח מהמחשב, וודא שקיים גיבוי. האם אתה בטוח שאתה רוצה להמשיך?"
+
+#: src/electron/main.tsx:304
+msgid "Developer"
+msgstr "מפתח"
+
+#: src/electron/main.tsx:307
+msgid "Developer Tools"
+msgstr "כלי פיתוח"
+
+#: src/components/block/Block.jsx:222
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
+msgid "Difficulty"
+msgstr "קושי"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:172
+msgid "Disable bitfield plotting"
+msgstr "השבת bitfield plotting"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:26
+msgid "Discard"
+msgstr "בטל"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:22
+msgid "Disconnect"
+msgstr "היתנתק"
+
+#: src/components/wallet/create/WalletCreateList.tsx:28
+#: src/components/wallet/did/WalletDIDSelect.tsx:25
+msgid "Distributed Identity"
+msgstr "זהות מבוזרת"
+
+#: src/components/wallet/create/WalletCreate.jsx:280
+#~ msgid "Distributed Identity Options"
+#~ msgstr "Distributed Identity Options"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:52
+#: src/components/plot/overview/PlotOverviewHero.tsx:69
+msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
+msgstr "האם כבר קיימים פלוטים במחשב זה? <0> הוסף תקיית פלוטים <0>"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:55
+msgid "Does your machine support parallel plotting?"
+msgstr "האם המערכת שלך תומכת ביצירת פלוטים במקביל?"
+
+#: src/components/wallet/did/WalletDID.tsx:428
+msgid "Drag and drop attestation packet(s)"
+msgstr "גרור והנח מנה/ות אישור"
+
+#: src/components/trading/ViewOffer.jsx:39
+msgid "Drag and drop offer file"
+msgstr "גרור ושחרר את קובץ ההצעה"
+
+#: src/components/backup/BackupRestore.tsx:173
+msgid "Drag and drop your backup file"
+msgstr "גרור ושחרר את קובץ הגיבוי שלך"
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:109
+msgid "Drag and drop your recovery backup file"
+msgstr "גרור ושחרר את קובץ הגיבוי שלך"
+
+#: src/electron/main.tsx:263
+msgid "Edit"
+msgstr "עריכה"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:259
+#: src/components/plotNFT/PlotNFTCard.tsx:301
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:76
+msgid "Edit Payout Instructions"
+msgstr "עריכת הוראות תשלום"
+
+#: src/components/wallet/WalletImport.tsx:147
+msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
+msgstr "הקש את 24 מילות ה-Mnemonic Seed ששמרת על מנת לשחזר את ארנק ה-Chia שלך."
+
+#: src/components/farm/card/FarmCardStatus.tsx:35
+#: src/components/farm/card/FarmCardStatus.tsx:49
+#: src/components/farm/FarmerStatus.tsx:21
+#: src/components/farm/FarmerStatus.tsx:22
+#: src/components/plot/PlotStatus.tsx:20
+#: src/components/plot/PlotStatus.tsx:21
+#: src/components/plot/queue/PlotQueueIndicator.tsx:22
+msgid "Error"
+msgstr "שגיאה"
+
+#: src/components/wallet/standard/WalletStandard.tsx:456
+msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
+msgstr "שגיאה: לא ניתן לשלוח Chia לכתובת הצבעונית הזו. אנא הקש כתובת Chia."
+
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
+msgid "Estimated Network Space"
+msgstr "גודל רשת מוערך"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:45
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:53
+msgid "Estimated Time to Win"
+msgstr "זמן משוער לזכיה"
+
+#: src/components/fullNode/FullNode.jsx:204
+#~ msgid "Estimated network space"
+#~ msgstr "Estimated network space"
+
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
+msgid "Estimated sum of all the plotted disk space of all farmers in the network"
+msgstr "סכום משוער של כל שטח הדיסק המתוכנן של כל החקלאים ברשת"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:193
+msgid "Exclude final directory"
+msgstr "אל תכלול את התקייה הסופית"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "Expected Time to Win"
+#~ msgstr ""
+
+#: src/components/plot/PlotsFailed.tsx:38
+msgid "Failed to open (invalid plots)"
+msgstr "לא ניתן לפתוח (פלוטים שגויים)"
+
+#: src/components/dashboard/DashboardSideBar.tsx:55
+#: src/components/wallet/coloured/WalletColoured.tsx:610
+#: src/components/wallet/standard/WalletStandard.tsx:532
+msgid "Farm"
+msgstr "חווה"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:211
+msgid "Farmer Public Key"
+msgstr "מפתח Farmer Public"
+
+#: src/components/block/Block.jsx:268
+msgid "Farmer Puzzle Hash"
+msgstr "חקלאי Puzzle Hash"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:163
+msgid "Farmer Reward Address"
+msgstr "כתובת תגמול לחקלאי"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:137
+msgid "Farmer Reward Address is not properly formatted."
+msgstr "כתובת תגמול האיכר (Farmer Reward Address) אינה מעוצבת כראוי. מבנה כתובת הדוא\"ל שגוי."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:131
+msgid "Farmer Reward Address must not be empty."
+msgstr "כתובת תגמול האיכר (Farmer Reward Address) אינה יכולה להיות ריקה."
+
+#: src/components/farm/card/FarmCardStatus.tsx:38
+#: src/components/plot/PlotStatus.tsx:28
+msgid "Farmer is not connected"
+msgstr "חווה לא מחוברת"
+
+#: src/components/farm/card/FarmCardStatus.tsx:52
+#: src/components/plot/PlotStatus.tsx:29
+msgid "Farmer is not running"
+msgstr "חווה לא עובדת"
+
+#: src/middleware/middleware_api.jsx:237
+msgid "Farmer public key:"
+msgstr "מפתח ציבורי לחקלאי:"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:33
+msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
+msgstr "חקלאים מרוויחים תגמולים ודמי עסקה על ידי התחייבות שטח פנוי לרשת כדי לסייע באבטחת עסקאות.  המקום שבו החווה שלך תהיה ברגע שתוסיף פלוט. <0>למד עוד</0>"
+
+#: src/components/farm/card/FarmCardStatus.tsx:62
+#: src/components/farm/Farm.tsx:23
+#: src/components/farm/FarmerStatus.tsx:18
+#: src/components/plot/PlotStatus.tsx:17
+msgid "Farming"
+msgstr "קוצר"
+
+#: src/components/farm/card/FarmCardStatus.tsx:15
+#: src/components/farm/card/FarmCardStatus.tsx:26
+#: src/components/farm/card/FarmCardStatus.tsx:32
+#: src/components/farm/card/FarmCardStatus.tsx:46
+#: src/components/farm/card/FarmCardStatus.tsx:59
+msgid "Farming Status"
+msgstr "מצב הקצירה"
+
+#: src/components/core/components/Fee/Fee.tsx:48
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:154
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:147
+#: src/components/pool/PoolInfo.tsx:17
+#: src/components/wallet/create/createExistingColouredCoin.jsx:123
+#: src/components/wallet/create/createNewColouredCoin.jsx:132
+#: src/components/wallet/create/createRLAdmin.jsx:244
+#: src/components/wallet/create/createRLAdmin.jsx:272
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
+#: src/components/wallet/standard/WalletStandard.tsx:524
+#: src/components/wallet/WalletHistory.tsx:66
+msgid "Fee"
+msgstr "דמי"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:420
+#~ msgid "Fee (TXCH)"
+#~ msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:420
+#~ msgid "Fee ({0})"
+#~ msgstr "Fee ({0})"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:595
+msgid "Fee ({currencyCode})"
+msgstr "דמי"
+
+#: src/components/block/Block.jsx:322
+msgid "Fees Amount"
+msgstr "סכום העמלות"
+
+#: src/components/block/Block.jsx:313
+#~ msgid "Fees Puzzle Hash"
+#~ msgstr ""
+
+#: src/electron/main.tsx:255
+#: src/electron/main.tsx:456
+msgid "File"
+msgstr "קובץ"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:106
+#: src/components/plot/PlotsFailed.tsx:14
+#: src/components/plot/PlotsNotFound.tsx:14
+#: src/components/wallet/did/WalletDID.tsx:975
+msgid "Filename"
+msgstr "שם הקובץ"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:36
+msgid "Final folder location"
+msgstr "מיקום סופי של החלקה"
+
+#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:98
+msgid "Finished"
+msgstr "הסתיים"
+
+#: src/electron/main.tsx:407
+msgid "Follow on Twitter"
+msgstr "עקוב בטוויטר"
+
+#: src/electron/main.tsx:366
+msgid "Frequently Asked Questions"
+msgstr "שאלות נפוצות"
+
+#: src/components/dashboard/DashboardSideBar.tsx:39
+#: src/components/fullNode/FullNode.jsx:323
+msgid "Full Node"
+msgstr "תחנת צ'יה"
+
+#: src/components/fullNode/FullNode.jsx:326
+msgid "Full Node Overview"
+msgstr "סקירה כללית של ה-Full Node"
+
+#: src/components/fullNode/FullNode.jsx:267
+#~ msgid "Full Node Status"
+#~ msgstr "Full Node Status"
+
+#: src/electron/main.tsx:332
+msgid "Full Screen"
+msgstr "מסך מלא"
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:102
+msgid "Generate New Colour"
+msgstr "צור צבע חדש"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:251
+#~ msgid "Get Pool Login Link"
+#~ msgstr "Get Pool Login Link"
+
+#: src/components/pool/PoolOverview.tsx:176
+msgid "Grid view"
+msgstr "תצוגה טבלאית"
+
+#: src/components/wallet/standard/WalletStandard.tsx:583
+msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
+msgstr "HD או מפתחות Hierarchical Deterministic הם סוג של מפתח ציבורי/מפתח פרטי שבו מפתח פרטי אחד יכול לכלול מספר אינסופי של מפתחות ציבוריים שונים (ועל כן ארנק מקבל כתובות) שבסופו של דבר יחזרו ויהיו ניתנים למשיכה באמצעות מפתח פרטי אחד."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#~ msgid "Harvester ID"
+#~ msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:132
+msgid "Harvester Plots"
+msgstr "פלוטים בחלקה (Harvester)"
+
+#: src/components/fullNode/FullNode.jsx:61
+msgid "Header Hash"
+msgstr "כותרת קוד"
+
+#: src/components/block/Block.jsx:186
+msgid "Header hash"
+msgstr "כותרת קוד"
+
+#: src/components/block/Block.jsx:202
+#: src/components/fullNode/FullNode.jsx:81
+#: src/components/fullNode/FullNodeConnections.tsx:79
+msgid "Height"
+msgstr "גובה"
+
+#: src/electron/main.tsx:354
+msgid "Help"
+msgstr "עזרה"
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:76
+msgid "Help translate"
+msgstr "עזור לתרגם"
+
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
+msgid "Hide Advanced Options"
+msgstr "הסתר אפשרויות מתקדמות"
+
+#: src/components/wallet/WalletHistory.tsx:91
+msgid "History"
+msgstr "היסטוריה"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:36
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:36
+msgid "Host Name"
+msgstr "שם מחשב מארח"
+
+#: src/components/fullNode/FullNodeConnections.tsx:40
+msgid "IP address"
+msgstr "כתובת IP"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:75
+msgid "IP address / host"
+msgstr "כתובת IP / מחשב מארח"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:115
+msgid "If none selected, then it will default to the temporary directory."
+msgstr "אם שום דבר לא סומן, אז ברירת המחדל תהייה התקייה הזמנית."
+
+#: src/components/wallet/WalletImport.tsx:144
+msgid "Import Wallet from Mnemonics"
+msgstr "ייבא ארנק באמצעות Mnemonic"
+
+#: src/components/selectKey/SelectKey.tsx:220
+msgid "Import from Mnemonics (24 words)"
+msgstr "ייבא באמצעות Mnemonic (24 מילים)"
+
+#: src/components/fullNode/FullNode.jsx:45
+msgid "In Progress"
+msgstr "בתהליך"
+
+#: src/components/wallet/WalletHistory.tsx:23
+msgid "Incoming"
+msgstr "נכנס"
+
+#: src/components/core/components/Fee/Fee.tsx:36
+msgid "Incorrect value"
+msgstr "ערך שגוי"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:18
+msgid "Index"
+msgstr "אינדקס"
+
+#: src/components/trading/TradingOverview.jsx:214
+msgid "Indicated if this offer was created by us"
+msgstr "צוין אם הצעה זו נוצרה על ידינו"
+
+#: src/components/trading/TradingOverview.jsx:231
+msgid "Indicated what time this offer was accepted"
+msgstr "צוין באיזו שעה התקבלה הצעה זו"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:333
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:472
+msgid "Info Packet"
+msgstr "חבילת מידע"
+
+#: src/components/wallet/create/createRLAdmin.jsx:260
+msgid "Initial Amount"
+msgstr "סכום ראשוני"
+
+#: src/components/wallet/create/createRLUser.jsx:87
+msgid "Initialize a Rate Limited User Wallet:"
+msgstr "אתחול ארנק משתמשים מוגבל בשיעור:"
+
+#: src/components/wallet/create/createRLAdmin.jsx:218
+msgid "Interval"
+msgstr "הפסקה"
+
+#: src/components/plotNFT/PlotNFTState.tsx:26
+msgid "Invalid state"
+msgstr "מצב לא תקין"
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:90
+msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
+msgstr "זהו קישור התחברות חד פעמי שניתן להשתמש בו כדי להיכנס לאתר בריכה (Pool). הוא מכיל חתימה באמצעות מפתח האיכר מתוך פלוט NFT. לא כל הבריכות תומכות בתכונה זו."
+
+#: src/components/plotNFT/PlotNFTCard.tsx:406
+#: src/components/pool/PoolOverview.tsx:113
+msgid "Join Pool"
+msgstr "הצטרף/י לבריכה (Pool)"
+
+#: src/components/plot/add/PlotAddNFT.tsx:59
+#: src/components/plot/add/PlotAddNFT.tsx:141
+#: src/components/pool/PoolHero.tsx:31
+msgid "Join a Pool"
+msgstr "הצטרף/י לבריכה (Pool)"
+
+#: src/components/plot/add/PlotAddNFT.tsx:44
+msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
+msgstr "הצטרף/י לבריכה (Pool) וקבל/י תגמולים עקביים של חקלאות (Farming) - XCH. התשואה הממוצעת זהה, אך היא הרבה פחות תנודתית."
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:59
+msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile. Assign plots to a plot NFT. You can easily switch pools without having to re-plot."
+msgstr "הצטרף/י לבריכה (Pool) וקבל/י תגמולים עקביים של חקלאות (Farming) - XCH. התשואה הממוצעת זהה, אך היא הרבה פחות תנודתית. הקצה/י פלוטים אל פלוט NFT. תוכל/י להחליף בריכה (Pool) בקלות מבלי שתצטרך/י ליצור פלוטים מחדש."
+
+#: src/components/plot/add/PlotAddNFT.tsx:133
+msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
+msgstr "הצטרף/י לבריכה (Pool) וקבל/י תגמולים עקביים של חקלאות (Farming) - XCH. צור/י פלוט NFT והקצה/י את הפלוטים החדשים שלך לקבוצה."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:63
+msgid "K-Size"
+msgstr "גודל-K"
+
+#: src/components/dashboard/DashboardSideBar.tsx:66
+msgid "Keys"
+msgstr "מפתחות"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:64
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:64
+msgid "KiB Up/Down"
+msgstr "KiB עולה/יורד"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:47
+msgid "Last Attempted Proof"
+msgstr "ניסיון הוכחה אחרון"
+
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:19
+msgid "Last Height Farmed"
+msgstr "ה-Height האחרון שנקצר"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:36
+msgid "Latest Block Challenges"
+msgstr "אתגרי בלוק אחרונים"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:295
+#: src/components/plotNFT/PlotNFTCard.tsx:350
+msgid "Launcher Id"
+msgstr "מזהה מפעיל (Launcher ID)"
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:100
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:114
+msgid "Learn More"
+msgstr "למד/י עוד"
+
+#: src/components/plotNFT/PlotNFTState.tsx:58
+msgid "Leaving Pool"
+msgstr "עוזב בריכה (Pool)"
+
+#: src/components/pool/PoolOverview.tsx:176
+msgid "List view"
+msgstr "תצוגת רשימה"
+
+#: src/components/pool/Pool.tsx:21
+msgid "Loading Plot NFTs"
+msgstr "טוען פלוט NFTs"
+
+#: src/components/wallet/Wallets.tsx:117
+msgid "Loading list of wallets"
+msgstr "טוען רשימה של ארנקים"
+
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
+msgid "Loading..."
+msgstr "טוען..."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:126
+#~ msgid "Local Harvester Plots"
+#~ msgstr "Local Harvester Plots"
+
+#: src/components/app/AppRouter.tsx:41
+msgid "Logging in"
+msgstr "מתחבר..."
+
+#: src/components/wallet/create/WalletCreate.jsx:124
+#~ msgid "MainWalletList.colouredCoin"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:258
+#~ msgid "MainWalletList.createAdminWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:322
+#~ msgid "MainWalletList.createDIDWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:194
+#~ msgid "MainWalletList.createNewColouredCoin"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:270
+#~ msgid "MainWalletList.createUserWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:206
+#~ msgid "MainWalletList.createWalletForExistingColour"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:144
+#~ msgid "MainWalletList.distributedIdentity"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:134
+#~ msgid "MainWalletList.rateLimited"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:334
+#~ msgid "MainWalletList.recoverDIDWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:112
+#~ msgid "MainWalletList.title"
+#~ msgstr ""
+
+#: src/components/farm/overview/FarmOverview.tsx:53
+msgid "Manage Farming Rewards"
+msgstr "ניהול תגמולי חווה"
+
+#: src/components/wallet/did/WalletDID.tsx:806
+msgid "Manage Recovery DIDs"
+msgstr "נהל/י שחזור DIDs"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:119
+msgid "Manage Your Farming Rewards Target Addresses"
+msgstr "ניהול תגמולי חווה, כתובות למטרה"
+
+#: src/components/fullNode/FullNodeConnections.tsx:68
+msgid "MiB Up/Down"
+msgstr "MiB עולה/יורד"
+
+#: src/components/pool/PoolInfo.tsx:27
+msgid "Minimum Difficulty"
+msgstr "רמת קושי מינימלית"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:97
+msgid "Minutes"
+msgstr "דקות"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:116
+msgid "More memory slightly increases speed"
+msgstr "תוספת זיכרון תגביר מעט את המהירות"
+
+#: src/components/wallet/did/WalletDID.tsx:537
+msgid "My DID Wallet"
+msgstr "ארנק ה-DID שלי"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
+msgid "My Pubkey"
+msgstr "המפתח הציבורי שלי"
+
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
+msgid "Network Name"
+msgstr "שם הרשת"
+
+#: src/components/fullNode/FullNode.jsx:106
+#~ msgid "Network has not yet been launched, once it launches full node will start automatically."
+#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
+
+#: src/components/app/AppRouter.tsx:24
+#~ msgid "Network not launched yet, waiting for genesis challenge!"
+#~ msgstr "Network not launched yet, waiting for genesis challenge!"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:685
+#: src/components/wallet/standard/WalletStandard.tsx:579
+msgid "New Address"
+msgstr "כתובת חדשה"
+
+#: src/components/wallet/WalletAdd.tsx:63
+msgid "New Wallet"
+msgstr "ארנק חדש"
+
+#: src/components/block/Block.jsx:351
+#: src/components/wallet/WalletAdd.tsx:95
+#: src/components/wallet/WalletImport.tsx:163
+msgid "Next"
+msgstr "הבא"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:249
+msgid "Nickname"
+msgstr "שם כינוי"
+
+#: src/components/trading/TradingOverview.jsx:209
+#: src/electron/main.tsx:192
+msgid "No"
+msgstr "לא"
+
+#: src/middleware/middleware_api.jsx:263
+msgid "No 24 word seed, since this key is imported."
+msgstr "אין 24 מילות, מכיוון שמפתח זה יובא."
+
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:21
+msgid "No blocks farmed yet"
+msgstr "לא נקצרו בלוקים עד לרגע זה"
+
+#: src/components/wallet/WalletHistory.tsx:102
+msgid "No previous transactions"
+msgstr "אין עסקאות קודמות"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:156
+msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
+msgstr "אין מפתחות פרטיים עבור אחד או יותר מהכתובות. יהיה אך ורק בטוח לשלוח תגלומים לארנק נוסף."
+
+#: src/components/farm/FarmFullNodeConnections.tsx:32
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
+#: src/components/fullNode/FullNodeConnections.tsx:36
+msgid "Node ID"
+msgstr "מזהה Node"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:87
+msgid "Node Id"
+msgstr "מזהה Node"
+
+#: src/components/plot/add/PlotAddNFT.tsx:86
+msgid "None"
+msgstr "ללא"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:68
+msgid "None of your plots have passed the plot filter yet."
+msgstr "אף-אחד מהפלוטים שלך לא עבר את הפילטר עדיין."
+
+#: src/components/farm/card/FarmCardNotAvailable.tsx:20
+#: src/components/farm/card/FarmCardNotAvailable.tsx:23
+#: src/components/farm/FarmerStatus.tsx:20
+#: src/components/plot/PlotStatus.tsx:19
+#: src/components/plotNFT/PlotNFTCard.tsx:365
+msgid "Not Available"
+msgstr "לא זמין"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
+#: src/components/wallet/WalletStatus.tsx:28
+msgid "Not Synced"
+msgstr "לא מסונכרן"
+
+#: src/components/trading/TradingOverview.jsx:222
+msgid "Not accepted yet"
+msgstr "עדיין לא התקבל"
+
+#: src/components/trading/TradingOverview.jsx:195
+msgid "Not confirmed yet"
+msgstr "טרם אומת"
+
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:52
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
+msgid "Not connected"
+msgstr "לא מחובר"
+
+#: src/components/plot/PlotsNotFound.tsx:37
+msgid "Not found Plots"
+msgstr "לא נמצאו פלוטים"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:184
+msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
+msgstr "שים/י לב שזה לא משנה את כתובות תשלומי הבריכות (Pooling Payout Addresses) שלך. זה משפיע רק על פלוטים בפורמט ישן, ועל התגמול של 0.25XCH על פלוטים של בריכות (Pooling Plots)."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:118
+#: src/components/plotNFT/PlotNFTCard.tsx:160
+msgid "Number of Plots"
+msgstr "מספר הפלוטים"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:147
+msgid "Number of buckets"
+msgstr "מספר ה-Buckets"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:133
+msgid "Number of threads"
+msgstr "מספר ה-Threads"
+
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:87
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:111
+msgid "OK"
+msgstr "אישור"
+
+#: src/components/trading/ViewOffer.jsx:67
+msgid "Offer"
+msgstr "הצעה"
+
+#: src/components/trading/TradingOverview.jsx:413
+msgid "Offers Created"
+msgstr "הצעות שנוצרו"
+
+#: src/components/wallet/standard/WalletStandard.tsx:485
+msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
+msgstr "בממוצע יש דקה בין עסקת Block. אלא אם יש עומס, אתה יכול לצפות שהעסקה שלך תיכלל תוך פחות מדקה."
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:34
+msgid "Only one backup file is allowed."
+msgstr "ניתן להשתמש רק בקובץ גיבוי אחד."
+
+#: src/components/wallet/create/recoverDIDWallet.js:156
+#~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
+#~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
+
+#: src/components/wallet/WalletHistory.tsx:23
+msgid "Outgoing"
+msgstr "יוצא"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:361
+msgid "Payout Address"
+msgstr "כתובת לתשלום"
+
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
+msgid "Peak Height"
+msgstr "שיא Height"
+
+#: src/components/fullNode/FullNode.jsx:204
+#~ msgid "Peak Sub-block Height"
+#~ msgstr "Peak Sub-block Height"
+
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:23
+msgid "Peak Time"
+msgstr "זמן שיא"
+
+#: src/components/plotNFT/PlotNFTState.tsx:43
+#: src/components/wallet/WalletHistory.tsx:53
+msgid "Pending"
+msgstr "ממתין"
+
+#: src/components/wallet/card/WalletCardPendingBalance.tsx:24
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:573
+msgid "Pending Balance"
+msgstr "יתרה בהמתנה"
+
+#: src/components/wallet/card/WalletCardPendingChange.tsx:24
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:578
+msgid "Pending Change"
+msgstr "בהמתנה לשינוי"
+
+#: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:27
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:568
+msgid "Pending Total Balance"
+msgstr "יתרה כוללת בהמתנה"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:131
+#: src/hooks/useAbsorbRewards.tsx:45
+msgid "Please Confirm"
+msgstr "אנא אשר/י"
+
+#: src/components/trading/CreateOffer.jsx:100
+msgid "Please add a trade pair"
+msgstr "אנא הוסף זוג סחר"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:668
+msgid "Please enter 0 fee. Positive fees not supported yet for RL."
+msgstr "אנא הכנס 0 עמלות. עמלות חיוביות עדיין לא נתמכות עבור RL."
+
+#: src/components/wallet/did/WalletDID.tsx:924
+msgid "Please enter a coin"
+msgstr "נא להזין מטבע"
+
+#: src/components/wallet/did/WalletDID.tsx:526
+#: src/components/wallet/did/WalletDID.tsx:914
+msgid "Please enter a filename"
+msgstr "אנא הזן/י שם קובץ"
+
+#: src/components/wallet/did/WalletDID.tsx:934
+msgid "Please enter a pubkey"
+msgstr "אנא הזן/י pubkey"
+
+#: src/components/wallet/did/WalletDID.tsx:944
+msgid "Please enter a puzzlehash"
+msgstr "אנא הזן/י puzzlehash"
+
+#: src/components/wallet/create/createRLAdmin.jsx:140
+msgid "Please enter a valid initial coin amount"
+msgstr "אנא הזן סכום מטבע ראשוני תקף"
+
+#: src/components/wallet/did/WalletDID.tsx:777
+#: src/components/wallet/did/WalletDIDCreate.tsx:76
+msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
+msgstr "הזן מספר שלם חוקי של 0 ומעלה עבור מספר מזהי הגיבוי הדרושים לשחזור."
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:69
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
+#: src/components/wallet/standard/WalletStandard.tsx:432
+msgid "Please enter a valid numeric amount"
+msgstr "אנא הזן סכום מספרי תקף"
+
+#: src/components/wallet/did/WalletDIDCreate.tsx:50
+msgid "Please enter a valid numeric amount."
+msgstr "אנא הזן/י כמות מספרית."
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:70
+#: src/components/wallet/create/createNewColouredCoin.jsx:79
+#: src/components/wallet/create/createRLAdmin.jsx:150
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
+#: src/components/wallet/standard/WalletStandard.tsx:444
+msgid "Please enter a valid numeric fee"
+msgstr "אנא הזן עמלה מספרית בתוקף"
+
+#: src/components/wallet/create/createRLAdmin.jsx:100
+msgid "Please enter a valid numeric interval length"
+msgstr "הזן אורך מרווח מספרי תקף"
+
+#: src/components/wallet/create/createRLAdmin.jsx:115
+msgid "Please enter a valid numeric spendable amount"
+msgstr "אנא הכנס סכום מספרי תקף לבזבוז"
+
+#: src/components/wallet/create/createRLAdmin.jsx:125
+msgid "Please enter a valid pubkey"
+msgstr "אנא הזן pubkey חוקי"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:623
+#: src/components/wallet/standard/WalletStandard.tsx:420
+msgid "Please finish syncing before making a transaction"
+msgstr "אנא סיים את הסנכרון לפני ביצוע עסקה"
+
+#: src/components/trading/CreateOffer.jsx:66
+msgid "Please select amount"
+msgstr "אנא בחר סכום"
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:55
+msgid "Please select backup file first"
+msgstr "אנא בחר/י קובץ גיבוי ראשון"
+
+#: src/components/trading/CreateOffer.jsx:76
+msgid "Please select buy or sell"
+msgstr "אנא בחר לקנות או למכור"
+
+#: src/components/trading/CreateOffer.jsx:56
+msgid "Please select coin colour"
+msgstr "אנא בחר צבע מטבע"
+
+#: src/components/trading/CreateOffer.jsx:63
+#~ msgid "Please select coin type"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:45
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:49
+msgid "Please specify final directory"
+msgstr "אנא ציין את התקייה הסופית"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:60
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:64
+msgid "Please specify temporary directory"
+msgstr "אנא ציין תקייה זמנית"
+
+#: src/hooks/useAbsorbRewards.tsx:21
+msgid "Please wait for synchronization"
+msgstr "אנא המתן/י לסנכרון"
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:64
+#: src/hooks/useJoinPool.tsx:27
+msgid "Please wait for wallet synchronization"
+msgstr "אנא המתן/י לסנכרון הארנק"
+
+#: src/components/plot/Plot.tsx:18
+msgid "Plot"
+msgstr "חלקה"
+
+#: src/components/farm/card/FarmCardPlotCount.tsx:12
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:41
+msgid "Plot Count"
+msgstr "מספר חלקות"
+
+#: src/components/block/Block.jsx:300
+msgid "Plot Id"
+msgstr "זיהוי החלקה"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+msgid "Plot Key"
+msgstr "מפתח של החלקה"
+
+#: src/components/pool/PoolOverview.tsx:40
+msgid "Plot NFT"
+msgstr "פלוט NFT"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:103
+#: src/components/plotNFT/PlotNFTChangePool.tsx:81
+msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
+msgstr "פלוט NFT עם p2_singleton_puzzle_hash {plotNFTId} לא קיים"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:43
+#~ msgid "Plot Name"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:260
+msgid "Plot Public Key"
+msgstr "מפתח ציבורי של החלקה"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#~ msgid "Plot Seed"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:80
+msgid "Plot Size"
+msgstr "גודל החלקה"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:74
+msgid "Plot in Parallel"
+msgstr "ייצור חלקות במקביל"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:46
+msgid "Plot is duplicate of {0}"
+msgstr "פלוט כפול מ-"
+
+#: src/components/plotNFT/PlotNFTState.tsx:46
+#~ msgid "PlotNFT is transitioning to (target state)"
+#~ msgstr "PlotNFT is transitioning to (target state)"
+
+#: src/components/plotNFT/PlotNFTState.tsx:46
+msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
+msgstr "פלוט NFT עובר ל (מצב יעד). זה יכול לקחת זמן. נא לא לסגור את הבקשה עד להשלמתה."
+
+#: src/components/dashboard/DashboardSideBar.tsx:50
+msgid "Plots"
+msgstr "פלוטים"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:22
+msgid "Plots Passed Filter"
+msgstr "פלוטים שעברו את המסנן"
+
+#: src/components/plot/overview/PlotOverviewHero.tsx:35
+msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
+msgstr "לפלוטים מוקצה שטח על הדיסק הקשיח אשר משמש לקצירה ולהרוויח Chia <0>למד עוד</0>"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:34
+msgid "Plotting"
+msgstr "יוצר פלוטים"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:58
+msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
+msgstr "פלוטינג במקביל יכול לחסוך זמן. אחרת, הוסף פלוטים לתור."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:174
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
+msgstr "פלוטינג עם bitfield מופעל , יש בערך 30% פחות כתיבה כללית ועכשיו הוא כמעט תמיד מהיר יותר. יתכן שתראה דרישות זיכרון מופחתות כאשר bitfield מושבת.\n"
+"אם המעבד שלך הוא מלפני שנת 2010, אתה תצטרך להשבית Bitfield Plotting."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:174
+#: src/components/plotNFT/PlotNFTCard.tsx:216
+msgid "Points Found Since Start"
+msgstr "נקודות שנמצאו מאז ההתחלה"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:185
+#: src/components/plotNFT/PlotNFTCard.tsx:227
+msgid "Points Found in Last 24 Hours"
+msgstr "נקודות שנמצאו ב-24 השעות האחרונות"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:194
+#: src/components/plotNFT/PlotNFTCard.tsx:236
+msgid "Points Successful in Last 24 Hours"
+msgstr "נקודות שהצליחו ב-24 השעות האחרונות"
+
+#: src/components/dashboard/DashboardSideBar.tsx:60
+#: src/components/pool/Pool.tsx:25
+msgid "Pool"
+msgstr "בריכה (Pool)"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:100
+msgid "Pool Contract Address"
+msgstr "כתובת חוזה בריכה (Pool Contract Address)"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:81
+msgid "Pool Key"
+msgstr "מפתח בריכה"
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
+msgid "Pool Login Link"
+msgstr "קישור לכניסה לאתר הבריכה (Pool)"
+
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:87
+msgid "Pool Payout Instructions"
+msgstr "הוראות תשלום לבריכה (Pool)"
+
+#: src/components/block/Block.jsx:264
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:222
+msgid "Pool Public Key"
+msgstr "מפתח בריכה ציבורי"
+
+#: src/components/block/Block.jsx:284
+msgid "Pool Puzzle Hash"
+msgstr "בריכה (Pool) Puzzle Hash"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:173
+msgid "Pool Reward Address"
+msgstr "כתובת תגמול לבריכה"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:149
+msgid "Pool Reward Address is not properly formatted."
+msgstr "כתובת תגמול הבריכה (Pool Reward Address) אינה מעוצבת כראוי."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:144
+msgid "Pool Reward Address must not be empty."
+msgstr "כתובת תגמול הבריכה (Pool Reward Address) לא יכולה להשאר ריקה."
+
+#: src/components/block/Block.jsx:314
+msgid "Pool Reward Amount"
+msgstr "סכום תגמול לבריכה"
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
+msgid "Pool does not provide relative_lock_height."
+msgstr "הבריכה (Pool) אינה מספקת relative_lock_height."
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
+msgid "Pool does not provide target_puzzle_hash."
+msgstr "הבריכה (Pool) אינה מספקת target_puzzle_hash."
+
+#: src/middleware/middleware_api.jsx:245
+msgid "Pool public key:"
+msgstr "מפתח בריכה (Pool) ציבורי: "
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:272
+#: src/components/plotNFT/PlotNFTCard.tsx:327
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
+msgid "Pool:"
+msgstr "בריכה (Pool):"
+
+#: src/components/plotNFT/PlotNFTExternalState.tsx:24
+#: src/components/plotNFT/PlotNFTState.tsx:59
+msgid "Pooling"
+msgstr "מסונכרן (Pooling)"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:42
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:42
+#: src/components/fullNode/FullNodeAddConnection.tsx:80
+#: src/components/fullNode/FullNodeConnections.tsx:46
+msgid "Port"
+msgstr "פורט"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:88
+#: src/components/plotNFT/PlotNFTChangePool.tsx:74
+msgid "Preparing Plot NFT"
+msgstr "מכין פלוט NFT"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:96
+msgid "Preparing standard wallet"
+msgstr "מכין ארנק סטנדרטי"
+
+#: src/components/block/Block.jsx:348
+msgid "Previous"
+msgstr "הקודם"
+
+#: src/components/block/Block.jsx:203
+#~ msgid "Previous Block Hash"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:216
+msgid "Previous Header Hash"
+msgstr "Header Hash הקודם"
+
+#: src/components/block/Block.jsx:217
+#~ msgid "Previous Sub Block Hash"
+#~ msgstr "Previous Sub Block Hash"
+
+#: src/components/selectKey/SelectKey.tsx:165
+msgid "Private key with public fingerprint {fingerprint}"
+msgstr "מפתח פרטי עם טביעת אצבע ציבורית "
+
+#: src/middleware/middleware_api.jsx:211
+msgid "Private key {0}"
+msgstr "מפתח פרטי"
+
+#: src/middleware/middleware_api.jsx:221
+msgid "Private key:"
+msgstr "מפתח פרטי:"
+
+#: src/components/block/Block.jsx:252
+msgid "Proof of Space Size"
+msgstr "גודל PoS"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:26
+msgid "Proofs Found"
+msgstr "הוכחות שנמצאו"
+
+#: src/components/pool/PoolInfo.tsx:22
+msgid "Protocol Version"
+msgstr "גרסת פרוטוקול"
+
+#: src/components/wallet/create/createRLAdmin.jsx:297
+#: src/components/wallet/did/WalletDID.tsx:993
+msgid "Pubkey"
+msgstr "מפתח ציבורי"
+
+#: src/middleware/middleware_api.jsx:229
+msgid "Public key:"
+msgstr "מפתח ציבורי:"
+
+#: src/components/wallet/did/WalletDID.tsx:1002
+msgid "Puzzlehash"
+msgstr "Puzzlehash"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:162
+msgid "Queue Name"
+msgstr "שם התור"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:69
+msgid "Queue name"
+msgstr "שם התור"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:35
+msgid "Queued"
+msgstr "בתור"
+
+#: src/electron-starter.js:80
+#~ msgid "Quit"
+#~ msgstr "Quit"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:115
+msgid "RAM max usage"
+msgstr "שימוש מירבי ב-RAM"
+
+#: src/components/wallet/Wallets.tsx:51
+#~ msgid "RL Wallet"
+#~ msgstr "RL Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:246
+#~ msgid "RLListItems.title"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreateList.tsx:42
+msgid "Rate Limited"
+msgstr "מגבלות מיכסה"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:391
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:438
+msgid "Rate Limited Info"
+msgstr "מידע על הגבלות מכסה"
+
+#: src/components/wallet/create/WalletCreate.jsx:176
+msgid "Rate Limited Options"
+msgstr "אפשרויות הגבלות מכסה"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:273
+msgid "Rate Limited User Wallet Setup"
+msgstr "הגדרת ארנק משתמש מוגבל במכסה"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:650
+#: src/components/wallet/standard/WalletStandard.tsx:576
+msgid "Receive Address"
+msgstr "כותבת לקבלה"
+
+#: src/components/wallet/did/WalletDID.tsx:464
+#: src/components/wallet/did/WalletDIDRecovery.tsx:124
+msgid "Recover"
+msgstr "שחזור"
+
+#: src/components/wallet/did/WalletDID.tsx:340
+#: src/components/wallet/did/WalletDID.tsx:480
+msgid "Recover DID Wallet"
+msgstr "שחזור ארנק DID"
+
+#: src/components/wallet/create/WalletCreate.jsx:296
+#~ msgid "Recover DID wallet"
+#~ msgstr "Recover DID wallet"
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:84
+msgid "Recover Distributed Identity Wallet"
+msgstr "שחזור ארנק זהות מבוזרת"
+
+#: src/components/wallet/did/WalletDIDSelect.tsx:39
+msgid "Recover Wallet"
+msgstr "שחזור ארנק"
+
+#: src/components/plot/overview/PlotOverviewHero.tsx:62
+#: src/components/plot/PlotHeader.tsx:78
+msgid "Refresh Plots"
+msgstr "רענן פלוטים"
+
+#: src/components/pool/PoolInfo.tsx:32
+msgid "Relative Lock Height"
+msgstr "גובה מנעול יחסי (Lock Height)"
+
+#: src/electron/main.tsx:374
+msgid "Release Notes"
+msgstr "הערות גרסה"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:36
+msgid "Removing"
+msgstr "מסיר"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:265
+msgid "Rename"
+msgstr "שנה/י שם"
+
+#: src/electron/main.tsx:393
+msgid "Report an Issue..."
+msgstr "דווח/י על תקלה.."
+
+#: src/components/backup/BackupRestore.tsx:160
+msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
+msgstr "שיחזור נתוני Meta עבור מטבעות צבעוניים וארנקים חכמים מתוך גיבוי"
+
+#: src/components/backup/BackupRestore.tsx:107
+#~ msgid "Restore Smart Wallets From Backup"
+#~ msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:57
+#: src/components/fullNode/FullNodeConnections.jsx:107
+#~ msgid "SB Height"
+#~ msgstr "SB Height"
+
+#: src/components/backup/BackupRestore.tsx:186
+msgid "Safe To Skip"
+msgstr "בטוח לדלג"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:199
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:126
+#: src/components/trading/CreateOffer.jsx:142
+msgid "Save"
+msgstr "שמירה"
+
+#: src/components/fullNode/FullNode.jsx:338
+#~ msgid "Search"
+#~ msgstr ""
+
+#: src/components/fullNode/FullNodeBlockSearch.tsx:41
+msgid "Search block by header hash"
+msgstr "חיפוש בלוק ע\"י header hash"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:93
+msgid "Second temporary folder location"
+msgstr "מיקום ספרייה זמנית משנית"
+
+#: src/components/selectKey/SelectKey.tsx:174
+msgid "See private key"
+msgstr "צפה/י במפתח פרטי"
+
+#: src/middleware/middleware_api.jsx:255
+msgid "Seed:"
+msgstr "זרע:"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:87
+msgid "Select 2nd Temporary Directory"
+msgstr "בחר ספרייה זמנית משנית"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:23
+msgid "Select Final Directory"
+msgstr "בחר ספרייה סופית"
+
+#: src/components/selectKey/SelectKey.tsx:133
+msgid "Select Key"
+msgstr "בחר מפתח"
+
+#: src/components/trading/ViewOffer.jsx:37
+msgid "Select Offer"
+msgstr "בחר הצעה"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
+msgid "Select Temporary Directory"
+msgstr "בחר ספרייה זמנית"
+
+#: src/components/wallet/create/WalletCreateList.tsx:21
+msgid "Select Wallet Type"
+msgstr "בחר סוג ארנק"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:25
+msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
+msgstr "בחר את הספרייה הסופית בה את/ה רוצה לאחסן את הפלוטים שלך. אנו ממליצים להשתמש בכונן קשיח בנפח גדול ואיטי (כמו כונן קשיח חיצוני)."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+#~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+#~ msgstr "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
+msgstr "בחר את הספרייה הזמנית בה את/ה רוצה לאחסן את הפלוטים שלך. אנו ממליצים להשתמש בכונן קשיח מהיר במיוחד."
+
+#: src/components/plot/add/PlotAddNFT.tsx:81
+msgid "Select your Plot NFT"
+msgstr "בחר/י את הפלוט NFT שלך"
+
+#: src/components/plot/add/PlotAddNFT.tsx:72
+msgid "Select your Plot NFT from the dropdown or create a new one."
+msgstr "בחר/י את הפלוט NFT שלך מהתפריט הנפתח או צור/י אחד חדש."
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:61
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:108
+msgid "Selected"
+msgstr "נבחר"
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:91
+msgid "Selected recovery file:"
+msgstr "קובץ שחזור שנבחר:"
+
+#: src/components/plotNFT/PlotNFTExternalState.tsx:23
+#: src/components/plotNFT/PlotNFTState.tsx:57
+msgid "Self Pooling"
+msgstr "בריכה עצמאית (Self Pooling)"
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:105
+msgid "Self pool. When you win a block you will earn XCH rewards."
+msgstr "בריכה עצמאית (Self Pooling). כשתזכה/י בבלוק תתוגמל/י בפרסים של XCH."
+
+#: src/components/trading/CreateOffer.jsx:164
+#: src/components/trading/TradesTable.tsx:47
+#: src/components/trading/TradingOverview.jsx:288
+msgid "Sell"
+msgstr "מכור"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:620
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
+#: src/components/wallet/standard/WalletStandard.tsx:542
+msgid "Send"
+msgstr "שלח/י"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:460
+msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
+msgstr "שלח את חבילת המידע הזו למשתמש הארנק המוגבל במכסה, שחייב להשתמש בו להשלמת הגדרת הארנק:"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:279
+msgid "Send your pubkey to your Rate Limited Wallet admin:"
+msgstr "שלח את המפתח הציבורי אל מנהל הארנק המוגבל במכסה:"
+
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
+msgid "Show Advanced Options"
+msgstr "הצג אפשרויות מתקדמות"
+
+#: src/electron-starter.js:79
+#~ msgid "Show app"
+#~ msgstr "Show app"
+
+#: src/components/trading/CreateOffer.jsx:153
+#: src/components/trading/TradesTable.tsx:16
+msgid "Side"
+msgstr "צד"
+
+#: src/components/selectKey/SelectKey.tsx:138
+msgid "Sign In"
+msgstr "כניסה"
+
+#: src/components/backup/BackupRestore.tsx:122
+#~ msgid "Skip"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+#~ msgid "Skips adding [final dir] to harvester for farming"
+#~ msgstr "Skips adding [final dir] to harvester for farming"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:195
+msgid "Skips adding a final directory to harvester for farming"
+msgstr "דלג על הוספת ספרייה סופית עבור harvester בשביל farming"
+
+#: src/components/pool/PoolHero.tsx:26
+msgid "Smooth out your XCH farming rewards by joining a pool."
+msgstr "החלק את פרסי החקלאות שלך ב- XCH על ידי הצטרפות לבריכה (Pool)."
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
+msgid "Something went wrong"
+msgstr "משהו השתבש"
+
+#: src/electron/main.tsx:470
+msgid "Speech"
+msgstr "מלל"
+
+#: src/components/wallet/create/createRLAdmin.jsx:230
+msgid "Spendable Amount"
+msgstr "סכום למשיכה"
+
+#: src/components/wallet/create/createRLAdmin.jsx:202
+msgid "Spendable Amount Per Interval"
+msgstr "סכום הניתן לבזבוז לכל מרווח"
+
+#: src/components/wallet/card/WalletCardSpendableBalance.tsx:24
+#: src/components/wallet/coloured/WalletColoured.tsx:384
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:548
+msgid "Spendable Balance"
+msgstr "יתרה ניתנת למשיכה"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:396
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:443
+msgid "Spending Interval (number of blocks): {interval}"
+msgstr "מרווח למשיכה (מספר הבלוקים)"
+
+#: src/components/wallet/create/createRLAdmin.jsx:197
+msgid "Spending Interval Length (number of blocks)"
+msgstr "אורך משיכה למרווח (מספר בלוקים)"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:401
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:448
+msgid "Spending Limit (chia per interval): {0}"
+msgstr "הגבלת משיכה (Chia לכל מרווח) {0}"
+
+#: src/components/fullNode/FullNode.jsx:100
+msgid "State"
+msgstr "מצב"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:59
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:67
+#: src/components/plot/overview/PlotOverviewPlots.tsx:110
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:113
+#: src/components/plotNFT/PlotNFTCard.tsx:145
+#: src/components/pool/PoolOverview.tsx:44
+#: src/components/trading/TradingOverview.jsx:128
+#: src/components/wallet/WalletHistory.tsx:55
+#: src/components/wallet/Wallets.tsx:50
+#: src/components/wallet/WalletStatusCard.tsx:22
+msgid "Status"
+msgstr "מצב"
+
+#: src/components/trading/TradingOverview.jsx:179
+msgid "Status:"
+msgstr "מצב:"
+
+#: src/components/wallet/Wallets.tsx:119
+#~ msgid "StatusCard.connections"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:113
+#~ msgid "StatusCard.height"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:98
+#~ msgid "StatusCard.status"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:93
+#~ msgid "StatusCard.title"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
+#~ msgid "Stripe Size"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:199
+#~ msgid "Sub Block Height"
+#~ msgstr "Sub Block Height"
+
+#: src/components/block/Block.jsx:338
+#~ msgid "Sub Block at height {0} in the Chia blockchain"
+#~ msgstr "Sub Block at height {0} in the Chia blockchain"
+
+#: src/components/wallet/did/WalletDID.tsx:886
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:347
+msgid "Submit"
+msgstr "שלח/י"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
+#: src/components/wallet/WalletStatus.tsx:33
+msgid "Synced"
+msgstr "מסונכרן"
+
+#: src/components/farm/card/FarmCardStatus.tsx:18
+#: src/components/farm/FarmerStatus.tsx:19
+#: src/components/plot/PlotStatus.tsx:18
+#: src/components/wallet/WalletStatus.tsx:38
+msgid "Syncing"
+msgstr "מסנכרן"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:21
+msgid "Syncing <0/>/<1/>"
+msgstr "מסנכרן"
+
+#: src/components/fullNode/FullNode.jsx:107
+#~ msgid "Syncing {progress}/{tip}"
+#~ msgstr "Syncing {progress}/{tip}"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:15
+#~ msgid "TXCH Block Rewards"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
+#~ msgid "TXCH Farming Rewards"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardFeesReward.tsx:12
+#~ msgid "TXCH Fees Collected"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardUserFees.tsx:12
+#~ msgid "TXCH User Fees"
+#~ msgstr "TXCH User Fees"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:15
+#~ msgid "TXCH User Transaction Fees"
+#~ msgstr ""
+
+#: src/components/pool/PoolInfo.tsx:37
+msgid "Target Puzzle Hash"
+msgstr "מטרת Puzzle Hash"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:18
+#~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:51
+msgid "Temporary folder location"
+msgstr "מיקום ספרייה זמנית"
+
+#: src/components/app/AppTimeBomb.tsx:30
+msgid "The application will stop working at block height 193536."
+msgstr "התוכנה תפסיק לפעול בבלוק מספר 193536."
+
+#: src/components/farm/FarmFullNodeConnections.tsx:97
+msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
+msgstr "ה-Full node אליו ה-Farmer מחובר הוא מתחת. <0>למד עוד</0>"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:34
+#: src/components/plot/add/PlotAddChooseSize.tsx:91
+msgid "The minimum required size for mainnet is k=32"
+msgstr "הגודל המינימלי הדרוש עבור mainnet הוא k=32"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:39
+msgid "The node is not synced"
+msgstr "ה-node לא מסונכרן"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:29
+msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
+msgstr "ה-node מסתנכרן, מה שאומר שהוא מוריד בלוקים ממחשבים אחרים, ע\"מ להשיג את הבלוק האחרון בשרשרת"
+
+#: src/components/wallet/did/WalletDID.tsx:790
+#: src/components/wallet/did/WalletDIDCreate.tsx:89
+msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
+msgstr "מספר מזהי הגיבוי הדרושים לשחזור אינו יכול לחרוג ממספר מזהי הגיבוי שנוספו."
+
+#: src/hooks/usePoolInfo.ts:57
+msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
+msgstr "כתובת ה-URL של הבריכה (Pool) \"{normalizedUrl}\" לא עובדת. האם זו בריכה? שגיאה: {0}"
+
+#: src/hooks/usePoolInfo.ts:43
+msgid "The pool URL is not valid. {normalizedUrl}"
+msgstr "כתובת ה-URL של הבריכה (Pool) לא חוקית. {normalizedUrl}"
+
+#: src/hooks/usePoolInfo.ts:39
+msgid "The pool URL needs to use protocol https. {normalizedUrl}"
+msgstr "כתובת ה-URL של הבריכה (Pool) מצריך שימוש בפרוטוקול https. {normalizedUrl}"
+
+#: src/hooks/usePoolInfo.ts:44
+#~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
+#~ msgstr "The specified pool URL is not valid. {normalizedUrl}"
+
+#: src/hooks/usePoolInfo.ts:23
+#~ msgid "The pool URL speciefied is not valid. {poolUrl}"
+#~ msgstr "The pool URL specified is not valid. {poolUrl}"
+
+#: src/components/plotNFT/PlotNFTState.tsx:29
+msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
+msgstr "פעולת החלפת הבריכה (Pool) בוטלה. נסה/י שוב על ידי החלפת בריכה או בריכה עצמאית (Self Pooling)"
+
+#: src/components/block/Block.jsx:303
+msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
+msgstr "הזרע ששומש ליצירת הפלוט. זה תלוי ב-pool pk ו-plot pk."
+
+#: src/components/block/Block.jsx:229
+msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
+msgstr "המספר הכולל של VDF (פונקציית עיכוב ניתנת לאימות) או proof of time iterations בכל השרשרת עד לבלוק משנה זה."
+
+#: src/components/block/Block.jsx:245
+msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
+msgstr "המספר הכולל של VDF (פונקציית עיכוב ניתנת לאימות) או proof of time iterations בבלוק הנוכחי."
+
+#: src/components/block/Block.jsx:325
+msgid "The total transactions fees in this block. Rewarded to the farmer."
+msgstr "סך דמי העסקאות בבלוק הנוכחי. אשר תוגמל החלקאי."
+
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:102
+msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
+msgstr "אלה ההנחיות כיצד החקלאי/ת רוצה לקבל תשלום. כברירת מחדל זו תהיה כתובת XCH, אך ניתן להגדיר אותה לכל מחרוזת בגודל של פחות מ -1024 תווים, כך שהיא יכולה לייצג מערכת blockchain נוספת או מזהה מערכת התשלומים (Payment System Identifier)."
+
+#: src/components/plot/PlotsFailed.tsx:40
+msgid "These plots are invalid, you might want to delete them."
+msgstr "הפלוטים הללו לא חוקיים, בטח תרצה/י להסיר אותם."
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:72
+msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
+msgstr "זה מאפשר לך להוסיף ספריות בהן יש פלוטים. אם עוד לא יצרת פלוטים עדיין, עבור למסך יצירת הפלוטים."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:130
+#: src/components/plotNFT/PlotNFTCard.tsx:172
+msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
+msgstr "קושי זה הוא קושי נמוך באופן מלאכותי מאשר ברשת האמיתית, והוא משמש בעת החקלאות, על מנת למצוא הוכחות (Proofs) נוספות ולשלוח אותן לבריכה (Pool). ככל שיש לך יותר פלוטים כך ערך הקושי (Difficulty) גבוה יותר. עם זאת, הקושי אינו משפיע על הפרסים."
+
+#: src/components/trading/CreateOffer.jsx:123
+#: src/hooks/useSelectDirectory.tsx:31
+#: src/hooks/useSelectFile.tsx:21
+msgid "This feature is available only from the GUI."
+msgstr "האפשרות הזו זמינה רק דרך הממשק GUI."
+
+#: src/components/wallet/card/WalletCardSpendableBalance.tsx:26
+msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
+msgstr "זהו סכום ה-Chia שבהם תוכל להשתמש כעת לביצוע עסקאות. זה לא כולל תגמולים בהמתנה, עסקאות נכנסות בהמתנה ומטבעות Chia שכבר משכת אבל עוד לא הופיע ב-Blockchain."
+
+#: src/components/wallet/card/WalletCardPendingChange.tsx:26
+msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
+msgstr "זה השינוי שממתין, אשר משנה מטבעות ששלחת לעצמך, אבל עוד לא אושר עדיין."
+
+#: src/components/wallet/card/WalletCardPendingBalance.tsx:26
+msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
+msgstr "זהו סכום העסקאות הנכנסות והיוצאות בהמתנה (שטרם נכללו ב-Blockchain). זה לא כולל תגמולי farming."
+
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
+msgid "This is the time of the latest peak sub block."
+msgstr "זה הזמן לשיא האחרון לבלוק המשני."
+
+#: src/components/block/Block.jsx:195
+msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
+msgstr "זהו הזמן בו הבלוק נוצר ע\"י ה-farmer, וזה לפני שהוא נגמר עם הוכחת זמן"
+
+#: src/components/wallet/card/WalletCardTotalBalance.tsx:34
+msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+msgstr "זוהי הכמות הכוללת של צ'יה ב-Blockchain בבלוק המשנה הנוכחי שנשלט על ידי המפתחות הפרטיים שלך. הוא כולל פרסים חקלאיים קפואים, אך לא עסקאות נכנסות ויוצאות בהמתנה."
+
+#: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:29
+msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
+msgstr "זוהי היתרה הכוללת + יתרה ממתינה: זה מה שיהיה יתרתך לאחר אישור כל העסקאות הממתינות."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:149
+#: src/components/plotNFT/PlotNFTCard.tsx:191
+msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
+msgstr "זהו מספר הנקודות הכולל שיש לפלוט NFT זה עם מאגר בריכה (Pool) זה, מאז התשלום האחרון. הבריכה תאפס את הנקודות לאחר ביצוע התשלום."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:166
+#: src/components/plotNFT/PlotNFTCard.tsx:208
+msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
+msgstr "זהו מספר הנקודות הכולל שהחקלאי שלך מצא עבור פלוט NFT זה. כל פלוט k32 יקבל בערך 10 נקודות ליום, כך שאם יש לך 10TiB, עליך לצפות לכ-1000 נקודות ביום, או 41 נקודות לשעה."
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:46
+msgid "This node is fully caught up and validating the network"
+msgstr "ה-node הזה נתפס במלואו ומאמת את הרשת"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:308
+msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
+msgstr "פלוט NFT זה מוקצה למפתח אחר. את/ה עדיין יכול ליצור פלוטים עבור חלקת NFT זו, אך אינך יכול/ה לבצע שינויים."
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
+msgid "This plot NFT is not connected to pool"
+msgstr "חלקת NFT זו אינה מחוברת לבריכה (Pool)"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:39
+#~ msgid "This table shows you the last time your farm attempted to win a block challenge."
+#~ msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:49
+msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
+msgstr "טבלה זו מציגה את הפעם האחרונה שבה החווה שלך ניסתה לזכות באתגר בלוקים. <0>למד עוד</0>"
+
+#: src/components/trading/TradingOverview.jsx:189
+msgid "This trade was created at this time"
+msgstr "החלפה זו נוצרה בזמן זה"
+
+#: src/components/trading/TradingOverview.jsx:205
+msgid "This trade was included on blockchain at this block height"
+msgstr "החלפה זו נכללת ב-Blockchain בגובה הבלוק הזה"
+
+#: src/components/app/AppTimeBombAlert.tsx:19
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr "גרסה זו של Chia כבר אינה תואמת את ה-Blockchain ואינה בטוחה עוד עבור החווה שלך."
+
+#: src/components/fullNode/FullNode.jsx:92
+msgid "Time Created"
+msgstr "זמן שנוצר"
+
+#: src/components/trading/TradingOverview.jsx:192
+#~ msgid "Time this trade was created at this time"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:190
+msgid "Timestamp"
+msgstr "חותמת זמן"
+
+#: src/components/wallet/WalletHistory.tsx:42
+msgid "To"
+msgstr "עבור"
+
+#: src/components/wallet/card/WalletCardTotalBalance.tsx:32
+#: src/components/wallet/coloured/WalletColoured.tsx:379
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:543
+msgid "Total Balance"
+msgstr "יתרה כוללת"
+
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
+#~ msgid "Total Chia Farmed"
+#~ msgstr ""
+
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:20
+msgid "Total Iterations"
+msgstr "סך כל ה-Iterations"
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:15
+msgid "Total Network Space"
+msgstr "שטח רשת כולל"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:146
+msgid "Total Plot Size:"
+msgstr "שטח פלוט כולל:"
+
+#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:12
+msgid "Total Size of Plots"
+msgstr "שטח פלוטים כולל"
+
+#: src/components/block/Block.jsx:226
+msgid "Total VDF Iterations"
+msgstr "סך כל ה-VDF Iterations"
+
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:22
+msgid "Total iterations since the start of the blockchain"
+msgstr "סך כל ה-Iterations מאז תחילה ה-Blockchain"
+
+#: src/components/dashboard/DashboardSideBar.tsx:27
+#~ msgid "Trade"
+#~ msgstr "Trade"
+
+#: src/components/trading/TradingOverview.jsx:350
+msgid "Trade Details"
+msgstr "פרטי החלפה"
+
+#: src/components/trading/TradingOverview.jsx:125
+msgid "Trade ID"
+msgstr "מזהה החלפה"
+
+#: src/components/trading/TradingOverview.jsx:172
+msgid "Trade ID:"
+msgstr "מזהה החלפה:"
+
+#: src/components/trading/TradeManager.tsx:34
+msgid "Trade Overview"
+msgstr "סקירת החלפה"
+
+#: src/components/trading/TradingOverview.jsx:153
+msgid "Trades will show up here"
+msgstr "החלפות יופיעו כאן"
+
+#: src/components/trading/TradeManager.tsx:23
+msgid "Trading"
+msgstr "מחליף"
+
+#: src/components/trading/TradingOverview.jsx:422
+msgid "Trading History"
+msgstr "הסטוריית החלפות"
+
+#: src/components/block/Block.jsx:310
+msgid "Transactions Filter Hash"
+msgstr "מסנן עסקאות"
+
+#: src/components/wallet/WalletHistory.tsx:25
+msgid "Type"
+msgstr "סוג"
+
+#: src/components/plot/add/PlotAdd.tsx:101
+msgid "Unable to create plot NFT"
+msgstr "לא ניתן ליצור חלקת NFT"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:150
+#: src/components/pool/PoolOverview.tsx:66
+msgid "Unclaimed Rewards"
+msgstr "תגמולים שטרם נאספו"
+
+#: src/components/fullNode/FullNode.jsx:98
+msgid "Unfinished"
+msgstr "לא גמור"
+
+#: src/components/trading/TradingOverview.jsx:175
+msgid "Unique identifier"
+msgstr "מזהה ייחודי"
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:55
+msgid "Unknown"
+msgstr "לא ידוע"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:25
+msgid "Unsaved Changes"
+msgstr "שינויים שטרם נשמרו"
+
+#: src/components/wallet/create/createRLAdmin.jsx:281
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:293
+msgid "User Pubkey"
+msgstr "מפתח ציבורי למשתמש"
+
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
+msgid "VDF Sub Slot Iterations"
+msgstr "VDF Slot Iterations משני"
+
+#: src/components/core/components/Fee/Fee.tsx:28
+#~ msgid "Value is too high"
+#~ msgstr "Value is too high"
+
+#: src/components/core/components/Fee/Fee.tsx:28
+msgid "Value seems high"
+msgstr "הערך נראה גבוה"
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
+msgid "Verify Pool Details"
+msgstr "אמת את פרטי הבריכה (Pool)"
+
+#: src/electron/main.tsx:295
+msgid "View"
+msgstr "צפה/י"
+
+#: src/components/plot/queue/PlotQueueActions.tsx:79
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:63
+msgid "View Log"
+msgstr "צפה/י ביומן רישום"
+
+#: src/components/trading/TradeManager.tsx:54
+msgid "View Offer"
+msgstr "הצג הצעה"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:256
+#: src/components/plotNFT/PlotNFTCard.tsx:298
+#~ msgid "View Payout Instructions"
+#~ msgstr "View Payout Instructions"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:286
+msgid "View Pool Login Link"
+msgstr "הצג קישור לכניסה לאתר הבריכה (Pool)"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
+msgid "View pending balances"
+msgstr "הצג יתרות בהמתנה"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:393
+msgid "View pending balances..."
+msgstr "הצג יתרות בהמתנה..."
+
+#: src/components/farm/card/FarmCardNotAvailable.tsx:26
+#: src/components/plot/PlotStatus.tsx:26
+#: src/components/plot/PlotStatus.tsx:27
+msgid "Wait for synchronization"
+msgstr "ממתין לסנכרון"
+
+#: src/components/wallet/Wallets.tsx:104
+#~ msgid "Waiting for launch"
+#~ msgstr "Waiting for launch"
+
+#: src/components/fullNode/FullNode.jsx:103
+#: src/components/wallet/WalletStatusCard.tsx:20
+#~ msgid "Waiting for network to launch"
+#~ msgstr "Waiting for network to launch"
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:74
+msgid "Waiting for the transaction to be confirmed"
+msgstr "ממתין לאישור העסקה"
+
+#: src/components/pool/PoolOverview.tsx:185
+#: src/components/wallet/standard/WalletStandard.tsx:656
+msgid "Wallet Status:"
+msgstr "מצב הארנק:"
+
+#: src/components/wallet/did/WalletDID.tsx:1118
+msgid "Wallet does not exists"
+msgstr "ארנק לא נמצא"
+
+#: src/components/wallet/Wallets.tsx:34
+#~ msgid "WalletItem.ccWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:30
+#~ msgid "WalletItem.chiaWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:48
+#~ msgid "WalletItem.didWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:41
+#~ msgid "WalletItem.rlWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:107
+#~ msgid "WalletStatusCard.not_synced"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:105
+#~ msgid "WalletStatusCard.synced"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:103
+#~ msgid "WalletStatusCard.syncing"
+#~ msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:45
+#: src/components/wallet/Wallets.tsx:118
+msgid "Wallets"
+msgstr "ארנקים"
+
+#: src/components/wallet/Wallets.tsx:131
+#~ msgid "Wallets.title"
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:57
+msgid "Want to Join a Pool? Create a Plot NFT"
+msgstr "רוצה להצטרף לבריכה (Pool)? צור/י חלקת NFT"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:139
+msgid "Want to earn more Chia? Add more plots to your farm."
+msgstr "רוצה להרוויח עוד Chia? הוסף/י עוד פלוטים לחווה שלך."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:86
+msgid "Want to have a delay before the next plot starts?"
+msgstr "רוצה לבצע עיכוב לפני תחילתו של הפלוט הבא?"
+
+#: src/components/selectKey/SelectKey.tsx:86
+msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
+msgstr "אזהרה: מפתח זה משמש עבור ארנק שעשוי להיות בעל יתרה שאינה אפס. מחיקת מפתח זה את/ה עלול/ה לאבד את הגישה לארנק זה"
+
+#: src/components/selectKey/SelectKey.tsx:72
+msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
+msgstr "אזהרה: מפתח זה משמש לכתובת התגמולים לחקלאות (Farming Reward Address) שלך. על ידי מחיקת מפתח זה את/ה עלול/ה לאבד את הגישה לכל פרסים חקלאיים (Farming Rewards) עתידיים"
+
+#: src/components/selectKey/SelectKey.tsx:79
+msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
+msgstr "אזהרה: מפתח זה משמש עבור כתובת תגמולים לבריכה (Pool Rewards Address) שלך. על ידי מחיקת מפתח זה את/ה עלול/ה לאבד את הגישה לכל פרסי בריכה (Pool Rewards) עתידיים"
+
+#: src/components/block/Block.jsx:206
+msgid "Weight"
+msgstr "משקל"
+
+#: src/components/block/Block.jsx:209
+msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
+msgstr "המשקל הוא הקושי הכולל הנוסף של כל בלוקי המשנה כולל זה"
+
+#: src/components/selectKey/SelectKey.tsx:141
+msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
+msgstr "ברוכים הבאים ל-Chia. בבקשה התחבר עם מפתח קיים, או צור/י לעצמך מפתח חדש."
+
+#: src/components/wallet/WalletAdd.tsx:66
+msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
+msgstr "ברוכים הבאים! המילים הבאות ישמשו אותך ע\"מ לשחזר את הארנק שלך. בלעדיהם, תאבד/י את הגישה לארנק שלך, שמור עליהם! רשמו כל מילה יחד בסדר הנכון. (סדר חשוב)"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:316
+msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
+msgstr "כשתקבל את חבילת פרטי ההגדרה מהמנהל שלך, הזן אותה למטה כדי להשלים את הגדרת הארנק המוגבל בתעריפים:"
+
+#: src/electron/main.tsx:340
+msgid "Window"
+msgstr "חלון"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:36
+msgid "Without fees"
+msgstr "ללא עמלות"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:35
+#: src/components/trading/TradingOverview.jsx:209
+#: src/electron/main.tsx:193
+msgid "Yes"
+msgstr "כן"
+
+#: src/hooks/useAbsorbRewards.tsx:29
+#: src/hooks/useJoinPool.tsx:35
+msgid "You are in pending state. Please wait for confirmation"
+msgstr "את/ה במצב ממתין. אנא המתן/י לאישור"
+
+#: src/hooks/useAbsorbRewards.tsx:37
+msgid "You are not self pooling"
+msgstr "את/ה לא בריכה עצמאית (Self Pooling)"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:424
+msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
+msgstr "את/ה עדיין יכול/ה ליצור פלוטים עבור חלקת NFT זו, אך אינך יכול/ה לבצע שינויים עד לסיום הסנכרון."
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:56
+#~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:63
+msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+msgstr "אינך צריך להיות מסונכרן או מחובר ע\"מ לייצר פלוט. במהלך תהליך הפלוט נוצרים קבצים זמניים החורגים מגודל קבצי הפלוט הסופיים. וודא/י שיש לך מספיק מקום. <0>למד עוד</0>"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:29
+msgid "You have made changes. Do you want to discard them?"
+msgstr "עשית שינויים. האם את/ה רוצה לבטל אותם?"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:56
+msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
+msgstr "יש ברשותך {0}% משטח הרשת, לכן קצירת בלוק עלולה לקחת {expectedTimeToWin} בציפייה. התוצאות בפועל עשויות להימשך פי 3 עד 4 מהערכה זו."
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+
+#: src/components/pool/PoolJoin.tsx:37
+msgid "You need to claim your rewards first"
+msgstr "עליך לקבל את הפרסים קודם"
+
+#: src/components/app/AppTimeBomb.tsx:28
+#~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
+#~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
+
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:37
+msgid "You need {currencyCode} to join a pool."
+msgstr "את/ה צריך {currencyCode} על מנת להצטרף לבריכה (Pool)."
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
+msgid "You will recieve <0/> to {0}"
+msgstr "את/ה תקבל/י <0/> ל {0}"
+
+#: src/hooks/useAbsorbRewards.tsx:49
+msgid "You will recieve <0/> to {address}"
+msgstr "את/ה תקבל/י <0/> ל {address}"
+
+#: src/components/wallet/did/WalletDID.tsx:328
+msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
+msgstr "ה-DID שלך מצריך לפחות {dids_num_req} קובץ אישור{0} לשחזור. אנא העלה/י מסמכים נוספים."
+
+#: src/components/farm/overview/FarmOverview.tsx:37
+msgid "Your Farm Overview"
+msgstr "סקירת החווה שלך"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:95
+msgid "Your Full Node Connection"
+msgstr "חיבור ה-Full Node שלך"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:96
+msgid "Your Harvester Network"
+msgstr "רשת ה-Harvester שלך"
+
+#: src/components/pool/PoolOverview.tsx:160
+msgid "Your Pool Overview"
+msgstr "סקירת הבריכה (Pool) שלך"
+
+#: src/util/getDescriptiveError.ts:5
+msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
+msgstr "[שגיאה 13] ההרשאה נדחתה. אתה מנסה לגשת לקובץ/ספרייה מבלי לקבל את ההרשאות הדרושות. סביר להניח שיש תקלה באחת מתיקיות הפלוטים ב- config.yaml שלך."
+
+#: src/util/getDescriptiveError.ts:8
+msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
+msgstr "[שגיאה 22] הקובץ לא נמצא. סביר להניח שיש בעיה באחת מתיקיות הפלוטים ב- config.yaml שלך."
+
+#: src/components/wallet/Wallets.tsx:75
+#: src/components/wallet/WalletStatusCard.tsx:41
+msgid "connections:"
+msgstr "חיבורים:"
+
+#: src/components/wallet/Wallets.tsx:67
+#: src/components/wallet/WalletStatusCard.tsx:33
+msgid "height:"
+msgstr "גובה:"
+
+#: src/components/wallet/Wallets.tsx:61
+msgid "not synced"
+msgstr "לא מסונכרן"
+
+#: src/components/plot/add/PlotAdd.tsx:105
+msgid "p2_singleton_puzzle_hash is not defined"
+msgstr "p2_singleton_puzzle_hash אינו מוגדר"
+
+#: src/components/wallet/Wallets.tsx:55
+#: src/components/wallet/WalletStatusCard.tsx:27
+msgid "status:"
+msgstr "מצב:"
+
+#: src/components/wallet/Wallets.tsx:60
+#: src/components/wallet/WalletStatusCard.tsx:29
+msgid "synced"
+msgstr "מסונכרן"
+
+#: src/components/wallet/Wallets.tsx:59
+#: src/components/wallet/WalletStatusCard.tsx:29
+msgid "syncing"
+msgstr "מסנכרן"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:16
+#~ msgid "{0} Block Rewards"
+#~ msgstr "{0} Block Rewards"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:16
+#~ msgid "{0} User Transaction Fees"
+#~ msgstr "{0} User Transaction Fees"
+
+#: src/components/plotNFT/PlotNFTGraph.tsx:111
+msgid "{0} points {1} - {2} hours ago"
+msgstr "{0} נקודות {1} - {2} שעות שחלפו"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:35
+msgid "{currencyCode} Block Rewards"
+msgstr "{currencyCode} תגלומי בלוק"
+
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:29
+msgid "{currencyCode} Total Chia Farmed"
+msgstr "{currencyCode} סכום צ'יה כולל שנקצר"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:28
+msgid "{currencyCode} User Transaction Fees"
+msgstr "{currencyCode} עמלות עסקה למשתמש"
+
+#: src/components/core/components/Amount/Amount.tsx:82
+msgid "{mojo, plural, one {mojo} other {mojos}}"
+msgstr "{mojo, plural, one {mojo} other {mojos}}"
+

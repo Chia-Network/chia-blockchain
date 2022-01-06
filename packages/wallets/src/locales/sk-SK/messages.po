@@ -1,0 +1,3274 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2021-02-08 18:51+0100\n"
+"Mime-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: sk_SK\n"
+"Project-Id-Version: chia-blockchain\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: 2021-09-17 17:39\n"
+"Last-Translator: \n"
+"Language-Team: Slovak\n"
+"Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
+"X-Crowdin-Project: chia-blockchain\n"
+"X-Crowdin-Project-ID: 440660\n"
+"X-Crowdin-Language: sk\n"
+"X-Crowdin-File: /[Chia-Network.chia-blockchain-gui] main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 118\n"
+
+#: src/components/plot/add/PlotAddChoosePlotter.tsx:74
+#~ msgid "(Not Installed)"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddChoosePlotter.tsx:71
+#~ msgid "(Not Supported)"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:67
+#~ msgid "(Optional)"
+#~ msgstr "(voliteľné)"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:58
+#~ msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
+#~ msgstr "* Chcete viac preskúmať Chia bloky? Vyskúšajte aplikáciu <0>Chia Explorer</0> vytvorenú open source vývojárom."
+
+#: src/components/WalletHistory.tsx:104
+msgid "+"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:128
+#~ msgid "+ Add New Plot NFT"
+#~ msgstr "+ Pridať nové NFT poľa"
+
+#: src/components/WalletHeader.tsx:62
+msgid "+ Add Token"
+msgstr ""
+
+#: src/components/_wallet_old/Wallets.tsx:132
+#~ msgid "+ Add Wallet"
+#~ msgstr "+ Pridať peňaženku"
+
+#: src/components/WalletHistory.tsx:103
+msgid "-"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
+#~ msgid "0 automatically chooses bucket count"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:148
+#~ msgid "128 buckets is recommended"
+#~ msgstr "Odporúčame 128 sektorov"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:96
+#~ msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
+#~ msgstr "Kombajn je služba bežiaca na stroji, kde sú uložené polia. Farmár a kombajn komunikujú s plným uzlom, aby zistili stav reťaze. Nižšie si pozrite svoju sieť prepojených kombajnov. Viac informácií"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:155
+#~ msgid "A value of {0} is recommended"
+#~ msgstr ""
+
+#: src/electron/main.tsx:433
+#: src/electron/main.tsx:520
+#~ msgid "About Chia Blockchain"
+#~ msgstr "O Chia blockchaine"
+
+#: src/components/trading/ViewOffer.jsx:74
+#~ msgid "Accept"
+#~ msgstr "Akceptovať"
+
+#: src/components/trading/TradingOverview.jsx:227
+#~ msgid "Accepted at time:"
+#~ msgstr "Akceptované o:"
+
+#: src/components/plot/PlotsFailed.tsx:18
+#: src/components/plot/PlotsNotFound.tsx:18
+#: src/components/plot/overview/PlotOverviewPlots.tsx:114
+#~ msgid "Action"
+#~ msgstr "Akcia"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:68
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:67
+#: src/components/fullNode/FullNodeConnections.tsx:81
+#: src/components/pool/PoolOverview.tsx:66
+#~ msgid "Actions"
+#~ msgstr "Akcie"
+
+#: src/components/cat/WalletCATCreateExistingSimple.tsx:97
+msgid "Add"
+msgstr "Pridať"
+
+#: src/components/did/WalletDID.tsx:873
+#: src/components/did/WalletDIDCreate.tsx:204
+msgid "Add Backup ID"
+msgstr "Pridať záložné ID"
+
+#: src/components/hero/WalletHeroAdd.tsx:99
+msgid "Add Custom Token"
+msgstr ""
+
+#: src/components/plot/PlotHeader.tsx:89
+#~ msgid "Add Plot Directory"
+#~ msgstr "Pridať adresár polí"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:70
+#~ msgid "Add Plot to Queue"
+#~ msgstr "Pridať pole do fronty"
+
+#: src/components/WalletsList.tsx:54
+#: src/components/cat/WalletCATCreateExistingSimple.tsx:62
+#: src/components/cat/WalletCATCreateSimple.tsx:70
+#: src/components/hero/WalletHeroAdd.tsx:64
+#: src/components/hero/WalletHeroWallets.tsx:100
+msgid "Add Token"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:88
+#~ msgid "Add Wallet"
+#~ msgstr "Add Wallet"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:45
+#: src/components/plot/PlotHeader.tsx:61
+#: src/components/plot/add/PlotAddForm.tsx:177
+#: src/components/plot/overview/PlotOverviewHero.tsx:52
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:229
+#: src/components/plotNFT/PlotNFTCard.tsx:269
+#~ msgid "Add a Plot"
+#~ msgstr "Pridať pole"
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:55
+#~ msgid "Add a Plot NFT"
+#~ msgstr "Pridať NFT poľa"
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:85
+#~ msgid "Add a plot"
+#~ msgstr "Pridať pole"
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:124
+#~ msgid "Add plot directory"
+#~ msgstr "Pridať adresár polí"
+
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:41
+#~ msgid "Add {currencyCode} from the Faucet"
+#~ msgstr "Pridať {currencyCode} z Faucetu"
+
+#: src/components/cat/WalletCATCreateSimple.tsx:94
+msgid "Adding {0} token"
+msgstr ""
+
+#: src/components/WalletReceiveAddress.tsx:56
+msgid "Address"
+msgstr "Adresa"
+
+#: src/components/WalletSend.tsx:151
+#: src/components/cat/WalletCATSend.tsx:194
+#: src/components/rateLimited/WalletRateLimited.jsx:700
+msgid "Address / Puzzle hash"
+msgstr "Adresa"
+
+#: src/components/app/AppKeyringMigrator.tsx:199
+#~ msgid "After your keys are successfully migrated to the new keyring, you may choose to have your keys removed from the old keyring."
+#~ msgstr ""
+
+#: src/components/WalletHistory.tsx:189
+msgid "All"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:238
+#~ msgid "Alternate tmpdir/tmpdir2"
+#~ msgstr ""
+
+#: src/components/WalletHistory.tsx:117
+#: src/components/WalletSend.tsx:161
+#: src/components/cat/WalletCATSend.tsx:205
+#: src/components/rateLimited/WalletRateLimited.jsx:719
+msgid "Amount"
+msgstr "Suma"
+
+#: src/components/_wallet_old/coloured/WalletColoured.tsx:581
+#~ msgid "Amount ({cc_unit})"
+#~ msgstr "Suma ({cc_unit})"
+
+#: src/components/create/createRLAdmin.jsx:238
+msgid "Amount For Initial Coin"
+msgstr "Počiatočná suma"
+
+#: src/components/did/WalletDIDCreate.tsx:61
+msgid "Amount must be an even amount."
+msgstr "Suma musí byť párna."
+
+#: src/components/plot/PlotAction.tsx:29
+#: src/components/plot/queue/PlotQueueActions.tsx:47
+#~ msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
+#~ msgstr "Naozaj chcete odstrániť pole? Pole nie je možné obnoviť."
+
+#: src/components/WalletHeader.tsx:45
+msgid "Are you sure you want to delete unconfirmed transactions?"
+msgstr "Naozaj chcete odstrániť nepotvrdené transakcie?"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:26
+#~ msgid "Are you sure you want to disconnect?"
+#~ msgstr "Naozaj sa chcete odpojiť?"
+
+#: src/electron/main.tsx:201
+#~ msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+#~ msgstr "Naozaj chcete skončiť? GUI pre vykresľovanie polí a farmárčenie budú ukončené."
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:31
+#~ msgid "Are you sure you want to use k={plotSize}"
+#~ msgstr "Are you sure you want to use k={plotSize}"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:51
+#~ msgid "Are you sure you want to use k={plotSize}?"
+#~ msgstr "Naozaj chcete použiť k={plotSize}?"
+
+#: src/components/cat/WalletCATCreateExistingSimple.tsx:81
+#: src/components/cat/WalletCATTAILDialog.tsx:44
+#: src/components/cat/WalletCATTAILDialog.tsx:57
+msgid "Asset Id"
+msgstr ""
+
+#: src/constants/WalletName.ts:11
+msgid "Atomic Swap Wallet"
+msgstr ""
+
+#: src/components/app/AppState.tsx:148
+#~ msgid "Attempt {attempt}"
+#~ msgstr ""
+
+#: src/constants/WalletName.ts:14
+msgid "Authorized Payee Wallet"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTName.tsx:39
+#~ msgid "Autogenerated name from pool contract address"
+#~ msgstr "Názov automaticky vygenerovaný z adresy zmluvy združenia"
+
+#: src/components/_selectKey_old/SelectKey.tsx:77
+#: src/components/_selectKey_old/SelectKey.tsx:116
+#~ msgid "Back"
+#~ msgstr "Späť"
+
+#: src/components/backup/BackupCreate.tsx:45
+#~ msgid "Backup file is used to restore smart wallets."
+#~ msgstr "Súbor so zálohou inteligentných peňaženiek."
+
+#: src/components/did/WalletDID.tsx:646
+#: src/components/rateLimited/WalletRateLimited.jsx:540
+msgid "Balance"
+msgstr "Zostatok"
+
+#: src/components/block/Block.jsx:306
+#~ msgid "Base Farmer Reward Amount"
+#~ msgstr "Základná výška odmeny farmára"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:33
+#: src/components/farm/FarmLatestBlockChallenges.tsx:43
+#~ msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
+#~ msgstr "Nižšie sú aktuálne výzvy bloku. Môžete alebo nemusíte mať dôkaz miesta pre tieto výzvy. Tieto bloky momentálne neobsahujú dôkaz času."
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:15
+#~ msgid "Best estimate over last 24 hours"
+#~ msgstr "Najlepší odhad za posledných 24 hodín"
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+#~ msgid "Best estimate over last 5 hours"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:116
+#: src/components/block/Block.jsx:125
+#: src/components/block/Block.jsx:142
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:322
+#~ msgid "Block"
+#~ msgstr "Blok"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:31
+#~ msgid "Block Rewards"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:138
+#~ msgid "Block Test"
+#~ msgstr "Test bloku"
+
+#: src/components/block/Block.jsx:224
+#~ msgid "Block VDF Iterations"
+#~ msgstr "Blok VDF iterácii"
+
+#: src/components/block/Block.jsx:326
+#~ msgid "Block at height {0} in the Chia blockchain"
+#~ msgstr "Blok s výškou {0} v Chia blockchaine"
+
+#: src/components/fullNode/FullNode.jsx:331
+#~ msgid "Block hash"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:129
+#~ msgid "Block with hash {headerHash}"
+#~ msgstr "Blok s hashom {headerHash}"
+
+#: src/components/block/Block.jsx:151
+#~ msgid "Block with hash {headerHash} does not exist."
+#~ msgstr "Block s hashom {headerHash} neexistuje."
+
+#: src/components/fullNode/FullNode.jsx:124
+#~ msgid "Blocks"
+#~ msgstr "Bloky"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:91
+#~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
+#~ msgstr "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:72
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:92
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:123
+#~ msgid "Browse"
+#~ msgstr "Vybrať"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:74
+#~ msgid "But you are currently farming <0/>"
+#~ msgstr "Ale aktuálne farmárčite <0/>"
+
+#: src/components/trading/CreateOffer.jsx:161
+#: src/components/trading/TradesTable.tsx:46
+#: src/components/trading/TradingOverview.jsx:287
+#~ msgid "Buy"
+#~ msgstr "Kúpiť"
+
+#: src/constants/WalletName.ts:23
+msgid "CAT Wallet"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:49
+#~ msgid "CC Wallet"
+#~ msgstr "CC Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:182
+#~ msgid "CCListItems.title"
+#~ msgstr ""
+
+#: src/components/_selectKey_old/SelectKey.tsx:212
+#~ msgid "Can be backed up to mnemonic seed"
+#~ msgstr "Možnosť zálohovať pomocou mnemotechnickej pomôcky"
+
+#: src/components/WalletRenameDialog.tsx:91
+msgid "Cancel"
+msgstr "Zrušiť"
+
+#: src/components/trading/TradingOverview.jsx:388
+#~ msgid "Cancel and Spend"
+#~ msgstr "Zrušiť a minúť"
+
+#: src/components/WalletSend.tsx:100
+#: src/components/cat/WalletCATSend.tsx:119
+msgid "Cannot send chia to coloured address. Please enter a chia address."
+msgstr ""
+
+#: src/components/plot/PlotsNotFound.tsx:36
+#~ msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
+#~ msgstr "Pozor, tieto polia sa odstránia navždy. Skontrolujte, či sú pamäťové zariadenia správne pripojené."
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:15
+#~ msgid "Challenge"
+#~ msgstr "Výzva"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:13
+#~ msgid "Challenge Hash"
+#~ msgstr "Hash výzvy"
+
+#: src/components/plotNFT/PlotNFTChangePool.tsx:122
+#~ msgid "Change"
+#~ msgstr "Zmeniť"
+
+#: src/components/settings/ChangePassphrasePrompt.tsx:232
+#: src/components/settings/Settings.tsx:160
+#~ msgid "Change Passphrase"
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:405
+#: src/components/plotNFT/PlotNFTChangePool.tsx:121
+#: src/components/pool/PoolOverview.tsx:112
+#~ msgid "Change Pool"
+#~ msgstr "Zmeniť združenie"
+
+#: src/electron/main.tsx:412
+#~ msgid "Chat on KeyBase"
+#~ msgstr "Chatovať na KeyBase"
+
+#: src/electron/main.tsx:430
+#~ msgid "Chia"
+#~ msgstr "Chia"
+
+#: src/components/cat/WalletCATSelect.tsx:25
+#: src/components/create/WalletCreateList.tsx:32
+msgid "Chia Asset Token"
+msgstr ""
+
+#: src/electron/main.tsx:369
+#~ msgid "Chia Blockchain Wiki"
+#~ msgstr "Chia Blockchain Wiki"
+
+#: src/components/standard/WalletStandard.tsx:23
+msgid "Chia Wallet"
+msgstr "Chia peňaženka"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:34
+#~ msgid "Choose Number of Plots"
+#~ msgstr "Vyberte počet polí"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:74
+#~ msgid "Choose Plot Size"
+#~ msgstr "Vyberte veľkosť poľa"
+
+#: src/components/plot/add/PlotAddChoosePlotter.tsx:90
+#~ msgid "Choose Plotter"
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:381
+#: src/components/pool/PoolOverview.tsx:89
+#~ msgid "Claim Rewards"
+#~ msgstr "Vyzdvihnúť odmeny"
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:131
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:82
+#~ msgid "Close"
+#~ msgstr "Zavrieť"
+
+#: src/components/app/AppState.tsx:106
+#~ msgid "Closing down node and server"
+#~ msgstr "Zatvára sa uzol a server"
+
+#: src/components/did/WalletDID.tsx:983
+msgid "Coin Name"
+msgstr "Názov mince"
+
+#: src/components/trading/TradingOverview.jsx:365
+#~ msgid "Coins:"
+#~ msgstr "Mince:"
+
+#: src/components/trading/CreateOffer.jsx:172
+#: src/components/trading/TradesTable.tsx:23
+#~ msgid "Colour"
+#~ msgstr "Farba"
+
+#: src/components/_wallet_old/coloured/WalletColoured.tsx:223
+#~ msgid "Colour Info"
+#~ msgstr "Informácie o farbe"
+
+#: src/components/_wallet_old/create/createExistingColouredCoin.jsx:110
+#~ msgid "Colour String"
+#~ msgstr "Reťazec farby"
+
+#: src/components/_wallet_old/coloured/WalletColoured.tsx:228
+#~ msgid "Colour:"
+#~ msgstr "Farba:"
+
+#: src/components/_wallet_old/create/WalletCreateList.tsx:34
+#~ msgid "Coloured Coin"
+#~ msgstr "Farebná minca"
+
+#: src/components/_wallet_old/create/WalletCreate.jsx:122
+#~ msgid "Coloured Coin Options"
+#~ msgstr "Možnosti farebných mincí"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
+#: src/electron/main.tsx:199
+#: src/hooks/useAbsorbRewards.tsx:44
+#~ msgid "Confirm"
+#~ msgstr "Potvrdiť"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:19
+#~ msgid "Confirm Disconnect"
+#~ msgstr "Potvrďte odpojenie"
+
+#: src/components/settings/ChangePassphrasePrompt.tsx:182
+#~ msgid "Confirm New Passphrase"
+#~ msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:150
+#: src/components/app/AppKeyringMigrator.tsx:151
+#: src/components/settings/SetPassphrasePrompt.tsx:162
+#~ msgid "Confirm Passphrase"
+#~ msgstr ""
+
+#: src/components/WalletHeader.tsx:40
+msgid "Confirmation"
+msgstr "Potvrdenie"
+
+#: src/components/WalletHistory.tsx:68
+msgid "Confirmed"
+msgstr ""
+
+#: src/components/WalletHistory.tsx:231
+msgid "Confirmed at Height"
+msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:200
+#~ msgid "Confirmed at block:"
+#~ msgstr "Potvrdené v bloku:"
+
+#: src/components/_wallet_old/WalletHistory.tsx:51
+#~ msgid "Confirmed at height {0}"
+#~ msgstr "Potvrdené na pozícii {0}"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:89
+#~ msgid "Connect"
+#~ msgstr "Pripojiť"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:65
+#: src/components/fullNode/FullNodeConnections.tsx:109
+#~ msgid "Connect to other peers"
+#~ msgstr "Pripojiť k iným uzlom"
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:115
+#~ msgid "Connect to pool"
+#~ msgstr "Pripojiť k združeniu"
+
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:20
+#~ msgid "Connected"
+#~ msgstr "Pripojené"
+
+#: src/components/app/AppState.tsx:141
+#: src/components/app/AppState.tsx:145
+#~ msgid "Connecting to daemon"
+#~ msgstr ""
+
+#: src/components/app/AppRouter.tsx:61
+#~ msgid "Connecting to wallet"
+#~ msgstr "Pripájanie k peňaženke"
+
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:18
+#~ msgid "Connection Status"
+#~ msgstr "Stav pripojenia"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:109
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:107
+#~ msgid "Connection Status:"
+#~ msgstr "Stav pripojenia:"
+
+#: src/components/WalletConnections.tsx:62
+msgid "Connection type"
+msgstr "Typ pripojenia"
+
+#: src/components/WalletConnections.tsx:78
+msgid "Connections"
+msgstr "Pripojenia"
+
+#: src/electron/main.tsx:393
+#~ msgid "Contribute on GitHub"
+#~ msgstr "Prispejte na GitHube"
+
+#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:31
+#~ msgid "Copied"
+#~ msgstr "Skopírované"
+
+#: src/components/rateLimited/WalletRateLimited.jsx:305
+#: src/components/rateLimited/WalletRateLimited.jsx:427
+#: src/components/rateLimited/WalletRateLimited.jsx:484
+msgid "Copy"
+msgstr "Kopírovať"
+
+#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:33
+#~ msgid "Copy to Clipboard"
+#~ msgstr "Skopírovať do schránky"
+
+#: src/components/cat/WalletCATCreateNew.tsx:102
+#: src/components/create/createRLAdmin.jsx:306
+#: src/components/create/createRLUser.jsx:99
+#: src/components/did/WalletDIDCreate.tsx:217
+msgid "Create"
+msgstr "Vytvoriť"
+
+#: src/components/did/WalletDID.tsx:966
+msgid "Create An Attestation Packet"
+msgstr "Vytvoriť atestačný paket"
+
+#: src/components/cat/WalletCATCreateExisting.tsx:77
+msgid "Create Chia Asset Token Wallet from Existing TAIL"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:290
+#~ msgid "Create DID wallet"
+#~ msgstr "Create DID wallet"
+
+#: src/components/did/WalletDIDCreate.tsx:109
+msgid "Create Distributed Identity Wallet"
+msgstr "Vytvoriť peňaženku s distribuovanou identitou"
+
+#: src/components/cat/WalletCATCreateNew.tsx:76
+msgid "Create New Chia Asset Token Wallet"
+msgstr ""
+
+#: src/components/cat/WalletCATSelect.tsx:32
+#: src/components/did/WalletDIDSelect.tsx:32
+msgid "Create New Wallet"
+msgstr "Vytvoriť novú peňaženku"
+
+#: src/components/trading/TradeManager.tsx:45
+#~ msgid "Create Offer"
+#~ msgstr "Vytvoriť ponuku"
+
+#: src/components/plot/add/PlotAdd.tsx:92
+#~ msgid "Create Plot"
+#~ msgstr "Create Plot"
+
+#: src/components/create/createRLAdmin.jsx:187
+msgid "Create Rate Limited Admin Wallet"
+msgstr "Vytvoriť administrátorskú peňaženku s obmedzenou sadzbou"
+
+#: src/components/create/createRLUser.jsx:78
+msgid "Create Rate Limited User Wallet"
+msgstr "Vytvoriť Používateľskú Peňaženku s Obmedzenou Sadzbou"
+
+#: src/components/trading/TradeManager.tsx:22
+#~ msgid "Create Trade"
+#~ msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:135
+#~ msgid "Create Trade Offer"
+#~ msgstr "Vytvorte obchodnú ponuku"
+
+#: src/components/WalletSend.tsx:134
+#: src/components/cat/WalletCATSend.tsx:176
+#: src/components/rateLimited/WalletRateLimited.jsx:683
+msgid "Create Transaction"
+msgstr "Vytvoriť transakciu"
+
+#: src/components/backup/BackupCreate.tsx:41
+#~ msgid "Create a Backup"
+#~ msgstr "Vytvoriť zálohu"
+
+#: src/components/plot/add/PlotAddNFT.tsx:47
+#~ msgid "Create a Plot NFT"
+#~ msgstr "Vytvoriť NFT poľa"
+
+#: src/components/_selectKey_old/SelectKey.tsx:254
+#~ msgid "Create a new private key"
+#~ msgstr "Vytvoriť nový privátny kľúč"
+
+#: src/components/_wallet_old/create/WalletCreate.jsx:186
+#~ msgid "Create admin wallet"
+#~ msgstr "Vytvoriť peňaženku pre správcu"
+
+#: src/components/cat/WalletCATCreateExisting.tsx:76
+msgid "Create custom CAT Wallet"
+msgstr ""
+
+#: src/components/_wallet_old/create/WalletCreate.jsx:132
+#~ msgid "Create new coloured coin"
+#~ msgstr "Vytvoriť novú farebnú mincu"
+
+#: src/components/_wallet_old/create/WalletCreate.jsx:192
+#~ msgid "Create user wallet"
+#~ msgstr "Vytvoriť peňaženku pre používateľa"
+
+#: src/components/_wallet_old/create/createExistingColouredCoin.jsx:93
+#~ msgid "Create wallet for colour"
+#~ msgstr "Vytvoriť peňaženku pre farbu"
+
+#: src/components/_wallet_old/create/WalletCreate.jsx:139
+#~ msgid "Create wallet for existing colour"
+#~ msgstr "Vytvoriť peňaženku pre existujúcu farbu"
+
+#: src/components/wallet/Wallets.tsx:81
+#~ msgid "CreateWallet.addWallet"
+#~ msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:185
+#~ msgid "Created At:"
+#~ msgstr "Vytvorené o:"
+
+#: src/components/trading/TradingOverview.jsx:210
+#~ msgid "Created by us:"
+#~ msgstr "Vytvorené nami:"
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:61
+#~ msgid "Creating Plot NFT and Joining the Pool"
+#~ msgstr "Vytváranie NFT poľa a pripájanie k združeniu"
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
+#~ msgid "Creating Plot NFT for Self Pooling"
+#~ msgstr "Vytváranie NFT poľa osobného združenia"
+
+#: src/components/plot/add/PlotAddForm.tsx:109
+#~ msgid "Currency code is not defined"
+#~ msgstr "Kód meny nie je definovaný"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:138
+#: src/components/plotNFT/PlotNFTCard.tsx:178
+#~ msgid "Current Difficulty"
+#~ msgstr "Aktuálna zložitosť"
+
+#: src/components/settings/ChangePassphrasePrompt.tsx:162
+#~ msgid "Current Passphrase"
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:155
+#: src/components/plotNFT/PlotNFTCard.tsx:195
+#~ msgid "Current Points Balance"
+#~ msgstr "Aktuálny počet bodov"
+
+#: src/components/trading/TradingOverview.jsx:181
+#~ msgid "Current trade status"
+#~ msgstr "Aktuálny stav obchodu"
+
+#: src/constants/WalletName.ts:20
+msgid "Custody Wallet"
+msgstr ""
+
+#: src/components/cat/WalletCATCreateSimple.tsx:102
+msgid "Custom"
+msgstr ""
+
+#: src/components/_selectKey_old/SelectKey.tsx:227
+#~ msgid "DANGER: permanently delete private key"
+#~ msgstr "POZOR: natrvalo odstrániť súkromný klúč"
+
+#: src/constants/WalletName.ts:29
+msgid "DID Wallet"
+msgstr "DID Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:310
+#~ msgid "DIDListItems.title"
+#~ msgstr ""
+
+#: src/components/WalletHistory.tsx:90
+msgid "Date"
+msgstr "Dátum"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:93
+#~ msgid "Delay"
+#~ msgstr "Oneskorenie"
+
+#: src/components/WalletHeader.tsx:41
+#: src/components/did/WalletDID.tsx:448
+#: src/components/did/WalletDID.tsx:861
+#: src/components/did/WalletDIDCreate.tsx:193
+#: src/components/did/WalletDIDRecovery.tsx:100
+msgid "Delete"
+msgstr "Zmazať"
+
+#: src/components/app/AppPassPrompt.tsx:93
+#~ msgid "Delete Key"
+#~ msgstr ""
+
+#: src/components/plot/PlotAction.tsx:24
+#: src/components/plot/queue/PlotQueueActions.tsx:40
+#~ msgid "Delete Plot"
+#~ msgstr "Zmazať pole"
+
+#: src/components/WalletHeader.tsx:86
+msgid "Delete Unconfirmed Transactions"
+msgstr "Odstrániť nepotvrdené transakcie"
+
+#: src/components/_selectKey_old/SelectKey.tsx:114
+#: src/components/_selectKey_old/SelectKey.tsx:273
+#~ msgid "Delete all keys"
+#~ msgstr "Zmazať všetky kľúče"
+
+#: src/components/selectKey/SelectKey.tsx:58
+#~ msgid "Delete key"
+#~ msgstr "Delete key"
+
+#: src/components/_selectKey_old/SelectKey.tsx:75
+#~ msgid "Delete key {fingerprint}"
+#~ msgstr "Odstrániť kľúč {fingerprint}"
+
+#: src/components/selectKey/SelectKey.tsx:126
+#~ msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
+#~ msgstr "Po stlačení tlačidla zmazať odstránite natrvalo všetký kľúče z počítača. Uistite sa, že máte zálohu. Ste si istý, že chcete pokračovať?"
+
+#: src/components/app/AppPassPrompt.tsx:89
+#~ msgid "Deleting key"
+#~ msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:101
+#~ msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
+#~ msgstr "Odstránením kľúča natrvalo odstránite kľúč z počítača. Uistite sa, že máte zálohy. Ste si istý, že chcete pokračovať?"
+
+#: src/components/plot/add/PlotAddChoosePlotter.tsx:92
+#~ msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
+#~ msgstr ""
+
+#: src/electron/main.tsx:315
+#~ msgid "Developer"
+#~ msgstr "Vývojár"
+
+#: src/electron/main.tsx:318
+#~ msgid "Developer Tools"
+#~ msgstr "Nástroje pre vývojárov"
+
+#: src/components/block/Block.jsx:210
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
+#~ msgid "Difficulty"
+#~ msgstr "Zložitosť"
+
+#: src/components/app/AppPassPrompt.tsx:78
+#~ msgid "Disable"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:266
+#~ msgid "Disable NUMA"
+#~ msgstr ""
+
+#: src/components/app/AppPassPrompt.tsx:77
+#~ msgid "Disable Passphrase Protection"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:215
+#~ msgid "Disable bitfield plotting"
+#~ msgstr "Zakázať vykresľovanie s bitovým poľom"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:26
+#~ msgid "Discard"
+#~ msgstr "Odstrániť"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:20
+#~ msgid "Disconnect"
+#~ msgstr "Odpojiť"
+
+#: src/components/create/WalletCreateList.tsx:39
+#: src/components/did/WalletDIDSelect.tsx:25
+msgid "Distributed Identity"
+msgstr "Distribuovaná identita"
+
+#: src/components/wallet/create/WalletCreate.jsx:280
+#~ msgid "Distributed Identity Options"
+#~ msgstr "Distributed Identity Options"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:51
+#: src/components/plot/overview/PlotOverviewHero.tsx:67
+#~ msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
+#~ msgstr "Máte existujúce ploty na tomto stroji? <0>Pridaj Adresár s Plotmi</0>"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:55
+#~ msgid "Does your machine support parallel plotting?"
+#~ msgstr "Podporuje váše zariadenie paralelné vytváranie polí?"
+
+#: src/components/did/WalletDID.tsx:427
+msgid "Drag and drop attestation packet(s)"
+msgstr "Pretiahnite myšou atestačné pakety"
+
+#: src/components/trading/ViewOffer.jsx:39
+#~ msgid "Drag and drop offer file"
+#~ msgstr "Súbor s ponukami presuňte tu"
+
+#: src/components/backup/BackupRestore.tsx:173
+#~ msgid "Drag and drop your backup file"
+#~ msgstr "Pretiahnite súbor zálohy"
+
+#: src/components/did/WalletDIDRecovery.tsx:108
+msgid "Drag and drop your recovery backup file"
+msgstr "Pretiahnite myšou obnovovací záložný súbor"
+
+#: src/electron/main.tsx:274
+#~ msgid "Edit"
+#~ msgstr "Upraviť"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:258
+#: src/components/plotNFT/PlotNFTCard.tsx:298
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:81
+#~ msgid "Edit Payout Instructions"
+#~ msgstr "Upraviť platobné pokyny"
+
+#: src/components/wallet/EnterPassphrasePrompt.tsx:111
+#~ msgid "Enter Passphrase"
+#~ msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:129
+#~ msgid "Enter a strong passphrase and click Migrate Keys to secure your keys"
+#~ msgstr ""
+
+#: src/components/settings/SetPassphrasePrompt.tsx:141
+#~ msgid "Enter a strong passphrase to secure your keys:"
+#~ msgstr ""
+
+#: src/components/WalletImport.tsx:82
+msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
+msgstr "Zadajte 24 slov, ktoré ste si uložili pre účely obnovenia vašej peňaženky Chia."
+
+#: src/components/settings/RemovePassphrasePrompt.tsx:104
+#~ msgid "Enter your passphrase:"
+#~ msgstr ""
+
+#: src/components/farm/FarmerStatus.tsx:21
+#: src/components/farm/FarmerStatus.tsx:22
+#: src/components/farm/card/FarmCardStatus.tsx:35
+#: src/components/farm/card/FarmCardStatus.tsx:49
+#: src/components/plot/PlotStatus.tsx:20
+#: src/components/plot/PlotStatus.tsx:21
+#: src/components/plot/queue/PlotQueueIndicator.tsx:22
+#~ msgid "Error"
+#~ msgstr "Chyba"
+
+#: src/components/cat/WalletCATSend.tsx:129
+msgid "Error the entered address appears to be for a different colour."
+msgstr ""
+
+#: src/components/_wallet_old/standard/WalletStandard.tsx:450
+#~ msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
+#~ msgstr "Chyba: Chia nie je možné odoslať na farebnú adresu. Zadajte prosím Chia adresu."
+
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:14
+#~ msgid "Estimated Network Space"
+#~ msgstr "Odhadovaná velkosť siete"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:43
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:51
+#~ msgid "Estimated Time to Win"
+#~ msgstr "Očakávaný čas na výhru"
+
+#: src/components/fullNode/FullNode.jsx:204
+#~ msgid "Estimated network space"
+#~ msgstr "Estimated network space"
+
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:16
+#~ msgid "Estimated sum of all the plotted disk space of all farmers in the network"
+#~ msgstr "Odhadovaný súčet všetkého obsadeného miesta na disku všetkých ťažiarov v sieti"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:279
+#~ msgid "Exclude final directory"
+#~ msgstr "Vylúčiť cieľový adresár"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "Expected Time to Win"
+#~ msgstr ""
+
+#: src/components/plot/PlotsFailed.tsx:34
+#~ msgid "Failed to open (invalid plots)"
+#~ msgstr "Nepodarilo sa otvoriť (neplatné polia)"
+
+#: src/components/settings/ChangePassphrasePrompt.tsx:97
+#~ msgid "Failed to remove passphrase: {error}"
+#~ msgstr ""
+
+#: src/components/settings/SetPassphrasePrompt.tsx:85
+#~ msgid "Failed to set passphrase: {0}"
+#~ msgstr ""
+
+#: src/components/settings/SetPassphrasePrompt.tsx:92
+#~ msgid "Failed to set passphrase: {error}"
+#~ msgstr ""
+
+#: src/components/settings/ChangePassphrasePrompt.tsx:113
+#~ msgid "Failed to update passphrase: {0}"
+#~ msgstr ""
+
+#: src/components/settings/ChangePassphrasePrompt.tsx:120
+#~ msgid "Failed to update passphrase: {error}"
+#~ msgstr ""
+
+#: src/components/WalletSend.tsx:180
+#: src/components/cat/WalletCATSend.tsx:238
+msgid "Farm"
+msgstr "Farma"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:297
+#~ msgid "Farmer Public Key"
+#~ msgstr "Verejný kľúč farmára"
+
+#: src/components/block/Block.jsx:256
+#~ msgid "Farmer Puzzle Hash"
+#~ msgstr "Hash hádaniek pre farmára"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:143
+#~ msgid "Farmer Reward Address"
+#~ msgstr "Adresa odmeny farmára"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:117
+#~ msgid "Farmer Reward Address is not properly formatted."
+#~ msgstr "Adresa odmeny farmára nemá správny formát."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:111
+#~ msgid "Farmer Reward Address must not be empty."
+#~ msgstr "Adresa odmeny farmára nesmie byť prázdna."
+
+#: src/components/farm/card/FarmCardStatus.tsx:38
+#: src/components/plot/PlotStatus.tsx:28
+#~ msgid "Farmer is not connected"
+#~ msgstr "Farmár nie je pripojený"
+
+#: src/components/farm/card/FarmCardStatus.tsx:52
+#: src/components/plot/PlotStatus.tsx:29
+#~ msgid "Farmer is not running"
+#~ msgstr "Nebeží farmer"
+
+#: src/_middleware_old/middleware_api.jsx:247
+#~ msgid "Farmer public key:"
+#~ msgstr "Verejný kľúč farmára:"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:32
+#~ msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
+#~ msgstr "Farmári získavajú odmeny za bloky a transakčné poplatky tým, že vložia voľný priestor do siete, aby pomohli zabezpečit transakcie. Tu bude vaša farma akonáhle pridáte svoje pole. <0>Viac informácií</0>"
+
+#: src/components/farm/Farm.tsx:19
+#: src/components/farm/FarmerStatus.tsx:18
+#: src/components/farm/card/FarmCardStatus.tsx:62
+#: src/components/plot/PlotStatus.tsx:17
+#~ msgid "Farming"
+#~ msgstr "Ťažba"
+
+#: src/components/farm/card/FarmCardStatus.tsx:15
+#: src/components/farm/card/FarmCardStatus.tsx:26
+#: src/components/farm/card/FarmCardStatus.tsx:32
+#: src/components/farm/card/FarmCardStatus.tsx:46
+#: src/components/farm/card/FarmCardStatus.tsx:59
+#~ msgid "Farming Status"
+#~ msgstr "Stav ťažby"
+
+#: src/components/WalletHistory.tsx:127
+#: src/components/WalletSend.tsx:172
+#: src/components/cat/WalletCATSend.tsx:218
+#: src/components/create/createRLAdmin.jsx:243
+#: src/components/create/createRLAdmin.jsx:271
+#: src/components/rateLimited/WalletRateLimited.jsx:732
+msgid "Fee"
+msgstr "Poplatok"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:420
+#~ msgid "Fee (TXCH)"
+#~ msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:420
+#~ msgid "Fee ({0})"
+#~ msgstr "Fee ({0})"
+
+#: src/components/_wallet_old/coloured/WalletColoured.tsx:595
+#~ msgid "Fee ({currencyCode})"
+#~ msgstr "Poplatok ({currencyCode})"
+
+#: src/components/plotNFT/PlotNFTChangePool.tsx:126
+#~ msgid "Fee is used TWICE: once to leave pool, once to join."
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:310
+#~ msgid "Fees Amount"
+#~ msgstr "Výška poplatkov"
+
+#: src/components/block/Block.jsx:313
+#~ msgid "Fees Puzzle Hash"
+#~ msgstr ""
+
+#: src/electron/main.tsx:266
+#: src/electron/main.tsx:467
+#~ msgid "File"
+#~ msgstr "Súbor"
+
+#: src/components/did/WalletDID.tsx:974
+msgid "Filename"
+msgstr "Meno súboru"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:47
+#~ msgid "Final folder location"
+#~ msgstr "Cieľový adresár"
+
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:96
+#~ msgid "Finished"
+#~ msgstr "Dokončené"
+
+#: src/electron/main.tsx:418
+#~ msgid "Follow on Twitter"
+#~ msgstr "Sledovať na Twitteri"
+
+#: src/electron/main.tsx:377
+#~ msgid "Frequently Asked Questions"
+#~ msgstr "Často kladené otázky (FAQ)"
+
+#: src/components/dashboard/DashboardSideBar.tsx:51
+#: src/components/fullNode/FullNode.jsx:137
+#~ msgid "Full Node"
+#~ msgstr "Celý uzol"
+
+#: src/components/fullNode/FullNode.jsx:140
+#~ msgid "Full Node Overview"
+#~ msgstr "Prehľad celého uzla"
+
+#: src/components/fullNode/FullNode.jsx:267
+#~ msgid "Full Node Status"
+#~ msgstr "Full Node Status"
+
+#: src/electron/main.tsx:343
+#~ msgid "Full Screen"
+#~ msgstr "Celá obrazovka"
+
+#: src/components/_wallet_old/create/createNewColouredCoin.jsx:102
+#~ msgid "Generate New Colour"
+#~ msgstr "Generovať novú farbu"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:251
+#~ msgid "Get Pool Login Link"
+#~ msgstr "Get Pool Login Link"
+
+#: src/components/pool/PoolOverview.tsx:173
+#~ msgid "Grid view"
+#~ msgstr "Mriežkové zobrazenie"
+
+#: src/components/WalletReceiveAddress.tsx:40
+msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
+msgstr "HD alebo Hierarchické Deterministické kľúče sú typ schémy verejného kľúča/súkromného kľúča, kde jeden súkromný kľúč môže mať takmer nekonečný počet rôznych verejných kľúčov (a tým pádom adries pre príjem do peňaženky), ktoré sa nakoniec vrátia k jedinému súkromnému kľúču a budú z neho utratiteľné."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#~ msgid "Harvester ID"
+#~ msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:132
+#~ msgid "Harvester Plots"
+#~ msgstr "Zoznam polí"
+
+#: src/components/fullNode/FullNode.jsx:60
+#~ msgid "Header Hash"
+#~ msgstr "Hash hlavičky"
+
+#: src/components/block/Block.jsx:174
+#~ msgid "Header hash"
+#~ msgstr "Hash hlavičky"
+
+#: src/components/block/Block.jsx:190
+#: src/components/fullNode/FullNode.jsx:78
+#: src/components/fullNode/FullNodeConnections.tsx:78
+#~ msgid "Height"
+#~ msgstr "Poradie"
+
+#: src/electron/main.tsx:365
+#~ msgid "Help"
+#~ msgstr "Pomoc"
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:76
+#~ msgid "Help translate"
+#~ msgstr "Pomôcť s prekladom"
+
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
+#~ msgid "Hide Advanced Options"
+#~ msgstr "Skryť rozšírené možnosti"
+
+#: src/components/app/AppPassPrompt.tsx:128
+#: src/components/settings/RemovePassphrasePrompt.tsx:120
+#~ msgid "Hint"
+#~ msgstr ""
+
+#: src/components/_wallet_old/WalletHistory.tsx:91
+#~ msgid "History"
+#~ msgstr "História"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:37
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:36
+#~ msgid "Host Name"
+#~ msgstr "Meno hostiteľa"
+
+#: src/components/WalletConnections.tsx:27
+msgid "IP address"
+msgstr "IP Adresa"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:72
+#~ msgid "IP address / host"
+#~ msgstr "IP Adresa / host"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:128
+#~ msgid "If none selected, then it will default to the temporary directory."
+#~ msgstr "Ak nie je vybraný žiadny adresár, použije sa ako predvolený, dočasný adresár."
+
+#: src/components/WalletImport.tsx:79
+msgid "Import Wallet from Mnemonics"
+msgstr "Obnoviť peňaženku pomocou mnemotechnickej pomôcky"
+
+#: src/components/_selectKey_old/SelectKey.tsx:264
+#~ msgid "Import from Mnemonics (24 words)"
+#~ msgstr "Obnoviť z mnemotechniky (24 slov)"
+
+#: src/components/fullNode/FullNode.jsx:44
+#~ msgid "In Progress"
+#~ msgstr "Prebieha"
+
+#: src/components/WalletHistory.tsx:36
+msgid "Incoming"
+msgstr "Prichádzajúce"
+
+#: src/components/core/components/Fee/Fee.tsx:36
+#~ msgid "Incorrect value"
+#~ msgstr "Nesprávna hodnota"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:17
+#~ msgid "Index"
+#~ msgstr "Index"
+
+#: src/components/trading/TradingOverview.jsx:213
+#~ msgid "Indicated if this offer was created by us"
+#~ msgstr "Identifikátor zobrazujúci či bola táto ponuka vytvorená nami"
+
+#: src/components/trading/TradingOverview.jsx:230
+#~ msgid "Indicated what time this offer was accepted"
+#~ msgstr "Čas, v akom bola táto ponuka prijatá"
+
+#: src/components/rateLimited/WalletRateLimited.jsx:332
+#: src/components/rateLimited/WalletRateLimited.jsx:471
+msgid "Info Packet"
+msgstr "Informačný paket"
+
+#: src/components/create/createRLAdmin.jsx:259
+msgid "Initial Amount"
+msgstr "Počiatočná suma"
+
+#: src/components/create/createRLUser.jsx:87
+msgid "Initialize a Rate Limited User Wallet:"
+msgstr "Inicializovať používateľskú peňaženku s obmedzenou sazbou:"
+
+#: src/components/create/createRLAdmin.jsx:217
+msgid "Interval"
+msgstr "Interval"
+
+#: src/components/plotNFT/PlotNFTState.tsx:26
+#~ msgid "Invalid state"
+#~ msgstr "Neplatný stav"
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:67
+#~ msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
+#~ msgstr "Jednorazový odkaz, ktorým sa môžete prihlásiť na webovú stránku združenia. Obsahuje podpis, ktorý používa farmárov kľúč z NFT poľa. Niektoré združenia túto funkciu nepodporujú."
+
+#: src/components/plotNFT/PlotNFTCard.tsx:403
+#: src/components/pool/PoolOverview.tsx:110
+#~ msgid "Join Pool"
+#~ msgstr "Pripojiť sa k združeniu"
+
+#: src/components/plot/add/PlotAddNFT.tsx:64
+#: src/components/plot/add/PlotAddNFT.tsx:146
+#: src/components/pool/PoolHero.tsx:31
+#~ msgid "Join a Pool"
+#~ msgstr "Pripojiť sa k združeniu"
+
+#: src/components/plot/add/PlotAddNFT.tsx:49
+#~ msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
+#~ msgstr "Pripojte sa k združeniu a získajte konzistentné farmárske XCH odmeny. Priemerný výnos je rovnaký, je však oveľa menej volatilný."
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:63
+#~ msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile. Assign plots to a plot NFT. You can easily switch pools without having to re-plot."
+#~ msgstr "Pripojte sa k združeniu a získajte konzistentné farmárske XCH odmeny. Priemerný výnos je rovnaký, je však oveľa menej volatilný. Priraďte polia k NFT poľa. Môžete ľahko prepínať združenia bez nutnosti opakovaného vytvárania polí."
+
+#: src/components/plot/add/PlotAddNFT.tsx:138
+#~ msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
+#~ msgstr "Pripojte sa k združeniu a získajte konzistentnejšie farmárske XCH odmeny. Vytvorte NFT poľa a priraďte svoje nové polia do skupiny."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:63
+#~ msgid "K-Size"
+#~ msgstr "K-veľkosť"
+
+#: src/components/app/AppKeyringMigrator.tsx:94
+#~ msgid "Keyring migration failed: {0}"
+#~ msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:86
+#~ msgid "Keyring migration failed: {error}"
+#~ msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:85
+#~ msgid "Keys"
+#~ msgstr "Kľúče"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:65
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:64
+#~ msgid "KiB Up/Down"
+#~ msgstr "KiB Odoslané/Stiahnuté"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:45
+#~ msgid "Last Attempted Proof"
+#~ msgstr "Posledný pokus o dôkaz"
+
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:14
+#~ msgid "Last Height Farmed"
+#~ msgstr "Posledná vyfarmárčená pozícia"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:30
+#~ msgid "Latest Block Challenges"
+#~ msgstr "Najnovšie blokové výzvy"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:294
+#: src/components/plotNFT/PlotNFTCard.tsx:347
+#~ msgid "Launcher Id"
+#~ msgstr "Id spúšťača"
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:119
+#~ msgid "Learn More"
+#~ msgstr "Zistiť viac"
+
+#: src/components/plotNFT/PlotNFTState.tsx:58
+#~ msgid "Leaving Pool"
+#~ msgstr "Opúšťanie združenia"
+
+#: src/components/WalletConnections.tsx:83
+msgid "List of connections is empty"
+msgstr ""
+
+#: src/components/pool/PoolOverview.tsx:173
+#~ msgid "List view"
+#~ msgstr "Zobraziť ako zoznam"
+
+#: src/components/pool/Pool.tsx:21
+#~ msgid "Loading Plot NFTs"
+#~ msgstr "Načítavanie NFT polí"
+
+#: src/components/app/App.tsx:66
+#~ msgid "Loading configuration"
+#~ msgstr ""
+
+#: src/components/app/AppState.tsx:114
+#~ msgid "Loading keyring status"
+#~ msgstr ""
+
+#: src/components/_wallet_old/Wallets.tsx:117
+#~ msgid "Loading list of wallets"
+#~ msgstr "Načítavanie zoznamu peňaženiek"
+
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:35
+#~ msgid "Loading..."
+#~ msgstr "Načítava sa..."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:126
+#~ msgid "Local Harvester Plots"
+#~ msgstr "Local Harvester Plots"
+
+#: src/components/app/AppRouter.tsx:68
+#~ msgid "Logging in"
+#~ msgstr "Prihlasovanie"
+
+#: src/components/wallet/create/WalletCreate.jsx:124
+#~ msgid "MainWalletList.colouredCoin"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:258
+#~ msgid "MainWalletList.createAdminWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:322
+#~ msgid "MainWalletList.createDIDWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:194
+#~ msgid "MainWalletList.createNewColouredCoin"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:270
+#~ msgid "MainWalletList.createUserWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:206
+#~ msgid "MainWalletList.createWalletForExistingColour"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:144
+#~ msgid "MainWalletList.distributedIdentity"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:134
+#~ msgid "MainWalletList.rateLimited"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:334
+#~ msgid "MainWalletList.recoverDIDWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:112
+#~ msgid "MainWalletList.title"
+#~ msgstr ""
+
+#: src/components/farm/overview/FarmOverview.tsx:49
+#~ msgid "Manage Farming Rewards"
+#~ msgstr "Spravovať farmárske odmeny"
+
+#: src/components/did/WalletDID.tsx:805
+msgid "Manage Recovery DIDs"
+msgstr "Spravovať obnovovacie DID"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:99
+#~ msgid "Manage Your Farming Rewards Target Addresses"
+#~ msgstr "Spravovať cieľové adresy farmárskych odmien"
+
+#: src/components/WalletHistory.tsx:73
+#: src/components/cat/WalletCATSend.tsx:230
+msgid "Memo"
+msgstr ""
+
+#: src/components/WalletHistory.tsx:235
+msgid "Memos"
+msgstr ""
+
+#: src/components/WalletConnections.tsx:55
+msgid "MiB Up/Down"
+msgstr "MiB Odoslané/Stiahnuté"
+
+#: src/components/_selectKey_old/SelectKey.tsx:137
+#~ msgid "Migrate"
+#~ msgstr ""
+
+#: src/components/settings/Settings.tsx:182
+#~ msgid "Migrate Keyring"
+#~ msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:230
+#~ msgid "Migrate Keys"
+#~ msgstr ""
+
+#: src/components/_selectKey_old/SelectKey.tsx:136
+#: src/components/app/AppKeyringMigrator.tsx:125
+#~ msgid "Migration required"
+#~ msgstr ""
+
+#: src/components/settings/Settings.tsx:123
+#~ msgid "Migration required to support passphrase protection"
+#~ msgstr ""
+
+#: src/components/pool/PoolInfo.tsx:27
+#~ msgid "Minimum Difficulty"
+#~ msgstr "Minimálna zložitosť"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:98
+#~ msgid "Minutes"
+#~ msgstr "Minút"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:118
+#~ msgid "More memory slightly increases speed"
+#~ msgstr "Viac pamäte mierne zvyšuje rýchlosť"
+
+#: src/constants/WalletName.ts:17
+msgid "Multi Sig Wallet"
+msgstr ""
+
+#: src/components/did/WalletDID.tsx:536
+msgid "My DID Wallet"
+msgstr "Moja DID peňaženka"
+
+#: src/components/rateLimited/WalletRateLimited.jsx:414
+msgid "My Pubkey"
+msgstr "Môj verejný kľúč"
+
+#: src/components/cat/WalletCATCreateExistingSimple.tsx:72
+msgid "Name"
+msgstr ""
+
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:14
+#~ msgid "Network Name"
+#~ msgstr "Názov siete"
+
+#: src/components/fullNode/FullNode.jsx:106
+#~ msgid "Network has not yet been launched, once it launches full node will start automatically."
+#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
+
+#: src/components/app/AppRouter.tsx:24
+#~ msgid "Network not launched yet, waiting for genesis challenge!"
+#~ msgstr "Network not launched yet, waiting for genesis challenge!"
+
+#: src/components/WalletReceiveAddress.tsx:36
+msgid "New Address"
+msgstr "Nová adresa"
+
+#: src/components/settings/ChangePassphrasePrompt.tsx:172
+#~ msgid "New Passphrase"
+#~ msgstr ""
+
+#: src/components/WalletAdd.tsx:73
+msgid "New Wallet"
+msgstr "Nová peňaženka"
+
+#: src/components/app/AppPassPrompt.tsx:60
+#~ msgid "New passphrase is the same as your current passphrase"
+#~ msgstr ""
+
+#: src/components/WalletAdd.tsx:107
+#: src/components/WalletImport.tsx:109
+msgid "Next"
+msgstr "Ďalej"
+
+#: src/components/WalletRenameDialog.tsx:79
+msgid "Nickname"
+msgstr "Prezývka"
+
+#: src/components/trading/TradingOverview.jsx:208
+#: src/electron/main.tsx:196
+#~ msgid "No"
+#~ msgstr "Nie"
+
+#: src/_middleware_old/middleware_api.jsx:273
+#~ msgid "No 24 word seed, since this key is imported."
+#~ msgstr "Žiadny 24-slovný seed, pretože tento kľúč je importovaný."
+
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:16
+#~ msgid "No blocks farmed yet"
+#~ msgstr "Zatiaľ neboli vyťažené žiadne bloky"
+
+#: src/components/WalletHistory.tsx:266
+msgid "No previous transactions"
+msgstr "Žiadne predchádzajúce transakcie"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:136
+#~ msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
+#~ msgstr "Žiadne súkromné kľúče pre jednu alebo obidve adresy. Bezpečné iba v prípade, že posielate odmeny do inej peňaženky."
+
+#: src/components/WalletConnections.tsx:23
+msgid "Node ID"
+msgstr "ID uzla"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:87
+#~ msgid "Node Id"
+#~ msgstr "Id uzla"
+
+#: src/components/plot/add/PlotAddNFT.tsx:91
+#~ msgid "None"
+#~ msgstr "Žiadny"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:69
+#~ msgid "None of your plots have passed the plot filter yet."
+#~ msgstr "Žiadne z vašich polí zatiaľ neprešlo filtrom polí."
+
+#: src/components/WalletHistory.tsx:227
+#: src/components/WalletHistory.tsx:232
+msgid "Not Available"
+msgstr "Nie je k dispozícií"
+
+#: src/components/WalletStatus.tsx:32
+msgid "Not Synced"
+msgstr "Nesynchronizované"
+
+#: src/components/trading/TradingOverview.jsx:221
+#~ msgid "Not accepted yet"
+#~ msgstr "Zatiaľ neakceptované"
+
+#: src/components/trading/TradingOverview.jsx:194
+#~ msgid "Not confirmed yet"
+#~ msgstr "Zatiaľ nepotvrdené"
+
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:20
+#~ msgid "Not connected"
+#~ msgstr "Nepripojené"
+
+#: src/components/plot/PlotsNotFound.tsx:34
+#~ msgid "Not found Plots"
+#~ msgstr "Polia sa nenašli"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:164
+#~ msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
+#~ msgstr "Toto však nezmení vaše platobné adresy združovania. Ovplyvňuje to iba polia v starom formáte, a odmenu 0,25 XCH za združovanie polí."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:117
+#: src/components/plotNFT/PlotNFTCard.tsx:157
+#~ msgid "Number of Plots"
+#~ msgstr "Počet polí"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:171
+#~ msgid "Number of buckets"
+#~ msgstr "Počet sektorov"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:188
+#~ msgid "Number of buckets for phase 3 & 4"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:136
+#~ msgid "Number of threads"
+#~ msgstr "Počet vlákien"
+
+#: src/components/cat/WalletCATTAILDialog.tsx:82
+msgid "OK"
+msgstr "OK"
+
+#: src/components/trading/ViewOffer.jsx:67
+#~ msgid "Offer"
+#~ msgstr "Ponuka"
+
+#: src/components/trading/TradingOverview.jsx:412
+#~ msgid "Offers Created"
+#~ msgstr "Vytvorené ponuky"
+
+#: src/components/WalletSend.tsx:136
+#: src/components/cat/WalletCATSend.tsx:178
+msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
+msgstr "Priemerný čas medzi jednotlivými blokmi transakcií je jedna minúta. Ak nedôjde k preťaženiu, môžete očakávať, že vaša transakcia bude zahrnutá za menej ako minútu."
+
+#: src/components/did/WalletDIDRecovery.tsx:33
+msgid "Only one backup file is allowed."
+msgstr "Je povolený iba jeden záložný súbor."
+
+#: src/components/wallet/create/recoverDIDWallet.js:156
+#~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
+#~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
+
+#: src/components/WalletHistory.tsx:36
+msgid "Outgoing"
+msgstr "Odchádzajúce"
+
+#: src/components/app/AppKeyringMigrator.tsx:139
+#: src/components/app/AppKeyringMigrator.tsx:140
+#: src/components/app/AppPassPrompt.tsx:120
+#: src/components/settings/RemovePassphrasePrompt.tsx:112
+#: src/components/settings/SetPassphrasePrompt.tsx:151
+#~ msgid "Passphrase"
+#~ msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:163
+#: src/components/settings/ChangePassphrasePrompt.tsx:193
+#: src/components/settings/SetPassphrasePrompt.tsx:175
+#~ msgid "Passphrase Hint"
+#~ msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:162
+#: src/components/settings/ChangePassphrasePrompt.tsx:192
+#: src/components/settings/SetPassphrasePrompt.tsx:174
+#~ msgid "Passphrase Hint (Optional)"
+#~ msgstr ""
+
+#: src/components/settings/Settings.tsx:213
+#~ msgid "Passphrase Settings"
+#~ msgstr ""
+
+#: src/components/app/AppPassPrompt.tsx:152
+#: src/components/settings/RemovePassphrasePrompt.tsx:67
+#~ msgid "Passphrase is incorrect"
+#~ msgstr ""
+
+#: src/components/settings/Settings.tsx:96
+#~ msgid "Passphrase protection has been disabled"
+#~ msgstr ""
+
+#: src/components/settings/Settings.tsx:133
+#~ msgid "Passphrase protection is disabled"
+#~ msgstr ""
+
+#: src/components/settings/Settings.tsx:130
+#~ msgid "Passphrase protection is enabled"
+#~ msgstr ""
+
+#: src/components/settings/Settings.tsx:124
+#~ msgid "Passphrase support requires migrating your keys to a new keyring"
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:358
+#~ msgid "Payout Address"
+#~ msgstr "Výplatná adresa"
+
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:14
+#~ msgid "Peak Height"
+#~ msgstr "Najvyššia pozícia"
+
+#: src/components/fullNode/FullNode.jsx:204
+#~ msgid "Peak Sub-block Height"
+#~ msgstr "Peak Sub-block Height"
+
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:18
+#~ msgid "Peak Time"
+#~ msgstr "Vrchol času"
+
+#: src/components/WalletHistory.tsx:70
+msgid "Pending"
+msgstr "Spracúva sa"
+
+#: src/components/card/WalletCardPendingBalance.tsx:37
+#: src/components/rateLimited/WalletRateLimited.jsx:572
+msgid "Pending Balance"
+msgstr "Nespracovaný zostatok"
+
+#: src/components/card/WalletCardPendingChange.tsx:38
+#: src/components/rateLimited/WalletRateLimited.jsx:577
+msgid "Pending Change"
+msgstr "Nespracované zmeny"
+
+#: src/components/card/WalletCardPendingTotalBalance.tsx:38
+#: src/components/rateLimited/WalletRateLimited.jsx:567
+msgid "Pending Total Balance"
+msgstr "Celkový nespracovaný zostatok"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
+#: src/hooks/useAbsorbRewards.tsx:43
+#~ msgid "Please Confirm"
+#~ msgstr "Prosím potvrďte"
+
+#: src/components/trading/CreateOffer.jsx:100
+#~ msgid "Please add a trade pair"
+#~ msgstr "Prosím pridajte obchodný pár"
+
+#: src/components/rateLimited/WalletRateLimited.jsx:667
+msgid "Please enter 0 fee. Positive fees not supported yet for RL."
+msgstr "Prosím zadajte nulový poplatok. Kladné nenulové poplatky ešte nie sú pre RL podporované."
+
+#: src/components/did/WalletDID.tsx:923
+msgid "Please enter a coin"
+msgstr "Zadajte prosím mincu"
+
+#: src/components/did/WalletDID.tsx:525
+#: src/components/did/WalletDID.tsx:913
+msgid "Please enter a filename"
+msgstr "Zadajte prosím názov súboru"
+
+#: src/components/app/AppPassPrompt.tsx:53
+#: src/components/settings/SetPassphrasePrompt.tsx:53
+#~ msgid "Please enter a passphrase"
+#~ msgstr ""
+
+#: src/components/did/WalletDID.tsx:933
+msgid "Please enter a pubkey"
+msgstr "Prosím zadajte verejný kľúč"
+
+#: src/components/did/WalletDID.tsx:943
+msgid "Please enter a puzzlehash"
+msgstr "Zadajte prosím hash hádaniek"
+
+#: src/components/cat/WalletCATCreateExisting.tsx:41
+msgid "Please enter a valid CAT name"
+msgstr ""
+
+#: src/components/cat/WalletCATCreateExistingSimple.tsx:42
+msgid "Please enter a valid asset id"
+msgstr ""
+
+#: src/components/create/createRLAdmin.jsx:139
+msgid "Please enter a valid initial coin amount"
+msgstr "Prosím zadajte platnú počiatočnú sumu"
+
+#: src/components/did/WalletDID.tsx:776
+#: src/components/did/WalletDIDCreate.tsx:75
+msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
+msgstr "Zadajte prosím platné celé číslo od 0 alebo vyššie pre počet záložných ID potrebných na obnovu."
+
+#: src/components/WalletSend.tsx:90
+#: src/components/cat/WalletCATSend.tsx:105
+#: src/components/rateLimited/WalletRateLimited.jsx:638
+msgid "Please enter a valid numeric amount"
+msgstr "Prosím zadajte platnú číselnú sumu"
+
+#: src/components/did/WalletDIDCreate.tsx:49
+msgid "Please enter a valid numeric amount."
+msgstr "Zadajte prosím platnú číselnú sumu."
+
+#: src/components/WalletSend.tsx:95
+#: src/components/cat/WalletCATSend.tsx:110
+#: src/components/create/createRLAdmin.jsx:149
+#: src/components/rateLimited/WalletRateLimited.jsx:648
+msgid "Please enter a valid numeric fee"
+msgstr "Prosím zadajte platný číselný poplatok"
+
+#: src/components/create/createRLAdmin.jsx:99
+msgid "Please enter a valid numeric interval length"
+msgstr "Prosím zadajte platnú číselnú dĺžku intervalu"
+
+#: src/components/create/createRLAdmin.jsx:114
+msgid "Please enter a valid numeric spendable amount"
+msgstr "Prosím zadajte platný číselný disponibilný zostatok"
+
+#: src/components/create/createRLAdmin.jsx:124
+msgid "Please enter a valid pubkey"
+msgstr "Prosím zadajte platný verejný kľúč"
+
+#: src/components/cat/WalletCATCreateExistingSimple.tsx:46
+msgid "Please enter a valid token name"
+msgstr ""
+
+#: src/components/WalletRenameDialog.tsx:50
+msgid "Please enter valid wallet name"
+msgstr ""
+
+#: src/components/settings/ChangePassphrasePrompt.tsx:75
+#~ msgid "Please enter your current passphrase, and a new passphrase"
+#~ msgstr ""
+
+#: src/components/app/AppPassPrompt.tsx:80
+#: src/components/app/AppPassPrompt.tsx:96
+#: src/components/settings/RemovePassphrasePrompt.tsx:52
+#~ msgid "Please enter your passphrase"
+#~ msgstr ""
+
+#: src/components/app/AppPassPrompt.tsx:90
+#~ msgid "Please enter your passphrase to proceed"
+#~ msgstr ""
+
+#: src/components/WalletSend.tsx:85
+#: src/components/cat/WalletCATSend.tsx:96
+#: src/components/rateLimited/WalletRateLimited.jsx:622
+msgid "Please finish syncing before making a transaction"
+msgstr "Pred uskutočnením transakcie dokončite synchronizáciu"
+
+#: src/components/trading/CreateOffer.jsx:66
+#~ msgid "Please select amount"
+#~ msgstr "Prosím vyberte sumu"
+
+#: src/components/did/WalletDIDRecovery.tsx:54
+msgid "Please select backup file first"
+msgstr "Najprv vyberte záložný súbor"
+
+#: src/components/trading/CreateOffer.jsx:76
+#~ msgid "Please select buy or sell"
+#~ msgstr "Prosím vyberte kúpiť alebo predať"
+
+#: src/components/trading/CreateOffer.jsx:56
+#~ msgid "Please select coin colour"
+#~ msgstr "Prosím vyberte farbu mince"
+
+#: src/components/trading/CreateOffer.jsx:63
+#~ msgid "Please select coin type"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:56
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:60
+#~ msgid "Please specify final directory"
+#~ msgstr "Prosím, vyberte cieľový adresár"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:73
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
+#~ msgid "Please specify temporary directory"
+#~ msgstr "Prosím, vyberte dočasný adresár"
+
+#: src/hooks/useAbsorbRewards.tsx:19
+#~ msgid "Please wait for synchronization"
+#~ msgstr "Počkajte prosím na synchronizáciu"
+
+#: src/components/cat/WalletCATCreateExistingSimple.tsx:38
+#: src/components/cat/WalletCATCreateSimple.tsx:37
+#: src/components/did/WalletDIDRecovery.tsx:63
+msgid "Please wait for wallet synchronization"
+msgstr "Počkajte prosím na synchronizáciu peňaženky"
+
+#: src/components/plot/Plot.tsx:28
+#~ msgid "Plot"
+#~ msgstr "Pole"
+
+#: src/components/farm/card/FarmCardPlotCount.tsx:12
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
+#~ msgid "Plot Count"
+#~ msgstr "Počet plotov"
+
+#: src/components/block/Block.jsx:288
+#~ msgid "Plot Id"
+#~ msgstr "Id poľa"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+#~ msgid "Plot Key"
+#~ msgstr "Kľúč poľa"
+
+#: src/components/pool/PoolOverview.tsx:39
+#~ msgid "Plot NFT"
+#~ msgstr "NFT poľa"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:109
+#: src/components/plotNFT/PlotNFTChangePool.tsx:92
+#~ msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
+#~ msgstr "NFT poľa s p2_singleton_puzzle_hash {plotNFTId} neexistuje"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:43
+#~ msgid "Plot Name"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:248
+#~ msgid "Plot Public Key"
+#~ msgstr "Verejný kľúč poľa"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#~ msgid "Plot Seed"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:93
+#~ msgid "Plot Size"
+#~ msgstr "Veľkosť poľa"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:74
+#~ msgid "Plot in Parallel"
+#~ msgstr "Paralelné vytváranie polí"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:46
+#~ msgid "Plot is duplicate of {0}"
+#~ msgstr "Pole je duplikátom {0}"
+
+#: src/components/plotNFT/PlotNFTState.tsx:46
+#~ msgid "PlotNFT is transitioning to (target state)"
+#~ msgstr "PlotNFT is transitioning to (target state)"
+
+#: src/components/plotNFT/PlotNFTState.tsx:46
+#~ msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
+#~ msgstr "NFT poľa prechádza do (cieľového stavu). Môže to chvíľu trvať. Prosím nezatvárajte aplikáciu, kým nebude prechod dokončený."
+
+#: src/components/dashboard/DashboardSideBar.tsx:62
+#: src/components/plot/Plot.tsx:14
+#~ msgid "Plots"
+#~ msgstr "Polia"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:21
+#~ msgid "Plots Passed Filter"
+#~ msgstr "Polia, ktoré prešli filtrom"
+
+#: src/components/plot/overview/PlotOverviewHero.tsx:33
+#~ msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
+#~ msgstr "Polia sú pridelené priestory na vašom pevnom disku používanom na ťažbu a zarábanie Chia. <0>Ďalšie informácie</0>"
+
+#: src/components/plot/add/PlotAddChoosePlotter.tsx:103
+#~ msgid "Plotter"
+#~ msgstr ""
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:34
+#~ msgid "Plotting"
+#~ msgstr "Vytváranie poľa"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:58
+#~ msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
+#~ msgstr "Paralelné vytváranie polí môže ušetriť čas. V opačnom prípade sa pridá do frontu."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:217
+#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
+#~ msgstr "Vykresľovanie s bitovým poľom umožňuje okolo 30% menej zápisov a je teraz takmer vždy rýchlejšie. Vypnutím bitového poľa môžete znížiť požiadavky na pamäť. Ak je vaše CPU z pred roku 2010, možno budete musieť vykresľovanie s bitovým poľom deaktivovať."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:173
+#: src/components/plotNFT/PlotNFTCard.tsx:213
+#~ msgid "Points Found Since Start"
+#~ msgstr "Body nájdené od spustenia"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:184
+#: src/components/plotNFT/PlotNFTCard.tsx:224
+#~ msgid "Points Found in Last 24 Hours"
+#~ msgstr "Body nájdené za posledných 24 hodín"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:193
+#: src/components/plotNFT/PlotNFTCard.tsx:233
+#~ msgid "Points Successful in Last 24 Hours"
+#~ msgstr "Úspešné body za posledných 24 hodín"
+
+#: src/components/dashboard/DashboardSideBar.tsx:72
+#: src/components/pool/Pool.tsx:17
+#~ msgid "Pool"
+#~ msgstr "Združenie"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:100
+#~ msgid "Pool Contract Address"
+#~ msgstr "Adresa zmluvy združenia"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:81
+#~ msgid "Pool Key"
+#~ msgstr "Kľúč združenia"
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:54
+#~ msgid "Pool Login Link"
+#~ msgstr "Odkaz na prihlásenie do združenia"
+
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:92
+#~ msgid "Pool Payout Instructions"
+#~ msgstr "Pokyny združenia na výplatu"
+
+#: src/components/block/Block.jsx:252
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
+#~ msgid "Pool Public Key"
+#~ msgstr "Verejný kľúč združenia"
+
+#: src/components/block/Block.jsx:272
+#~ msgid "Pool Puzzle Hash"
+#~ msgstr "Hádankový klúč združenia"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:153
+#~ msgid "Pool Reward Address"
+#~ msgstr "Adresa odmeny združenia"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:129
+#~ msgid "Pool Reward Address is not properly formatted."
+#~ msgstr "Adresa odmeny združenia nemá správny formát."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:124
+#~ msgid "Pool Reward Address must not be empty."
+#~ msgstr "Adresa odmeny združenia nesmie byť prázdna."
+
+#: src/components/block/Block.jsx:302
+#~ msgid "Pool Reward Amount"
+#~ msgstr "Čiastka odmeny združenia"
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:37
+#~ msgid "Pool does not provide relativeLockHeight."
+#~ msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
+#~ msgid "Pool does not provide relative_lock_height."
+#~ msgstr "Združenie neposkytuje relative_lock_height."
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:34
+#~ msgid "Pool does not provide targetPuzzleHash."
+#~ msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
+#~ msgid "Pool does not provide target_puzzle_hash."
+#~ msgstr "Združenie neposkytuje target_puzzle_hash."
+
+#: src/_middleware_old/middleware_api.jsx:255
+#~ msgid "Pool public key:"
+#~ msgstr "Verejný kľúč združenia:"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:271
+#: src/components/plotNFT/PlotNFTCard.tsx:324
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:67
+#~ msgid "Pool:"
+#~ msgstr "Združenie:"
+
+#: src/components/plotNFT/PlotNFTExternalState.tsx:24
+#: src/components/plotNFT/PlotNFTState.tsx:59
+#~ msgid "Pooling"
+#~ msgstr "Združovanie"
+
+#: src/constants/WalletName.ts:32
+msgid "Pooling Wallet"
+msgstr ""
+
+#: src/components/WalletConnections.tsx:33
+msgid "Port"
+msgstr "Port"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:94
+#: src/components/plotNFT/PlotNFTChangePool.tsx:85
+#~ msgid "Preparing Plot NFT"
+#~ msgstr "Príprava NFT poľa"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:102
+#~ msgid "Preparing standard wallet"
+#~ msgstr "Príprava štandardnej peňaženky"
+
+#: src/components/block/Block.jsx:337
+#~ msgid "Previous"
+#~ msgstr "Predchádzajúci"
+
+#: src/components/block/Block.jsx:203
+#~ msgid "Previous Block Hash"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:204
+#~ msgid "Previous Header Hash"
+#~ msgstr "Hash predchádzajúceho záhlavia"
+
+#: src/components/block/Block.jsx:217
+#~ msgid "Previous Sub Block Hash"
+#~ msgstr "Previous Sub Block Hash"
+
+#: src/components/_selectKey_old/SelectKey.tsx:207
+#~ msgid "Private key with public fingerprint {fingerprint}"
+#~ msgstr "Privátny kľúč s verejným odtlačkom {fingerprint}"
+
+#: src/_middleware_old/middleware_api.jsx:221
+#~ msgid "Private key {0}"
+#~ msgstr "Privátny kľúč {0}"
+
+#: src/_middleware_old/middleware_api.jsx:231
+#~ msgid "Private key:"
+#~ msgstr "Privátny kľúč:"
+
+#: src/components/block/Block.jsx:240
+#~ msgid "Proof of Space Size"
+#~ msgstr "Dôkaz o veľkosti priestoru"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:25
+#~ msgid "Proofs Found"
+#~ msgstr "Nájdené dôkazy"
+
+#: src/components/pool/PoolInfo.tsx:22
+#~ msgid "Protocol Version"
+#~ msgstr "Verzia protokolu"
+
+#: src/components/create/createRLAdmin.jsx:296
+#: src/components/did/WalletDID.tsx:992
+msgid "Pubkey"
+msgstr "Verejný kľúč"
+
+#: src/_middleware_old/middleware_api.jsx:239
+#~ msgid "Public key:"
+#~ msgstr "Verejný kľúč:"
+
+#: src/components/did/WalletDID.tsx:1001
+msgid "Puzzlehash"
+msgstr "Hash hádaniek"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:204
+#~ msgid "Queue Name"
+#~ msgstr "Názov frontu"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:69
+#~ msgid "Queue name"
+#~ msgstr "Názov frontu"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:35
+#~ msgid "Queued"
+#~ msgstr "V poradí"
+
+#: src/electron-starter.js:80
+#~ msgid "Quit"
+#~ msgstr "Quit"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:117
+#~ msgid "RAM max usage"
+#~ msgstr "Maximálna spotreba RAM"
+
+#: src/constants/WalletName.ts:8
+msgid "RL Wallet"
+msgstr "RL Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:246
+#~ msgid "RLListItems.title"
+#~ msgstr ""
+
+#: src/components/create/WalletCreateList.tsx:45
+msgid "Rate Limited"
+msgstr "S obmedzenou sadzbou"
+
+#: src/components/rateLimited/WalletRateLimited.jsx:390
+#: src/components/rateLimited/WalletRateLimited.jsx:437
+msgid "Rate Limited Info"
+msgstr "Informácie o obmedzenej sadzbe"
+
+#: src/components/_wallet_old/create/WalletCreate.jsx:176
+#~ msgid "Rate Limited Options"
+#~ msgstr "Možnosti obmedzenej sadzby"
+
+#: src/components/rateLimited/WalletRateLimited.jsx:272
+msgid "Rate Limited User Wallet Setup"
+msgstr "Nastavenia používateľskej peňaženky s obmedzenou sadzbou"
+
+#: src/components/WalletReceiveAddress.tsx:33
+msgid "Receive Address"
+msgstr "Adresa príjemcu"
+
+#: src/components/cat/WalletCATSend.tsx:123
+msgid "Recipient address is not a coloured wallet address. Please enter a coloured wallet address"
+msgstr ""
+
+#: src/components/cat/WalletCATCreateExisting.tsx:105
+#: src/components/did/WalletDID.tsx:463
+#: src/components/did/WalletDIDRecovery.tsx:123
+msgid "Recover"
+msgstr "Obnoviť"
+
+#: src/components/did/WalletDID.tsx:339
+#: src/components/did/WalletDID.tsx:479
+msgid "Recover DID Wallet"
+msgstr "Obnoviť DID peňaženku"
+
+#: src/components/wallet/create/WalletCreate.jsx:296
+#~ msgid "Recover DID wallet"
+#~ msgstr "Recover DID wallet"
+
+#: src/components/did/WalletDIDRecovery.tsx:83
+msgid "Recover Distributed Identity Wallet"
+msgstr "Obnoviť peňaženku s distribuovanou identitou"
+
+#: src/components/did/WalletDIDSelect.tsx:39
+msgid "Recover Wallet"
+msgstr "Obnoviť peňaženku"
+
+#: src/constants/WalletName.ts:26
+msgid "Recoverable Wallet"
+msgstr ""
+
+#: src/components/cat/WalletCATSelect.tsx:39
+msgid "Recovery Wallet"
+msgstr ""
+
+#: src/components/plot/PlotHeader.tsx:76
+#: src/components/plot/overview/PlotOverviewHero.tsx:60
+#~ msgid "Refresh Plots"
+#~ msgstr "Obnoviť polia"
+
+#: src/components/pool/PoolInfo.tsx:32
+#~ msgid "Relative Lock Height"
+#~ msgstr "Relatívna výška zámku"
+
+#: src/electron/main.tsx:385
+#~ msgid "Release Notes"
+#~ msgstr "Poznámky k vydaniu"
+
+#: src/components/settings/RemovePassphrasePrompt.tsx:100
+#: src/components/settings/RemovePassphrasePrompt.tsx:147
+#: src/components/settings/Settings.tsx:194
+#~ msgid "Remove Passphrase"
+#~ msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:196
+#~ msgid "Remove keys from old keyring upon successful migration"
+#~ msgstr ""
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:36
+#~ msgid "Removing"
+#~ msgstr "Odstraňujem"
+
+#: src/components/_wallet_old/coloured/WalletColoured.tsx:265
+#~ msgid "Rename"
+#~ msgstr "Premenovať"
+
+#: src/components/WalletRenameDialog.tsx:70
+#: src/components/cat/WalletCAT.tsx:89
+msgid "Rename Wallet"
+msgstr ""
+
+#: src/electron/main.tsx:404
+#~ msgid "Report an Issue..."
+#~ msgstr "Nahlásiť Problém..."
+
+#: src/components/backup/BackupRestore.tsx:160
+#~ msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
+#~ msgstr "Obnoviť metadáta pre Farebné Mince a iné Smart peňaženky zo zálohy"
+
+#: src/components/backup/BackupRestore.tsx:107
+#~ msgid "Restore Smart Wallets From Backup"
+#~ msgstr ""
+
+#: src/components/WalletHistory.tsx:76
+msgid "Retire"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:57
+#: src/components/fullNode/FullNodeConnections.jsx:107
+#~ msgid "SB Height"
+#~ msgstr "SB Height"
+
+#: src/components/backup/BackupRestore.tsx:186
+#~ msgid "Safe To Skip"
+#~ msgstr "Bezpečné preskočiť"
+
+#: src/components/WalletRenameDialog.tsx:99
+msgid "Save"
+msgstr "Uložiť"
+
+#: src/components/app/AppKeyringMigrator.tsx:178
+#: src/components/settings/ChangePassphrasePrompt.tsx:208
+#: src/components/settings/SetPassphrasePrompt.tsx:190
+#~ msgid "Save passphrase"
+#~ msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:338
+#~ msgid "Search"
+#~ msgstr ""
+
+#: src/components/fullNode/FullNodeBlockSearch.tsx:41
+#~ msgid "Search block by header hash"
+#~ msgstr "Hľadanie bloku podľa hashu záhlavia"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:106
+#~ msgid "Second temporary folder location"
+#~ msgstr "Druhý dočasný adresár"
+
+#: src/components/settings/Settings.tsx:126
+#~ msgid "Secure your keychain using a strong passphrase"
+#~ msgstr ""
+
+#: src/components/_selectKey_old/SelectKey.tsx:216
+#~ msgid "See private key"
+#~ msgstr "Zobraziť privátny kľúč"
+
+#: src/_middleware_old/middleware_api.jsx:265
+#~ msgid "Seed:"
+#~ msgstr "Zrnko:"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:100
+#~ msgid "Select 2nd Temporary Directory"
+#~ msgstr "Vyberte druhý dočasný adresár"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:34
+#~ msgid "Select Final Directory"
+#~ msgstr "Vyberte cieľový adresár"
+
+#: src/components/_selectKey_old/SelectKey.tsx:175
+#~ msgid "Select Key"
+#~ msgstr "Vyberte kľúč"
+
+#: src/components/trading/ViewOffer.jsx:37
+#~ msgid "Select Offer"
+#~ msgstr "Vyberte ponuku"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:52
+#~ msgid "Select Temporary Directory"
+#~ msgstr "Vyberte dočasný adresár"
+
+#: src/components/WalletsList.tsx:32
+#: src/components/hero/WalletHeroWallets.tsx:64
+msgid "Select Wallet"
+msgstr ""
+
+#: src/components/create/WalletCreateList.tsx:25
+msgid "Select Wallet Type"
+msgstr "Vyberte typ peňaženky"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:36
+#~ msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
+#~ msgstr "Vyberte cieľový adresár, do ktorého chcete uložiť pole. Odporúčame vám používať veľký pomalý pevný disk (napríklad externý pevný disk)."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+#~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+#~ msgstr "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:54
+#~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
+#~ msgstr "Vyberte dočasný adresár, do ktorého chcete uložiť pole. Odporúčame vám použiť rýchle úložisko dát."
+
+#: src/components/plot/add/PlotAddNFT.tsx:86
+#~ msgid "Select your Plot NFT"
+#~ msgstr "Vyberte NFT vášho poľa"
+
+#: src/components/plot/add/PlotAddNFT.tsx:77
+#~ msgid "Select your Plot NFT from the dropdown or create a new one."
+#~ msgstr "Vyberte svoje NFT poľa z rozbaľovacej ponuky alebo vytvorte nové."
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:72
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:90
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:121
+#~ msgid "Selected"
+#~ msgstr "Vybrané"
+
+#: src/components/did/WalletDIDRecovery.tsx:90
+msgid "Selected recovery file:"
+msgstr "Vybratý obnovovací súbor:"
+
+#: src/components/plotNFT/PlotNFTExternalState.tsx:23
+#: src/components/plotNFT/PlotNFTState.tsx:57
+#~ msgid "Self Pooling"
+#~ msgstr "Sólo združovanie"
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:104
+#~ msgid "Self pool. When you win a block you will earn XCH rewards."
+#~ msgstr "Osobné združenie. Keď vyhráte blok, získate XCH odmeny."
+
+#: src/components/trading/CreateOffer.jsx:164
+#: src/components/trading/TradesTable.tsx:46
+#: src/components/trading/TradingOverview.jsx:287
+#~ msgid "Sell"
+#~ msgstr "Predať"
+
+#: src/components/WalletSend.tsx:190
+#: src/components/cat/WalletCATSend.tsx:248
+#: src/components/rateLimited/WalletRateLimited.jsx:747
+msgid "Send"
+msgstr "Odoslať"
+
+#: src/components/rateLimited/WalletRateLimited.jsx:459
+msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
+msgstr "Poslať tento informačný paket používateľovi peňaženky s obmedzenou sadzbou, ktorý ho ho musí použiť na dokončenie nastavenia svojej peňaženky:"
+
+#: src/components/rateLimited/WalletRateLimited.jsx:278
+msgid "Send your pubkey to your Rate Limited Wallet admin:"
+msgstr "Pošlite svoj verejný kľúč vášmu správcovi peňaženky s obmedzenou sadzbou:"
+
+#: src/components/settings/SetPassphrasePrompt.tsx:137
+#: src/components/settings/SetPassphrasePrompt.tsx:216
+#: src/components/settings/Settings.tsx:205
+#~ msgid "Set Passphrase"
+#~ msgstr ""
+
+#: src/components/app/AppPassPrompt.tsx:75
+#~ msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
+#~ msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:78
+#: src/components/settings/Settings.tsx:241
+#~ msgid "Settings"
+#~ msgstr ""
+
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
+#~ msgid "Show Advanced Options"
+#~ msgstr "Zobraziť rozšírené možnosti"
+
+#: src/components/cat/WalletCAT.tsx:103
+msgid "Show Asset Id"
+msgstr ""
+
+#: src/electron-starter.js:79
+#~ msgid "Show app"
+#~ msgstr "Show app"
+
+#: src/components/trading/CreateOffer.jsx:153
+#: src/components/trading/TradesTable.tsx:15
+#~ msgid "Side"
+#~ msgstr "Kúpiť alebo predať"
+
+#: src/components/_selectKey_old/SelectKey.tsx:180
+#~ msgid "Sign In"
+#~ msgstr "Prihlásiť sa"
+
+#: src/components/app/AppKeyringMigrator.tsx:58
+#: src/components/app/AppKeyringMigrator.tsx:219
+#~ msgid "Skip"
+#~ msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:57
+#~ msgid "Skip Keyring Migration"
+#~ msgstr ""
+
+#: src/components/app/AppPassPrompt.tsx:73
+#~ msgid "Skip Passphrase Protection"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+#~ msgid "Skips adding [final dir] to harvester for farming"
+#~ msgstr "Skips adding [final dir] to harvester for farming"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:281
+#~ msgid "Skips adding a final directory to harvester for farming"
+#~ msgstr "Preskočiť pridanie cieľového adresára do zberača pre farmárčenie"
+
+#: src/components/pool/PoolHero.tsx:26
+#~ msgid "Smooth out your XCH farming rewards by joining a pool."
+#~ msgstr "Zjemnite si svoje farmárske XCH odmeny pripojením sa k združeniu."
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
+#~ msgid "Something went wrong"
+#~ msgstr "Niečo sa pokazilo"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:138
+#~ msgid "Specify a value of 0 to use all available threads"
+#~ msgstr ""
+
+#: src/electron/main.tsx:481
+#~ msgid "Speech"
+#~ msgstr "Reč"
+
+#: src/components/create/createRLAdmin.jsx:229
+msgid "Spendable Amount"
+msgstr "Disponibilný zostatok"
+
+#: src/components/create/createRLAdmin.jsx:201
+msgid "Spendable Amount Per Interval"
+msgstr "Disponibilná suma na interval"
+
+#: src/components/card/WalletCardSpendableBalance.tsx:38
+#: src/components/rateLimited/WalletRateLimited.jsx:547
+msgid "Spendable Balance"
+msgstr "Disponibilný zostatok"
+
+#: src/components/rateLimited/WalletRateLimited.jsx:395
+#: src/components/rateLimited/WalletRateLimited.jsx:442
+msgid "Spending Interval (number of blocks): {interval}"
+msgstr "Interval výdavkov (počet blokov): {interval}"
+
+#: src/components/create/createRLAdmin.jsx:196
+msgid "Spending Interval Length (number of blocks)"
+msgstr "Dĺžka disponibilného intervalu (počet blokov)"
+
+#: src/components/rateLimited/WalletRateLimited.jsx:400
+#: src/components/rateLimited/WalletRateLimited.jsx:447
+msgid "Spending Limit (chia per interval): {0}"
+msgstr "Limit výdavkov (chia na interval): {0}"
+
+#: src/constants/WalletName.ts:5
+msgid "Standard Wallet"
+msgstr ""
+
+#: src/components/app/AppState.tsx:161
+#~ msgid "Starting services"
+#~ msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:98
+#~ msgid "State"
+#~ msgstr "Stav"
+
+#: src/components/WalletStatusCard.tsx:22
+msgid "Status"
+msgstr "Stav"
+
+#: src/components/WalletHeader.tsx:68
+msgid "Status:"
+msgstr "Stav:"
+
+#: src/components/wallet/Wallets.tsx:119
+#~ msgid "StatusCard.connections"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:113
+#~ msgid "StatusCard.height"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:98
+#~ msgid "StatusCard.status"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:93
+#~ msgid "StatusCard.title"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
+#~ msgid "Stripe Size"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:199
+#~ msgid "Sub Block Height"
+#~ msgstr "Sub Block Height"
+
+#: src/components/block/Block.jsx:338
+#~ msgid "Sub Block at height {0} in the Chia blockchain"
+#~ msgstr "Sub Block at height {0} in the Chia blockchain"
+
+#: src/components/did/WalletDID.tsx:885
+#: src/components/rateLimited/WalletRateLimited.jsx:346
+msgid "Submit"
+msgstr "Odoslať"
+
+#: src/components/wallet/EnterPassphrasePrompt.tsx:146
+#~ msgid "Submit Passphrase"
+#~ msgstr ""
+
+#: src/components/WalletSend.tsx:121
+#: src/components/cat/WalletCATSend.tsx:163
+msgid "Success"
+msgstr ""
+
+#: src/components/WalletStatus.tsx:37
+msgid "Synced"
+msgstr "Synchronizované"
+
+#: src/components/WalletStatus.tsx:42
+msgid "Syncing"
+msgstr "Synchronizácia"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:19
+#~ msgid "Syncing <0/>/<1/>"
+#~ msgstr "Synchronizácia <0/>/<1/>"
+
+#: src/components/fullNode/FullNode.jsx:107
+#~ msgid "Syncing {progress}/{tip}"
+#~ msgstr "Syncing {progress}/{tip}"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:15
+#~ msgid "TXCH Block Rewards"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
+#~ msgid "TXCH Farming Rewards"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardFeesReward.tsx:12
+#~ msgid "TXCH Fees Collected"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardUserFees.tsx:12
+#~ msgid "TXCH User Fees"
+#~ msgstr "TXCH User Fees"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:15
+#~ msgid "TXCH User Transaction Fees"
+#~ msgstr ""
+
+#: src/components/pool/PoolInfo.tsx:37
+#~ msgid "Target Puzzle Hash"
+#~ msgstr "Hash hádaniek cieľa"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:18
+#~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:64
+#~ msgid "Temporary folder location"
+#~ msgstr "Dočasný adresár"
+
+#: src/components/app/AppTimeBomb.tsx:28
+#~ msgid "The application will stop working at block height 193536."
+#~ msgstr "Aplikácia prestane pracovať pri výške bloku 193536."
+
+#: src/components/farm/FarmFullNodeConnections.tsx:95
+#~ msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
+#~ msgstr "Celý uzol, ku ktorému je váš farmár pripojený, je uvedený nižšie. <0> Ďalšie informácie </0>"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:47
+#: src/components/plot/add/PlotAddChooseSize.tsx:104
+#~ msgid "The minimum required size for mainnet is k=32"
+#~ msgstr "Minimálna požadovaná veľkosť pre sieť mainnet je k = 32"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
+#~ msgid "The node is not synced"
+#~ msgstr "Uzol nie je synchronizovaný"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:27
+#~ msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
+#~ msgstr "Uzol sa synchronizuje, čo znamená, že sťahuje bloky z iných uzlov, aby sa dostal k najnovšiemu bloku v reťazci"
+
+#: src/components/did/WalletDID.tsx:789
+#: src/components/did/WalletDIDCreate.tsx:88
+msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
+msgstr "Počet zálohovacích ID potrebných na obnovu nemôže prekročiť počet pridaných zálohovacích ID."
+
+#: src/hooks/usePoolInfo.ts:59
+#~ msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
+#~ msgstr "URL adresa združenia „{normalizedUrl}“ nefunguje. Je to združenie? Chyba: {0}"
+
+#: src/hooks/usePoolInfo.ts:44
+#~ msgid "The pool URL is not valid. {normalizedUrl}"
+#~ msgstr "URL adresa združenia je neplatná. {normalizedUrl}"
+
+#: src/hooks/usePoolInfo.ts:40
+#~ msgid "The pool URL needs to use protocol https. {normalizedUrl}"
+#~ msgstr "URL adresa združenia musí používať protokol https. {normalizedUrl}"
+
+#: src/hooks/usePoolInfo.ts:44
+#~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
+#~ msgstr "The specified pool URL is not valid. {normalizedUrl}"
+
+#: src/hooks/usePoolInfo.ts:23
+#~ msgid "The pool URL speciefied is not valid. {poolUrl}"
+#~ msgstr "The pool URL specified is not valid. {poolUrl}"
+
+#: src/components/plotNFT/PlotNFTState.tsx:29
+#~ msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
+#~ msgstr "Operácia prepnutia združenia bola zrušená. Skúste to znova zmenou združenia alebo osobným združovaním"
+
+#: src/components/app/AppPassPrompt.tsx:37
+#~ msgid "The provided passphrase and confirmation do not match"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:291
+#~ msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
+#~ msgstr "Seed použitý na vytvorenie poľa. Závisí od PK združenia a PK poľa."
+
+#: src/components/block/Block.jsx:217
+#~ msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
+#~ msgstr "Celkový počet VDF (overiteľná funkcia oneskorenia) alebo dôkaz o časových iteráciách v celom reťazci až po tento čiastkový blok."
+
+#: src/components/block/Block.jsx:233
+#~ msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
+#~ msgstr "Celkový počet VDF (overiteľná funkcia oneskorenia) alebo dôkaz o časových iteráciách v tomto bloku."
+
+#: src/components/block/Block.jsx:313
+#~ msgid "The total transactions fees in this block. Rewarded to the farmer."
+#~ msgstr "Celkové poplatky v tomto bloku idú ťažiarovi."
+
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:107
+#~ msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
+#~ msgstr "Toto sú inštrukcie, ako chce farmár dostať zaplatené. V predvolenom nastavení to bude adresa XCH, ale dá sa nastaviť na ľubovoľný reťazec s veľkosťou menej ako 1024 znakov, takže môže predstavovať identifikátor iného blockchainu alebo platobného systému."
+
+#: src/components/plot/PlotsFailed.tsx:36
+#~ msgid "These plots are invalid, you might want to delete them."
+#~ msgstr "Tieto polia sú neplatné, asi ich budete chcieť vymazať."
+
+#: src/components/WalletBadge.tsx:26
+msgid "This access token is verified"
+msgstr ""
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:89
+#~ msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
+#~ msgstr "Toto umožňuje pridať adresár, ktorý obsahuje už vykreslené polia. Ak ste ešte nevytvorili žiadne polia, prejdite na obrazovku vykresľovania polí."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:129
+#: src/components/plotNFT/PlotNFTCard.tsx:169
+#~ msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
+#~ msgstr "Táto zložitosť je umelo nižšou zložitosťou ako v skutočnej sieti a používa sa pri farmárčení na vyhľadanie ďalších dôkazov a ich odoslanie do združenia. Čím viac polí máte, tým vyššia zložitosť. Zložitosť však nemá vplyv na odmeny."
+
+#: src/components/trading/CreateOffer.jsx:123
+#: src/hooks/useSelectDirectory.tsx:32
+#: src/hooks/useSelectFile.tsx:20
+#~ msgid "This feature is available only from the GUI."
+#~ msgstr "Táto možnosť je dostupná iba z Electron aplikácie."
+
+#: src/components/standard/WalletStandardCards.tsx:23
+msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
+msgstr "Toto je množstvo Chia, ktoré môžete v súčasnosti použiť na uskutočnenie transakcií. Nezahŕňa nespracované odmeny za ťažbu, nespracované prichádzajúce transakcie a Chia, ktorú ste práve minuli, ale ešte nie je v blockchaine."
+
+#: src/components/standard/WalletStandardCards.tsx:44
+msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
+msgstr "Toto je nespracovaná zmena. Sú to mince, ktoré ste si poslali, ale zatiaľ neboli spracované."
+
+#: src/components/standard/WalletStandardCards.tsx:37
+msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
+msgstr "Toto je súčet prichádzajúcich a odchádzajúcich nespracovaných transakcií (ešte nezahrnutých do blockchainu). To nezahŕňa odmeny za ťažbu."
+
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:19
+#~ msgid "This is the time of the latest peak sub block."
+#~ msgstr "Toto je čas posledného najvyššieho podbloku."
+
+#: src/components/block/Block.jsx:183
+#~ msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
+#~ msgstr "Toto je čas, kedy ťažiar vytvoril blok, a to ešte predtým, ako bol finalizovaný s dôkazom o čase"
+
+#: src/components/standard/WalletStandardCards.tsx:16
+msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+msgstr "Toto je celkové množstvo Chia v blockchaine v aktuálne najnovšom čiastkovom bloku, ktorý je kontrolovaný vašimi súkromnými kľúčmi. Zahŕňa zmrazené odmeny za ťaženie, ale nie nespracované prichádzajúce a odchádzajúce transakcie."
+
+#: src/components/standard/WalletStandardCards.tsx:31
+msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
+msgstr "Toto je celkový zostatok + nespracovaný zostatok alebo to, aký bude váš zostatok po potvrdení všetkých nespracovaných transakcií."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:148
+#: src/components/plotNFT/PlotNFTCard.tsx:188
+#~ msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
+#~ msgstr "Toto je celkový počet bodov, ktoré má tento NFT v tomto združení od poslednej výplaty. Združenie vynuluje body po vykonaní výplaty."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:165
+#: src/components/plotNFT/PlotNFTCard.tsx:205
+#~ msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
+#~ msgstr "Toto je celkový počet bodov, ktoré váš farmár našiel pre tento NFT poľa. Každé k32 pole získa okolo 10 bodov za deň, takže ak máte 10TiB, mali by ste očakávať okolo 1000 bodov za deň, alebo 41 bodov za hodinu."
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:44
+#~ msgid "This node is fully caught up and validating the network"
+#~ msgstr "Tento uzol je plne aktualizovaný a overuje sieť"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:307
+#~ msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
+#~ msgstr "Tento NFT poľa je priradený inému kľúču. Stále môžete vytvárať polia pre tento NFT, nemôžete však robiť zmeny."
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
+#~ msgid "This plot NFT is not connected to pool"
+#~ msgstr "Tento NFT poľa nie je pripojený k združeniu"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:39
+#~ msgid "This table shows you the last time your farm attempted to win a block challenge."
+#~ msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:47
+#~ msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
+#~ msgstr "Táto tabuľka zobrazuje, kedy sa vaša farma naposledy pokúsila vyhrať blokovú výzvu. <0> Ďalšie informácie </0>"
+
+#: src/components/trading/TradingOverview.jsx:188
+#~ msgid "This trade was created at this time"
+#~ msgstr "Čas, kedy sa tento obchod vytvoril"
+
+#: src/components/trading/TradingOverview.jsx:204
+#~ msgid "This trade was included on blockchain at this block height"
+#~ msgstr "Tento obchod bol zahrnutý v blockchaine na tejto pozícii"
+
+#: src/components/app/AppTimeBombAlert.tsx:19
+#~ msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+#~ msgstr "Táto verzia Chii nie je kompatibilná s blockchainom a farmenie na nej nie je bezpečné."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:154
+#~ msgid "Thread Multiplier for Phase 2"
+#~ msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:90
+#~ msgid "Time Created"
+#~ msgstr "Čas vytvorenia"
+
+#: src/components/trading/TradingOverview.jsx:192
+#~ msgid "Time this trade was created at this time"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:178
+#~ msgid "Timestamp"
+#~ msgstr "Časová značka"
+
+#: src/components/WalletHistory.tsx:82
+msgid "To"
+msgstr "Príjemca"
+
+#: src/components/cat/WalletCATCreateExisting.tsx:86
+msgid "Token and Asset Issuance Limitations"
+msgstr ""
+
+#: src/components/cat/WalletCATCreateSimple.tsx:45
+msgid "Token has empty asset id"
+msgstr ""
+
+#: src/components/cat/WalletCATCreateSimple.tsx:41
+msgid "Token has empty name"
+msgstr ""
+
+#: src/components/card/WalletCardTotalBalance.tsx:46
+#: src/components/rateLimited/WalletRateLimited.jsx:542
+msgid "Total Balance"
+msgstr "Celkový zostatok"
+
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
+#~ msgid "Total Chia Farmed"
+#~ msgstr ""
+
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:14
+#~ msgid "Total Iterations"
+#~ msgstr "Celkový počet iterácií"
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:13
+#~ msgid "Total Network Space"
+#~ msgstr "Celková veľkosť siete"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:146
+#~ msgid "Total Plot Size:"
+#~ msgstr "Celková veľkosť polí:"
+
+#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:12
+#~ msgid "Total Size of Plots"
+#~ msgstr "Celková veľkosť polí"
+
+#: src/components/block/Block.jsx:214
+#~ msgid "Total VDF Iterations"
+#~ msgstr "Celkový počet VDF iterácií"
+
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:16
+#~ msgid "Total iterations since the start of the blockchain"
+#~ msgstr "Celkový počet iterácií od začiatku blockchainu"
+
+#: src/components/dashboard/DashboardSideBar.tsx:27
+#~ msgid "Trade"
+#~ msgstr "Trade"
+
+#: src/components/trading/TradingOverview.jsx:349
+#~ msgid "Trade Details"
+#~ msgstr "Detaily obchodu"
+
+#: src/components/trading/TradingOverview.jsx:124
+#~ msgid "Trade ID"
+#~ msgstr "Obchodné ID"
+
+#: src/components/trading/TradingOverview.jsx:171
+#~ msgid "Trade ID:"
+#~ msgstr "Obchodné ID:"
+
+#: src/components/trading/TradeManager.tsx:34
+#~ msgid "Trade Overview"
+#~ msgstr "Prehľad obchodov"
+
+#: src/components/trading/TradingOverview.jsx:152
+#~ msgid "Trades will show up here"
+#~ msgstr "Tu sa zobrazia obchody"
+
+#: src/components/trading/TradeManager.tsx:23
+#~ msgid "Trading"
+#~ msgstr "Obchodovanie"
+
+#: src/components/trading/TradingOverview.jsx:421
+#~ msgid "Trading History"
+#~ msgstr "História obchodovania"
+
+#: src/components/WalletSend.tsx:122
+#: src/components/cat/WalletCATSend.tsx:164
+msgid "Transaction has successfully been sent to a full node and included in the mempool."
+msgstr ""
+
+#: src/components/WalletHistory.tsx:184
+msgid "Transactions"
+msgstr ""
+
+#: src/components/block/Block.jsx:298
+#~ msgid "Transactions Filter Hash"
+#~ msgstr "Hash filtra transakcií"
+
+#: src/components/_wallet_old/WalletHistory.tsx:25
+#~ msgid "Type"
+#~ msgstr "Typ"
+
+#: src/components/plot/add/PlotAdd.tsx:132
+#~ msgid "Unable to create plot NFT"
+#~ msgstr "Nepodarilo sa vytvoriť NFT poľa"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:147
+#: src/components/pool/PoolOverview.tsx:63
+#~ msgid "Unclaimed Rewards"
+#~ msgstr "Nevyzdvihnuté odmeny"
+
+#: src/components/fullNode/FullNode.jsx:96
+#~ msgid "Unfinished"
+#~ msgstr "Nedokončené"
+
+#: src/components/trading/TradingOverview.jsx:174
+#~ msgid "Unique identifier"
+#~ msgstr "Jedinečný identifikátor"
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:55
+#~ msgid "Unknown"
+#~ msgstr "Neznáme"
+
+#: src/components/app/AppPassPrompt.tsx:83
+#~ msgid "Unlock Keyring"
+#~ msgstr ""
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:25
+#~ msgid "Unsaved Changes"
+#~ msgstr "Neuložené zmeny"
+
+#: src/components/create/createRLAdmin.jsx:280
+#: src/components/rateLimited/WalletRateLimited.jsx:292
+msgid "User Pubkey"
+msgstr "Používateľov verejný kľúč"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:27
+#~ msgid "User Transaction Fees"
+#~ msgstr ""
+
+#: src/components/app/AppPassPrompt.tsx:79
+#~ msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
+#~ msgstr ""
+
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:14
+#~ msgid "VDF Sub Slot Iterations"
+#~ msgstr "VDF dielčie iterácie slotu"
+
+#: src/components/core/components/Fee/Fee.tsx:28
+#~ msgid "Value is too high"
+#~ msgstr "Value is too high"
+
+#: src/components/core/components/Fee/Fee.tsx:28
+#~ msgid "Value seems high"
+#~ msgstr "Hodnota sa zdá byť vysoká"
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
+#~ msgid "Verify Pool Details"
+#~ msgstr "Overte detaily združenia"
+
+#: src/electron/main.tsx:306
+#~ msgid "View"
+#~ msgstr "Zobrazenie"
+
+#: src/components/plot/queue/PlotQueueActions.tsx:75
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
+#~ msgid "View Log"
+#~ msgstr "Zobraziť záznam"
+
+#: src/components/trading/TradeManager.tsx:54
+#~ msgid "View Offer"
+#~ msgstr "Zobraziť ponuku"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:256
+#: src/components/plotNFT/PlotNFTCard.tsx:298
+#~ msgid "View Payout Instructions"
+#~ msgstr "View Payout Instructions"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:283
+#~ msgid "View Pool Login Link"
+#~ msgstr "Zobraziť odkaz na prihlásenie do združenia"
+
+#: src/components/rateLimited/WalletRateLimited.jsx:561
+msgid "View pending balances"
+msgstr "Zobraziť nespracované zostatky"
+
+#: src/components/_wallet_old/coloured/WalletColoured.tsx:393
+#~ msgid "View pending balances..."
+#~ msgstr "Zobraziť nespracované zostatky..."
+
+#: src/components/farm/card/FarmCardNotAvailable.tsx:26
+#: src/components/plot/PlotStatus.tsx:26
+#: src/components/plot/PlotStatus.tsx:27
+#~ msgid "Wait for synchronization"
+#~ msgstr "Čakanie na synchronizáciu"
+
+#: src/components/wallet/Wallets.tsx:104
+#~ msgid "Waiting for launch"
+#~ msgstr "Waiting for launch"
+
+#: src/components/fullNode/FullNode.jsx:103
+#: src/components/wallet/WalletStatusCard.tsx:20
+#~ msgid "Waiting for network to launch"
+#~ msgstr "Waiting for network to launch"
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:84
+#~ msgid "Waiting for the transaction to be confirmed"
+#~ msgstr "Čaká sa na potvrdenie transakcie"
+
+#: src/components/_wallet_old/standard/WalletStandard.tsx:649
+#: src/components/pool/PoolOverview.tsx:182
+#~ msgid "Wallet Status:"
+#~ msgstr "Stav peňaženky:"
+
+#: src/components/cat/WalletCAT.tsx:64
+#: src/components/did/WalletDID.tsx:1117
+msgid "Wallet does not exists"
+msgstr "Peňaženka neexistuje"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:70
+#~ msgid "Wallet is not defined"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:34
+#~ msgid "WalletItem.ccWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:30
+#~ msgid "WalletItem.chiaWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:48
+#~ msgid "WalletItem.didWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:41
+#~ msgid "WalletItem.rlWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:107
+#~ msgid "WalletStatusCard.not_synced"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:105
+#~ msgid "WalletStatusCard.synced"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:103
+#~ msgid "WalletStatusCard.syncing"
+#~ msgstr ""
+
+#: src/components/Wallets.tsx:26
+msgid "Wallets"
+msgstr "Peňaženky"
+
+#: src/components/wallet/Wallets.tsx:131
+#~ msgid "Wallets.title"
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:61
+#~ msgid "Want to Join a Pool? Create a Plot NFT"
+#~ msgstr "Chcete sa pripojiť k združeniu? Vytvorte NFT poľa"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:139
+#~ msgid "Want to earn more Chia? Add more plots to your farm."
+#~ msgstr "Chcete zarobiť viac Chia? Pridajte na svoju farmu ďalšie polia."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:87
+#~ msgid "Want to have a delay before the next plot starts?"
+#~ msgstr "Chcete oneskoriť začiatok vykresľovania ďalšieho poľa?"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:252
+#~ msgid "Warm start"
+#~ msgstr ""
+
+#: src/components/_selectKey_old/SelectKey.tsx:88
+#: src/components/_selectKey_old/SelectKey.tsx:119
+#~ msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
+#~ msgstr "Varovanie: Tento kľúč sa používa pre peňaženku, ktorá môže mať nenulový zostatok. Odstránením tohto kľúča môžete stratiť prístup k tejto peňaženke"
+
+#: src/components/_selectKey_old/SelectKey.tsx:81
+#~ msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
+#~ msgstr "Varovanie: Tento kľúč sa používa pre vašu adresu farmárskych odmien. Odstránením tohto kľúča môžete stratiť prístup k budúcim farmárskym odmenám"
+
+#: src/components/_selectKey_old/SelectKey.tsx:94
+#~ msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
+#~ msgstr "Varovanie: Tento kľúč sa používa pre vašu adresu odmien združenia. Odstránením tohto kľúča môžete stratiť prístup k budúcim odmenám združenia"
+
+#: src/components/block/Block.jsx:194
+#~ msgid "Weight"
+#~ msgstr "Váha"
+
+#: src/components/block/Block.jsx:197
+#~ msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
+#~ msgstr "Váha je celková pridaná obtiažnosť všetkých blokov až po tento blok vrátane tohto bloku"
+
+#: src/components/_selectKey_old/SelectKey.tsx:183
+#~ msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
+#~ msgstr "Vitajte v Chia. Prosím prihláste sa s existujúcim kľúčom, alebo si vytvorte nový."
+
+#: src/components/WalletAdd.tsx:76
+msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
+msgstr "Vitajte! Pre zálohovanie vašej peňaženky sa používajú nasledujúce slová. Bez nich stratíte prístup k svojej peňaženke, chráňte ich! Zapíšte si každé slovo spolu s číslom poradia vedľa nich. (Poradie je dôležité)"
+
+#: src/components/rateLimited/WalletRateLimited.jsx:315
+msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
+msgstr "Keď obdržíte informačný paket od svojho administrátora, vložte ho nižšie na dokončenie nastavenia vašej peňaženky s obmedzenou sadzbou:"
+
+#: src/electron/main.tsx:351
+#~ msgid "Window"
+#~ msgstr "Okno"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:32
+#~ msgid "Without fees"
+#~ msgstr "Bez poplatkov"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:48
+#: src/components/trading/TradingOverview.jsx:208
+#: src/electron/main.tsx:197
+#~ msgid "Yes"
+#~ msgstr "Áno"
+
+#: src/hooks/useAbsorbRewards.tsx:27
+#: src/hooks/useJoinPool.tsx:36
+#~ msgid "You are in pending state. Please wait for confirmation"
+#~ msgstr "Ste v stave čakania. Počkajte prosím na potvrdenie"
+
+#: src/hooks/useAbsorbRewards.tsx:35
+#~ msgid "You are not self pooling"
+#~ msgstr "Nemáte osobné združenie"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:421
+#~ msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
+#~ msgstr "Stále môžete vytvárať polia pre tento NFT, ale nemôžete robiť zmeny, kým nie je dokončená synchronizácia."
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:76
+#~ msgid "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:56
+#~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:63
+#~ msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr "Na vykreslenie poľa nemusí byť počítač synchronizovaný ani pripojený. Počas procesu vykresľovania sa vytvárajú dočasné súbory, ktoré presahujú veľkosť konečných súborov poľa. Uistite sa, že máte dostatok miesta. <0> Ďalšie informácie </0>"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:29
+#~ msgid "You have made changes. Do you want to discard them?"
+#~ msgstr "Urobili ste zmeny. Chcete ich zrušiť?"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:54
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
+#~ msgstr "Máte {0}% miesta v sieti, takže vyfarmárčenie jedného bloku zaberie odhadom {expectedTimeToWin}. Skutočné výsledky môžu trvať 3 až 4 krát dlhšie, ako je tento odhad."
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+
+#: src/components/pool/PoolJoin.tsx:36
+#~ msgid "You need to claim your rewards first"
+#~ msgstr "Najprv musíte získať svoje odmeny"
+
+#: src/components/app/AppTimeBomb.tsx:28
+#~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
+#~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
+
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:36
+#~ msgid "You need {currencyCode} to join a pool."
+#~ msgstr "Na pripojenie sa k združeniu potrebujete {currencyCode}."
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:143
+#~ msgid "You will recieve <0/> to {0}"
+#~ msgstr "Dostanete <0/> na {0}"
+
+#: src/hooks/useAbsorbRewards.tsx:51
+#~ msgid "You will recieve <0/> to {address}"
+#~ msgstr "Dostanete <0/> na {address}"
+
+#: src/components/did/WalletDID.tsx:327
+msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
+msgstr "Vaše DID vyžaduje na obnovu aspoň {dids_num_req} atestačný súbor {0}. Prosím nahrajte ďalšie súbory."
+
+#: src/components/farm/overview/FarmOverview.tsx:33
+#~ msgid "Your Farm Overview"
+#~ msgstr "Prehľad vašej farmy"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:93
+#~ msgid "Your Full Node Connection"
+#~ msgstr "Vaše pripojenie k sieti"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:94
+#~ msgid "Your Harvester Network"
+#~ msgstr "Sieť vašich zberačov"
+
+#: src/components/pool/PoolOverview.tsx:157
+#~ msgid "Your Pool Overview"
+#~ msgstr "Prehľad vašich združení"
+
+#: src/components/app/AppPassPrompt.tsx:79
+#~ msgid "Your keyring is locked"
+#~ msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:63
+#~ msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Are you sure you want to skip migrating your keys?"
+#~ msgstr ""
+
+#: src/components/_selectKey_old/SelectKey.tsx:141
+#~ msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
+#~ msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:106
+#~ msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."
+#~ msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:112
+#~ msgid "Your keys need to be migrated to a new keyring that is secured by a master passphrase."
+#~ msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:181
+#: src/components/settings/ChangePassphrasePrompt.tsx:211
+#: src/components/settings/SetPassphrasePrompt.tsx:193
+#~ msgid "Your passphrase can be stored in your system's secure credential store. Chia will be able to access your keys without prompting for your passphrase."
+#~ msgstr ""
+
+#: src/components/settings/Settings.tsx:85
+#~ msgid "Your passphrase has been set"
+#~ msgstr ""
+
+#: src/components/settings/Settings.tsx:74
+#~ msgid "Your passphrase has been updated"
+#~ msgstr ""
+
+#: src/util/getDescriptiveError.ts:5
+#~ msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
+#~ msgstr "[Chyba 13] Povolenie bolo zamietnuté. Pokúšate sa získať prístup k súboru/adresáru bez potrebných povolení. S najväčšou pravdepodobnosťou má problém jeden z priečinkov polí vo vašom súbore config.yaml."
+
+#: src/util/getDescriptiveError.ts:8
+#~ msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
+#~ msgstr "[Chyba 22] Súbor sa nenašiel. S najväčšou pravdepodobnosťou má problém jeden z priečinkov polí vo vašom súbore config.yaml."
+
+#: src/components/WalletStatusCard.tsx:41
+msgid "connections:"
+msgstr "pripojenia:"
+
+#: src/components/WalletStatusCard.tsx:33
+msgid "height:"
+msgstr "pozícia:"
+
+#: src/components/_wallet_old/Wallets.tsx:61
+#~ msgid "not synced"
+#~ msgstr "nesynchronizované"
+
+#: src/components/plot/add/PlotAddForm.tsx:124
+#~ msgid "p2SingletonPuzzleHash is not defined"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAdd.tsx:136
+#~ msgid "p2_singleton_puzzle_hash is not defined"
+#~ msgstr "p2_singleton_puzzle_hash nie je definovaný"
+
+#: src/components/WalletStatusCard.tsx:27
+msgid "status:"
+msgstr "stav:"
+
+#: src/components/WalletStatusCard.tsx:29
+msgid "synced"
+msgstr "synchronizované"
+
+#: src/components/WalletStatusCard.tsx:29
+msgid "syncing"
+msgstr "synchronizácia"
+
+#: src/components/plot/add/PlotAddChoosePlotter.tsx:89
+#~ msgid "thirdparty.plotter.disclaimer"
+#~ msgstr ""
+
+#: src/components/app/AppPassPrompt.tsx:48
+#~ msgid "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:16
+#~ msgid "{0} Block Rewards"
+#~ msgstr "{0} Block Rewards"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:16
+#~ msgid "{0} User Transaction Fees"
+#~ msgstr "{0} User Transaction Fees"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:172
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:189
+#~ msgid "{0} buckets is recommended"
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotNFTGraph.tsx:111
+#~ msgid "{0} points {1} - {2} hours ago"
+#~ msgstr "{0} bodov pred {1} - {2} hodinami"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:35
+#~ msgid "{currencyCode} Block Rewards"
+#~ msgstr "{currencyCode} Odmena za blok"
+
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:29
+#~ msgid "{currencyCode} Total Chia Farmed"
+#~ msgstr "{currencyCode} Celkové množstvo vyfarmárčenej Chii"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:28
+#~ msgid "{currencyCode} User Transaction Fees"
+#~ msgstr "{currencyCode} Užívateľské poplatky za transakcie"
+
+#: src/components/core/components/Amount/Amount.tsx:82
+#~ msgid "{mojo, plural, one {mojo} other {mojos}}"
+#~ msgstr "{mojo, plural, one {mojo} few {mojos} many {mojos} other {mojos}}"
+
+#: src/components/plot/add/PlotAddChoosePlotter.tsx:118
+#~ msgid "{warning}"
+#~ msgstr ""

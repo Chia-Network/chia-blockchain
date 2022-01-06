@@ -562,7 +562,7 @@ msgid "Claim Rewards"
 msgstr "Забрать награду"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:131
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:80
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:82
 msgid "Close"
 msgstr "Закрыть"
 
@@ -1392,7 +1392,7 @@ msgstr ""
 #~ msgid "Keyring migration failed: {error}"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:78
+#: src/components/dashboard/DashboardSideBar.tsx:85
 msgid "Keys"
 msgstr "Ключи"
 
@@ -1447,7 +1447,7 @@ msgstr ""
 msgid "Loading list of wallets"
 msgstr "Загрузка списка кошельков"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:33
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:35
 msgid "Loading..."
 msgstr "Загрузка..."
 
@@ -2434,7 +2434,7 @@ msgstr ""
 #~ msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:85
+#: src/components/dashboard/DashboardSideBar.tsx:78
 #: src/components/settings/Settings.tsx:241
 msgid "Settings"
 msgstr ""
@@ -2956,7 +2956,7 @@ msgid "View"
 msgstr "Вид"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:75
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:54
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
 msgid "View Log"
 msgstr "Посмотреть журнал"
 

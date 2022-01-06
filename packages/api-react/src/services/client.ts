@@ -55,10 +55,11 @@ export const clientApi = apiWithTag.injectEndpoints({
 
     clientStartService: build.mutation<boolean, {
       service?: ServiceName;
+      disableWait?: boolean;
     }>({
-      query: ({ service }) => ({
+      query: ({ service, disableWait }) => ({
         command: 'startService',
-        args: [service],
+        args: [service, disableWait],
         client: true,
       }),
     }),

@@ -190,7 +190,7 @@ export default class Client extends EventEmitter {
     return this.connectedPromise;
   }
 
-  async startService(serviceName: ServiceName) {
+  async startService(serviceName: ServiceName, disableWait?: boolean) {
     if (this.started.has(serviceName)) {
       return;
     }
@@ -203,23 +203,26 @@ export default class Client extends EventEmitter {
 
     // wait for service initialisation
     log(`Waiting for ping from service: ${serviceName}`);
-    while(true) {
-      try {
-        const { data: pingResponse } = await this.send(new Message({
-          command: 'ping',
-          origin: this.origin,
-          destination: serviceName,
-        }), 1000);
-        
-        if (pingResponse.success) {
-          break;
+    if (!disableWait) {
+      while(true) {
+        try {
+          const { data: pingResponse } = await this.send(new Message({
+            command: 'ping',
+            origin: this.origin,
+            destination: serviceName,
+          }), 1000);
+          
+          if (pingResponse.success) {
+            break;
+          }
+        } catch (error) {
+          await sleep(1000);
         }
-      } catch (error) {
-        await sleep(1000);
       }
+
+      log(`Service: ${serviceName} started`);
     }
 
-    log(`Service: ${serviceName} started`);
     this.started.add(serviceName);
   }
 

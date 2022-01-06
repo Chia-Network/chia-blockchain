@@ -58,8 +58,11 @@ export default function AppState(props: Props) {
 
   async function loadAllServices() {
     await Promise.all(services.map(async (service) => {
+      const disableWait = service === ServiceName.SIMULATOR;
+
       await startService({
         service,
+        disableWait,
       }).unwrap();
 
       setRunningServices((oldValue) => ({

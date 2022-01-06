@@ -1,0 +1,6 @@
+node_modules
+dist
+examples
+daemon
+build
+packages/*/test/fixtures
