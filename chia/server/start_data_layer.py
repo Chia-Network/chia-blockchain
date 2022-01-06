@@ -14,12 +14,11 @@ from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
 from chia.server.start_wallet import service_kwargs_for_wallet
 
-from chia.util.config import load_config_cli, load_config
+from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 # See: https://bugs.python.org/issue29288
 from chia.util.keychain import Keychain
-from chia.wallet.wallet_node import WalletNode
 
 "".encode("idna")
 

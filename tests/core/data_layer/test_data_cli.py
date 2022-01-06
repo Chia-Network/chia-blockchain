@@ -31,7 +31,9 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
         print(f"create_kv_store: {create}")
         tree_id = "0102030405060708091011121314151617181920212223242526272829303132"
         changelist: List[Dict[str, str]] = [{"action": "insert", "row_data": row_data}]
-        update = chia_root.run(args=["data", "update_kv_store", "--id", tree_id, "--changelist", json.dumps(changelist), "-wp", port])
+        update = chia_root.run(
+            args=["data", "update_kv_store", "--id", tree_id, "--changelist", json.dumps(changelist), "-wp", port]
+        )
         print(f"update_kv_store: {update}")
         completed_process = chia_root.run(args=["data", "get_value", "--id", tree_id, "--key", row_hash, "-wp", port])
         parsed = json.loads(completed_process.stdout)

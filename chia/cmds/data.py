@@ -98,6 +98,7 @@ def create_kv_store(
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import create_kv_store_cmd
+
     run(create_kv_store_cmd(fingerprint, data_rpc_port))
 
 
@@ -113,6 +114,7 @@ def update_kv_store(
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import update_kv_store_cmd
+
     run(update_kv_store_cmd(id, json.loads(changelist_string), fingerprint, data_rpc_port))
 
 
@@ -128,5 +130,5 @@ def get_value(
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_value_cmd
-    run(get_value_cmd(id, key, fingerprint, data_rpc_port))
 
+    run(get_value_cmd(id, key, fingerprint, data_rpc_port))
