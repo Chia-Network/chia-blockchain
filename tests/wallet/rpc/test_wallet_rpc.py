@@ -150,11 +150,13 @@ class TestWalletRpc:
             assert len(tx_res.additions) == 2  # The output and the change
             assert any([addition.amount == signed_tx_amount for addition in tx_res.additions])
             # check error for a ASSERT_ANNOUNCE_CONSUMED_FAILED and if the error is not there throw a value error
+            # fmt: off
             try:
                 push_res = await client_node.push_tx(tx_res.spend_bundle)
             except ValueError as error:
                 if error.args[0]["error"].find("ASSERT_ANNOUNCE_CONSUMED_FAILED") == -1:  # noqa:  # pylint: disable=E1126
                     raise ValueError from error
+            # fmt: on
 
             # Test basic transaction to one output
             signed_tx_amount = 888000
