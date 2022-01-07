@@ -116,7 +116,9 @@ class TestFullNodeStore:
         # Add/get unfinished block
         for height, unf_block in enumerate(unfinished_blocks):
             assert store.get_unfinished_block(unf_block.partial_hash) is None
-            store.add_unfinished_block(uint32(height), unf_block, PreValidationResult(None, uint64(123532), None))
+            store.add_unfinished_block(
+                uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, False)
+            )
             assert store.get_unfinished_block(unf_block.partial_hash) == unf_block
             store.remove_unfinished_block(unf_block.partial_hash)
             assert store.get_unfinished_block(unf_block.partial_hash) is None

@@ -1582,7 +1582,7 @@ class TestPreValidation:
         block_bad = recursive_replace(
             blocks[-1], "reward_chain_block.total_iters", blocks[-1].reward_chain_block.total_iters + 1
         )
-        res = await empty_blockchain.pre_validate_blocks_multiprocessing([blocks[0], block_bad], {})
+        res = await empty_blockchain.pre_validate_blocks_multiprocessing([blocks[0], block_bad], {}, True)
         assert res[0].error is None
         assert res[1].error is not None
 
@@ -1597,7 +1597,7 @@ class TestPreValidation:
             end_i = min(i + n_at_a_time, len(blocks))
             blocks_to_validate = blocks[i:end_i]
             start_pv = time.time()
-            res = await empty_blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {})
+            res = await empty_blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {}, False)
             end_pv = time.time()
             times_pv.append(end_pv - start_pv)
             assert res is not None
@@ -2063,7 +2063,7 @@ class TestBodyValidation:
         block_2 = recursive_replace(block, "transactions_generator_ref_list", [block.height - 2, block.height - 1])
         err = (await b.receive_block(block_2))[1]
         assert err == Err.GENERATOR_REF_HAS_NO_GENERATOR
-        assert (await b.pre_validate_blocks_multiprocessing([block_2], {})) is None
+        assert (await b.pre_validate_blocks_multiprocessing([block_2], {}), False) is None
         await check_block_store_invariant(b)
 
         # Not tx block
@@ -2071,8 +2071,14 @@ class TestBodyValidation:
             block_2 = recursive_replace(block, "transactions_generator_ref_list", [h])
             err = (await b.receive_block(block_2))[1]
             assert err == Err.GENERATOR_REF_HAS_NO_GENERATOR or err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
-            assert (await b.pre_validate_blocks_multiprocessing([block_2], {})) is None
+            assert (await b.pre_validate_blocks_multiprocessing([block_2], {}), False) is None
             await check_block_store_invariant(b)
+
+        # Bad signature
+        block_2 = recursive_replace(block, "transactions_info.aggregated_signature", G2Element().generator())
+        preval_results = await b.pre_validate_blocks_multiprocessing([block_2], {}, True)
+        assert preval_results is not None
+        assert preval_results[0].error == Err.BAD_AGGREGATE_SIGNATURE
 
     @pytest.mark.asyncio
     async def test_cost_exceeds_max(self, empty_blockchain):

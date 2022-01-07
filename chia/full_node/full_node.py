@@ -1045,10 +1045,14 @@ class FullNode:
         if len(blocks_to_validate) == 0:
             return True, False, fork_height, ([], {})
 
+        # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
+        # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.time()
         pre_validation_results: Optional[
             List[PreValidationResult]
-        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {}, wp_summaries=wp_summaries)
+        ] = await self.blockchain.pre_validate_blocks_multiprocessing(
+            blocks_to_validate, {}, True, wp_summaries=wp_summaries
+        )
         pre_validate_end = time.time()
         if pre_validate_end - pre_validate_start > 10:
             self.log.warning(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
@@ -1455,7 +1459,12 @@ class FullNode:
             npc_results = {}
             if pre_validation_result is not None and pre_validation_result.npc_result is not None:
                 npc_results[block.height] = pre_validation_result.npc_result
-            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
+
+            # Don't validate signatures because we want to validate them in the main thread later, since we have a
+            # cache available
+            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(
+                [block], npc_results, False
+            )
             added: Optional[ReceiveBlockResult] = None
             pre_validation_time = time.time() - validation_start
             try:

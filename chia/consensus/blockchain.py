@@ -260,6 +260,7 @@ class Blockchain(BlockchainInterface):
             npc_result,
             fork_point_with_peak,
             self.get_block_generator,
+            pre_validation_result is None or not pre_validation_result.validated_signature,
         )
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code, None, ([], {})
@@ -580,7 +581,7 @@ class Blockchain(BlockchainInterface):
             not self.contains_block(block.prev_header_hash)
             and not block.prev_header_hash == self.constants.GENESIS_CHALLENGE
         ):
-            return PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None)
+            return PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False)
 
         unfinished_header_block = UnfinishedHeaderBlock(
             block.finished_sub_slots,
@@ -606,7 +607,7 @@ class Blockchain(BlockchainInterface):
         )
 
         if error is not None:
-            return PreValidationResult(uint16(error.code.value), None, None)
+            return PreValidationResult(uint16(error.code.value), None, None, False)
 
         prev_height = (
             -1
@@ -629,14 +630,15 @@ class Blockchain(BlockchainInterface):
         )
 
         if error_code is not None:
-            return PreValidationResult(uint16(error_code.value), None, None)
+            return PreValidationResult(uint16(error_code.value), None, None, False)
 
-        return PreValidationResult(None, required_iters, cost_result)
+        return PreValidationResult(None, required_iters, cost_result, False)
 
     async def pre_validate_blocks_multiprocessing(
         self,
         blocks: List[FullBlock],
         npc_results: Dict[uint32, NPCResult],
+        validate_signatures: bool,
         batch_size: int = 4,
         wp_summaries: Optional[List[SubEpochSummary]] = None,
     ) -> Optional[List[PreValidationResult]]:
@@ -651,6 +653,7 @@ class Blockchain(BlockchainInterface):
             self.get_block_generator,
             batch_size,
             wp_summaries,
+            validate_signatures,
         )
 
     async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator) -> NPCResult:

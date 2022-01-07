@@ -5,6 +5,8 @@ from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable
 
+from chia.util import cached_bls
+
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
@@ -23,6 +25,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
+from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint64, uint32
@@ -37,6 +40,7 @@ class PreValidationResult(Streamable):
     error: Optional[uint16]
     required_iters: Optional[uint64]  # Iff error is None
     npc_result: Optional[NPCResult]  # Iff error is None and block is a transaction block
+    validated_signature: bool
 
 
 def batch_pre_validate_blocks(
@@ -49,6 +53,7 @@ def batch_pre_validate_blocks(
     check_filter: bool,
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
+    validate_signatures: bool,
 ) -> List[bytes]:
     blocks: Dict[bytes, BlockRecord] = {}
     for k, v in blocks_pickled.items():
@@ -57,6 +62,8 @@ def batch_pre_validate_blocks(
     constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
     if full_blocks_pickled is not None and header_blocks_pickled is not None:
         assert ValueError("Only one should be passed here")
+
+    # In this case, we are validating full blocks, not headers
     if full_blocks_pickled is not None:
         for i in range(len(full_blocks_pickled)):
             try:
@@ -101,12 +108,25 @@ def batch_pre_validate_blocks(
                 error_int: Optional[uint16] = None
                 if error is not None:
                     error_int = uint16(error.code.value)
+                successfully_validated_signatures = False
+                if validate_signatures:
+                    if npc_result is not None and block.transactions_info is not None:
+                        pairs_pks, pairs_msgs = pkm_pairs(npc_result.npc_list, constants.AGG_SIG_ME_ADDITIONAL_DATA)
+                        if not cached_bls.aggregate_verify(
+                            pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, True
+                        ):
+                            error_int = uint16(Err.BAD_AGGREGATE_SIGNATURE.value)
+                        else:
+                            successfully_validated_signatures = True
 
-                results.append(PreValidationResult(error_int, required_iters, npc_result))
+                results.append(
+                    PreValidationResult(error_int, required_iters, npc_result, successfully_validated_signatures)
+                )
             except Exception:
                 error_stack = traceback.format_exc()
                 log.error(f"Exception: {error_stack}")
-                results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None))
+                results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False))
+    # In this case, we are validating header blocks
     elif header_blocks_pickled is not None:
         for i in range(len(header_blocks_pickled)):
             try:
@@ -125,11 +145,11 @@ def batch_pre_validate_blocks(
                 error_int = None
                 if error is not None:
                     error_int = uint16(error.code.value)
-                results.append(PreValidationResult(error_int, required_iters, None))
+                results.append(PreValidationResult(error_int, required_iters, None, False))
             except Exception:
                 error_stack = traceback.format_exc()
                 log.error(f"Exception: {error_stack}")
-                results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None))
+                results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False))
     return [bytes(r) for r in results]
 
 
@@ -144,6 +164,7 @@ async def pre_validate_blocks_multiprocessing(
     get_block_generator: Optional[Callable],
     batch_size: int,
     wp_summaries: Optional[List[SubEpochSummary]] = None,
+    validate_signatures: bool = True,
 ) -> Optional[List[PreValidationResult]]:
     """
     This method must be called under the blockchain lock
@@ -168,7 +189,7 @@ async def pre_validate_blocks_multiprocessing(
     num_blocks_seen = 0
     if blocks[0].height > 0:
         if not block_records.contains_block(blocks[0].prev_header_hash):
-            return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None)]
+            return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False)]
         curr = block_records.block_record(blocks[0].prev_header_hash)
         num_sub_slots_to_look_for = 3 if curr.overflow else 2
         while (
@@ -315,6 +336,7 @@ async def pre_validate_blocks_multiprocessing(
                 check_filter,
                 [diff_ssis[j][0] for j in range(i, end_i)],
                 [diff_ssis[j][1] for j in range(i, end_i)],
+                validate_signatures,
             )
         )
     # Collect all results into one flat list
