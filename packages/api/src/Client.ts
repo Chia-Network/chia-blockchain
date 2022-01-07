@@ -26,7 +26,7 @@ export default class Client extends EventEmitter {
   private options: Required<Options>;
   private ws: any;
 
-  private connected: boolean = false;
+  private connected = false;
   private requests: Map<string, {
     resolve: (value: Response) => void;
     reject: (reason: Error) => void;
@@ -38,9 +38,9 @@ export default class Client extends EventEmitter {
 
   private daemon: Daemon;
 
-  private closed: boolean = false;
+  private closed = false;
   private state: ConnectionState = ConnectionState.DISCONNECTED;
-  private reconnectAttempt: number = 0;
+  private reconnectAttempt = 0;
   private startingService?: ServiceName;
 
   constructor(options: Options) {

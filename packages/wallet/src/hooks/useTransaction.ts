@@ -6,7 +6,7 @@ import type Transaction from '../types/Transaction';
 
 export default function useTransaction(
   transactionId: string,
-  delay: number = 1000,
+  delay = 1000,
 ): [Transaction | undefined] {
   const dispatch = useDispatch();
   const [transaction, setTransaction] = useState<Transaction | undefined>();

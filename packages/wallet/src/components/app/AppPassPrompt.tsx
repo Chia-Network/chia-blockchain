@@ -70,7 +70,7 @@ export default function AppPassPrompt(props: Props) {
 
   let dialogTitle: React.ReactElement;
   let submitButtonTitle: React.ReactElement;
-  let cancellable: boolean = true;
+  let cancellable = true;
 
   switch (reason) {
     case PassphrasePromptReason.KEYRING_LOCKED:

@@ -12,7 +12,7 @@ const uniqueNames: {
   [key: string]: string;
 } = {};
 
-function getUniqueName(seed: string, iteration: number = 0): string {
+function getUniqueName(seed: string, iteration = 0): string {
   const computedName = Object.keys(uniqueNames).find((key) => uniqueNames[key] === seed);
   if (computedName) {
     return computedName;

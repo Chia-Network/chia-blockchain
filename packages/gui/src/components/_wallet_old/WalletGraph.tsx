@@ -185,7 +185,7 @@ function prepareGraphPoints(
   }
 
   let start = balance;
-  let data = generateTransactionGraphData(transactions, peak);
+  const data = generateTransactionGraphData(transactions, peak);
 
   /*
   if (aggregate) {

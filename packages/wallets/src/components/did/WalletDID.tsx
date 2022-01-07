@@ -471,8 +471,8 @@ const RecoveryTransCard = (props) => {
   const id = props.wallet_id;
   const { wallet } = useWallet(id);
   const { mydid, data } = wallet;
-  let data_parsed = JSON.parse(data);
-  let temp_coin = data_parsed.temp_coin;
+  const data_parsed = JSON.parse(data);
+  const temp_coin = data_parsed.temp_coin;
   const classes = useStyles();
 
   return (
@@ -517,7 +517,7 @@ const MyDIDCard = (props) => {
   const dispatch = useDispatch();
 
   const generateBackup = () => {
-    let filename = filename_input.value;
+    const filename = filename_input.value;
     if (filename === '') {
       dispatch(
         openDialog(
@@ -696,9 +696,9 @@ const BalanceCard = (props) => {
 
 const ViewDIDsSubsection = (props) => {
   const classes = useStyles();
-  let backup_list = props.backup_did_list;
-  let dids_num_req = props.dids_num_req;
-  let isEmptyList = !backup_list || !backup_list.length;
+  const backup_list = props.backup_did_list;
+  const dids_num_req = props.dids_num_req;
+  const isEmptyList = !backup_list || !backup_list.length;
 
   return (
     <Grid item xs={12}>
@@ -743,11 +743,11 @@ const ViewDIDsSubsection = (props) => {
 };
 
 const ManageDIDsCard = (props) => {
-  var id = props.wallet_id;
+  const id = props.wallet_id;
   const classes = useStyles();
   const dispatch = useDispatch();
-  var pending = useSelector((state) => state.create_options.pending);
-  var created = useSelector((state) => state.create_options.created);
+  const pending = useSelector((state) => state.create_options.pending);
+  const created = useSelector((state) => state.create_options.created);
 
   const { wallet } = useWallet(id);
   const { 
@@ -765,7 +765,7 @@ const ManageDIDsCard = (props) => {
     const didArray = data.backup_dids?.map((item) => item.backupid) ?? [];
     let uniqDidArray = Array.from(new Set(didArray));
     uniqDidArray = uniqDidArray.filter(item => item !== "")
-    let num_of_backup_ids_needed = data.num_needed;
+    const num_of_backup_ids_needed = data.num_needed;
     if (
       num_of_backup_ids_needed === '' ||
       isNaN(Number(num_of_backup_ids_needed))
@@ -1015,8 +1015,8 @@ const CreateAttest = (props) => {
 
 // this is currently not being displayed; did_spend does not exist in wallet_rpc_api.py
 const CashoutCard = (props) => {
-  var id = props.wallet_id;
-  var address_input = null;
+  const id = props.wallet_id;
+  let address_input = null;
   const classes = useStyles();
   const dispatch = useDispatch();
 

@@ -182,7 +182,7 @@ function prepareGraphPoints(
   }
 
   let start = balance;
-  let data = generateTransactionGraphData(transactions);
+  const data = generateTransactionGraphData(transactions);
 
   const [peakTransaction] = transactions;
 

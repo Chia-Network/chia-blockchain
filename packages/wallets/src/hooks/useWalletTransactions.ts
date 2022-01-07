@@ -4,8 +4,8 @@ import type { Transaction } from '@chia/api';
 
 export default function useWalletTransactions(
   walletId: number, 
-  defaultRowsPerPage: number = 10, 
-  defaultPage: number = 0, 
+  defaultRowsPerPage = 10, 
+  defaultPage = 0, 
   sortKey?: 'CONFIRMED_AT_HEIGHT' | 'RELEVANCE',
   reverse?: boolean,
 ): {

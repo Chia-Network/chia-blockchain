@@ -1,7 +1,7 @@
 import { get } from 'lodash';
 import { useGetBlockchainStateQuery, useGetBlockRecordsQuery } from "../services/fullNode";
 
-export default function useGetLatestBlocksQuery(count: number = 10) {
+export default function useGetLatestBlocksQuery(count = 10) {
   const { data: state, isLoading: isLoadingBlockchainState, ...rest } = useGetBlockchainStateQuery();
   const peakHeight = get(state, 'peak.height');
   const end = peakHeight ? peakHeight + 1 : 1;

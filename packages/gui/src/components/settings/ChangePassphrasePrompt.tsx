@@ -67,7 +67,7 @@ export default function ChangePassphrasePrompt(props: Props) {
   } = keyringState;
 
   async function validateDialog(currentPassphrase: string, newPassphrase: string, confirmation: string) {
-    let isValid: boolean = false;
+    let isValid = false;
 
     if (currentPassphrase === "" && newPassphrase === "" && confirmation === "") {
       await openDialog(

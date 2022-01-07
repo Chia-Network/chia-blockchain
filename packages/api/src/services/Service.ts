@@ -88,7 +88,7 @@ export default class Service extends EventEmitter {
     }    
   }
 
-  async command(command: string, data: Object = {}, ack: boolean = false, timeout?: number, disableFormat?: boolean): Promise<any> {
+  async command(command: string, data: Object = {}, ack = false, timeout?: number, disableFormat?: boolean): Promise<any> {
     const { client, origin, name } = this;
 
     if (!command) {

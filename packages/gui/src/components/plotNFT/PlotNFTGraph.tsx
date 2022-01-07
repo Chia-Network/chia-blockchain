@@ -47,8 +47,8 @@ const StyledMiddleTypography = styled(Typography)`
 
 const HOUR_SECONDS = 60 * 60;
 
-function aggregatePoints(points, hours: number = 2, totalHours: number = 24) {
-  let current = Date.now() / 1000;
+function aggregatePoints(points, hours = 2, totalHours = 24) {
+  const current = Date.now() / 1000;
 
   const items = [];
 
