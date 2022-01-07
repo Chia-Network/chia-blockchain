@@ -158,7 +158,7 @@ class DataStore:
             if result_dict != values:
                 raise Exception(f"Requested insertion of node with matching hash but other values differ: {node_hash}")
 
-    async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
+    async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32, tree_id: bytes32) -> bytes32:
         node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
 
         await self._insert_node(
@@ -550,7 +550,7 @@ class DataStore:
                     right = new_terminal_node_hash
 
                 # create first new internal node
-                new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
+                new_hash = await self._insert_internal_node(left_hash=left, right_hash=right, tree_id=tree_id)
 
                 traversal_node_hash = reference_node_hash
 
@@ -568,7 +568,7 @@ class DataStore:
 
                     traversal_node_hash = ancestor.hash
 
-                    new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
+                    new_hash = await self._insert_internal_node(left_hash=left, right_hash=right, tree_id=tree_id)
 
                 await self._insert_root(tree_id=tree_id, node_hash=new_hash, status=status)
 
@@ -607,7 +607,9 @@ class DataStore:
                 else:
                     raise Exception("Internal error.")
 
-                new_child_hash = await self._insert_internal_node(left_hash=left_hash, right_hash=right_hash)
+                new_child_hash = await self._insert_internal_node(
+                    left_hash=left_hash, right_hash=right_hash, tree_id=tree_id
+                )
 
                 old_child_hash = ancestor.hash
 

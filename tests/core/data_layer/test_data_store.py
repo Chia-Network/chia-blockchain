@@ -233,7 +233,7 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
     ]
 
     ancestors_2 = await data_store.get_ancestors_2(node_hash=reference_node_hash, tree_id=tree_id)
-    assert ancestor == ancestors_2
+    assert ancestors == ancestors_2
 
 
 @pytest.mark.asyncio
