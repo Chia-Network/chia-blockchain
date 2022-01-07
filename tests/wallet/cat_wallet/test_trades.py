@@ -118,9 +118,11 @@ class TestCATTrades:
 
         # Create the trade parameters
         MAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
+        TAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
+        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
+        await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
         MAKER_CAT_BALANCE = 100
         MAKER_NEW_CAT_BALANCE = 0
-        TAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
         TAKER_CAT_BALANCE = 0
         TAKER_NEW_CAT_BALANCE = 100
 
