@@ -2078,7 +2078,7 @@ class TestBodyValidation:
         block_2 = recursive_replace(block, "transactions_info.aggregated_signature", G2Element.generator())
         preval_results = await b.pre_validate_blocks_multiprocessing([block_2], {}, True)
         assert preval_results is not None
-        assert preval_results[0].error == Err.BAD_AGGREGATE_SIGNATURE
+        assert preval_results[0].error == Err.BAD_AGGREGATE_SIGNATURE.value
 
     @pytest.mark.asyncio
     async def test_cost_exceeds_max(self, empty_blockchain):
