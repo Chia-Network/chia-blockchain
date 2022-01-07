@@ -243,20 +243,15 @@ class MempoolManager:
         if new_spend_bytes is None:
             new_spend_bytes = bytes(new_spend)
 
-        # err, cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
-        #     self.pool,
-        #     validate_clvm_and_signature,
-        #     new_spend_bytes,
-        #     int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM),
-        #     self.constants.COST_PER_BYTE,
-        #     self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-        # )
-        err, cached_result_bytes, new_cache_entries = validate_clvm_and_signature(
+        err, cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
+            self.pool,
+            validate_clvm_and_signature,
             new_spend_bytes,
             int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM),
             self.constants.COST_PER_BYTE,
             self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
+
         if err is not None:
             raise ValidationError(err)
         for cache_entry_key, cached_entry_value in new_cache_entries.items():
