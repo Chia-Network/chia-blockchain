@@ -81,6 +81,16 @@ class DataStore:
                 )
                 """
             )
+            await self.db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS ancestors(
+                    hash TEXT NOT NULL,
+                    ancestor TEXT,
+                    tree_id TEXT NOT NULL,
+                    PRIMARY KEY(hash, tree_id)
+                )
+                """
+            )
 
         return self
 
@@ -103,6 +113,15 @@ class DataStore:
                 "status": status.value,
             },
         )
+
+        # `node_hash` is now a root, so it has no ancestor.
+        if node_hash is not None:
+            await self.db.execute(
+                """
+                DELETE FROM ancestors WHERE hash == :node_hash
+                """,
+                {"node_hash": node_hash.hex()},
+            )
 
     async def _insert_node(
         self,
@@ -150,6 +169,21 @@ class DataStore:
             key=None,
             value=None,
         )
+
+        # Update ancestors table.
+        for hash in (left_hash, right_hash):
+            values = {
+                "hash": hash.hex(),
+                "ancestor": node_hash.hex(),
+                "tree_id": tree_id.hex(),
+            }
+            await self.db.execute(
+                """
+                INSERT OR REPLACE INTO ancestors(hash, ancestor, tree_id)
+                VALUES (:hash, :ancestor, :tree_id)
+                """,
+                values,
+            )
 
         return node_hash  # type: ignore[no-any-return]
 
@@ -349,6 +383,28 @@ class DataStore:
             ancestors = [InternalNode.from_row(row=row) async for row in cursor]
 
         return ancestors
+
+    async def get_ancestors_2(self, node_hash: bytes32, tree_id: bytes32, lock: bool = True) -> List[InternalNode]:
+        nodes = []
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                """
+                WITH RECURSIVE
+                    get_ancestors_hash(hash, depth) AS (
+                        SELECT :reference_hash, 0 AS depth
+                        UNION ALL
+                        SELECT ancestors.ancestor, get_ancestors_hash.depth + 1 FROM ancestors, get_ancestors_hash
+                        WHERE ancestors.tree_id == :tree_id AND ancestors.hash == get_ancestors_hash.hash
+                    )
+                SELECT node.* FROM node, get_ancestors_hash
+                WHERE node.hash == get_ancestors_hash.hash AND get_ancestors_hash.depth > 0
+                ORDER BY get_ancestors_hash.depth ASC
+                """,
+                {"reference_hash": node_hash.hex(), "tree_id": tree_id.hex()},
+            )
+            nodes = [InternalNode.from_row(row=row) async for row in cursor]
+
+        return nodes
 
     async def get_pairs(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
