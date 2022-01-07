@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, Any
+from typing import Callable, Dict, List, Optional, Tuple, Set, Any
 
 from blspy import PrivateKey, G1Element
 
@@ -1186,6 +1186,14 @@ class WalletRpcApi:
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
+        coin_announcements: Optional[Set[bytes32]] = None
+        if (
+            "coin_announcements" in request
+            and request["coin_announcements"] is not None
+            and len(request["coin_announcements"]) > 0
+        ):
+            coin_announcements = set([hexstr_to_bytes(announcement) for announcement in request["coin_announcements"]])
+
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
                 signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
@@ -1195,6 +1203,7 @@ class WalletRpcApi:
                     coins=coins,
                     ignore_max_send_amount=True,
                     primaries=additional_outputs,
+                    announcements_to_consume=coin_announcements,
                     memos=memos_0,
                 )
         else:
@@ -1205,6 +1214,7 @@ class WalletRpcApi:
                 coins=coins,
                 ignore_max_send_amount=True,
                 primaries=additional_outputs,
+                announcements_to_consume=coin_announcements,
                 memos=memos_0,
             )
         return {"signed_tx": signed_tx.to_json_dict_convenience(self.service.config)}

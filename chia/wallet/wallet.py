@@ -319,9 +319,8 @@ class Wallet:
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
         Note: this must be called under a wallet state manager lock
         """
-        primaries: Optional[List[AmountWithPuzzlehash]]
         if primaries_input is None:
-            primaries = None
+            primaries: Optional[List[AmountWithPuzzlehash]] = None
             total_amount = amount + fee
         else:
             primaries = primaries_input.copy()

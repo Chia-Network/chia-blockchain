@@ -412,7 +412,7 @@ class CATWallet:
 
         for record in record_list:
             lineage = await self.get_lineage_proof_for_coin(record.coin)
-            if lineage is not None:
+            if lineage is not None and not lineage.is_none():
                 result.append(record)
 
         return result
@@ -483,7 +483,7 @@ class CATWallet:
                         conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
                     ):
                         try:
-                            assert synthetic_pk == pk
+                            assert bytes(synthetic_pk) == pk
                             sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
                         except AssertionError:
                             raise ValueError("This spend bundle cannot be signed by the CAT wallet")
@@ -775,7 +775,8 @@ class CATWallet:
         """
         self.log.info(f"Adding parent {name}: {lineage}")
         current_list = self.cat_info.lineage_proofs.copy()
-        current_list.append((name, lineage))
+        if (name, lineage) not in current_list:
+            current_list.append((name, lineage))
         cat_info: CATInfo = CATInfo(self.cat_info.limitations_program_hash, self.cat_info.my_tail, current_list)
         await self.save_info(cat_info, in_transaction)
 

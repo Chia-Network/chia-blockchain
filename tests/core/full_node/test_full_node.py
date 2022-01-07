@@ -6,6 +6,7 @@ import random
 import time
 from secrets import token_bytes
 from typing import Dict, Optional, List
+from blspy import G2Element
 
 import pytest
 
@@ -21,8 +22,9 @@ from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
+from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
@@ -192,6 +194,13 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_2, 5)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 5)
 
+        async def check_transaction_confirmed(transaction) -> bool:
+            tx = await wallet_node_1.wallet_state_manager.get_transaction(transaction.name)
+            return tx.confirmed
+
+        await time_out_assert(10, check_transaction_confirmed, True, tr)
+        await asyncio.sleep(0.5)
+
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
@@ -216,6 +225,9 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_1, 6)
         await time_out_assert(10, node_height_at_least, True, full_node_2, 6)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 6)
+
+        await time_out_assert(10, check_transaction_confirmed, True, tr)
+        await asyncio.sleep(0.5)
 
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
@@ -284,36 +296,43 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_2, 9)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 9)
 
+        await time_out_assert(10, check_transaction_confirmed, True, tr)
+        await asyncio.sleep(0.5)
+
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
         assert detect_potential_template_generator(uint32(9), program) is None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
 
-        # Creates a cc wallet
-        async with wallet_node_1.wallet_state_manager.lock:
-            cc_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node_1.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
-            )
-        tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
-        tr = tx_queue[0]
-        await time_out_assert(
-            10,
-            full_node_1.full_node.mempool_manager.get_spendbundle,
-            tr.spend_bundle,
-            tr.spend_bundle.name(),
-        )
-
+        # Creates a standard_transaction and an anyone-can-spend tx
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
-            ph,
+            Program.to(1).get_tree_hash(),
         )
-        await wallet.push_transaction(tx=tr)
+        extra_spend = SpendBundle(
+            [
+                CoinSpend(
+                    next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
+                    Program.to(1),
+                    Program.to([[51, ph, 30000]]),
+                )
+            ],
+            G2Element(),
+        )
+        new_spend_bundle = SpendBundle.aggregate([tr.spend_bundle, extra_spend])
+        new_tr = dataclasses.replace(
+            tr,
+            spend_bundle=new_spend_bundle,
+            additions=new_spend_bundle.additions(),
+            removals=new_spend_bundle.removals(),
+        )
+        await wallet.push_transaction(tx=new_tr)
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
-            tr.spend_bundle,
-            tr.name,
+            new_tr.spend_bundle,
+            new_tr.spend_bundle.name(),
         )
 
         # Farm a block
@@ -322,33 +341,43 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_2, 10)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 10)
 
+        await time_out_assert(10, check_transaction_confirmed, True, new_tr)
+        await asyncio.sleep(0.5)
+
         # Confirm generator is not compressed, #CAT creation has a cat spend
         all_blocks = await full_node_1.get_all_full_blocks()
         program: Optional[SerializedProgram] = all_blocks[-1].transactions_generator
         assert program is not None
         assert len(all_blocks[-1].transactions_generator_ref_list) == 0
 
-        # Make a cc transaction
-        tr_list: List[TransactionRecord] = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
-        tr = tr_list[0]
-        await wallet.wallet_state_manager.add_pending_transaction(tr)
-        await time_out_assert(
-            10,
-            full_node_2.full_node.mempool_manager.get_spendbundle,
-            tr.spend_bundle,
-            tr.name,
-        )
-        # Make a standard transaction
+        # Make a standard transaction and an anyone-can-spend transaction
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
-            ph,
+            Program.to(1).get_tree_hash(),
         )
-        await wallet.push_transaction(tx=tr)
+        extra_spend = SpendBundle(
+            [
+                CoinSpend(
+                    next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
+                    Program.to(1),
+                    Program.to([[51, ph, 30000]]),
+                )
+            ],
+            G2Element(),
+        )
+        new_spend_bundle = SpendBundle.aggregate([tr.spend_bundle, extra_spend])
+        new_tr = dataclasses.replace(
+            tr,
+            spend_bundle=new_spend_bundle,
+            additions=new_spend_bundle.additions(),
+            removals=new_spend_bundle.removals(),
+        )
+        await wallet.push_transaction(tx=new_tr)
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
-            tr.spend_bundle,
-            tr.name,
+            new_tr.spend_bundle,
+            new_tr.spend_bundle.name(),
         )
 
         # Farm a block

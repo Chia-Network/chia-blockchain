@@ -2,11 +2,12 @@ import functools
 from typing import List, Optional
 
 from blspy import AugSchemeMPL, G1Element, G2Element, GTElement
+from chia.types.blockchain_format.sized_bytes import bytes48
 from chia.util.hash import std_hash
 from chia.util.lru_cache import LRUCache
 
 
-def get_pairings(cache: LRUCache, pks: List[G1Element], msgs: List[bytes], force_cache: bool) -> List[GTElement]:
+def get_pairings(cache: LRUCache, pks: List[bytes48], msgs: List[bytes], force_cache: bool) -> List[GTElement]:
     pairings: List[Optional[GTElement]] = []
     missing_count: int = 0
     for pk, msg in zip(pks, msgs):
@@ -35,11 +36,11 @@ def get_pairings(cache: LRUCache, pks: List[G1Element], msgs: List[bytes], force
     return pairings
 
 
-LOCAL_CACHE: LRUCache = LRUCache(10000)
+LOCAL_CACHE: LRUCache = LRUCache(50000)
 
 
 def aggregate_verify(
-    pks: List[G1Element], msgs: List[bytes], sig: G2Element, force_cache: bool = False, cache: LRUCache = LOCAL_CACHE
+    pks: List[bytes48], msgs: List[bytes], sig: G2Element, force_cache: bool = False, cache: LRUCache = LOCAL_CACHE
 ):
     pairings: List[GTElement] = get_pairings(cache, pks, msgs, force_cache)
     if len(pairings) == 0:

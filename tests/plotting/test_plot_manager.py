@@ -1,4 +1,5 @@
 import logging
+import time
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
@@ -78,6 +79,10 @@ class PlotRefreshTester:
 
     def __init__(self, root_path: Path):
         self.plot_manager = PlotManager(root_path, self.refresh_callback)
+        # Set a very high refresh interval here to avoid unintentional refresh cycles
+        self.plot_manager.refresh_parameter.interval_seconds = 10000
+        # Set to the current time to avoid automated refresh after we start below.
+        self.plot_manager.last_refresh_time = time.time()
         self.plot_manager.start_refreshing()
 
     def refresh_callback(self, event: PlotRefreshEvents, refresh_result: PlotRefreshResult):
