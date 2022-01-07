@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Any, Tuple
 
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
+from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -201,41 +202,46 @@ class WalletRpcClient(RpcClient):
         additions: List[Dict],
         coins: List[Coin] = None,
         fee: uint64 = uint64(0),
-        coin_announcements: List[bytes32] = None,
+        coin_announcements: Optional[List[Announcement]] = None,
+        puzzle_announcements: Optional[List[Announcement]] = None,
     ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
-
-        # Converts bytes to hex for coin announcements and does not if it is none.
-        coin_announcements_hex: Optional[List[str]] = None
-        if coin_announcements is not None and len(coin_announcements) > 0:
-            coin_announcements_hex = [announcement.hex() for announcement in coin_announcements]
-
         additions_hex = []
         for ad in additions:
             additions_hex.append({"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()})
             if "memos" in ad:
                 additions_hex[-1]["memos"] = ad["memos"]
 
+        request: Dict[str, Any] = {
+            "additions": additions_hex,
+            "fee": fee,
+        }
+
+        if coin_announcements is not None and len(coin_announcements) > 0:
+            request["coin_announcements"] = [
+                {
+                    "coin_id": ann.origin_info.hex(),
+                    "message": ann.message.hex(),
+                    "morph_bytes": ann.morph_bytes.hex() if ann.morph_bytes is not None else b"".hex(),
+                }
+                for ann in coin_announcements
+            ]
+
+        if puzzle_announcements is not None and len(puzzle_announcements) > 0:
+            request["puzzle_announcements"] = [
+                {
+                    "puzzle_hash": ann.origin_info.hex(),
+                    "message": ann.message.hex(),
+                    "morph_bytes": ann.morph_bytes.hex() if ann.morph_bytes is not None else b"".hex(),
+                }
+                for ann in puzzle_announcements
+            ]
+
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
-            response: Dict = await self.fetch(
-                "create_signed_transaction",
-                {
-                    "additions": additions_hex,
-                    "coins": coins_json,
-                    "fee": fee,
-                    "coin_announcements": coin_announcements_hex,
-                },
-            )
-        else:
-            response = await self.fetch(
-                "create_signed_transaction",
-                {
-                    "additions": additions_hex,
-                    "fee": fee,
-                    "coin_announcements": coin_announcements_hex,
-                },
-            )
+            request["coins"] = coins_json
+
+        response: Dict = await self.fetch("create_signed_transaction", request)
         return TransactionRecord.from_json_dict_convenience(response["signed_tx"])
 
     async def create_new_did_wallet(self, amount):
