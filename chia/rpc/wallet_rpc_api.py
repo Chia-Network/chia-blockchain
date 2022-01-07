@@ -1180,7 +1180,7 @@ class WalletRpcApi:
         ):
             coin_announcements = {
                 Announcement(
-                    hexstr_to_bytes(announcement["coin_id"]),
+                    bytes32(hexstr_to_bytes(announcement["coin_id"])),
                     bytes(Program.to(binutils.assemble(announcement["message"]))),
                     hexstr_to_bytes(announcement["morph_bytes"]) if "morph_bytes" in announcement else None,
                 )
@@ -1195,7 +1195,7 @@ class WalletRpcApi:
         ):
             puzzle_announcements = {
                 Announcement(
-                    hexstr_to_bytes(announcement["puzzle_hash"]),
+                    bytes32(hexstr_to_bytes(announcement["puzzle_hash"])),
                     bytes(Program.to(binutils.assemble(announcement["message"]))),
                     hexstr_to_bytes(announcement["morph_bytes"]) if "morph_bytes" in announcement else None,
                 )

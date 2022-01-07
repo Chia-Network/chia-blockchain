@@ -183,12 +183,12 @@ class TestWalletRpc:
                 Announcement(
                     std_hash(b"coin_id_1"),
                     std_hash(b"message"),
-                    b'\xca',
+                    b"\xca",
                 ),
                 Announcement(
                     std_hash(b"coin_id_2"),
                     bytes(Program.to("a string")),
-                )
+                ),
             ]
             tx_res: TransactionRecord = await client.create_signed_transaction(
                 [{"amount": signed_tx_amount, "puzzle_hash": ph_3}], coin_announcements=tx_coin_announcements
@@ -212,12 +212,12 @@ class TestWalletRpc:
                 Announcement(
                     std_hash(b"puzzle_hash_1"),
                     b"message",
-                    b'\xca',
+                    b"\xca",
                 ),
                 Announcement(
                     std_hash(b"puzzle_hash_2"),
                     bytes(Program.to("a string")),
-                )
+                ),
             ]
             tx_res: TransactionRecord = await client.create_signed_transaction(
                 [{"amount": signed_tx_amount, "puzzle_hash": ph_3}], puzzle_announcements=tx_puzzle_announcements
