@@ -119,10 +119,10 @@ async function postToOfferBin(offerData: string, sharePrivately: boolean): Promi
 }
 
 enum HashgreenErrorCodes {
-  OFFERED_AMOUNT_TOO_SMALL = 40021, // The offered amount is too small
+  OFFERED_AMOUNT_TOO_SMALL = 40020, // The offered amount is too small
   MARKET_NOT_FOUND = 50029, // Pairing doesn't exist e.g. XCH/RandoCoin
   OFFER_FILE_EXISTS = 50037, // Offer already shared
-  COINS_ALREADY_COMMITTED = 50039, // Coins in the offer are already committed in another offer
+  COINS_ALREADY_COMMITTED = 50041, // Coins in the offer are already committed in another offer
 };
 
 async function postToHashgreen(offerData: string): Promise<string> {
@@ -132,7 +132,7 @@ async function postToHashgreen(offerData: string): Promise<string> {
       const request = remote.net.request({
         method: 'POST',
         protocol: 'https:',
-        hostname: 'testnet10.hash.green',
+        hostname: 'mainnet.hash.green',
         port: 443,
         path: '/api/v1/orders',
       });
@@ -158,7 +158,7 @@ async function postToHashgreen(offerData: string): Promise<string> {
               const id = data?.id;
 
               if (id) {
-                resolve(`https://testnet10.hash.green/orders/${id}`);
+                resolve(`https://mainnet.hash.green/dex?order=${id}`);
               }
               else {
                 reject(new Error(`Hashgreen response missing data.id: ${JSON.stringify(response)}`));
@@ -177,7 +177,7 @@ async function postToHashgreen(offerData: string): Promise<string> {
               const { code, msg, data } = response;
 
               if (code === HashgreenErrorCodes.OFFER_FILE_EXISTS && data) {
-                resolve(`https://testnet10.hash.green/orders/${data}`);
+                resolve(`https://mainnet.hash.green/dex?order=${data}`);
               }
               else {
                 console.log(`Upload failure response: ${body}`);
@@ -788,7 +788,7 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
                 color="default"
                 onClick={handleHashgreen}
               >
-                Hashgreen DEX (testnet10 only)
+                Hashgreen DEX
               </Button>
               <Button
                 variant="contained"
