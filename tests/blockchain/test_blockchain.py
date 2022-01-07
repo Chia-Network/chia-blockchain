@@ -2063,7 +2063,7 @@ class TestBodyValidation:
         block_2 = recursive_replace(block, "transactions_generator_ref_list", [block.height - 2, block.height - 1])
         err = (await b.receive_block(block_2))[1]
         assert err == Err.GENERATOR_REF_HAS_NO_GENERATOR
-        assert (await b.pre_validate_blocks_multiprocessing([block_2], {}), False) is None
+        assert (await b.pre_validate_blocks_multiprocessing([block_2], {}, False)) is None
         await check_block_store_invariant(b)
 
         # Not tx block
@@ -2071,7 +2071,7 @@ class TestBodyValidation:
             block_2 = recursive_replace(block, "transactions_generator_ref_list", [h])
             err = (await b.receive_block(block_2))[1]
             assert err == Err.GENERATOR_REF_HAS_NO_GENERATOR or err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
-            assert (await b.pre_validate_blocks_multiprocessing([block_2], {}), False) is None
+            assert (await b.pre_validate_blocks_multiprocessing([block_2], {}, False)) is None
             await check_block_store_invariant(b)
 
         # Bad signature
