@@ -194,6 +194,13 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_2, 5)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 5)
 
+        async def check_transaction_confirmed(transaction) -> bool:
+            tx = await wallet_node_1.wallet_state_manager.get_transaction(transaction.name)
+            return tx.confirmed
+
+        await time_out_assert(10, check_transaction_confirmed, True, tr)
+        await asyncio.sleep(0.5)
+
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
@@ -218,6 +225,9 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_1, 6)
         await time_out_assert(10, node_height_at_least, True, full_node_2, 6)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 6)
+
+        await time_out_assert(10, check_transaction_confirmed, True, tr)
+        await asyncio.sleep(0.5)
 
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
@@ -286,6 +296,9 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_2, 9)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 9)
 
+        await time_out_assert(10, check_transaction_confirmed, True, tr)
+        await asyncio.sleep(0.5)
+
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
@@ -326,6 +339,9 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_1, 10)
         await time_out_assert(10, node_height_at_least, True, full_node_2, 10)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 10)
+
+        await time_out_assert(10, check_transaction_confirmed, True, new_tr)
+        await asyncio.sleep(0.5)
 
         # Confirm generator is not compressed, #CAT creation has a cat spend
         all_blocks = await full_node_1.get_all_full_blocks()
