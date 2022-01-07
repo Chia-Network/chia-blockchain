@@ -162,10 +162,16 @@ async def add_token(args: dict, wallet_client: WalletRpcClient, fingerprint: int
     token_name = args["token_name"]
     try:
         asset_id_bytes: bytes = hexstr_to_bytes(asset_id)
-        response = await wallet_client.create_wallet_for_existing_cat(asset_id_bytes)
-        wallet_id = response["wallet_id"]
-        await wallet_client.set_cat_name(wallet_id, token_name)
-        print(f"Successfully added {token_name} with wallet id {wallet_id} on key {fingerprint}")
+        existing_info: Optional[Tuple[Optional[uint32], str]] = await wallet_client.cat_asset_id_to_name(asset_id_bytes)
+        if existing_info is None or existing_info.wallet_id is None:
+            response = await wallet_client.create_wallet_for_existing_cat(asset_id_bytes)
+            wallet_id = response["wallet_id"]
+            await wallet_client.set_cat_name(wallet_id, token_name)
+            print(f"Successfully added {token_name} with wallet id {wallet_id} on key {fingerprint}")
+        else:
+            wallet_id, old_name = existing_info
+            await wallet_client.set_cat_name(wallet_id, token_name)
+            print(f"Successfully renamed {old_name} with wallet_id {wallet_id} on key {fingerprint} to {token_name}")
     except ValueError as e:
         if "fromhex()" in str(e):
             print(f"{asset_id} is not a valid Asset ID")

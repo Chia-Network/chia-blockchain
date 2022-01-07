@@ -173,7 +173,7 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fing
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_unconfirmed_transactions))
 
 
-@wallet_cmd.command("add_token", short_help="Add a CAT to the wallet by its asset ID")
+@wallet_cmd.command("add_token", short_help="Add/Rename a CAT to the wallet by its asset ID")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -184,7 +184,7 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fing
 @click.option(
     "-id",
     "--asset-id",
-    help="The Asset ID of the coin you wish to add (the treehash of the TAIL program)",
+    help="The Asset ID of the coin you wish to add/rename (the treehash of the TAIL program)",
     required=True,
 )
 @click.option(
