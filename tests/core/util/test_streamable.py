@@ -372,7 +372,7 @@ class TestStreamable(unittest.TestCase):
         # EOF off by one
         with raises(AssertionError):
             parse_str(io.BytesIO(b"\x00\x00\x02\x01" + b"a" * 512))
-
+d
 
 if __name__ == "__main__":
     unittest.main()

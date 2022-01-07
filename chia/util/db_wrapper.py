@@ -52,3 +52,18 @@ class DBWrapper:
                 raise
             else:
                 await self.commit_transaction()
+
+    # @contextlib.asynccontextmanager
+    # async def defer_foreign_keys(self):
+    #     # TODO: this cannot be nested
+    #     cursor = await self.db.execute("PRAGMA defer_foreign_keys;")
+    #     row = await cursor.fetchone()
+    #     existing_value = row[0]
+    #     # TODO: something other than an assert
+    #     # We are interpolating this into SQL, let's make sure we know what it is.
+    #     assert isinstance(existing_value, int)
+    #     try:
+    #         await self.db.execute("PRAGMA defer_foreign_keys = 1;")
+    #         yield
+    #     finally:
+    #         await self.db.execute(f"PRAGMA defer_foreign_keys = {existing_value};")

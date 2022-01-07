@@ -57,8 +57,8 @@ class TerminalNode:
         return cls(
             hash=bytes32.fromhex(row["hash"]),
             # generation=row["generation"],
-            key=bytes.fromhex(row["key"]),
-            value=bytes.fromhex(row["value"]),
+            key=row["key_bytes"],
+            value=row["value_bytes"],
         )
 
 
