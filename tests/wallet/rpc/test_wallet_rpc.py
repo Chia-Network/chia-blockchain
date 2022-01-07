@@ -19,6 +19,8 @@ from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.announcement import Announcement
+from chia.types.blockchain_format.program import Program
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.consensus.coinbase import create_puzzlehash_for_pk
@@ -177,9 +179,48 @@ class TestWalletRpc:
 
             # Test basic transaction to one output and coin announcement
             signed_tx_amount = 888000
-            tx_coin_announcements = [std_hash(b"extra_stuff"), std_hash(b"more_stuff")]
+            tx_coin_announcements = [
+                Announcement(
+                    std_hash(b"coin_id_1"),
+                    std_hash(b"message"),
+                    b'\xca',
+                ),
+                Announcement(
+                    std_hash(b"coin_id_2"),
+                    bytes(Program.to("a string")),
+                )
+            ]
             tx_res: TransactionRecord = await client.create_signed_transaction(
                 [{"amount": signed_tx_amount, "puzzle_hash": ph_3}], coin_announcements=tx_coin_announcements
+            )
+
+            assert tx_res.fee_amount == 0
+            assert tx_res.amount == signed_tx_amount
+            assert len(tx_res.additions) == 2  # The output and the change
+            assert any([addition.amount == signed_tx_amount for addition in tx_res.additions])
+            # check error for a ASSERT_ANNOUNCE_CONSUMED_FAILED and if the error is not there throw a value error
+            try:
+                push_res = await client_node.push_tx(tx_res.spend_bundle)
+            except ValueError as error:
+                error_string = error.args[0]["error"]  # noqa:  # pylint: disable=E1126
+                if error_string.find("ASSERT_ANNOUNCE_CONSUMED_FAILED") == -1:
+                    raise ValueError from error
+
+            # # Test basic transaction to one output and puzzle announcement
+            signed_tx_amount = 888000
+            tx_puzzle_announcements = [
+                Announcement(
+                    std_hash(b"puzzle_hash_1"),
+                    b"message",
+                    b'\xca',
+                ),
+                Announcement(
+                    std_hash(b"puzzle_hash_2"),
+                    bytes(Program.to("a string")),
+                )
+            ]
+            tx_res: TransactionRecord = await client.create_signed_transaction(
+                [{"amount": signed_tx_amount, "puzzle_hash": ph_3}], puzzle_announcements=tx_puzzle_announcements
             )
 
             assert tx_res.fee_amount == 0
