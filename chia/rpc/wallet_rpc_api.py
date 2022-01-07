@@ -1175,7 +1175,7 @@ class WalletRpcApi:
             and request["coin_announcements"] is not None
             and len(request["coin_announcements"]) > 0
         ):
-            coin_announcements = set([hexstr_to_bytes(announcement) for announcement in request["coin_announcements"]])
+            coin_announcements = {bytes32.from_hexstr(announcement) for announcement in request["coin_announcements"]}
 
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
@@ -1186,7 +1186,7 @@ class WalletRpcApi:
                     coins=coins,
                     ignore_max_send_amount=True,
                     primaries=additional_outputs,
-                    announcements_to_consume=coin_announcements,
+                    coin_announcements_to_consume=coin_announcements,
                     memos=memos_0,
                 )
         else:
@@ -1197,7 +1197,7 @@ class WalletRpcApi:
                 coins=coins,
                 ignore_max_send_amount=True,
                 primaries=additional_outputs,
-                announcements_to_consume=coin_announcements,
+                coin_announcements_to_consume=coin_announcements,
                 memos=memos_0,
             )
         return {"signed_tx": signed_tx.to_json_dict_convenience(self.service.config)}
