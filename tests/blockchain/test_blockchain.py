@@ -2075,7 +2075,7 @@ class TestBodyValidation:
             await check_block_store_invariant(b)
 
         # Bad signature
-        block_2 = recursive_replace(block, "transactions_info.aggregated_signature", G2Element().generator())
+        block_2 = recursive_replace(block, "transactions_info.aggregated_signature", G2Element.generator())
         preval_results = await b.pre_validate_blocks_multiprocessing([block_2], {}, True)
         assert preval_results is not None
         assert preval_results[0].error == Err.BAD_AGGREGATE_SIGNATURE
