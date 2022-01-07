@@ -321,7 +321,8 @@ class TestFullNodeBlockCompression:
             G2Element(),
         )
         new_spend_bundle = SpendBundle.aggregate([tr.spend_bundle, extra_spend])
-        new_tr = dataclasses.replace(tr,
+        new_tr = dataclasses.replace(
+            tr,
             spend_bundle=new_spend_bundle,
             additions=new_spend_bundle.additions(),
             removals=new_spend_bundle.removals(),
@@ -365,7 +366,8 @@ class TestFullNodeBlockCompression:
             G2Element(),
         )
         new_spend_bundle = SpendBundle.aggregate([tr.spend_bundle, extra_spend])
-        new_tr = dataclasses.replace(tr,
+        new_tr = dataclasses.replace(
+            tr,
             spend_bundle=new_spend_bundle,
             additions=new_spend_bundle.additions(),
             removals=new_spend_bundle.removals(),
