@@ -139,6 +139,7 @@ function OfferDetails(props: OfferDetailsProps) {
   const [isAccepting, setIsAccepting] = useState<boolean>(false);
   const [isValidating, setIsValidating] = useState<boolean>(false);
   const [isValid, setIsValid] = useState<boolean>(tradeRecord !== undefined);
+  const [isMissingRequestedAsset, setIsMissingRequestedAsset] = useState<boolean>(false);
   const [checkOfferValidity] = useCheckOfferValidityMutation();
   const [takeOffer] = useTakeOfferMutation();
   let detailRows: OfferDetailsRow[] = [];
@@ -453,6 +454,7 @@ function OfferDetails(props: OfferDetailsProps) {
               summary={summary}
               makerTitle={<Typography variant="h6"><Trans>In exchange for</Trans></Typography>}
               takerTitle={<Typography variant="h6"><Trans>You will receive</Trans></Typography>}
+              setIsMissingRequestedAsset={(isMissing: boolean) => setIsMissingRequestedAsset(isMissing)}
             />
             {imported && (
               <Form methods={methods} onSubmit={handleAcceptOffer}>
@@ -483,7 +485,7 @@ function OfferDetails(props: OfferDetailsProps) {
                       variant="contained"
                       color="primary"
                       type="submit"
-                      disabled={!isValid}
+                      disabled={!isValid || isMissingRequestedAsset}
                       loading={isAccepting}
                     >
                       <Trans>Accept Offer</Trans>

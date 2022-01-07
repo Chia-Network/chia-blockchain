@@ -44,6 +44,7 @@ type CommonDialogProps = {
 }
 
 type OfferShareOfferBinDialogProps = CommonOfferProps & CommonDialogProps;
+type OfferShareHashgreenDialogProps = CommonOfferProps & CommonDialogProps;
 type OfferShareKeybaseDialogProps = CommonOfferProps & CommonDialogProps;
 
 async function writeTempOfferFile(offerData: string, filename: string): Promise<string> {
@@ -117,6 +118,110 @@ async function postToOfferBin(offerData: string, sharePrivately: boolean): Promi
   });
 }
 
+enum HashgreenErrorCodes {
+  OFFERED_AMOUNT_TOO_SMALL = 40021, // The offered amount is too small
+  MARKET_NOT_FOUND = 50029, // Pairing doesn't exist e.g. XCH/RandoCoin
+  OFFER_FILE_EXISTS = 50037, // Offer already shared
+  COINS_ALREADY_COMMITTED = 50039, // Coins in the offer are already committed in another offer
+};
+
+async function postToHashgreen(offerData: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    try {
+      const remote: Remote = (window as any).remote;
+      const request = remote.net.request({
+        method: 'POST',
+        protocol: 'https:',
+        hostname: 'testnet10.hash.green',
+        port: 443,
+        path: '/api/v1/orders',
+      });
+
+      request.setHeader('accept', 'application/json');
+      request.setHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+      request.on('response', (response: IncomingMessage) => {
+        if (response.statusCode === 200) {
+          console.log('Hashgreen upload completed');
+
+          response.on('error', (e: string) => {
+            const error = new Error(`Failed to receive response from Hashgreen: ${e}`);
+            console.error(error);
+            reject(error.message);
+          });
+
+          response.on('data', (chunk: Buffer) => {
+            try {
+              const body = chunk.toString('utf8');
+              const response = JSON.parse(body);
+              const { data } = response;
+              const id = data?.id;
+
+              if (id) {
+                resolve(`https://testnet10.hash.green/orders/${id}`);
+              }
+              else {
+                reject(new Error(`Hashgreen response missing data.id: ${JSON.stringify(response)}`));
+              }
+            }
+            catch (e) {
+              reject(e);
+            }
+          });
+        }
+        else {
+          response.on('data', (chunk: Buffer) => {
+            try {
+              const body = chunk.toString('utf8');
+              const response = JSON.parse(body);
+              const { code, msg, data } = response;
+
+              if (code === HashgreenErrorCodes.OFFER_FILE_EXISTS && data) {
+                resolve(`https://testnet10.hash.green/orders/${data}`);
+              }
+              else {
+                console.log(`Upload failure response: ${body}`);
+                switch (code) {
+                  case HashgreenErrorCodes.MARKET_NOT_FOUND:
+                    reject(new Error(`Hashgreen upload rejected. Pairing is not supported: ${msg}`));
+                    break;
+                  case HashgreenErrorCodes.COINS_ALREADY_COMMITTED:
+                    reject(new Error(`Hashgreen upload rejected. Offer contains coins that are in use by another offer: ${msg}`));
+                    break;
+                  case HashgreenErrorCodes.OFFERED_AMOUNT_TOO_SMALL:
+                    reject(new Error(`Hashgreen upload rejected. Offer amount is too small: ${msg}`));
+                    break;
+                  default:
+                    reject(new Error(`Hashgreen upload rejected: code=${code} msg=${msg} data=${data}`));
+                }
+              }
+            }
+            catch (e) {
+              reject(new Error(`Hashgreen upload failed, failed to read response: ${e}`));
+            }
+          });
+          response.on('end', () => {
+            reject(new Error(`Hashgreen upload failed, statusCode=${response.statusCode}, statusMessage=${response.statusMessage}`));
+          });
+        }
+      });
+
+      request.on('error', (error: any) => {
+        console.error(error);
+        reject(error);
+      });
+
+      // Upload and finalize the request
+      request.write(`offer=${offerData}`);
+      request.end();
+    }
+    catch (error) {
+      console.error(error);
+      reject(error);
+    }
+  });
+}
+
 async function postToKeybase(
   offerRecord: OfferTradeRecord,
   offerData: string,
@@ -133,8 +238,21 @@ async function postToKeybase(
 
   try {
     success = await new Promise((resolve, reject) => {
+      let options: any = {};
+
+      if (process.platform === 'darwin') {
+        const env = Object.assign({}, process.env);
+
+        // Add /usr/local/bin and a direct path to the keybase binary on macOS.
+        // Without these additions, the keybase binary may not be found.
+        env.PATH = `${env.PATH}:/usr/local/bin:/Applications/Keybase.app/Contents/SharedSupport/bin`;
+
+        options['env'] = env;
+      }
+
       child_process.exec(
         `keybase chat upload "${team}" --channel "${channel}" --title "${summary}" "${filePath}"`,
+        options,
         (error, _/*stdout*/, stderr) => {
           if (error) {
             console.error(`Keybase error: ${error}`);
@@ -293,6 +411,135 @@ function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
 }
 
 OfferShareOfferBinDialog.defaultProps = {
+  open: false,
+  onClose: () => {},
+};
+
+function OfferShareHashgreenDialog(props: OfferShareHashgreenDialogProps) {
+  const { offerRecord, offerData, onClose, open } = props;
+  const openExternal = useOpenExternal();
+  const showError = useShowError();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [sharedURL, setSharedURL] = React.useState('');
+
+  function handleClose() {
+    onClose(false);
+  }
+
+  async function handleConfirm() {
+    try {
+      setIsSubmitting(true);
+
+      const url = await postToHashgreen(offerData);
+
+      console.log(`Hashgreen URL: ${url}`);
+      setSharedURL(url);
+    }
+    catch (e) {
+      showError(e);
+    }
+    finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (sharedURL) {
+    return (
+      <Dialog
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+        maxWidth="xs"
+        open={open}
+        onClose={handleClose}
+        fullWidth
+      >
+        <DialogTitle>
+          <Trans>Offer Shared</Trans>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Flex flexDirection="column" gap={3}>
+            <TextField
+              label={<Trans>Hashgreen DEX URL</Trans>}
+              value={sharedURL}
+              variant="filled"
+              InputProps={{
+                readOnly: true,
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <CopyToClipboard value={sharedURL} />
+                  </InputAdornment>
+                ),
+              }}
+              fullWidth
+            />
+            <Flex>
+            <Button
+              color="secondary"
+              variant="contained"
+              onClick={() => openExternal(sharedURL)}
+            >
+              <Trans>View on Hashgreen DEX</Trans>
+            </Button>
+            </Flex>
+          </Flex>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleClose}
+            color="primary"
+            variant="contained"
+          >
+            <Trans>Close</Trans>
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Dialog
+      onClose={handleClose}
+      aria-labelledby="alert-dialog-title"
+      aria-describedby="alert-dialog-description"
+      maxWidth="sm"
+      open={open}
+      fullWidth
+    >
+      <DialogTitle id="alert-dialog-title">
+        <Trans>Share on Hashgreen DEX</Trans>
+      </DialogTitle>
+      <DialogContent dividers>
+        <OfferSummary
+          isMyOffer={true}
+          summary={offerRecord.summary}
+          makerTitle={<Typography variant="subtitle1"><Trans>Your offer:</Trans></Typography>}
+          takerTitle={<Typography variant="subtitle1"><Trans>In exchange for:</Trans></Typography>}
+          rowIndentation={4}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button
+          onClick={handleClose}
+          color="primary"
+          variant="contained"
+          disabled={isSubmitting}
+        >
+          <Trans>Cancel</Trans>
+        </Button>
+        <ButtonLoading
+          onClick={handleConfirm}
+          color="secondary"
+          variant="contained"
+          loading={isSubmitting}
+        >
+          <Trans>Share</Trans>
+        </ButtonLoading>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+OfferShareHashgreenDialog.defaultProps = {
   open: false,
   onClose: () => {},
 };
@@ -496,6 +743,12 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
     );
   }
 
+  async function handleHashgreen() {
+    await openDialog(
+      <OfferShareHashgreenDialog offerRecord={offerRecord} offerData={offerData} />
+    );
+  }
+
   async function handleKeybase() {
     await openDialog(
       <OfferShareKeybaseDialog offerRecord={offerRecord} offerData={offerData} />
@@ -523,8 +776,19 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
           <Flex flexDirection="column" gap={2}>
             <Typography variant="subtitle1">Where would you like to share your offer?</Typography>
             <Flex flexDirection="row" gap={3}>
-              <Button variant="contained" color="default" onClick={handleOfferBin}>
+              <Button
+                variant="contained"
+                color="default"
+                onClick={handleOfferBin}
+              >
                 OfferBin
+              </Button>
+              <Button
+                variant="contained"
+                color="default"
+                onClick={handleHashgreen}
+              >
+                Hashgreen DEX (testnet10 only)
               </Button>
               <Button
                 variant="contained"
@@ -533,12 +797,6 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
               >
                 <Flex flexDirection="column">
                   Keybase
-                </Flex>
-              </Button>
-              <Button variant="contained" color="secondary" disabled={true}>
-                <Flex flexDirection="column">
-                  Reddit
-                  <Typography variant="caption"><Trans>(Coming Soon)</Trans></Typography>
                 </Flex>
               </Button>
             </Flex>

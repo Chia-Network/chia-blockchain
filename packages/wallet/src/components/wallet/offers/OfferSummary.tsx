@@ -27,10 +27,11 @@ type Props = {
   makerTitle: React.ReactElement | string;
   takerTitle: React.ReactElement | string;
   rowIndentation: number;
+  setIsMissingRequestedAsset?: (isMissing: boolean) => void;
 };
 
 export default function OfferSummary(props: Props) {
-  const { isMyOffer, summary, makerTitle, takerTitle, rowIndentation } = props;
+  const { isMyOffer, summary, makerTitle, takerTitle, rowIndentation, setIsMissingRequestedAsset } = props;
   const theme = useTheme();
   const { lookupByAssetId } = useAssetIdName();
   const horizontalPadding = `${theme.spacing(rowIndentation)}px`; // logic borrowed from Flex's gap computation
@@ -43,19 +44,28 @@ export default function OfferSummary(props: Props) {
   const makerExchangeRate = makerAssetInfo && takerAssetInfo ? takerAmount / makerAmount : undefined;
   const takerExchangeRate = makerAssetInfo && takerAssetInfo ? makerAmount / takerAmount : undefined;
 
-  const takerUnknownCATs = useMemo(() => {
+  const [takerUnknownCATs, makerUnknownCATs] = useMemo(() => {
     if (isMyOffer) {
       return [];
     }
 
-    // Identify unknown CATs offered by the maker
-    return makerEntries.filter(([assetId, _]) => lookupByAssetId(assetId) === undefined).map(([assetId, _]) => assetId);
+    // Identify unknown CATs offered/requested by the maker
+    let takerUnknownCATs = makerEntries.filter(([assetId, _]) => lookupByAssetId(assetId) === undefined).map(([assetId, _]) => assetId);
+    let makerUnknownCATs = takerEntries.filter(([assetId, _]) => lookupByAssetId(assetId) === undefined).map(([assetId, _]) => assetId);
+
+    return [takerUnknownCATs, makerUnknownCATs];
   }, [summary]);
 
-  const sections: { title: React.ReactElement | string, entries: [string, number][], unknownCATs: string[] | undefined }[] = [
-    {title: makerTitle, entries: isMyOffer ? makerEntries : takerEntries, unknownCATs: undefined},
-    {title: takerTitle, entries: isMyOffer ? takerEntries : makerEntries, unknownCATs: isMyOffer ? undefined : takerUnknownCATs},
+  const sections: { tradeSide: 'buy' | 'sell', title: React.ReactElement | string, entries: [string, number][], unknownCATs: string[] | undefined }[] = [
+    {tradeSide: isMyOffer ? 'sell' : 'buy', title: makerTitle, entries: isMyOffer ? makerEntries : takerEntries, unknownCATs: isMyOffer ? undefined : makerUnknownCATs},
+    {tradeSide: isMyOffer ? 'buy' : 'sell', title: takerTitle, entries: isMyOffer ? takerEntries : makerEntries, unknownCATs: isMyOffer ? undefined : takerUnknownCATs},
   ];
+
+  if (setIsMissingRequestedAsset) {
+    const isMissingRequestedAsset = isMyOffer ? false : makerUnknownCATs?.length !== 0 ?? false;
+
+    setIsMissingRequestedAsset(isMissingRequestedAsset);
+  }
 
   if (!isMyOffer) {
     sections.reverse();
@@ -63,7 +73,7 @@ export default function OfferSummary(props: Props) {
 
   return (
     <Flex flexDirection="column" flexGrow={1} gap={3}>
-      {sections.map(({title, entries, unknownCATs}, index) => (
+      {sections.map(({tradeSide, title, entries, unknownCATs}, index) => (
         <>
           {title}
           <Box sx={{ paddingLeft: `${horizontalPadding}`, paddingRight: `${horizontalPadding}` }}>
@@ -75,7 +85,12 @@ export default function OfferSummary(props: Props) {
               </Flex>
               {unknownCATs !== undefined && unknownCATs.length > 0 && (
                 <Flex flexDirection="row" gap={1}>
-                  <StyledWarningText variant="caption"><Trans>Warning: Verify that the offered CAT asset IDs match the asset IDs of the tokens you expect to receive.</Trans></StyledWarningText>
+                  {tradeSide === 'sell' && (
+                    <StyledWarningText variant="caption"><Trans>Warning: Verify that the offered CAT asset IDs match the asset IDs of the tokens you expect to receive.</Trans></StyledWarningText>
+                  )}
+                  {tradeSide === 'buy' && (
+                    <StyledWarningText variant="caption">Offer cannot be accepted because you don't possess the requested assets</StyledWarningText>
+                  )}
                 </Flex>
               )}
             </Flex>

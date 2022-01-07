@@ -1,8 +1,10 @@
 import React, { ReactNode } from 'react';
+import { Trans } from '@lingui/macro';
 import { AppBar, Toolbar, Box } from '@material-ui/core';
 import styled from 'styled-components';
 import { Flex, DarkModeToggle, LocaleToggle } from '@chia/core';
 import { defaultLocale, locales } from '../../config/locales';
+import { Shell } from 'electron';
 
 const StyledWrapper = styled(Box)`
   padding-top: ${({ theme }) => `${theme.spacing(3)}px`};
@@ -23,10 +25,27 @@ const StyledBody = styled(Box)`
   flex-grow: 1;
 `;
 
+const SendFeedback = styled.a`
+  align-self: flex-end;
+  padding-right: ${({ theme }) => `${theme.spacing(3)}px`};
+  padding-bottom: ${({ theme }) => `${theme.spacing(3)}px`};
+  color: rgb(128, 160, 194);
+`;
+
 type Props = {
   children?: ReactNode;
   header?: ReactNode;
 };
+
+async function openSendFeedbackURL(): Promise<void> {
+  try {
+    const shell: Shell = (window as any).shell;
+    await shell.openExternal('https://forms.gle/f19UKU52xtWGwQqH9');
+  }
+  catch (e) {
+    console.error(e);
+  }
+}
 
 export default function LayoutHero(props: Props) {
   const { children, header } = props;
@@ -46,6 +65,9 @@ export default function LayoutHero(props: Props) {
           {children}
         </Flex>
       </StyledBody>
+      <SendFeedback onClick={openSendFeedbackURL}>
+        <Trans>Send Feedback</Trans>
+      </SendFeedback>
     </StyledWrapper>
   );
 }
