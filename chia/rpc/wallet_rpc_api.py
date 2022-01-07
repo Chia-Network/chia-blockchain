@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, Set, Any
 
 from blspy import PrivateKey, G1Element
+from clvm_tools import binutils
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
@@ -11,6 +12,8 @@ from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, Pool
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.announcement import Announcement
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -1169,13 +1172,35 @@ class WalletRpcApi:
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
-        coin_announcements: Optional[Set[bytes32]] = None
+        coin_announcements: Optional[Set[Announcement]] = None
         if (
             "coin_announcements" in request
             and request["coin_announcements"] is not None
             and len(request["coin_announcements"]) > 0
         ):
-            coin_announcements = {bytes32.from_hexstr(announcement) for announcement in request["coin_announcements"]}
+            coin_announcements = {
+                Announcement(
+                    bytes32.from_hexstr(announcement["coin_id"]),
+                    bytes(Program.to(binutils.assemble(announcement["message"]))),
+                    hexstr_to_bytes(announcement["morph_bytes"]) if "morph_bytes" in announcement else None,
+                )
+                for announcement in request["coin_announcements"]
+            }
+
+        puzzle_announcements: Optional[Set[Announcement]] = None
+        if (
+            "puzzle_announcements" in request
+            and request["puzzle_announcements"] is not None
+            and len(request["puzzle_announcements"]) > 0
+        ):
+            puzzle_announcements = {
+                Announcement(
+                    bytes32.from_hexstr(announcement["puzzle_hash"]),
+                    bytes(Program.to(binutils.assemble(announcement["message"]))),
+                    hexstr_to_bytes(announcement["morph_bytes"]) if "morph_bytes" in announcement else None,
+                )
+                for announcement in request["puzzle_announcements"]
+            }
 
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
@@ -1186,8 +1211,9 @@ class WalletRpcApi:
                     coins=coins,
                     ignore_max_send_amount=True,
                     primaries=additional_outputs,
-                    coin_announcements_to_consume=coin_announcements,
                     memos=memos_0,
+                    coin_announcements_to_consume=coin_announcements,
+                    puzzle_announcements_to_consume=puzzle_announcements,
                 )
         else:
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
@@ -1197,8 +1223,9 @@ class WalletRpcApi:
                 coins=coins,
                 ignore_max_send_amount=True,
                 primaries=additional_outputs,
-                coin_announcements_to_consume=coin_announcements,
                 memos=memos_0,
+                coin_announcements_to_consume=coin_announcements,
+                puzzle_announcements_to_consume=puzzle_announcements,
             )
         return {"signed_tx": signed_tx.to_json_dict_convenience(self.service.config)}
 
