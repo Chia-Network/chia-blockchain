@@ -227,7 +227,7 @@ class CoinStore:
         coins = set()
         cursor = await self.coin_record_db.execute(
             f'SELECT * from coin_record WHERE'
-            f"AND confirmed_index>=? AND confirmed_index<? "
+            f"confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             (start_height, end_height),
         )
