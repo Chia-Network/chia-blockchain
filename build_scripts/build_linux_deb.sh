@@ -26,7 +26,7 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 echo "Installing npm and electron packagers"
 #npm install electron-packager -g
 #npm install electron-installer-debian -g
-#npm install lerna -g
+npm install lerna -g
 cd npm_linux_deb || exit
 npm ci
 PATH=$(npm bin):$PATH
