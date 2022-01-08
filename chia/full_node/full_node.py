@@ -28,6 +28,7 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_manager import MempoolManager
+from chia.full_node.prometheus import Prometheus
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import SyncStore
 from chia.full_node.weight_proof import WeightProofHandler
@@ -95,6 +96,7 @@ class FullNode:
     timelord_lock: asyncio.Lock
     initialized: bool
     weight_proof_handler: Optional[WeightProofHandler]
+    prometheus: Prometheus
     _ui_tasks: Set[asyncio.Task]
     _blockchain_lock_queue: LockQueue
     _blockchain_lock_ultra_priority: LockClient
@@ -140,6 +142,7 @@ class FullNode:
         self.peer_sub_counter: Dict[bytes32, int] = {}  # Peer ID: int (subscription count)
         mkdir(self.db_path.parent)
         self._transaction_queue_task = None
+        self.prometheus = Prometheus(config, self.log)
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -250,6 +253,10 @@ class FullNode:
                     sanitize_weight_proof_only,
                 )
             )
+
+        await self.prometheus.register_metrics()
+        await self.prometheus.start_server()
+
         self.initialized = True
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.start())

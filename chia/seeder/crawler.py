@@ -142,7 +142,7 @@ class Crawler:
     async def _start(self):
         self.task = asyncio.create_task(self.crawl())
 
-        # Start prometheus exporter server
+        # Start prometheus exporter server for the crawler
         if self.start_prometheus_server:
             self.log.error(f"Starting crawler prometheus server on port {self.prometheus_port}")
             start_http_server(self.prometheus_port)
