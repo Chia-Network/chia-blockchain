@@ -38,6 +38,8 @@ class Crawler:
     root_path: Path
     peer_count: int
     with_peak: set
+    minimum_version_count: int
+    start_prometheus_server: bool
     prometheus_port: int
 
     def __init__(
@@ -73,14 +75,28 @@ class Crawler:
         self.bootstrap_peers = config["bootstrap_peers"]
         self.minimum_height = config["minimum_height"]
         self.other_peers_port = config["other_peers_port"]
+        self.versions = {}
+        if "minimum_version_count" in self.config and self.config["minimum_version_count"] > 0:
+            self.minimum_version_count = self.config["minimum_version_count"]
+        else:
+            self.minimum_version_count = 100
+
+        if "crawler_prometheus" in config and "start_prometheus_server" in config["crawler_prometheus"]:
+            self.start_prometheus_server = config["crawler_prometheus"]["start_prometheus_server"]
+        else:
+            self.start_prometheus_server = True
+
         if "crawler_prometheus" in config and "prometheus_exporter_port" in config["crawler_prometheus"]:
             self.prometheus_port = config["crawler_prometheus"]["prometheus_exporter_port"]
         else:
             self.prometheus_port = DEFAULT_PROMETHEUS_PORT
+
+        # Prometheus Metrics
         self.g_total_5d = Gauge
         self.g_reliable_nodes = Gauge
         self.g_ipv4_5d = Gauge
         self.g_ipv6_5d = Gauge
+        self.g_version_buckets = Gauge
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -127,7 +143,9 @@ class Crawler:
         self.task = asyncio.create_task(self.crawl())
 
         # Start prometheus exporter server
-        start_http_server(self.prometheus_port)
+        if self.start_prometheus_server:
+            self.log.error(f"Starting crawler prometheus server on port {self.prometheus_port}")
+            start_http_server(self.prometheus_port)
 
     async def init_metrics(self):
         # Set up crawler metrics
@@ -147,6 +165,11 @@ class Crawler:
             'chia_crawler_ipv6_nodes_5_days',
             'IPv6 addresses gossiped with timestamp in the last 5 days with respond_peers messages'
         )
+        self.g_version_buckets = Gauge(
+            'chia_crawler_version_bucket',
+            'Number of peers on a particular version',
+            ['version']
+        )
 
     async def update_metric_values(self):
         self.g_reliable_nodes.set(self.crawl_store.get_reliable_peers())
@@ -160,6 +183,11 @@ class Crawler:
                 continue
         self.g_ipv6_5d.set(ipv6_addresses_count)
         self.g_ipv4_5d.set(len(self.best_timestamp_per_peer) - ipv6_addresses_count)
+
+        # Add version buckets
+        for version, count in sorted(self.versions.items(), key=lambda kv: kv[1], reverse=True):
+            if count >= self.minimum_version_count:
+                self.g_version_buckets.labels(version).set(count)
 
     async def crawl(self):
         try:
@@ -270,11 +298,11 @@ class Crawler:
                     for host, timestamp in self.best_timestamp_per_peer.items()
                     if timestamp >= now - 5 * 24 * 3600
                 }
-                versions = {}
+                self.versions = {}
                 for host, version in self.host_to_version.items():
-                    if version not in versions:
-                        versions[version] = 0
-                    versions[version] += 1
+                    if version not in self.versions:
+                        self.versions[version] = 0
+                    self.versions[version] += 1
                 self.version_cache = []
                 self.peers_retrieved = []
 
@@ -340,12 +368,8 @@ class Crawler:
                 )
                 self.log.error(f"Total IPv6 nodes reachable in the last 5 days: {ipv6_available_peers}.")
                 self.log.error("Version distribution among reachable in the last 5 days (at least 100 nodes):")
-                if "minimum_version_count" in self.config and self.config["minimum_version_count"] > 0:
-                    minimum_version_count = self.config["minimum_version_count"]
-                else:
-                    minimum_version_count = 100
-                for version, count in sorted(versions.items(), key=lambda kv: kv[1], reverse=True):
-                    if count >= minimum_version_count:
+                for version, count in sorted(self.versions.items(), key=lambda kv: kv[1], reverse=True):
+                    if count >= self.minimum_version_count:
                         self.log.error(f"Version: {version} - Count: {count}")
                 self.log.error(f"Banned addresses in the DB: {banned_peers}")
                 self.log.error(f"Temporary ignored addresses in the DB: {ignored_peers}")

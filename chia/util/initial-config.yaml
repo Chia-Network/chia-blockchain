@@ -136,7 +136,6 @@ seeder:
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
   other_peers_port: 8444
 
-
   crawler_prometheus:
     # If True, starts a prometheus exporter for private metrics from the crawler
     start_prometheus_server: True
