@@ -53,6 +53,7 @@ class FullNodeRpcApi:
             "/get_network_info": self.get_network_info,
             "/get_recent_signage_point_or_eos": self.get_recent_signage_point_or_eos,
             # Coins
+            "/get_coin_records_in_range": self.get_coin_records_in_range,
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
             "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,
             "/get_coin_record_by_name": self.get_coin_record_by_name,
@@ -445,6 +446,24 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
 
+        return {"coin_records": coin_records}
+
+    async def get_coin_records_in_range(self, request: Dict) -> Optional[Dict]:
+        """
+        Retrieves the coins in a range of block height
+        """
+        if not "start_height" in request:
+            raise ValueError("start_height not in request")
+        if not "end_height" in request:
+            raise ValueError("end_height not in request")
+        kwargs: Dict[str, Any] = {
+            "start_height": uint32(request["start_height"]),
+            "end_height": uint32(request["end_height"]),
+        }
+        if "include_spent_coins" in request:
+            kwargs["include_spent_coins"] = request["include_spent_coins"]
+
+        coin_records = await self.service.blockchain.coin_store.get_coin_records_in_range(**kwargs)
         return {"coin_records": coin_records}
 
     async def get_coin_records_by_puzzle_hashes(self, request: Dict) -> Optional[Dict]:
