@@ -130,20 +130,22 @@ logging: &logging
   log_syslog_host: "localhost"  # Send logging messages to a remote or local Unix syslog
   log_syslog_port: 514  # UDP port of the remote or local Unix syslog
 
-crawler:
-  # If True, starts a prometheus exporter for private metrics
-  start_prometheus_server: True
-  prometheus_exporter_port: 9919
-
 seeder:
   # The fake full node used for crawling will run on this port.
   port: 8444
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
   other_peers_port: 8444
 
-  # If True, starts a prometheus exporter for private metrics
-  start_prometheus_server: True
-  prometheus_exporter_port: 9920
+
+  crawler_prometheus:
+    # If True, starts a prometheus exporter for private metrics from the crawler
+    start_prometheus_server: True
+    prometheus_exporter_port: 9919
+
+  seeder_prometheus:
+    # If True, starts a prometheus exporter for private metrics from the DNS Seeder
+    start_prometheus_server: True
+    prometheus_exporter_port: 9920
 
   # Path to crawler DB. If empty, will use $CHIA_ROOT/crawler.db
   crawler_db_path: ""

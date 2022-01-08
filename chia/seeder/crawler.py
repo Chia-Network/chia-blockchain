@@ -5,6 +5,7 @@ import traceback
 import ipaddress
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
+from prometheus_client import start_http_server, Gauge
 
 import aiosqlite
 
@@ -21,6 +22,9 @@ from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 
+# Default port for prometheus exporter
+DEFAULT_PROMETHEUS_PORT = 9919
+
 
 class Crawler:
     sync_store: Any
@@ -34,6 +38,7 @@ class Crawler:
     root_path: Path
     peer_count: int
     with_peak: set
+    prometheus_port: int
 
     def __init__(
         self,
@@ -68,6 +73,10 @@ class Crawler:
         self.bootstrap_peers = config["bootstrap_peers"]
         self.minimum_height = config["minimum_height"]
         self.other_peers_port = config["other_peers_port"]
+        if "crawler_prometheus" in config and "prometheus_exporter_port" in config["crawler_prometheus"]:
+            self.prometheus_port = config["crawler_prometheus"]["prometheus_exporter_port"]
+        else:
+            self.prometheus_port = DEFAULT_PROMETHEUS_PORT
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -113,7 +122,28 @@ class Crawler:
     async def _start(self):
         self.task = asyncio.create_task(self.crawl())
 
+        # Start prometheus exporter server
+        start_http_server(self.prometheus_port)
+
     async def crawl(self):
+        # Set up crawler metrics
+        g_total_5d = Gauge(
+            'chia_crawler_total_nodes_5_days',
+            'Total nodes gossiped with timestamp in the last 5 days with respond_peers messages'
+        )
+        g_reliable_nodes = Gauge(
+            'chia_crawler_reliable_nodes',
+            'High quality reachable nodes, used by DNS introducer in replies'
+        )
+        g_ipv4_5d = Gauge(
+            'chia_crawler_ipv4_nodes_5_days',
+            'IPv4 addresses gossiped with timestamp in the last 5 days with respond_peers messages'
+        )
+        g_ipv6_5d = Gauge(
+            'chia_crawler_ipv6_nodes_5_days',
+            'IPv6 addresses gossiped with timestamp in the last 5 days with respond_peers messages'
+        )
+
         try:
             self.connection = await aiosqlite.connect(self.db_path)
             self.crawl_store = await CrawlStore.create(self.connection)
@@ -142,6 +172,20 @@ class Crawler:
 
             self.host_to_version, self.handshake_time = self.crawl_store.load_host_to_version()
             self.best_timestamp_per_peer = self.crawl_store.load_best_peer_reliability()
+
+            # Set initial metric values
+            g_reliable_nodes.set(self.crawl_store.get_reliable_peers())
+            g_total_5d.set(len(self.best_timestamp_per_peer))
+            ipv6_addresses_count = 0
+            for host in self.best_timestamp_per_peer.keys():
+                try:
+                    _ = ipaddress.IPv6Address(host)
+                    ipv6_addresses_count += 1
+                except ValueError:
+                    continue
+            g_ipv6_5d.set(ipv6_addresses_count)
+            g_ipv4_5d.set(len(self.best_timestamp_per_peer) - ipv6_addresses_count)
+
             while True:
                 self.with_peak = set()
                 peers_to_crawl = await self.crawl_store.get_peers_to_crawl(25000, 250000)
@@ -255,6 +299,7 @@ class Crawler:
                 # Periodically print detailed stats.
                 reliable_peers = self.crawl_store.get_reliable_peers()
                 self.log.error(f"High quality reachable nodes, used by DNS introducer in replies: {reliable_peers}")
+                g_reliable_nodes.set(reliable_peers)
                 banned_peers = self.crawl_store.get_banned_peers()
                 ignored_peers = self.crawl_store.get_ignored_peers()
                 available_peers = len(self.host_to_version)
@@ -271,10 +316,13 @@ class Crawler:
                     "IPv4 addresses gossiped with timestamp in the last 5 days with respond_peers messages: "
                     f"{addresses_count - ipv6_addresses_count}."
                 )
+                g_total_5d.set(addresses_count)
+                g_ipv4_5d.set(addresses_count - ipv6_addresses_count)
                 self.log.error(
                     "IPv6 addresses gossiped with timestamp in the last 5 days with respond_peers messages: "
                     f"{ipv6_addresses_count}."
                 )
+                g_ipv6_5d.set(ipv6_addresses_count)
                 ipv6_available_peers = 0
                 for host in self.host_to_version.keys():
                     try:
