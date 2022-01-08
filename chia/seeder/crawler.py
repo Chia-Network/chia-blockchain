@@ -22,7 +22,7 @@ from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 
-# Default port for prometheus exporter
+# Default port for the crawler prometheus exporter
 DEFAULT_PROMETHEUS_PORT = 9919
 
 

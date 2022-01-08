@@ -4,7 +4,9 @@ import logging
 import random
 import signal
 import traceback
-from typing import Any, List
+from pathlib import Path
+from typing import Any, Dict, List
+from prometheus_client import start_http_server, Counter
 
 import aiosqlite
 from dnslib import A, AAAA, SOA, NS, MX, CNAME, RR, DNSRecord, QTYPE, DNSHeader
@@ -16,6 +18,9 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 
 SERVICE_NAME = "seeder"
 log = logging.getLogger(__name__)
+
+# Default port for the seeder prometheus exporter
+DEFAULT_PROMETHEUS_PORT = 9920
 
 # DNS snippet taken from: https://gist.github.com/pklaus/b5a7876d4d2cf7271873
 
@@ -69,17 +74,38 @@ class DNSServer:
     lock: asyncio.Lock
     pointer: int
     crawl_db: aiosqlite.Connection
+    start_prometheus_server: bool
+    prometheus_port: int
 
-    def __init__(self):
+    def __init__(self, config: Dict, root_path: Path):
         self.reliable_peers_v4 = []
         self.reliable_peers_v6 = []
         self.lock = asyncio.Lock()
         self.pointer_v4 = 0
         self.pointer_v6 = 0
-        db_path_replaced: str = "crawler.db"
-        root_path = DEFAULT_ROOT_PATH
-        self.db_path = path_from_root(root_path, db_path_replaced)
+
+        if "crawler_db_path" in config and config["crawler_db_path"] != "":
+            path = Path(config["crawler_db_path"])
+            self.db_path = path.resolve()
+        else:
+            db_path_replaced: str = "crawler.db"
+            self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
+
+        if "seeder_prometheus" in config and "start_prometheus_server" in config["seeder_prometheus"]:
+            self.start_prometheus_server = config["seeder_prometheus"]["start_prometheus_server"]
+        else:
+            self.start_prometheus_server = True
+
+        if "seeder_prometheus" in config and "prometheus_exporter_port" in config["seeder_prometheus"]:
+            self.prometheus_port = config["seeder_prometheus"]["prometheus_exporter_port"]
+        else:
+            self.prometheus_port = DEFAULT_PROMETHEUS_PORT
+
+        self.c_handled_requests = Counter(
+            'chia_seeder_handled_requests',
+            'total requests handled by this server since starting'
+        )
 
     async def start(self):
         # self.crawl_db = await aiosqlite.connect(self.db_path)
@@ -93,6 +119,11 @@ class DNSServer:
             lambda: EchoServerProtocol(self.dns_response), local_addr=("0.0.0.0", 53)
         )
         self.reliable_task = asyncio.create_task(self.periodically_get_reliable_peers())
+
+        # Start prometheus exporter server
+        if self.start_prometheus_server:
+            log.error(f"Starting {SERVICE_NAME} prometheus server on port {self.prometheus_port}")
+            start_http_server(self.prometheus_port)
 
     async def periodically_get_reliable_peers(self):
         sleep_interval = 0
@@ -222,13 +253,14 @@ class DNSServer:
 
                 reply.add_auth(RR(rname=D, rtype=QTYPE.SOA, rclass=1, ttl=TTL, rdata=soa_record))
 
+            self.c_handled_requests.inc()
             return reply.pack()
         except Exception as e:
             log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
 
-async def serve_dns():
-    dns_server = DNSServer()
+async def serve_dns(config: Dict, root_path: Path):
+    dns_server = DNSServer(config, root_path)
     await dns_server.start()
 
     # TODO: Make this cleaner?
@@ -278,7 +310,7 @@ def main():
         log.info("signal handlers unsupported")
 
     try:
-        loop.run_until_complete(serve_dns())
+        loop.run_until_complete(serve_dns(config, root_path))
     finally:
         loop.close()
 
