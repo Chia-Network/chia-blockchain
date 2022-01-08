@@ -29,10 +29,12 @@ echo "Installing npm and electron packagers"
 #npm install lerna -g
 #npm uninstall lerna -g
 echo "  Check npm info"
+echo ls -l ~/.npm/_cacache/content-v2/sha512/f1/97
 ls -l ~/.npm/_cacache/content-v2/sha512/f1/97
 npm cache clear --force
 cd npm_linux_deb || exit
 npm ci
+echo ls -l ~/.npm/_cacache/content-v2/sha512/f1/97
 ls -l ~/.npm/_cacache/content-v2/sha512/f1/97
 PATH=$(npm bin):$PATH
 cd .. || exit
@@ -57,6 +59,8 @@ cd chia-blockchain-gui || exit
 
 echo "npm build"
 lerna clean -y
+echo ls -l ~/.npm/_cacache/content-v2/sha512/f1/97
+ls -l ~/.npm/_cacache/content-v2/sha512/f1/97
 npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
 # npm audit fix
