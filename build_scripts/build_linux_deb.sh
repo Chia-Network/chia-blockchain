@@ -29,10 +29,9 @@ echo "Installing npm and electron packagers"
 #npm install lerna -g
 #npm uninstall lerna -g
 echo "  Check npm info"
-node -v
-npm -v
 ls -l ~/.npm/_cacache/content-v2/sha512/f1/97
 rm -rf ~/.npm/_cacache/content-v2/sha512/f1/97
+npm cache clear --force
 cd npm_linux_deb || exit
 npm ci
 ls -l ~/.npm/_cacache/content-v2/sha512/f1/97
