@@ -130,11 +130,21 @@ logging: &logging
   log_syslog_host: "localhost"  # Send logging messages to a remote or local Unix syslog
   log_syslog_port: 514  # UDP port of the remote or local Unix syslog
 
+crawler:
+  # If True, starts a prometheus exporter for private metrics
+  start_prometheus_server: True
+  prometheus_exporter_port: 9919
+
 seeder:
   # The fake full node used for crawling will run on this port.
   port: 8444
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
   other_peers_port: 8444
+
+  # If True, starts a prometheus exporter for private metrics
+  start_prometheus_server: True
+  prometheus_exporter_port: 9920
+
   # Path to crawler DB. If empty, will use $CHIA_ROOT/crawler.db
   crawler_db_path: ""
   # Peers used for the initial run.
@@ -168,6 +178,11 @@ harvester:
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8560
+
+  # If True, starts a prometheus exporter for private metrics
+  start_prometheus_server: True
+  prometheus_exporter_port: 9916
+
   num_threads: 30
   plots_refresh_parameter:
     interval_seconds: 120 # The interval in seconds to refresh the plot file manager
@@ -225,6 +240,10 @@ farmer:
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8559
+
+  # If True, starts a prometheus exporter for private metrics
+  start_prometheus_server: True
+  prometheus_exporter_port: 9915
 
   # To send a share to a pool, a proof of space must have required_iters less than this number
   pool_share_threshold: 1000
@@ -330,6 +349,10 @@ full_node:
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8555
+
+  # If True, starts a prometheus exporter for private metrics
+  start_prometheus_server: True
+  prometheus_exporter_port: 9914
 
   # Use UPnP to attempt to allow other full nodes to reach your node behind a gateway
   enable_upnp: True
@@ -459,6 +482,10 @@ wallet:
   num_sync_batches: 50
   initial_num_public_keys: 100
   initial_num_public_keys_new_wallet: 5
+
+  # If True, starts a prometheus exporter for private metrics
+  start_prometheus_server: True
+  prometheus_exporter_port: 9917
 
   full_node_peer:
     host: *self_hostname
