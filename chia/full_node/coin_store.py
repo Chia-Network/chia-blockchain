@@ -226,7 +226,7 @@ class CoinStore:
     ) -> List[CoinRecord]:
         coins = set()
         cursor = await self.coin_record_db.execute(
-            f'SELECT * from coin_record WHERE'
+            f'SELECT * from coin_record WHERE '
             f"confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             (start_height, end_height),
