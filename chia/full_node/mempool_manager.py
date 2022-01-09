@@ -17,7 +17,7 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict, get_name_puzzle_conditions
 from chia.full_node.pending_tx_cache import PendingTxCache
-from chia.full_node.prometheus import Prometheus
+from chia.full_node.prometheus_full_node import PrometheusFullNode
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -78,7 +78,7 @@ def validate_clvm_and_signature(
 
 
 class MempoolManager:
-    def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants, prometheus: Prometheus):
+    def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants, prometheus: PrometheusFullNode):
         self.constants: ConsensusConstants = consensus_constants
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
         self.prometheus = prometheus
