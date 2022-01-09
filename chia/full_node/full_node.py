@@ -1567,7 +1567,7 @@ class FullNode:
 
         if block.transactions_info is not None:
             percent_full = round(100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3)
-            percent_full_str = ", percent full: " + str(percent_full) + "%"
+            percent_full_str = f", percent full: {percent_full}%"
             self.prometheus.block_percent_full.set(percent_full)
         else:
             percent_full_str = ""
@@ -1730,7 +1730,7 @@ class FullNode:
                 percent_full = round(
                     100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3
                 )
-                percent_full_str = ", percent full: " + str(percent_full) + "%"
+                percent_full_str = f", percent full: {percent_full}%"
                 self.prometheus.block_percent_full.set(percent_full)
             else:
                 percent_full_str = ""
