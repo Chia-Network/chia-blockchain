@@ -27,7 +27,6 @@ class Prometheus:
         self.height = self.new_gauge('height', "this node's current peak height")
         self.compact_blocks = self.new_gauge('compact_blocks', 'number of fully compact blocks in the DB')
         self.uncompact_blocks = self.new_gauge('uncompact_blocks', 'number of uncompact blocks in the DB')
-        # @TODO
         self.netspace_mib = self.new_gauge('netspace_mib', 'Estimated netspace in MiB')
         self.difficulty = self.new_gauge('difficulty', 'Current difficulty')
         self.mempool_size = self.new_gauge('mempool_size', 'Number of spends in the mempool')

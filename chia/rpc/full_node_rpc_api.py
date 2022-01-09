@@ -15,6 +15,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.netspace import estimate_network_space_bytes
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
@@ -410,18 +411,7 @@ class FullNodeRpcApi:
         older_block = await self.service.block_store.get_block_record(older_block_bytes)
         if older_block is None:
             raise ValueError("Newer block not found")
-        delta_weight = newer_block.weight - older_block.weight
-
-        delta_iters = newer_block.total_iters - older_block.total_iters
-        weight_div_iters = delta_weight / delta_iters
-        additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR
-        eligible_plots_filter_multiplier = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
-        network_space_bytes_estimate = (
-            UI_ACTUAL_SPACE_CONSTANT_FACTOR
-            * weight_div_iters
-            * additional_difficulty_constant
-            * eligible_plots_filter_multiplier
-        )
+        network_space_bytes_estimate = estimate_network_space_bytes(newer_block, older_block, self.service.constants)
         return {"space": uint128(int(network_space_bytes_estimate))}
 
     async def get_coin_records_by_puzzle_hash(self, request: Dict) -> Optional[Dict]:

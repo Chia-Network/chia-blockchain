@@ -67,6 +67,7 @@ from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.netspace import estimate_network_space_bytes
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
@@ -1392,6 +1393,15 @@ class FullNode:
             self.prometheus.compact_blocks.set(await self.block_store.count_compactified_blocks())
             self.prometheus.uncompact_blocks.set(await self.block_store.count_uncompactified_blocks())
             self.prometheus.hint_count.set(await self.hint_store.count_hints())
+
+            # Figure out current estimated netspace
+            older_block_height = max(0, record.height - int(4608))
+            older_block_header_hash = self.blockchain.height_to_hash(uint32(older_block_height))
+            older_block = await self.block_store.get_block_record(older_block_header_hash)
+            estimated_netspace_bytes = estimate_network_space_bytes(record, older_block, self.constants)
+            # Converting to MiB because prometheus won't currently handle numbers large enough to deal in bytes
+            netspace_mib_estimate = estimated_netspace_bytes / 1048576
+            self.prometheus.netspace_mib.set(netspace_mib_estimate)
 
     async def respond_block(
         self,
