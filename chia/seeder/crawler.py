@@ -132,7 +132,7 @@ class Crawler:
         ipv6_addresses_count = 0
         for host in self.best_timestamp_per_peer.keys():
             try:
-                _ = ipaddress.IPv6Address(host)
+                ipaddress.IPv6Address(host)
                 ipv6_addresses_count += 1
             except ValueError:
                 continue
