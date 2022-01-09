@@ -1,19 +1,19 @@
+from dataclasses import dataclass
 import logging
 from typing import Tuple
 from prometheus_client import start_http_server, Counter, Gauge
 
 
-class Prometheus:
+@dataclass
+class PrometheusServer:
     service_name: str
     server_enabled: bool
     server_port: int
     log: logging.Logger
 
-    def __init__(self, service_name: str, server_enabled: bool, server_port: int, log: logging.Logger):
-        self.service_name = service_name
-        self.log = log
-        self.server_enabled = server_enabled
-        self.server_port = server_port
+    @classmethod
+    def create(cls, service_name: str, server_enabled: bool, server_port: int, log: logging.Logger):
+        return cls(service_name=service_name, server_enabled=server_enabled, server_port=server_port, log=log)
 
     async def start_server(self):
         # Start prometheus exporter server for the full node

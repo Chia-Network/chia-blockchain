@@ -77,7 +77,7 @@ class Crawler:
         else:
             self.minimum_version_count = 100
 
-        self.prometheus = PrometheusCrawler(config, self.log)
+        self.prometheus = PrometheusCrawler.create(config, self.log)
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -124,7 +124,7 @@ class Crawler:
         self.task = asyncio.create_task(self.crawl())
 
         # Starts the prometheus server if enabled in config
-        await self.prometheus.start_server()
+        await self.prometheus.server.start_server()
 
     async def update_metric_values(self):
         self.prometheus.reliable_nodes.set(self.crawl_store.get_reliable_peers())

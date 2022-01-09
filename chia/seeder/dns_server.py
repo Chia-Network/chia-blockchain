@@ -88,7 +88,7 @@ class DNSServer:
             self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
 
-        self.prometheus = PrometheusSeeder(config, log)
+        self.prometheus = PrometheusSeeder.create(config, log)
 
     async def start(self):
         # self.crawl_db = await aiosqlite.connect(self.db_path)
@@ -104,7 +104,7 @@ class DNSServer:
         self.reliable_task = asyncio.create_task(self.periodically_get_reliable_peers())
 
         # Starts the prometheus server if enabled in config
-        await self.prometheus.start_server()
+        await self.prometheus.server.start_server()
 
     async def periodically_get_reliable_peers(self):
         sleep_interval = 0

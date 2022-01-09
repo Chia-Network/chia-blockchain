@@ -143,7 +143,7 @@ class FullNode:
         self.peer_sub_counter: Dict[bytes32, int] = {}  # Peer ID: int (subscription count)
         mkdir(self.db_path.parent)
         self._transaction_queue_task = None
-        self.prometheus = PrometheusFullNode(config, self.log)
+        self.prometheus = PrometheusFullNode.create(config, self.log)
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -256,7 +256,7 @@ class FullNode:
             )
 
         # Starts the prometheus server if enabled in config
-        await self.prometheus.start_server()
+        await self.prometheus.server.start_server()
 
         self.initialized = True
         if self.full_node_peers is not None:
@@ -1390,7 +1390,7 @@ class FullNode:
 
         # Update certain prometheus values that we can't update with a known value in real time elsewhere
         # Skip updating these values (which result in a few DB queries) if the prometheus server is not enabled
-        if self.prometheus.server_enabled:
+        if self.prometheus.server.server_enabled:
             self.prometheus.compact_blocks.set(await self.block_store.count_compactified_blocks())
             self.prometheus.uncompact_blocks.set(await self.block_store.count_uncompactified_blocks())
             self.prometheus.hint_count.set(await self.hint_store.count_hints())
