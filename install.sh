@@ -130,7 +130,7 @@ find_python() {
 				if [ "$BEST_VERSION" = "3" ]; then
 					PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
 					if [[ "$PY3_VERSION" =~ 3.11.* ]]; then
-						echo "Chia requires Python version <= 3.11.0"
+						echo "Chia requires Python version < 3.11.0"
 						echo "Current Python version = $PY3_VERSION"
 						exit 1
 					fi
