@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 import aiosqlite
 

@@ -313,31 +313,6 @@ async def test_inserting_duplicate_key_fails(
 
 @pytest.mark.asyncio()
 async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: bytes32) -> None:
-    expected = Program.to(
-        (
-            (
-                (
-                    (b"\x00", b"\x10\x00"),
-                    (b"\x01", b"\x11\x01"),
-                ),
-                (
-                    (b"\x02", b"\x12\x02"),
-                    (b"\x03", b"\x13\x03"),
-                ),
-            ),
-            (
-                (
-                    (b"\x04", b"\x14\x04"),
-                    (b"\x05", b"\x15\x05"),
-                ),
-                (
-                    (b"\x06", b"\x16\x06"),
-                    (b"\x07", b"\x17\x07"),
-                ),
-            ),
-        ),
-    )
-
     for n in [0, 4, 2, 6, 1, 3, 5, 7]:
         await data_store.autoinsert(
             key=bytes([n]),
@@ -354,31 +329,6 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
 @pytest.mark.asyncio()
 async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
-
-    expected = Program.to(
-        (
-            (
-                (
-                    (b"\x00", b"\x10\x00"),
-                    (b"\x01", b"\x11\x01"),
-                ),
-                (
-                    (b"\x02", b"\x12\x02"),
-                    (b"\x03", b"\x13\x03"),
-                ),
-            ),
-            (
-                (
-                    (b"\x04", b"\x14\x04"),
-                    (b"\x05", b"\x15\x05"),
-                ),
-                (
-                    (b"\x06", b"\x16\x06"),
-                    (b"\x07", b"\x17\x07"),
-                ),
-            ),
-        ),
-    )
 
     ns = [1, 5]
 
