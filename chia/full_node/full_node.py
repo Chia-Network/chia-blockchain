@@ -1396,13 +1396,20 @@ class FullNode:
             self.prometheus.hint_count.set(await self.hint_store.count_hints())
 
             # Figure out current estimated netspace
-            older_block_height = max(0, record.height - int(4608))
-            older_block_header_hash = self.blockchain.height_to_hash(uint32(older_block_height))
-            older_block = await self.block_store.get_block_record(older_block_header_hash)
-            estimated_netspace_bytes = estimate_network_space_bytes(record, older_block, self.constants)
-            # Converting to MiB because prometheus won't currently handle numbers large enough to deal in bytes
-            netspace_mib_estimate = estimated_netspace_bytes / 1048576
-            self.prometheus.netspace_mib.set(netspace_mib_estimate)
+            try:
+                older_block_height = max(0, record.height - int(4608))
+                older_block_header_hash = self.blockchain.height_to_hash(uint32(older_block_height))
+                if older_block_header_hash is None:
+                    raise ValueError(f"Older block hash not found for height {older_block_height}")
+                older_block = await self.block_store.get_block_record(older_block_header_hash)
+                if older_block is None:
+                    raise ValueError("Older block not found")
+                estimated_netspace_bytes = estimate_network_space_bytes(record, older_block, self.constants)
+                # Converting to MiB because prometheus won't currently handle numbers large enough to deal in bytes
+                netspace_mib_estimate = estimated_netspace_bytes / 1048576
+                self.prometheus.netspace_mib.set(netspace_mib_estimate)
+            except ValueError as e:
+                self.log.info(f"Unable to determine current netspace for metrics: {e}.")
 
     async def respond_block(
         self,
@@ -1560,11 +1567,7 @@ class FullNode:
 
         if block.transactions_info is not None:
             percent_full = round(100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3)
-            percent_full_str = (
-                ", percent full: "
-                + str(percent_full)
-                + "%"
-            )
+            percent_full_str = ", percent full: " + str(percent_full) + "%"
             self.prometheus.block_percent_full.set(percent_full)
         else:
             percent_full_str = ""
@@ -1724,12 +1727,10 @@ class FullNode:
             )
         else:
             if block.transactions_info is not None:
-                percent_full = round(100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3)
-                percent_full_str = (
-                    ", percent full: "
-                    + str(percent_full)
-                    + "%"
+                percent_full = round(
+                    100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3
                 )
+                percent_full_str = ", percent full: " + str(percent_full) + "%"
                 self.prometheus.block_percent_full.set(percent_full)
             else:
                 percent_full_str = ""

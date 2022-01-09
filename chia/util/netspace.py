@@ -11,10 +11,10 @@ def estimate_network_space_bytes(newer_block: BlockRecord, older_block: BlockRec
     additional_difficulty_constant = constants.DIFFICULTY_CONSTANT_FACTOR
     eligible_plots_filter_multiplier = 2 ** constants.NUMBER_ZERO_BITS_PLOT_FILTER
     network_space_bytes_estimate = (
-            UI_ACTUAL_SPACE_CONSTANT_FACTOR
-            * weight_div_iters
-            * additional_difficulty_constant
-            * eligible_plots_filter_multiplier
+        UI_ACTUAL_SPACE_CONSTANT_FACTOR
+        * weight_div_iters
+        * additional_difficulty_constant
+        * eligible_plots_filter_multiplier
     )
 
     return network_space_bytes_estimate

@@ -555,10 +555,7 @@ class MempoolManager:
         spends = len(self.mempool.spends)
         total_cost = self.mempool.total_mempool_cost
         min_fee = self.mempool.get_min_fee_rate(100000)
-        log.info(
-            f"Size of mempool: {spends} spends, cost: {total_cost} "
-            f"minimum fee to get in: {min_fee}"
-        )
+        log.info(f"Size of mempool: {spends} spends, cost: {total_cost} " f"minimum fee to get in: {min_fee}")
         self.prometheus.mempool_size.set(spends)
         self.prometheus.mempool_cost.set(total_cost)
         self.prometheus.mempool_min_fee.set(min_fee)

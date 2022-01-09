@@ -71,7 +71,7 @@ class Crawler:
         self.bootstrap_peers = config["bootstrap_peers"]
         self.minimum_height = config["minimum_height"]
         self.other_peers_port = config["other_peers_port"]
-        self.versions = {}
+        self.versions: Dict[str, int] = {}
         if "minimum_version_count" in self.config and self.config["minimum_version_count"] > 0:
             self.minimum_version_count = self.config["minimum_version_count"]
         else:

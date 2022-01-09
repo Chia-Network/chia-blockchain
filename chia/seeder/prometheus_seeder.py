@@ -8,7 +8,6 @@ DEFAULT_PROMETHEUS_PORT = 9920
 
 
 class PrometheusSeeder(Prometheus):
-
     def __init__(self, config: Dict, log: logging.Logger):
         if "seeder_prometheus" in config and "start_prometheus_server" in config["seeder_prometheus"]:
             enabled = config["seeder_prometheus"]["start_prometheus_server"]
@@ -23,6 +22,5 @@ class PrometheusSeeder(Prometheus):
         super().__init__("seeder", enabled, port, log)
 
         self.handled_requests = self.new_counter(
-            'handled_requests',
-            'total requests handled by this server since starting'
+            "handled_requests", "total requests handled by this server since starting"
         )
