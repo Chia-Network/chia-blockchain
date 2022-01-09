@@ -5,7 +5,6 @@ import traceback
 import ipaddress
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
-from prometheus_client import start_http_server, Gauge
 
 import aiosqlite
 
@@ -15,15 +14,13 @@ from chia.full_node.coin_store import CoinStore
 from chia.protocols import full_node_protocol
 from chia.seeder.crawl_store import CrawlStore
 from chia.seeder.peer_record import PeerRecord, PeerReliability
+from chia.seeder.prometheus_crawler import PrometheusCrawler
 from chia.server.server import ChiaServer
 from chia.types.peer_info import PeerInfo
 from chia.util.path import mkdir, path_from_root
 from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
-
-# Default port for the crawler prometheus exporter
-DEFAULT_PROMETHEUS_PORT = 9919
 
 
 class Crawler:
@@ -39,8 +36,7 @@ class Crawler:
     peer_count: int
     with_peak: set
     minimum_version_count: int
-    start_prometheus_server: bool
-    prometheus_port: int
+    prometheus: PrometheusCrawler
 
     def __init__(
         self,
@@ -81,22 +77,7 @@ class Crawler:
         else:
             self.minimum_version_count = 100
 
-        if "crawler_prometheus" in config and "start_prometheus_server" in config["crawler_prometheus"]:
-            self.start_prometheus_server = config["crawler_prometheus"]["start_prometheus_server"]
-        else:
-            self.start_prometheus_server = True
-
-        if "crawler_prometheus" in config and "prometheus_exporter_port" in config["crawler_prometheus"]:
-            self.prometheus_port = config["crawler_prometheus"]["prometheus_exporter_port"]
-        else:
-            self.prometheus_port = DEFAULT_PROMETHEUS_PORT
-
-        # Prometheus Metrics
-        self.g_total_5d = Gauge
-        self.g_reliable_nodes = Gauge
-        self.g_ipv4_5d = Gauge
-        self.g_ipv6_5d = Gauge
-        self.g_version_buckets = Gauge
+        self.prometheus = PrometheusCrawler(config, self.log)
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -142,38 +123,12 @@ class Crawler:
     async def _start(self):
         self.task = asyncio.create_task(self.crawl())
 
-        # Start prometheus exporter server for the crawler
-        if self.start_prometheus_server:
-            self.log.error(f"Starting crawler prometheus server on port {self.prometheus_port}")
-            start_http_server(self.prometheus_port)
-
-    async def init_metrics(self):
-        # Set up crawler metrics
-        self.g_total_5d = Gauge(
-            'chia_crawler_total_nodes_5_days',
-            'Total nodes gossiped with timestamp in the last 5 days with respond_peers messages'
-        )
-        self.g_reliable_nodes = Gauge(
-            'chia_crawler_reliable_nodes',
-            'High quality reachable nodes, used by DNS introducer in replies'
-        )
-        self.g_ipv4_5d = Gauge(
-            'chia_crawler_ipv4_nodes_5_days',
-            'IPv4 addresses gossiped with timestamp in the last 5 days with respond_peers messages'
-        )
-        self.g_ipv6_5d = Gauge(
-            'chia_crawler_ipv6_nodes_5_days',
-            'IPv6 addresses gossiped with timestamp in the last 5 days with respond_peers messages'
-        )
-        self.g_version_buckets = Gauge(
-            'chia_crawler_version_bucket',
-            'Number of peers on a particular version',
-            ['version']
-        )
+        # Starts the prometheus server if enabled in config
+        await self.prometheus.start_server()
 
     async def update_metric_values(self):
-        self.g_reliable_nodes.set(self.crawl_store.get_reliable_peers())
-        self.g_total_5d.set(len(self.best_timestamp_per_peer))
+        self.prometheus.reliable_nodes.set(self.crawl_store.get_reliable_peers())
+        self.prometheus.total_5d.set(len(self.best_timestamp_per_peer))
         ipv6_addresses_count = 0
         for host in self.best_timestamp_per_peer.keys():
             try:
@@ -181,13 +136,13 @@ class Crawler:
                 ipv6_addresses_count += 1
             except ValueError:
                 continue
-        self.g_ipv6_5d.set(ipv6_addresses_count)
-        self.g_ipv4_5d.set(len(self.best_timestamp_per_peer) - ipv6_addresses_count)
+        self.prometheus.ipv6_5d.set(ipv6_addresses_count)
+        self.prometheus.ipv4_5d.set(len(self.best_timestamp_per_peer) - ipv6_addresses_count)
 
         # Add version buckets
         for version, count in sorted(self.versions.items(), key=lambda kv: kv[1], reverse=True):
             if count >= self.minimum_version_count:
-                self.g_version_buckets.labels(version).set(count)
+                self.prometheus.version_buckets.labels(version).set(count)
 
     async def crawl(self):
         try:
@@ -220,7 +175,6 @@ class Crawler:
             self.best_timestamp_per_peer = self.crawl_store.load_best_peer_reliability()
 
             # Set up metrics after the initial load of data from the DB
-            await self.init_metrics()
             await self.update_metric_values()
 
             while True:

@@ -255,6 +255,7 @@ class FullNode:
                 )
             )
 
+        # Starts the prometheus server if enabled in config
         await self.prometheus.start_server()
 
         self.initialized = True

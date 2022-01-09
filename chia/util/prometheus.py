@@ -1,4 +1,5 @@
 import logging
+from typing import List, Optional
 from prometheus_client import start_http_server, Gauge
 
 
@@ -20,5 +21,5 @@ class Prometheus:
             self.log.info(f"Starting full_node prometheus server on port {self.server_port}")
             start_http_server(self.server_port)
 
-    def new_gauge(self, name: str, description: str) -> Gauge:
-        return Gauge(f"chia_{self.service_name}_{name}", description)
+    def new_gauge(self, name: str, description: str, labelnames: Optional[List[str]] = ()) -> Gauge:
+        return Gauge(name, description, labelnames, 'chia', self.service_name)
