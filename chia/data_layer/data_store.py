@@ -192,7 +192,7 @@ class DataStore:
         return node_hash  # type: ignore[no-any-return]
 
     def _key_value_hash(self, key: bytes, value: bytes) -> bytes32:
-        return Program.to((key, value)).get_tree_hash()
+        return Program.to((key, value)).get_tree_hash()  # type: ignore[no-any-return]
 
     async def _insert_terminal_node(self, key_hash: bytes32, value_hash: bytes32, node_hash: bytes32) -> None:
         await self._insert_node(
@@ -389,7 +389,7 @@ class DataStore:
         generation: int = row["MAX(generation)"]
         return generation
 
-    async def get_tree_root(self, tree_id: bytes32, generation: int = None, *, lock: bool = True) -> Root:
+    async def get_tree_root(self, tree_id: bytes32, generation: Optional[int] = None, *, lock: bool = True) -> Root:
         async with self.db_wrapper.locked_transaction(lock=lock):
             if generation is None:
                 generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
@@ -740,10 +740,11 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             ancestors = await self.get_ancestors(node_hash=node.hash, tree_id=tree_id, lock=False)
+            generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
 
             if len(ancestors) == 0:
                 # the only node is being deleted
-                await self._insert_root(tree_id=tree_id, node_hash=None, status=status)
+                await self._insert_root(tree_id=tree_id, generation=generation, node_hash=None, status=status)
 
                 return
 
@@ -752,7 +753,7 @@ class DataStore:
 
             if len(ancestors) == 1:
                 # the parent is the root so the other side will become the new root
-                await self._insert_root(tree_id=tree_id, node_hash=other_hash, status=status)
+                await self._insert_root(tree_id=tree_id, generation=generation, node_hash=other_hash, status=status)
 
                 return
 
