@@ -1,6 +1,6 @@
 import logging
 from typing import List, Optional
-from prometheus_client import start_http_server, Gauge
+from prometheus_client import start_http_server, Counter, Gauge
 
 
 class Prometheus:
@@ -23,3 +23,6 @@ class Prometheus:
 
     def new_gauge(self, name: str, description: str, labelnames: Optional[List[str]] = ()) -> Gauge:
         return Gauge(name, description, labelnames, 'chia', self.service_name)
+
+    def new_counter(self, name: str, description: str, labelnames: Optional[List[str]] = ()) -> Counter:
+        return Counter(name, description, labelnames, 'chia', self.service_name)

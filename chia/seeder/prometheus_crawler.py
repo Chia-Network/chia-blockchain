@@ -3,7 +3,7 @@ from typing import Dict
 
 from chia.util.prometheus import Prometheus
 
-# Default port for the full_node prometheus exporter
+# Default port for the crawler prometheus exporter
 DEFAULT_PROMETHEUS_PORT = 9919
 
 
