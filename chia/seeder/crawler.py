@@ -134,7 +134,7 @@ class Crawler:
             try:
                 ipaddress.IPv6Address(host)
                 ipv6_addresses_count += 1
-            except ValueError:
+            except ipaddress.AddressValueError:
                 continue
         self.prometheus.ipv6_5d.set(ipv6_addresses_count)
         self.prometheus.ipv4_5d.set(len(self.best_timestamp_per_peer) - ipv6_addresses_count)
@@ -298,9 +298,9 @@ class Crawler:
                 ipv6_addresses_count = 0
                 for host in self.best_timestamp_per_peer.keys():
                     try:
-                        _ = ipaddress.IPv6Address(host)
+                        ipaddress.IPv6Address(host)
                         ipv6_addresses_count += 1
-                    except ValueError:
+                    except ipaddress.AddressValueError:
                         continue
                 self.log.error(
                     "IPv4 addresses gossiped with timestamp in the last 5 days with respond_peers messages: "
@@ -313,9 +313,9 @@ class Crawler:
                 ipv6_available_peers = 0
                 for host in self.host_to_version.keys():
                     try:
-                        _ = ipaddress.IPv6Address(host)
+                        ipaddress.IPv6Address(host)
                         ipv6_available_peers += 1
-                    except ValueError:
+                    except ipaddress.AddressValueError:
                         continue
                 self.log.error(
                     f"Total IPv4 nodes reachable in the last 5 days: {available_peers - ipv6_available_peers}."
