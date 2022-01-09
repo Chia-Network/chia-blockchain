@@ -190,7 +190,7 @@ class FullNode:
         self.blockchain = await Blockchain.create(
             self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent, reserved_cores
         )
-        self.mempool_manager = MempoolManager(self.coin_store, self.constants)
+        self.mempool_manager = MempoolManager(self.coin_store, self.constants, self.prometheus)
 
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
         # be validated first.
@@ -254,7 +254,6 @@ class FullNode:
                 )
             )
 
-        await self.prometheus.register_metrics()
         await self.prometheus.start_server()
 
         self.initialized = True
@@ -1239,6 +1238,8 @@ class FullNode:
             f"Generator ref list size: "
             f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
+        self.prometheus.height.set(record.height)
+        self.prometheus.difficulty.set(difficulty)
 
         sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(record.header_hash)
         assert sub_slots is not None
@@ -1384,6 +1385,13 @@ class FullNode:
         await self.update_wallets(record.height, fork_height, record.header_hash, coin_changes)
         await self.server.send_to_all([msg], NodeType.WALLET)
         self._state_changed("new_peak")
+
+        # Update certain prometheus values that we can't update with a known value in real time elsewhere
+        # Skip updating these values (which result in a few DB queries) if the prometheus server is not enabled
+        if self.prometheus.start_prometheus_server:
+            self.prometheus.compact_blocks.set(await self.block_store.count_compactified_blocks())
+            self.prometheus.uncompact_blocks.set(await self.block_store.count_uncompactified_blocks())
+            self.prometheus.hint_count.set(await self.hint_store.count_hints())
 
     async def respond_block(
         self,
@@ -1539,15 +1547,17 @@ class FullNode:
                 block, new_peak, fork_height, peer, coin_changes, mempool_new_peak_result, fns_peak_result
             )
 
-        percent_full_str = (
-            (
+        if block.transactions_info is not None:
+            percent_full = round(100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3)
+            percent_full_str = (
                 ", percent full: "
-                + str(round(100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3))
+                + str(percent_full)
                 + "%"
             )
-            if block.transactions_info is not None
-            else ""
-        )
+            self.prometheus.block_percent_full.set(percent_full)
+        else:
+            percent_full_str = ""
+
         self.log.log(
             logging.WARNING if validation_time > 2 else logging.DEBUG,
             f"Block validation time: {validation_time:0.2f} seconds, "
@@ -1702,15 +1712,16 @@ class FullNode:
                 f"cost: {block.transactions_info.cost if block.transactions_info else 'None'} "
             )
         else:
-            percent_full_str = (
-                (
+            if block.transactions_info is not None:
+                percent_full = round(100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3)
+                percent_full_str = (
                     ", percent full: "
-                    + str(round(100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3))
+                    + str(percent_full)
                     + "%"
                 )
-                if block.transactions_info is not None
-                else ""
-            )
+                self.prometheus.block_percent_full.set(percent_full)
+            else:
+                percent_full_str = ""
             self.log.info(
                 f"Added unfinished_block {block_hash}, not farmed by us,"
                 f" SP: {block.reward_chain_block.signage_point_index} farmer response time: "

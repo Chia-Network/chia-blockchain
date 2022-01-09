@@ -17,6 +17,7 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict, get_name_puzzle_conditions
 from chia.full_node.pending_tx_cache import PendingTxCache
+from chia.full_node.prometheus import Prometheus
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -77,9 +78,10 @@ def validate_clvm_and_signature(
 
 
 class MempoolManager:
-    def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants):
+    def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants, prometheus: Prometheus):
         self.constants: ConsensusConstants = consensus_constants
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
+        self.prometheus = prometheus
 
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
@@ -550,10 +552,16 @@ class MempoolManager:
             )
             if status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
+        spends = len(self.mempool.spends)
+        total_cost = self.mempool.total_mempool_cost
+        min_fee = self.mempool.get_min_fee_rate(100000)
         log.info(
-            f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
-            f"minimum fee to get in: {self.mempool.get_min_fee_rate(100000)}"
+            f"Size of mempool: {spends} spends, cost: {total_cost} "
+            f"minimum fee to get in: {min_fee}"
         )
+        self.prometheus.mempool_size.set(spends)
+        self.prometheus.mempool_cost.set(total_cost)
+        self.prometheus.mempool_min_fee.set(min_fee)
         return txs_added
 
     async def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[MempoolItem]:

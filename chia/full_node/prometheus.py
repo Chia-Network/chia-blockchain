@@ -24,13 +24,17 @@ class Prometheus:
         else:
             self.prometheus_port = DEFAULT_PROMETHEUS_PORT
 
-        self.height = Gauge
-        self.compact_blocks = Gauge
-        self.uncompact_blocks = Gauge
-        self.netspace_mib = Gauge
-        self.difficulty = Gauge
-        self.mempool_size = Gauge
-        self.hint_count = Gauge
+        self.height = self.new_gauge('height', "this node's current peak height")
+        self.compact_blocks = self.new_gauge('compact_blocks', 'number of fully compact blocks in the DB')
+        self.uncompact_blocks = self.new_gauge('uncompact_blocks', 'number of uncompact blocks in the DB')
+        # @TODO
+        self.netspace_mib = self.new_gauge('netspace_mib', 'Estimated netspace in MiB')
+        self.difficulty = self.new_gauge('difficulty', 'Current difficulty')
+        self.mempool_size = self.new_gauge('mempool_size', 'Number of spends in the mempool')
+        self.mempool_cost = self.new_gauge('mempool_cost', 'Total cost currently in mempool')
+        self.mempool_min_fee = self.new_gauge('mempool_min_fee', 'Current minimum fee')
+        self.block_percent_full = self.new_gauge('block_percent_full', 'How full the last block was as a percent')
+        self.hint_count = self.new_gauge('hint_count', 'total number of hints in the DB')
 
     async def start_server(self):
         # Start prometheus exporter server for the full node
@@ -38,16 +42,5 @@ class Prometheus:
             self.log.info(f"Starting full_node prometheus server on port {self.prometheus_port}")
             start_http_server(self.prometheus_port)
 
-    async def register_metrics(self):
-        # Metrics are registered whether the server is running or not
-        self.height = self.new_gauge('height', "this node's current peak height")
-        self.compact_blocks = self.new_gauge('compact_blocks', 'number of fully compact blocks in the DB')
-        self.uncompact_blocks = self.new_gauge('uncompact_blocks', 'number of uncompact blocks in the DB')
-        self.netspace_mib = self.new_gauge('netspace_mib', 'Estimated netspace in MiB')
-        self.difficulty = self.new_gauge('difficulty', 'Current difficulty')
-        self.mempool_size = self.new_gauge('mempool_size', 'Number of spends in the mempool')
-        self.hint_count = self.new_gauge('hint_count', 'total number of hints in the DB')
-
     def new_gauge(self, name: str, description: str) -> Gauge:
         return Gauge(f"chia_node_{name}", description)
-
