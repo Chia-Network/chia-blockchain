@@ -9,16 +9,9 @@ DEFAULT_PROMETHEUS_PORT = 9919
 
 class PrometheusCrawler(Prometheus):
     def __init__(self, config: Dict, log: logging.Logger):
-        if "crawler_prometheus" in config and "start_prometheus_server" in config["crawler_prometheus"]:
-            enabled = config["crawler_prometheus"]["start_prometheus_server"]
-        else:
-            enabled = False
-
-        if "crawler_prometheus" in config and "prometheus_exporter_port" in config["crawler_prometheus"]:
-            port = config["crawler_prometheus"]["prometheus_exporter_port"]
-        else:
-            port = DEFAULT_PROMETHEUS_PORT
-
+        prometheus_config = config.get("crawler_prometheus", {})
+        enabled = prometheus_config.get("start_prometheus_server", False)
+        port = prometheus_config.get("prometheus_exporter_port", DEFAULT_PROMETHEUS_PORT)
         super().__init__("crawler", enabled, port, log)
 
         self.total_5d = self.new_gauge(

@@ -9,10 +9,8 @@ DEFAULT_PROMETHEUS_PORT = 9914
 
 class PrometheusFullNode(Prometheus):
     def __init__(self, config: Dict, log: logging.Logger):
-        enabled = False if "start_prometheus_server" not in config else config["start_prometheus_server"]
-        port = (
-            DEFAULT_PROMETHEUS_PORT if "prometheus_exporter_port" not in config else config["prometheus_exporter_port"]
-        )
+        enabled = config.get("start_prometheus_server", False)
+        port = config.get("prometheus_exporter_port", DEFAULT_PROMETHEUS_PORT)
         super().__init__("full_node", enabled, port, log)
 
         self.height = self.new_gauge("height", "this node's current peak height")
