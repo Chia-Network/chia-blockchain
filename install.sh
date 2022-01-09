@@ -123,14 +123,14 @@ fi
 find_python() {
 	set +e
 	unset BEST_VERSION
-	for V in 39 3.9 38 3.8 37 3.7 3; do
+	for V in 310 3.10 39 3.9 38 3.8 37 3.7 3; do
 		if command -v python$V >/dev/null; then
 			if [ "$BEST_VERSION" = "" ]; then
 				BEST_VERSION=$V
 				if [ "$BEST_VERSION" = "3" ]; then
 					PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
-					if [[ "$PY3_VERSION" =~ 3.10.* ]]; then
-						echo "Chia requires Python version <= 3.9.9"
+					if [[ "$PY3_VERSION" =~ 3.11.* ]]; then
+						echo "Chia requires Python version <= 3.11.0"
 						echo "Current Python version = $PY3_VERSION"
 						exit 1
 					fi
