@@ -63,7 +63,7 @@ class Crawler:
         self.best_timestamp_per_peer: Dict[str, int] = {}
         if "crawler_db_path" in config and config["crawler_db_path"] != "":
             path = Path(config["crawler_db_path"])
-            self.db_path = path.resolve()
+            self.db_path = path.expanduser()
         else:
             db_path_replaced: str = "crawler.db"
             self.db_path = path_from_root(root_path, db_path_replaced)
