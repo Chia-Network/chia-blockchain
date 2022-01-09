@@ -13,7 +13,7 @@ class PrometheusSeeder(Prometheus):
         if "seeder_prometheus" in config and "start_prometheus_server" in config["seeder_prometheus"]:
             enabled = config["seeder_prometheus"]["start_prometheus_server"]
         else:
-            enabled = True
+            enabled = False
 
         if "seeder_prometheus" in config and "prometheus_exporter_port" in config["seeder_prometheus"]:
             port = config["seeder_prometheus"]["prometheus_exporter_port"]
