@@ -123,7 +123,13 @@ class DataStore:
 
         return self
 
-    async def _insert_root(self, tree_id: bytes32, generation: int, node_hash: Optional[bytes32], status: Status) -> None:
+    async def _insert_root(
+        self,
+        tree_id: bytes32,
+        generation: int,
+        node_hash: Optional[bytes32],
+        status: Status,
+    ) -> None:
         await self.db.execute(
             """
             INSERT INTO root(tree_id, generation, node_hash, status) VALUES(:tree_id, :generation, :node_hash, :status)
@@ -431,7 +437,13 @@ class DataStore:
 
         return ancestors
 
-    async def get_pairs(self, tree_id: bytes32, generation: Optional[int] = None, *, lock: bool = True) -> List[TerminalNode]:
+    async def get_pairs(
+        self,
+        tree_id: bytes32,
+        generation: Optional[int] = None,
+        *,
+        lock: bool = True,
+    ) -> List[TerminalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             if generation is None:
                 generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
@@ -458,7 +470,13 @@ class DataStore:
 
         return terminal_nodes
 
-    async def get_pairs_ordered(self, tree_id: bytes32, generation: Optional[int] = None, *, lock: bool = True) -> List[TerminalNode]:
+    async def get_pairs_ordered(
+        self,
+        tree_id: bytes32,
+        generation: Optional[int] = None,
+        *,
+        lock: bool = True,
+    ) -> List[TerminalNode]:
         # TODO: Consider removal.  This is slow, limited to a depth of 62, and not presently used anywhere.
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, generation=generation, lock=False)
@@ -512,7 +530,13 @@ class DataStore:
 
         return terminal_nodes
 
-    async def get_pairs_shallow_first(self, tree_id: bytes32, generation: Optional[int] = None, *, lock: bool = True) -> List[TerminalNode]:
+    async def get_pairs_shallow_first(
+        self,
+        tree_id: bytes32,
+        generation: Optional[int] = None,
+        *,
+        lock: bool = True,
+    ) -> List[TerminalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, generation=generation, lock=False)
 
@@ -645,7 +669,12 @@ class DataStore:
                 if side is not None:
                     raise Exception("Tree was empty so side must be unspecified, got: {side!r}")
 
-                await self._insert_root(tree_id=tree_id, generation=generation, node_hash=new_terminal_node_hash, status=status)
+                await self._insert_root(
+                    tree_id=tree_id,
+                    generation=generation,
+                    node_hash=new_terminal_node_hash,
+                    status=status,
+                )
             else:
                 if side is None:
                     raise Exception("Tree was not empty, side must be specified.")

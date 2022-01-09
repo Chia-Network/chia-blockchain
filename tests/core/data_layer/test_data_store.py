@@ -182,7 +182,11 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
         before = await cursor.fetchall()
 
     async with data_store.db_wrapper.locked_transaction():
-        await data_store._insert_terminal_node(key_hash=std_hash(kv_node.key), value_hash=std_hash(kv_node.value), node_hash=kv_node.hash)
+        await data_store._insert_terminal_node(
+            key_hash=std_hash(kv_node.key),
+            value_hash=std_hash(kv_node.value),
+            node_hash=kv_node.hash,
+        )
 
     async with data_store.db_wrapper.locked_transaction():
         cursor = await data_store.db.execute("SELECT * FROM node")
