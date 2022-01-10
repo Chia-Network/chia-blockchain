@@ -160,9 +160,10 @@ async def test_insert_internal_node_does_nothing_if_matching(data_store: DataSto
         cursor = await data_store.db.execute("SELECT * FROM node")
         before = await cursor.fetchall()
 
+    generation = await data_store.get_tree_generation(tree_id=tree_id) + 1
     async with data_store.db_wrapper.locked_transaction():
         await data_store._insert_internal_node(
-            left_hash=parent.left_hash, right_hash=parent.right_hash, tree_id=tree_id
+            left_hash=parent.left_hash, right_hash=parent.right_hash, tree_id=tree_id, generation=generation
         )
 
     async with data_store.db_wrapper.locked_transaction():

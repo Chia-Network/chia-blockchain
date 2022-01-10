@@ -87,7 +87,8 @@ class DataStore:
                     hash TEXT NOT NULL,
                     ancestor TEXT,
                     tree_id TEXT NOT NULL,
-                    PRIMARY KEY(hash, tree_id)
+                    generation INTEGER NOT NULL,
+                    PRIMARY KEY(hash, tree_id, generation)
                 )
                 """
             )
@@ -116,11 +117,17 @@ class DataStore:
 
         # `node_hash` is now a root, so it has no ancestor.
         if node_hash is not None:
+            values = {
+                "hash": node_hash.hex(),
+                "tree_id": tree_id.hex(),
+                "generation": generation,
+            }
             await self.db.execute(
                 """
-                DELETE FROM ancestors WHERE hash == :node_hash
+                INSERT INTO ancestors(hash, ancestor, tree_id, generation)
+                VALUES (:hash, NULL, :tree_id, :generation)
                 """,
-                {"node_hash": node_hash.hex()},
+                values,
             )
 
     async def _insert_node(
@@ -158,7 +165,13 @@ class DataStore:
             if result_dict != values:
                 raise Exception(f"Requested insertion of node with matching hash but other values differ: {node_hash}")
 
-    async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32, tree_id: bytes32) -> bytes32:
+    async def _insert_internal_node(
+        self,
+        left_hash: bytes32,
+        right_hash: bytes32,
+        tree_id: bytes32,
+        generation: int,
+    ) -> bytes32:
         node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
 
         await self._insert_node(
@@ -176,11 +189,12 @@ class DataStore:
                 "hash": hash.hex(),
                 "ancestor": node_hash.hex(),
                 "tree_id": tree_id.hex(),
+                "generation": generation,
             }
             await self.db.execute(
                 """
-                INSERT OR REPLACE INTO ancestors(hash, ancestor, tree_id)
-                VALUES (:hash, :ancestor, :tree_id)
+                INSERT INTO ancestors(hash, ancestor, tree_id, generation)
+                VALUES (:hash, :ancestor, :tree_id, :generation)
                 """,
                 values,
             )
@@ -337,9 +351,10 @@ class DataStore:
         generation: int = row["MAX(generation)"]
         return generation
 
-    async def get_tree_root(self, tree_id: bytes32, *, lock: bool = True) -> Root:
+    async def get_tree_root(self, tree_id: bytes32, generation: Optional[int] = None, *, lock: bool = True) -> Root:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
+            if generation is None:
+                generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
             cursor = await self.db.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation",
                 {"tree_id": tree_id.hex(), "generation": generation},
@@ -384,25 +399,39 @@ class DataStore:
 
         return ancestors
 
-    async def get_ancestors_2(self, node_hash: bytes32, tree_id: bytes32, lock: bool = True) -> List[InternalNode]:
+    async def get_ancestors_2(
+        self, node_hash: bytes32, tree_id: bytes32, generation: Optional[int] = None, lock: bool = True
+    ) -> List[InternalNode]:
         nodes = []
-        async with self.db_wrapper.locked_transaction(lock=lock):
+        if generation is None:
+            generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
+        while True:
             cursor = await self.db.execute(
                 """
-                WITH RECURSIVE
-                    get_ancestors_hash(hash, depth) AS (
-                        SELECT :reference_hash, 0 AS depth
-                        UNION ALL
-                        SELECT ancestors.ancestor, get_ancestors_hash.depth + 1 FROM ancestors, get_ancestors_hash
-                        WHERE ancestors.tree_id == :tree_id AND ancestors.hash == get_ancestors_hash.hash
-                    )
-                SELECT node.* FROM node, get_ancestors_hash
-                WHERE node.hash == get_ancestors_hash.hash AND get_ancestors_hash.depth > 0
-                ORDER BY get_ancestors_hash.depth ASC
+                SELECT * from node INNER JOIN (
+                    SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
+                    FROM ancestors
+                    WHERE ancestors.hash == :hash
+                    AND ancestors.tree_id == :tree_id
+                    AND ancestors.generation <= :generation
+                    AND ancestors.ancestor is NOT NULL
+                    GROUP BY hash
+                ) asc on asc.hash == node.hash
                 """,
-                {"reference_hash": node_hash.hex(), "tree_id": tree_id.hex()},
+                {"hash": node_hash.hex(), "tree_id": tree_id.hex(), "generation": generation},
             )
-            nodes = [InternalNode.from_row(row=row) async for row in cursor]
+            row = await cursor.fetchone()
+            if row is None:
+                break
+            internal_node = InternalNode.from_row(row=row)
+            nodes.append(internal_node)
+            node_hash = internal_node.hash
+
+        # Check if the root from `generation` is at the top of ancestors list.
+        # If it misses, this node is an orphan for `generation`.
+        root = await self.get_tree_root(tree_id=tree_id, generation=generation, lock=False)
+        if root.node_hash is None or root.node_hash != nodes[-1].hash:
+            return []
 
         return nodes
 
@@ -533,6 +562,7 @@ class DataStore:
 
                 await self._insert_root(tree_id=tree_id, node_hash=new_terminal_node_hash, status=status)
             else:
+                new_generation = root.generation + 1
                 if side is None:
                     raise Exception("Tree was not empty, side must be specified.")
                 if reference_node_hash is None:
@@ -550,7 +580,9 @@ class DataStore:
                     right = new_terminal_node_hash
 
                 # create first new internal node
-                new_hash = await self._insert_internal_node(left_hash=left, right_hash=right, tree_id=tree_id)
+                new_hash = await self._insert_internal_node(
+                    left_hash=left, right_hash=right, tree_id=tree_id, generation=new_generation
+                )
 
                 traversal_node_hash = reference_node_hash
 
@@ -568,7 +600,9 @@ class DataStore:
 
                     traversal_node_hash = ancestor.hash
 
-                    new_hash = await self._insert_internal_node(left_hash=left, right_hash=right, tree_id=tree_id)
+                    new_hash = await self._insert_internal_node(
+                        left_hash=left, right_hash=right, tree_id=tree_id, generation=new_generation
+                    )
 
                 await self._insert_root(tree_id=tree_id, node_hash=new_hash, status=status)
 
@@ -596,6 +630,7 @@ class DataStore:
 
             old_child_hash = parent.hash
             new_child_hash = other_hash
+            new_generation = await self.get_tree_generation(tree_id, lock=False) + 1
             # more parents to handle so let's traverse them
             for ancestor in ancestors[1:]:
                 if ancestor.left_hash == old_child_hash:
@@ -608,7 +643,7 @@ class DataStore:
                     raise Exception("Internal error.")
 
                 new_child_hash = await self._insert_internal_node(
-                    left_hash=left_hash, right_hash=right_hash, tree_id=tree_id
+                    left_hash=left_hash, right_hash=right_hash, tree_id=tree_id, generation=new_generation
                 )
 
                 old_child_hash = ancestor.hash
