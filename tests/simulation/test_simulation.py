@@ -28,7 +28,7 @@ class TestSimulation:
 
     # TODO: Ideally, the db_version should be the (parameterized) db_version
     # fixture, to test all versions of the database schema. This doesn't work
-    # because of a hack in shutting down the full node, which means you can run
+    # because of a hack in shutting down the full node, which means you cannot run
     # more than one simulations per process.
     @pytest.fixture(scope="function")
     async def extra_node(self):
