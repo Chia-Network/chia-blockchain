@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "performance-now": "^0.2.0"
+  }
+}
