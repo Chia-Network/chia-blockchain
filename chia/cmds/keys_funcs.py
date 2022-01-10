@@ -9,7 +9,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32
-from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, unlocks_keyring
+from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed, unlocks_keyring
 from chia.wallet.derive_keys import (
     _derive_path,
     _derive_path_unhardened,
@@ -148,6 +148,7 @@ def search_derive(
     private_key: Optional[PrivateKey],
     search_term: str,
     limit: int,
+    hardened_derivation: bool,
 ):
     private_keys: List[PrivateKey]
     if private_key is None:
@@ -157,25 +158,34 @@ def search_derive(
 
     for sk in private_keys:
         print(f"Searching keys derived from: {sk.get_g1().get_fingerprint()}")
-        path_root: str = "m/12381/8444/"
         current_path: str = ""
         current_path_indices: List[int] = [12381, 8444]
+        path_root: str = "m/"
+        for i in [12381, 8444]:
+            path_root += f"{i}{'h' if hardened_derivation else ''}/"
         found_item: Any = None
         found_item_type: str = ""
         sys.stdout.write(path_root)
+        # 7 account levels for derived keys (0-6):
+        # 0, 1, 2, 3, 4, 5, 6 farmer, pool, wallet, local, backup key, singleton, pooling authentication key numbers
         for account in range(7):
-            current_path = path_root + f"{account}/"
+            account_str = str(account) + 'h' if hardened_derivation else ''
+            current_path = path_root + f"{account_str}/"
             current_path_indices.append(account)
-            sys.stdout.write(f"{account}/")
+            sys.stdout.write(f"{account_str}/")
             for index in range(limit):
-                current_path += f"{index}"
+                index_str = str(index) + 'h' if hardened_derivation else ''
+                current_path += f"{index_str}"
                 current_path_indices.append(index)
-                sys.stdout.write(f"{index}")
+                sys.stdout.write(f"{index_str}")
                 sys.stdout.flush()
-                child_sk = _derive_path(sk, current_path_indices)
+                if hardened_derivation:
+                    child_sk = _derive_path(sk, current_path_indices)
+                else:
+                    child_sk = _derive_path_unhardened(sk, current_path_indices)
                 child_pk = child_sk.get_g1()
                 address: str = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), "xch")
-                sys.stdout.write("\b" * len(str(index)))
+                sys.stdout.write("\b" * len(str(index_str)))
                 sys.stdout.flush()
                 if search_term in str(child_pk):
                     found_item = child_pk
@@ -189,9 +199,9 @@ def search_derive(
                     found_item = address
                     found_item_type = "address"
                     break
-                current_path = current_path[: -len(str(index))]
+                current_path = current_path[: -len(str(index_str))]
                 current_path_indices = current_path_indices[:-1]
-            sys.stdout.write("\b" * (1 + len(str(account))))
+            sys.stdout.write("\b" * (1 + len(str(account_str))))
             current_path_indices = current_path_indices[:-1]
 
             if found_item is not None:
@@ -211,25 +221,34 @@ def derive_wallet_address(
     index: int,
     count: int,
     prefix: Optional[str],
-    public_derivation: bool,
+    hardened_derivation: bool,
     show_hd_path: bool,
 ):
     if prefix is None:
         config: Dict = load_config(root_path, "config.yaml")
         selected: str = config["selected_network"]
         prefix = config["network_overrides"]["config"][selected]["address_prefix"]
-    wallet_hd_path_root: str = "m/12381/8444/2/"
+    path_indices: List[int] = [12381, 8444, 2]
+    wallet_hd_path_root: str = "m/"
+    for i in path_indices:
+        wallet_hd_path_root += f"{i}{'h' if hardened_derivation else ''}/"
     for i in range(index, index + count):
-        derived_key: PrivateKey
-        if public_derivation:
-            sk = master_sk_to_wallet_sk_unhardened(private_key, uint32(i))
-        else:
+        if hardened_derivation:
             sk = master_sk_to_wallet_sk(private_key, uint32(i))
+        else:
+            sk = master_sk_to_wallet_sk_unhardened(private_key, uint32(i))
         address = encode_puzzle_hash(create_puzzlehash_for_pk(sk.get_g1()), prefix)
         if show_hd_path:
-            print(f"Wallet address {i} ({wallet_hd_path_root + str(i)}): {address}")
+            print(
+                f"Wallet address {i} ({wallet_hd_path_root + str(i) + ('h' if hardened_derivation else '')}): {address}"
+            )
         else:
             print(f"Wallet address {i}: {address}")
+
+
+def private_key_string_repr(private_key: PrivateKey):
+    s: str = str(private_key)
+    return s[len("<PrivateKey ") : s.rfind(">")] if s.startswith("<PrivateKey ") else s
 
 
 def derive_child_key(
@@ -238,7 +257,7 @@ def derive_child_key(
     key_type: str,
     index: int,
     count: int,
-    public_derivation: bool,
+    hardened_derivation: bool,
     show_private_keys: bool,
     show_hd_path: bool,
 ):
@@ -258,20 +277,18 @@ def derive_child_key(
     elif key_type == "pool_auth":
         path.append(6)
 
+    hd_path_root: str = "m/"
+    for i in path:
+        hd_path_root += f"{i}{'h' if hardened_derivation else ''}/"
     for i in range(index, index + count):
-        if public_derivation:
-            sk = _derive_path_unhardened(master_sk, path + [i])
-        else:
+        if hardened_derivation:
             sk = _derive_path(master_sk, path + [i])
-        if show_hd_path:
-            hd_path: str = "m/" + "/".join([str(j) for j in path]) + "/" + str(i)
-            print(f"{key_type.capitalize()} public key {i} ({hd_path}): {sk.get_g1()}")
-            if show_private_keys:
-                print(f"{key_type.capitalize()} private key {i} ({hd_path}): {sk}")
         else:
-            print(f"{key_type.capitalize()} public key {i}: {sk.get_g1()}")
-            if show_private_keys:
-                print(f"{key_type.capitalize()} private key {i}: {sk}")
+            sk = _derive_path_unhardened(master_sk, path + [i])
+        hd_path: str = " (" + hd_path_root + str(i) + ("h" if hardened_derivation else "") + ")" if show_hd_path else ""
+        print(f"{key_type.capitalize()} public key {i}{hd_path}: {sk.get_g1()}")
+        if show_private_keys:
+            print(f"{key_type.capitalize()} private key {i}{hd_path}: {private_key_string_repr(sk)}")
 
 
 def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:
@@ -281,3 +298,42 @@ def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:
         if sk.get_g1().get_fingerprint() == fingerprint:
             return sk
     return None
+
+
+def get_private_key_with_fingerprint_or_prompt(fingerprint: Optional[int]):
+    if fingerprint is not None:
+        return private_key_for_fingerprint(fingerprint)
+
+    fingerprints: List[int] = [pk.get_fingerprint() for pk in keychain.get_all_public_keys()]
+    while True:
+        print("Choose key:")
+        for i, fp in enumerate(fingerprints):
+            print(f"{i+1}) {fp}")
+        val = None
+        while val is None:
+            val = input("Enter a number to pick or q to quit: ")
+            if val == "q":
+                return None
+            if not val.isdigit():
+                val = None
+            else:
+                index = int(val) - 1
+                if index >= len(fingerprints):
+                    print("Invalid value")
+                    val = None
+                    continue
+                else:
+                    return private_key_for_fingerprint(fingerprints[index])
+
+
+def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
+    mnemonic = filename.read_text().rstrip()
+    seed = mnemonic_to_seed(mnemonic, "")
+    return AugSchemeMPL.key_gen(seed)
+
+
+def resolve_derivation_master_key(fingerprint: Optional[int], filename: Optional[str]) -> PrivateKey:
+    if filename:
+        return private_key_from_mnemonic_seed_file(Path(filename))
+    else:
+        return get_private_key_with_fingerprint_or_prompt(fingerprint)
