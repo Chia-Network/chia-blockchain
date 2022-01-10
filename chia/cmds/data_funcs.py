@@ -44,13 +44,11 @@ async def create_kv_store_cmd(rpc_port: Optional[int], table_string: str) -> Opt
 
 async def get_value_cmd(rpc_port: Optional[int], tree_id: str, key: str) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
-
     tree_id_bytes = bytes32(hexstr_to_bytes(tree_id))
-    key_bytes = hexstr_to_bytes(key)
     try:
         client, rpc_port = await get_client(rpc_port)
+        key_bytes = key.encode(encoding='UTF-8')
         response = await client.get_value(tree_id=tree_id_bytes, key=key_bytes)
-        print(json.dumps(response, indent=4))
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
         return None
@@ -74,7 +72,6 @@ async def update_kv_store_cmd(
     try:
         client, rpc_port = await get_client(rpc_port)
         response = await client.update_kv_store(tree_id=tree_id_bytes, changelist=changelist)
-        print(json.dumps(response, indent=4))
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
         return None

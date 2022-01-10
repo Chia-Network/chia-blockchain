@@ -26,19 +26,18 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
     with chia_root.print_log_after():
         row_data = "ffff8353594d8083616263"
         row_hash = "1a6f915513173902a7216e7d9e4a16bfd088e20683f45de3b432ce72e9cc7aa8"
-
-        changelist: List[Dict[str, str]] = [{"action": "insert", "row_data": row_data}]
-
-        create = chia_root.run(args=["data", "create_table", "--table", "test table"])
-        print(f"create {create}")
-        # TODO get store id from cli response
-        store_id = "0102030405060708091011121314151617181920212223242526272829303132"
+        create = chia_root.run(args=["data", "create_kv_store"])
+        print(f"create_kv_store: {create}")
+        tree_id = "0102030405060708091011121314151617181920212223242526272829303132"
+        key = b"a"
+        value = b"\x00\x01"
+        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        print(json.dumps(changelist))
         update = chia_root.run(
-            args=["data", "update_table", "--table", store_id, "--changelist", json.dumps(changelist)]
+            args=["data", "update_kv_store", "--id", tree_id, "--changelist", json.dumps(changelist)]
         )
-        print(f"update {update}")
-        completed_process = chia_root.run(args=["data", "get_row", "--table", store_id, "--row_hash", row_hash])
+        print(f"update_kv_store: {update}")
+        completed_process = chia_root.run(args=["data", "get_value", "--id", tree_id, "--key", row_hash])
         parsed = json.loads(completed_process.stdout)
         expected = {"row_data": row_data, "row_hash": row_hash, "success": True}
-
         assert parsed == expected

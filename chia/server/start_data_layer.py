@@ -29,19 +29,10 @@ log = logging.getLogger(__name__)
 def service_kwargs_for_data_layer(
     root_path: pathlib.Path,
     config: Dict,  # type: ignore[type-arg]
-    constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
 ) -> Dict[str, Any]:
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "wallet")
-
     # add local node to trusted peers if old config
-    node = WalletNode(
-        config,
-        root_path,
-        consensus_constants=constants,
-        local_keychain=keychain,
-    )
-    data_layer = DataLayer(root_path=root_path, wallet_node=node)
+    data_layer = DataLayer(root_path=root_path, wallet_state_manager=None)
     api = DataLayerAPI(data_layer)
     network_id = config["selected_network"]
     kwargs: Dict[str, Any] = dict(
