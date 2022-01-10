@@ -30,8 +30,8 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
 
     startupinfo = None
     if os.name == "nt":
-        startupinfo = subprocess.STARTUPINFO()  # type: ignore
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
     # CREATE_NEW_PROCESS_GROUP allows graceful shutdown on windows, by CTRL_BREAK_EVENT signal
     if sys.platform == "win32" or sys.platform == "cygwin":
@@ -94,6 +94,7 @@ if getattr(sys, "frozen", False):
         else:
             path = f"{application_path}/{name_map[service_name]}"
             return path
+
 
 else:
     application_path = os.path.dirname(__file__)
