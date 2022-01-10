@@ -193,6 +193,9 @@ class CCWallet:
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
         self.cc_info = CCInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+        self.lineage_proof_dict: Dict[bytes32, Optional[LineageProof]] = {}
+        for name, proof in self.cc_info.lineage_proofs:
+            self.lineage_proof_dict[name] = proof
         return self
 
     @classmethod
@@ -746,6 +749,7 @@ class CCWallet:
         self.log.info(f"Adding parent {name}: {lineage}")
         current_list = self.cc_info.lineage_proofs.copy()
         current_list.append((name, lineage))
+        self.lineage_proof_dict[name] = lineage
         cc_info: CCInfo = CCInfo(self.cc_info.limitations_program_hash, self.cc_info.my_genesis_checker, current_list)
         await self.save_info(cc_info, in_transaction)
 
@@ -753,6 +757,8 @@ class CCWallet:
         self.log.info(f"Removing parent {name} (probably had a non-CAT parent)")
         current_list = self.cc_info.lineage_proofs.copy()
         current_list = list(filter(lambda tup: tup[0] != name, current_list))
+        if name in self.lineage_proof_dict:
+            self.lineage_proof_dict.pop(name)
         cc_info: CCInfo = CCInfo(self.cc_info.limitations_program_hash, self.cc_info.my_genesis_checker, current_list)
         await self.save_info(cc_info, in_transaction)
 

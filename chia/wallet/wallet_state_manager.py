@@ -732,9 +732,7 @@ class WalletStateManager:
                         )
                         await self.tx_store.add_transaction_record(tx_record, False)
 
-                    children: List[CoinState] = await self.wallet_node.fetch_children(
-                        peer, coin_state.coin.name(), weight_proof
-                    )
+                    children: List[CoinState] = []
                     additions = [state.coin for state in children]
                     if len(children) > 0:
                         cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
