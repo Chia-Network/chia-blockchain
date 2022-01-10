@@ -132,6 +132,7 @@ class BlockTools:
         root_path: Optional[Path] = None,
         const_dict=None,
         keychain: Optional[Keychain] = None,
+        create_default = True,
     ):
         self._tempdir = None
         if root_path is None:
@@ -141,8 +142,9 @@ class BlockTools:
         self.root_path = root_path
         self.local_keychain = keychain
 
-        create_default_chia_config(root_path)
-        create_all_ssl(root_path)
+        if create_default:
+            create_default_chia_config(root_path)
+            create_all_ssl(root_path)
 
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
         self._config = load_config(self.root_path, "config.yaml")
@@ -2026,7 +2028,7 @@ def create_block_tools(
     const_dict=None,
     keychain: Optional[Keychain] = None,
 ) -> BlockTools:
-    bt = BlockTools(constants, root_path, const_dict, keychain)
+    bt = BlockTools(constants, root_path, const_dict, keychain, False)
 
     asyncio.get_event_loop().run_until_complete(bt.setup_keys())
     asyncio.get_event_loop().run_until_complete(bt.setup_plots())

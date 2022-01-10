@@ -298,7 +298,7 @@ class WebSocketServer:
                 return dict_to_json_str(message), sockets
 
             return None, []
-
+        self.log.info(message)
         data = message["data"]
         commands_with_data = [
             "start_service",
