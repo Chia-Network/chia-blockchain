@@ -28,4 +28,4 @@ jobs:
         mkdir npm_test
         cd npm_test
         npm init -y
-        npm install performance-now
+        npm install performance-now@0.2.0
