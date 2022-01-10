@@ -1,6 +1,7 @@
 import itertools
 import logging
-from typing import Awaitable, Callable, Dict, List, Optional
+from typing import Awaitable, Callable, Dict, List, Optional, Tuple
+from random import Random
 
 import pytest
 
@@ -11,7 +12,15 @@ from chia.data_layer.data_layer_errors import (
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
 )
-from chia.data_layer.data_layer_types import NodeType, ProofOfInclusion, ProofOfInclusionLayer, Side, Status
+from chia.data_layer.data_layer_types import (
+    NodeType,
+    ProofOfInclusion,
+    ProofOfInclusionLayer,
+    Side,
+    Status,
+    InternalNode,
+    TerminalNode,
+)
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
@@ -19,7 +28,7 @@ from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 
-from tests.core.data_layer.util import add_0123_example, add_01234567_example, Example
+from tests.core.data_layer.util import add_0123_example, add_01234567_example, Example, get_random_terminal_node
 
 
 log = logging.getLogger(__name__)
@@ -237,6 +246,50 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
 
     ancestors_2 = await data_store.get_ancestors_2(node_hash=reference_node_hash, tree_id=tree_id)
     assert ancestors == ancestors_2
+
+
+@pytest.mark.asyncio
+async def test_get_ancestors_2(data_store: DataStore, tree_id: bytes32) -> None:
+    ancestors: List[Tuple[int, bytes32, List[InternalNode]]] = []
+    random = Random()
+    random.seed(100, version=2)
+
+    insertions = 0
+    for i in range(300):
+        node_hash = await get_random_terminal_node(data_store, tree_id, random)
+        if random.randint(0, 4) > 0 or insertions < 25:
+            insertions += 1
+            key = (i + 100).to_bytes(4, byteorder="big")
+            value = (i + 200).to_bytes(4, byteorder="big")
+            side = None if node_hash is None else Side.LEFT if random.randint(0, 1) == 0 else Side.RIGHT
+
+            _ = await data_store.insert(
+                key=key,
+                value=value,
+                tree_id=tree_id,
+                reference_node_hash=node_hash,
+                side=side,
+            )
+            if node_hash is not None:
+                generation = await data_store.get_tree_generation(tree_id=tree_id)
+                current_ancestors = await data_store.get_ancestors(node_hash=node_hash, tree_id=tree_id)
+                ancestors.append((generation, node_hash, current_ancestors))
+        else:
+            assert node_hash is not None
+            node = await data_store.get_node(node_hash)
+            assert isinstance(node, TerminalNode)
+            await data_store.delete(key=node.key, tree_id=tree_id)
+            generation = await data_store.get_tree_generation(tree_id=tree_id)
+            current_ancestors = await data_store.get_ancestors_2(
+                node_hash=node_hash, tree_id=tree_id, generation=generation
+            )
+            assert current_ancestors == []
+
+    for generation, node_hash, expected_ancestors in ancestors:
+        current_ancestors = await data_store.get_ancestors_2(
+            node_hash=node_hash, tree_id=tree_id, generation=generation
+        )
+        assert current_ancestors == expected_ancestors
 
 
 @pytest.mark.asyncio
