@@ -31,8 +31,8 @@ async def empty_blockchain(request):
 
 
 @pytest.fixture(scope="function", params=[1, 2])
-async def db_version(request):
-    yield request.param
+def db_version(request):
+    return request.param
 
 
 block_format_version = "rc4"
