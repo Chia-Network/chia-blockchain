@@ -521,6 +521,9 @@ class DataStore:
     async def delete(self, key: bytes, tree_id: bytes32, *, lock: bool = True, status: Status = Status.PENDING) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
+            if node is None:
+                return
+
             ancestors = await self.get_ancestors(node_hash=node.hash, tree_id=tree_id, lock=False)
 
             if len(ancestors) == 0:
@@ -648,10 +651,13 @@ class DataStore:
         tree_id: bytes32,
         *,
         lock: bool = True,
-    ) -> ProofOfInclusion:
+    ) -> Optional[ProofOfInclusion]:
         """Collect the information for a proof of inclusion of a key and its value in
         the Merkle tree.
         """
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
+            if node is None:
+                log.error("error getting node from store")
+                return None
             return await self.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id, lock=False)

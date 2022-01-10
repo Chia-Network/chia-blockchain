@@ -128,9 +128,9 @@ async def test_create_double_insert(chia_root: ChiaRoot, one_wallet_node: nodes)
     await asyncio.sleep(1)
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(
-        15, is_transaction_confirmed, True, update_tx_rec0.wallet_id, wallet_rpc_api, update_tx_rec0.name
-    )
+    # await time_out_assert(
+    #     15, is_transaction_confirmed, True, update_tx_rec0.wallet_id, wallet_rpc_api, update_tx_rec0.name
+    # )
 
     res = await data_rpc_api.get_value({"id": store_id.hex(), "key": key1.hex()})
     assert hexstr_to_bytes(res["data"]) == value1
@@ -140,9 +140,9 @@ async def test_create_double_insert(chia_root: ChiaRoot, one_wallet_node: nodes)
     await asyncio.sleep(1)
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(
-        15, is_transaction_confirmed, True, update_tx_rec0.wallet_id, wallet_rpc_api, update_tx_rec1.name
-    )
+    # await time_out_assert(
+    #     15, is_transaction_confirmed, True, update_tx_rec0.wallet_id, wallet_rpc_api, update_tx_rec1.name
+    # )
     res = await data_rpc_api.get_value({"id": store_id.hex(), "key": key2.hex()})
     assert hexstr_to_bytes(res["data"]) == value2
 
@@ -193,9 +193,9 @@ async def test_get_keys_values(chia_root: ChiaRoot, one_wallet_node: nodes) -> N
     await asyncio.sleep(1)
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(
-        15, is_transaction_confirmed, True, update_tx_rec0.wallet_id, wallet_rpc_api, update_tx_rec0.name
-    )
+    # await time_out_assert(
+    #     15, is_transaction_confirmed, True, update_tx_rec0.wallet_id, wallet_rpc_api, update_tx_rec0.name
+    # )
     val = await data_rpc_api.get_keys_values({"id": tree_id.hex()})
     dic = {}
     for item in val["data"]:
@@ -249,9 +249,9 @@ async def test_get_ancestors(chia_root: ChiaRoot, one_wallet_node: nodes) -> Non
     await asyncio.sleep(1)
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(
-        15, is_transaction_confirmed, True, update_tx_rec0.wallet_id, wallet_rpc_api, update_tx_rec0.name
-    )
+    # await time_out_assert(
+    #     15, is_transaction_confirmed, True, update_tx_rec0.wallet_id, wallet_rpc_api, update_tx_rec0.name
+    # )
     val = await data_rpc_api.get_keys_values({"id": tree_id.hex()})
     assert val["data"]
     val = await data_rpc_api.get_ancestors({"id": tree_id.hex(), "hash": val["data"][4].hash.hex()})

@@ -23,14 +23,14 @@ class DataLayerRpcClient(RpcClient):
     async def get_keys_values(self, tree_id: bytes32) -> Dict[str, Any]:
         response = await self.fetch("get_keys_values", {"id": tree_id.hex()})
         # TODO: better hinting for .fetch() (probably a TypedDict)
-        return response
+        return response  # type: ignore[no-any-return]
 
     async def get_ancestors(self, tree_id: bytes32, hash: bytes32) -> Dict[str, Any]:
         response = await self.fetch("get_ancestors", {"id": tree_id.hex(), "hash": hash})
         # TODO: better hinting for .fetch() (probably a TypedDict)
-        return response
+        return response  # type: ignore[no-any-return]
 
-    async def get_root(self, tree_id) -> Dict[str, Any]:
+    async def get_root(self, tree_id: bytes32) -> Dict[str, Any]:
         response = await self.fetch("get_root", {"id": tree_id.hex()})
         # TODO: better hinting for .fetch() (probably a TypedDict)
-        return response
+        return response  # type: ignore[no-any-return]

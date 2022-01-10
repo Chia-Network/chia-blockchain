@@ -153,6 +153,7 @@ async def test_insert_internal_node_does_nothing_if_matching(data_store: DataSto
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
     kv_node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
+    assert kv_node
     ancestors = await data_store.get_ancestors(node_hash=kv_node.hash, tree_id=tree_id)
     parent = ancestors[0]
 
@@ -175,7 +176,7 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
     kv_node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
-
+    assert kv_node
     async with data_store.db_wrapper.locked_transaction():
         cursor = await data_store.db.execute("SELECT * FROM node")
         before = await cursor.fetchall()
@@ -214,6 +215,7 @@ async def test_get_node_by_key(data_store: DataStore, tree_id: bytes32) -> None:
     # TODO: make a nicer relationship between the hash and the key
 
     actual = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
+    assert actual
     assert actual.hash == key_node_hash
 
 
@@ -504,9 +506,9 @@ async def test_proof_of_inclusion_by_hash(data_store: DataStore, tree_id: bytes3
     root = await data_store.get_tree_root(tree_id=tree_id)
     assert root.node_hash is not None
     node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
-
+    assert node
     proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
-
+    assert proof
     print(node)
     await _debug_dump(db=data_store.db)
 
@@ -538,9 +540,9 @@ async def test_proof_of_inclusion_by_hash_no_ancestors(data_store: DataStore, tr
     root = await data_store.get_tree_root(tree_id=tree_id)
     assert root.node_hash is not None
     node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
-
+    assert node
     proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
-
+    assert proof
     assert proof == ProofOfInclusion(node_hash=node.hash, root_hash=root.node_hash, layers=[])
 
 
@@ -550,9 +552,9 @@ async def test_proof_of_inclusion_by_hash_program(data_store: DataStore, tree_id
 
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
     node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
-
+    assert node
     proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
-
+    assert proof
     assert proof.as_program() == [
         b"\x04",
         [
@@ -569,8 +571,9 @@ async def test_proof_of_inclusion_by_hash_equals_by_key(data_store: DataStore, t
 
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
     node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
-
+    assert node
     proof_by_hash = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
+    assert proof_by_hash
     proof_by_key = await data_store.get_proof_of_inclusion_by_key(key=b"\x04", tree_id=tree_id)
 
     assert proof_by_hash == proof_by_key
@@ -583,9 +586,9 @@ async def test_proof_of_inclusion_by_hash_bytes(data_store: DataStore, tree_id: 
     """
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
     node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
-
+    assert node
     proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
-
+    assert proof
     expected = (
         b"\xff\x04\xff\xff\xa0\xfbf\xfeS\x9b>\xb2\x02\r\xfb\xfa\xdf\xd6\x01\xfa1\x85!)"
         b"+A\xf0L W\xc1o\xcak\x94|\xa1\xff\xa0m:\xf8\xd9=\xb9H\xe8\xb6\xaaC\x86\x95"

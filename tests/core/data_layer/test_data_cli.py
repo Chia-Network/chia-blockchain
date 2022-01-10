@@ -40,7 +40,7 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
         print(f"update_data_store: {update}")
         completed_process = chia_root.run(args=["data", "get_value", "--id", tree_id, "--key", key])
         parsed = json.loads(completed_process.stdout)
-        expected = {"data": value, "success": True}
+        expected = {"value": value, "success": True}
         assert parsed == expected
         get_keys_values = chia_root.run(args=["data", "get_keys_values", "--id", tree_id])
         print(f"get_keys_values: {get_keys_values}")

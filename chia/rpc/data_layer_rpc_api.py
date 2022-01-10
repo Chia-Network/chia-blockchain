@@ -76,7 +76,7 @@ class DataLayerRpcApi:
         hex = None
         if value is not None:
             hex = value.hex()
-        return {"data": hex}
+        return {"value": hex}
 
     async def get_keys_values(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
@@ -85,9 +85,9 @@ class DataLayerRpcApi:
         res = await self.service.get_keys_values(store_id)
         json_nodes = []
         for node in res:
-            json = recurse_jsonify(dataclasses.asdict(node))
+            json = recurse_jsonify(dataclasses.asdict(node))  # type: ignore[no-untyped-call]
             json_nodes.append(json)
-        return {"data": json_nodes}
+        return {"keys_values": json_nodes}
 
     async def get_ancestors(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
@@ -95,7 +95,7 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         value = await self.service.get_ancestors(node_hash, store_id)
-        return {"data": value}
+        return {"ancestors": value}
 
     async def update_data_store(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -149,4 +149,4 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         res = await self.service.get_root(store_id)
-        return {"data": res}
+        return {"hash": res}
