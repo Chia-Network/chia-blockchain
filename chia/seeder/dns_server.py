@@ -80,12 +80,8 @@ class DNSServer:
         self.pointer_v4 = 0
         self.pointer_v6 = 0
 
-        if "crawler_db_path" in config and config["crawler_db_path"] != "":
-            path = Path(config["crawler_db_path"])
-            self.db_path = path.expanduser()
-        else:
-            db_path_replaced: str = "crawler.db"
-            self.db_path = path_from_root(root_path, db_path_replaced)
+        crawler_db_path: str = config.get("crawler_db_path", "crawler.db")
+        self.db_path = path_from_root(root_path, crawler_db_path)
         mkdir(self.db_path.parent)
 
         self.prometheus = PrometheusSeeder.create(config, log)

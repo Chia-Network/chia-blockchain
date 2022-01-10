@@ -61,12 +61,8 @@ class Crawler:
         self.version_cache: List[Tuple[str, str]] = []
         self.handshake_time: Dict[str, int] = {}
         self.best_timestamp_per_peer: Dict[str, int] = {}
-        if "crawler_db_path" in config and config["crawler_db_path"] != "":
-            path = Path(config["crawler_db_path"])
-            self.db_path = path.expanduser()
-        else:
-            db_path_replaced: str = "crawler.db"
-            self.db_path = path_from_root(root_path, db_path_replaced)
+        crawler_db_path: str = config.get("crawler_db_path", "crawler.db")
+        self.db_path = path_from_root(root_path, crawler_db_path)
         mkdir(self.db_path.parent)
         self.bootstrap_peers = config["bootstrap_peers"]
         self.minimum_height = config["minimum_height"]

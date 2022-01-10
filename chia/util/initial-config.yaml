@@ -146,8 +146,8 @@ seeder:
     start_prometheus_server: False
     prometheus_exporter_port: 9920
 
-  # Path to crawler DB. If empty, will use $CHIA_ROOT/crawler.db
-  crawler_db_path: ""
+  # Path to crawler DB. Defaults to $CHIA_ROOT/crawler.db
+  crawler_db_path: "crawler.db"
   # Peers used for the initial run.
   bootstrap_peers:
     - "node.chia.net"
