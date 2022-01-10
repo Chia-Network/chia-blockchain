@@ -23,6 +23,8 @@ jobs:
         python-version: [3.8]
 
     steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
     - name: Build arm64 .deb package
       run: |
         mkdir npm_test
