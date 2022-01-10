@@ -29,3 +29,8 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("get_ancestors", {"id": tree_id.hex(), "hash": hash})
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response
+
+    async def get_root(self, tree_id) -> Dict[str, Any]:
+        response = await self.fetch("get_root", {"id": tree_id.hex()})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response

@@ -145,9 +145,22 @@ def get_keys_values(
     fingerprint: int,
     data_rpc_port: int,
 ) -> None:
-    from chia.cmds.data_funcs import get_keys_values
+    from chia.cmds.data_funcs import get_keys_values_cmd
 
-    run(get_keys_values(data_rpc_port, id))
+    run(get_keys_values_cmd(data_rpc_port, id))
+
+@data_cmd.command("get_root", short_help="")
+@create_data_store_id_option()
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@create_rpc_port_option()
+def get_root(
+    id: str,
+    fingerprint: int,
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import get_root_cmd
+
+    run(get_root_cmd(data_rpc_port, id))
 
 
 # @data_cmd.command("get_ancestors", short_help="")

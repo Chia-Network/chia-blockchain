@@ -84,7 +84,7 @@ async def update_data_store_cmd(
     return response
 
 
-async def get_keys_values(
+async def get_keys_values_cmd(
     rpc_port: Optional[int],
     tree_id: str,
 ) -> Optional[Dict[str, Any]]:
@@ -94,6 +94,24 @@ async def get_keys_values(
     try:
         client, rpc_port = await get_client(rpc_port)
         response = await client.get_keys_values(tree_id=tree_id_bytes)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+        return None
+    except Exception as e:
+        print(f"Exception from 'data': {e}")
+        return None
+
+    client.close()
+    await client.await_closed()
+    return response
+
+
+async def get_root_cmd(rpc_port: Optional[int], tree_id: str) -> Optional[Dict[str, Any]]:
+    # TODO: nice cli error handling
+    tree_id_bytes = bytes32(hexstr_to_bytes(tree_id))
+    try:
+        client, rpc_port = await get_client(rpc_port)
+        response = await client.get_root(tree_id=tree_id_bytes)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
         return None

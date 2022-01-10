@@ -55,6 +55,7 @@ class DataLayerRpcApi:
             "/get_value": self.get_value,
             "/get_keys_values": self.get_keys_values,
             "/get_ancestors": self.get_ancestors,
+            "/get_root": self.get_root,
         }
 
         ##########################################################################################
@@ -97,7 +98,7 @@ class DataLayerRpcApi:
         value = await self.service.get_ancestors(node_hash, store_id)
         return {"data": value}
 
-    async def update_data_store(self, request: Dict[str, Any]) -> Optional[TransactionRecord]:
+    async def update_data_store(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         rows_to_add a list of clvm objects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove
@@ -107,4 +108,46 @@ class DataLayerRpcApi:
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        return await self.service.insert(store_id, changelist)
+        txs = await self.service.batch_update(store_id, changelist)
+        return {"tx_id": "id"}
+
+    async def insert(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        rows_to_add a list of clvm objects as bytes to add to talbe
+        rows_to_remove a list of row hashes to remove
+        """
+        key = hexstr_to_bytes(request["key"])
+        value = hexstr_to_bytes(request["value"])
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        # todo input checks
+        if self.service is None:
+            raise Exception("Data layer not created")
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        txs = await self.service.batch_update(store_id, changelist)
+        return {"tx_id": "id"}
+
+    async def delete_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        rows_to_add a list of clvm objects as bytes to add to talbe
+        rows_to_remove a list of row hashes to remove
+        """
+        key = hexstr_to_bytes(request["key"])
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        # todo input checks
+        if self.service is None:
+            raise Exception("Data layer not created")
+        changelist = [{"action": "delete", "key": key.hex()}]
+        txs = await self.service.batch_update(store_id, changelist)
+        return {"tx_id": "id"}
+
+    async def get_root(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        rows_to_add a list of clvm objects as bytes to add to talbe
+        rows_to_remove a list of row hashes to remove
+        """
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        # todo input checks
+        if self.service is None:
+            raise Exception("Data layer not created")
+        res =  await self.service.get_root(store_id)
+        return {"data": res}

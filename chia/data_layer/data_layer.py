@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import aiosqlite
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode, Root
 from chia.data_layer.data_store import DataStore
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -83,7 +83,7 @@ class DataLayer:
             self.log.fatal("failed creating store")
         return tree_id
 
-    async def insert(
+    async def batch_update(
         self,
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
@@ -132,3 +132,10 @@ class DataLayer:
         if res is None:
             self.log.error("Failed to create tree")
         return res
+
+    async def get_root(self,store_id: bytes32) -> Optional[bytes32]:
+        res = await self.data_store.get_tree_root(tree_id=store_id)
+        self.log.info(f"root is {res.node_hash}")
+        if res is None:
+            self.log.error("Failed to create tree")
+        return res.node_hash
