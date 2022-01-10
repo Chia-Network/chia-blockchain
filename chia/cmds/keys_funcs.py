@@ -149,7 +149,9 @@ def search_derive(
     search_term: str,
     limit: int,
     hardened_derivation: bool,
-):
+    no_progress: bool,
+) -> bool:
+    show_progress: bool = not no_progress
     private_keys: List[PrivateKey]
     if private_key is None:
         private_keys = [sk for sk, _ in keychain.get_all_private_keys()]
@@ -157,7 +159,8 @@ def search_derive(
         private_keys = [private_key]
 
     for sk in private_keys:
-        print(f"Searching keys derived from: {sk.get_g1().get_fingerprint()}")
+        if show_progress:
+            print(f"Searching keys derived from: {sk.get_g1().get_fingerprint()}")
         current_path: str = ""
         current_path_indices: List[int] = [12381, 8444]
         path_root: str = "m/"
@@ -165,28 +168,34 @@ def search_derive(
             path_root += f"{i}{'h' if hardened_derivation else ''}/"
         found_item: Any = None
         found_item_type: str = ""
-        sys.stdout.write(path_root)
+        if show_progress:
+            sys.stdout.write(path_root)
+
         # 7 account levels for derived keys (0-6):
         # 0, 1, 2, 3, 4, 5, 6 farmer, pool, wallet, local, backup key, singleton, pooling authentication key numbers
         for account in range(7):
-            account_str = str(account) + 'h' if hardened_derivation else ''
+            account_str = str(account) + "h" if hardened_derivation else ""
             current_path = path_root + f"{account_str}/"
             current_path_indices.append(account)
-            sys.stdout.write(f"{account_str}/")
+            if show_progress:
+                sys.stdout.write(f"{account_str}/")
+
             for index in range(limit):
-                index_str = str(index) + 'h' if hardened_derivation else ''
+                index_str = str(index) + "h" if hardened_derivation else ""
                 current_path += f"{index_str}"
                 current_path_indices.append(index)
-                sys.stdout.write(f"{index_str}")
-                sys.stdout.flush()
+                if show_progress:
+                    sys.stdout.write(f"{index_str}")
+                    sys.stdout.flush()
                 if hardened_derivation:
                     child_sk = _derive_path(sk, current_path_indices)
                 else:
                     child_sk = _derive_path_unhardened(sk, current_path_indices)
                 child_pk = child_sk.get_g1()
                 address: str = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), "xch")
-                sys.stdout.write("\b" * len(str(index_str)))
-                sys.stdout.flush()
+                if show_progress:
+                    sys.stdout.write("\b" * len(str(index_str)))
+                    sys.stdout.flush()
                 if search_term in str(child_pk):
                     found_item = child_pk
                     found_item_type = "public key"
@@ -201,18 +210,22 @@ def search_derive(
                     break
                 current_path = current_path[: -len(str(index_str))]
                 current_path_indices = current_path_indices[:-1]
-            sys.stdout.write("\b" * (1 + len(str(account_str))))
+            if show_progress:
+                sys.stdout.write("\b" * (1 + len(str(account_str))))
             current_path_indices = current_path_indices[:-1]
 
             if found_item is not None:
                 break
         if found_item is not None:
             break
+        if show_progress:
+            print()
+    if show_progress:
         print()
-    print()
     if found_item is not None:
-        print(f"Found {found_item_type}: {found_item}")
-        print(f"HD Path: {current_path}")
+        print(f"Found {found_item_type}: {found_item} (HD path: {current_path})")
+
+    return found_item is not None
 
 
 def derive_wallet_address(

@@ -151,18 +151,29 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
 
 
 @derive_cmd.command("search", short_help="Search the keyring for a matching derived key or wallet address")
-@click.argument("search_term", type=str)
+@click.argument("search-term", type=str)
 @click.option("--limit", "-l", default=500, help="Limit the number of derivations to search against", type=int)
 @click.option(
     "--hardened-derivation",
-    "-p",
+    "-d",
     help="Search against keys derived using hardened derivation.",
     default=False,
     show_default=True,
     is_flag=True,
 )
+@click.option(
+    "--no-progress",
+    "-P",
+    help="Do not show search progress",
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
 @click.pass_context
-def search_cmd(ctx: click.Context, search_term: str, limit: int, hardened_derivation: bool):
+def search_cmd(
+    ctx: click.Context, search_term: str, limit: int, hardened_derivation: bool, no_progress: bool
+):
+    import sys
     from .keys_funcs import search_derive, resolve_derivation_master_key
     from blspy import PrivateKey
 
@@ -174,7 +185,9 @@ def search_cmd(ctx: click.Context, search_term: str, limit: int, hardened_deriva
     if fingerprint is not None or filename is not None:
         private_key = resolve_derivation_master_key(ctx.obj["fingerprint"], ctx.obj["filename"])
 
-    search_derive(ctx.obj["root_path"], private_key, search_term, limit, hardened_derivation)
+    found: bool = search_derive(ctx.obj["root_path"], private_key, search_term, limit, hardened_derivation, no_progress)
+
+    sys.exit(0 if found else 1)
 
 
 @derive_cmd.command("wallet-address", short_help="Derive wallet receive addresses")
