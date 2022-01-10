@@ -27,7 +27,8 @@ jobs:
 
     - name: Build arm64 .deb package
       run: |
-        mkdir npm_test
-        cd npm_test
-        npm init -y
-        npm install performance-now@0.2.0
+        echo ls -l ~/.npm/_cacache/content-v2/sha512/f1/b7
+        ls -l ~/.npm/_cacache/content-v2/sha512/f1/b7
+        echo cd build_scripts/npm_test
+        cd build_scripts/npm_test
+        npm ci
