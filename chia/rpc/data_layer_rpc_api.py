@@ -69,7 +69,10 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         value = await self.service.get_value(store_id=store_id, key=key)
-        return {"data": value.hex()}
+        hex = None
+        if value is not None:
+            hex = value.hex()
+        return {"data": hex}
 
     async def get_pairs(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))

@@ -559,15 +559,15 @@ class DataStore:
 
         return
 
-    async def get_node_by_key(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
+    async def get_node_by_key(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> Optional[TerminalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             nodes = await self.get_pairs(tree_id=tree_id, lock=False)
 
         for node in nodes:
             if node.key == key:
                 return node
-
-        raise Exception(f"Key not found: {key.hex()}")
+        log.error(f"Key not found: {key.hex()}")
+        return None
 
     async def get_node(self, node_hash: bytes32, *, lock: bool = True) -> Node:
         async with self.db_wrapper.locked_transaction(lock=lock):

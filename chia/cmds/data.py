@@ -21,11 +21,11 @@ def run(coro: Coroutine[Any, Any, Optional[Dict[str, Any]]]) -> None:
     response = asyncio.run(coro)
 
     success = response is not None and response.get("success", False)
-    print(f"{response}")
+    print(f"{json.dumps(response)}")
     logger.info(f"data layer cli call response:{success}")
     # todo make sure all cli methods follow this pattern, uncomment
-    # if not success:
-    # raise click.ClickException(message=f"query unsuccessful, response: {response}")
+    if not success:
+        raise click.ClickException(message=f"query unsuccessful, response: {response}")
 
 
 @click.group("data", short_help="Manage your data")

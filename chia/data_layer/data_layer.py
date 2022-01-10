@@ -114,10 +114,11 @@ class DataLayer:
         # await self.data_store.change_root_status(root, Status.COMMITTED)
         return None
 
-    async def get_value(self, store_id: bytes32, key: bytes) -> bytes:
+    async def get_value(self, store_id: bytes32, key: bytes) -> Optional[bytes]:
         res = await self.data_store.get_node_by_key(tree_id=store_id, key=key)
         if res is None:
-            self.log.error("Failed to create tree")
+            self.log.error("Failed to fetch key")
+            return None
         return res.value
 
     async def get_pairs(self, store_id: bytes32) -> List[TerminalNode]:

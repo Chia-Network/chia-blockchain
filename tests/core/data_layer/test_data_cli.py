@@ -18,26 +18,36 @@ async def test_help(chia_root: ChiaRoot) -> None:
     assert "Show this message and exit" in completed_process.stdout
 
 
-@pytest.mark.xfail(strict=True)
 @pytest.mark.asyncio
 def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> None:
     """Create a table, insert a row, get the row by its hash."""
 
     with chia_root.print_log_after():
-        row_data = "ffff8353594d8083616263"
-        row_hash = "1a6f915513173902a7216e7d9e4a16bfd088e20683f45de3b432ce72e9cc7aa8"
         create = chia_root.run(args=["data", "create_kv_store"])
         print(f"create_kv_store: {create}")
-        tree_id = "0102030405060708091011121314151617181920212223242526272829303132"
-        key = b"a"
-        value = b"\x00\x01"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        dic = json.loads(create.stdout)
+        assert dic["success"]
+        tree_id = dic["id"]
+        key = "1a6f915513173902a7216e7d9e4a16bfd088e20683f45de3b432ce72e9cc7aa8"
+        value = "ffff8353594d8083616263"
+        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key, "value": value}]
         print(json.dumps(changelist))
         update = chia_root.run(
             args=["data", "update_kv_store", "--id", tree_id, "--changelist", json.dumps(changelist)]
         )
+        dic = json.loads(create.stdout)
+        assert dic["success"]
         print(f"update_kv_store: {update}")
-        completed_process = chia_root.run(args=["data", "get_value", "--id", tree_id, "--key", row_hash])
+        completed_process = chia_root.run(args=["data", "get_value", "--id", tree_id, "--key", key])
         parsed = json.loads(completed_process.stdout)
-        expected = {"row_data": row_data, "row_hash": row_hash, "success": True}
+        expected = {"data": value, "success": True}
+        assert parsed == expected
+        changelist = [{"action": "delete", "key": key}]
+        update = chia_root.run(
+            args=["data", "update_kv_store", "--id", tree_id, "--changelist", json.dumps(changelist)]
+        )
+        print(f"update_kv_store: {update}")
+        completed_process = chia_root.run(args=["data", "get_value", "--id", tree_id, "--key", key])
+        parsed = json.loads(completed_process.stdout)
+        expected = {"data": None, "success": True}
         assert parsed == expected
