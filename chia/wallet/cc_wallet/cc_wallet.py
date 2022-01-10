@@ -33,6 +33,7 @@ from chia.wallet.cc_wallet.cc_utils import (
     unsigned_spend_bundle_for_spendable_ccs,
     match_cat_puzzle,
 )
+from chia.wallet.cc_wallet.lineage_store import CCLineageStore
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.genesis_checkers import ALL_LIMITATIONS_PROGRAMS
@@ -63,6 +64,7 @@ class CCWallet:
     cc_info: CCInfo
     standard_wallet: Wallet
     cost_of_single_tx: Optional[int]
+    lineage_store: CCLineageStore
 
     @staticmethod
     async def create_new_cc_wallet(
@@ -97,13 +99,14 @@ class CCWallet:
                 amount,
             )
             assert self.cc_info.limitations_program_hash != empty_bytes
-            assert self.cc_info.lineage_proofs != []
+            # assert self.cc_info.lineage_proofs != []
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id(), False)
             raise
         if spend_bundle is None:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")
+        self.lineage_store = await CCLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_colour())
 
         await self.wallet_state_manager.add_new_wallet(self, self.id())
 
@@ -174,7 +177,7 @@ class CCWallet:
         )
         if self.wallet_info is None:
             raise Exception("wallet_info is None")
-
+        self.lineage_store = await CCLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_colour())
         await self.wallet_state_manager.add_new_wallet(self, self.id())
         return self
 
@@ -193,9 +196,7 @@ class CCWallet:
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
         self.cc_info = CCInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
-        self.lineage_proof_dict: Dict[bytes32, Optional[LineageProof]] = {}
-        for name, proof in self.cc_info.lineage_proofs:
-            self.lineage_proof_dict[name] = proof
+        self.lineage_store = await CCLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_colour())
         return self
 
     @classmethod
@@ -304,12 +305,9 @@ class CCWallet:
         lineage_proof = LineageProof(coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount)
         await self.add_lineage(coin.name(), lineage_proof, True)
 
-        for name, lineage_proofs in self.cc_info.lineage_proofs:
-            if coin.parent_coin_info == name:
-                search_for_parent = False
-                break
+        lineage = await self.get_lineage_proof_for_coin(coin)
 
-        if search_for_parent:
+        if lineage is None:
             data: Dict[str, Any] = {
                 "data": {
                     "action_data": {
@@ -507,10 +505,7 @@ class CCWallet:
         return inner_puzzle
 
     async def get_lineage_proof_for_coin(self, coin) -> Optional[LineageProof]:
-        for name, proof in self.cc_info.lineage_proofs:
-            if name == coin.parent_coin_info:
-                return proof
-        return None
+        return await self.lineage_store.get_lineage_proof(coin.parent_coin_info)
 
     async def create_tandem_xch_tx(
         self,
@@ -747,19 +742,12 @@ class CCWallet:
         parent of the coin you are trying to spend. 'If I'm your parent, here's the info you need to spend yourself'
         """
         self.log.info(f"Adding parent {name}: {lineage}")
-        current_list = self.cc_info.lineage_proofs.copy()
-        current_list.append((name, lineage))
-        self.lineage_proof_dict[name] = lineage
-        cc_info: CCInfo = CCInfo(self.cc_info.limitations_program_hash, self.cc_info.my_genesis_checker, current_list)
-        await self.save_info(cc_info, in_transaction)
+        if lineage is not None:
+            await self.lineage_store.add_lineage_proof(name, lineage)
 
     async def remove_lineage(self, name: bytes32, in_transaction=False):
         self.log.info(f"Removing parent {name} (probably had a non-CAT parent)")
-        current_list = self.cc_info.lineage_proofs.copy()
-        current_list = list(filter(lambda tup: tup[0] != name, current_list))
-        if name in self.lineage_proof_dict:
-            self.lineage_proof_dict.pop(name)
-        cc_info: CCInfo = CCInfo(self.cc_info.limitations_program_hash, self.cc_info.my_genesis_checker, current_list)
+        cc_info: CCInfo = CCInfo(self.cc_info.limitations_program_hash, self.cc_info.my_genesis_checker, [])
         await self.save_info(cc_info, in_transaction)
 
     async def save_info(self, cc_info: CCInfo, in_transaction):

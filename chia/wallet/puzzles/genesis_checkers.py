@@ -72,7 +72,7 @@ class GenesisById(LimitationsProgram):
         origin_id = origin.name()
 
         cc_inner: Program = await wallet.get_new_inner_puzzle()
-        await wallet.add_lineage(origin_id, LineageProof())
+        # await wallet.add_lineage(origin_id, LineageProof())
         genesis_coin_checker: Program = cls.construct([Program.to(origin_id)])
 
         minted_cc_puzzle_hash: bytes32 = construct_cc_puzzle(

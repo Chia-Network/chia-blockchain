@@ -374,6 +374,16 @@ class WalletNode:
         if not self.has_full_node() and self.wallet_peers is not None:
             asyncio.create_task(self.wallet_peers.on_connect(peer))
 
+    async def get_puzzle_hashes_to_subscribe(self) -> List[bytes32]:
+        assert self.wallet_state_manager is not None
+        all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+        # Get all phs from interested store
+        interested_puzzle_hashes = [
+            t[0] for t in await self.wallet_state_manager.interested_store.get_interested_puzzle_hashes()
+        ]
+        all_puzzle_hashes.extend(interested_puzzle_hashes)
+        return all_puzzle_hashes
+
     async def trusted_sync(self, full_node: WSChiaConnection):
         """
         Performs a one-time sync with each trusted peer, subscribing to interested puzzle hashes and coin ids.
@@ -389,14 +399,7 @@ class WalletNode:
         continue_while: bool = True
         while continue_while:
             # Get all phs from puzzle store
-            all_puzzle_hashes: List[bytes32] = list(
-                await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes()
-            )
-            # Get all phs from interested store
-            interested_puzzle_hashes = [
-                t[0] for t in await self.wallet_state_manager.interested_store.get_interested_puzzle_hashes()
-            ]
-            all_puzzle_hashes.extend(interested_puzzle_hashes)
+            all_puzzle_hashes: List[bytes32] = await self.get_puzzle_hashes_to_subscribe()
             to_check: List[bytes32] = []
             for ph in all_puzzle_hashes:
                 if ph in already_checked:
@@ -410,10 +413,7 @@ class WalletNode:
             await self.subscribe_to_phs(to_check, full_node, request_height)
 
             # Check if new puzzle hashed have been created
-            check_again = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
-            self.log.debug(f"already_checked {len(already_checked)}")
-            self.log.debug(f"check_again {len(check_again)}")
-            self.log.debug(f"all_puzzle_hashes {len(all_puzzle_hashes)}")
+            check_again = await self.get_puzzle_hashes_to_subscribe()
             await self.wallet_state_manager.create_more_puzzle_hashes()
 
             continue_while = False
@@ -424,12 +424,9 @@ class WalletNode:
 
         all_coins: Set[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_coins_to_check(request_height)
         all_coin_names: List[bytes32] = [coin_record.name() for coin_record in all_coins]
-        removed_dict, added_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+        removed_dict, added = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
         all_coin_names.extend(removed_dict.keys())
-        all_coin_names.extend(added_dict.keys())
 
-        # TODO: loop here in order to support singletons for pooling
-        all_coin_names.extend(await self.wallet_state_manager.interested_store.get_interested_coin_ids())
         one_k_chunks = chunks(all_coin_names, 1000)
         for chunk in one_k_chunks:
             await self.subscribe_to_coin_updates(chunk, full_node, request_height)
