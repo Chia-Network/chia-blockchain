@@ -13,7 +13,7 @@ from chia.util.path import mkdir, path_from_root
 from tests.block_tools import BlockTools, create_block_tools, test_constants
 from tests.util.keyring import TempKeyring
 
-from .full_node_simulator import FullNodeSimulator
+from chia.simulator.full_node_simulator import FullNodeSimulator
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -59,10 +59,9 @@ def main() -> None:
             sys.argv.remove("-D")  # Remove -D to avoid conflicting with load_config_cli's argparse usage
         config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
         config["database_path"] = config["simulator_database_path"]
-        config["peers_file_path"] = config["simulator_peers_file_path"]
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = 58555
-        config["selected_network"] = "testnet0"
+        config["selected_network"] = "testnet10"
         config["simulation"] = True
         kwargs = service_kwargs_for_full_node_simulator(
             DEFAULT_ROOT_PATH,

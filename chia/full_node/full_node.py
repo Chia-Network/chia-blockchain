@@ -251,7 +251,10 @@ class FullNode:
                 )
             )
         self.initialized = True
-        if self.full_node_peers is not None:
+        simulation = False
+        if "simulation" in self.config and self.config["simulation"] is True:
+            simulation = True
+        if self.full_node_peers is not None and simulation is False:
             asyncio.create_task(self.full_node_peers.start())
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry):
