@@ -1,14 +1,16 @@
+import dataclasses
 import logging
 from typing import Any, Callable, Dict, Optional
 
 
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_types import Side
+from chia.data_layer.data_layer_types import Side, TerminalNode
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
 # todo input assertions for all rpc's
+from chia.util.streamable import recurse_jsonify
 from chia.wallet.transaction_record import TransactionRecord
 
 
@@ -35,6 +37,7 @@ def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
         "side": side,
     }
 
+
 log = logging.getLogger(__name__)
 
 
@@ -47,17 +50,18 @@ class DataLayerRpcApi:
 
     def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
         return {
-            "/create_kv_store": self.create_kv_store,
-            "/update_kv_store": self.update_kv_store,
+            "/create_data_store": self.create_data_store,
+            "/update_data_store": self.update_data_store,
             "/get_value": self.get_value,
-            "/get_pairs": self.get_pairs,
+            "/get_keys_values": self.get_keys_values,
+            "/get_ancestors": self.get_ancestors,
         }
 
         ##########################################################################################
         # Data Layer Wallet
         ##########################################################################################
 
-    async def create_kv_store(self, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def create_data_store(self, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         if self.service is None:
             raise Exception("Data layer not created")
         value = await self.service.create_store()
@@ -74,13 +78,16 @@ class DataLayerRpcApi:
             hex = value.hex()
         return {"data": hex}
 
-    async def get_pairs(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_keys_values(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         if self.service is None:
             raise Exception("Data layer not created")
-        value = await self.service.get_pairs(store_id)
-        # TODO: fix
-        return {"data": value}
+        res = await self.service.get_keys_values(store_id)
+        json_nodes = []
+        for node in res:
+            json = recurse_jsonify(dataclasses.asdict(node))
+            json_nodes.append(json)
+        return {"data": json_nodes}
 
     async def get_ancestors(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
@@ -88,10 +95,9 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         value = await self.service.get_ancestors(node_hash, store_id)
-        # TODO: fix
         return {"data": value}
 
-    async def update_kv_store(self, request: Dict[str, Any]) -> TransactionRecord:
+    async def update_data_store(self, request: Dict[str, Any]) -> Optional[TransactionRecord]:
         """
         rows_to_add a list of clvm objects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove

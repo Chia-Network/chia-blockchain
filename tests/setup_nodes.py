@@ -137,7 +137,7 @@ async def setup_data_layer(
     # connect_to_daemon=False,
 ):
     config = local_bt.config["data_layer"]
-    kwargs = service_kwargs_for_data_layer(local_bt.root_path,config=config)
+    kwargs = service_kwargs_for_data_layer(local_bt.root_path, config=config)
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=False,

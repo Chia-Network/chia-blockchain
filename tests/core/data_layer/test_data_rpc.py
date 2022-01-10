@@ -71,11 +71,11 @@ async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) ->
     key = b"a"
     value = b"\x00\x01"
     changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
-    res = await data_rpc_api.create_kv_store()
+    res = await data_rpc_api.create_data_store()
     await asyncio.sleep(1)
     assert res is not None
     store_id = bytes32(hexstr_to_bytes(res["id"]))
-    update_tx_rec0 = await data_rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
+    update_tx_rec0 = await data_rpc_api.update_data_store({"id": store_id.hex(), "changelist": changelist})
     await asyncio.sleep(1)
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -85,7 +85,7 @@ async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) ->
     res = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
     assert hexstr_to_bytes(res["data"]) == value
     changelist = [{"action": "delete", "key": key.hex()}]
-    update_tx_rec1 = await data_rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
+    update_tx_rec1 = await data_rpc_api.update_data_store({"id": store_id.hex(), "changelist": changelist})
     await asyncio.sleep(1)
     for i in range(0, num_blocks):
         await asyncio.sleep(1)
@@ -122,9 +122,9 @@ async def test_create_double_insert(chia_root: ChiaRoot, one_wallet_node: nodes)
     key2 = b"b"
     value2 = b"\x01\x23"
     changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
-    res = await data_rpc_api.create_kv_store()
+    res = await data_rpc_api.create_data_store()
     store_id = bytes32(hexstr_to_bytes(res["id"]))
-    update_tx_rec0 = await data_rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
+    update_tx_rec0 = await data_rpc_api.update_data_store({"id": store_id.hex(), "changelist": changelist})
     await asyncio.sleep(1)
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -136,7 +136,7 @@ async def test_create_double_insert(chia_root: ChiaRoot, one_wallet_node: nodes)
     assert hexstr_to_bytes(res["data"]) == value1
 
     changelist = [{"action": "insert", "key": key2.hex(), "value": value2.hex()}]
-    update_tx_rec1 = await data_rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
+    update_tx_rec1 = await data_rpc_api.update_data_store({"id": store_id.hex(), "changelist": changelist})
     await asyncio.sleep(1)
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -147,13 +147,13 @@ async def test_create_double_insert(chia_root: ChiaRoot, one_wallet_node: nodes)
     assert hexstr_to_bytes(res["data"]) == value2
 
     changelist = [{"action": "delete", "key": key1.hex()}]
-    await data_rpc_api.update_kv_store({"id": store_id.hex(), "changelist": changelist})
+    await data_rpc_api.update_data_store({"id": store_id.hex(), "changelist": changelist})
     with pytest.raises(Exception):
         val = await data_rpc_api.get_value({"id": store_id.hex(), "key": key1.hex()})
 
 
 @pytest.mark.asyncio
-async def test_get_pairs(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
+async def test_get_keys_values(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     root = chia_root.path
     config = load_config(root, "config.yaml")
     config["data_layer"]["database_path"] = "data_layer_test.sqlite"
@@ -187,16 +187,16 @@ async def test_get_pairs(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     key5 = b"e"
     value5 = b"\x07\x01"
     changelist.append({"action": "insert", "key": key5.hex(), "value": value5.hex()})
-    res = await data_rpc_api.create_kv_store()
+    res = await data_rpc_api.create_data_store()
     tree_id = bytes32(hexstr_to_bytes(res["id"]))
-    update_tx_rec0 = await data_rpc_api.update_kv_store({"id": tree_id.hex(), "changelist": changelist})
+    update_tx_rec0 = await data_rpc_api.update_data_store({"id": tree_id.hex(), "changelist": changelist})
     await asyncio.sleep(1)
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await time_out_assert(
         15, is_transaction_confirmed, True, update_tx_rec0.wallet_id, wallet_rpc_api, update_tx_rec0.name
     )
-    val = await data_rpc_api.get_pairs({"id": tree_id.hex()})
+    val = await data_rpc_api.get_keys_values({"id": tree_id.hex()})
     dic = {}
     for item in val["data"]:
         dic[item.key] = item.value
@@ -243,16 +243,16 @@ async def test_get_ancestors(chia_root: ChiaRoot, one_wallet_node: nodes) -> Non
     key5 = b"e"
     value5 = b"\x07\x01"
     changelist.append({"action": "insert", "key": key5.hex(), "value": value5.hex()})
-    res = await data_rpc_api.create_kv_store()
+    res = await data_rpc_api.create_data_store()
     tree_id = bytes32(hexstr_to_bytes(res["id"]))
-    update_tx_rec0 = await data_rpc_api.update_kv_store({"id": tree_id.hex(), "changelist": changelist})
+    update_tx_rec0 = await data_rpc_api.update_data_store({"id": tree_id.hex(), "changelist": changelist})
     await asyncio.sleep(1)
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await time_out_assert(
         15, is_transaction_confirmed, True, update_tx_rec0.wallet_id, wallet_rpc_api, update_tx_rec0.name
     )
-    val = await data_rpc_api.get_pairs({"id": tree_id.hex()})
+    val = await data_rpc_api.get_keys_values({"id": tree_id.hex()})
     assert val["data"]
     val = await data_rpc_api.get_ancestors({"id": tree_id.hex(), "hash": val["data"][4].hash.hex()})
     print(val)

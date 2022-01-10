@@ -30,7 +30,7 @@ class DataLayer:
     def __init__(
         self,
         root_path: Path,
-        wallet_state_manager: WalletStateManager,
+        wallet_state_manager: Optional[WalletStateManager],
         name: Optional[str] = None,
     ):
         if name == "":
@@ -121,8 +121,8 @@ class DataLayer:
             return None
         return res.value
 
-    async def get_pairs(self, store_id: bytes32) -> List[TerminalNode]:
-        res = await self.data_store.get_pairs(store_id)
+    async def get_keys_values(self, store_id: bytes32) -> List[TerminalNode]:
+        res = await self.data_store.get_keys_values(store_id)
         if res is None:
             self.log.error("Failed to create tree")
         return res

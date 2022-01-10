@@ -57,7 +57,7 @@ def service_kwargs_for_data_layer(
 
 def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    kwargs = service_kwargs_for_data_layer(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
+    kwargs = service_kwargs_for_data_layer(DEFAULT_ROOT_PATH, config)
     return run_service(**kwargs)
 
 
