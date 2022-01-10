@@ -25,6 +25,17 @@ jobs:
     steps:
     - uses: Chia-Network/actions/clean-workspace@main
 
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - uses: Chia-Network/actions/git-ssh-to-https@main
+
+    - name: Cleanup any leftovers that exist from previous runs
+      run: bash build_scripts/clean-runner.sh || true
+
     - name: Build arm64 .deb package
       run: |
         echo ls -l ~/.npm/_cacache/content-v2/sha512/f1/97
