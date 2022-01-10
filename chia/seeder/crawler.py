@@ -68,10 +68,12 @@ class Crawler:
         self.minimum_height = config["minimum_height"]
         self.other_peers_port = config["other_peers_port"]
         self.versions: Dict[str, int] = {}
-        if "minimum_version_count" in self.config and self.config["minimum_version_count"] > 0:
-            self.minimum_version_count = self.config["minimum_version_count"]
-        else:
-            self.minimum_version_count = 100
+        self.minimum_version_count = self.config.get("minimum_version_count", 100)
+        if self.minimum_version_count < 1:
+            self.log.warning(
+                f"Crawler configuration minimum_version_count expected to be greater than zero: "
+                f"{self.minimum_version_count!r}"
+            )
 
         self.prometheus = PrometheusCrawler.create(config, self.log)
 
