@@ -4,13 +4,12 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import aiosqlite
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode, Root
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode
 from chia.data_layer.data_store import DataStore
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint64
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -102,12 +101,13 @@ class DataLayer:
                 key = change["key"]
                 await self.data_store.delete(key, tree_id)
 
-        root = await self.data_store.get_tree_root(tree_id)
+        await self.data_store.get_tree_root(tree_id)
+        # root = await self.data_store.get_tree_root(tree_id)
         # todo return empty node hash from get_tree_root
-        if root.node_hash is not None:
-            node_hash = root.node_hash
-        else:
-            node_hash = bytes32([0] * 32)  # todo change
+        # if root.node_hash is not None:
+        #     node_hash = root.node_hash
+        # else:
+        #     node_hash = bytes32([0] * 32)  # todo change
         # res = await self.wallet.create_update_state_spend(node_hash)
         # assert res
         # todo register callback to change status in data store
@@ -133,7 +133,7 @@ class DataLayer:
             self.log.error("Failed to create tree")
         return res
 
-    async def get_root(self,store_id: bytes32) -> Optional[bytes32]:
+    async def get_root(self, store_id: bytes32) -> Optional[bytes32]:
         res = await self.data_store.get_tree_root(tree_id=store_id)
         self.log.info(f"root is {res.node_hash}")
         if res is None:

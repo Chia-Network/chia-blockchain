@@ -4,14 +4,13 @@ from typing import Any, Callable, Dict, Optional
 
 
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_types import Side, TerminalNode
+from chia.data_layer.data_layer_types import Side
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
 # todo input assertions for all rpc's
 from chia.util.streamable import recurse_jsonify
-from chia.wallet.transaction_record import TransactionRecord
 
 
 def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
@@ -108,7 +107,7 @@ class DataLayerRpcApi:
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        txs = await self.service.batch_update(store_id, changelist)
+        await self.service.batch_update(store_id, changelist)
         return {"tx_id": "id"}
 
     async def insert(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -149,5 +148,5 @@ class DataLayerRpcApi:
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        res =  await self.service.get_root(store_id)
+        res = await self.service.get_root(store_id)
         return {"data": res}
