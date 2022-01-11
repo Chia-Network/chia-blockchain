@@ -237,22 +237,22 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             commit_in = HINT_COMMIT_RATE
             hint_start_time = time()
             hint_values = []
-            await out_db.execute("CREATE TABLE hints(id INTEGER PRIMARY KEY AUTOINCREMENT, coin_id blob,  hint blob)")
+            await out_db.execute("CREATE TABLE IF NOT EXISTS hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))")
             await out_db.commit()
             async with in_db.execute("SELECT coin_id, hint FROM hints") as cursor:
                 count = 0
                 await out_db.execute("begin transaction")
                 async for row in cursor:
-                    hint_values.append((None, row[0], row[1]))
+                    hint_values.append((row[0], row[1]))
                     commit_in -= 1
                     if commit_in == 0:
                         commit_in = HINT_COMMIT_RATE
-                        await out_db.executemany("INSERT INTO hints VALUES (?, ?, ?)", hint_values)
+                        await out_db.executemany("INSERT INTO hints VALUES(?, ?) ON CONFLICT DO NOTHING", hint_values)
                         await out_db.commit()
                         await out_db.execute("begin transaction")
                         hint_values = []
 
-            await out_db.executemany("INSERT INTO hints VALUES (?, ?, ?)", hint_values)
+            await out_db.executemany("INSERT INTO hints VALUES (?, ?)", hint_values)
             await out_db.commit()
 
             end_time = time()
