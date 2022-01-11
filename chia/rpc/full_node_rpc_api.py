@@ -759,6 +759,54 @@ class FullNodeRpcApi:
         is_cat_coin, _ = match_cat_puzzle(puzzle)
         return {"is_cat_coin": is_cat_coin}
 
+    async def are_cat_coins(self, request: Dict) -> Optional[Dict]:
+        '''
+        This RPC return a list of true/false for each coin if the coin in the list are CAT coins, false otherwise
+
+        params:
+        - coin_ids: the list of unique coin IDs or coin names (hash of puzzle_hash + parent_hash + amount)
+        '''
+        coin_ids: List[str] = request["coin_ids"]
+        coin_names: List[bytes32] = [hexstr_to_bytes(coin_id) for coin_id in coin_ids]
+        if len(coin_names) != len(set(coin_names)):
+            raise ValueError(f"Existing duplicated coin_names {coin_ids}")
+
+        coin_records: List[CoinRecord] = await self.service.coin_store.get_coin_records_by_names(names=coin_names, include_spent_coins=True)
+        if coin_records is None:
+            raise ValueError(f"Not found coin records")
+
+        if len(coin_records) != len(coin_names):
+            raise ValueError(f"Inconsistent length between coin_names and coin_records: {len(coin_names)} != {len(coin_records)}")
+
+        res: List[bool] = []
+        for coin_name, coin_record in zip(coin_names, coin_records):
+            if coin_record is None:
+                raise ValueError(f"Not found coin record")
+            if coin_record.spent_block_index == 0:
+                raise ValueError(f"Coin must be spent to have a solution: {coin_record}")
+            if coin_record.name() != coin_name:
+                raise ValueError(f"Inconsistent between coin name and coin_record.name(): {coin_record.name()} != {coin_name}")
+
+            height = coin_record.spent_block_index
+            header_hash = self.service.blockchain.height_to_hash(height)
+            block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
+
+            if block is None or block.transactions_generator is None:
+                raise ValueError("Invalid block or block generator")
+
+            block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
+            assert block_generator is not None
+            error, puzzle, _ = get_puzzle_and_solution_for_coin(
+                block_generator, coin_name, self.service.constants.MAX_BLOCK_COST_CLVM
+            )
+            if error is not None:
+                raise ValueError(f"Error: {error}")
+
+            is_cat_coin, _ = match_cat_puzzle(puzzle)
+            res.append(is_cat_coin)
+
+        return {"are_cat_coins": res}
+
     async def get_puzzle_and_solution(self, request: Dict) -> Optional[Dict]:
         coin_name: bytes32 = hexstr_to_bytes(request["coin_id"])
         height = request["height"]
