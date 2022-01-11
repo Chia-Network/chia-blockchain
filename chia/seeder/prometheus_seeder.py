@@ -11,7 +11,8 @@ DEFAULT_PROMETHEUS_PORT = 9920
 @dataclass
 class PrometheusSeeder:
     server: PrometheusServer
-    handled_requests: Gauge
+
+    _handled_requests: Gauge
 
     @classmethod
     def create(cls, config: Dict, log: logging.Logger):
@@ -22,7 +23,10 @@ class PrometheusSeeder:
 
         return cls(
             server=prometheus_server,
-            handled_requests=prometheus_server.new_counter(
+            _handled_requests=prometheus_server.new_counter(
                 "handled_requests", "total requests handled by this server since starting"
             ),
         )
+
+    async def handled_request(self):
+        self._handled_requests.inc()

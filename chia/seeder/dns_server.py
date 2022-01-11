@@ -230,7 +230,8 @@ class DNSServer:
 
                 reply.add_auth(RR(rname=D, rtype=QTYPE.SOA, rclass=1, ttl=TTL, rdata=soa_record))
 
-            self.prometheus.handled_requests.inc()
+            with self.prometheus.server.log_errors():
+                await self.prometheus.handled_request()
             return reply.pack()
         except Exception as e:
             log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
