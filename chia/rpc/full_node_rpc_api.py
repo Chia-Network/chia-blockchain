@@ -785,7 +785,7 @@ class FullNodeRpcApi:
                 raise ValueError(f"Not found coin record")
             if coin_record.spent_block_index == 0:
                 raise ValueError(f"Coin must be spent to have a solution: {coin_record}")
-            if coin_record.name() != coin_name:
+            if coin_record.name != coin_name:
                 raise ValueError(f"Inconsistent between coin name and coin_record.name(): {coin_record.name()} != {coin_name}")
 
             height = coin_record.spent_block_index
