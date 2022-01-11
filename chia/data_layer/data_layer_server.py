@@ -1,6 +1,9 @@
 import aiosqlite
-from aiohttp import web
+import aiohttp
+import json
 from random import Random
+from typing import Dict
+from aiohttp import web
 from chia.data_layer.data_store import DataStore
 from chia.util.db_wrapper import DBWrapper
 from chia.types.blockchain_format.tree_hash import bytes32
@@ -11,24 +14,24 @@ from dataclasses import dataclass
 
 @dataclass
 class DataLayerServer:
-    async def handle_tree_root(self, request: web.Request) -> web.Response:
-        tree_id = request.rel_url.query["tree_id"]
+    async def handle_tree_root(self, request: Dict[str, str]) -> str:
+        tree_id = request["tree_id"]
         tree_id_bytes = bytes32.from_hexstr(tree_id)
         tree_root = await self.data_store.get_tree_root(tree_id_bytes)
         if tree_root.node_hash is None:
-            return web.json_response({})
+            return json.dumps({})
         result = {
             "tree_id": tree_id,
             "generation": tree_root.generation,
             "node_hash": tree_root.node_hash.hex(),
             "status": tree_root.status.value,
         }
-        return web.json_response(result)
+        return json.dumps(result)
 
-    async def handle_tree_nodes(self, request: web.Request) -> web.Response:
-        node_hash = request.rel_url.query["node_hash"]
-        tree_id = request.rel_url.query["tree_id"]
-        root_hash = request.rel_url.query["root_hash"]
+    async def handle_tree_nodes(self, request: Dict[str, str]) -> str:
+        node_hash = request["node_hash"]
+        tree_id = request["tree_id"]
+        root_hash = request["root_hash"]
         node_hash_bytes = bytes32.from_hexstr(node_hash)
         tree_id_bytes = bytes32.from_hexstr(tree_id)
         nodes = await self.data_store.get_left_to_right_ordering(node_hash_bytes, tree_id_bytes)
@@ -52,16 +55,16 @@ class DataLayerServer:
                 )
         current_tree_root = await self.data_store.get_tree_root(tree_id_bytes)
         root_changed = current_tree_root.node_hash != bytes32.from_hexstr(root_hash)
-        return web.json_response(
+        return json.dumps(
             {
                 "root_changed": root_changed,
                 "answer": answer,
             }
         )
 
-    async def handle_operations(self, request: web.Request) -> web.Response:
-        tree_id = request.rel_url.query["tree_id"]
-        generation = request.rel_url.query["generation"]
+    async def handle_operations(self, request: Dict[str, str]) -> str:
+        tree_id = request["tree_id"]
+        generation = request["generation"]
         tree_id_bytes = bytes32.from_hexstr(tree_id)
         operations_data = await self.data_store.get_operations(tree_id_bytes, int(generation))
         answer = []
@@ -92,7 +95,7 @@ class DataLayerServer:
                     }
                 )
 
-        return web.json_response(answer)
+        return json.dumps(answer)
 
     async def init_example_data_store(self) -> None:
         tree_id = bytes32(b"\0" * 32)
@@ -102,6 +105,26 @@ class DataLayerServer:
         await generate_big_datastore(data_store=self.data_store, tree_id=tree_id, random=random)
         print("Generated datastore.")
 
+    async def websocket_handler(self, request: web.Request) -> web.WebSocketResponse:
+        ws = aiohttp.web.WebSocketResponse()
+        await ws.prepare(request)
+
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                json_request = json.loads(msg.data)
+                if json_request["type"] == "close":
+                    await ws.close()
+                    return
+                elif json_request["type"] == "request_root":
+                    json_response = await self.handle_tree_root(json_request)
+                elif json_request["type"] == "request_nodes":
+                    json_response = await self.handle_tree_nodes(json_request)
+                elif json_request["type"] == "request_operations":
+                    json_response = await self.handle_operations(json_request)
+                await ws.send_str(json_response)
+
+        return ws
+
     async def start(self) -> web.Application:
         self.db_connection = await aiosqlite.connect(":memory:")
         await self.db_connection.execute("PRAGMA foreign_keys = ON")
@@ -110,13 +133,7 @@ class DataLayerServer:
         await self.init_example_data_store()
 
         app = web.Application()
-        app.add_routes(
-            [
-                web.get("/get_tree_root", self.handle_tree_root),
-                web.get("/get_tree_nodes", self.handle_tree_nodes),
-                web.get("/get_operations", self.handle_operations),
-            ]
-        )
+        app.router.add_route("GET", "/ws", self.websocket_handler)
         return app
 
 
