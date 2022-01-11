@@ -114,7 +114,7 @@ class DataLayerServer:
                 json_request = json.loads(msg.data)
                 if json_request["type"] == "close":
                     await ws.close()
-                    return
+                    return ws
                 elif json_request["type"] == "request_root":
                     json_response = await self.handle_tree_root(json_request)
                 elif json_request["type"] == "request_nodes":
