@@ -17,7 +17,7 @@ jobs:
   build:
     name: MacOS core-full_node Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 80
     strategy:
       fail-fast: false
       max-parallel: 4

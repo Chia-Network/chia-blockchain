@@ -566,7 +566,6 @@ class TestBlockHeaderValidation:
         db_path.unlink()
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_invalid_icc_sub_slot_vdf(self, db_version):
         with TempKeyring() as keychain:
             await self.do_test_invalid_icc_sub_slot_vdf(keychain, db_version)
@@ -2198,7 +2197,6 @@ class TestBodyValidation:
         await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_max_coin_amount(self, db_version):
         # 10
         # TODO: fix, this is not reaching validation. Because we can't create a block with such amounts due to uint64
