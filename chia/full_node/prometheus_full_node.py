@@ -26,7 +26,7 @@ class PrometheusFullNode:
     def create(cls, config: Dict, log: logging.Logger):
         enabled = config.get("start_prometheus_server", False)
         port = config.get("prometheus_exporter_port", DEFAULT_PROMETHEUS_PORT)
-        prometheus_server = PrometheusServer.create("full_node", enabled, port, log)
+        prometheus_server = PrometheusServer("full_node", enabled, port, log)
 
         return cls(
             server=prometheus_server,

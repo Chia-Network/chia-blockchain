@@ -18,7 +18,7 @@ class PrometheusSeeder:
         prometheus_config = config.get("seeder_prometheus", {})
         enabled = prometheus_config.get("start_prometheus_server", False)
         port = prometheus_config.get("prometheus_exporter_port", DEFAULT_PROMETHEUS_PORT)
-        prometheus_server = PrometheusServer.create("seeder", enabled, port, log)
+        prometheus_server = PrometheusServer("seeder", enabled, port, log)
 
         return cls(
             server=prometheus_server,

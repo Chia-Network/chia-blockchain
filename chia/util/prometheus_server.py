@@ -11,10 +11,6 @@ class PrometheusServer:
     server_port: int
     log: logging.Logger
 
-    @classmethod
-    def create(cls, service_name: str, server_enabled: bool, server_port: int, log: logging.Logger):
-        return cls(service_name=service_name, server_enabled=server_enabled, server_port=server_port, log=log)
-
     async def start_server(self):
         # Start prometheus exporter server for the full node
         if self.server_enabled:

@@ -22,7 +22,7 @@ class PrometheusCrawler:
         prometheus_config = config.get("crawler_prometheus", {})
         enabled = prometheus_config.get("start_prometheus_server", False)
         port = prometheus_config.get("prometheus_exporter_port", DEFAULT_PROMETHEUS_PORT)
-        prometheus_server = PrometheusServer.create("crawler", enabled, port, log)
+        prometheus_server = PrometheusServer("crawler", enabled, port, log)
 
         return cls(
             server=prometheus_server,
