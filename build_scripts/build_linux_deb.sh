@@ -32,7 +32,7 @@ echo "  Check npm info"
 echo ls -l ~/.npm/_cacache/content-v2/sha512/f1/97
 ls -l ~/.npm/_cacache/content-v2/sha512/f1/97
 #npm cache clear --force
-rm -rf ~/.npm/_cacache/content-v2/sha512/f1
+#rm -rf ~/.npm/_cacache/content-v2/sha512/f1
 cd npm_linux_deb || exit
 npm ci
 echo ls -l ~/.npm/_cacache/content-v2/sha512/f1/97
