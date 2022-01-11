@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 import aiosqlite
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
@@ -39,11 +39,9 @@ class HintStore:
         )
         await cursor.close()
 
-    async def count_hints(self) -> Optional[int]:
+    async def count_hints(self) -> int:
         async with self.coin_record_db.execute("select count(*) from hints") as cursor:
             row = await cursor.fetchone()
 
-        if row is None:
-            return None
-
-        return int(row[0])
+        [count] = row
+        return int(count)

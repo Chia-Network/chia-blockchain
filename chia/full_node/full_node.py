@@ -1391,17 +1391,9 @@ class FullNode:
         # Update certain prometheus values that we can't update with a known value in real time elsewhere
         # Skip updating these values (which result in a few DB queries) if the prometheus server is not enabled
         if self.prometheus.server.server_enabled:
-            compact_block_count = await self.block_store.count_compactified_blocks()
-            if compact_block_count is not None:
-                self.prometheus.compact_blocks.set(compact_block_count)
-
-            uncompactified_block_count = await self.block_store.count_uncompactified_blocks()
-            if uncompactified_block_count is not None:
-                self.prometheus.uncompact_blocks.set(uncompactified_block_count)
-
-            hint_count = await self.hint_store.count_hints()
-            if hint_count is not None:
-                self.prometheus.hint_count.set(hint_count)
+            self.prometheus.compact_blocks.set(await self.block_store.count_compactified_blocks())
+            self.prometheus.uncompact_blocks.set(await self.block_store.count_uncompactified_blocks())
+            self.prometheus.hint_count.set(await self.hint_store.count_hints())
 
             # Figure out current estimated netspace
             try:
