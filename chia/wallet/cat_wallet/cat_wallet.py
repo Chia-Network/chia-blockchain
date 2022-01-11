@@ -34,6 +34,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.genesis_checkers import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -48,11 +49,6 @@ from chia.wallet.wallet_info import WalletInfo
 
 
 # This should probably not live in this file but it's for experimental right now
-@dataclasses.dataclass
-class Payment:
-    puzzle_hash: bytes32
-    amount: uint64
-    memos: List[bytes]
 
 
 class CATWallet:

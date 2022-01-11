@@ -270,7 +270,7 @@ class Offer:
             if arbitrage_amount > 0:
                 assert arbitrage_amount is not None
                 assert arbitrage_ph is not None
-                all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount)))
+                all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount), []))
 
             for coin in offered_coins:
                 inner_solutions = []
