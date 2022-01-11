@@ -5,6 +5,8 @@ from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable
 
+from blspy import AugSchemeMPL, G1Element
+
 from chia.util import cached_bls
 
 from chia.consensus.block_header_validation import validate_finished_header_block
@@ -108,12 +110,17 @@ def batch_pre_validate_blocks(
                 error_int: Optional[uint16] = None
                 if error is not None:
                     error_int = uint16(error.code.value)
+
+                # If this is False, it means either we don't have a signature (not a tx block) or we have an invalid
+                # signature (which also puts in an error) or we didn't validate the signature because we want to
+                # validate it later
                 successfully_validated_signatures = False
                 if validate_signatures:
                     if npc_result is not None and block.transactions_info is not None:
                         pairs_pks, pairs_msgs = pkm_pairs(npc_result.npc_list, constants.AGG_SIG_ME_ADDITIONAL_DATA)
-                        if not cached_bls.aggregate_verify(
-                            pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, True
+                        pks_objects: List[G1Element] = [G1Element.from_bytes(pk) for pk in pairs_pks]
+                        if not AugSchemeMPL.aggregate_verify(
+                            pks_objects, pairs_msgs, block.transactions_info.aggregated_signature
                         ):
                             error_int = uint16(Err.BAD_AGGREGATE_SIGNATURE.value)
                         else:
@@ -164,6 +171,7 @@ async def pre_validate_blocks_multiprocessing(
     get_block_generator: Optional[Callable],
     batch_size: int,
     wp_summaries: Optional[List[SubEpochSummary]] = None,
+    *,
     validate_signatures: bool = True,
 ) -> Optional[List[PreValidationResult]]:
     """

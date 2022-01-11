@@ -1051,7 +1051,7 @@ class FullNode:
         pre_validation_results: Optional[
             List[PreValidationResult]
         ] = await self.blockchain.pre_validate_blocks_multiprocessing(
-            blocks_to_validate, {}, True, wp_summaries=wp_summaries
+            blocks_to_validate, {}, wp_summaries=wp_summaries, validate_signatures=True
         )
         pre_validate_end = time.time()
         if pre_validate_end - pre_validate_start > 10:
@@ -1463,7 +1463,7 @@ class FullNode:
             # Don't validate signatures because we want to validate them in the main thread later, since we have a
             # cache available
             pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(
-                [block], npc_results, False
+                [block], npc_results, validate_signatures=False
             )
             added: Optional[ReceiveBlockResult] = None
             pre_validation_time = time.time() - validation_start

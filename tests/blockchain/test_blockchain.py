@@ -84,7 +84,12 @@ class TestGenesisBlock:
     async def test_non_overflow_genesis(self, empty_blockchain):
         assert empty_blockchain.get_peak() is None
         genesis = bt.get_consecutive_blocks(1, force_overflow=False)[0]
-        result, err, _, _ = await empty_blockchain.receive_block(genesis)
+
+        pre_validation_results = await empty_blockchain.pre_validate_blocks_multiprocessing(
+            [genesis], {}, validate_signatures=True
+        )
+        assert pre_validation_results is not None
+        result, err, _, _ = await empty_blockchain.receive_block(genesis, pre_validation_results[0])
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
         assert empty_blockchain.get_peak().height == 0
@@ -92,21 +97,35 @@ class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_overflow_genesis(self, empty_blockchain):
         genesis = bt.get_consecutive_blocks(1, force_overflow=True)[0]
-        result, err, _, _ = await empty_blockchain.receive_block(genesis)
+
+        pre_validation_results = await empty_blockchain.pre_validate_blocks_multiprocessing(
+            [genesis], {}, validate_signatures=True
+        )
+        assert pre_validation_results is not None
+        result, err, _, _ = await empty_blockchain.receive_block(genesis, pre_validation_results[0])
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_genesis_empty_slots(self, empty_blockchain):
         genesis = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=30)[0]
-        result, err, _, _ = await empty_blockchain.receive_block(genesis)
+        pre_validation_results = await empty_blockchain.pre_validate_blocks_multiprocessing(
+            [genesis], {}, validate_signatures=True
+        )
+        assert pre_validation_results is not None
+        result, err, _, _ = await empty_blockchain.receive_block(genesis, pre_validation_results[0])
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_overflow_genesis_empty_slots(self, empty_blockchain):
         genesis = bt.get_consecutive_blocks(1, force_overflow=True, skip_slots=3)[0]
-        result, err, _, _ = await empty_blockchain.receive_block(genesis)
+        pre_validation_results = await empty_blockchain.pre_validate_blocks_multiprocessing(
+            [genesis], {}, validate_signatures=True
+        )
+        assert pre_validation_results is not None
+
+        result, err, _, _ = await empty_blockchain.receive_block(genesis, pre_validation_results[0])
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
@@ -115,7 +134,11 @@ class TestGenesisBlock:
         genesis = bt.get_consecutive_blocks(1, force_overflow=False)[0]
         bad_prev = bytes([1] * 32)
         genesis = recursive_replace(genesis, "foliage.prev_block_hash", bad_prev)
-        result, err, _, _ = await empty_blockchain.receive_block(genesis)
+        pre_validation_results = await empty_blockchain.pre_validate_blocks_multiprocessing(
+            [genesis], {}, validate_signatures=True
+        )
+        assert pre_validation_results is not None
+        result, err, _, _ = await empty_blockchain.receive_block(genesis, pre_validation_results[0])
         assert err == Err.INVALID_PREV_BLOCK_HASH
 
 
