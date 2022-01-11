@@ -132,7 +132,7 @@ async function postToHashgreen(offerData: string): Promise<string> {
       const request = remote.net.request({
         method: 'POST',
         protocol: 'https:',
-        hostname: 'mainnet.hash.green',
+        hostname: 'hash.green',
         port: 443,
         path: '/api/v1/orders',
       });
@@ -158,7 +158,7 @@ async function postToHashgreen(offerData: string): Promise<string> {
               const id = data?.id;
 
               if (id) {
-                resolve(`https://mainnet.hash.green/dex?order=${id}`);
+                resolve(`https://hash.green/dex?order=${id}`);
               }
               else {
                 reject(new Error(`Hashgreen response missing data.id: ${JSON.stringify(response)}`));
@@ -177,7 +177,7 @@ async function postToHashgreen(offerData: string): Promise<string> {
               const { code, msg, data } = response;
 
               if (code === HashgreenErrorCodes.OFFER_FILE_EXISTS && data) {
-                resolve(`https://mainnet.hash.green/dex?order=${data}`);
+                resolve(`https://hash.green/dex?order=${data}`);
               }
               else {
                 console.log(`Upload failure response: ${body}`);

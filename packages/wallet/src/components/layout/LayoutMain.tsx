@@ -1,5 +1,4 @@
 import React, { ReactElement, ReactNode } from 'react';
-import { Trans } from '@lingui/macro';
 import { Container } from '@material-ui/core';
 import styled from 'styled-components';
 import { Flex, Loading } from '@chia/core';
