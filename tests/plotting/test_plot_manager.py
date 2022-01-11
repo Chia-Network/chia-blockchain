@@ -477,10 +477,13 @@ async def test_plot_info_caching(test_plot_environment, bt):
     assert env.refresh_tester.plot_manager.cache.path().exists()
     refresh_tester: PlotRefreshTester = PlotRefreshTester(env.root_path)
     plot_manager = refresh_tester.plot_manager
+    plot_manager.set_public_keys(bt.plot_manager.farmer_public_keys, bt.plot_manager.pool_public_keys)
     plot_manager.cache.load()
     assert len(plot_manager.cache) == len(env.refresh_tester.plot_manager.cache)
-    for plot_id, cache_entry in env.refresh_tester.plot_manager.cache.items():
-        cache_entry_new = plot_manager.cache.get(plot_id)
+    for path, cache_entry in env.refresh_tester.plot_manager.cache.items():
+        cache_entry_new = plot_manager.cache.get(path)
+        assert bytes(cache_entry_new.prover) == bytes(cache_entry.prover)
+        assert cache_entry_new.farmer_public_key == cache_entry.farmer_public_key
         assert cache_entry_new.pool_public_key == cache_entry.pool_public_key
         assert cache_entry_new.pool_contract_puzzle_hash == cache_entry.pool_contract_puzzle_hash
         assert cache_entry_new.plot_public_key == cache_entry.plot_public_key
