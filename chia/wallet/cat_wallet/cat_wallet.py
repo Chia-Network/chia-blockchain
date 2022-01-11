@@ -479,11 +479,11 @@ class CATWallet:
                 )
                 if conditions is not None:
                     synthetic_pk = synthetic_secret_key.get_g1()
-                    for pk, msg in pkm_pairs_for_conditions_dict(
+                    for pk_bytes, msg in pkm_pairs_for_conditions_dict(
                         conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
                     ):
                         try:
-                            assert synthetic_pk == pk
+                            assert bytes(synthetic_pk) == pk_bytes
                             sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
                         except AssertionError:
                             raise ValueError("This spend bundle cannot be signed by the CAT wallet")
