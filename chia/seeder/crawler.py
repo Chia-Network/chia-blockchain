@@ -122,8 +122,8 @@ class Crawler:
     async def _start(self):
         self.task = asyncio.create_task(self.crawl())
 
-        # Starts the prometheus server if enabled in config
-        await self.prometheus.server.start_if_enabled()
+        with self.prometheus.server.log_errors():
+            await self.prometheus.server.start_if_enabled()
 
     async def update_metric_values(self):
         ipv6_addresses_count = 0

@@ -189,6 +189,7 @@ class FullNode:
         self.blockchain = await Blockchain.create(
             self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent, reserved_cores
         )
+
         self.prometheus = PrometheusFullNode.create(
             config=self.config,
             log=self.log,
@@ -197,7 +198,9 @@ class FullNode:
             constants=self.constants,
             hint_store=self.hint_store,
         )
-        await self.prometheus.server.start_if_enabled()
+        with self.prometheus.server.log_errors():
+            await self.prometheus.server.start_if_enabled()
+
         self.mempool_manager = MempoolManager(self.coin_store, self.constants, self.prometheus)
 
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
