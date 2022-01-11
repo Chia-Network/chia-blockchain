@@ -55,6 +55,7 @@ class WalletRpcApi:
         return {
             # Key management
             "/log_in": self.log_in,
+            "/get_logged_in_fingerprint": self.get_logged_in_fingerprint,
             "/get_public_keys": self.get_public_keys,
             "/get_private_key": self.get_private_key,
             "/generate_mnemonic": self.generate_mnemonic,
@@ -165,6 +166,9 @@ class WalletRpcApi:
             return {"fingerprint": fingerprint}
 
         return {"success": False, "error": "Unknown Error"}
+
+    async def get_logged_in_fingerprint(self, request: Dict):
+        return {"fingerprint": self.service.logged_in_fingerprint}
 
     async def get_public_keys(self, request: Dict):
         try:
@@ -532,7 +536,7 @@ class WalletRpcApi:
                     try:
                         delayed_address = None
                         if "p2_singleton_delayed_ph" in request:
-                            delayed_address = bytes32(hexstr_to_bytes(request["p2_singleton_delayed_ph"]))
+                            delayed_address = bytes32.from_hexstr(request["p2_singleton_delayed_ph"])
                         tr, p2_singleton_puzzle_hash, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
                             wallet_state_manager,
                             main_wallet,
@@ -884,7 +888,7 @@ class WalletRpcApi:
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
-        trade_id = hexstr_to_bytes(request["trade_id"])
+        trade_id = bytes32.from_hexstr(request["trade_id"])
         file_contents: bool = request.get("file_contents", False)
         trade_record: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(bytes32(trade_id))
         if trade_record is None:
@@ -921,7 +925,7 @@ class WalletRpcApi:
 
         wsm = self.service.wallet_state_manager
         secure = request["secure"]
-        trade_id = hexstr_to_bytes(request["trade_id"])
+        trade_id = bytes32.from_hexstr(request["trade_id"])
         fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
