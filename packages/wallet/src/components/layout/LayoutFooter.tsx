@@ -11,11 +11,15 @@ padding-left: ${({ theme }) => `${theme.spacing(3)}px`};
 color: rgb(128, 128, 128);
 `;
 
+const FAQ = styled.a`
+align-self: flex-end;
+color: rgb(128, 160, 194);
+`;
+
 const SendFeedback = styled.a`
 align-self: flex-end;
 padding-right: ${({ theme }) => `${theme.spacing(3)}px`};
 color: rgb(128, 160, 194);
-display: inline;
 `;
 
 const Footer = styled(Flex)`
@@ -23,6 +27,16 @@ width: 100%;
 bottom: 0;
 padding-bottom: ${({ theme }) => `${theme.spacing(3)}px`};
 `;
+
+async function openFAQURL(): Promise<void> {
+  try {
+    const shell: Shell = (window as any).shell;
+    await shell.openExternal('https://github.com/Chia-Network/chia-blockchain/wiki/FAQ');
+  }
+  catch (e) {
+    console.error(e);
+  }
+}
 
 async function openSendFeedbackURL(): Promise<void> {
   try {
@@ -44,9 +58,14 @@ export default function LayoutFooter() {
       <Version>
         {productName} {version}
       </Version>
-      <SendFeedback onClick={openSendFeedbackURL}>
-        <Trans>Send Feedback</Trans>
-      </SendFeedback>
+      <Flex flexDirection="row" gap={2}>
+        <FAQ onClick={openFAQURL}>
+          <Trans>FAQ</Trans>
+        </FAQ>
+        <SendFeedback onClick={openSendFeedbackURL}>
+          <Trans>Send Feedback</Trans>
+        </SendFeedback>
+      </Flex>
     </Footer>
   )
 }
