@@ -4,7 +4,7 @@ import threading
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, ItemsView, ValuesView, KeysView
 from concurrent.futures.thread import ThreadPoolExecutor
 
 from blspy import G1Element
@@ -71,27 +71,27 @@ class Cache:
     _data: Dict[Path, CacheEntry]
     expiry_seconds: int = 7 * 24 * 60 * 60  # Keep the cache entries alive for 7 days after its last access
 
-    def __init__(self, path: Path):
+    def __init__(self, path: Path) -> None:
         self._changed = False
         self._data = {}
         self._path = path
         if not path.parent.exists():
             mkdir(path.parent)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._data)
 
-    def update(self, path: Path, entry: CacheEntry):
+    def update(self, path: Path, entry: CacheEntry) -> None:
         self._data[path] = entry
         self._changed = True
 
-    def remove(self, cache_keys: List[Path]):
+    def remove(self, cache_keys: List[Path]) -> None:
         for key in cache_keys:
             if key in self._data:
                 del self._data[key]
                 self._changed = True
 
-    def save(self):
+    def save(self) -> None:
         try:
             disk_cache_entries: Dict[str, DiskCacheEntry] = {
                 str(path): DiskCacheEntry(
@@ -114,7 +114,7 @@ class Cache:
         except Exception as e:
             log.error(f"Failed to save cache: {e}, {traceback.format_exc()}")
 
-    def load(self):
+    def load(self) -> None:
         try:
             serialized = self._path.read_bytes()
             version = uint16.from_bytes(serialized[0:2])
@@ -139,22 +139,22 @@ class Cache:
         except Exception as e:
             log.error(f"Failed to load cache: {e}, {traceback.format_exc()}")
 
-    def keys(self):
+    def keys(self) -> KeysView[Path]:
         return self._data.keys()
 
-    def values(self):
+    def values(self) -> ValuesView[CacheEntry]:
         return self._data.values()
 
-    def items(self):
+    def items(self) -> ItemsView[Path, CacheEntry]:
         return self._data.items()
 
-    def get(self, path: Path):
+    def get(self, path: Path) -> Optional[CacheEntry]:
         return self._data.get(path)
 
-    def changed(self):
+    def changed(self) -> bool:
         return self._changed
 
-    def path(self):
+    def path(self) -> Path:
         return self._path
 
 
@@ -456,6 +456,7 @@ class PlotManager:
                     )
                     self.cache.update(file_path, cache_entry)
 
+                assert cache_entry is not None
                 # Only use plots that correct keys associated with them
                 if cache_entry.farmer_public_key not in self.farmer_public_keys:
                     log.warning(f"Plot {file_path} has a farmer public key that is not in the farmer's pk list.")
