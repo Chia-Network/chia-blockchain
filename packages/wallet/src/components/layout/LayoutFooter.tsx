@@ -2,8 +2,8 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Flex } from '@chia/core';
 import styled from 'styled-components';
-import { Shell } from 'electron';
-import packageJson from '../../../package.json';
+import { Remote, Shell } from 'electron';
+import { default as walletPackageJson } from '../../../package.json';
 
 const Version = styled.a`
 align-self: flex-end;
@@ -27,7 +27,7 @@ padding-bottom: ${({ theme }) => `${theme.spacing(3)}px`};
 async function openSendFeedbackURL(): Promise<void> {
   try {
     const shell: Shell = (window as any).shell;
-    await shell.openExternal('https://forms.gle/f19UKU52xtWGwQqH9');
+    await shell.openExternal('https://feedback.chia.net/lightwallet');
   }
   catch (e) {
     console.error(e);
@@ -35,7 +35,9 @@ async function openSendFeedbackURL(): Promise<void> {
 }
 
 export default function LayoutFooter() {
-  const { productName, version } = packageJson;
+  const remote: Remote = (window as any).remote;
+  const version = remote.app.getVersion();
+  const { productName } = walletPackageJson;
 
   return (
     <Footer flexDirection="row" flexGrow={1} justifyContent="space-between">
