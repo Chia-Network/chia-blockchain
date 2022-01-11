@@ -141,10 +141,7 @@ class WeightProofHandler:
 
             if _sample_sub_epoch(prev_ses_block.weight, ses_block.weight, weight_to_check):  # type: ignore
                 sample_n += 1
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to "get_sub_epoch_challenge_segments" of "BlockchainInterface" has
-                #       incompatible type "bytes32"; expected "uint32"  [arg-type]
-                segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.header_hash)  # type: ignore[arg-type]  # noqa: E501
+                segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.header_hash)
                 if segments is None:
                     segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
                     if segments is None:
@@ -152,11 +149,7 @@ class WeightProofHandler:
                             f"failed while building segments for sub epoch {sub_epoch_n}, ses height {ses_height} "
                         )
                         return None
-                    # TODO: address hint error and remove ignore
-                    #       error: Argument 1 to "persist_sub_epoch_challenge_segments" of "BlockchainInterface" has
-                    #       incompatible type "bytes32"; expected "uint32"  [arg-type]
-                    await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.header_hash, segments)  # type: ignore[arg-type]  # noqa: E501
-                log.debug(f"sub epoch {sub_epoch_n} has {len(segments)} segments")
+                    await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.header_hash, segments)
                 sub_epoch_segments.extend(segments)
             prev_ses_block = ses_block
         log.debug(f"sub_epochs: {len(sub_epoch_data)}")
