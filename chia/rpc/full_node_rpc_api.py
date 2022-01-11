@@ -64,6 +64,7 @@ class FullNodeRpcApi:
             "/push_tx": self.push_tx,
             "/get_puzzle_and_solution": self.get_puzzle_and_solution,
             "/is_cat_coin": self.is_cat_coin,
+            "/are_cat_coins": self.are_cat_coins,
             # Mempool
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
