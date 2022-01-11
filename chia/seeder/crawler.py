@@ -123,7 +123,7 @@ class Crawler:
         self.task = asyncio.create_task(self.crawl())
 
         # Starts the prometheus server if enabled in config
-        await self.prometheus.server.start_server()
+        await self.prometheus.server.start_if_enabled()
 
     async def update_metric_values(self):
         self.prometheus.reliable_nodes.set(self.crawl_store.get_reliable_peers())
