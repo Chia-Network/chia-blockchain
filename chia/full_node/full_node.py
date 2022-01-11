@@ -158,9 +158,9 @@ class FullNode:
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
 
-        await self.connection.execute(
-            "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path))
-        )
+        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
+        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
+        await self.connection.execute("pragma synchronous={}".format(db_sync))
 
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
