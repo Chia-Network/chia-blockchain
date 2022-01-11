@@ -1872,7 +1872,7 @@ class TestGeneratorConditions:
             assert c.conditions == [
                 (
                     opcode.value,
-                    [ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([10]), b""])],
+                    [ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([10])])],
                 )
             ]
 
@@ -1886,11 +1886,11 @@ class TestGeneratorConditions:
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode.CREATE_COIN
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash_1.encode("ascii"), bytes([5]), b""])
+            ConditionWithArgs(opcode, [puzzle_hash_1.encode("ascii"), bytes([5])])
             in npc_result.npc_list[0].conditions[0][1]
         )
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash_2.encode("ascii"), bytes([5]), b""])
+            ConditionWithArgs(opcode, [puzzle_hash_2.encode("ascii"), bytes([5])])
             in npc_result.npc_list[0].conditions[0][1]
         )
 
@@ -1903,11 +1903,11 @@ class TestGeneratorConditions:
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode.CREATE_COIN
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([5]), b""])
+            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([5])])
             in npc_result.npc_list[0].conditions[0][1]
         )
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([4]), b""])
+            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([4])])
             in npc_result.npc_list[0].conditions[0][1]
         )
 
