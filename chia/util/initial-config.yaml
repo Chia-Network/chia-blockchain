@@ -300,7 +300,7 @@ full_node:
   #         kernel panics
   # "auto"  on/off is decided based on a heuristic of how likely a failure is on
   #         the particular system we're running on. Defaults to "full".
-  db_sync: auto
+  db_sync: "auto"
 
   # when this is true, minor data base updates may be performed on startup.
   # the database upgrades are minor, in that they typically remove unnevessary
