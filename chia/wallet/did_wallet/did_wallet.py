@@ -345,7 +345,9 @@ class DIDWallet:
             details = f.readline().split(":")
             f.close()
             origin = Coin(
-                bytes32(bytes.fromhex(details[0])), bytes32(bytes.fromhex(details[1])), uint64(int(details[2]))
+                bytes32.fromhex(details[0]),
+                bytes32.fromhex(details[1]),
+                uint64(int(details[2])),
             )
             backup_ids = []
             for d in details[3].split(","):
@@ -432,8 +434,12 @@ class DIDWallet:
         innerpuz = did_wallet_puzzles.create_innerpuz(
             pubkey, self.did_info.backup_ids, self.did_info.num_of_backup_ids_needed
         )
-        assert self.did_info.origin_coin is not None
-        return did_wallet_puzzles.create_fullpuz(innerpuz, self.did_info.origin_coin.name())
+        if self.did_info.origin_coin is not None:
+            return did_wallet_puzzles.create_fullpuz(innerpuz, self.did_info.origin_coin.name())
+        else:
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "create_fullpuz" has incompatible type "int"; expected "bytes32"  [arg-type]
+            return did_wallet_puzzles.create_fullpuz(innerpuz, 0x00)  # type: ignore[arg-type]
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(

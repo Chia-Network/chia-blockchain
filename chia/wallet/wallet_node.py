@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import socket
 import time
 import traceback
 from pathlib import Path
@@ -58,7 +57,8 @@ from chia.types.weight_proof import WeightProof, SubEpochData
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.ints import uint32, uint64
-from chia.util.keychain import KeyringIsLocked
+from chia.util.keychain import KeyringIsLocked, Keychain
+from chia.util.network import get_host_addr
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.util.wallet_sync_utils import (
@@ -113,7 +113,7 @@ class WalletNode:
         root_path: Path,
         consensus_constants: ConsensusConstants,
         name: str = None,
-        local_keychain=None,
+        local_keychain: Optional[Keychain] = None,
     ):
         self.config = config
         self.constants = consensus_constants
@@ -247,7 +247,7 @@ class WalletNode:
         self.logged_in_fingerprint = None
         self._shut_down = True
 
-    async def _await_closed(self) -> None:
+    async def _await_closed(self):
         self.log.info("self._await_closed")
         if self.server is not None:
             await self.server.close_all_connections()
@@ -325,7 +325,7 @@ class WalletNode:
             already_sent = set()
             for peer, status, _ in record.sent_to:
                 if status == MempoolInclusionStatus.SUCCESS.value:
-                    already_sent.add(bytes32(hexstr_to_bytes(peer)))
+                    already_sent.add(bytes32.from_hexstr(peer))
             messages.append((msg, already_sent))
 
         return messages
@@ -564,7 +564,9 @@ class WalletNode:
             if full_node_peer.is_valid():
                 full_node_resolved = full_node_peer
             else:
-                full_node_resolved = PeerInfo(socket.gethostbyname(full_node_peer.host), full_node_peer.port)
+                full_node_resolved = PeerInfo(
+                    get_host_addr(full_node_peer.host, self.config.get("prefer_ipv6")), full_node_peer.port
+                )
             if full_node_peer in peers or full_node_resolved in peers:
                 self.log.info(f"Will not attempt to connect to other nodes, already connected to {full_node_peer}")
                 for connection in self.server.get_full_node_connections():

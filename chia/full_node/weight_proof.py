@@ -150,7 +150,6 @@ class WeightProofHandler:
                         )
                         return None
                     await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.header_hash, segments)
-                log.debug(f"sub epoch {sub_epoch_n} has {len(segments)} segments")
                 sub_epoch_segments.extend(segments)
             prev_ses_block = ses_block
         log.debug(f"sub_epochs: {len(sub_epoch_data)}")

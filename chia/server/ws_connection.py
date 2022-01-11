@@ -105,7 +105,7 @@ class WSChiaConnection:
         self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
         self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
 
-        # Used by crawler/dns introducer
+        # Used by the Chia Seeder.
         self.version = None
         self.protocol_version = ""
 
@@ -188,7 +188,7 @@ class WSChiaConnection:
 
     async def close(self, ban_time: int = 0, ws_close_code: WSCloseCode = WSCloseCode.OK, error: Optional[Err] = None):
         """
-        Closes the connection, and finally calls the close_callback on the server, so the connections gets removed
+        Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
         from the global list.
         """
 
@@ -275,11 +275,12 @@ class WSChiaConnection:
             self.log.error(f"Exception: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    async def send_message(self, message: Message):
+    async def send_message(self, message: Message) -> bool:
         """Send message sends a message with no tracking / callback."""
         if self.closed:
-            return None
+            return False
         await self.outgoing_queue.put(message)
+        return True
 
     def __getattr__(self, attr_name: str):
         # TODO KWARGS
@@ -491,7 +492,7 @@ class WSChiaConnection:
             await asyncio.sleep(3)
         return None
 
-    # Used by crawler/dns introducer
+    # Used by the Chia Seeder.
     def get_version(self):
         return self.version
 
