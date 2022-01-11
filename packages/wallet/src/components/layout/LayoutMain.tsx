@@ -4,7 +4,7 @@ import { Container } from '@material-ui/core';
 import styled from 'styled-components';
 import { Flex, Loading } from '@chia/core';
 import DashboardTitle from '../dashboard/DashboardTitle';
-import { Shell } from 'electron';
+import LayoutFooter from './LayoutFooter';
 
 const StyledContainer = styled(Container)`
   padding-top: ${({ theme }) => `${theme.spacing(3)}px`};
@@ -22,13 +22,6 @@ const StyledBody = styled(Flex)`
   min-width: 0;
 `;
 
-const SendFeedback = styled.a`
-  align-self: flex-end;
-  padding-right: ${({ theme }) => `${theme.spacing(3)}px`};
-  padding-bottom: ${({ theme }) => `${theme.spacing(3)}px`};
-  color: rgb(128, 160, 194);
-`;
-
 type Props = {
   children?: ReactElement<any>;
   title?: ReactNode;
@@ -36,16 +29,6 @@ type Props = {
   loadingTitle?: ReactNode;
   bodyHeader?: ReactNode;
 };
-
-async function openSendFeedbackURL(): Promise<void> {
-  try {
-    const shell: Shell = (window as any).shell;
-    await shell.openExternal('https://forms.gle/f19UKU52xtWGwQqH9');
-  }
-  catch (e) {
-    console.error(e);
-  }
-}
 
 export default function LayoutMain(props: Props) {
   const { children, title, loading, loadingTitle, bodyHeader } = props;
@@ -73,9 +56,7 @@ export default function LayoutMain(props: Props) {
           </StyledBody>
         </StyledContainer>
       </StyledInnerContainer>
-      <SendFeedback onClick={openSendFeedbackURL}>
-        <Trans>Send Feedback</Trans>
-      </SendFeedback>
+      <LayoutFooter />
     </>
   );
 }

@@ -2,7 +2,7 @@
   "name": "@chia/wallet",
   "author": "Chia Network <hello@chia.net> (https://chia.net/)",
   "description": "Standalone wallet for Chia Blockchain",
-  "productName": "Chia Wallet",
+  "productName": "Chia Wallet Beta",
   "private": true,
   "homepage": "./",
   "main": "build/electron/main.js",

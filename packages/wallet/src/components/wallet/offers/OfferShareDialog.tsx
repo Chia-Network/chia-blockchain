@@ -222,22 +222,27 @@ async function postToHashgreen(offerData: string): Promise<string> {
   });
 }
 
-async function postToKeybase(
-  offerRecord: OfferTradeRecord,
-  offerData: string,
-  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined): Promise<boolean> {
+enum KeybaseCLIActions {
+  JOIN_TEAM = 'JOIN_TEAM',
+  JOIN_CHANNEL = 'JOIN_CHANNEL',
+  UPLOAD_OFFER = 'UPLOAD_OFFER',
+  CHECK_TEAM_MEMBERSHIP = 'CHECK_TEAM_MEMBERSHIP',
+};
 
-  const filename = suggestedFilenameForOffer(offerRecord.summary, lookupByAssetId);
-  const summary = shortSummaryForOffer(offerRecord.summary, lookupByAssetId);
-  const team = 'chia_offers';
-  const channel = 'offers-trading';
-  let filePath: string = '';
-  let success = false;
+type KeybaseCLIRequest = {
+  action: KeybaseCLIActions,
+  uploadArgs?: {
+    title: string,
+    filePath: string,
+  }
+};
 
-  filePath = await writeTempOfferFile(offerData, filename);
+const KeybaseTeamName = 'chia_offers';
+const KeybaseChannelName = 'offers-trading';
 
-  try {
-    success = await new Promise((resolve, reject) => {
+async function execKeybaseCLI(request: KeybaseCLIRequest): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    try {
       let options: any = {};
 
       if (process.platform === 'darwin') {
@@ -250,18 +255,85 @@ async function postToKeybase(
         options['env'] = env;
       }
 
-      child_process.exec(
-        `keybase chat upload "${team}" --channel "${channel}" --title "${summary}" "${filePath}"`,
-        options,
-        (error, _/*stdout*/, stderr) => {
-          if (error) {
-            console.error(`Keybase error: ${error}`);
-            reject(new Error(t`Failed to upload offer to Keybase: ${stderr}`));
-          }
+      let command: string | undefined = undefined;
 
-          resolve(true);
-      });
-    });
+      switch (request.action) {
+        case KeybaseCLIActions.JOIN_TEAM:
+          command = `keybase team request-access ${KeybaseTeamName}`;
+          break;
+        case KeybaseCLIActions.JOIN_CHANNEL:
+          command = `keybase chat join-channel ${KeybaseTeamName} '#${KeybaseChannelName}'`;
+          break;
+        case KeybaseCLIActions.UPLOAD_OFFER:
+          const { title, filePath } = request.uploadArgs!;
+          if (title && filePath) {
+            command = `keybase chat upload "${KeybaseTeamName}" --channel "${KeybaseChannelName}" --title "${title}" "${filePath}"`;
+          }
+          else {
+            reject(new Error(`Missing title or filePath in request.uploadArgs`));
+          }
+          break;
+        case KeybaseCLIActions.CHECK_TEAM_MEMBERSHIP:
+          command = 'keybase team list-memberships';
+          break;
+        default:
+          reject(new Error(`Unknown KeybaseCLI action: ${request.action}`));
+          break;
+      }
+
+      if (command) {
+        child_process.exec(
+          command,
+          options,
+          (error, stdout, stderr) => {
+            if (error) {
+              console.error(`Keybase error: ${error}`);
+              switch (request.action) {
+                case KeybaseCLIActions.CHECK_TEAM_MEMBERSHIP:
+                  resolve(stdout.indexOf(`${KeybaseTeamName}`) === 0);
+                  break;
+                case KeybaseCLIActions.JOIN_TEAM:
+                  resolve(stderr.indexOf('(code 2665)') !== -1);
+                  break;
+                default:
+                  if (stderr.indexOf('(code 2623)') !== -1) {
+                    resolve(false);
+                  }
+                  else {
+                    reject(new Error(t`Failed to execute Keybase command: ${stderr}`));
+                  }
+              }
+            }
+
+            resolve(true);
+        });
+      }
+      else {
+        reject(new Error(`Missing command for action: ${request.action}`));
+      }
+    }
+    catch (error) {
+      console.error(error);
+      reject(error);
+    }
+  });
+}
+
+async function postToKeybase(
+  offerRecord: OfferTradeRecord,
+  offerData: string,
+  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined): Promise<boolean> {
+
+  const filename = suggestedFilenameForOffer(offerRecord.summary, lookupByAssetId);
+  const summary = shortSummaryForOffer(offerRecord.summary, lookupByAssetId);
+
+  let filePath: string = '';
+  let success = false;
+
+  filePath = await writeTempOfferFile(offerData, filename);
+
+  try {
+    success = await execKeybaseCLI({ action: KeybaseCLIActions.UPLOAD_OFFER, uploadArgs: { title: summary, filePath } });
   }
   finally {
     if (filePath) {
@@ -549,6 +621,7 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
   const { lookupByAssetId } = useAssetIdName();
   const showError = useShowError();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isJoiningTeam, setIsJoiningTeam] = React.useState(false);
   const [shared, setShared] = React.useState(false);
 
   function handleClose() {
@@ -566,19 +639,76 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
   }
 
   async function handleKeybaseJoinTeam() {
+    setIsJoiningTeam(true);
+
     try {
       const shell: Shell = (window as any).shell;
-      await shell.openExternal('keybase://team-page/chia_offers/join');
+      const joinTeamSucceeded = await execKeybaseCLI({ action: KeybaseCLIActions.JOIN_TEAM });
+      let joinTeamThroughURL = false;
+      if (joinTeamSucceeded) {
+        let attempts = 0;
+        let isMember = false;
+        while (attempts < 20) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          isMember = await execKeybaseCLI({ action: KeybaseCLIActions.CHECK_TEAM_MEMBERSHIP });
+
+          if (isMember) {
+            console.log("Joined team successfully");
+            break;
+          }
+
+          attempts++;
+        }
+
+        if (isMember) {
+          attempts = 0;
+          let joinChannelSucceeded = false;
+          while (attempts < 30) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            joinChannelSucceeded = await execKeybaseCLI({ action: KeybaseCLIActions.JOIN_CHANNEL });
+
+            if (joinChannelSucceeded) {
+              break;
+            }
+
+            attempts++;
+          }
+
+          if (joinChannelSucceeded) {
+            console.log("Joined channel successfully");
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await shell.openExternal(`keybase://chat/${KeybaseTeamName}#${KeybaseChannelName}`);
+          }
+          else {
+            console.error("Failed to join channel");
+            shell.openExternal(`keybase://chat/${KeybaseTeamName}#${KeybaseChannelName}`);
+          }
+        }
+        else {
+          console.error("Failed to join team");
+          joinTeamThroughURL = true;
+        }
+      }
+      else {
+        joinTeamThroughURL = true;
+      }
+
+      if (joinTeamThroughURL) {
+        await shell.openExternal(`keybase://team-page/${KeybaseTeamName}/join`);
+      }
     }
     catch (e) {
-      showError(new Error(t`Unable to open Keybase. Install Keybase from https://keybase.io`));
+      showError(new Error(t`Keybase command failed ${e}. If you haven't installed Keybase, you can download from https://keybase.io`));
+    }
+    finally {
+      setIsJoiningTeam(false);
     }
   }
 
   async function handleKeybaseGoToChannel() {
     try {
       const shell: Shell = (window as any).shell;
-      await shell.openExternal('keybase://chat/chia_offers#offers-trading');
+      await shell.openExternal(`keybase://chat/${KeybaseTeamName}#${KeybaseChannelName}`);
     }
     catch (e) {
       showError(new Error(t`Unable to open Keybase. Install Keybase from https://keybase.io`));
@@ -628,7 +758,7 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
             color="secondary"
             variant="contained"
           >
-            <Trans>Go to #offers-trading</Trans>
+            <Trans>Go to #{KeybaseChannelName}</Trans>
           </Button>
           <Button
             onClick={handleClose}
@@ -659,7 +789,7 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
           <Typography variant="body2">
             <Trans>
               Keybase is a secure messaging and file sharing application. To share an offer
-              in the Keybase chia_offers team, you must first have Keybase installed.
+              in the Keybase {KeybaseTeamName} team, you must first have Keybase installed.
             </Trans>
           </Typography>
           <Flex justifyContent="center" flexGrow={0} >
@@ -674,18 +804,20 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
           <Divider />
           <Typography variant="body2">
             <Trans>
-              Before posting an offer in Keybase to the #offers-trading channel, you must
-              first join the chia_offers team.
+              Before posting an offer in Keybase to the #{KeybaseChannelName} channel, you must
+              first join the {KeybaseTeamName} team. Please note that it might take a few moments
+              to join the channel.
             </Trans>
           </Typography>
           <Flex justifyContent="center" flexGrow={0}>
-            <Button
+            <ButtonLoading
               onClick={handleKeybaseJoinTeam}
               color="secondary"
               variant="contained"
+              loading={isJoiningTeam}
             >
-              <Trans>Join chia_offers</Trans>
-            </Button>
+              <Trans>Join {KeybaseTeamName}</Trans>
+            </ButtonLoading>
           </Flex>
         </Flex>
       </DialogContent>
@@ -695,7 +827,7 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
           color="primary"
           variant="contained"
         >
-          <Trans>Go to #offers-trading</Trans>
+          <Trans>Go to #{KeybaseChannelName}</Trans>
         </Button>
         <Flex flexGrow={1}></Flex>
         <Button
