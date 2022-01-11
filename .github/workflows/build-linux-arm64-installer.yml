@@ -116,6 +116,8 @@ jobs:
         ldd --version
         cd ./chia-blockchain-gui
         git status
+        node -v
+        npm -v
         cd ../build_scripts
         sh build_linux_deb.sh arm64
 
