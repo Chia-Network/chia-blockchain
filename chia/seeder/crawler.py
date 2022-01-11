@@ -76,7 +76,7 @@ class Crawler:
                 f"{self.minimum_version_count!r}"
             )
 
-        self.prometheus = PrometheusCrawler.create(config, self.log)
+        self.prometheus = PrometheusCrawler.create(config, self.log, self.minimum_version_count)
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -126,8 +126,6 @@ class Crawler:
         await self.prometheus.server.start_if_enabled()
 
     async def update_metric_values(self):
-        self.prometheus.reliable_nodes.set(self.crawl_store.get_reliable_peers())
-        self.prometheus.total_5d.set(len(self.best_timestamp_per_peer))
         ipv6_addresses_count = 0
         for host in self.best_timestamp_per_peer.keys():
             try:
@@ -135,13 +133,15 @@ class Crawler:
                 ipv6_addresses_count += 1
             except ipaddress.AddressValueError:
                 continue
-        self.prometheus.ipv6_5d.set(ipv6_addresses_count)
-        self.prometheus.ipv4_5d.set(len(self.best_timestamp_per_peer) - ipv6_addresses_count)
 
-        # Add version buckets
-        for version, count in sorted(self.versions.items(), key=lambda kv: kv[1], reverse=True):
-            if count >= self.minimum_version_count:
-                self.prometheus.version_buckets.labels(version).set(count)
+        with self.prometheus.server.log_errors():
+            await self.prometheus.crawling_batch_complete(
+                reliable_nodes=self.crawl_store.get_reliable_peers(),
+                total_5d=len(self.best_timestamp_per_peer),
+                ipv4_5d=len(self.best_timestamp_per_peer) - ipv6_addresses_count,
+                ipv6_5d=ipv6_addresses_count,
+                versions=self.versions,
+            )
 
     async def crawl(self):
         try:
