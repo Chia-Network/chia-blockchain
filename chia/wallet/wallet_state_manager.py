@@ -156,6 +156,8 @@ class WalletStateManager:
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
         self.pool_store = await WalletPoolStore.create(self.db_wrapper)
 
+        reserved_cores = self.config.get("reserved_cores", 2)
+
         self.blockchain = await WalletBlockchain.create(
             self.block_store,
             self.coin_store,
@@ -165,6 +167,7 @@ class WalletStateManager:
             self.new_transaction_block_callback,
             self.reorg_rollback,
             self.lock,
+            reserved_cores,
         )
         self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
 

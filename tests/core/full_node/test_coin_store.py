@@ -249,7 +249,7 @@ class TestCoinStoreWithBlocks:
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
             hint_store = await HintStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir)
+            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir, 2)
             try:
 
                 records: List[Optional[CoinRecord]] = []
@@ -319,7 +319,7 @@ class TestCoinStoreWithBlocks:
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
             hint_store = await HintStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir)
+            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir, 2)
             for block in blocks:
                 res, err, _, _ = await b.receive_block(block)
                 assert err is None
