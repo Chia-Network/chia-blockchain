@@ -561,10 +561,11 @@ class MempoolManager:
         total_cost = self.mempool.total_mempool_cost
         min_fee = self.mempool.get_min_fee_rate(100000)
         log.info(f"Size of mempool: {spends} spends, cost: {total_cost} " f"minimum fee to get in: {min_fee}")
+
         if self.prometheus is not None:
-            self.prometheus.mempool_size.set(spends)
-            self.prometheus.mempool_cost.set(total_cost)
-            self.prometheus.mempool_min_fee.set(min_fee)
+            with self.prometheus.server.log_errors():
+                await self.prometheus.mempool_new_peak(spends=spends, total_cost=total_cost, min_fee=min_fee)
+
         return txs_added
 
     async def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[MempoolItem]:

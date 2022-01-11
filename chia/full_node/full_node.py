@@ -67,7 +67,6 @@ from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.netspace import estimate_network_space_bytes
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
@@ -143,7 +142,6 @@ class FullNode:
         self.peer_sub_counter: Dict[bytes32, int] = {}  # Peer ID: int (subscription count)
         mkdir(self.db_path.parent)
         self._transaction_queue_task = None
-        self.prometheus = PrometheusFullNode.create(config, self.log)
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -191,6 +189,15 @@ class FullNode:
         self.blockchain = await Blockchain.create(
             self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent, reserved_cores
         )
+        self.prometheus = PrometheusFullNode.create(
+            config=self.config,
+            log=self.log,
+            block_store=self.block_store,
+            blockchain=self.blockchain,
+            constants=self.constants,
+            hint_store=self.hint_store,
+        )
+        await self.prometheus.server.start_if_enabled()
         self.mempool_manager = MempoolManager(self.coin_store, self.constants, self.prometheus)
 
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
@@ -254,9 +261,6 @@ class FullNode:
                     sanitize_weight_proof_only,
                 )
             )
-
-        # Starts the prometheus server if enabled in config
-        await self.prometheus.server.start_server()
 
         self.initialized = True
         if self.full_node_peers is not None:
@@ -1240,8 +1244,8 @@ class FullNode:
             f"Generator ref list size: "
             f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
-        self.prometheus.height.set(record.height)
-        self.prometheus.difficulty.set(difficulty)
+        with self.prometheus.server.log_errors():
+            await self.prometheus.new_peak(height=record.height, difficulty=difficulty)
 
         sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(record.header_hash)
         assert sub_slots is not None
@@ -1388,28 +1392,8 @@ class FullNode:
         await self.server.send_to_all([msg], NodeType.WALLET)
         self._state_changed("new_peak")
 
-        # Update certain prometheus values that we can't update with a known value in real time elsewhere
-        # Skip updating these values (which result in a few DB queries) if the prometheus server is not enabled
-        if self.prometheus.server.server_enabled:
-            self.prometheus.compact_blocks.set(await self.block_store.count_compactified_blocks())
-            self.prometheus.uncompact_blocks.set(await self.block_store.count_uncompactified_blocks())
-            self.prometheus.hint_count.set(await self.hint_store.count_hints())
-
-            # Figure out current estimated netspace
-            try:
-                older_block_height = max(0, record.height - int(4608))
-                older_block_header_hash = self.blockchain.height_to_hash(uint32(older_block_height))
-                if older_block_header_hash is None:
-                    raise ValueError(f"Older block hash not found for height {older_block_height}")
-                older_block = await self.block_store.get_block_record(older_block_header_hash)
-                if older_block is None:
-                    raise ValueError("Older block not found")
-                estimated_netspace_bytes = estimate_network_space_bytes(record, older_block, self.constants)
-                # Converting to MiB because prometheus won't currently handle numbers large enough to deal in bytes
-                netspace_mib_estimate = estimated_netspace_bytes / 1048576
-                self.prometheus.netspace_mib.set(netspace_mib_estimate)
-            except ValueError as e:
-                self.log.info(f"Unable to determine current netspace for metrics: {e}.")
+        with self.prometheus.server.log_errors():
+            await self.prometheus.new_peak(record=record)
 
     async def respond_block(
         self,
@@ -1568,7 +1552,8 @@ class FullNode:
         if block.transactions_info is not None:
             percent_full = round(100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3)
             percent_full_str = f", percent full: {percent_full}%"
-            self.prometheus.block_percent_full.set(percent_full)
+            with self.prometheus.server.log_errors():
+                await self.prometheus.new_peak(block_percent_full=percent_full)
         else:
             percent_full_str = ""
 
@@ -1731,7 +1716,8 @@ class FullNode:
                     100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3
                 )
                 percent_full_str = f", percent full: {percent_full}%"
-                self.prometheus.block_percent_full.set(percent_full)
+                with self.prometheus.server.log_errors():
+                    await self.prometheus.new_peak(block_percent_full=percent_full)
             else:
                 percent_full_str = ""
             self.log.info(
