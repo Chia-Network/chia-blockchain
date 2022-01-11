@@ -3,6 +3,7 @@ import logging
 import time
 import traceback
 import ipaddress
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -250,10 +251,8 @@ class Crawler:
                     for host, timestamp in self.best_timestamp_per_peer.items()
                     if timestamp >= now - 5 * 24 * 3600
                 }
-                self.versions = {}
+                self.versions = defaultdict(lambda: 0)
                 for host, version in self.host_to_version.items():
-                    if version not in self.versions:
-                        self.versions[version] = 0
                     self.versions[version] += 1
                 self.version_cache = []
                 self.peers_retrieved = []
