@@ -20,7 +20,7 @@ from chia.plotting.util import (
     parse_plot_info,
 )
 from chia.util.generator_tools import list_to_batches
-from chia.util.ints import uint16
+from chia.util.ints import uint16, uint64
 from chia.util.path import mkdir
 from chia.util.streamable import Streamable, streamable
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
@@ -29,27 +29,43 @@ from chia.wallet.derive_keys import master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
 
-CURRENT_VERSION: uint16 = uint16(0)
+CURRENT_VERSION: int = 1
 
 
 @streamable
 @dataclass(frozen=True)
-class CacheEntry(Streamable):
+class DiskCacheEntry(Streamable):
     pool_public_key: Optional[G1Element]
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
+    last_use: uint64
 
 
 @streamable
 @dataclass(frozen=True)
 class DiskCache(Streamable):
     version: uint16
-    data: List[Tuple[bytes32, CacheEntry]]
+    data: List[Tuple[bytes32, DiskCacheEntry]]
+
+
+@dataclass
+class CacheEntry:
+    pool_public_key: Optional[G1Element]
+    pool_contract_puzzle_hash: Optional[bytes32]
+    plot_public_key: G1Element
+    last_use: float
+
+    def bump_last_use(self) -> None:
+        self.last_use = time.time()
+
+    def expired(self, expiry_seconds: int) -> bool:
+        return time.time() - self.last_use > expiry_seconds
 
 
 class Cache:
     _changed: bool
     _data: Dict[bytes32, CacheEntry]
+    expiry_seconds: int = 7 * 24 * 60 * 60  # Keep the cache entries alive for 7 days after its last access
 
     def __init__(self, path: Path):
         self._changed = False
@@ -73,8 +89,17 @@ class Cache:
 
     def save(self):
         try:
+            disk_cache_entries: Dict[bytes32, DiskCacheEntry] = {
+                plot_id: DiskCacheEntry(
+                    cache_entry.pool_public_key,
+                    cache_entry.pool_contract_puzzle_hash,
+                    cache_entry.plot_public_key,
+                    uint64(int(cache_entry.last_use)),
+                )
+                for plot_id, cache_entry in self.items()
+            }
             disk_cache: DiskCache = DiskCache(
-                CURRENT_VERSION, [(plot_id, cache_entry) for plot_id, cache_entry in self.items()]
+                uint16(CURRENT_VERSION), [(plot_id, cache_entry) for plot_id, cache_entry in disk_cache_entries.items()]
             )
             serialized: bytes = bytes(disk_cache)
             self._path.write_bytes(serialized)
@@ -86,12 +111,21 @@ class Cache:
     def load(self):
         try:
             serialized = self._path.read_bytes()
+            version = uint16.from_bytes(serialized[0:2])
             log.info(f"Loaded {len(serialized)} bytes of cached data")
-            stored_cache: DiskCache = DiskCache.from_bytes(serialized)
-            if stored_cache.version != CURRENT_VERSION:
-                # TODO, Migrate or drop current cache if the version changes.
-                raise ValueError(f"Invalid cache version {stored_cache.version}. Expected version {CURRENT_VERSION}.")
-            self._data = {plot_id: cache_entry for plot_id, cache_entry in stored_cache.data}
+            if version == CURRENT_VERSION:
+                stored_cache: DiskCache = DiskCache.from_bytes(serialized)
+                self._data = {
+                    plot_id: CacheEntry(
+                        cache_entry.pool_public_key,
+                        cache_entry.pool_contract_puzzle_hash,
+                        cache_entry.plot_public_key,
+                        float(cache_entry.last_use),
+                    )
+                    for plot_id, cache_entry in stored_cache.data
+                }
+            else:
+                raise ValueError(f"Invalid cache version {version}. Expected version {CURRENT_VERSION}.")
         except FileNotFoundError:
             log.debug(f"Cache {self._path} not found")
         except Exception as e:
@@ -99,6 +133,9 @@ class Cache:
 
     def keys(self):
         return self._data.keys()
+
+    def values(self):
+        return self._data.values()
 
     def items(self):
         return self._data.items()
@@ -299,10 +336,16 @@ class PlotManager:
                 self._initial = False
 
                 # Cleanup unused cache
+                self.log.debug(f"_refresh_task: cached entries before cleanup: {len(self.cache)}")
                 available_ids = set([plot_info.prover.get_id() for plot_info in self.plots.values()])
-                invalid_cache_keys = [plot_id for plot_id in self.cache.keys() if plot_id not in available_ids]
-                self.cache.remove(invalid_cache_keys)
-                self.log.debug(f"_refresh_task: cached entries removed: {len(invalid_cache_keys)}")
+                remove_ids: List[bytes32] = []
+                for plot_id, cache_entry in self.cache.items():
+                    if cache_entry.expired(Cache.expiry_seconds) and plot_id not in available_ids:
+                        remove_ids.append(plot_id)
+                    elif plot_id in available_ids:
+                        cache_entry.bump_last_use()
+                self.cache.remove(remove_ids)
+                self.log.debug(f"_refresh_task: cached entries removed: {len(remove_ids)}")
 
                 if self.cache.changed():
                     self.cache.save()
@@ -412,7 +455,7 @@ class PlotManager:
                         local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
                     )
 
-                    cache_entry = CacheEntry(pool_public_key, pool_contract_puzzle_hash, plot_public_key)
+                    cache_entry = CacheEntry(pool_public_key, pool_contract_puzzle_hash, plot_public_key, time.time())
                     self.cache.update(prover.get_id(), cache_entry)
 
                 with self.plot_filename_paths_lock:
@@ -433,6 +476,8 @@ class PlotManager:
                     stat_info.st_size,
                     stat_info.st_mtime,
                 )
+
+                cache_entry.bump_last_use()
 
                 with counter_lock:
                     result.loaded.append(new_plot_info)
