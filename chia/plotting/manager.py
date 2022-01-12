@@ -341,7 +341,7 @@ class PlotManager:
                 return None
 
             if file_path in self.plots:
-                return self.plots[file_path]
+                return None
 
             entry: Optional[Tuple[str, Set[str]]] = self.plot_filename_paths.get(file_path.name)
             if entry is not None:
