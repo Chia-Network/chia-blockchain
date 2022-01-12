@@ -53,6 +53,7 @@ def validate_clvm_and_signature(
         result: NPCResult = get_name_puzzle_conditions(
             program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True
         )
+
         if result.error is not None:
             return Err(result.error), b"", {}
 
