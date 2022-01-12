@@ -202,7 +202,7 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
     { side: 'buy', fields: takerFields, namePrefix: 'takerRows', canAddRow: canAddTakerRow },
     { side: 'sell', fields: makerFields, namePrefix: 'makerRows', canAddRow: canAddMakerRow },
   ];
-  const showAddCATsMessage = !canAddTakerRow && takerRows.length === 1;
+  const showAddCATsMessage = !canAddTakerRow && wallets.length === 1;
 
   if (makerSide === 'sell') {
     sections.reverse();
