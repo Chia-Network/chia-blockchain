@@ -19,11 +19,12 @@ type OfferEditorConditionsRowProps = {
   tradeSide: 'buy' | 'sell';  // section that the row belongs to
   addRow: (() => void) | undefined;  // undefined if adding is not allowed
   removeRow: (() => void) | undefined;  // undefined if removing is not allowed
+  showAddWalletMessage: boolean;
   disabled?: boolean;
 };
 
 function OfferEditorConditionRow(props: OfferEditorConditionsRowProps) {
-  const { namePrefix, item, tradeSide, addRow, removeRow, disabled, ...rest } = props;
+  const { namePrefix, item, tradeSide, addRow, removeRow, showAddWalletMessage, disabled, ...rest } = props;
   const { getValues, setValue } = useFormContext();
   const [walletId, setWalletId] = React.useState<number | undefined>(undefined);
   const { data: walletBalance, isLoading } = useGetWalletBalanceQuery({ walletId });
@@ -69,6 +70,7 @@ function OfferEditorConditionRow(props: OfferEditorConditionsRowProps) {
             tradeSide={tradeSide}
             defaultValue={undefined}
             onChange={(walletId: number, walletType: WalletType) => handleAssetChange(namePrefix, walletId, walletType)}
+            showAddWalletMessage={showAddWalletMessage}
             disabled={disabled}
           />
         </Flex>
@@ -118,6 +120,7 @@ function OfferEditorConditionRow(props: OfferEditorConditionsRowProps) {
 }
 
 OfferEditorConditionRow.defaultProps = {
+  showAddWalletMessage: false,
   disabled: false,
 };
 
@@ -199,6 +202,7 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
     { side: 'buy', fields: takerFields, namePrefix: 'takerRows', canAddRow: canAddTakerRow },
     { side: 'sell', fields: makerFields, namePrefix: 'makerRows', canAddRow: canAddMakerRow },
   ];
+  const showAddCATsMessage = !canAddTakerRow && takerRows.length === 1;
 
   if (makerSide === 'sell') {
     sections.reverse();
@@ -225,6 +229,7 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
                   () => { section.side === 'buy' ? takerRemove(fieldIndex) : makerRemove(fieldIndex) } :
                   undefined
               }
+              showAddWalletMessage={section.side === 'buy' && showAddCATsMessage}
               disabled={disabled}
             />
           ))}

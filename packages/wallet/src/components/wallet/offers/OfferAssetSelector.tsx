@@ -85,12 +85,13 @@ type OfferAssetSelectorProps = {
   id: string;
   tradeSide: 'buy' | 'sell';
   defaultValue: any;
+  showAddWalletMessage: boolean;
   onChange?: (selectedWalletId: number, selectedWalletType: WalletType) => void;
   disabled?: boolean;
 };
 
 function OfferAssetSelector(props: OfferAssetSelectorProps): JSX.Element {
-  const { name, id, tradeSide, defaultValue, onChange, ...rest } = props;
+  const { name, id, tradeSide, defaultValue, showAddWalletMessage, onChange, ...rest } = props;
   const { data: wallets, isLoading } = useGetWalletsQuery();
   const { data: catList = [], isLoading: isCatListLoading } = useGetCatListQuery();
   const { getValues, watch } = useFormContext();
@@ -117,6 +118,16 @@ function OfferAssetSelector(props: OfferAssetSelectorProps): JSX.Element {
         <Trans>Asset Type</Trans>
       </InputLabel>
       <Select name={name} id={id} defaultValue={defaultValue || ''}>
+        {showAddWalletMessage === true && (
+          <MenuItem
+            disabled={true}
+            value={-1}
+            key={-1}
+            onClick={() => {}}
+          >
+            <Trans>Add CAT wallets to have more options</Trans>
+          </MenuItem>
+        )}
         {options.map((option) => (
           <MenuItem
             disabled={option.disabled}
@@ -133,6 +144,7 @@ function OfferAssetSelector(props: OfferAssetSelectorProps): JSX.Element {
 }
 
 OfferAssetSelector.defaultProps = {
+  showAddWalletMessage: false,
   disabled: false,
 }
 
