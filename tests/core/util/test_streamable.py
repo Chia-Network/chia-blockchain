@@ -26,7 +26,6 @@ from chia.util.streamable import (
     parse_size_hints,
     parse_str,
 )
-from chia.util.streamablemetadata import unstreamed_field
 from tests.setup_nodes import bt, test_constants
 
 
