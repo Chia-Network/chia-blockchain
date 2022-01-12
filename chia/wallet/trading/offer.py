@@ -8,7 +8,13 @@ from chia.types.blockchain_format.program import Program
 from chia.types.announcement import Announcement
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
+from chia.util.bech32m import bech32_encode, bech32_decode, convertbits
 from chia.util.ints import uint64
+from chia.wallet.util.puzzle_compression import (
+    compress_object_with_puzzles,
+    decompress_object_with_puzzles,
+    lowest_best_version,
+)
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
@@ -376,6 +382,39 @@ class Offer:
 
     def name(self) -> bytes32:
         return self.to_spend_bundle().name()
+
+    def compress(self, version=None) -> bytes:
+        as_spend_bundle = self.to_spend_bundle()
+        if version is None:
+            mods: List[bytes] = [bytes(s.puzzle_reveal.to_program().uncurry()[0]) for s in as_spend_bundle.coin_spends]
+            version = max(lowest_best_version(mods), 2)  # 2 is the version where OFFER_MOD lives
+        return compress_object_with_puzzles(bytes(as_spend_bundle), version)
+
+    @classmethod
+    def from_compressed(cls, compressed_bytes: bytes) -> "Offer":
+        return Offer.from_bytes(decompress_object_with_puzzles(compressed_bytes))
+
+    @classmethod
+    def try_offer_decompression(cls, offer_bytes: bytes) -> "Offer":
+        try:
+            return cls.from_compressed(offer_bytes)
+        except TypeError:
+            pass
+        return cls.from_bytes(offer_bytes)
+
+    def to_bech32(self, prefix: str = "offer", compression_version=None) -> str:
+        offer_bytes = self.compress(version=compression_version)
+        encoded = bech32_encode(prefix, convertbits(list(offer_bytes), 8, 5))
+        return encoded
+
+    @classmethod
+    def from_bech32(cls, offer_bech32: str) -> "Offer":
+        hrpgot, data = bech32_decode(offer_bech32, max_length=len(offer_bech32))
+        if data is None:
+            raise ValueError("Invalid Offer")
+        decoded = convertbits(list(data), 5, 8, False)
+        decoded_bytes = bytes(decoded)
+        return cls.try_offer_decompression(decoded_bytes)
 
     # Methods to make this a valid Streamable member
     # We basically hijack the SpendBundle versions for most of it

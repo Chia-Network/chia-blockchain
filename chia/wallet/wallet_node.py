@@ -800,7 +800,7 @@ class WalletNode:
     async def complete_blocks(self, header_blocks: List[HeaderBlock], peer: WSChiaConnection):
         if self.wallet_state_manager is None:
             return None
-        all_outgoing_per_wallet: Dict[int, List[TransactionRecord]] = {}
+        all_txs_per_wallet: Dict[int, List[TransactionRecord]] = {}
 
         for block in header_blocks:
             if block.is_transaction_block:
@@ -825,20 +825,18 @@ class WalletNode:
                     if wallet_info is None:
                         continue
                     wallet_id, wallet_type = wallet_info
-                    if wallet_id in all_outgoing_per_wallet:
-                        all_outgoing = all_outgoing_per_wallet[wallet_id]
+                    if wallet_id in all_txs_per_wallet:
+                        all_txs = all_txs_per_wallet[wallet_id]
                     else:
-                        all_outgoing = await self.wallet_state_manager.tx_store.get_all_transactions_for_wallet(
-                            wallet_id
-                        )
-                        all_outgoing_per_wallet[wallet_id] = all_outgoing
+                        all_txs = await self.wallet_state_manager.tx_store.get_all_transactions_for_wallet(wallet_id)
+                        all_txs_per_wallet[wallet_id] = all_txs
                     derivation_index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
                         added_coin.puzzle_hash
                     )
                     if derivation_index is not None:
                         await self.wallet_state_manager.puzzle_store.set_used_up_to(derivation_index, False)
                     await self.wallet_state_manager.coin_added(
-                        added_coin, block.height, all_outgoing, wallet_id, wallet_type
+                        added_coin, block.height, all_txs, wallet_id, wallet_type
                     )
 
                 all_unconfirmed: List[
@@ -862,9 +860,15 @@ class WalletNode:
                             )
 
                     record = await self.wallet_state_manager.coin_store.get_coin_record(removed_coin.name())
+
+                    if record is not None:
+                        await self.wallet_state_manager.coin_store.set_spent(removed_coin.name(), block.height)
+                    if removed_coin.name() in trade_removals:
+                        await self.wallet_state_manager.trade_manager.coins_of_interest_farmed(
+                            CoinState(removed_coin, block.height, None)  # `None` is a lie but it shouldn't matter
+                        )
                     if record is None:
                         continue
-                    await self.wallet_state_manager.coin_store.set_spent(removed_coin.name(), block.height)
                     removed_record = await self.wallet_state_manager.coin_store.get_coin_record(removed_coin.name())
 
                     if removed_record is not None and removed_record.wallet_type == WalletType.POOLING_WALLET:
@@ -1505,3 +1509,13 @@ class WalletNode:
             raise ValueError(f"Was not able to obtain children {response}")
 
         return response.coin_states
+
+    # For RPC only.  You should use wallet_state_manager.add_pending_transaction for normal wallet business.
+    async def push_tx(self, spend_bundle):
+        msg = make_msg(
+            ProtocolMessageTypes.send_transaction,
+            wallet_protocol.SendTransaction(spend_bundle),
+        )
+        full_nodes = self.server.get_full_node_connections()
+        for peer in full_nodes:
+            await peer.send_message(msg)

@@ -14,6 +14,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
@@ -64,6 +65,7 @@ class WalletRpcApi:
             # Wallet node
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
+            "/push_tx": self.push_tx,
             "/farm_block": self.farm_block,  # Only when node simulator is running
             # this function is just here for backwards-compatibility. It will probably
             # be removed in the future
@@ -366,6 +368,14 @@ class WalletRpcApi:
         network_name = self.service.config["selected_network"]
         address_prefix = self.service.config["network_overrides"]["config"][network_name]["address_prefix"]
         return {"network_name": network_name, "network_prefix": address_prefix}
+
+    async def push_tx(self, request: Dict):
+        assert self.service.server is not None
+        nodes = self.service.server.get_full_node_connections()
+        if len(nodes) == 0:
+            raise ValueError("Wallet is not currently connected to any full node peers")
+        await self.service.push_tx(SpendBundle.from_bytes(hexstr_to_bytes(request["spend_bundle"])))
+        return {}
 
     async def farm_block(self, request):
         raw_puzzle_hash = decode_puzzle_hash(request["address"])
@@ -777,14 +787,6 @@ class WalletRpcApi:
         name: str = await wallet.get_name()
         return {"wallet_id": wallet_id, "name": name}
 
-    async def cat_asset_id_to_name(self, request):
-        assert self.service.wallet_state_manager is not None
-        wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request["asset_id"])
-        if wallet is None:
-            raise ValueError("The asset ID specified does not belong to a wallet")
-        else:
-            return {"wallet_id": wallet.id(), "name": (await wallet.get_name())}
-
     async def cat_spend(self, request):
         assert self.service.wallet_state_manager is not None
 
@@ -824,13 +826,16 @@ class WalletRpcApi:
         asset_id: str = wallet.get_asset_id()
         return {"asset_id": asset_id, "wallet_id": wallet_id}
 
-    async def get_offer_summary(self, request):
+    async def cat_asset_id_to_name(self, request):
         assert self.service.wallet_state_manager is not None
-        offer_hex: str = request["offer"]
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
-        offered, requested = offer.summary()
-
-        return {"summary": {"offered": offered, "requested": requested}}
+        wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request["asset_id"])
+        if wallet is None:
+            if request["asset_id"] in DEFAULT_CATS:
+                return {"wallet_id": None, "name": DEFAULT_CATS[request["asset_id"]]["name"]}
+            else:
+                raise ValueError("The asset ID specified does not belong to a wallet")
+        else:
+            return {"wallet_id": wallet.id(), "name": (await wallet.get_name())}
 
     async def create_offer_for_ids(self, request):
         assert self.service.wallet_state_manager is not None
@@ -853,22 +858,30 @@ class WalletRpcApi:
             )
         if success:
             return {
-                "offer": trade_record.offer.hex(),
+                "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
                 "trade_record": trade_record.to_json_dict_convenience(),
             }
         raise ValueError(error)
 
+    async def get_offer_summary(self, request):
+        assert self.service.wallet_state_manager is not None
+        offer_hex: str = request["offer"]
+        offer = Offer.from_bech32(offer_hex)
+        offered, requested = offer.summary()
+
+        return {"summary": {"offered": offered, "requested": requested}}
+
     async def check_offer_validity(self, request):
         assert self.service.wallet_state_manager is not None
         offer_hex: str = request["offer"]
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+        offer = Offer.from_bech32(offer_hex)
 
         return {"valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer))}
 
     async def take_offer(self, request):
         assert self.service.wallet_state_manager is not None
-        offer_hex = request["offer"]
-        offer = Offer.from_bytes(hexstr_to_bytes(offer_hex))
+        offer_hex: str = request["offer"]
+        offer = Offer.from_bech32(offer_hex)
         fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
@@ -893,7 +906,7 @@ class WalletRpcApi:
             raise ValueError(f"No trade with trade id: {trade_id.hex()}")
 
         offer_to_return: bytes = trade_record.offer if trade_record.taken_offer is None else trade_record.taken_offer
-        offer_value: Optional[str] = offer_to_return.hex() if file_contents else None
+        offer_value: Optional[str] = Offer.from_bytes(offer_to_return).to_bech32() if file_contents else None
         return {"trade_record": trade_record.to_json_dict_convenience(), "offer": offer_value}
 
     async def get_all_offers(self, request: Dict):
@@ -914,7 +927,7 @@ class WalletRpcApi:
             result.append(trade.to_json_dict_convenience())
             if file_contents and offer_values is not None:
                 offer_to_return: bytes = trade.offer if trade.taken_offer is None else trade.taken_offer
-                offer_values.append(offer_to_return.hex())
+                offer_values.append(Offer.from_bytes(offer_to_return).to_bech32())
 
         return {"trade_records": result, "offers": offer_values}
 

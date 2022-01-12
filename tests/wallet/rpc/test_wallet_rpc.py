@@ -27,6 +27,7 @@ from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.util.hash import std_hash
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -246,7 +247,7 @@ class TestWalletRpc:
             assert len(tx_res.additions) == 2  # The output and the change
             assert any([addition.amount == signed_tx_amount for addition in tx_res.additions])
 
-            push_res = await client_node.push_tx(tx_res.spend_bundle)
+            push_res = await client.push_tx(tx_res.spend_bundle)
             assert push_res["success"]
             assert (await client.get_wallet_balance("1"))[
                 "confirmed_wallet_balance"
@@ -394,6 +395,10 @@ class TestWalletRpc:
             assert name == "My cat"
             should_be_none = await client.cat_asset_id_to_name(bytes([0] * 32))
             assert should_be_none is None
+            verified_asset_id = next(iter(DEFAULT_CATS.items()))[1]["asset_id"]
+            should_be_none, name = await client.cat_asset_id_to_name(bytes.fromhex(verified_asset_id))
+            assert should_be_none is None
+            assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
 
             await asyncio.sleep(1)
             for i in range(0, 5):
