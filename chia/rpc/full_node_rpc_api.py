@@ -783,6 +783,21 @@ class FullNodeRpcApi:
         for cr in coin_records:
             coin_records_map[cr.name] = cr
 
+        block_generator_map: Dict[int, Optional[BlockGenerator]] = {}
+        async def get_block_generator(height: int) -> Optional[BlockGenerator]:
+            if height in block_generator_map:
+                return block_generator_map[height]
+
+            header_hash = self.service.blockchain.height_to_hash(height)
+            block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
+
+            if block is None or block.transactions_generator is None:
+                raise ValueError("Invalid block or block generator")
+
+            block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
+            block_generator_map[height] = block_generator
+            return block_generator
+
         # Make sure the are_cat_list has the same order with the coin_names
         res: List[bool] = []
         for coin_name in coin_names:
@@ -796,14 +811,9 @@ class FullNodeRpcApi:
                 raise ValueError(f"Inconsistent between coin name and coin_record.name(): {coin_record.name} != {coin_name}")
 
             height = coin_record.spent_block_index
-            header_hash = self.service.blockchain.height_to_hash(height)
-            block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
-
-            if block is None or block.transactions_generator is None:
-                raise ValueError("Invalid block or block generator")
-
-            block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
+            block_generator = await get_block_generator(height=height)
             assert block_generator is not None
+
             error, puzzle, _ = get_puzzle_and_solution_for_coin(
                 block_generator, coin_name, self.service.constants.MAX_BLOCK_COST_CLVM
             )
