@@ -163,7 +163,7 @@ async def add_token(args: dict, wallet_client: WalletRpcClient, fingerprint: int
     try:
         asset_id_bytes: bytes = hexstr_to_bytes(asset_id)
         existing_info: Optional[Tuple[Optional[uint32], str]] = await wallet_client.cat_asset_id_to_name(asset_id_bytes)
-        if existing_info is None or existing_info.wallet_id is None:
+        if existing_info is None or existing_info[0] is None:
             response = await wallet_client.create_wallet_for_existing_cat(asset_id_bytes)
             wallet_id = response["wallet_id"]
             await wallet_client.set_cat_name(wallet_id, token_name)
