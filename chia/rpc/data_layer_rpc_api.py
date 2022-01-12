@@ -161,4 +161,4 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         res = await self.service.get_roots(store_ids)
-        return {"hash": res}
+        return {"root_hashes": res}

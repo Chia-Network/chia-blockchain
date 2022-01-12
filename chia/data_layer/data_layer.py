@@ -136,7 +136,6 @@ class DataLayer:
 
     async def get_root(self, store_id: bytes32) -> Optional[bytes32]:
         res = await self.data_store.get_tree_root(tree_id=store_id)
-        self.log.info(f"root is {res.node_hash}")
         if res is None:
             self.log.error(f"Failed to get root for {store_id.hex()}")
         return res.node_hash
@@ -145,7 +144,6 @@ class DataLayer:
         roots=[]
         for id in store_ids:
             res = await self.data_store.get_tree_root(tree_id=bytes32(hexstr_to_bytes(id)))
-            self.log.info(f"root is {res.node_hash}")
             if res is None:
                 self.log.error(f"Failed to get root for {id}")
                 continue

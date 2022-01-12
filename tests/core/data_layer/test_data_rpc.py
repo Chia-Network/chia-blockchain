@@ -292,18 +292,21 @@ async def test_get_roots(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
     key3 = b"c"
     value3 = b"\x04\x05"
     changelist.append({"action": "insert", "key": key3.hex(), "value": value3.hex()})
-    update_tx_rec0 = await data_rpc_api.update_data_store({"id": tree_id_1.hex(), "changelist": changelist})
+    update_tx_rec = await data_rpc_api.update_data_store({"id": tree_id_1.hex(), "changelist": changelist})
     roots = await data_rpc_api.get_roots({"ids": [tree_id_1.hex(), tree_id_2.hex()]})
-    print(f"roots {roots}")
+    root = await data_rpc_api.get_root({"id": tree_id_1.hex()})
+    assert roots['root_hashes'][0] == root['hash']
+    assert roots['root_hashes'][1] == None
     key4 = b"d"
     value4 = b"\x06\x03"
     changelist.append({"action": "insert", "key": key4.hex(), "value": value4.hex()})
     key5 = b"e"
     value5 = b"\x07\x01"
     changelist.append({"action": "insert", "key": key5.hex(), "value": value5.hex()})
-    update_tx_rec0 = await data_rpc_api.update_data_store({"id": tree_id_2.hex(), "changelist": changelist})
+    update_tx_rec = await data_rpc_api.update_data_store({"id": tree_id_2.hex(), "changelist": changelist})
     roots = await data_rpc_api.get_roots({"ids": [tree_id_1.hex(), tree_id_2.hex()]})
-    print(f"roots {roots}")
+    assert roots['root_hashes'][0] is not None
+    assert roots['root_hashes'][1] is not None
     await asyncio.sleep(1)
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
