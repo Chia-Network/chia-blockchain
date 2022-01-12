@@ -564,6 +564,9 @@ class WalletStateManager:
 
     async def fetch_parent_and_check_for_cat(self, peer, coin_state) -> Tuple[Optional[uint32], Optional[WalletType]]:
         response: List[CoinState] = await self.wallet_node.get_coin_state([coin_state.coin.parent_coin_info])
+        if len(response) == 0:
+            self.log.warning(f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info}")
+            return None, None
         parent_coin_state = response[0]
         assert parent_coin_state.spent_height == coin_state.created_height
         wallet_id = None
@@ -620,11 +623,10 @@ class WalletStateManager:
                 created_h_none.append(coin_st)
         coin_states.sort(key=lambda x: x.created_height, reverse=False)  # type: ignore
         coin_states.extend(created_h_none)
-        all_outgoing_per_wallet: Dict[int, List[TransactionRecord]] = {}
-        trade_removals, trade_additions = await self.trade_manager.get_coins_of_interest()
+        all_txs_per_wallet: Dict[int, List[TransactionRecord]] = {}
+        trade_removals = await self.trade_manager.get_coins_of_interest()
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
         trade_coin_removed: List[CoinState] = []
-        trade_adds: List[CoinState] = []
 
         if fork_height is not None and current_height is not None and fork_height != current_height - 1:
             # This only applies to trusted mode
@@ -653,20 +655,20 @@ class WalletStateManager:
             else:
                 continue
 
-            if wallet_id in all_outgoing_per_wallet:
-                all_outgoing = all_outgoing_per_wallet[wallet_id]
+            if wallet_id in all_txs_per_wallet:
+                all_txs = all_txs_per_wallet[wallet_id]
             else:
-                all_outgoing = await self.tx_store.get_all_transactions_for_wallet(
-                    wallet_id, TransactionType.OUTGOING_TX
-                )
-                all_outgoing_per_wallet[wallet_id] = all_outgoing
+                all_txs = await self.tx_store.get_all_transactions_for_wallet(wallet_id)
+                all_txs_per_wallet[wallet_id] = all_txs
+
+            all_outgoing = [tx for tx in all_txs if "OUTGOING" in TransactionType(tx.type).name]
 
             if coin_state.created_height is None:
                 # TODO implements this coin got reorged
                 pass
             elif coin_state.created_height is not None and coin_state.spent_height is None:
                 added_coin_record = await self.coin_added(
-                    coin_state.coin, coin_state.created_height, all_outgoing, wallet_id, wallet_type, trade_additions
+                    coin_state.coin, coin_state.created_height, all_txs, wallet_id, wallet_type
                 )
                 if added_coin_record is not None:
                     added.append(added_coin_record)
@@ -811,8 +813,6 @@ class WalletStateManager:
             else:
                 raise RuntimeError("All cases already handled")  # Logic error, all cases handled
 
-        for coin_state_added in trade_adds:
-            await self.trade_manager.coins_of_interest_farmed(coin_state_added)
         for coin_state_removed in trade_coin_removed:
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed)
 
@@ -858,7 +858,6 @@ class WalletStateManager:
         all_outgoing_transaction_records: List[TransactionRecord],
         wallet_id: uint32,
         wallet_type: WalletType,
-        trade_additions,
     ) -> Optional[WalletCoinRecord]:
         """
         Adding coin to DB, return wallet coin record if it get's added
@@ -921,7 +920,6 @@ class WalletStateManager:
                         records.append(record)
 
             if len(records) > 0:
-                # This is the change from this transaction
                 for record in records:
                     if record.confirmed is False:
                         await self.tx_store.set_confirmed(record.name, height)
@@ -1062,7 +1060,7 @@ class WalletStateManager:
 
         return 0
 
-    async def get_wallet_for_colour(self, colour):
+    async def get_wallet_for_colour(self, colour: str):
         for wallet_id in self.wallets:
             wallet = self.wallets[wallet_id]
             if wallet.type() == WalletType.COLOURED_COIN:
@@ -1074,6 +1072,7 @@ class WalletStateManager:
         self.wallets[uint32(wallet_id)] = wallet
         if create_puzzle_hashes:
             await self.create_more_puzzle_hashes()
+        self.state_changed("wallet_created")
 
     async def get_spendable_coins_for_wallet(self, wallet_id: int, records=None) -> Set[WalletCoinRecord]:
         if records is None:
@@ -1171,6 +1170,11 @@ class WalletStateManager:
         # Get all unspent coins
         my_coin_records: Set[WalletCoinRecord] = await self.coin_store.get_unspent_coins_at_height(None)
 
+        # Get additions on unconfirmed transactions
+        unconfirmed_additions: Set[Coin] = set()
+        for tx_record in await self.tx_store.get_all_unconfirmed():
+            unconfirmed_additions.update(set(tx_record.additions))
+
         # Filter coins up to and including fork point
         unspent_coin_names: Set[bytes32] = set()
         for coin in my_coin_records:
@@ -1181,17 +1185,14 @@ class WalletStateManager:
         removals_of_interest: bytes32 = []
         additions_of_interest: bytes32 = []
 
-        (
-            trade_removals,
-            trade_additions,
-        ) = await self.trade_manager.get_coins_of_interest()
+        trade_removals = await self.trade_manager.get_coins_of_interest()
         for name, trade_coin in trade_removals.items():
             if tx_filter.Match(bytearray(trade_coin.name())):
                 removals_of_interest.append(trade_coin.name())
 
-        for name, trade_coin in trade_additions.items():
-            if tx_filter.Match(bytearray(trade_coin.puzzle_hash)):
-                additions_of_interest.append(trade_coin.puzzle_hash)
+        for addition in unconfirmed_additions:
+            if tx_filter.Match(bytearray(addition.name())):
+                additions_of_interest.append(addition.name())
 
         for coin_name in unspent_coin_names:
             if tx_filter.Match(bytearray(coin_name)):
@@ -1210,3 +1211,8 @@ class WalletStateManager:
                 additions_of_interest.append(puzzle_hash)
 
         return additions_of_interest, removals_of_interest
+
+    async def delete_trade_transactions(self, trade_id: bytes32):
+        txs: List[TransactionRecord] = await self.tx_store.get_transactions_by_trade_id(trade_id)
+        for tx in txs:
+            await self.tx_store.delete_transaction_record(tx.name())

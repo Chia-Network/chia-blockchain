@@ -9,6 +9,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.transaction_type import TransactionType
 
 
@@ -174,7 +175,7 @@ class WalletTransactionStore:
             removals=current.removals,
             wallet_id=current.wallet_id,
             sent_to=current.sent_to,
-            trade_id=None,
+            trade_id=current.trade_id,
             type=current.type,
             name=current.name,
             memos=current.memos,
@@ -225,7 +226,7 @@ class WalletTransactionStore:
             removals=current.removals,
             wallet_id=current.wallet_id,
             sent_to=sent_to,
-            trade_id=None,
+            trade_id=current.trade_id,
             type=current.type,
             name=current.name,
             memos=current.memos,
@@ -251,7 +252,7 @@ class WalletTransactionStore:
             removals=record.removals,
             wallet_id=record.wallet_id,
             sent_to=[],
-            trade_id=None,
+            trade_id=record.trade_id,
             type=record.type,
             name=record.name,
             memos=record.memos,
@@ -347,14 +348,26 @@ class WalletTransactionStore:
         else:
             return []
 
-    async def get_transactions_between(self, wallet_id: int, start, end) -> List[TransactionRecord]:
+    async def get_transactions_between(
+        self, wallet_id: int, start, end, sort_key=None, reverse=False
+    ) -> List[TransactionRecord]:
         """Return a list of transaction between start and end index. List is in reverse chronological order.
         start = 0 is most recent transaction
         """
         limit = end - start
+
+        if sort_key is None:
+            sort_key = "CONFIRMED_AT_HEIGHT"
+        if sort_key not in SortKey.__members__:
+            raise ValueError(f"There is no known sort {sort_key}")
+
+        if reverse:
+            query_str = SortKey[sort_key].descending()
+        else:
+            query_str = SortKey[sort_key].ascending()
+
         cursor = await self.db_connection.execute(
-            f"SELECT * from transaction_record where wallet_id=?"
-            f" order by confirmed_at_height DESC LIMIT {start}, {limit}",
+            f"SELECT * from transaction_record where wallet_id=?" f" {query_str}, rowid" f" LIMIT {start}, {limit}",
             (wallet_id,),
         )
         rows = await cursor.fetchall()
@@ -364,8 +377,6 @@ class WalletTransactionStore:
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
             records.append(record)
-
-        records.reverse()
 
         return records
 
@@ -430,6 +441,18 @@ class WalletTransactionStore:
         cursor = await self.db_connection.execute(
             "SELECT * from transaction_record WHERE confirmed_at_height>?", (height,)
         )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            record = TransactionRecord.from_bytes(row[0])
+            records.append(record)
+
+        return records
+
+    async def get_transactions_by_trade_id(self, trade_id: bytes32) -> List[TransactionRecord]:
+        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE trade_id=?", (trade_id,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []

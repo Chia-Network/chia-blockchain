@@ -13,6 +13,7 @@ from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
@@ -26,8 +27,8 @@ from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.trade_record import TradeRecord
+from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.trade_utils import trade_record_to_dict
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
@@ -62,6 +63,7 @@ class WalletRpcApi:
             # Wallet node
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
+            "/push_tx": self.push_tx,
             "/farm_block": self.farm_block,  # Only when node simulator is running
             # this function is just here for backwards-compatibility. It will probably
             # be removed in the future
@@ -86,13 +88,15 @@ class WalletRpcApi:
             "/cc_get_name": self.cc_get_name,
             "/cc_spend": self.cc_spend,
             "/cc_get_colour": self.cc_get_colour,
-            "/create_offer_for_ids": self.create_offer_for_ids,
-            "/get_discrepancies_for_offer": self.get_discrepancies_for_offer,
-            "/respond_to_offer": self.respond_to_offer,
-            "/get_trade": self.get_trade,
-            "/get_all_trades": self.get_all_trades,
-            "/cancel_trade": self.cancel_trade,
+            "/cat_asset_id_to_name": self.cat_asset_id_to_name,
             "/get_cat_list": self.get_cat_list,
+            "/create_offer_for_ids": self.create_offer_for_ids,
+            "/get_offer_summary": self.get_offer_summary,
+            "/check_offer_validity": self.check_offer_validity,
+            "/take_offer": self.take_offer,
+            "/get_offer": self.get_offer,
+            "/get_all_offers": self.get_all_offers,
+            "/cancel_offer": self.cancel_offer,
             # DID Wallet
             "/did_update_recovery_ids": self.did_update_recovery_ids,
             "/did_get_pubkey": self.did_get_pubkey,
@@ -360,6 +364,13 @@ class WalletRpcApi:
         address_prefix = self.service.config["network_overrides"]["config"][network_name]["address_prefix"]
         return {"network_name": network_name, "network_prefix": address_prefix}
 
+    async def push_tx(self, request: Dict):
+        nodes = self.service.server.get_full_node_connections()
+        if len(nodes) == 0:
+            raise ValueError("Wallet is not currently connected to any full node peers")
+        await self.service.push_tx(SpendBundle.from_bytes(hexstr_to_bytes(request["spend_bundle"])))
+        return {}
+
     async def farm_block(self, request):
         raw_puzzle_hash = decode_puzzle_hash(request["address"])
         request = FarmNewBlockProtocol(raw_puzzle_hash)
@@ -622,16 +633,15 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
 
         wallet_id = int(request["wallet_id"])
-        if "start" in request:
-            start = request["start"]
-        else:
-            start = 0
-        if "end" in request:
-            end = request["end"]
-        else:
-            end = 1000
 
-        transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(wallet_id, start, end)
+        start = request.get("start", 0)
+        end = request.get("end", 50)
+        sort_key = request.get("sort_key", None)
+        reverse = request.get("reverse", False)
+
+        transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
+            wallet_id, start, end, sort_key=sort_key, reverse=reverse
+        )
         return {
             "transactions": [tr.to_json_dict_convenience(self.service.config) for tr in transactions],
             "wallet_id": wallet_id,
@@ -811,85 +821,122 @@ class WalletRpcApi:
         colour: str = wallet.get_colour()
         return {"colour": colour, "wallet_id": wallet_id}
 
+    async def cat_asset_id_to_name(self, request):
+        assert self.service.wallet_state_manager is not None
+        wallet = await self.service.wallet_state_manager.get_wallet_for_colour(request["asset_id"])
+        if wallet is None:
+            if request["asset_id"] in DEFAULT_CATS:
+                return {"wallet_id": None, "name": DEFAULT_CATS[request["asset_id"]]["name"]}
+            else:
+                raise ValueError("The asset ID specified does not belong to a wallet")
+        else:
+            return {"wallet_id": wallet.id(), "name": (await wallet.get_name())}
+
     async def create_offer_for_ids(self, request):
         assert self.service.wallet_state_manager is not None
 
-        offer = request["ids"]
-        file_name = request["filename"]
-        async with self.service.wallet_state_manager.lock:
-            (
-                success,
-                spend_bundle,
-                error,
-            ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(offer, file_name)
-        if success:
-            self.service.wallet_state_manager.trade_manager.write_offer_to_disk(Path(file_name), spend_bundle)
-            return {}
-        raise ValueError(error)
+        offer: Dict[str, int] = request["offer"]
+        fee: uint64 = uint64(request.get("fee", 0))
+        validate_only: bool = request.get("validate_only", False)
 
-    async def get_discrepancies_for_offer(self, request):
-        assert self.service.wallet_state_manager is not None
-        file_name = request["filename"]
-        file_path = Path(file_name)
-        async with self.service.wallet_state_manager.lock:
-            (
-                success,
-                discrepancies,
-                error,
-            ) = await self.service.wallet_state_manager.trade_manager.get_discrepancies_for_offer(file_path)
+        modified_offer = {}
+        for key in offer:
+            modified_offer[int(key)] = offer[key]
 
-        if success:
-            return {"discrepancies": discrepancies}
-        raise ValueError(error)
-
-    async def respond_to_offer(self, request):
-        assert self.service.wallet_state_manager is not None
-        file_path = Path(request["filename"])
         async with self.service.wallet_state_manager.lock:
             (
                 success,
                 trade_record,
                 error,
-            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(file_path)
+            ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
+                modified_offer, fee=fee, validate_only=validate_only
+            )
+        if success:
+            return {
+                "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
+                "trade_record": trade_record.to_json_dict_convenience(),
+            }
+        raise ValueError(error)
+
+    async def get_offer_summary(self, request):
+        assert self.service.wallet_state_manager is not None
+        offer_hex: str = request["offer"]
+        offer = Offer.from_bech32(offer_hex)
+        offered, requested = offer.summary()
+
+        return {"summary": {"offered": offered, "requested": requested}}
+
+    async def check_offer_validity(self, request):
+        assert self.service.wallet_state_manager is not None
+        offer_hex: str = request["offer"]
+        offer = Offer.from_bech32(offer_hex)
+
+        return {"valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer))}
+
+    async def take_offer(self, request):
+        assert self.service.wallet_state_manager is not None
+        offer_hex: str = request["offer"]
+        offer = Offer.from_bech32(offer_hex)
+        fee: uint64 = uint64(request.get("fee", 0))
+
+        async with self.service.wallet_state_manager.lock:
+            (
+                success,
+                trade_record,
+                error,
+            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer, fee=fee)
         if not success:
             raise ValueError(error)
-        return {}
+        return {"trade_record": trade_record.to_json_dict_convenience()}
 
-    async def get_trade(self, request: Dict):
+    async def get_offer(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
-        trade_id = request["trade_id"]
-        trade: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
-        if trade is None:
-            raise ValueError(f"No trade with trade id: {trade_id}")
+        trade_id = hexstr_to_bytes(request["trade_id"])
+        file_contents: bool = request.get("file_contents", False)
+        trade_record: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
+        if trade_record is None:
+            raise ValueError(f"No trade with trade id: {trade_id.hex()}")
 
-        result = trade_record_to_dict(trade)
-        return {"trade": result}
+        offer_to_return: bytes = trade_record.offer if trade_record.taken_offer is None else trade_record.taken_offer
+        offer_value: Optional[str] = Offer.from_bytes(offer_to_return).to_bech32() if file_contents else None
+        return {"trade_record": trade_record.to_json_dict_convenience(), "offer": offer_value}
 
-    async def get_all_trades(self, request: Dict):
+    async def get_all_offers(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
-        all_trades = await trade_mgr.get_all_trades()
+        start: int = request.get("start", 0)
+        end: int = request.get("end", 50)
+        sort_key: Optional[str] = request.get("sort_key", None)
+        reverse: bool = request.get("reverse", False)
+        file_contents: bool = request.get("file_contents", False)
+
+        all_trades = await trade_mgr.trade_store.get_trades_between(start, end, sort_key=sort_key, reverse=reverse)
         result = []
+        offer_values: Optional[List[str]] = [] if file_contents else None
         for trade in all_trades:
-            result.append(trade_record_to_dict(trade))
+            result.append(trade.to_json_dict_convenience())
+            if file_contents and offer_values is not None:
+                offer_to_return: bytes = trade.offer if trade.taken_offer is None else trade.taken_offer
+                offer_values.append(Offer.from_bytes(offer_to_return).to_bech32())
 
-        return {"trades": result}
+        return {"trade_records": result, "offers": offer_values}
 
-    async def cancel_trade(self, request: Dict):
+    async def cancel_offer(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
         wsm = self.service.wallet_state_manager
         secure = request["secure"]
         trade_id = hexstr_to_bytes(request["trade_id"])
+        fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
             if secure:
-                await wsm.trade_manager.cancel_pending_offer_safely(trade_id)
+                await wsm.trade_manager.cancel_pending_offer_safely(trade_id, fee=fee)
             else:
                 await wsm.trade_manager.cancel_pending_offer(trade_id)
         return {}
