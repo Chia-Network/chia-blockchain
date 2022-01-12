@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import dataclasses
-import functools
 import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, ClassVar, Dict, List, Tuple, Type, TypeVar, Callable, Optional, Iterator
+from typing import Any, BinaryIO, ClassVar, Dict, List, Tuple, Type, Callable, Optional, Iterator
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal
@@ -17,6 +16,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import int64, int512, uint32, uint64, uint128
+from chia.util.streamablemetadata import _ClassMetadata
 from chia.util.type_checking import is_type_List, is_type_SpecificOptional, is_type_Tuple, strictdataclass
 
 if sys.version_info < (3, 8):
@@ -131,53 +131,6 @@ def recurse_jsonify(d):
 
 
 PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
-
-_field_metadata_key = "_chia_streamable"
-
-
-@dataclasses.dataclass(frozen=True)
-class _FieldMetadata:
-    ignore: bool = False
-
-
-@functools.wraps(wrapped=dataclasses.field)
-def unstreamed_field(*args, **kwargs):
-    metadata = kwargs.setdefault("metadata", {})
-    metadata[_field_metadata_key] = _FieldMetadata(ignore=True)
-
-    return dataclasses.field(*args, **kwargs)
-
-
-_T_Field = TypeVar("_T_Field", bound="_Field")
-
-
-@dataclasses.dataclass(frozen=True)
-class _Field:
-    name: str
-    annotation: Any
-
-    @classmethod
-    def from_dataclass_field(cls: Type[_T_Field], field: dataclasses.Field) -> _T_Field:
-        return cls(name=field.name, annotation=field.type)
-
-
-_T_ClassMetadata = TypeVar("_T_ClassMetadata", bound="_ClassMetadata")
-
-
-@dataclasses.dataclass(frozen=True)
-class _ClassMetadata:
-    fields: Tuple[_Field, ...] = ()
-
-    @classmethod
-    def from_dataclass(cls: Type[_T_ClassMetadata], dataclass) -> _T_ClassMetadata:
-        fields = []
-        for dataclass_field in dataclasses.fields(dataclass):
-            metadata = dataclass_field.metadata.get(_field_metadata_key, _FieldMetadata())
-            if metadata.ignore:
-                continue
-            fields.append(_Field.from_dataclass_field(field=dataclass_field))
-
-        return cls(fields=tuple(fields))
 
 
 def streamable(cls: Type["Streamable"]) -> Type["Streamable"]:
