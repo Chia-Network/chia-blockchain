@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
+from typing import Awaitable, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 import aiosqlite
 
@@ -14,6 +14,7 @@ from chia.data_layer.data_layer_errors import (
 )
 from chia.data_layer.data_layer_types import (
     InternalNode,
+    KeyIndex,
     Node,
     NodeType,
     Root,
@@ -244,6 +245,15 @@ class DataStore:
                 "node_hash": node_hash.hex(),
                 "value_hash": value_hash,
             },
+        )
+
+    async def _insert_keys(self, key_indexes: Iterable[KeyIndex]) -> None:
+        await self.db.executemany(
+            """
+            INSERT INTO key_index(tree_id, generation, key_hash, node_hash, value_hash)
+            VALUES(:tree_id, :generation, :key_hash, :node_hash, :value_hash)
+            """,
+            (key_index.to_table_values() for key_index in key_indexes),
         )
 
     async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> None:
@@ -717,14 +727,19 @@ class DataStore:
 
             # TODO: this could probably be a direct sql statement instead of query then insert
             existing_terminal_nodes = await self.get_pairs(tree_id=tree_id, generation=existing_generation, lock=False)
-            for node in existing_terminal_nodes:
-                await self._insert_key(
-                    tree_id=tree_id,
-                    generation=generation,
-                    key_hash=std_hash(node.key),
-                    node_hash=node.hash,
-                    value_hash=std_hash(node.value),
-                )
+
+            await self._insert_keys(
+                key_indexes=(
+                    KeyIndex(
+                        tree_id=tree_id,
+                        generation=generation,
+                        key_hash=std_hash(node.key),
+                        node_hash=node.hash,
+                        value_hash=std_hash(node.value),
+                    )
+                    for node in existing_terminal_nodes
+                ),
+            )
 
             await self._insert_key(
                 tree_id=tree_id,

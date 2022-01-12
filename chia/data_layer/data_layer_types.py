@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Dict, List, Optional, Tuple, Type, TypedDict, Union
 
 import aiosqlite as aiosqlite
 
@@ -162,6 +162,32 @@ class Root:
             generation=row["generation"],
             status=Status(row["status"]),
         )
+
+
+class KeyIndexTableValues(TypedDict):
+    tree_id: str
+    generation: int
+    key_hash: bytes32
+    node_hash: str
+    value_hash: bytes32
+
+
+@dataclass(frozen=True)
+class KeyIndex:
+    tree_id: bytes32
+    generation: int
+    key_hash: bytes32
+    node_hash: bytes32
+    value_hash: bytes32
+
+    def to_table_values(self) -> KeyIndexTableValues:
+        return {
+            "tree_id": self.tree_id.hex(),
+            "generation": self.generation,
+            "key_hash": self.key_hash,
+            "node_hash": self.node_hash.hex(),
+            "value_hash": self.value_hash,
+        }
 
 
 node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]] = {
