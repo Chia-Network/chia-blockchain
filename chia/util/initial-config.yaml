@@ -342,7 +342,7 @@ full_node:
 
   # When creating process pools the process count will generally be the CPU count minus
   # this reserved core count.
-  reserved_cores: 2
+  reserved_cores: 0
 
   # How often to initiate outbound connections to other full nodes.
   peer_connect_interval: 30
