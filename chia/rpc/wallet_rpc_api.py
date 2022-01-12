@@ -1151,7 +1151,7 @@ class WalletRpcApi:
         additions: List[Dict] = request["additions"]
         amount_0: uint64 = uint64(additions[0]["amount"])
         assert amount_0 <= self.service.constants.MAX_COIN_AMOUNT
-        puzzle_hash_0 = hexstr_to_bytes(additions[0]["puzzle_hash"])
+        puzzle_hash_0 = bytes32.from_hexstr(additions[0]["puzzle_hash"])
         if len(puzzle_hash_0) != 32:
             raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0.hex()}")
 
@@ -1159,7 +1159,7 @@ class WalletRpcApi:
 
         additional_outputs: List[AmountWithPuzzlehash] = []
         for addition in additions[1:]:
-            receiver_ph = bytes32(hexstr_to_bytes(addition["puzzle_hash"]))
+            receiver_ph = bytes32.from_hexstr(addition["puzzle_hash"])
             if len(receiver_ph) != 32:
                 raise ValueError(f"Address must be 32 bytes. {receiver_ph.hex()}")
             amount = uint64(addition["amount"])
