@@ -191,7 +191,20 @@ class Blockchain(BlockchainInterface):
         blockchain, regardless of whether it is the child of a head, or another block.
         Returns a header if block is added to head. Returns an error if the block is
         invalid. Also returns the fork height, in the case of a new peak.
+
+        Args:
+            block: The FullBlock to be validated.
+            pre_validation_result: A result of successful pre validation
+            fork_point_with_peak: The fork point, for efficiency reasons, if None, it will be recomputed
+
+        Returns:
+            The result of adding the block to the blockchain (NEW_PEAK, ADDED_AS_ORPHAN, INVALID_BLOCK,
+                DISCONNECTED_BLOCK, ALREDY_HAVE_BLOCK)
+            An optional error if the result is not NEW_PEAK or ADDED_AS_ORPHAN
+            A fork point if the result is NEW_PEAK
+            A list of changes to the coin store, and changes to hints, if the result is NEW_PEAK
         """
+
         genesis: bool = block.height == 0
         if self.contains_block(block.header_hash):
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None, ([], {})
@@ -204,7 +217,8 @@ class Blockchain(BlockchainInterface):
 
         npc_result: Optional[NPCResult] = pre_validation_result.npc_result
         required_iters = pre_validation_result.required_iters
-        assert pre_validation_result.error is None
+        if pre_validation_result.error is not None:
+            return ReceiveBlockResult.INVALID_BLOCK, Err(pre_validation_result.error), None, ([], {})
         assert required_iters is not None
 
         error_code, _ = await validate_block_body(
@@ -567,7 +581,6 @@ class Blockchain(BlockchainInterface):
 
         if error is not None:
             return PreValidationResult(uint16(error.code.value), None, None, False)
-
         prev_height = (
             -1
             if block.prev_header_hash == self.constants.GENESIS_CHALLENGE
@@ -585,7 +598,7 @@ class Blockchain(BlockchainInterface):
             npc_result,
             None,
             self.get_block_generator,
-            False,
+            validate_signature=False,
         )
 
         if error_code is not None:
@@ -596,7 +609,7 @@ class Blockchain(BlockchainInterface):
     async def pre_validate_blocks_multiprocessing(
         self,
         blocks: List[FullBlock],
-        npc_results: Dict[uint32, NPCResult],
+        npc_results: Dict[uint32, NPCResult],  # A cache of the result of running CLVM, optional (you can use {})
         batch_size: int = 4,
         wp_summaries: Optional[List[SubEpochSummary]] = None,
         *,
