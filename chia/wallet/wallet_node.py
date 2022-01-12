@@ -881,7 +881,7 @@ class WalletNode:
                                 removed_record.wallet_type,
                             )
                             pool_wallet = self.wallet_state_manager.wallets[uint32(removed_record.wallet_id)]
-                            await pool_wallet.apply_state_transitions([pool_spend], block.height)
+                            await pool_wallet.apply_state_transitions(pool_spend, block.height)
                             assert all_removed_coins is not None
                             if pool_added_coin in all_removed_coins:
                                 pool_spend_2 = await self.fetch_puzzle_solution(peer, block.height, pool_added_coin)
@@ -895,7 +895,7 @@ class WalletNode:
                                         removed_record.wallet_type,
                                     )
                                     pool_wallet = self.wallet_state_manager.wallets[uint32(removed_record.wallet_id)]
-                                    await pool_wallet.apply_state_transitions([pool_spend_2], block.height)
+                                    await pool_wallet.apply_state_transitions(pool_spend_2, block.height)
 
                     # Check if we have created a pool wallet
                     children: List[CoinState] = await self.fetch_children(peer, removed_coin.name(), None)
@@ -925,7 +925,7 @@ class WalletNode:
                             False,
                             "pool_wallet",
                         )
-                        await pool_wallet.apply_state_transitions([launcher_spend], block.height)
+                        await pool_wallet.apply_state_transitions(launcher_spend, block.height)
                         pool_added_coin = launcher_spend.additions()[0]
                         await self.wallet_state_manager.coin_added(
                             pool_added_coin,
