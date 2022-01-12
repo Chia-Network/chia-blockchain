@@ -8,6 +8,7 @@ from chia.data_layer.data_layer_types import InternalNode, TerminalNode
 from chia.data_layer.data_store import DataStore
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.path import mkdir, path_from_root
@@ -124,18 +125,29 @@ class DataLayer:
     async def get_keys_values(self, store_id: bytes32) -> List[TerminalNode]:
         res = await self.data_store.get_keys_values(store_id)
         if res is None:
-            self.log.error("Failed to create tree")
+            self.log.error("Failed to fetch keys values")
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
         res = await self.data_store.get_ancestors(tree_id=store_id, node_hash=node_hash)
         if res is None:
-            self.log.error("Failed to create tree")
+            self.log.error("Failed to get ancestors")
         return res
 
     async def get_root(self, store_id: bytes32) -> Optional[bytes32]:
         res = await self.data_store.get_tree_root(tree_id=store_id)
         self.log.info(f"root is {res.node_hash}")
         if res is None:
-            self.log.error("Failed to create tree")
+            self.log.error(f"Failed to get root for {store_id.hex()}")
         return res.node_hash
+
+    async def get_roots(self, store_ids: List[str]) -> List[bytes32]:
+        roots=[]
+        for id in store_ids:
+            res = await self.data_store.get_tree_root(tree_id=bytes32(hexstr_to_bytes(id)))
+            self.log.info(f"root is {res.node_hash}")
+            if res is None:
+                self.log.error(f"Failed to get root for {id}")
+                continue
+            roots.append(res.node_hash)
+        return roots

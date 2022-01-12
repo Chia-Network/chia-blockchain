@@ -150,3 +150,15 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         res = await self.service.get_root(store_id)
         return {"hash": res}
+
+    async def get_roots(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        rows_to_add a list of clvm objects as bytes to add to talbe
+        rows_to_remove a list of row hashes to remove
+        """
+        store_ids =request["ids"]
+        # todo input checks
+        if self.service is None:
+            raise Exception("Data layer not created")
+        res = await self.service.get_roots(store_ids)
+        return {"hash": res}
