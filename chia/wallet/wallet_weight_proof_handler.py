@@ -93,7 +93,6 @@ class WalletWeightProofHandler:
         )
 
         vdf_tasks: List[asyncio.Future] = []
-        # TODO: remove hint overrides after https://github.com/python/typeshed/pull/6187
         recent_blocks_validation_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
             self._executor,
             _validate_recent_blocks_and_get_records,
@@ -101,7 +100,7 @@ class WalletWeightProofHandler:
             wp_recent_chain_bytes,
             summary_bytes,
             pathlib.Path(self._executor_shutdown_tempfile.name),
-        )  # type: ignore[assignment]
+        )
         try:
             if not skip_segment_validation:
                 segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
@@ -117,14 +116,13 @@ class WalletWeightProofHandler:
                     for vdf_proof, classgroup, vdf_info in chunk:
                         byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
 
-                    # TODO: remove hint overrides after https://github.com/python/typeshed/pull/6187
                     vdf_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
                         self._executor,
                         _validate_vdf_batch,
                         constants,
                         byte_chunks,
                         pathlib.Path(self._executor_shutdown_tempfile.name),
-                    )  # type: ignore[assignment]
+                    )
                     vdf_tasks.append(vdf_task)
 
                 for vdf_task in vdf_tasks:

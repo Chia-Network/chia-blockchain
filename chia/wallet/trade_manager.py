@@ -256,7 +256,7 @@ class TradeManager:
                         p2_ph: bytes32 = await wallet.get_new_puzzlehash()
                         if wallet.type() == WalletType.STANDARD_WALLET:
                             key: Optional[bytes32] = None
-                            memos: Optional[List[Optional[bytes]]] = None
+                            memos: List[bytes] = []
                         elif wallet.type() == WalletType.CAT:
                             key = bytes32(bytes.fromhex(wallet.get_asset_id()))
                             memos = [p2_ph]

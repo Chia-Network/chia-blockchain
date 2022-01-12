@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import socket
 import time
 import traceback
 from pathlib import Path
@@ -59,6 +58,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyringIsLocked
+from chia.util.network import get_host_addr
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.util.wallet_sync_utils import (
@@ -564,7 +564,9 @@ class WalletNode:
             if full_node_peer.is_valid():
                 full_node_resolved = full_node_peer
             else:
-                full_node_resolved = PeerInfo(socket.gethostbyname(full_node_peer.host), full_node_peer.port)
+                full_node_resolved = PeerInfo(
+                    get_host_addr(full_node_peer.host, self.config.get("prefer_ipv6")), full_node_peer.port
+                )
             if full_node_peer in peers or full_node_resolved in peers:
                 self.log.info(f"Will not attempt to connect to other nodes, already connected to {full_node_peer}")
                 for connection in self.server.get_full_node_connections():
@@ -879,7 +881,7 @@ class WalletNode:
                                 removed_record.wallet_type,
                             )
                             pool_wallet = self.wallet_state_manager.wallets[uint32(removed_record.wallet_id)]
-                            await pool_wallet.apply_state_transitions([pool_spend], block.height)
+                            await pool_wallet.apply_state_transitions(pool_spend, block.height)
                             assert all_removed_coins is not None
                             if pool_added_coin in all_removed_coins:
                                 pool_spend_2 = await self.fetch_puzzle_solution(peer, block.height, pool_added_coin)
@@ -893,7 +895,7 @@ class WalletNode:
                                         removed_record.wallet_type,
                                     )
                                     pool_wallet = self.wallet_state_manager.wallets[uint32(removed_record.wallet_id)]
-                                    await pool_wallet.apply_state_transitions([pool_spend_2], block.height)
+                                    await pool_wallet.apply_state_transitions(pool_spend_2, block.height)
 
                     # Check if we have created a pool wallet
                     children: List[CoinState] = await self.fetch_children(peer, removed_coin.name(), None)
@@ -923,7 +925,7 @@ class WalletNode:
                             False,
                             "pool_wallet",
                         )
-                        await pool_wallet.apply_state_transitions([launcher_spend], block.height)
+                        await pool_wallet.apply_state_transitions(launcher_spend, block.height)
                         pool_added_coin = launcher_spend.additions()[0]
                         await self.wallet_state_manager.coin_added(
                             pool_added_coin,

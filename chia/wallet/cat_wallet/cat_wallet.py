@@ -34,6 +34,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.genesis_checkers import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -48,11 +49,6 @@ from chia.wallet.wallet_info import WalletInfo
 
 
 # This should probably not live in this file but it's for experimental right now
-@dataclasses.dataclass
-class Payment:
-    puzzle_hash: bytes32
-    amount: uint64
-    memos: List[bytes]
 
 
 class CATWallet:
@@ -211,22 +207,6 @@ class CATWallet:
         return uint64(amount)
 
     async def get_unconfirmed_balance(self, unspent_records=None) -> uint128:
-        # confirmed = await self.get_confirmed_balance(unspent_records)
-        # unconfirmed_tx: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-        #     self.id()
-        # )
-        # addition_amount = 0
-        # removal_amount = 0
-        #
-        # for record in unconfirmed_tx:
-        #     if TransactionType(record.type) is TransactionType.INCOMING_TX:
-        #         addition_amount += record.amount
-        #     else:
-        #         removal_amount += record.amount
-        #
-        # result = confirmed - removal_amount + addition_amount
-        #
-        # return uint128(result)
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
     async def get_max_send_amount(self, records=None):

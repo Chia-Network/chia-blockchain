@@ -264,36 +264,35 @@ class PoolWallet:
             return [coin.name()]
         return []
 
-    async def apply_state_transitions(self, block_spends: List[CoinSpend], block_height: uint32):
+    async def apply_state_transitions(self, new_state: CoinSpend, block_height: uint32):
         """
         Updates the Pool state (including DB) with new singleton spends. The block spends can contain many spends
         that we are not interested in, and can contain many ephemeral spends. They must all be in the same block.
         The DB must be committed after calling this method. All validation should be done here.
         """
-        coin_name_to_spend: Dict[bytes32, CoinSpend] = {cs.coin.name(): cs for cs in block_spends}
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
         tip_spend = tip[1]
 
-        while True:
-            tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
-            assert tip_coin is not None
-            spent_coin_name: bytes32 = tip_coin.name()
-            if spent_coin_name not in coin_name_to_spend:
-                break
-            spend: CoinSpend = coin_name_to_spend[spent_coin_name]
-            await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, spend, block_height)
-            tip_spend = (await self.get_tip())[1]
-            self.log.info(f"New PoolWallet singleton tip_coin: {tip_spend}")
-            coin_name_to_spend.pop(spent_coin_name)
+        tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
+        assert tip_coin is not None
+        spent_coin_name: bytes32 = tip_coin.name()
+        if spent_coin_name != new_state.coin.name():
+            self.log.warning(f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} ")
+            return
 
-            # If we have reached the target state, resets it to None. Loops back to get current state
-            for _, added_spend in reversed(self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)):
-                latest_state: Optional[PoolState] = solution_to_pool_state(added_spend)
-                if latest_state is not None:
-                    if self.target_state == latest_state:
-                        self.target_state = None
-                        self.next_transaction_fee = uint64(0)
-                    break
+        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
+        tip_spend = (await self.get_tip())[1]
+        self.log.info(f"New PoolWallet singleton tip_coin: {tip_spend}")
+
+        # If we have reached the target state, resets it to None. Loops back to get current state
+        for _, added_spend in reversed(self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)):
+            latest_state: Optional[PoolState] = solution_to_pool_state(added_spend)
+            if latest_state is not None:
+                if self.target_state == latest_state:
+                    self.target_state = None
+                    self.next_transaction_fee = uint64(0)
+                break
+
         await self.update_pool_config(False)
 
     async def rewind(self, block_height: int) -> bool:

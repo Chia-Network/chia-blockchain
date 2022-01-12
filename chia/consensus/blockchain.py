@@ -100,6 +100,7 @@ class Blockchain(BlockchainInterface):
         consensus_constants: ConsensusConstants,
         hint_store: HintStore,
         blockchain_dir: Path,
+        reserved_cores: int,
     ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -112,7 +113,7 @@ class Blockchain(BlockchainInterface):
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
-        num_workers = max(cpu_count - 2, 1)
+        num_workers = max(cpu_count - reserved_cores, 1)
         self.pool = ProcessPoolExecutor(max_workers=num_workers)
         log.info(f"Started {num_workers} processes for block validation")
 

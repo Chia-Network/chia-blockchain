@@ -718,7 +718,7 @@ class WalletRpcApi:
         amount: uint64 = uint64(request["amount"])
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
 
-        memos: Optional[bytes] = None
+        memos: List[bytes] = []
         if "memos" in request:
             memos = [mem.encode("utf-8") for mem in request["memos"]]
 
@@ -901,7 +901,7 @@ class WalletRpcApi:
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
-        trade_id = hexstr_to_bytes(request["trade_id"])
+        trade_id = bytes32.from_hexstr(request["trade_id"])
         file_contents: bool = request.get("file_contents", False)
         trade_record: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(bytes32(trade_id))
         if trade_record is None:
@@ -938,7 +938,7 @@ class WalletRpcApi:
 
         wsm = self.service.wallet_state_manager
         secure = request["secure"]
-        trade_id = hexstr_to_bytes(request["trade_id"])
+        trade_id = bytes32.from_hexstr(request["trade_id"])
         fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
@@ -1164,7 +1164,7 @@ class WalletRpcApi:
         additions: List[Dict] = request["additions"]
         amount_0: uint64 = uint64(additions[0]["amount"])
         assert amount_0 <= self.service.constants.MAX_COIN_AMOUNT
-        puzzle_hash_0 = hexstr_to_bytes(additions[0]["puzzle_hash"])
+        puzzle_hash_0 = bytes32.from_hexstr(additions[0]["puzzle_hash"])
         if len(puzzle_hash_0) != 32:
             raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0.hex()}")
 
@@ -1172,7 +1172,7 @@ class WalletRpcApi:
 
         additional_outputs: List[AmountWithPuzzlehash] = []
         for addition in additions[1:]:
-            receiver_ph = bytes32(hexstr_to_bytes(addition["puzzle_hash"]))
+            receiver_ph = bytes32.from_hexstr(addition["puzzle_hash"])
             if len(receiver_ph) != 32:
                 raise ValueError(f"Address must be 32 bytes. {receiver_ph.hex()}")
             amount = uint64(addition["amount"])
@@ -1197,7 +1197,7 @@ class WalletRpcApi:
         ):
             coin_announcements = {
                 Announcement(
-                    bytes32(hexstr_to_bytes(announcement["coin_id"])),
+                    bytes32.from_hexstr(announcement["coin_id"]),
                     bytes(Program.to(binutils.assemble(announcement["message"]))),
                     hexstr_to_bytes(announcement["morph_bytes"]) if "morph_bytes" in announcement else None,
                 )
@@ -1212,7 +1212,7 @@ class WalletRpcApi:
         ):
             puzzle_announcements = {
                 Announcement(
-                    bytes32(hexstr_to_bytes(announcement["puzzle_hash"])),
+                    bytes32.from_hexstr(announcement["puzzle_hash"]),
                     bytes(Program.to(binutils.assemble(announcement["message"]))),
                     hexstr_to_bytes(announcement["morph_bytes"]) if "morph_bytes" in announcement else None,
                 )

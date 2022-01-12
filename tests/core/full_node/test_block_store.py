@@ -23,7 +23,6 @@ def event_loop():
 
 class TestBlockStore:
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_block_store(self, tmp_dir, db_version):
         assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(10)
@@ -34,7 +33,7 @@ class TestBlockStore:
             coin_store_2 = await CoinStore.create(db_wrapper_2)
             store_2 = await BlockStore.create(db_wrapper_2)
             hint_store = await HintStore.create(db_wrapper_2)
-            bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir)
+            bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir, 2)
 
             store = await BlockStore.create(db_wrapper)
             await BlockStore.create(db_wrapper_2)
@@ -62,7 +61,6 @@ class TestBlockStore:
             assert len(block_record_records) == len(blocks)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_deadlock(self, tmp_dir, db_version):
         """
         This test was added because the store was deadlocking in certain situations, when fetching and
@@ -76,7 +74,7 @@ class TestBlockStore:
             coin_store_2 = await CoinStore.create(wrapper_2)
             store_2 = await BlockStore.create(wrapper_2)
             hint_store = await HintStore.create(wrapper_2)
-            bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir)
+            bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir, 2)
             block_records = []
             for block in blocks:
                 await bc.receive_block(block)
@@ -105,7 +103,7 @@ class TestBlockStore:
             coin_store = await CoinStore.create(db_wrapper)
             block_store = await BlockStore.create(db_wrapper)
             hint_store = await HintStore.create(db_wrapper)
-            bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, tmp_dir)
+            bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, tmp_dir, 2)
 
             # insert all blocks
             count = 0

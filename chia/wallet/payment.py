@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from typing import Optional, List
+from typing import List
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
@@ -12,7 +12,7 @@ from chia.util.ints import uint64
 class Payment:
     puzzle_hash: bytes32
     amount: uint64
-    memos: Optional[List[Optional[bytes]]] = None
+    memos: List[bytes]
 
     def as_condition_args(self) -> List:
         return [self.puzzle_hash, self.amount, self.memos]
@@ -27,7 +27,7 @@ class Payment:
     def from_condition(cls, condition: Program) -> "Payment":
         python_condition: List = condition.as_python()
         puzzle_hash, amount = python_condition[1:3]
-        memos: Optional[List[Optional[bytes]]] = None
+        memos: List[bytes] = []
         if len(python_condition) > 3:
             memos = python_condition[3]
         return cls(bytes32(puzzle_hash), uint64(int.from_bytes(amount, "big")), memos)

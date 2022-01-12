@@ -819,7 +819,7 @@ class WalletStateManager:
                 if record.wallet_type == WalletType.POOLING_WALLET:
                     cs = await self.wallet_node.fetch_puzzle_solution(peer, coin_state.spent_height, coin_state.coin)
                     wallet = self.wallets[uint32(record.wallet_id)]
-                    await wallet.apply_state_transitions([cs], coin_state.spent_height)
+                    await wallet.apply_state_transitions(cs, coin_state.spent_height)
                     if len(cs.additions()) > 0:
                         added_pool_coin = cs.additions()[0]
                         await self.coin_added(
@@ -860,7 +860,7 @@ class WalletStateManager:
                         False,
                         "pool_wallet",
                     )
-                    await pool_wallet.apply_state_transitions([launcher_spend], coin_state.spent_height)
+                    await pool_wallet.apply_state_transitions(launcher_spend, coin_state.spent_height)
                     coin_added = launcher_spend.additions()[0]
                     await self.coin_added(
                         coin_added, coin_state.spent_height, [], pool_wallet.id(), WalletType(pool_wallet.type())
