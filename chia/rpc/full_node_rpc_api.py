@@ -779,14 +779,21 @@ class FullNodeRpcApi:
         if len(coin_records) != len(coin_names):
             raise ValueError(f"Inconsistent length between coin_names and coin_records: {len(coin_names)} != {len(coin_records)}")
 
+        coin_records_map: Dict[bytes32, CoinRecord] = {}
+        for cr in coin_records:
+            coin_records_map[cr.name] = cr
+
+        # Make sure the are_cat_list has the same order with the coin_names
         res: List[bool] = []
-        for coin_name, coin_record in zip(coin_names, coin_records):
-            if coin_record is None:
+        for coin_name in coin_names:
+            if not coin_name in coin_records_map:
                 raise ValueError(f"Not found coin record")
+
+            coin_record = coin_records_map[coin_name]
             if coin_record.spent_block_index == 0:
                 raise ValueError(f"Coin must be spent to have a solution: {coin_record}")
             if coin_record.name != coin_name:
-                raise ValueError(f"Inconsistent between coin name and coin_record.name(): {coin_record.name()} != {coin_name}")
+                raise ValueError(f"Inconsistent between coin name and coin_record.name(): {coin_record.name} != {coin_name}")
 
             height = coin_record.spent_block_index
             header_hash = self.service.blockchain.height_to_hash(height)
@@ -805,6 +812,9 @@ class FullNodeRpcApi:
 
             is_cat_coin, _ = match_cat_puzzle(puzzle)
             res.append(is_cat_coin)
+
+        if len(coin_names) != len(res):
+            raise ValueError(f"Inconsisten length between coin_names and result: {len(coin_names)} != {len(res)}")
 
         return {"are_cat_coins": res}
 
