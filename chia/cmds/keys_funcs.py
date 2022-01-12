@@ -1,8 +1,9 @@
 import sys
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.util.bech32m import encode_puzzle_hash
@@ -143,16 +144,26 @@ def verify(message: str, public_key: str, signature: str):
     print(AugSchemeMPL.verify(public_key, messageBytes, signature))
 
 
+class DerivedSearchResultType(Enum):
+    PUBLIC_KEY = "public key"
+    PRIVATE_KEY = "private key"
+    WALLET_ADDRESS = "wallet address"
+
+
 def search_derive(
     root_path: Path,
     private_key: Optional[PrivateKey],
-    search_term: str,
+    search_terms: Tuple[str, ...],
     limit: int,
     hardened_derivation: bool,
     no_progress: bool,
 ) -> bool:
+    from time import perf_counter
+
+    start_time = perf_counter()
     show_progress: bool = not no_progress
     private_keys: List[PrivateKey]
+    remaining_search_terms: Dict[str, None] = dict.fromkeys(search_terms)
     if private_key is None:
         private_keys = [sk for sk, _ in keychain.get_all_private_keys()]
     else:
@@ -166,8 +177,7 @@ def search_derive(
         path_root: str = "m/"
         for i in [12381, 8444]:
             path_root += f"{i}{'h' if hardened_derivation else ''}/"
-        found_item: Any = None
-        found_item_type: str = ""
+
         if show_progress:
             sys.stdout.write(path_root)
 
@@ -181,6 +191,8 @@ def search_derive(
                 sys.stdout.write(f"{account_str}/")
 
             for index in range(limit):
+                found_items: List[str] = []
+                printed_match: bool = False
                 index_str = str(index) + "h" if hardened_derivation else ""
                 current_path += f"{index_str}"
                 current_path_indices.append(index)
@@ -193,39 +205,67 @@ def search_derive(
                     child_sk = _derive_path_unhardened(sk, current_path_indices)
                 child_pk = child_sk.get_g1()
                 address: str = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), "xch")
-                if show_progress:
-                    sys.stdout.write("\b" * len(str(index_str)))
-                    sys.stdout.flush()
-                if search_term in str(child_pk):
-                    found_item = child_pk
-                    found_item_type = "public key"
+
+                for term in remaining_search_terms:
+                    found_item: Any = None
+                    found_item_type: Optional[DerivedSearchResultType] = None
+                    if term in str(child_pk):
+                        found_item = child_pk
+                        found_item_type = DerivedSearchResultType.PUBLIC_KEY
+                    elif term in str(child_sk):
+                        found_item = child_sk
+                        found_item_type = DerivedSearchResultType.PRIVATE_KEY
+                    elif term in address:
+                        found_item = address
+                        found_item_type = DerivedSearchResultType.WALLET_ADDRESS
+
+                    if found_item is not None and found_item_type is not None:
+                        found_items.append(term)
+                        if show_progress:
+                            print()
+                        print(f"Found {found_item_type.value}: {found_item} (HD path: {current_path})")
+                        printed_match = True
+
+                for k in found_items:
+                    del remaining_search_terms[k]
+
+                if len(remaining_search_terms) == 0:
                     break
-                if search_term in str(child_sk):
-                    found_item = child_sk
-                    found_item_type = "private key"
-                    break
-                elif search_term in address:
-                    found_item = address
-                    found_item_type = "address"
-                    break
+
                 current_path = current_path[: -len(str(index_str))]
                 current_path_indices = current_path_indices[:-1]
+
+                if show_progress:
+                    if printed_match:
+                        sys.stdout.write(f"{current_path}")
+                    else:
+                        sys.stdout.write("\b" * len(str(index_str)))
+                    sys.stdout.flush()
+
+            if len(remaining_search_terms) == 0:
+                break
+
             if show_progress:
                 sys.stdout.write("\b" * (1 + len(str(account_str))))
             current_path_indices = current_path_indices[:-1]
 
-            if found_item is not None:
-                break
-        if found_item is not None:
+        if len(remaining_search_terms) == 0:
             break
+
         if show_progress:
+            sys.stdout.write("\b" * (1 + len(current_path)))
+            sys.stdout.flush()
             print()
+    end_time = perf_counter()
+    if len(remaining_search_terms) > 0:
+        for term in remaining_search_terms:
+            print(f"Could not find '{term}'")
+
     if show_progress:
         print()
-    if found_item is not None:
-        print(f"Found {found_item_type}: {found_item} (HD path: {current_path})")
+        print(f"Search completed in {end_time - start_time} seconds")
 
-    return found_item is not None
+    return len(remaining_search_terms) == 0
 
 
 def derive_wallet_address(

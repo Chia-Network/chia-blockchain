@@ -1,6 +1,6 @@
 import click
 
-from typing import Optional
+from typing import Optional, Tuple
 
 
 @click.group("keys", short_help="Manage your keys")
@@ -150,8 +150,8 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
     ctx.obj["filename"] = filename
 
 
-@derive_cmd.command("search", short_help="Search the keyring for a matching derived key or wallet address")
-@click.argument("search-term", type=str)
+@derive_cmd.command("search", short_help="Search the keyring for one or more matching derived keys or wallet addresses")
+@click.argument("search-terms", type=str, nargs=-1)
 @click.option("--limit", "-l", default=500, help="Limit the number of derivations to search against", type=int)
 @click.option(
     "--hardened-derivation",
@@ -171,7 +171,7 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
 )
 @click.pass_context
 def search_cmd(
-    ctx: click.Context, search_term: str, limit: int, hardened_derivation: bool, no_progress: bool
+    ctx: click.Context, search_terms: Tuple[str, ...], limit: int, hardened_derivation: bool, no_progress: bool
 ):
     import sys
     from .keys_funcs import search_derive, resolve_derivation_master_key
@@ -185,7 +185,9 @@ def search_cmd(
     if fingerprint is not None or filename is not None:
         private_key = resolve_derivation_master_key(ctx.obj["fingerprint"], ctx.obj["filename"])
 
-    found: bool = search_derive(ctx.obj["root_path"], private_key, search_term, limit, hardened_derivation, no_progress)
+    found: bool = search_derive(
+        ctx.obj["root_path"], private_key, search_terms, limit, hardened_derivation, no_progress
+    )
 
     sys.exit(0 if found else 1)
 
