@@ -705,7 +705,7 @@ class WalletRpcApi:
         amount: uint64 = uint64(request["amount"])
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
 
-        memos: Optional[bytes] = None
+        memos: List[bytes] = []
         if "memos" in request:
             memos = [mem.encode("utf-8") for mem in request["memos"]]
 
