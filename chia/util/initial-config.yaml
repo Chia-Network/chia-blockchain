@@ -67,6 +67,17 @@ network_overrides: &network_overrides
       MEMPOOL_BLOCK_BUFFER: 50
       EPOCH_BLOCKS: 768
       DIFFICULTY_STARTING: 30
+    testnet10:
+      AGG_SIG_ME_ADDITIONAL_DATA: ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2
+      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
+      DIFFICULTY_STARTING: 30
+      EPOCH_BLOCKS: 768
+      GENESIS_CHALLENGE: ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
+      MEMPOOL_BLOCK_BUFFER: 10
+      MIN_PLOT_SIZE: 18
+      NETWORK_TYPE: 1
   config:
     mainnet:
       address_prefix: "xch"
@@ -83,6 +94,9 @@ network_overrides: &network_overrides
     testnet4:
       address_prefix: "txch"
     testnet7:
+      address_prefix: "txch"
+      default_full_node_port: 58444
+    testnet10:
       address_prefix: "txch"
       default_full_node_port: 58444
 
