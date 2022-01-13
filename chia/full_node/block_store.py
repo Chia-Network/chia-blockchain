@@ -493,12 +493,18 @@ class BlockStore:
         async with self.db.execute("select count(*) from full_blocks where is_fully_compactified=1") as cursor:
             row = await cursor.fetchone()
 
+        if row is None:
+            raise Exception("row was None when querying compact blocks")
+
         [count] = row
         return int(count)
 
     async def count_uncompactified_blocks(self) -> int:
         async with self.db.execute("select count(*) from full_blocks where is_fully_compactified=0") as cursor:
             row = await cursor.fetchone()
+
+        if row is None:
+            raise Exception("row was None when querying uncompact blocks")
 
         [count] = row
         return int(count)
