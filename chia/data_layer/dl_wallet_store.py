@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 import aiosqlite
+import dataclasses
 
 from chia.data_layer.data_layer_wallet import SingletonRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -42,7 +43,9 @@ class DataLayerStore:
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_id on singleton_records(coin_id)")
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS launcher_id on singleton_records(launcher_id)")
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS root on singleton_records(root)")
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS inner_puzzle_hash on singleton_records(inner_puzzle_hash)")
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS inner_puzzle_hash on singleton_records(inner_puzzle_hash)"
+        )
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS confirmed_at_height on singleton_records(root)")
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS generation on singleton_records(generation)")
 
@@ -116,15 +119,15 @@ class DataLayerStore:
 
     async def get_all_singletons_for_launcher(self, launcher_id: bytes32) -> List[SingletonRecord]:
         """
-        Returns all stored transactions.
+        Returns all stored singletons.
         """
-        cursor = await self.db_connection.execute("SELECT * from transaction_record")
+        cursor = await self.db_connection.execute("SELECT * from singleton_records")
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
 
         for row in rows:
-            records.append(self._row_to_singleton_record(record))
+            records.append(self._row_to_singleton_record(row))
 
         return records
 
@@ -157,3 +160,13 @@ class DataLayerStore:
         if row is not None:
             return self._row_to_singleton_record(row)
         return None
+
+    async def set_confirmed(self, coin_id: bytes32, height: uint32):
+        """
+        Updates singleton record to be confirmed.
+        """
+        current: Optional[TransactionRecord] = await self.get_singleton_record(coin_id)
+        if current is None or current.confirmed_at_height == height:
+            return
+
+        await self.add_singleton_record(dataclasses.replace(current, confirmed=True, confirmed_at_height=height), True)
