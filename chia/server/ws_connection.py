@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 import traceback
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, get_type_hints, List, Optional
 
 from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
@@ -310,7 +310,7 @@ class WSChiaConnection:
                     raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
                 ret_attr = getattr(class_for_type(self.local_type), ProtocolMessageTypes(result.type).name, None)
 
-                req_annotations = ret_attr.__annotations__
+                req_annotations = get_type_hints(ret_attr)
                 req = None
                 for key in req_annotations:
                     if key == "return" or key == "peer":

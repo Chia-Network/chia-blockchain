@@ -1,6 +1,6 @@
 import dataclasses
 import sys
-from typing import Any, List, Optional, Tuple, Type, Union
+from typing import Any, get_type_hints, List, Optional, Tuple, Type, Union
 
 if sys.version_info < (3, 8):
 
@@ -81,7 +81,7 @@ def strictdataclass(cls: Any):
 
         def __post_init__(self):
             try:
-                fields = self.__annotations__  # pylint: disable=no-member
+                fields = get_type_hints(self)  # pylint: disable=no-member
             except Exception:
                 fields = {}
             data = self.__dict__

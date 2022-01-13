@@ -1,6 +1,7 @@
 import functools
 import logging
 from inspect import signature
+from typing import get_type_hints
 
 from chia.util.streamable import Streamable
 
@@ -18,7 +19,7 @@ def api_request(f):
         # Converts each parameter from a Python dictionary, into an instance of the object
         # specified by the type annotation (signature) of the function that is being called (f)
         # The method can also be called with the target type instead of a dictionary.
-        for param_name, param_class in f.__annotations__.items():
+        for param_name, param_class in get_type_hints(f).items():
             if param_name != "return" and isinstance(inter[param_name], Streamable):
                 if param_class.__name__ == "bytes":
                     continue

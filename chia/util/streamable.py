@@ -7,7 +7,7 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, List, Tuple, Type, Callable, Optional, Iterator
+from typing import Any, BinaryIO, Dict, get_type_hints, List, Tuple, Type, Callable, Optional, Iterator
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal
@@ -179,7 +179,7 @@ def streamable(cls: Any):
 
     parse_functions = []
     try:
-        fields = cls1.__annotations__  # pylint: disable=no-member
+        fields = get_type_hints(cls1)
     except Exception:
         fields = {}
 
@@ -295,7 +295,7 @@ class Streamable:
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
         obj: Streamable = object.__new__(cls)
-        fields: Iterator[str] = iter(getattr(cls, "__annotations__", {}))
+        fields: Iterator[str] = iter(get_type_hints(cls))
         values: Iterator = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
         for field, value in zip(fields, values):
             object.__setattr__(obj, field, value)
@@ -347,7 +347,7 @@ class Streamable:
 
     def stream(self, f: BinaryIO) -> None:
         try:
-            fields = self.__annotations__  # pylint: disable=no-member
+            fields = get_type_hints(self)  # pylint: disable=no-member
         except Exception:
             fields = {}
         for f_name, f_type in fields.items():
