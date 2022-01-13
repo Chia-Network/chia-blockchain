@@ -212,6 +212,13 @@ class FullNode:
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
             self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
+            num_unspent = await self.coin_store.num_unspent()
+            if num_unspent > 0:
+                self.log.error(
+                    f"Inconsistent blockchain DB file! Could not find peak block but found {num_unspent} coins! "
+                    "This is a fatal error. The blockchain database may be corrupt"
+                )
+                raise RuntimeError("corrupt blockchain DB")
         else:
             self.log.info(
                 f"Blockchain initialized to peak {self.blockchain.get_peak().header_hash} height"
