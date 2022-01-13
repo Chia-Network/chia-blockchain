@@ -1,6 +1,6 @@
 import itertools
 import logging
-from typing import Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Set
 from random import Random
 
 import pytest
@@ -20,6 +20,7 @@ from chia.data_layer.data_layer_types import (
     Status,
     InternalNode,
     TerminalNode,
+    DiffData,
 )
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
@@ -290,6 +291,50 @@ async def test_get_ancestors_2(data_store: DataStore, tree_id: bytes32) -> None:
             node_hash=node_hash, tree_id=tree_id, generation=generation
         )
         assert current_ancestors == expected_ancestors
+
+
+@pytest.mark.asyncio
+async def test_tree_diff(data_store: DataStore, tree_id: bytes32) -> None:
+    random = Random()
+    random.seed(100, version=2)
+    insertions = 0
+    generation_start = 0
+    expected_diff: Set[DiffData] = set()
+    for i in range(500):
+        node_hash = await get_random_terminal_node(data_store, tree_id, random)
+        if random.randint(0, 4) > 0 or insertions < 25:
+            insertions += 1
+            key = (i + 100).to_bytes(4, byteorder="big")
+            value = (i + 200).to_bytes(4, byteorder="big")
+            side = None if node_hash is None else Side.LEFT if random.randint(0, 1) == 0 else Side.RIGHT
+
+            _ = await data_store.insert(
+                key=key,
+                value=value,
+                tree_id=tree_id,
+                reference_node_hash=node_hash,
+                side=side,
+            )
+            if i > 200:
+                expected_diff.add(DiffData("insert", key, value))
+        else:
+            assert node_hash is not None
+            node = await data_store.get_node(node_hash)
+            assert isinstance(node, TerminalNode)
+            await data_store.delete(key=node.key, tree_id=tree_id)
+            if i > 200:
+                if DiffData("insert", node.key, node.value) in expected_diff:
+                    expected_diff.remove(DiffData("insert", node.key, node.value))
+                else:
+                    expected_diff.add(DiffData("delete", node.key, node.value))
+        if i == 200:
+            generation_start = await data_store.get_tree_generation(tree_id=tree_id)
+    root_start = await data_store.get_tree_root(tree_id, generation_start)
+    root_end = await data_store.get_tree_root(tree_id)
+    diffs = await data_store.get_tree_diff(tree_id, root_start, root_end)
+    assert len(diffs) == len(expected_diff)
+    for diff in diffs:
+        assert diff in expected_diff
 
 
 @pytest.mark.asyncio

@@ -164,6 +164,13 @@ class Root:
         )
 
 
+@dataclass(frozen=True)
+class DiffData:
+    type: str
+    key: bytes
+    value: bytes
+
+
 node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]] = {
     NodeType.INTERNAL: InternalNode,
     NodeType.TERMINAL: TerminalNode,

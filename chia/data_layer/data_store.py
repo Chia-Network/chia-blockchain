@@ -22,6 +22,7 @@ from chia.data_layer.data_layer_types import (
     Side,
     TerminalNode,
     Status,
+    DiffData,
 )
 from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
@@ -402,38 +403,50 @@ class DataStore:
     async def get_ancestors_2(
         self, node_hash: bytes32, tree_id: bytes32, generation: Optional[int] = None, lock: bool = True
     ) -> List[InternalNode]:
-        nodes = []
-        if generation is None:
-            generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
-        while True:
-            cursor = await self.db.execute(
-                """
-                SELECT * from node INNER JOIN (
-                    SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
-                    FROM ancestors
-                    WHERE ancestors.hash == :hash
-                    AND ancestors.tree_id == :tree_id
-                    AND ancestors.generation <= :generation
-                    AND ancestors.ancestor is NOT NULL
-                    GROUP BY hash
-                ) asc on asc.hash == node.hash
-                """,
-                {"hash": node_hash.hex(), "tree_id": tree_id.hex(), "generation": generation},
-            )
-            row = await cursor.fetchone()
-            if row is None:
-                break
-            internal_node = InternalNode.from_row(row=row)
-            nodes.append(internal_node)
-            node_hash = internal_node.hash
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            nodes = []
+            if generation is None:
+                generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
+            while True:
+                cursor = await self.db.execute(
+                    """
+                    SELECT * from node INNER JOIN (
+                        SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
+                        FROM ancestors
+                        WHERE ancestors.hash == :hash
+                        AND ancestors.tree_id == :tree_id
+                        AND ancestors.generation <= :generation
+                        AND ancestors.ancestor is NOT NULL
+                        GROUP BY hash
+                    ) asc on asc.hash == node.hash
+                    """,
+                    {"hash": node_hash.hex(), "tree_id": tree_id.hex(), "generation": generation},
+                )
+                row = await cursor.fetchone()
+                if row is None:
+                    break
+                internal_node = InternalNode.from_row(row=row)
+                nodes.append(internal_node)
+                node_hash = internal_node.hash
 
-        # Check if the root from `generation` is at the top of ancestors list.
-        # If it misses, this node is an orphan for `generation`.
-        root = await self.get_tree_root(tree_id=tree_id, generation=generation, lock=False)
-        if root.node_hash is None or root.node_hash != nodes[-1].hash:
-            return []
+            # Check if the root from `generation` is at the top of ancestors list.
+            # If it misses, this node is an orphan for `generation`.
+            root = await self.get_tree_root(tree_id=tree_id, generation=generation, lock=False)
+            if root.node_hash is None or len(nodes) == 0 or root.node_hash != nodes[-1].hash:
+                return []
 
-        return nodes
+            return nodes
+
+    async def node_exists(
+        self, node_hash: bytes32, tree_id: bytes32, generation: Optional[int] = None, *, lock: bool = True
+    ) -> bool:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            ancestors = await self.get_ancestors_2(node_hash, tree_id, generation, lock=False)
+            if ancestors != []:
+                return True
+
+            root = await self.get_tree_root(tree_id=tree_id, generation=generation, lock=False)
+            return root.node_hash is not None and root.node_hash == node_hash
 
     async def get_pairs(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -748,3 +761,53 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             return await self.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id, lock=False)
+
+    async def get_tree_diff_terminal_nodes(
+        self,
+        tree_id: bytes32,
+        hash: Optional[bytes32],
+        generation_1: int,
+        generation_2: int,
+        *,
+        lock: bool = True,
+    ) -> List[TerminalNode]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            if hash is None:
+                return []
+            result: List[TerminalNode] = []
+            queue: List[bytes32] = []
+            queue.append(hash)
+            while len(queue) > 0:
+                node_hash = queue.pop()
+                if not await self.node_exists(node_hash, tree_id, generation_2, lock=False):
+                    node = await self.get_node(node_hash, lock=False)
+                    if isinstance(node, TerminalNode):
+                        result.append(node)
+                    else:
+                        queue.append(node.left_hash)
+                        queue.append(node.right_hash)
+
+            return result
+
+    async def get_tree_diff(
+        self,
+        tree_id: bytes32,
+        root_1: Root,
+        root_2: Root,
+        *,
+        lock: bool = True,
+    ) -> List[DiffData]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            result: List[DiffData] = []
+            deletions = await self.get_tree_diff_terminal_nodes(
+                tree_id, root_1.node_hash, root_1.generation, root_2.generation, lock=False
+            )
+            for node in deletions:
+                result.append(DiffData("delete", node.key, node.value))
+            additions = await self.get_tree_diff_terminal_nodes(
+                tree_id, root_2.node_hash, root_2.generation, root_1.generation, lock=False
+            )
+            for node in additions:
+                result.append(DiffData("insert", node.key, node.value))
+
+            return result
