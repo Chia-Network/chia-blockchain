@@ -406,7 +406,7 @@ class DataLayerWallet:
         ] = await self.wallet_state_manager.dl_store.get_all_singletons_for_launcher(coin.parent_coin_info)
         if len(existing_singleton_records) > 0:
             if len(existing_singleton_records) > 1:
-                self.log.warning(f"Unexpected singleton received for launcher id {coin_name}")
+                self.log.warning(f"Unexpected singleton received for launcher id {coin.parent_coin_info}")
                 return
             elif len(existing_singleton_records) == 1:
                 await self.wallet_state_manager.dl_store.set_confirmed(existing_singleton_records[0].coin_id, height)

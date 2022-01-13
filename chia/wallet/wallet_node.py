@@ -911,7 +911,8 @@ class WalletNode:
                         pool_state = None
                         try:
                             pool_state = solution_to_pool_state(launcher_spend)
-                        except Exception as e:
+                            assert pool_state is not None
+                        except (AssertionError, ValueError) as e:
                             self.log.debug(f"Not a pool wallet launcher {e}")
                             continue
                         assert pool_state is not None
