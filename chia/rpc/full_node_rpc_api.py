@@ -27,6 +27,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.wallet.cc_wallet.cc_utils import match_cat_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 from chia.wallet.wallet import Wallet
+from chia.wallet.puzzles.cc_loader import CC_MOD
 
 
 class FullNodeRpcApi:
@@ -65,6 +66,7 @@ class FullNodeRpcApi:
             "/get_puzzle_and_solution": self.get_puzzle_and_solution,
             "/is_cat_coin": self.is_cat_coin,
             "/are_cat_coins": self.are_cat_coins,
+            "/get_cat_puzzle_hash": self.get_cat_puzzle_hash,
             # Mempool
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
@@ -827,6 +829,16 @@ class FullNodeRpcApi:
             raise ValueError(f"Inconsisten length between coin_names and result: {len(coin_names)} != {len(res)}")
 
         return {"are_cat_coins": res}
+
+    async def get_cat_puzzle_hash(self, request: Dict) -> Optional[Dict]:
+        asset_id: str = request["asset_id"] # CAT program tail hash
+        tail_hash = bytes.fromhex(asset_id.lstrip("0x"))
+
+        xch_puzzle_hash: str = request["xch_puzzle_hash"]
+        xch_puzzle_hash = bytes.fromhex(xch_puzzle_hash.lstrip("0x"))
+
+        cat_puzzle_hash = CC_MOD.curry(CC_MOD.get_tree_hash(), tail_hash, xch_puzzle_hash).get_tree_hash(xch_puzzle_hash)
+        return { "cat_puzzle_hash": "0x" + cat_puzzle_hash.hex() }
 
     async def get_puzzle_and_solution(self, request: Dict) -> Optional[Dict]:
         coin_name: bytes32 = hexstr_to_bytes(request["coin_id"])
