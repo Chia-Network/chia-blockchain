@@ -176,9 +176,7 @@ class FullNode:
 
         db_version: int = await lookup_db_version(self.connection)
 
-        self.db_wrapper = DBWrapper(
-            self.connection, self.config.get("allow_database_upgrades", False), db_version=db_version
-        )
+        self.db_wrapper = DBWrapper(self.connection, db_version=db_version)
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
         self.hint_store = await HintStore.create(self.db_wrapper)
