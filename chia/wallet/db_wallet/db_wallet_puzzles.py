@@ -16,16 +16,16 @@ DB_OFFER_MOD = load_clvm("database_offer.clvm")
 DB_HOST_MOD_HASH = DB_HOST_MOD.get_tree_hash()
 
 
-def create_host_fullpuz(innerpuz: Program, current_root: bytes32, genesis_id: bytes32) -> Program:
-    db_layer = create_host_layer_puzzle(innerpuz, current_root)
+def create_host_fullpuz(innerpuz_hash: bytes32, current_root: bytes32, genesis_id: bytes32) -> Program:
+    db_layer = create_host_layer_puzzle(innerpuz_hash, current_root)
     mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
     singleton_struct = Program.to((mod_hash, (genesis_id, SINGLETON_LAUNCHER.get_tree_hash())))
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, db_layer)
 
 
-def create_host_layer_puzzle(innerpuz: Program, current_root: bytes32) -> Program:
+def create_host_layer_puzzle(innerpuz_hash: bytes32, current_root: bytes32) -> Program:
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
-    db_layer = DB_HOST_MOD.curry(DB_HOST_MOD.get_tree_hash(), current_root, innerpuz)
+    db_layer = DB_HOST_MOD.curry(DB_HOST_MOD.get_tree_hash(), current_root, innerpuz_hash)
     return db_layer
 
 

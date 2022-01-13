@@ -54,9 +54,54 @@ class TestDLWallet:
         async for _ in setup_simulators_and_wallets(3, 2, {}):
             yield _
 
-    @pytest.mark.skip(reason="tested code is expected to be replaced soon")
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_update_coin(self, three_wallet_nodes: SimulatorsAndWallets) -> None:
+    async def test_initial_creation(self, wallet_node: SimulatorsAndWallets, trusted: bool) -> None:
+        full_nodes, wallets = wallet_node
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
+        wallet_node_0, server_0 = wallets[0]
+        assert wallet_node_0.wallet_state_manager is not None
+        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+
+        if trusted:
+            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node_0.config["trusted_peers"] = {}
+
+        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+        funds = await full_node_api.farm_blocks(count=1, wallet=wallet_0)
+
+        await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
+        await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+
+        async with wallet_node_0.wallet_state_manager.lock:
+            dl_wallet = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager, wallet_0)
+
+        nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
+        current_tree = MerkleTree(nodes)
+        current_root = current_tree.calculate_root()
+
+        dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(
+            current_root, fee=uint64(1999999999999)
+        )
+
+        assert await dl_wallet.get_latest_singleton(launcher_id) is not None
+
+        await full_node_api.process_transaction_records(records=[dl_record, std_record])
+
+        assert (await dl_wallet.get_latest_singleton(launcher_id)).confirmed
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
+    async def test_update_coin(self, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
