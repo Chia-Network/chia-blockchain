@@ -100,6 +100,4 @@ build_scripts/win_build
 win_code_sign_cert.p12
 
 # chia-blockchain wheel build folder
-build/lib/chia
-build/lib/mozilla-ca
-build/lib/build_scripts/installer-version.py
+build/
