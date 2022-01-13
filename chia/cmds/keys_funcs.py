@@ -156,13 +156,12 @@ def search_derive(
     search_terms: Tuple[str, ...],
     limit: int,
     hardened_derivation: bool,
-    no_progress: bool,
+    show_progress: bool,
     search_types: Tuple[str, ...],
 ) -> bool:
     from time import perf_counter
 
     start_time = perf_counter()
-    show_progress: bool = not no_progress
     private_keys: List[PrivateKey]
     remaining_search_terms: Dict[str, None] = dict.fromkeys(search_terms)
     search_address = "address" in search_types
@@ -203,11 +202,11 @@ def search_derive(
             for index in range(limit):
                 found_items: List[Tuple[str, str, DerivedSearchResultType]] = []
                 printed_match: bool = False
-                index_str = str(index) + "h" if hardened_derivation else ""
-                current_path += f"{index_str}"
+                current_index_str = str(index) + "h" if hardened_derivation else ""
+                current_path += f"{current_index_str}"
                 current_path_indices.append(index)
                 if show_progress:
-                    sys.stdout.write(f"{index_str}")
+                    sys.stdout.write(f"{current_index_str}")
                     sys.stdout.flush()
                 if hardened_derivation:
                     child_sk = _derive_path(sk, current_path_indices)
@@ -251,14 +250,14 @@ def search_derive(
                 if len(remaining_search_terms) == 0:
                     break
 
-                current_path = current_path[: -len(str(index_str))]
+                current_path = current_path[: -len(str(current_index_str))]
                 current_path_indices = current_path_indices[:-1]
 
                 if show_progress:
                     if printed_match:
                         sys.stdout.write(f"{current_path}")
                     else:
-                        sys.stdout.write("\b" * len(str(index_str)))
+                        sys.stdout.write("\b" * len(str(current_index_str)))
                     sys.stdout.flush()
 
             if len(remaining_search_terms) == 0:
@@ -323,44 +322,105 @@ def private_key_string_repr(private_key: PrivateKey):
     return s[len("<PrivateKey ") : s.rfind(">")] if s.startswith("<PrivateKey ") else s
 
 
+class DerivationType(Enum):
+    HARDENED = 0
+    UNHARDENED = 1
+
+
 def derive_child_key(
     root_path: Path,
     master_sk: PrivateKey,
-    key_type: str,
+    key_type: Optional[str],
+    derive_from_hd_path: Optional[str],
     index: int,
     count: int,
     hardened_derivation: bool,
     show_private_keys: bool,
     show_hd_path: bool,
 ):
-    path: List[int] = [12381, 8444]
-    if key_type == "farmer":
-        path.append(0)
-    elif key_type == "pool":
-        path.append(1)
-    elif key_type == "wallet":
-        path.append(2)
-    elif key_type == "local":
-        path.append(3)
-    elif key_type == "backup":
-        path.append(4)
-    elif key_type == "singleton":
-        path.append(5)
-    elif key_type == "pool_auth":
-        path.append(6)
+    derivation_root_sk: Optional[PrivateKey] = None
+    hd_path_root: Optional[str] = None
+    current_sk: Optional[PrivateKey] = None
 
-    hd_path_root: str = "m/"
-    for i in path:
-        hd_path_root += f"{i}{'h' if hardened_derivation else ''}/"
-    for i in range(index, index + count):
+    if key_type is not None:
+        path_indices: List[int] = [12381, 8444]
+        path_indices.append(
+            {
+                "farmer": 0,
+                "pool": 1,
+                "wallet": 2,
+                "local": 3,
+                "backup": 4,
+                "singleton": 5,
+                "pool_auth": 6,
+            }[key_type]
+        )
+
         if hardened_derivation:
-            sk = _derive_path(master_sk, path + [i])
+            current_sk = _derive_path(master_sk, path_indices)
         else:
-            sk = _derive_path_unhardened(master_sk, path + [i])
-        hd_path: str = " (" + hd_path_root + str(i) + ("h" if hardened_derivation else "") + ")" if show_hd_path else ""
-        print(f"{key_type.capitalize()} public key {i}{hd_path}: {sk.get_g1()}")
-        if show_private_keys:
-            print(f"{key_type.capitalize()} private key {i}{hd_path}: {private_key_string_repr(sk)}")
+            current_sk = _derive_path_unhardened(master_sk, path_indices)
+
+        derivation_root_sk = current_sk
+        hd_path_root = "m/"
+        for i in path_indices:
+            hd_path_root += f"{i}{'h' if hardened_derivation else ''}/"
+    elif derive_from_hd_path is not None:
+        path: List[str] = derive_from_hd_path.split("/")
+        if len(path) == 0 or path[0] != "m":
+            raise ValueError("Invalid HD path. Must start with 'm'")
+
+        path = path[1:]  # Skip "m"
+
+        if path[-1] == "":  # remove trailing slash
+            path = path[:-1]
+
+        index_and_derivation_types: List[Tuple[int, DerivationType]] = []
+
+        # Validate path
+        for current_index_str in path:
+            if len(current_index_str) == 0:
+                raise ValueError("Invalid HD path. Empty index")
+
+            hardened: bool = current_index_str[-1] == "h"
+            current_index: int = int(current_index_str[:-1]) if hardened else int(current_index_str)
+
+            index_and_derivation_types.append(
+                (current_index, DerivationType.HARDENED if hardened else DerivationType.UNHARDENED)
+            )
+
+        current_sk = master_sk
+
+        for (current_index, derivation_type) in index_and_derivation_types:
+            if derivation_type == DerivationType.HARDENED:
+                current_sk = _derive_path(current_sk, [current_index])
+            elif derivation_type == DerivationType.UNHARDENED:
+                current_sk = _derive_path_unhardened(current_sk, [current_index])
+            else:
+                raise ValueError(f"Unhandled derivation type: {derivation_type}")
+
+        derivation_root_sk = current_sk
+        hd_path_root = "m/" + "/".join(path) + "/"
+
+    if derivation_root_sk is not None and hd_path_root is not None:
+        for i in range(index, index + count):
+            if hardened_derivation:
+                sk = _derive_path(derivation_root_sk, [i])
+            else:
+                sk = _derive_path_unhardened(derivation_root_sk, [i])
+            hd_path: str = (
+                " (" + hd_path_root + str(i) + ("h" if hardened_derivation else "") + ")" if show_hd_path else ""
+            )
+            key_type_str: Optional[str]
+
+            if key_type is not None:
+                key_type_str = key_type.capitalize()
+            else:
+                key_type_str = "Hardened" if hardened_derivation else "Unhardened"
+
+            print(f"{key_type_str} public key {i}{hd_path}: {sk.get_g1()}")
+            if show_private_keys:
+                print(f"{key_type_str} private key {i}{hd_path}: {private_key_string_repr(sk)}")
 
 
 def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:

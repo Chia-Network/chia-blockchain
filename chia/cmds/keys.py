@@ -162,9 +162,9 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
     is_flag=True,
 )
 @click.option(
-    "--no-progress",
+    "--show-progress",
     "-P",
-    help="Do not show search progress",
+    help="Show search progress",
     default=False,
     show_default=True,
     is_flag=True,
@@ -176,7 +176,7 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
     default=["address"],
     show_default=True,
     multiple=True,
-    type=click.Choice(['public_key', 'private_key', 'address', 'all'], case_sensitive=True)
+    type=click.Choice(["public_key", "private_key", "address", "all"], case_sensitive=True),
 )
 @click.pass_context
 def search_cmd(
@@ -184,7 +184,7 @@ def search_cmd(
     search_terms: Tuple[str, ...],
     limit: int,
     hardened_derivation: bool,
-    no_progress: bool,
+    show_progress: bool,
     search_type: Tuple[str, ...],
 ):
     import sys
@@ -205,8 +205,8 @@ def search_cmd(
         search_terms,
         limit,
         hardened_derivation,
-        no_progress,
-        ("all") if "all" in search_type else search_type,
+        show_progress,
+        ("all",) if "all" in search_type else search_type,
     )
 
     sys.exit(0 if found else 1)
@@ -251,8 +251,14 @@ def wallet_address_cmd(
     "-t",
     "key_type",  # Rename the target argument
     help="Type of child key to derive",
-    required=True,
+    required=False,
     type=click.Choice(["farmer", "pool", "wallet", "local", "backup", "singleton", "pool_auth"]),
+)
+@click.option(
+    "--derive-from-hd-path",
+    "-d",
+    help="Derive child keys rooted from a specific HD path.",
+    type=str,
 )
 @click.option(
     "--index", "-i", help="Index of the first child key to derive. Index 0 is the first child key.", default=0
@@ -261,7 +267,7 @@ def wallet_address_cmd(
 @click.option(
     "--hardened-derivation",
     "-p",
-    help="Derive keys using hardened derivation.",
+    help="Derive keys using hardened derivation. Ignored if --derive-from-parent is specified. Example HD path: m/12381h/8444h/2/",
     default=False,
     show_default=True,
     is_flag=True,
@@ -284,7 +290,8 @@ def wallet_address_cmd(
 @click.pass_context
 def child_key_cmd(
     ctx: click.Context,
-    key_type: str,
+    key_type: Optional[str],
+    derive_from_hd_path: Optional[str],
     index: int,
     count: int,
     hardened_derivation: bool,
@@ -293,12 +300,16 @@ def child_key_cmd(
 ):
     from .keys_funcs import derive_child_key, resolve_derivation_master_key
 
+    if key_type is None and derive_from_hd_path is None:
+        ctx.fail("--type or --derive-from-hd-path is required")
+
     private_key = resolve_derivation_master_key(ctx.obj["fingerprint"], ctx.obj["filename"])
 
     derive_child_key(
         ctx.obj["root_path"],
         private_key,
         key_type,
+        derive_from_hd_path.lower() if derive_from_hd_path is not None else None,
         index,
         count,
         hardened_derivation,
