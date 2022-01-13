@@ -1,3 +1,5 @@
+from typing import Tuple, Iterator
+
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
 from chia.util.ints import uint64
@@ -49,3 +51,19 @@ def create_offer_fullpuz(
         DB_HOST_MOD_HASH, singleton_struct, leaf_reveal, claim_target, recovery_target, recovery_timelock
     )
     return full_puz
+
+
+def match_dl_singleton(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
+    """
+    Given a puzzle test if it's a CAT and, if it is, return the curried arguments
+    """
+    mod, singleton_curried_args = puzzle.uncurry()
+    if mod == SINGLETON_TOP_LAYER_MOD:
+        mod, dl_curried_args = singleton_curried_args.at("rf")
+        if mod == DB_HOST_MOD:
+            launcher_id = singleton_curried_args.at("frf")
+            root = singleton_curried_args.at("rf")
+            innerpuz_hash = singleton_curried_args.at("rrf")
+            return True, iter((innerpuz_hash, root, launcher_id))
+
+    return False, iter(())

@@ -96,7 +96,10 @@ class TestDLWallet:
         await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
         await full_node_api.process_transaction_records(records=[dl_record, std_record])
 
-        assert (await dl_wallet.get_latest_singleton(launcher_id)).confirmed
+        async def is_singleton_confirmed(lid) -> bool:
+            return (await dl_wallet.get_latest_singleton(launcher_id)).confirmed
+
+        await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
 
     @pytest.mark.parametrize(
         "trusted",
