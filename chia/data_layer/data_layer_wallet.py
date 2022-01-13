@@ -118,13 +118,16 @@ class DataLayerWallet:
         inner_puzzle: Program = await self.standard_wallet.get_new_puzzle()
         full_puzzle: Program = create_host_fullpuz(inner_puzzle.get_tree_hash(), initial_root, launcher_coin.name())
 
-        announcement_message: bytes32 = Program.to([full_puzzle.get_tree_hash(), 1, initial_root]).get_tree_hash()
+        genesis_launcher_solution: Program = Program.to(
+            [full_puzzle.get_tree_hash(), 1, [initial_root, inner_puzzle.get_tree_hash()]]
+        )
+        announcement_message: bytes32 = genesis_launcher_solution.get_tree_hash()
         announcement = Announcement(launcher_coin.name(), announcement_message)
         create_launcher_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             amount=uint64(1),
             puzzle_hash=SINGLETON_LAUNCHER.get_tree_hash(),
             fee=fee,
-            origin_id=launcher_parent,
+            origin_id=launcher_parent.name(),
             coins=coins,
             primaries=None,
             ignore_max_send_amount=False,
@@ -132,9 +135,6 @@ class DataLayerWallet:
         )
         assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
 
-        genesis_launcher_solution: Program = Program.to(
-            [full_puzzle.get_tree_hash(), 1, [initial_root, inner_puzzle.get_tree_hash()]]
-        )
         launcher_cs: CoinSpend = CoinSpend(
             launcher_coin,
             SerializedProgram.from_program(SINGLETON_LAUNCHER),
@@ -167,17 +167,18 @@ class DataLayerWallet:
             coin_id=Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), uint64(1)).name(),
             launcher_id=launcher_coin.name(),
             root=initial_root,
+            inner_puzzle_hash=inner_puzzle.get_tree_hash(),
             confirmed=False,
             confirmed_at_height=uint64(0),
             lineage_proof=LineageProof(
-                eve_coin.parent_coin_info,
+                launcher_coin.name(),
                 create_host_layer_puzzle(inner_puzzle.get_tree_hash(), initial_root).get_tree_hash(),
-                eve_coin.amount,
+                1,
             ),
         )
 
-        await self.wallet_state_manager.dl_store.add_singleton_record(singleton_record)
-        await self.wallet_state_manager.add_interested_puzzle_hash(singleton_record.launcher_id)
+        await self.wallet_state_manager.dl_store.add_singleton_record(singleton_record, False)
+        await self.wallet_state_manager.add_interested_puzzle_hash(singleton_record.launcher_id, self.id())
 
         return dl_record, std_record, launcher_coin.name()
 

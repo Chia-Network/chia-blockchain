@@ -6,6 +6,7 @@ from chia.data_layer.data_layer_wallet import SingletonRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
 
@@ -30,6 +31,7 @@ class DataLayerStore:
                 "coin_id blob PRIMARY KEY,"
                 " launcher_id blob,"
                 " root blob,"
+                " inner_puzzle_hash blob,"
                 " confirmed tinyint,"
                 " confirmed_at_height int,"
                 " proof blob,"
@@ -40,7 +42,9 @@ class DataLayerStore:
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_id on singleton_records(coin_id)")
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS launcher_id on singleton_records(launcher_id)")
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS root on singleton_records(root)")
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS inner_puzzle_hash on singleton_records(inner_puzzle_hash)")
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS confirmed_at_height on singleton_records(root)")
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS generation on singleton_records(generation)")
 
         await self.db_connection.commit()
         return self
@@ -55,9 +59,10 @@ class DataLayerStore:
             bytes32(row[0]),
             bytes32(row[1]),
             bytes32(row[2]),
-            bool(row[3]),
-            uint32(row[4]),
-            None if row[5] == b"" else LineageProof.from_bytes(row[5]),
+            bytes32(row[3]),
+            bool(row[4]),
+            uint32(row[5]),
+            None if row[6] == b"" else LineageProof.from_bytes(row[6]),
         )
 
     async def get_singleton_generation_count(self, launcher_id: bytes32) -> int:
@@ -83,13 +88,14 @@ class DataLayerStore:
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
         try:
-            count: int = self.get_singleton_generation_count(record.launcher_id)
+            count: int = await self.get_singleton_generation_count(record.launcher_id)
             cursor = await self.db_connection.execute(
-                "INSERT OR REPLACE INTO singleton_records VALUES(?, ?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO singleton_records VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     record.coin_id,
                     record.launcher_id,
                     record.root,
+                    record.inner_puzzle_hash,
                     int(record.confirmed),
                     record.confirmed_at_height,
                     b"" if record.lineage_proof is None else bytes(record.lineage_proof),
@@ -144,7 +150,7 @@ class DataLayerStore:
         #     return self.tx_record_cache[tx_id]
 
         cursor = await self.db_connection.execute(
-            "SELECT * from singleton_records WHERE launcher_id=?" " ORDER BY count DESC LIMIT 1", (launcher_id,)
+            "SELECT * from singleton_records WHERE launcher_id=?" " ORDER BY generation DESC LIMIT 1", (launcher_id,)
         )
         row = await cursor.fetchone()
         await cursor.close()
