@@ -63,7 +63,6 @@ def test_transfer_no_backpayments():
             SINGLETON_STRUCT,
             did_one,
             nft_program.get_tree_hash(),  # below here is the solution
-            Program.to("my_puzzlehash").get_tree_hash(),
             uint64(1),
             did_one_innerpuz.get_tree_hash(),
             did_one_amount,
@@ -134,7 +133,6 @@ def test_transfer_with_backpayments():
             did_one,
             nft_program.get_tree_hash(),
             # below here is the solution
-            Program.to("my_puzzlehash").get_tree_hash(),
             uint64(1),
             did_one_innerpuz.get_tree_hash(),
             did_one_amount,
@@ -207,7 +205,6 @@ def test_announcne():
             SINGLETON_STRUCT,
             did_one,
             nft_program.get_tree_hash(),  # below here is the solution
-            did_one_puzzle.get_tree_hash(),  # this should actually be NFT puzzle
             uint64(1),
             did_one_innerpuz.get_tree_hash(),
             did_one_amount,
@@ -224,7 +221,7 @@ def test_announcne():
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
     ann = bytes("a", "utf-8")
     announcement_one = Announcement(did_one_coin.name(), ann)
-    assert res.rest().rest().rest().first().first().as_int() == 61
-    assert res.rest().rest().rest().first().rest().first().as_atom() == announcement_one.name()
-    assert res.rest().rest().rest().rest().first().first().as_int() == 60
-    assert res.rest().rest().rest().rest().first().rest().first().as_atom() == did_one
+    assert res.rest().rest().first().first().as_int() == 61
+    assert res.rest().rest().first().rest().first().as_atom() == announcement_one.name()
+    assert res.rest().rest().rest().first().first().as_int() == 60
+    assert res.rest().rest().rest().first().rest().first().as_atom() == did_one
