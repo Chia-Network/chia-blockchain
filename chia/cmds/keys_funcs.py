@@ -157,6 +157,7 @@ def search_derive(
     limit: int,
     hardened_derivation: bool,
     no_progress: bool,
+    search_types: Tuple[str, ...],
 ) -> bool:
     from time import perf_counter
 
@@ -164,6 +165,15 @@ def search_derive(
     show_progress: bool = not no_progress
     private_keys: List[PrivateKey]
     remaining_search_terms: Dict[str, None] = dict.fromkeys(search_terms)
+    search_address = "address" in search_types
+    search_public_key = "public_key" in search_types
+    search_private_key = "private_key" in search_types
+
+    if "all" in search_types:
+        search_address = True
+        search_public_key = True
+        search_private_key = True
+
     if private_key is None:
         private_keys = [sk for sk, _ in keychain.get_all_private_keys()]
     else:
@@ -191,7 +201,7 @@ def search_derive(
                 sys.stdout.write(f"{account_str}/")
 
             for index in range(limit):
-                found_items: List[str] = []
+                found_items: List[Tuple[str, str, DerivedSearchResultType]] = []
                 printed_match: bool = False
                 index_str = str(index) + "h" if hardened_derivation else ""
                 current_path += f"{index_str}"
@@ -203,31 +213,40 @@ def search_derive(
                     child_sk = _derive_path(sk, current_path_indices)
                 else:
                     child_sk = _derive_path_unhardened(sk, current_path_indices)
-                child_pk = child_sk.get_g1()
-                address: str = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), "xch")
+                child_pk: Optional[G1Element] = None
+
+                if search_public_key or search_address:
+                    child_pk = child_sk.get_g1()
+
+                address: Optional[str] = None
+
+                if search_address:
+                    address = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), "xch")
 
                 for term in remaining_search_terms:
                     found_item: Any = None
                     found_item_type: Optional[DerivedSearchResultType] = None
-                    if term in str(child_pk):
-                        found_item = child_pk
-                        found_item_type = DerivedSearchResultType.PUBLIC_KEY
-                    elif term in str(child_sk):
+                    if search_private_key and term in str(child_sk):
                         found_item = child_sk
                         found_item_type = DerivedSearchResultType.PRIVATE_KEY
-                    elif term in address:
+                    elif search_public_key and child_pk is not None and term in str(child_pk):
+                        found_item = child_pk
+                        found_item_type = DerivedSearchResultType.PUBLIC_KEY
+                    elif search_address and address is not None and term in address:
                         found_item = address
                         found_item_type = DerivedSearchResultType.WALLET_ADDRESS
 
                     if found_item is not None and found_item_type is not None:
-                        found_items.append(term)
-                        if show_progress:
-                            print()
-                        print(f"Found {found_item_type.value}: {found_item} (HD path: {current_path})")
-                        printed_match = True
+                        found_items.append((term, found_item, found_item_type))
 
-                for k in found_items:
-                    del remaining_search_terms[k]
+                if len(found_items) > 0 and show_progress:
+                    print()
+
+                for (term, found_item, found_item_type) in found_items:
+                    del remaining_search_terms[term]
+
+                    print(f"Found {found_item_type.value}: {found_item} (HD path: {current_path})")
+                    printed_match = True
 
                 if len(remaining_search_terms) == 0:
                     break

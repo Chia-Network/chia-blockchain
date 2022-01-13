@@ -169,9 +169,23 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
     show_default=True,
     is_flag=True,
 )
+@click.option(
+    "--search-type",
+    "-t",
+    help="Limit the search to include just the specified types",
+    default=["address"],
+    show_default=True,
+    multiple=True,
+    type=click.Choice(['public_key', 'private_key', 'address', 'all'], case_sensitive=True)
+)
 @click.pass_context
 def search_cmd(
-    ctx: click.Context, search_terms: Tuple[str, ...], limit: int, hardened_derivation: bool, no_progress: bool
+    ctx: click.Context,
+    search_terms: Tuple[str, ...],
+    limit: int,
+    hardened_derivation: bool,
+    no_progress: bool,
+    search_type: Tuple[str, ...],
 ):
     import sys
     from .keys_funcs import search_derive, resolve_derivation_master_key
@@ -186,7 +200,13 @@ def search_cmd(
         private_key = resolve_derivation_master_key(ctx.obj["fingerprint"], ctx.obj["filename"])
 
     found: bool = search_derive(
-        ctx.obj["root_path"], private_key, search_terms, limit, hardened_derivation, no_progress
+        ctx.obj["root_path"],
+        private_key,
+        search_terms,
+        limit,
+        hardened_derivation,
+        no_progress,
+        ("all") if "all" in search_type else search_type,
     )
 
     sys.exit(0 if found else 1)
