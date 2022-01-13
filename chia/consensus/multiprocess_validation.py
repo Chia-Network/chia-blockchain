@@ -114,7 +114,7 @@ def batch_pre_validate_blocks(
 
                 # If this is False, it means either we don't have a signature (not a tx block) or we have an invalid
                 # signature (which also puts in an error) or we didn't validate the signature because we want to
-                # validate it later
+                # validate it later. receive_block will attempt to validate the signature later.
                 successfully_validated_signatures = False
                 if validate_signatures:
                     if npc_result is not None and block.transactions_info is not None:

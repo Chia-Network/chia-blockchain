@@ -598,7 +598,7 @@ class Blockchain(BlockchainInterface):
             npc_result,
             None,
             self.get_block_generator,
-            validate_signature=False,
+            validate_signature=False,  # Signature was already validated before calling this method, no need to val
         )
 
         if error_code is not None:
