@@ -166,7 +166,7 @@ def cmd_run_json_block_file(file):
 
 
 def run_json_block_file(file: TextIO):
-    config, constants = get_config_and_constants()
+    _, constants = get_config_and_constants()
     full_block = json.load(file)
     ref_list = full_block["block"]["transactions_generator_ref_list"]
     args = ref_list_to_args(ref_list)
@@ -184,4 +184,4 @@ def get_config_and_constants():
 
 
 if __name__ == "__main__":
-    cmd_run_json_block_file()
+    cmd_run_json_block_file()  # pylint: disable=no-value-for-parameter
