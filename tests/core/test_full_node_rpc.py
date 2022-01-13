@@ -283,7 +283,8 @@ class TestRpc:
             blockchain = full_node_api_1.full_node.blockchain
             second_blockchain = empty_blockchain
 
-            await _validate_and_add_block(second_blockchain, blocks[-1])
+            for block in blocks:
+                await _validate_and_add_block(second_blockchain, block)
 
             # Creates a signage point based on the last block
             peak_2 = second_blockchain.get_peak()
