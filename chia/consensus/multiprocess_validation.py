@@ -7,8 +7,6 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable
 
 from blspy import AugSchemeMPL, G1Element
 
-from chia.util import cached_bls
-
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface

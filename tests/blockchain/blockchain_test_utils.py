@@ -1,4 +1,3 @@
-import dataclasses
 from typing import Optional, List
 
 from chia.consensus.blockchain import Blockchain, ReceiveBlockResult

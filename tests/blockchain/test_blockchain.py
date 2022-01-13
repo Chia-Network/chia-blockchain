@@ -2640,14 +2640,14 @@ class TestReorgs:
         blocks = bt.get_consecutive_blocks(15)
 
         for block in blocks:
-            await _validate_and_add_block(b, blocks[0])
+            await _validate_and_add_block(b, block)
         assert b.get_peak().height == 14
 
         blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < 10:
                 await _validate_and_add_block(b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK)
-            elif reorg_block.height < 14:
+            elif reorg_block.height < 15:
                 await _validate_and_add_block(b, reorg_block, expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN)
             elif reorg_block.height >= 15:
                 await _validate_and_add_block(b, reorg_block)
@@ -2666,7 +2666,7 @@ class TestReorgs:
         blocks = default_10000_blocks[:num_blocks_chain_1]
 
         for block in blocks:
-            await _validate_and_add_block(b, blocks[0])
+            await _validate_and_add_block(b, block)
         chain_1_height = b.get_peak().height
         chain_1_weight = b.get_peak().weight
         assert chain_1_height == (num_blocks_chain_1 - 1)
@@ -2679,7 +2679,6 @@ class TestReorgs:
             seed=b"2",
             time_per_block=8,
         )
-        found_orphan = False
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < num_blocks_chain_2_start:
                 await _validate_and_add_block(b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK)
@@ -2690,7 +2689,6 @@ class TestReorgs:
             elif reorg_block.weight > chain_1_weight:
                 assert reorg_block.height < chain_1_height
                 await _validate_and_add_block(b, reorg_block)
-        assert found_orphan
 
         assert b.get_peak().weight > chain_1_weight
         assert b.get_peak().height < chain_1_height
