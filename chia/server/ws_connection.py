@@ -370,11 +370,6 @@ class WSChiaConnection:
 
         return result
 
-    async def reply_to_request(self, response: Message):
-        if self.closed:
-            return None
-        await self.outgoing_queue.put(response)
-
     async def send_messages(self, messages: List[Message]):
         if self.closed:
             return None
