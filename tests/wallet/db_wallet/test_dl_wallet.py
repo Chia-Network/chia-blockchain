@@ -74,7 +74,7 @@ class TestDLWallet:
 
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.farm_blocks(count=1, wallet=wallet_0)
+        funds = await full_node_api.farm_blocks(count=2, wallet=wallet_0)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -86,20 +86,25 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(
-            current_root, fee=uint64(1999999999999)
-        )
-
-        assert await dl_wallet.get_latest_singleton(launcher_id) is not None
-
-        await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_record)
-        await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
-        await full_node_api.process_transaction_records(records=[dl_record, std_record])
-
         async def is_singleton_confirmed(lid) -> bool:
             return (await dl_wallet.get_latest_singleton(launcher_id)).confirmed
 
-        await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
+        for i in range(0, 2):
+            dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(
+                current_root, fee=uint64(1999999999999)
+            )
+
+            assert await dl_wallet.get_latest_singleton(launcher_id) is not None
+
+            await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_record)
+            await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
+            await full_node_api.process_transaction_records(records=[dl_record, std_record])
+
+            await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
+            await asyncio.sleep(0.5)
+
+        await time_out_assert(10, wallet_0.get_unconfirmed_balance, 0)
+        await time_out_assert(10, wallet_0.get_confirmed_balance, 0)
 
     @pytest.mark.parametrize(
         "trusted",

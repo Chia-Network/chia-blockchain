@@ -121,7 +121,7 @@ class DataLayerStore:
         """
         Returns all stored singletons.
         """
-        cursor = await self.db_connection.execute("SELECT * from singleton_records")
+        cursor = await self.db_connection.execute("SELECT * from singleton_records WHERE launcher_id=?", (launcher_id,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
