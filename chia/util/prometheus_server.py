@@ -8,6 +8,25 @@ from prometheus_client import start_http_server, Counter, Gauge
 
 @dataclass
 class PrometheusServer:
+    """
+    PrometheusServer wraps functionality from prometheus-client to ensure consistent usage for all metrics exported by
+    chia-blockchain
+
+    This class and its helper methods should be used rather than calling methods in prometheus-client directly to ensure
+    metric names are consistently prefixed with the chia namespace and the proper subsystem.
+
+    Parameters
+    ----------
+    service_name : str
+        The name of the service to export metrics for (full_node, wallet, etc)
+    server_enabled : bool
+        Set to true to start the prometheus metrics server
+    server_port: int
+        The port number to use for the prometheus http server
+    log: logging.Logger
+        An instance of logging.Logger to use for logging within PrometheusServer
+    """
+
     service_name: str
     server_enabled: bool
     server_port: int
@@ -20,9 +39,21 @@ class PrometheusServer:
             start_http_server(self.server_port)
 
     def new_gauge(self, name: str, description: str, labelnames: Tuple = ()) -> Gauge:
+        """
+        Returns a new prometheus Gauge with proper namespace and subsystem values set for consistent metric names
+
+        This method should be used rather than creating a new Gauge directly to ensure consistency in exported metric
+        names
+        """
         return Gauge(name, description, labelnames, "chia", self.service_name)
 
     def new_counter(self, name: str, description: str, labelnames: Tuple = ()) -> Counter:
+        """
+        Returns a new prometheus Counter with proper namespace and subsystem values set for consistent metric names
+
+        This method should be used rather than creating a new Counter directly to ensure consistency in exported metric
+        names
+        """
         return Counter(name, description, labelnames, "chia", self.service_name)
 
     @contextmanager
