@@ -92,6 +92,8 @@ class TestDLWallet:
 
         assert await dl_wallet.get_latest_singleton(launcher_id) is not None
 
+        await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_record)
+        await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
         await full_node_api.process_transaction_records(records=[dl_record, std_record])
 
         assert (await dl_wallet.get_latest_singleton(launcher_id)).confirmed
