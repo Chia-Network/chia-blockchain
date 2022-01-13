@@ -848,22 +848,12 @@ class Blockchain(BlockchainInterface):
             self.__heights_in_cache[block_record.height] = set()
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
 
-    # TODO: address hint error and remove ignore
-    #       error: Argument 1 of "persist_sub_epoch_challenge_segments" is incompatible with supertype
-    #       "BlockchainInterface"; supertype defines the argument type as "uint32"  [override]
-    #       note: This violates the Liskov substitution principle
-    #       note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
-    async def persist_sub_epoch_challenge_segments(  # type: ignore[override]
+    async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ):
         return await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
-    # TODO: address hint error and remove ignore
-    #       error: Argument 1 of "get_sub_epoch_challenge_segments" is incompatible with supertype
-    #       "BlockchainInterface"; supertype defines the argument type as "uint32"  [override]
-    #       note: This violates the Liskov substitution principle
-    #       note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
-    async def get_sub_epoch_challenge_segments(  # type: ignore[override]
+    async def get_sub_epoch_challenge_segments(
         self,
         ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:

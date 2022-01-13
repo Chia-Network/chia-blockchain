@@ -73,6 +73,7 @@ network_overrides: &network_overrides
       default_full_node_port: 8444
     testnet0:
       address_prefix: "txch"
+      default_full_node_port: 58444
     testnet1:
       address_prefix: "txch"
     testnet2:
