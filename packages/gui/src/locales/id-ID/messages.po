@@ -196,7 +196,7 @@ msgstr "Anda yakin ingin keluar dari program? Plotting dan Farming di GUI akan b
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Anda yakin ingin menggunakan k={plotSize}?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr "Ambil Hadiah"
 msgid "Close"
 msgstr "Tutup"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Menutup node dan server"
 
@@ -481,8 +481,8 @@ msgstr "Konek ke Pool"
 msgid "Connected"
 msgstr "Tersambung"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr "Tampilan daftar"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2351,7 +2351,7 @@ msgstr "Durasi Interval Pengeluaran (jumlah blok)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Batas Pengeluaran (chia per jarak waktu): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

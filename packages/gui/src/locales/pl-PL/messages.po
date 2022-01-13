@@ -196,7 +196,7 @@ msgstr "Czy na pewno? Tworzenie i farming działek zostaną zatrzymane."
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Czy na pewno chcesz użyć k={plotSize}?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr ""
 msgid "Close"
 msgstr "Zamknij"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Zamykanie węzła i serwera"
 
@@ -481,8 +481,8 @@ msgstr ""
 msgid "Connected"
 msgstr "Połączono"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr ""
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "Długość ograniczenia wydawania (number bloków)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limit wydawania (chia/interwał): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

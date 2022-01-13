@@ -198,7 +198,7 @@ msgstr "مطمئنید که می‌خواهید خارج شوید؟ فرایند
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "آیا مطمئنید که میخواهید از مقدار k= {plotSize} استفاده کنید؟"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -398,7 +398,7 @@ msgstr "Claim Rewards"
 msgid "Close"
 msgstr "بستن"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "بستن گره و سرور"
 
@@ -485,8 +485,8 @@ msgstr "Connect to pool"
 msgid "Connected"
 msgstr "متصل شد"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1273,7 +1273,7 @@ msgstr "List view"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2355,7 +2355,7 @@ msgstr "مدت فاصله خرج کردن (تعداد بلوک ها)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "محدودیت خرج کردن (چیـا بر فاصله): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

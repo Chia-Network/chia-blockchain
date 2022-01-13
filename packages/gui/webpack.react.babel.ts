@@ -9,7 +9,6 @@ import LodashModuleReplacementPlugin from 'lodash-webpack-plugin';
 const PORT = 3000;
 const CONTEXT = __dirname;
 const DEV = process.env.NODE_ENV !== 'production';
-const LOOSE = false;
 
 const babelQuery = {
   babelrc: false,
@@ -17,17 +16,16 @@ const babelQuery = {
     ['@babel/preset-env', {
       useBuiltIns: 'entry',
       corejs: 3,
-      loose: LOOSE,
     }],
     '@babel/preset-typescript',
-    '@babel/preset-react',
+    ["@babel/preset-react", {
+      "runtime": "automatic"
+    }]
   ],
   plugins: [
     'lodash',
     '@loadable/babel-plugin',
     'babel-plugin-styled-components',
-    ['@babel/plugin-proposal-class-properties', { loose: LOOSE }],
-    '@babel/plugin-proposal-export-default-from',
     ['babel-plugin-transform-imports', {
       '@material-ui/core': {
         // Use "transform: '@material-ui/core/${member}'," if your bundler does not support ES modules

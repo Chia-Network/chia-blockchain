@@ -196,7 +196,7 @@ msgstr "Είστε βέβαιοι ότι θέλετε να σταματήσετ�
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Είστε βέβαιοι ότι θέλετε να χρησιμοποιήσετε k={plotSize};"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr ""
 msgid "Close"
 msgstr "Κλείσιμο"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Κλείσιμο κόμβου και διακομιστή"
 
@@ -481,8 +481,8 @@ msgstr ""
 msgid "Connected"
 msgstr "Συνδέθηκε"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr ""
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "Spending Interval Length (number of blocks)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Όριο δαπανών (chia ανά διάστημα): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

@@ -196,7 +196,7 @@ msgstr "确定要退出吗? 农田开垦和耕种将会停止。"
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "你确定要使用 k={plotSize}？"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr "申领奖励"
 msgid "Close"
 msgstr "关闭"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "正在关闭节点与服务"
 
@@ -481,8 +481,8 @@ msgstr "连接到农业合作社"
 msgid "Connected"
 msgstr "已连接"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr "列表视图"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "支出迭代长度(区块数)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "消费限额（单位时间可消费的奇亚币）：{0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

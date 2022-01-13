@@ -196,7 +196,7 @@ msgstr "Você tem certeza que quer sair? O loteamento e o cultivo da GUI serão 
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Tem certeza de que deseja usar k = {plotSize}?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr "Resgatar recompensas"
 msgid "Close"
 msgstr "Fechar"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Fechar nó e servidor"
 
@@ -481,8 +481,8 @@ msgstr "Conectar ao bolão"
 msgid "Connected"
 msgstr "Conectado"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr "Visualização em lista"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "Intervalo de gastos (número de blocos)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limite de gastos (chia por intervalo): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

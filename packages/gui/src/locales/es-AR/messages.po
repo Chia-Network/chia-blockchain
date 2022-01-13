@@ -196,7 +196,7 @@ msgstr "¿Está seguro que quiere salir? El Sembrado y Cultivado de las parcelas
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "¿Está seguro que querés usar k={plotSize}?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr "Reclamar Recompensas"
 msgid "Close"
 msgstr "Cerrar"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Cerrando nodo y servidor"
 
@@ -481,8 +481,8 @@ msgstr "Conectarse a la piscina"
 msgid "Connected"
 msgstr "Conectado"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr "Vista de la lista"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "Duración del Intervalo de Gasto (cantidad de bloques)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limite de gasto (chia por intervalo): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

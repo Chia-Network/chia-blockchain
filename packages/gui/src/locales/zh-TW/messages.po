@@ -196,7 +196,7 @@ msgstr "你確定要退出？耕地規劃和耕種將會停止。"
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "你確定 k 的大小為 {plotSize}?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr "領取獎勵"
 msgid "Close"
 msgstr "關閉"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "關閉節點和伺服器"
 
@@ -481,8 +481,8 @@ msgstr "連線至農會"
 msgid "Connected"
 msgstr "已連線"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr "清單檢視"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "花費間隔長度 (區塊數量)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "花用限制（每間隔可用 Chia）：{0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

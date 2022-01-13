@@ -196,7 +196,7 @@ msgstr "Sei sicuro di voler chiudere il programma? Plotting e farming effettuati
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Sei sicuro di voler usare k={plotSize}?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr "Reclama Ricompense"
 msgid "Close"
 msgstr "Chiudi"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Arresto del nodo e del server in corso"
 
@@ -481,8 +481,8 @@ msgstr "Connettiti alla pool"
 msgid "Connected"
 msgstr "Connesso"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr "Visualizzazione elenco"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "Lunghezza Intervallo di Spesa (numero di blocchi)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limite di Spesa (chia per intervallo): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

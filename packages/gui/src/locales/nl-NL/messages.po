@@ -196,7 +196,7 @@ msgstr "Ben je zeker dat je wil afsluiten? BUI Plotting en farming zullen stoppe
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Ben je zeker dat je k={plotSize} wil gebruiken?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr ""
 msgid "Close"
 msgstr "Sluit"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Node en server worden afgesloten"
 
@@ -481,8 +481,8 @@ msgstr ""
 msgid "Connected"
 msgstr "Verbonden"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr ""
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "Bestedingsinterval Lengte (aantal Blocks)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Bestedingslimiet (Chia per Interval): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

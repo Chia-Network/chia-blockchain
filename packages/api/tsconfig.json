@@ -8,6 +8,7 @@
     "esModuleInterop": true,
     "noUnusedLocals": true,
     "noImplicitAny": true,
+    "emitDeclarationOnly": true,
     "declarationDir": "dist/types",
     "declaration": true,
     "target": "es2015",

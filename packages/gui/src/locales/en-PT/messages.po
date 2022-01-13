@@ -196,7 +196,7 @@ msgstr "Be ye sure ye want t' give up? GUI crew 'n boardin' will stop."
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Be ye sure ye wants t' use k={plotSize}?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr "Claim yar booty"
 msgid "Close"
 msgstr "Close"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Capt'n 'n server gettin' mighty drunk right now"
 
@@ -481,8 +481,8 @@ msgstr "Signal da fleet"
 msgid "Connected"
 msgstr "Natter'd wit' me hearties jus' now"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr ""
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "Spendin' Interval Length (number o' booties)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Squanderin' Limit (chia per interval): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

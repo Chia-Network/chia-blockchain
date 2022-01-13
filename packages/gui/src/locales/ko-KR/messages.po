@@ -196,7 +196,7 @@ msgstr "정말 종료해도 괜찮습니까? GUI 플로팅과 코인 파밍이 �
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "다음 값으로 정하시겠습니까? k={plotSize}"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr ""
 msgid "Close"
 msgstr "닫기"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "노드와 서버의 연결을 닫는 중..."
 
@@ -481,8 +481,8 @@ msgstr ""
 msgid "Connected"
 msgstr "연결됨"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr ""
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "지출 간격 길이 (블록 수)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "지출 한도 (간격 당 chia): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

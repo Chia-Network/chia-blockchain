@@ -196,7 +196,7 @@ msgstr "Je i sigurt që dëshiron të dalësh? Ndërfaqja për Plotting dhe Ferm
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Je i sigurt që dëshiron të përdoresh k={plotSize}?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr "Merr Shpërblimet"
 msgid "Close"
 msgstr "Mbyll"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Po mbyllim nodën dhe serverin"
 
@@ -481,8 +481,8 @@ msgstr "Lidhu me pollin"
 msgid "Connected"
 msgstr "Lidhur"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr "Pamje si listë"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "Gjatësia e intervalit të shpenzimeve (numri i blloqeve)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Kufiri i shpenzimeve (chia për interval): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

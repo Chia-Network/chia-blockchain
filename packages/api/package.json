@@ -10,6 +10,7 @@
   },
   "main": "dist/index.js",
   "module": "dist/esm.js",
+  "types": "dist/main.d.ts",
   "scripts": {
     "build": "npm run build:js",
     "build:js": "rollup -c",
@@ -27,8 +28,6 @@
   },
   "devDependencies": {
     "@babel/core": "7.16.7",
-    "@babel/plugin-proposal-class-properties": "7.16.7",
-    "@babel/plugin-proposal-export-default-from": "7.16.7",
     "@babel/plugin-transform-runtime": "7.16.7",
     "@babel/preset-env": "7.16.7",
     "@babel/preset-typescript": "7.16.7",

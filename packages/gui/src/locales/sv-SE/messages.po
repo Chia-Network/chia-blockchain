@@ -196,7 +196,7 @@ msgstr "Är det säkert att du vill stänga av? Plottning och odling i GUI komme
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Är det säkert att du vill använda k={plotSize}?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr "Begär in belöningar"
 msgid "Close"
 msgstr "Stäng"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Stänger ner nod och server"
 
@@ -481,8 +481,8 @@ msgstr "Anslut till poolen"
 msgid "Connected"
 msgstr "Ansluten"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr "Listvy"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "Längd på spenderintervall (antal block)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Spenderbegränsning (chia per intervall): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

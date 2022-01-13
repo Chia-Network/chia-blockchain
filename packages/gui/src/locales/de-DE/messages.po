@@ -196,7 +196,7 @@ msgstr "Bist du sicher, dass du beenden willst? GUI Plotting und farming werden 
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Bist du sicher, dass du k={plotSize} nutzen möchtest?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr "Belohnung einfordern"
 msgid "Close"
 msgstr "Schließen"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Schließe Node und Server"
 
@@ -481,8 +481,8 @@ msgstr "Mit Pool verbinden"
 msgid "Connected"
 msgstr "Verbunden"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1273,7 +1273,7 @@ msgstr "Listenansicht"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2357,7 +2357,7 @@ msgstr "Länge des Ausgabenintervalls (Anzahl der Blöcke)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Ausgabenlimit (Chia pro Intervall): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

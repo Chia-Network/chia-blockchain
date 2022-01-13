@@ -29,9 +29,9 @@ const StyledAppBar = styled(AppBar)`
   background-color: ${({ theme }) =>
     theme.palette.type === 'dark' ? '#424242' : 'white'};
   box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.2);
-  width: ${({ theme }) => `calc(100% - ${theme.drawer.width})`};
-  margin-left: ${({ theme }) => theme.drawer.width};
-  z-index: ${({ theme }) => theme.zIndex.drawer + 1};
+  width: ${({ theme, drawer }) => drawer ? `calc(100% - ${theme.drawer.width})` : '100%'};
+  margin-left: ${({ theme, drawer }) => drawer ? theme.drawer.width : 0};
+  z-index: ${({ theme }) => theme.zIndex.drawer + 1};};
 `;
 
 const StyledDrawer = styled(Drawer)`
@@ -84,7 +84,7 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
       <Suspense fallback={<Loading center />}>
         {sidebar ? (
           <>
-            <StyledAppBar position="fixed" color="transparent" elevation={0}>
+            <StyledAppBar position="fixed" color="transparent" elevation={0} drawer>
               <StyledToolbar>
                 <Container maxWidth="lg">
                   <Flex alignItems="center">
@@ -105,21 +105,21 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
             </StyledDrawer>
           </>
         ): (
-          <Toolbar>
-            <Container maxWidth="lg">
-              <Flex>
-                <StyledBrandWrapper>
-                  <Logo height={1} />
-                </StyledBrandWrapper>
-                <Flex flexGrow={1} alignItems="flex-end" gap={1} />
-                <LocaleToggle />
-                <DarkModeToggle />
-                <IconButton color="inherit" onClick={handleLogout} title={t`Log Out`}>
-                  <ExitToAppIcon />
-                </IconButton>
-              </Flex>
-            </Container>
-          </Toolbar>
+          <StyledAppBar position="fixed" color="transparent" elevation={0}>
+            <StyledToolbar>
+              <Container maxWidth="lg">
+                <Flex alignItems="center">
+                  <Logo width="100px" />
+                  <Flex flexGrow={1} />
+                  <LocaleToggle />
+                  <DarkModeToggle />
+                  <IconButton color="inherit" onClick={handleLogout} title={t`Log Out`}>
+                    <ExitToAppIcon />
+                  </IconButton>
+                </Flex>
+              </Container>
+            </StyledToolbar>
+          </StyledAppBar>
         )}
 
         <StyledBody flexDirection="column" flexGrow={1}>

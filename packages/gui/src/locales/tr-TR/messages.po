@@ -196,7 +196,7 @@ msgstr "Çıkmak istediğinizden emin misiniz? GUI Plotlama İşlemi ve Madencil
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "k={plotSize} 'ı kullanmak istediğinize emin misiniz?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr "Ödülleri Al"
 msgid "Close"
 msgstr "Kapat"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Sunucu ve node kapatılıyor"
 
@@ -481,8 +481,8 @@ msgstr "Havuza Bağlan"
 msgid "Connected"
 msgstr "Bağlandı"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr "Liste Görünümü"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "Harcama Aralığı Uzunluğu (blokların sayısı)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Harcama Limiti (aralık başına chia): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

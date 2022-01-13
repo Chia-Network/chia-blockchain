@@ -196,7 +196,7 @@ msgstr "Biztos vagy benne, hogy kilépsz? Az ültetés és a betakarítás meg f
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Biztos vagy benne, hogy használni szeretnéd a k={plotSize}-t?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr "Kérjen jutalmakat"
 msgid "Close"
 msgstr "Bezárás"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Node és szerver bezárása"
 
@@ -481,8 +481,8 @@ msgstr "Csatlakozzon a pool-hoz"
 msgid "Connected"
 msgstr "Csatlakozva"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr ""
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "Költési időszak hossza (blokkok száma)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Költési limit (chia / intervallum): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

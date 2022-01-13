@@ -196,7 +196,7 @@ msgstr "Opravdu chcete odejít? Vytváření aktuálních polí bude ztraceno a 
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Jste si jisti, že chcete použít k={plotSize}?"
 
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -394,7 +394,7 @@ msgstr "Získat odměnu"
 msgid "Close"
 msgstr "Zavřít"
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:109
 msgid "Closing down node and server"
 msgstr "Zavírání uzlu a serveru"
 
@@ -481,8 +481,8 @@ msgstr "Připojit ke Poolu"
 msgid "Connected"
 msgstr "Připojeno"
 
-#: src/components/app/AppState.tsx:141
-#: src/components/app/AppState.tsx:145
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr "Zobrazení jako seznam"
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:114
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
@@ -2349,7 +2349,7 @@ msgstr "Délka intervalu výdajů (počet bloků)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limit výdajů (chia na interval): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:164
 msgid "Starting services"
 msgstr ""
 

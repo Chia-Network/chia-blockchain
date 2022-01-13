@@ -14,12 +14,12 @@ const StyledCardTitle = styled(Box)`
   padding: ${({ theme }) => `${theme.spacing(2)}px ${theme.spacing(2)}px`};
 `;
 
-const StyledCardMaterial = styled(({ cursor, opacity, clickable, ...rest }) => (
+const StyledCardMaterial = styled(({ cursor, opacity, clickable, fullHeight, ...rest }) => (
   <CardMaterial {...rest}/>
 ))`
   cursor: ${({ clickable }) => clickable ? 'pointer' : 'default'};
   opacity: ${({ disabled }) => disabled ? '0.5': '1'};
-
+  height: ${({ fullHeight }) => fullHeight ? '100%': 'auto'};
 `;
 
 type Props = {
@@ -32,10 +32,11 @@ type Props = {
   action?: ReactNode;
   onSelect?: () => void;
   disabled?: boolean;
+  fullHeight?: boolean;
 };
 
 export default function Card(props: Props) {
-  const { children, title, tooltip, actions, gap, interactive, action, onSelect, disabled } = props;
+  const { children, title, tooltip, actions, gap, interactive, action, onSelect, disabled, fullHeight } = props;
 
   const headerTitle = tooltip ? (
     <Flex alignItems="center" gap={1}>
@@ -53,7 +54,7 @@ export default function Card(props: Props) {
   }
 
   return (
-    <StyledCardMaterial onClick={handleClick} clickable={!!onSelect} disabled={disabled}>
+    <StyledCardMaterial onClick={handleClick} clickable={!!onSelect} disabled={disabled} fullHeight={fullHeight}>
       {title && (
         <StyledCardTitle>
           <Flex gap={2} alignItems="center" flexWrap="wrap">
