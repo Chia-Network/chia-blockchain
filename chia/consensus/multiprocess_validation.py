@@ -94,6 +94,9 @@ def batch_pre_validate_blocks(
                         mempool_mode=False,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                if npc_result is not None and npc_result.error is not None:
+                    results.append(PreValidationResult(uint16(npc_result.error), None, npc_result, False))
+                    continue
 
                 header_block = get_block_header(block, tx_additions, removals)
                 # TODO: address hint error and remove ignore

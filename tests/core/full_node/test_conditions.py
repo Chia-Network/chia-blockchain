@@ -76,6 +76,7 @@ async def check_spend_bundle_validity(
     connection, blockchain = await create_ram_blockchain(constants)
     try:
         for block in blocks:
+            _validate_and_add_block()
             received_block_result, err, fork_height, coin_changes = await blockchain.receive_block(block)
             assert err is None
 

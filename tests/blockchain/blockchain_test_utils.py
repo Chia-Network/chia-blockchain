@@ -8,6 +8,34 @@ from chia.util.errors import Err
 from chia.util.ints import uint64
 
 
+async def check_block_store_invariant(bc: Blockchain):
+    db_wrapper = bc.block_store.db_wrapper
+
+    if db_wrapper.db_version == 1:
+        return
+
+    in_chain = set()
+    max_height = -1
+    async with db_wrapper.db.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
+        rows = await cursor.fetchall()
+        for row in rows:
+            height = row[0]
+
+            # if this block is in-chain, ensure we haven't found another block
+            # at this height that's also in chain. That would be an invariant
+            # violation
+            if row[1]:
+                # make sure we don't have any duplicate heights. Each block
+                # height can only have a single block with in_main_chain set
+                assert height not in in_chain
+                in_chain.add(height)
+                if height > max_height:
+                    max_height = height
+
+        # make sure every height is represented in the set
+        assert len(in_chain) == max_height + 1
+
+
 async def _validate_and_add_block(
     blockchain: Blockchain,
     block: FullBlock,
@@ -22,12 +50,13 @@ async def _validate_and_add_block(
     # case we return with no errors). If expected_error is not None, receive_block must return Err.INVALID_BLOCK.
     # If expected_result == INVALID_BLOCK but expected_error is None, we will allow for errors to happen
 
+    await check_block_store_invariant(blockchain)
     if skip_prevalidation:
         results = PreValidationResult(None, uint64(1), None, False)
     else:
         pre_validation_results: Optional[
             List[PreValidationResult]
-        ] = await blockchain.pre_validate_blocks_multiprocessing([block], {}, validate_signatures=True)
+        ] = await blockchain.pre_validate_blocks_multiprocessing([block], {}, validate_signatures=False)
 
         if pre_validation_results is None:
             # Returning None from pre validation means an error occurred
@@ -38,14 +67,17 @@ async def _validate_and_add_block(
         results = pre_validation_results[0]
     if results.error is not None:
         if expected_result == ReceiveBlockResult.INVALID_BLOCK:
+            await check_block_store_invariant(blockchain)
             return None
         if expected_error is None:
             raise ValueError(Err(results.error))
         elif Err(results.error) != expected_error:
             raise ValueError(f"Expected {expected_error} but got {Err(results.error)}")
+        await check_block_store_invariant(blockchain)
         return None
 
     result, err, _, _ = await blockchain.receive_block(block, results)
+    await check_block_store_invariant(blockchain)
     if expected_error is None and expected_result != ReceiveBlockResult.INVALID_BLOCK:
         # Not expecting any errors
         if err is not None:
@@ -69,16 +101,13 @@ async def _validate_and_add_block(
 
 
 async def _validate_and_add_block_multi_error(
-    blockchain: Blockchain,
-    block: FullBlock,
-    expected_errors: List[Err],
+    blockchain: Blockchain, block: FullBlock, expected_errors: List[Err], skip_prevalidation: bool = False
 ) -> None:
     # Checks that the blockchain returns one of the expected errors
     try:
-        await _validate_and_add_block(blockchain, block)
+        await _validate_and_add_block(blockchain, block, skip_prevalidation=skip_prevalidation)
     except Exception as e:
         assert isinstance(e, ValueError)
-        print(f"ERROR: {e.args[0]}")
         assert e.args[0] in expected_errors
         return
 
@@ -95,5 +124,8 @@ async def _validate_and_add_block_multi_result(
     except Exception as e:
         assert isinstance(e, ValueError)
         assert "Block was not added" in e.args[0]
-        for res in expected_result:
-            assert res.name in e.args[0]
+        expected_list: List[str] = [f"Block was not added: {res}" for res in expected_result]
+        if e.args[0] not in expected_list:
+            raise ValueError(
+                f"{ReceiveBlockResult(e.args[0].split('Block was not added: ')[1])} not in {expected_result}"
+            )
