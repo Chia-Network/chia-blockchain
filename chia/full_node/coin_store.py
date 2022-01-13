@@ -68,6 +68,13 @@ class CoinStore:
         self.coin_record_cache = LRUCache(cache_size)
         return self
 
+    async def num_unspent(self) -> int:
+        async with self.coin_record_db.execute("SELECT COUNT(*) FROM coin_record WHERE spent_index=0") as cursor:
+            row = await cursor.fetchone()
+            if row is not None:
+                return row[0]
+        return 0
+
     async def new_block(
         self,
         height: uint32,
