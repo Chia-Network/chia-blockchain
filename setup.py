@@ -1,7 +1,7 @@
 from setuptools import setup
 
 dependencies = [
-    "multidict==5.2.0",  # Avoid 5.2.0 due to Avast
+    "multidict==5.1.0",  # Avoid 5.2.0 due to Avast
     "aiofiles==0.8.0",  # Async IO for files
     "blspy==1.0.9",  # Signature library
     "chiavdf==1.0.4",  # timelord and vdf verification
