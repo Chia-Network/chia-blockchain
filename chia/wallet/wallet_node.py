@@ -69,6 +69,7 @@ from chia.wallet.util.wallet_sync_utils import (
 )
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.wallet.prometheus_wallet import PrometheusWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action import WalletAction
@@ -106,6 +107,7 @@ class WalletNode:
     wallet_peers_initialized: bool
     keychain_proxy: Optional[KeychainProxy]
     wallet_peers: Optional[WalletPeers]
+    prometheus: Optional[PrometheusWallet]
 
     def __init__(
         self,
@@ -142,6 +144,9 @@ class WalletNode:
         self.wallet_peers_initialized = False
         self.valid_wp_cache: Dict[bytes32, Any] = {}
         self.untrusted_caches: Dict[bytes32, Any] = {}
+
+        # Metrics
+        self.prometheus = PrometheusWallet.create(self.config, self.log)
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
@@ -192,6 +197,11 @@ class WalletNode:
         mkdir(path.parent)
         self.new_peak_lock = asyncio.Lock()
         assert self.server is not None
+
+        if self.prometheus is not None:
+            with self.prometheus.server.log_errors():
+                await self.prometheus.server.start_if_enabled()
+
         self.wallet_state_manager = await WalletStateManager.create(
             private_key,
             self.config,
@@ -203,6 +213,8 @@ class WalletNode:
             self.get_coin_state,
             self.subscribe_to_coin_updates,
             self,
+            None,
+            self.prometheus,
         )
 
         assert self.wallet_state_manager is not None

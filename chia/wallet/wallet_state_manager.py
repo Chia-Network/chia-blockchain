@@ -36,6 +36,7 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.key_val_store import KeyValStore
+from chia.wallet.prometheus_wallet import PrometheusWallet
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
@@ -117,6 +118,7 @@ class WalletStateManager:
     wallet_node: Any
     pool_store: WalletPoolStore
     default_cats: Dict[str, Any]
+    prometheus: Optional[PrometheusWallet]
 
     @staticmethod
     async def create(
@@ -131,6 +133,7 @@ class WalletStateManager:
         subscribe_to_coin_ids,
         wallet_node,
         name: str = None,
+        prometheus: Optional[PrometheusWallet] = None,
     ):
         self = WalletStateManager()
         self.subscribe_to_new_puzzle_hash = subscribe_to_new_puzzle_hash
@@ -209,6 +212,8 @@ class WalletStateManager:
                 )
             if wallet is not None:
                 self.wallets[wallet_info.id] = wallet
+
+        self.prometheus = prometheus
 
         return self
 
@@ -871,6 +876,12 @@ class WalletStateManager:
 
         for coin_state_removed in trade_coin_removed:
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed)
+
+        if self.prometheus is not None:
+            with self.prometheus.server.log_errors():
+                for wallet_id, wallet in self.wallets.items():
+                    unspent_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
+                    await self.prometheus.update_wallet_balance(wallet_id, wallet, unspent_records)
 
     async def have_a_pool_wallet_with_launched_id(self, launcher_id: bytes32) -> bool:
         for wallet_id, wallet in self.wallets.items():

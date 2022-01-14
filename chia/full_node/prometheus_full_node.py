@@ -50,7 +50,7 @@ class PrometheusFullNode:
             return None
 
         port = config.get("prometheus_exporter_port", DEFAULT_PROMETHEUS_PORT)
-        prometheus_server = PrometheusServer("full_node", enabled, port, log)
+        prometheus_server = PrometheusServer.create("full_node", enabled, port, log)
 
         return cls(
             server=prometheus_server,
