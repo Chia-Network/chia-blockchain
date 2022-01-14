@@ -8,12 +8,13 @@ from typing import Any, Optional, Tuple, Set, List, Dict, Type, TypeVar
 from blspy import G2Element, AugSchemeMPL
 
 from chia.consensus.block_record import BlockRecord
-from chia.protocols.wallet_protocol import PuzzleSolutionResponse
+from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_host_fullpuz,
     SINGLETON_LAUNCHER,
     create_host_layer_puzzle,
     create_singleton_fullpuz,
+    launch_solution_to_singleton_info,
 )
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -22,6 +23,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.json_util import dict_to_json_str
 from secrets import token_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.sign_coin_spends import sign_coin_spends
@@ -100,6 +102,122 @@ class DataLayerWallet:
 
         return self
 
+    #######################
+    # LAUNCHER PROCESSING #
+    #######################
+
+    @staticmethod
+    async def match_dl_launcher(launcher_spend: CoinSpend) -> Tuple[bool, Optional[bytes32]]:
+        # Sanity check it's a launcher
+        if launcher_spend.puzzle_reveal.to_program() != SINGLETON_LAUNCHER:
+            return False, None
+
+        # Let's make sure the solution looks how we expect it to
+        try:
+            full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(launcher_spend.solution)
+        except ValueError:
+            return False, None
+
+        # Now let's check that the full puzzle is an odd data layer singleton
+        if (
+            full_puzhash != create_host_fullpuz(inner_puzhash, root, launcher_spend.coin.name()).get_tree_hash()
+            or amount % 2 == 0
+        ):
+            return False, None
+
+        return True, inner_puzhash
+
+    async def get_launcher_coin_state(launcher_id: bytes32) -> CoinState:
+        coin_states: List[CoinState] = await self.wallet_state_manager.get_coin_state([launcher_id])
+
+        if len(coin_states) == 0:
+            raise ValueError(f"Launcher ID {launcher_id} is not a valid coin")
+        if coin_states[0].coin.puzzle_hash != SINGLETON_LAUNCHER.get_tree_hash():
+            raise ValueError(f"Coin with ID {launcher_id} is not a singleton launcher")
+        if coin_states[0].created_height is None:
+            raise ValueError(f"Launcher with ID {launcher_id} has not been created (maybe reorged)")
+        if coin_states[0].spent_height is None:
+            raise ValueError(f"Launcher with ID {launcher_id} has not been spent")
+
+        return coin_states[0]
+
+    async def track_new_launcher_id(
+        self,
+        launcher_id: bytes32,
+        spend: Optional[CoinSpend] = None,
+        height: Optional[uint32] = None,
+    ) -> None:
+        if spend is not None and spend.coin.name() == launcher_id:  # spend.coin.name() == launcher_id is a sanity check
+            await self.new_launcher_spend(spend, height)
+        else:
+            launcher_state: CoinState = await get_launcher_coin_state(launcher_id)
+
+            data: Dict[str, Any] = {
+                "data": {
+                    "action_data": {
+                        "api_name": "request_puzzle_solution",
+                        "height": launcher_state.spent_height,
+                        "coin_name": launcher_id,
+                        "launcher_coin": bytes(launcher_state.coin),
+                    }
+                }
+            }
+
+            data_str = dict_to_json_str(data)
+            await self.wallet_state_manager.create_action(
+                name="request_puzzle_solution",
+                wallet_id=self.id(),
+                wallet_type=self.type(),
+                callback="new_launcher_spend_response",
+                done=False,
+                data=data_str,
+                in_transaction=False,  # We should never be fetching this during sync, it will provide us with the spend
+            )
+
+    async def new_launcher_spend_response(self, response: PuzzleSolutionResponse, action_id: int) -> None:
+        action = await self.wallet_state_manager.action_store.get_wallet_action(action_id)
+        launcher_coin = Coin.from_bytes(hexstr_to_bytes(json.loads(action.data)["launcher_coin"]))
+        await self.new_launcher_spend(
+            CoinSpend(launcher_coin, response.puzzle, response.solution),
+            height=response.height,
+        )
+
+    async def new_launcher_spend(self, launcher_spend: CoinSpend, height: Optional[uint32] = None) -> None:
+        launcher_id: bytes32 = launcher_spend.coin.name()
+        if height is None:
+            height = (await self.get_launcher_coin_state(launcher_id)).spent_height
+
+        full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(launcher_spend.solution)
+        new_singleton = Coin(launcher_id, full_puzhash, amount)
+
+        singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_latest_singleton(
+            launcher_id
+        )
+        if singleton_record is not None:
+            if (  # This is an unconfirmed singleton that we know about
+                singleton_record.coin_id == new_singleton.name() and not singleton_record.confirmed
+            ):
+                await self.wallet_state_manager.dl_store.set_confirmed(singleton_record.coin_id, height)
+            else:
+                self.log.info(f"Spend of launcher {launcher_id} has already been processed")
+        else:
+            await self.wallet_state_manager.dl_store.add_singleton_record(
+                SingletonRecord(
+                    coin_id=new_singleton.name(),
+                    launcher_id=launcher_id,
+                    root=root,
+                    inner_puzzle_hash=inner_puzhash,
+                    confirmed=True,
+                    confirmed_at_height=height,
+                    lineage_proof=LineageProof(
+                        launcher_coin.name(),
+                        create_host_layer_puzzle(inner_puzhash, root).get_tree_hash(),
+                        amount,
+                    ),
+                )
+            )
+            await self.wallet_state_manager.add_interested_puzzle_hash(launcher_id, self.id())
+
     async def generate_new_reporter(
         self,
         initial_root: bytes32,
@@ -170,7 +288,7 @@ class DataLayerWallet:
             root=initial_root,
             inner_puzzle_hash=inner_puzzle.get_tree_hash(),
             confirmed=False,
-            confirmed_at_height=uint64(0),
+            confirmed_at_height=uint32(0),
             lineage_proof=LineageProof(
                 launcher_coin.name(),
                 create_host_layer_puzzle(inner_puzzle.get_tree_hash(), initial_root).get_tree_hash(),
@@ -180,7 +298,6 @@ class DataLayerWallet:
 
         await self.wallet_state_manager.dl_store.add_singleton_record(singleton_record, False)
         await self.wallet_state_manager.add_interested_puzzle_hash(singleton_record.launcher_id, self.id())
-        await self.wallet_state_manager.add_interested_puzzle_hash(full_puzzle.get_tree_hash(), self.id())
 
         return dl_record, std_record, launcher_coin.name()
 

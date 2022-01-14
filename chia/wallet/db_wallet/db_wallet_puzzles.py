@@ -67,3 +67,16 @@ def match_dl_singleton(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
             return True, iter((innerpuz_hash, root, launcher_id))
 
     return False, iter(())
+
+
+def launch_solution_to_singleton_info(launch_solution: Program) -> Tuple[bytes32, uint64, bytes32, bytes32]:
+    solution = launch_solution.to_program().as_python()
+    try:
+        full_puzzle_hash = bytes32(solution[0])
+        amount = uint64(int.from_bytes(solution[1], "big"))
+        root = bytes32(solution[2][0])
+        inner_puzzle_hash = bytes32(solution[2][1])
+    except (IndexError, TypeError):
+        raise ValueError(f"Launcher is not a data layer launcher")
+
+    return full_puzzle_hash, amount, root, inner_puzzle_hash

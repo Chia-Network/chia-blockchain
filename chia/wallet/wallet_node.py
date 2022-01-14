@@ -20,6 +20,7 @@ from chia.daemon.keychain_proxy import (
     KeychainProxy,
     KeyringIsEmpty,
 )
+from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.full_node.weight_proof import chunks
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
@@ -914,8 +915,26 @@ class WalletNode:
                             assert pool_state is not None
                         except (AssertionError, ValueError) as e:
                             self.log.debug(f"Not a pool wallet launcher {e}")
-                            continue
-                        assert pool_state is not None
+                            matched, inner_puzhash = await DataLayerWallet.match_dl_launcher(launcher_spend)
+                            if (
+                                matched
+                                and inner_puzhash is not None
+                                and (await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(inner_puzhash))
+                            ):
+                                for _, wallet in self.wallet_state_manager.wallets.items():
+                                    if wallet.type() == WalletType.DATA_LAYER.value:
+                                        dl_wallet: DataLayerWallet = wallet
+                                        break
+                                else:  # No DL wallet exists yet
+                                    dl_wallet = await DataLayerWallet.create(
+                                        self.wallet_state_manager, self.wallet_state_manager.main_wallet
+                                    )
+                                await dl_wallet.track_new_launcher_id(
+                                    child.coin.name(),
+                                    spend=launcher_spend,
+                                    height=child.spent_height,
+                                )
+                            break
                         assert child.spent_height is not None
                         pool_wallet = await PoolWallet.create(
                             self.wallet_state_manager,
