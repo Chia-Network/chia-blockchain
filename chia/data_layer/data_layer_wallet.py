@@ -131,7 +131,7 @@ class DataLayerWallet:
 
         return True, inner_puzhash
 
-    async def get_launcher_coin_state(launcher_id: bytes32) -> CoinState:
+    async def get_launcher_coin_state(self, launcher_id: bytes32) -> CoinState:
         coin_states: List[CoinState] = await self.wallet_state_manager.get_coin_state([launcher_id])
 
         if len(coin_states) == 0:
@@ -155,7 +155,7 @@ class DataLayerWallet:
         if spend is not None and spend.coin.name() == launcher_id:  # spend.coin.name() == launcher_id is a sanity check
             await self.new_launcher_spend(spend, height, in_transaction)
         else:
-            launcher_state: CoinState = await get_launcher_coin_state(launcher_id)
+            launcher_state: CoinState = await self.get_launcher_coin_state(launcher_id)
 
             data: Dict[str, Any] = {
                 "data": {
@@ -163,7 +163,11 @@ class DataLayerWallet:
                         "api_name": "request_puzzle_solution",
                         "height": launcher_state.spent_height,
                         "coin_name": launcher_id,
-                        "launcher_coin": bytes(launcher_state.coin),
+                        "launcher_coin": {
+                            "parent_id": launcher_state.coin.parent_coin_info.hex(),
+                            "puzzle_hash": launcher_state.coin.puzzle_hash.hex(),
+                            "amount": str(launcher_state.coin.amount),
+                        },
                     }
                 }
             }
@@ -181,7 +185,12 @@ class DataLayerWallet:
 
     async def new_launcher_spend_response(self, response: PuzzleSolutionResponse, action_id: int) -> None:
         action = await self.wallet_state_manager.action_store.get_wallet_action(action_id)
-        launcher_coin = Coin.from_bytes(hexstr_to_bytes(json.loads(action.data)["launcher_coin"]))
+        coin_dict = json.loads(action.data)["data"]["action_data"]["launcher_coin"]
+        launcher_coin = Coin(
+            bytes.fromhex(coin_dict["parent_id"]),
+            bytes.fromhex(coin_dict["puzzle_hash"]),
+            int(coin_dict["amount"]),
+        )
         await self.new_launcher_spend(
             CoinSpend(launcher_coin, response.puzzle, response.solution),
             height=response.height,
@@ -220,7 +229,7 @@ class DataLayerWallet:
                     confirmed=True,
                     confirmed_at_height=height,
                     lineage_proof=LineageProof(
-                        launcher_coin.name(),
+                        launcher_id,
                         create_host_layer_puzzle(inner_puzhash, root).get_tree_hash(),
                         amount,
                     ),
