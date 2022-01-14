@@ -127,17 +127,6 @@ class HarvesterAPI:
                                 )
                                 continue
 
-                            # Look up local_sk from plot to save locked memory
-                            (
-                                pool_public_key_or_puzzle_hash,
-                                farmer_public_key,
-                                local_master_sk,
-                            ) = parse_plot_info(plot_info.prover.get_memo())
-                            local_sk = master_sk_to_local_sk(local_master_sk)
-                            include_taproot = plot_info.pool_contract_puzzle_hash is not None
-                            plot_public_key = ProofOfSpace.generate_plot_public_key(
-                                local_sk.get_g1(), farmer_public_key, include_taproot
-                            )
                             responses.append(
                                 (
                                     quality_str,
@@ -145,7 +134,7 @@ class HarvesterAPI:
                                         sp_challenge_hash,
                                         plot_info.pool_public_key,
                                         plot_info.pool_contract_puzzle_hash,
-                                        plot_public_key,
+                                        plot_info.plot_public_key,
                                         uint8(plot_info.prover.get_size()),
                                         proof_xs,
                                     ),
