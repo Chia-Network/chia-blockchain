@@ -118,7 +118,7 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
-        txs = await self.service.batch_update(store_id, changelist)
+        await self.service.batch_update(store_id, changelist)
         return {"tx_id": "id"}
 
     async def delete_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
