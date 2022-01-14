@@ -178,6 +178,12 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
     multiple=True,
     type=click.Choice(["public_key", "private_key", "address", "all"], case_sensitive=True),
 )
+@click.option(
+    "--derive-from-hd-path",
+    "-d",
+    help="Search for items derived from a specific HD path. Example HD path: m/12381h/8444h/2/",
+    type=str,
+)
 @click.pass_context
 def search_cmd(
     ctx: click.Context,
@@ -186,6 +192,7 @@ def search_cmd(
     hardened_derivation: bool,
     show_progress: bool,
     search_type: Tuple[str, ...],
+    derive_from_hd_path: Optional[str],
 ):
     import sys
     from .keys_funcs import search_derive, resolve_derivation_master_key
@@ -207,6 +214,7 @@ def search_cmd(
         hardened_derivation,
         show_progress,
         ("all",) if "all" in search_type else search_type,
+        derive_from_hd_path,
     )
 
     sys.exit(0 if found else 1)
@@ -257,7 +265,7 @@ def wallet_address_cmd(
 @click.option(
     "--derive-from-hd-path",
     "-d",
-    help="Derive child keys rooted from a specific HD path.",
+    help="Derive child keys rooted from a specific HD path. Example HD path: m/12381h/8444h/2/",
     type=str,
 )
 @click.option(
@@ -267,7 +275,7 @@ def wallet_address_cmd(
 @click.option(
     "--hardened-derivation",
     "-p",
-    help="Derive keys using hardened derivation. Ignored if --derive-from-parent is specified. Example HD path: m/12381h/8444h/2/",
+    help="Derive keys using hardened derivation.",
     default=False,
     show_default=True,
     is_flag=True,

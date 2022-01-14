@@ -144,10 +144,137 @@ def verify(message: str, public_key: str, signature: str):
     print(AugSchemeMPL.verify(public_key, messageBytes, signature))
 
 
+class DerivationType(Enum):
+    HARDENED = 0
+    UNHARDENED = 1
+
+
+def derive_sk_from_hd_path(master_sk: PrivateKey, hd_path_root: str) -> Tuple[PrivateKey, str]:
+    path: List[str] = hd_path_root.split("/")
+    if len(path) == 0 or path[0] != "m":
+        raise ValueError("Invalid HD path. Must start with 'm'")
+
+    path = path[1:]  # Skip "m"
+
+    if path[-1] == "":  # remove trailing slash
+        path = path[:-1]
+
+    index_and_derivation_types: List[Tuple[int, DerivationType]] = []
+
+    # Validate path
+    for current_index_str in path:
+        if len(current_index_str) == 0:
+            raise ValueError("Invalid HD path. Empty index")
+
+        hardened: bool = current_index_str[-1] == "h"
+        current_index: int = int(current_index_str[:-1]) if hardened else int(current_index_str)
+
+        index_and_derivation_types.append(
+            (current_index, DerivationType.HARDENED if hardened else DerivationType.UNHARDENED)
+        )
+
+    current_sk: PrivateKey = master_sk
+
+    for (current_index, derivation_type) in index_and_derivation_types:
+        if derivation_type == DerivationType.HARDENED:
+            current_sk = _derive_path(current_sk, [current_index])
+        elif derivation_type == DerivationType.UNHARDENED:
+            current_sk = _derive_path_unhardened(current_sk, [current_index])
+        else:
+            raise ValueError(f"Unhandled derivation type: {derivation_type}")
+
+    return (current_sk, "m/" + "/".join(path) + "/")
+
+
 class DerivedSearchResultType(Enum):
     PUBLIC_KEY = "public key"
     PRIVATE_KEY = "private key"
     WALLET_ADDRESS = "wallet address"
+
+
+def _search_derived(
+    current_sk: PrivateKey,
+    search_terms: Tuple[str, ...],
+    path: str,
+    path_indices: Optional[List[int]],
+    limit: int,
+    hardened_derivation: bool,
+    show_progress: bool,
+    search_public_key: bool,
+    search_private_key: bool,
+    search_address: bool,
+) -> List[str]:  # Return found terms
+    remaining_search_terms: Dict[str, None] = dict.fromkeys(search_terms)
+    current_path: str = path
+    current_path_indices: List[int] = path_indices if path_indices is not None else []
+    found_search_terms: List[str] = []
+
+    for index in range(limit):
+        found_items: List[Tuple[str, str, DerivedSearchResultType]] = []
+        printed_match: bool = False
+        current_index_str = str(index) + ("h" if hardened_derivation else "")
+        current_path += f"{current_index_str}"
+        current_path_indices.append(index)
+        if show_progress:
+            sys.stdout.write(f"{current_index_str}")
+            sys.stdout.flush()
+        if hardened_derivation:
+            child_sk = _derive_path(current_sk, current_path_indices)
+        else:
+            child_sk = _derive_path_unhardened(current_sk, current_path_indices)
+        child_pk: Optional[G1Element] = None
+
+        if search_public_key or search_address:
+            child_pk = child_sk.get_g1()
+
+        address: Optional[str] = None
+
+        if search_address:
+            address = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), "xch")
+
+        for term in remaining_search_terms:
+            found_item: Any = None
+            found_item_type: Optional[DerivedSearchResultType] = None
+            if search_private_key and term in str(child_sk):
+                found_item = child_sk
+                found_item_type = DerivedSearchResultType.PRIVATE_KEY
+            elif search_public_key and child_pk is not None and term in str(child_pk):
+                found_item = child_pk
+                found_item_type = DerivedSearchResultType.PUBLIC_KEY
+            elif search_address and address is not None and term in address:
+                found_item = address
+                found_item_type = DerivedSearchResultType.WALLET_ADDRESS
+
+            if found_item is not None and found_item_type is not None:
+                found_items.append((term, found_item, found_item_type))
+
+        if len(found_items) > 0 and show_progress:
+            print()
+
+        for (term, found_item, found_item_type) in found_items:
+            del remaining_search_terms[term]
+            found_search_terms.append(term)
+
+            print(f"Found {found_item_type.value}: {found_item} (HD path: {current_path})")
+            printed_match = True
+
+        if len(remaining_search_terms) == 0:
+            break
+
+        current_path = current_path[: -len(str(current_index_str))]
+        current_path_indices = current_path_indices[:-1]
+
+        if show_progress:
+            if printed_match:
+                if index == limit - 1:
+                    sys.stdout.write(f"{current_path}{current_index_str}")
+                else:
+                    sys.stdout.write(f"{current_path}")
+            else:
+                sys.stdout.write("\b" * len(str(current_index_str)))
+            sys.stdout.flush()
+
+    return found_search_terms
 
 
 def search_derive(
@@ -158,6 +285,7 @@ def search_derive(
     hardened_derivation: bool,
     show_progress: bool,
     search_types: Tuple[str, ...],
+    derive_from_hd_path: Optional[str],
 ) -> bool:
     from time import perf_counter
 
@@ -179,93 +307,78 @@ def search_derive(
         private_keys = [private_key]
 
     for sk in private_keys:
+        current_path: str = ""
+        found_terms: List[str] = []
+
         if show_progress:
             print(f"Searching keys derived from: {sk.get_g1().get_fingerprint()}")
-        current_path: str = ""
-        current_path_indices: List[int] = [12381, 8444]
-        path_root: str = "m/"
-        for i in [12381, 8444]:
-            path_root += f"{i}{'h' if hardened_derivation else ''}/"
 
-        if show_progress:
-            sys.stdout.write(path_root)
+        if derive_from_hd_path is not None:
+            derivation_root_sk, hd_path_root = derive_sk_from_hd_path(sk, derive_from_hd_path)
 
-        # 7 account levels for derived keys (0-6):
-        # 0, 1, 2, 3, 4, 5, 6 farmer, pool, wallet, local, backup key, singleton, pooling authentication key numbers
-        for account in range(7):
-            account_str = str(account) + "h" if hardened_derivation else ""
-            current_path = path_root + f"{account_str}/"
-            current_path_indices.append(account)
             if show_progress:
-                sys.stdout.write(f"{account_str}/")
+                sys.stdout.write(hd_path_root)
 
-            for index in range(limit):
-                found_items: List[Tuple[str, str, DerivedSearchResultType]] = []
-                printed_match: bool = False
-                current_index_str = str(index) + "h" if hardened_derivation else ""
-                current_path += f"{current_index_str}"
-                current_path_indices.append(index)
-                if show_progress:
-                    sys.stdout.write(f"{current_index_str}")
-                    sys.stdout.flush()
-                if hardened_derivation:
-                    child_sk = _derive_path(sk, current_path_indices)
-                else:
-                    child_sk = _derive_path_unhardened(sk, current_path_indices)
-                child_pk: Optional[G1Element] = None
+            found_terms = _search_derived(
+                derivation_root_sk,
+                tuple(remaining_search_terms.keys()),
+                hd_path_root,
+                None,
+                limit,
+                hardened_derivation,
+                show_progress,
+                search_public_key,
+                search_private_key,
+                search_address,
+            )
 
-                if search_public_key or search_address:
-                    child_pk = child_sk.get_g1()
-
-                address: Optional[str] = None
-
-                if search_address:
-                    address = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), "xch")
-
-                for term in remaining_search_terms:
-                    found_item: Any = None
-                    found_item_type: Optional[DerivedSearchResultType] = None
-                    if search_private_key and term in str(child_sk):
-                        found_item = child_sk
-                        found_item_type = DerivedSearchResultType.PRIVATE_KEY
-                    elif search_public_key and child_pk is not None and term in str(child_pk):
-                        found_item = child_pk
-                        found_item_type = DerivedSearchResultType.PUBLIC_KEY
-                    elif search_address and address is not None and term in address:
-                        found_item = address
-                        found_item_type = DerivedSearchResultType.WALLET_ADDRESS
-
-                    if found_item is not None and found_item_type is not None:
-                        found_items.append((term, found_item, found_item_type))
-
-                if len(found_items) > 0 and show_progress:
-                    print()
-
-                for (term, found_item, found_item_type) in found_items:
-                    del remaining_search_terms[term]
-
-                    print(f"Found {found_item_type.value}: {found_item} (HD path: {current_path})")
-                    printed_match = True
-
-                if len(remaining_search_terms) == 0:
-                    break
-
-                current_path = current_path[: -len(str(current_index_str))]
-                current_path_indices = current_path_indices[:-1]
-
-                if show_progress:
-                    if printed_match:
-                        sys.stdout.write(f"{current_path}")
-                    else:
-                        sys.stdout.write("\b" * len(str(current_index_str)))
-                    sys.stdout.flush()
+            for term in found_terms:
+                del remaining_search_terms[term]
 
             if len(remaining_search_terms) == 0:
                 break
 
+            current_path = hd_path_root
+        else:
+            current_path_indices: List[int] = [12381, 8444]
+            path_root: str = "m/"
+            for i in [12381, 8444]:
+                path_root += f"{i}{'h' if hardened_derivation else ''}/"
+
             if show_progress:
-                sys.stdout.write("\b" * (1 + len(str(account_str))))
-            current_path_indices = current_path_indices[:-1]
+                sys.stdout.write(path_root)
+
+            # 7 account levels for derived keys (0-6):
+            # 0, 1, 2, 3, 4, 5, 6 farmer, pool, wallet, local, backup key, singleton, pooling authentication key numbers
+            for account in range(7):
+                account_str = str(account) + "h" if hardened_derivation else ""
+                current_path = path_root + f"{account_str}/"
+                current_path_indices.append(account)
+                if show_progress:
+                    sys.stdout.write(f"{account_str}/")
+
+                found_terms = _search_derived(
+                    sk,
+                    tuple(remaining_search_terms.keys()),
+                    str(current_path),  # copy
+                    list(current_path_indices),  # copy
+                    limit,
+                    hardened_derivation,
+                    show_progress,
+                    search_public_key,
+                    search_private_key,
+                    search_address,
+                )
+
+                for found_term in found_terms:
+                    del remaining_search_terms[found_term]
+
+                if len(remaining_search_terms) == 0:
+                    break
+
+                if show_progress:
+                    sys.stdout.write("\b" * (1 + len(str(account_str))))
+                current_path_indices = current_path_indices[:-1]
 
         if len(remaining_search_terms) == 0:
             break
@@ -322,11 +435,6 @@ def private_key_string_repr(private_key: PrivateKey):
     return s[len("<PrivateKey ") : s.rfind(">")] if s.startswith("<PrivateKey ") else s
 
 
-class DerivationType(Enum):
-    HARDENED = 0
-    UNHARDENED = 1
-
-
 def derive_child_key(
     root_path: Path,
     master_sk: PrivateKey,
@@ -366,41 +474,7 @@ def derive_child_key(
         for i in path_indices:
             hd_path_root += f"{i}{'h' if hardened_derivation else ''}/"
     elif derive_from_hd_path is not None:
-        path: List[str] = derive_from_hd_path.split("/")
-        if len(path) == 0 or path[0] != "m":
-            raise ValueError("Invalid HD path. Must start with 'm'")
-
-        path = path[1:]  # Skip "m"
-
-        if path[-1] == "":  # remove trailing slash
-            path = path[:-1]
-
-        index_and_derivation_types: List[Tuple[int, DerivationType]] = []
-
-        # Validate path
-        for current_index_str in path:
-            if len(current_index_str) == 0:
-                raise ValueError("Invalid HD path. Empty index")
-
-            hardened: bool = current_index_str[-1] == "h"
-            current_index: int = int(current_index_str[:-1]) if hardened else int(current_index_str)
-
-            index_and_derivation_types.append(
-                (current_index, DerivationType.HARDENED if hardened else DerivationType.UNHARDENED)
-            )
-
-        current_sk = master_sk
-
-        for (current_index, derivation_type) in index_and_derivation_types:
-            if derivation_type == DerivationType.HARDENED:
-                current_sk = _derive_path(current_sk, [current_index])
-            elif derivation_type == DerivationType.UNHARDENED:
-                current_sk = _derive_path_unhardened(current_sk, [current_index])
-            else:
-                raise ValueError(f"Unhandled derivation type: {derivation_type}")
-
-        derivation_root_sk = current_sk
-        hd_path_root = "m/" + "/".join(path) + "/"
+        derivation_root_sk, hd_path_root = derive_sk_from_hd_path(master_sk, derive_from_hd_path)
 
     if derivation_root_sk is not None and hd_path_root is not None:
         for i in range(index, index + count):
