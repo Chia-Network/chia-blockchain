@@ -350,7 +350,7 @@ class DataStore:
 
         return ancestors
 
-    async def get_pairs(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
+    async def get_keys_values(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
 
@@ -421,7 +421,7 @@ class DataStore:
         lock: bool = True,
     ) -> bytes32:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            pairs = await self.get_pairs(tree_id=tree_id, lock=False)
+            pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
 
             if len(pairs) == 0:
                 reference_node_hash = None
@@ -456,7 +456,7 @@ class DataStore:
 
             if not was_empty:
                 # TODO: is there any way the db can enforce this?
-                pairs = await self.get_pairs(tree_id=tree_id, lock=False)
+                pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
                 if any(key == node.key for node in pairs):
                     raise Exception(f"Key already present: {key.hex()}")
 
@@ -561,7 +561,7 @@ class DataStore:
 
     async def get_node_by_key(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            nodes = await self.get_pairs(tree_id=tree_id, lock=False)
+            nodes = await self.get_keys_values(tree_id=tree_id, lock=False)
 
         for node in nodes:
             if node.key == key:

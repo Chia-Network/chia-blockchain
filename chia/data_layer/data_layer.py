@@ -9,11 +9,13 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.data_store import DataStore
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.transaction_record import TransactionRecord
 
 
 class DataLayer:
@@ -69,16 +71,21 @@ class DataLayer:
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
+        return True
+
+    async def create_wallet(self) -> Optional[List[TransactionRecord]]:
+        # TODO: review for anything else we need to do here
+        assert self.wallet_node
         assert self.wallet_node.wallet_state_manager
         main_wallet = self.wallet_node.wallet_state_manager.main_wallet
         amount = uint64(1)  # todo what should amount be ?
         async with self.wallet_node.wallet_state_manager.lock:
-            creation_record = await self.wallet.create_new_dl_wallet(
+            creation_record = await DataLayerWallet.create_new_dl_wallet(
                 self.wallet_node.wallet_state_manager, main_wallet, amount, None
             )
             self.wallet = creation_record.item
         self.initialized = True
-        return True
+        return creation_record.transaction_records
 
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
@@ -97,11 +104,11 @@ class DataLayer:
             self.log.fatal("failed creating store")
         return tree_id
 
-    async def insert(
+    async def batch_update(
         self,
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
-    ) -> bool:
+    ) -> Optional[TransactionRecord]:
         for change in changelist:
             if change["action"] == "insert":
                 key = change["key"]
@@ -116,27 +123,50 @@ class DataLayer:
                 key = change["key"]
                 await self.data_store.delete(key, tree_id)
 
+        await self.data_store.get_tree_root(tree_id)
         root = await self.data_store.get_tree_root(tree_id)
-        assert root.node_hash
-        res = await self.wallet.create_update_state_spend(root.node_hash)
+        # todo return empty node hash from get_tree_root
+        if root.node_hash is not None:
+            node_hash = root.node_hash
+        else:
+            node_hash = bytes32([0] * 32)  # todo change
+        res = await self.wallet.create_update_state_spend(node_hash)
         assert res
-        # todo need to mark data as pending and change once tx is confirmed
-        return True
+        # todo register callback to change status in data store
+        # await self.data_store.change_root_status(root, Status.COMMITTED)
+        return None
 
-    async def get_value(self, store_id: bytes32, key: bytes) -> bytes:
+    async def get_value(self, store_id: bytes32, key: bytes) -> Optional[bytes]:
         res = await self.data_store.get_node_by_key(tree_id=store_id, key=key)
         if res is None:
-            self.log.error("Failed to create tree")
+            self.log.error("Failed to fetch key")
+            return None
         return res.value
 
-    async def get_pairs(self, store_id: bytes32) -> List[TerminalNode]:
-        res = await self.data_store.get_pairs(store_id)
+    async def get_keys_values(self, store_id: bytes32) -> List[TerminalNode]:
+        res = await self.data_store.get_keys_values(store_id)
         if res is None:
-            self.log.error("Failed to create tree")
+            self.log.error("Failed to fetch keys values")
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
         res = await self.data_store.get_ancestors(store_id, node_hash)
         if res is None:
-            self.log.error("Failed to create tree")
+            self.log.error("Failed to get ancestors")
         return res
+
+    async def get_root(self, store_id: bytes32) -> Optional[bytes32]:
+        res = await self.data_store.get_tree_root(tree_id=store_id)
+        if res is None:
+            self.log.error(f"Failed to get root for {store_id.hex()}")
+        return res.node_hash
+
+    async def get_roots(self, store_ids: List[str]) -> List[Optional[bytes32]]:
+        roots = []
+        for id in store_ids:
+            res = await self.data_store.get_tree_root(tree_id=bytes32(hexstr_to_bytes(id)))
+            if res is None:
+                self.log.error(f"Failed to get root for {id}")
+                continue
+            roots.append(res.node_hash)
+        return roots

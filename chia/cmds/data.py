@@ -90,16 +90,16 @@ def create_rpc_port_option() -> "IdentityFunction":
     )
 
 
-@data_cmd.command("create_kv_store", short_help="Get a data row by its hash")
+@data_cmd.command("create_data_store", short_help="Get a data row by its hash")
 @create_kv_store_id_option()
 @create_rpc_port_option()
-def create_kv_store(
+def create_data_store(
     table_string: str,
     data_rpc_port: int,
 ) -> None:
-    from chia.cmds.data_funcs import create_kv_store_cmd
+    from chia.cmds.data_funcs import create_data_store_cmd
 
-    run(create_kv_store_cmd(rpc_port=data_rpc_port, table_string=table_string))
+    run(create_data_store_cmd(rpc_port=data_rpc_port, table_string=table_string))
 
 
 @data_cmd.command("get_value", short_help="Get a data row by its hash")
@@ -116,7 +116,7 @@ def get_value(
     run(get_value_cmd(rpc_port=data_rpc_port, tree_id=tree_id, key=key))
 
 
-@data_cmd.command("update_kv_store", short_help="Update a table.")
+@data_cmd.command("update_data_store", short_help="Update a table.")
 @create_kv_store_id_option()
 @create_rpc_port_option()
 @create_changelist_option()
@@ -125,8 +125,20 @@ def update_kv_store(
     changelist_string: str,
     data_rpc_port: int,
 ) -> None:
-    from chia.cmds.data_funcs import update_kv_store_cmd
+    from chia.cmds.data_funcs import update_data_store_cmd
 
     changelist = json.loads(changelist_string)
 
-    run(update_kv_store_cmd(rpc_port=data_rpc_port, tree_id=tree_id, changelist=changelist))
+    run(update_data_store_cmd(rpc_port=data_rpc_port, tree_id=tree_id, changelist=changelist))
+
+
+@data_cmd.command("get_root", short_help="Get a data row by its hash")
+@create_kv_store_id_option()
+@create_rpc_port_option()
+def get_root(
+    tree_id: str,
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import get_root_cmd
+
+    run(get_root_cmd(rpc_port=data_rpc_port, tree_id=tree_id))
