@@ -10,6 +10,7 @@ from blspy import G2Element
 
 import pytest
 
+from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.full_node_api import FullNodeAPI
@@ -39,6 +40,10 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
+from tests.blockchain.blockchain_test_utils import (
+    _validate_and_add_block,
+    _validate_and_add_block_no_error,
+)
 from tests.wallet_tools import WalletTool
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.transaction_record import TransactionRecord
@@ -403,20 +408,24 @@ class TestFullNodeBlockCompression:
             reog_blocks = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
                 for reorg_block in reog_blocks[:r]:
-                    assert (await blockchain.receive_block(reorg_block))[1] is None
+                    await _validate_and_add_block_no_error(blockchain, reorg_block)
                 for i in range(1, height):
                     for batch_size in range(1, height):
-                        results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
+                        results = await blockchain.pre_validate_blocks_multiprocessing(
+                            all_blocks[:i], {}, batch_size, validate_signatures=False
+                        )
                         assert results is not None
                         for result in results:
                             assert result.error is None
 
             for r in range(0, len(all_blocks), 3):
                 for block in all_blocks[:r]:
-                    assert (await blockchain.receive_block(block))[1] is None
+                    await _validate_and_add_block_no_error(blockchain, block)
                 for i in range(1, height):
                     for batch_size in range(1, height):
-                        results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
+                        results = await blockchain.pre_validate_blocks_multiprocessing(
+                            all_blocks[:i], {}, batch_size, validate_signatures=False
+                        )
                         assert results is not None
                         for result in results:
                             assert result.error is None
@@ -1377,7 +1386,7 @@ class TestFullNodeProtocol:
 
         second_blockchain = empty_blockchain
         for block in blocks:
-            await second_blockchain.receive_block(block)
+            await _validate_and_add_block(second_blockchain, block)
 
         # Creates a signage point based on the last block
         peak_2 = second_blockchain.get_peak()
@@ -1483,9 +1492,9 @@ class TestFullNodeProtocol:
         invalid_program = SerializedProgram.from_bytes(large_puzzle_reveal)
         invalid_block = dataclasses.replace(invalid_block, transactions_generator=invalid_program)
 
-        result, error, fork_h, _ = await full_node_1.full_node.blockchain.receive_block(invalid_block)
-        assert error is not None
-        assert error == Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE
+        await _validate_and_add_block(
+            full_node_1.full_node.blockchain, invalid_block, expected_error=Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE
+        )
 
         blocks_new = bt.get_consecutive_blocks(
             1,
@@ -1496,9 +1505,7 @@ class TestFullNodeProtocol:
         valid_block = blocks_new[-1]
         valid_program = SerializedProgram.from_bytes(under_sized)
         valid_block = dataclasses.replace(valid_block, transactions_generator=valid_program)
-        result, error, fork_h = await full_node_1.full_node.blockchain.receive_block(valid_block)
-
-        assert error is None
+        await _validate_and_add_block(full_node_1.full_node.blockchain, valid_block)
 
     @pytest.mark.asyncio
     async def test_compact_protocol(self, setup_two_nodes):

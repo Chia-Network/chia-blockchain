@@ -36,6 +36,7 @@ from chia.full_node.pending_tx_cache import PendingTxCache
 from blspy import G2Element
 
 from chia.util.recursive_replace import recursive_replace
+from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.connection_utils import connect_and_get_peer
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import bt, setup_simulators_and_wallets
@@ -1004,9 +1005,9 @@ class TestMempoolManager:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=bundle
         )
         try:
-            await full_node_1.full_node.blockchain.receive_block(blocks[-1])
+            await _validate_and_add_block(full_node_1.full_node.blockchain, blocks[-1])
             assert False
-        except AssertionError:
+        except ValueError:
             pass
 
     # ensure an assert coin announcement is rejected if it doesn't match the
@@ -1277,7 +1278,9 @@ class TestMempoolManager:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle1
         )
         assert full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name()) is None
-        assert (await full_node_1.full_node.blockchain.receive_block(blocks[-1]))[1] == Err.RESERVE_FEE_CONDITION_FAILED
+        await _validate_and_add_block(
+            full_node_1.full_node.blockchain, blocks[-1], expected_error=Err.RESERVE_FEE_CONDITION_FAILED
+        )
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition_fee_too_large(self, two_nodes):
@@ -1291,7 +1294,9 @@ class TestMempoolManager:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle1
         )
         assert full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name()) is None
-        assert (await full_node_1.full_node.blockchain.receive_block(blocks[-1]))[1] == Err.RESERVE_FEE_CONDITION_FAILED
+        await _validate_and_add_block(
+            full_node_1.full_node.blockchain, blocks[-1], expected_error=Err.RESERVE_FEE_CONDITION_FAILED
+        )
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition_wrong_fee(self, two_nodes):

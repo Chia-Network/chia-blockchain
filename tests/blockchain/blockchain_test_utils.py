@@ -125,6 +125,18 @@ async def _validate_and_add_block_multi_result(
         assert "Block was not added" in e.args[0]
         expected_list: List[str] = [f"Block was not added: {res}" for res in expected_result]
         if e.args[0] not in expected_list:
-            raise ValueError(
-                f"{ReceiveBlockResult(e.args[0].split('Block was not added: ')[1])} not in {expected_result}"
-            )
+            raise ValueError(f"{e.args[0].split('Block was not added: ')[1]} not in {expected_result}")
+
+
+async def _validate_and_add_block_no_error(blockchain: Blockchain, block: FullBlock) -> None:
+    # adds a block and ensures that there is no error. However, does not ensure that block extended the peak of
+    # the blockchain
+    await _validate_and_add_block_multi_result(
+        blockchain,
+        block,
+        expected_result=[
+            ReceiveBlockResult.ALREADY_HAVE_BLOCK,
+            ReceiveBlockResult.NEW_PEAK,
+            ReceiveBlockResult.ADDED_AS_ORPHAN,
+        ],
+    )

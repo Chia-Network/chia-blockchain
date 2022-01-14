@@ -44,6 +44,7 @@ from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block_multi_error,
     _validate_and_add_block_multi_result,
     check_block_store_invariant,
+    _validate_and_add_block_no_error,
 )
 from tests.wallet_tools import WalletTool
 from tests.setup_nodes import bt, test_constants
@@ -2776,15 +2777,7 @@ class TestReorgs:
             await _validate_and_add_block(b, block)
 
         for block in blocks_fork:
-            await _validate_and_add_block_multi_result(
-                b,
-                block,
-                expected_result=[
-                    ReceiveBlockResult.ALREADY_HAVE_BLOCK,
-                    ReceiveBlockResult.NEW_PEAK,
-                    ReceiveBlockResult.ADDED_AS_ORPHAN,
-                ],
-            )
+            await _validate_and_add_block_no_error(b, block)
 
     @pytest.mark.asyncio
     async def test_get_header_blocks_in_range_tx_filter(self, empty_blockchain):

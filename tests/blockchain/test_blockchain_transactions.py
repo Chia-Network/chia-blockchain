@@ -228,7 +228,7 @@ class TestBlockchainTransactions:
             transaction_data=spend_bundle,
         )
 
-        await _validate_and_add_block(full_node_api_1.full_node.blockchain.blockchain, new_blocks[-1])
+        await _validate_and_add_block(full_node_api_1.full_node.blockchain, new_blocks[-1])
 
         # But can't spend it twice
         new_blocks_double = bt.get_consecutive_blocks(
@@ -240,7 +240,7 @@ class TestBlockchainTransactions:
         )
 
         await _validate_and_add_block(
-            full_node_api_1.full_node.blockchain.blockchain, new_blocks_double[-1], expected_error=Err.DOUBLE_SPEND
+            full_node_api_1.full_node.blockchain, new_blocks_double[-1], expected_error=Err.DOUBLE_SPEND
         )
 
         # Now test Reorg at block 5, same spend at block height 12
