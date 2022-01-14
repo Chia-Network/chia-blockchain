@@ -3,8 +3,7 @@ import time
 from typing import Dict, List, Optional
 from clvm_rs import STRICT_MODE as MEMPOOL_MODE
 
-from clvm.casts import int_from_bytes
-
+from clvm.casts import int_from_bytes, int_to_bytes
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.generator import create_generator_args, setup_generator_args
 from chia.types.blockchain_format.program import NIL
