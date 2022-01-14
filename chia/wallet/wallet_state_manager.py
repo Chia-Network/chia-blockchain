@@ -916,7 +916,7 @@ class WalletStateManager:
             wallet_id = uint32(interested_wallet_id)
             wallet_type = WalletType(self.wallets[uint32(wallet_id)].type())
             return wallet_id, wallet_type
-        breakpoint()
+
         return None
 
     async def coin_added(
@@ -1019,7 +1019,6 @@ class WalletStateManager:
         if (
             wallet_type == WalletType.CAT
             or wallet_type == WalletType.DISTRIBUTED_ID
-            or wallet_type == WalletType.DATA_LAYER
         ):
             wallet = self.wallets[wallet_id]
             await wallet.coin_added(coin, height)

@@ -4,9 +4,10 @@ import aiosqlite
 import dataclasses
 
 from chia.data_layer.data_layer_wallet import SingletonRecord
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
@@ -49,6 +50,10 @@ class DataLayerStore:
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS confirmed_at_height on singleton_records(root)")
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS generation on singleton_records(generation)")
 
+        await self.db_connection.execute(("CREATE TABLE IF NOT EXISTS launchers(id blob PRIMARY KEY, coin blob)"))
+
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS id on launchers(id)")
+
         await self.db_connection.commit()
         return self
 
@@ -65,23 +70,9 @@ class DataLayerStore:
             bytes32(row[3]),
             bool(row[4]),
             uint32(row[5]),
-            None if row[6] == b"" else LineageProof.from_bytes(row[6]),
+            LineageProof.from_bytes(row[6]),
+            uint32(row[7]),
         )
-
-    async def get_singleton_generation_count(self, launcher_id: bytes32) -> int:
-        """
-        Count the number of generations of a singleton wit a specific launcher ID.
-        """
-        cursor = await self.db_connection.execute(
-            "SELECT COUNT(*) FROM singleton_records where launcher_id=?", (launcher_id,)
-        )
-        count_result = await cursor.fetchone()
-        if count_result is not None:
-            count = count_result[0]
-        else:
-            count = 0
-        await cursor.close()
-        return count
 
     async def add_singleton_record(self, record: SingletonRecord, in_transaction: bool) -> None:
         """
@@ -91,7 +82,6 @@ class DataLayerStore:
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
         try:
-            count: int = await self.get_singleton_generation_count(record.launcher_id)
             cursor = await self.db_connection.execute(
                 "INSERT OR REPLACE INTO singleton_records VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
@@ -101,8 +91,8 @@ class DataLayerStore:
                     record.inner_puzzle_hash,
                     int(record.confirmed),
                     record.confirmed_at_height,
-                    b"" if record.lineage_proof is None else bytes(record.lineage_proof),
-                    count,
+                    bytes(record.lineage_proof),
+                    record.generation,
                 ),
             )
             await cursor.close()
@@ -153,7 +143,7 @@ class DataLayerStore:
         #     return self.tx_record_cache[tx_id]
 
         cursor = await self.db_connection.execute(
-            "SELECT * from singleton_records WHERE launcher_id=?" " ORDER BY generation DESC LIMIT 1", (launcher_id,)
+            "SELECT * from singleton_records WHERE launcher_id=? ORDER BY generation DESC LIMIT 1", (launcher_id,)
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -170,3 +160,57 @@ class DataLayerStore:
             return
 
         await self.add_singleton_record(dataclasses.replace(current, confirmed=True, confirmed_at_height=height), True)
+
+    async def add_launcher(self, launcher: Coin, in_transaction: bool):
+        """
+        Add a new launcher coin's information to the DB
+        """
+        launcher_bytes: bytes = launcher.parent_coin_info + launcher.puzzle_hash + bytes(launcher.amount)
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute(
+                "INSERT OR REPLACE INTO launchers VALUES (?, ?)",
+                (launcher.name(), launcher_bytes),
+            )
+            await cursor.close()
+            if not in_transaction:
+                await self.db_connection.commit()
+        finally:
+            if not in_transaction:
+                self.db_wrapper.lock.release()
+
+    async def get_launcher(self, launcher_id: bytes32) -> Optional[Coin]:
+        """
+        Checks DB for a launcher with the specified ID and returns it.
+        """
+
+        cursor = await self.db_connection.execute("SELECT * from launchers WHERE id=?", (launcher_id,))
+        row = await cursor.fetchone()
+        await cursor.close()
+        if row is not None:
+            return Coin(
+                bytes32(row[1][0:32]),
+                bytes32(row[1][32:64]),
+                uint64(int.from_bytes(row[1][64:72], "big"))
+            )
+        return None
+
+    async def get_all_launchers(self) -> List[Coin]:
+        """
+        Checks DB for all launchers.
+        """
+
+        cursor = await self.db_connection.execute("SELECT * from launchers")
+        rows = await cursor.fetchall()
+        await cursor.close()
+
+        coins = []
+        for row in rows:
+            return Coin(
+                bytes32(row[1][0:32]),
+                bytes32(row[1][32:64]),
+                uint64(int.from_bytes(row[1][64:72], "big"))
+            )
+
+        return coins
