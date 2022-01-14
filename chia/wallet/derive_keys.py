@@ -49,10 +49,6 @@ def master_sk_to_wallet_sk_unhardened(master: PrivateKey, index: uint32) -> Priv
     return _derive_path_unhardened(intermediate, [index])
 
 
-def master_sk_to_wallet_sk_unhardened(master: PrivateKey, index: uint32) -> PrivateKey:
-    return _derive_path_unhardened(master, [12381, 8444, 2, index])
-
-
 def master_sk_to_local_sk(master: PrivateKey) -> PrivateKey:
     return _derive_path(master, [12381, 8444, 3, 0])
 
