@@ -23,6 +23,9 @@ class PrometheusCrawler:
     def create(cls, config: Dict, log: logging.Logger, minimum_version_count: int):
         prometheus_config = config.get("crawler_prometheus", {})
         enabled = prometheus_config.get("start_prometheus_server", False)
+        if not enabled:
+            return None
+
         port = prometheus_config.get("prometheus_exporter_port", DEFAULT_PROMETHEUS_PORT)
         prometheus_server = PrometheusServer("crawler", enabled, port, log)
 

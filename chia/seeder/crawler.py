@@ -37,7 +37,7 @@ class Crawler:
     peer_count: int
     with_peak: set
     minimum_version_count: int
-    prometheus: PrometheusCrawler
+    prometheus: Optional[PrometheusCrawler]
 
     def __init__(
         self,
@@ -122,8 +122,9 @@ class Crawler:
     async def _start(self):
         self.task = asyncio.create_task(self.crawl())
 
-        with self.prometheus.server.log_errors():
-            await self.prometheus.server.start_if_enabled()
+        if self.prometheus is not None:
+            with self.prometheus.server.log_errors():
+                await self.prometheus.server.start_if_enabled()
 
     async def update_metric_values(self):
         ipv6_addresses_count = 0
