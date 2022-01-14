@@ -29,7 +29,7 @@ async def create_wallet(rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
         client, rpc_port = await get_client(rpc_port)
         response = await client.create_wallet()
     except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
+        print(f"Connection error. Check if data is running ")
         return None
     except Exception as e:
         print(f"Exception from 'data': {e}")
