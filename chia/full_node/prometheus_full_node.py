@@ -46,6 +46,9 @@ class PrometheusFullNode:
         hint_store: HintStore,
     ):
         enabled = config.get("start_prometheus_server", False)
+        if not enabled:
+            return None
+
         port = config.get("prometheus_exporter_port", DEFAULT_PROMETHEUS_PORT)
         prometheus_server = PrometheusServer("full_node", enabled, port, log)
 

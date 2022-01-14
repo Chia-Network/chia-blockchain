@@ -96,7 +96,7 @@ class FullNode:
     timelord_lock: asyncio.Lock
     initialized: bool
     weight_proof_handler: Optional[WeightProofHandler]
-    prometheus: PrometheusFullNode
+    prometheus: Optional[PrometheusFullNode]
     _ui_tasks: Set[asyncio.Task]
     _blockchain_lock_queue: LockQueue
     _blockchain_lock_ultra_priority: LockClient
@@ -198,8 +198,9 @@ class FullNode:
             constants=self.constants,
             hint_store=self.hint_store,
         )
-        with self.prometheus.server.log_errors():
-            await self.prometheus.server.start_if_enabled()
+        if self.prometheus is not None:
+            with self.prometheus.server.log_errors():
+                await self.prometheus.server.start_if_enabled()
 
         self.mempool_manager = MempoolManager(self.coin_store, self.constants, self.prometheus)
 
@@ -1247,8 +1248,9 @@ class FullNode:
             f"Generator ref list size: "
             f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
-        with self.prometheus.server.log_errors():
-            await self.prometheus.new_peak(height=record.height, difficulty=difficulty)
+        if self.prometheus is not None:
+            with self.prometheus.server.log_errors():
+                await self.prometheus.new_peak(height=record.height, difficulty=difficulty)
 
         sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(record.header_hash)
         assert sub_slots is not None
@@ -1395,8 +1397,9 @@ class FullNode:
         await self.server.send_to_all([msg], NodeType.WALLET)
         self._state_changed("new_peak")
 
-        with self.prometheus.server.log_errors():
-            await self.prometheus.new_peak(record=record)
+        if self.prometheus is not None:
+            with self.prometheus.server.log_errors():
+                await self.prometheus.new_peak(record=record)
 
     async def respond_block(
         self,
@@ -1555,8 +1558,9 @@ class FullNode:
         if block.transactions_info is not None:
             percent_full = round(100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3)
             percent_full_str = f", percent full: {percent_full}%"
-            with self.prometheus.server.log_errors():
-                await self.prometheus.new_peak(block_percent_full=percent_full)
+            if self.prometheus is not None:
+                with self.prometheus.server.log_errors():
+                    await self.prometheus.new_peak(block_percent_full=percent_full)
         else:
             percent_full_str = ""
 
@@ -1719,8 +1723,9 @@ class FullNode:
                     100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3
                 )
                 percent_full_str = f", percent full: {percent_full}%"
-                with self.prometheus.server.log_errors():
-                    await self.prometheus.new_peak(block_percent_full=percent_full)
+                if self.prometheus is not None:
+                    with self.prometheus.server.log_errors():
+                        await self.prometheus.new_peak(block_percent_full=percent_full)
             else:
                 percent_full_str = ""
             self.log.info(

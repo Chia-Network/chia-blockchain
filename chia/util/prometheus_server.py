@@ -45,7 +45,8 @@ class PrometheusServer:
         This method should be used rather than creating a new Gauge directly to ensure consistency in exported metric
         names
         """
-        return Gauge(name, description, labelnames, "chia", self.service_name)
+        with self.log_errors():
+            return Gauge(name, description, labelnames, "chia", self.service_name)
 
     def new_counter(self, name: str, description: str, labelnames: Tuple = ()) -> Counter:
         """
@@ -54,7 +55,8 @@ class PrometheusServer:
         This method should be used rather than creating a new Counter directly to ensure consistency in exported metric
         names
         """
-        return Counter(name, description, labelnames, "chia", self.service_name)
+        with self.log_errors():
+            return Counter(name, description, labelnames, "chia", self.service_name)
 
     @contextmanager
     def log_errors(self):
