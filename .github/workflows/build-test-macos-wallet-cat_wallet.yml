@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: Ubuntu wallet-cc_wallet Test
+name: MacOS wallet-cat_wallet Tests
 
 on:
   push:
@@ -15,15 +15,15 @@ on:
 
 jobs:
   build:
-    name: Ubuntu wallet-cc_wallet Test
+    name: MacOS wallet-cat_wallet Tests
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.7, 3.8, 3.9]
-        os: [ubuntu-latest]
+        python-version: [3.8, 3.9]
+        os: [macOS-latest]
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -42,13 +42,12 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache npm
-      uses: actions/cache@v2.1.6
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+    - name: Create keychain for CI use
+      run: |
+        security create-keychain -p foo chiachain
+        security default-keychain -s chiachain
+        security unlock-keychain -p foo chiachain
+        security set-keychain-settings -t 7200 -u chiachain
 
     - name: Get pip cache dir
       id: pip-cache
@@ -58,6 +57,7 @@ jobs:
     - name: Cache pip
       uses: actions/cache@v2.1.6
       with:
+        # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
         restore-keys: |
@@ -78,17 +78,12 @@ jobs:
         echo "$HOME/.chia"
         ls -al $HOME/.chia
 
-    - name: Install ubuntu dependencies
-      run: |
-        sudo apt-get install software-properties-common
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get update
-        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
-
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+        BUILD_VDF_CLIENT: "N"
       run: |
+        brew install boost
         sh install.sh -d
 
     - name: Install timelord
@@ -97,12 +92,10 @@ jobs:
         sh install-timelord.sh
         ./vdf_bench square_asm 400000
 
-    - name: Test wallet-cc_wallet code with pytest
+    - name: Test wallet-cat_wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet/cc_wallet/test_*.py -s -v --durations 0
-
-
+        ./venv/bin/py.test tests/wallet/cat_wallet/test_*.py -s -v --durations 0
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

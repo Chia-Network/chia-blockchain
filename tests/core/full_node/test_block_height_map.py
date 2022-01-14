@@ -115,7 +115,6 @@ async def setup_chain(
 
 class TestBlockHeightMap:
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_height_to_hash(self, tmp_dir, db_version):
 
         async with DBConnection(db_version) as db_wrapper:
@@ -132,7 +131,6 @@ class TestBlockHeightMap:
                 assert height_map.get_hash(height) == gen_block_hash(height)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_height_to_hash_long_chain(self, tmp_dir, db_version):
 
         async with DBConnection(db_version) as db_wrapper:
@@ -148,7 +146,6 @@ class TestBlockHeightMap:
                 assert height_map.get_hash(height) == gen_block_hash(height)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_save_restore(self, tmp_dir, db_version):
 
         async with DBConnection(db_version) as db_wrapper:
@@ -193,7 +190,6 @@ class TestBlockHeightMap:
                         height_map.get_ses(height)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_restore_extend(self, tmp_dir, db_version):
 
         # test the case where the cache has fewer blocks than the DB, and that
@@ -235,7 +231,6 @@ class TestBlockHeightMap:
                         height_map.get_ses(height)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_height_to_hash_with_orphans(self, tmp_dir, db_version):
 
         async with DBConnection(db_version) as db_wrapper:
@@ -252,7 +247,6 @@ class TestBlockHeightMap:
                 assert height_map.get_hash(height) == gen_block_hash(height)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_height_to_hash_update(self, tmp_dir, db_version):
 
         async with DBConnection(db_version) as db_wrapper:
@@ -275,7 +269,6 @@ class TestBlockHeightMap:
             assert height_map.get_hash(10) == gen_block_hash(100)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_update_ses(self, tmp_dir, db_version):
 
         async with DBConnection(db_version) as db_wrapper:
@@ -296,7 +289,6 @@ class TestBlockHeightMap:
             assert height_map.get_hash(10) == gen_block_hash(10)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_height_to_ses(self, tmp_dir, db_version):
 
         async with DBConnection(db_version) as db_wrapper:
@@ -324,7 +316,6 @@ class TestBlockHeightMap:
                 height_map.get_ses(9)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_rollback(self, tmp_dir, db_version):
 
         async with DBConnection(db_version) as db_wrapper:
@@ -355,7 +346,6 @@ class TestBlockHeightMap:
                 height_map.get_ses(8)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_rollback2(self, tmp_dir, db_version):
 
         async with DBConnection(db_version) as db_wrapper:

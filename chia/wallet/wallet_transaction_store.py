@@ -142,6 +142,17 @@ class WalletTransactionStore:
             if not in_transaction:
                 self.db_wrapper.lock.release()
 
+    async def delete_transaction_record(self, tx_id: bytes32) -> None:
+        if tx_id in self.tx_record_cache:
+            tx_record = self.tx_record_cache.pop(tx_id)
+            if tx_record.wallet_id in self.unconfirmed_for_wallet:
+                tx_cache = self.unconfirmed_for_wallet[tx_record.wallet_id]
+                if tx_id in tx_cache:
+                    tx_cache.pop(tx_id)
+
+        c = await self.db_connection.execute("DELETE FROM transaction_record WHERE bundle_id=?", (tx_id,))
+        await c.close()
+
     async def set_confirmed(self, tx_id: bytes32, height: uint32):
         """
         Updates transaction to be confirmed.
@@ -164,9 +175,10 @@ class WalletTransactionStore:
             removals=current.removals,
             wallet_id=current.wallet_id,
             sent_to=current.sent_to,
-            trade_id=None,
+            trade_id=current.trade_id,
             type=current.type,
             name=current.name,
+            memos=current.memos,
         )
         await self.add_transaction_record(tx, True)
 
@@ -217,6 +229,7 @@ class WalletTransactionStore:
             trade_id=None,
             type=current.type,
             name=current.name,
+            memos=current.memos,
         )
 
         await self.add_transaction_record(tx, False)
@@ -242,6 +255,7 @@ class WalletTransactionStore:
             trade_id=None,
             type=record.type,
             name=record.name,
+            memos=record.memos,
         )
         await self.add_transaction_record(tx, True)
 
@@ -427,6 +441,18 @@ class WalletTransactionStore:
         cursor = await self.db_connection.execute(
             "SELECT * from transaction_record WHERE confirmed_at_height>?", (height,)
         )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            record = TransactionRecord.from_bytes(row[0])
+            records.append(record)
+
+        return records
+
+    async def get_transactions_by_trade_id(self, trade_id: bytes32) -> List[TransactionRecord]:
+        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE trade_id=?", (trade_id,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []

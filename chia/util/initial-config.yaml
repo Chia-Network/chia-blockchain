@@ -67,12 +67,24 @@ network_overrides: &network_overrides
       MEMPOOL_BLOCK_BUFFER: 50
       EPOCH_BLOCKS: 768
       DIFFICULTY_STARTING: 30
+    testnet10:
+      AGG_SIG_ME_ADDITIONAL_DATA: ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2
+      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
+      DIFFICULTY_STARTING: 30
+      EPOCH_BLOCKS: 768
+      GENESIS_CHALLENGE: ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
+      MEMPOOL_BLOCK_BUFFER: 10
+      MIN_PLOT_SIZE: 18
+      NETWORK_TYPE: 1
   config:
     mainnet:
       address_prefix: "xch"
       default_full_node_port: 8444
     testnet0:
       address_prefix: "txch"
+      default_full_node_port: 58444
     testnet1:
       address_prefix: "txch"
     testnet2:
@@ -82,6 +94,9 @@ network_overrides: &network_overrides
     testnet4:
       address_prefix: "txch"
     testnet7:
+      address_prefix: "txch"
+      default_full_node_port: 58444
+    testnet10:
       address_prefix: "txch"
       default_full_node_port: 58444
 
@@ -300,15 +315,7 @@ full_node:
   #         kernel panics
   # "auto"  on/off is decided based on a heuristic of how likely a failure is on
   #         the particular system we're running on. Defaults to "full".
-  db_sync: auto
-
-  # when this is true, minor data base updates may be performed on startup.
-  # the database upgrades are minor, in that they typically remove unnevessary
-  # indices or re-build certain indices. The intention of these updates is to
-  # improve performance of the node at the expense of a one-time startup cost.
-  # also note that enabling this may prohibit down-grading the node to a
-  # previous version, or may trigger an index rebuild on startup on down-grades.
-  allow_database_upgrades: False
+  db_sync: "auto"
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v1_CHALLENGE.sqlite
@@ -332,6 +339,10 @@ full_node:
 
   # If node is more than these blocks behind, will do a short batch-sync, if it's less, will do a backtrack sync
   short_sync_blocks_behind_threshold: 20
+
+  # When creating process pools the process count will generally be the CPU count minus
+  # this reserved core count.
+  reserved_cores: 2
 
   # How often to initiate outbound connections to other full nodes.
   peer_connect_interval: 30
@@ -458,6 +469,10 @@ wallet:
   # wallet_peers_path is deprecated and has been replaced by wallet_peers_file_path
   wallet_peers_path: wallet/db/wallet_peers.sqlite
   wallet_peers_file_path: wallet/db/wallet_peers.dat
+
+  # When creating process pools the process count will generally be the CPU count minus
+  # this reserved core count.
+  reserved_cores: 2
 
   logging: *logging
   network_overrides: *network_overrides

@@ -67,4 +67,4 @@ async def setup_db(name: str, db_version: int) -> DBWrapper:
     await connection.execute("pragma journal_mode=wal")
     await connection.execute("pragma synchronous=full")
 
-    return DBWrapper(connection, False, db_version)
+    return DBWrapper(connection, db_version)

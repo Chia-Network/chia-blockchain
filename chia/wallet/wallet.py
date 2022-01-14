@@ -37,7 +37,7 @@ from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
@@ -127,7 +127,7 @@ class Wallet:
 
         for record in unconfirmed_tx:
             if not record.is_in_mempool():
-                self.log.warning(f"Record: {record} not in mempool")
+                self.log.warning(f"Record: {record} not in mempool, {record.sent_to}")
                 continue
             our_spend = False
             for coin in record.removals:
@@ -146,6 +146,9 @@ class Wallet:
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
+
+    async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
+        return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
 
     async def hack_populate_secret_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> G1Element:
         maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
@@ -195,10 +198,10 @@ class Wallet:
 
     def make_solution(
         self,
-        primaries: Optional[List[AmountWithPuzzlehash]] = None,
+        primaries: List[AmountWithPuzzlehash],
         min_time=0,
         me=None,
-        coin_announcements: Optional[Set[bytes32]] = None,
+        coin_announcements: Optional[Set[bytes]] = None,
         coin_announcements_to_assert: Optional[Set[bytes32]] = None,
         puzzle_announcements: Optional[Set[bytes32]] = None,
         puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
@@ -206,9 +209,15 @@ class Wallet:
     ) -> Program:
         assert fee >= 0
         condition_list = []
-        if primaries:
+        if len(primaries) > 0:
             for primary in primaries:
-                condition_list.append(make_create_coin_condition(primary["puzzlehash"], primary["amount"]))
+                if "memos" in primary:
+                    memos: Optional[List[bytes]] = primary["memos"]
+                    if memos is not None and len(memos) == 0:
+                        memos = None
+                else:
+                    memos = None
+                condition_list.append(make_create_coin_condition(primary["puzzlehash"], primary["amount"], memos))
         if min_time > 0:
             condition_list.append(make_assert_absolute_seconds_exceeds_condition(min_time))
         if me:
@@ -228,6 +237,11 @@ class Wallet:
             for announcement_hash in puzzle_announcements_to_assert:
                 condition_list.append(make_assert_puzzle_announcement(announcement_hash))
         return solution_for_conditions(condition_list)
+
+    def add_condition_to_solution(self, condition: Program, solution: Program) -> Program:
+        python_program = solution.as_python()
+        python_program[1].append(condition)
+        return Program.to(python_program)
 
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Set[Coin]:
         """
@@ -292,15 +306,17 @@ class Wallet:
         coins: Set[Coin] = None,
         primaries_input: Optional[List[AmountWithPuzzlehash]] = None,
         ignore_max_send_amount: bool = False,
-        announcements_to_consume: Set[Announcement] = None,
+        coin_announcements_to_consume: Set[Announcement] = None,
+        puzzle_announcements_to_consume: Set[Announcement] = None,
+        memos: Optional[List[bytes]] = None,
+        negative_change_allowed: bool = False,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
         Note: this must be called under a wallet state manager lock
         """
-        primaries: Optional[List[AmountWithPuzzlehash]]
         if primaries_input is None:
-            primaries = None
+            primaries: Optional[List[AmountWithPuzzlehash]] = None
             total_amount = amount + fee
         else:
             primaries = primaries_input.copy()
@@ -317,11 +333,23 @@ class Wallet:
         if coins is None:
             coins = await self.select_coins(total_amount)
         assert len(coins) > 0
-
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
+
         change = spend_value - total_amount
+        if negative_change_allowed:
+            change = max(0, change)
+
         assert change >= 0
+
+        if coin_announcements_to_consume is not None:
+            coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
+        else:
+            coin_announcements_bytes = None
+        if puzzle_announcements_to_consume is not None:
+            puzzle_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in puzzle_announcements_to_consume}
+        else:
+            puzzle_announcements_bytes = None
 
         spends: List[CoinSpend] = []
         primary_announcement_hash: Optional[bytes32] = None
@@ -331,39 +359,39 @@ class Wallet:
             all_primaries_list = [(p["puzzlehash"], p["amount"]) for p in primaries] + [(newpuzzlehash, amount)]
             if len(set(all_primaries_list)) != len(all_primaries_list):
                 raise ValueError("Cannot create two identical coins")
-
+        if memos is None:
+            memos = []
+        assert memos is not None
         for coin in coins:
-            self.log.info(f"coin from coins {coin}")
+            self.log.info(f"coin from coins: {coin.name()} {coin}")
             puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-
             # Only one coin creates outputs
             if primary_announcement_hash is None and origin_id in (None, coin.name()):
                 if primaries is None:
-                    primaries = [{"puzzlehash": newpuzzlehash, "amount": amount}]
+                    if amount > 0:
+                        primaries = [{"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos}]
+                    else:
+                        primaries = []
                 else:
-                    primaries.append({"puzzlehash": newpuzzlehash, "amount": amount})
+                    primaries.append({"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos})
                 if change > 0:
                     change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
-                    primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change)})
+                    primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change), "memos": []})
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
-                # TODO: address hint error and remove ignore
-                #       error: Argument "coin_announcements_to_assert" to "make_solution" of "Wallet" has incompatible
-                #       type "Optional[Set[Announcement]]"; expected "Optional[Set[bytes32]]"  [arg-type]
                 solution: Program = self.make_solution(
                     primaries=primaries,
                     fee=fee,
                     coin_announcements={message},
-                    coin_announcements_to_assert=announcements_to_consume,  # type: ignore[arg-type]
+                    coin_announcements_to_assert=coin_announcements_bytes,
+                    puzzle_announcements_to_assert=puzzle_announcements_bytes,
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to <set> has incompatible type "Optional[bytes32]"; expected "bytes32"
-                #       [arg-type]
-                solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})  # type: ignore[arg-type]  # noqa: E501
+                assert primary_announcement_hash is not None
+                solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash}, primaries=[])
 
             spends.append(
                 CoinSpend(
@@ -391,22 +419,33 @@ class Wallet:
         coins: Set[Coin] = None,
         primaries: Optional[List[AmountWithPuzzlehash]] = None,
         ignore_max_send_amount: bool = False,
-        announcements_to_consume: Set[bytes32] = None,
+        coin_announcements_to_consume: Set[Announcement] = None,
+        puzzle_announcements_to_consume: Set[Announcement] = None,
+        memos: Optional[List[bytes]] = None,
+        negative_change_allowed: bool = False,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
         Note: this must be called under a wallet state manager lock
+        The first output is (amount, puzzle_hash, memos), and the rest of the outputs are in primaries.
         """
         if primaries is None:
             non_change_amount = amount
         else:
             non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument 8 to "_generate_unsigned_transaction" of "Wallet" has incompatible type
-        #       "Optional[Set[bytes32]]"; expected "Optional[Set[Announcement]]"  [arg-type]
         transaction = await self._generate_unsigned_transaction(
-            amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send_amount, announcements_to_consume  # type: ignore[arg-type]  # noqa: E501
+            amount,
+            puzzle_hash,
+            fee,
+            origin_id,
+            coins,
+            primaries,
+            ignore_max_send_amount,
+            coin_announcements_to_consume,
+            puzzle_announcements_to_consume,
+            memos,
+            negative_change_allowed,
         )
         assert len(transaction) > 0
 
@@ -422,7 +461,13 @@ class Wallet:
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
         rem_list: List[Coin] = list(spend_bundle.removals())
-        assert sum(a.amount for a in add_list) + fee == sum(r.amount for r in rem_list)
+
+        output_amount = sum(a.amount for a in add_list) + fee
+        input_amount = sum(r.amount for r in rem_list)
+        if negative_change_allowed:
+            assert output_amount >= input_amount
+        else:
+            assert output_amount == input_amount
 
         return TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -440,11 +485,13 @@ class Wallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
+            memos=list(spend_bundle.get_memos().items()),
         )
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
         """Use this API to send transactions."""
         await self.wallet_state_manager.add_pending_transaction(tx)
+        await self.wallet_state_manager.wallet_node.update_ui()
 
     # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
     async def create_spend_bundle_relative_chia(self, chia_amount: int, exclude: List[Coin]) -> SpendBundle:
@@ -470,7 +517,9 @@ class Wallet:
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             if output_created is None:
                 newpuzhash = await self.get_new_puzzlehash()
-                primaries: List[AmountWithPuzzlehash] = [{"puzzlehash": newpuzhash, "amount": uint64(chia_amount)}]
+                primaries: List[AmountWithPuzzlehash] = [
+                    {"puzzlehash": newpuzhash, "amount": uint64(chia_amount), "memos": []}
+                ]
                 solution = self.make_solution(primaries=primaries)
                 output_created = coin
             list_of_solutions.append(CoinSpend(coin, puzzle, solution))
