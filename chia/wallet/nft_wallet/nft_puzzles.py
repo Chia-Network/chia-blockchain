@@ -30,6 +30,11 @@ def create_full_puzzle(singleton_id, current_owner_did, nft_transfer_program_has
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
 
 
+def create_transfer_puzzle(uri, percentage, backpayment_address):
+    ret = NFT_TRANSFER_PROGRAM.curry(Program.to([backpayment_address, percentage, uri]))
+    return ret
+
+
 def match_nft_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
     """
     Given a puzzle test if it's an NFT and, if it is, return the curried arguments

@@ -63,7 +63,7 @@ def test_transfer_no_backpayments():
             SINGLETON_STRUCT,
             did_one,
             nft_program.get_tree_hash(),  # below here is the solution
-            uint64(1),
+            Program.to(((0, 0), ((0, 1), (0, 0)))),  # truths
             did_one_innerpuz.get_tree_hash(),
             did_one_amount,
             did_one_parent,
@@ -133,7 +133,7 @@ def test_transfer_with_backpayments():
             did_one,
             nft_program.get_tree_hash(),
             # below here is the solution
-            uint64(1),
+            Program.to(((0, 0), ((0, 1), (0, 0)))),  # truths
             did_one_innerpuz.get_tree_hash(),
             did_one_amount,
             did_one_parent,
@@ -155,8 +155,8 @@ def test_transfer_with_backpayments():
     assert res.rest().first().rest().first().as_atom() == announcement_two.name()
     assert res.rest().rest().first().first().as_int() == 61
     assert res.rest().rest().first().rest().first().as_atom() == announcement_one.name()
-    assert res.rest().rest().rest().rest().rest().first().first().as_int() == 51
-    assert res.rest().rest().rest().rest().rest().first().rest().first().as_atom() == nft_creator_address
+    assert res.rest().rest().rest().rest().first().first().as_int() == 51
+    assert res.rest().rest().rest().rest().first().rest().first().as_atom() == nft_creator_address
 
 
 def test_announcne():
@@ -205,7 +205,7 @@ def test_announcne():
             SINGLETON_STRUCT,
             did_one,
             nft_program.get_tree_hash(),  # below here is the solution
-            uint64(1),
+            Program.to(((0, 0), ((0, 1), (0, 0)))),  # truths
             did_one_innerpuz.get_tree_hash(),
             did_one_amount,
             did_one_parent,
@@ -221,7 +221,7 @@ def test_announcne():
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
     ann = bytes("a", "utf-8")
     announcement_one = Announcement(did_one_coin.name(), ann)
-    assert res.rest().rest().first().first().as_int() == 61
-    assert res.rest().rest().first().rest().first().as_atom() == announcement_one.name()
-    assert res.rest().rest().rest().first().first().as_int() == 60
-    assert res.rest().rest().rest().first().rest().first().as_atom() == did_one
+    assert res.rest().first().first().as_int() == 61
+    assert res.rest().first().rest().first().as_atom() == announcement_one.name()
+    assert res.rest().rest().first().first().as_int() == 60
+    assert res.rest().rest().first().rest().first().as_atom() == did_one

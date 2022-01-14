@@ -123,3 +123,11 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_0.get_pending_change_balance, 0)
 
         nft_wallet = await NFTWallet.create_new_nft_wallet(wallet_node_0.wallet_state_manager, wallet_0, did_wallet_0.id())
+        tr = await nft_wallet.generate_new_nft("https://www.chia.net/img/branding/chia-logo.svg", 20, ph)
+
+        await wallet_0.push_transaction(tr)
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        

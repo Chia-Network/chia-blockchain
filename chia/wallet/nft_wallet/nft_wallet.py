@@ -36,6 +36,7 @@ class NFTCoinInfo(Streamable):
     coin: Coin
     lineage_proof: LineageProof
     transfer_program: Program
+    full_puzzle: Program
 
 
 @dataclass(frozen=True)
@@ -88,6 +89,26 @@ class NFTWallet:
         for node_id, node in full_nodes.copy().items():
             await self.wallet_state_manager.wallet_node.subscribe_to_phs([my_did], node)
         await self.wallet_state_manager.add_interested_puzzle_hash(my_did, self.wallet_id)
+        return self
+
+    @staticmethod
+    async def create(
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        wallet_info: WalletInfo,
+        name: str = None,
+    ):
+        self = NFTWallet()
+        self.log = logging.getLogger(name if name else __name__)
+        self.wallet_state_manager = wallet_state_manager
+        self.wallet_info = wallet_info
+        self.wallet_id = wallet_info.id
+        self.standard_wallet = wallet
+        self.wallet_info = wallet_info
+        self.nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
+        self.base_puzzle_program = None
+        self.base_inner_puzzle_hash = None
+        return self
 
     @classmethod
     def type(cls) -> uint8:
@@ -149,6 +170,7 @@ class NFTWallet:
                 coin_name,
                 LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount),
                 nft_transfer_program_hash,
+                puzzle
             )
             await self.wallet_state_manager.action_store.action_done(action_id)
         else:
@@ -179,13 +201,116 @@ class NFTWallet:
         return
 
     def puzzle_for_pk(self, pk):
-        # we don't use puzzle - this program is '(x pubkey)'
+        # we don't use this puzzle - '(x pubkey)'
+        # TODO: check we aren't bricking ourself if someone is stupid enough to actually send to this address
         return Program.to([8, pk])
+
+    async def mint_new_nft(self):
+
+        return
+
+    async def generate_new_nft(
+        self,
+        uri: str,
+        percentage: uint64,
+        backpayment_address: bytes32,
+        amount: int = 1
+    ) -> Optional[TransactionRecord]:
+        """
+        This must be called under the wallet state manager lock
+        """
+
+        coins = await self.standard_wallet.select_coins(amount)
+        if coins is None:
+            return None
+
+        origin = coins.copy().pop()
+        genesis_launcher_puz = nft_puzzles.LAUNCHER_PUZZLE
+        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), amount)
+
+        nft_transfer_program = nft_puzzles.create_transfer_puzzle(uri, percentage, backpayment_address)
+        nft_layer_puzzle = nft_puzzles.create_nft_layer_puzzle(launcher_coin.name(), self.nft_wallet_info.my_did, nft_transfer_program.get_tree_hash())
+
+        announcement_set: Set[Announcement] = set()
+        announcement_message = Program.to([nft_layer_puzzle.get_tree_hash(), amount, bytes(0x80)]).get_tree_hash()
+        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
+
+        tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+            amount, genesis_launcher_puz.get_tree_hash(), uint64(0), origin.name(), coins, None, False, announcement_set
+        )
+
+        nft_layer_puzhash = nft_layer_puzzle.get_tree_hash()
+        genesis_launcher_solution = Program.to([nft_layer_puzhash, amount, bytes(0x80)])
+
+        launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
+        launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+
+        eve_fullpuz = nft_puzzles.create_full_puzzle(
+            launcher_coin.name(),
+            self.nft_wallet_info.my_did,
+            nft_transfer_program.get_tree_hash()
+        )
+        eve_coin = Coin(launcher_coin.name(), eve_fullpuz.get_tree_hash(), amount)
+
+        if tx_record is None or tx_record.spend_bundle is None:
+            return None
+
+        # EVE SPEND BELOW
+        did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
+        # 1 is a coin announcement
+        messages = [(1, 'a')]
+        message_sb = await did_wallet.create_message_spend(messages)
+        if message_sb is None:
+            raise ValueError("Unable to created DID message spend.")
+        my_did_amount = message_sb.coin_solutions[0].coin.amount
+        my_did_parent = message_sb.coin_solutions[0].coin.parent_coin_info
+
+        innersol = Program.to([
+            did_wallet.did_info.current_inner.get_tree_hash(),
+            my_did_amount,
+            my_did_parent,
+            0
+        ])
+        fullsol = Program.to(
+            [
+                [launcher_coin.parent_coin_info, launcher_coin.amount],
+                eve_coin.amount,
+                innersol,
+            ]
+        )
+        list_of_coinspends = [CoinSpend(eve_coin, eve_fullpuz, fullsol)]
+        eve_spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
+        #eve_spend = await self.generate_eve_spend(eve_coin, , did_inner)
+        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend_bundle, launcher_sb, message_sb])
+        breakpoint()
+        nft_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=eve_fullpuz.get_tree_hash(),
+            amount=uint64(amount),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=full_spend,
+            additions=full_spend.additions(),
+            removals=full_spend.removals(),
+            wallet_id=self.wallet_info.id,
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=token_bytes(),
+            memos=[],
+        )
+        return nft_record
+
+    async def transfer_nft(self):
+
+        return
 
     async def save_info(self, nft_info: NFTWalletInfo, in_transaction):
         self.nft_wallet_info = nft_info
         current_info = self.wallet_info
-        data_str = bytes(nft_info).hex()
+        data_str = json.dumps(nft_info.to_json_dict())
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
