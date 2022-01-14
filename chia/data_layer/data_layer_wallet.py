@@ -15,12 +15,14 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_host_layer_puzzle,
     create_singleton_fullpuz,
     launch_solution_to_singleton_info,
+    match_dl_singleton,
 )
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.json_util import dict_to_json_str
@@ -34,6 +36,7 @@ from chia.wallet.transaction_record import ItemAndTransactionRecords
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
 
@@ -46,7 +49,8 @@ class SingletonRecord(Streamable):
     inner_puzzle_hash: bytes32
     confirmed: bool
     confirmed_at_height: uint32
-    lineage_proof: Optional[LineageProof]
+    lineage_proof: LineageProof
+    generation: uint32
 
 
 _T_DataLayerWallet = TypeVar("_T_DataLayerWallet", bound="DataLayerWallet")
@@ -146,9 +150,10 @@ class DataLayerWallet:
         launcher_id: bytes32,
         spend: Optional[CoinSpend] = None,
         height: Optional[uint32] = None,
+        in_transaction: bool = False,
     ) -> None:
         if spend is not None and spend.coin.name() == launcher_id:  # spend.coin.name() == launcher_id is a sanity check
-            await self.new_launcher_spend(spend, height)
+            await self.new_launcher_spend(spend, height, in_transaction)
         else:
             launcher_state: CoinState = await get_launcher_coin_state(launcher_id)
 
@@ -182,7 +187,12 @@ class DataLayerWallet:
             height=response.height,
         )
 
-    async def new_launcher_spend(self, launcher_spend: CoinSpend, height: Optional[uint32] = None) -> None:
+    async def new_launcher_spend(
+        self,
+        launcher_spend: CoinSpend,
+        height: Optional[uint32] = None,
+        in_transaction: bool = False,
+    ) -> None:
         launcher_id: bytes32 = launcher_spend.coin.name()
         if height is None:
             height = (await self.get_launcher_coin_state(launcher_id)).spent_height
@@ -214,9 +224,28 @@ class DataLayerWallet:
                         create_host_layer_puzzle(inner_puzhash, root).get_tree_hash(),
                         amount,
                     ),
-                )
+                    generation=0,
+                ),
+                in_transaction,
             )
-            await self.wallet_state_manager.add_interested_puzzle_hash(launcher_id, self.id())
+
+        await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin, in_transaction)
+        await self.wallet_state_manager.add_interested_puzzle_hash(launcher_id, self.id(), in_transaction)
+        await self.wallet_state_manager.coin_store.add_coin_record(
+            WalletCoinRecord(
+                new_singleton,
+                height,
+                uint32(0),
+                False,
+                False,
+                self.type(),
+                self.id(),
+            )
+        )
+
+    ################
+    # TRANSACTIONS #
+    ################
 
     async def generate_new_reporter(
         self,
@@ -294,43 +323,20 @@ class DataLayerWallet:
                 create_host_layer_puzzle(inner_puzzle.get_tree_hash(), initial_root).get_tree_hash(),
                 1,
             ),
+            generation=0,
         )
 
         await self.wallet_state_manager.dl_store.add_singleton_record(singleton_record, False)
-        await self.wallet_state_manager.add_interested_puzzle_hash(singleton_record.launcher_id, self.id())
+        await self.wallet_state_manager.add_interested_puzzle_hash(singleton_record.launcher_id, self.id(), False)
 
         return dl_record, std_record, launcher_coin.name()
-
-    async def get_spendable_singleton_records(self, launcher_id: bytes32) -> Tuple[SingletonRecord, SingletonRecord]:
-        # First, let's make sure this is a singleton that we track and that we can spend
-        singleton_record: Optional[SingletonRecord] = await self.get_latest_singleton(launcher_id)
-        if singleton_record is None:
-            raise ValueError(f"Singleton with launcher ID {launcher_id} is not tracked by DL Wallet")
-
-        # Next, let's verify we have all of the relevant coin information
-        if (
-            singleton_record.lineage_proof is None
-            or singleton_record.lineage_proof.parent_coin_info is None
-            or singleton_record.lineage_proof.amount is None
-        ):
-            raise ValueError(f"Singleton with launcher ID {launcher_id} has insufficient information to spend")
-
-        # Finally, let's get the parent record for its lineage proof
-        parent_singleton: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singleton_record(
-            singleton_record.lineage_proof.parent_coin_info
-        )
-        if parent_singleton is None or parent_singleton.lineage_proof is None:
-            raise ValueError(f"Have not found the parent of singleton with launcher ID {launcher_id}")
-
-        return singleton_record, parent_singleton
 
     async def create_update_state_spend(
         self,
         launcher_id: bytes32,
         root_hash: bytes32,
     ) -> TransactionRecord:
-
-        singleton_record, parent_singleton = await self.get_spendable_singleton_records(launcher_id)
+        singleton_record, parent_lineage = await self.get_spendable_singleton_info(launcher_id)
 
         inner_puzzle_derivation: Optional[
             DerivationRecord
@@ -356,16 +362,16 @@ class DataLayerWallet:
         # Make the solution to the current coin
         primaries: List[AmountWithPuzzlehash] = [
             {
-                "puzzlehash": new_db_layer_puzzle.get_tree_hash(),
+                "puzzlehash": next_db_layer_puzzle.get_tree_hash(),
                 "amount": singleton_record.lineage_proof.amount,
-                "memos": [launcher_id, root_hash, inner_puzzle_hash],
+                "memos": [launcher_id, root_hash, next_inner_puzzle.get_tree_hash()],
             }
         ]
         inner_sol: Program = self.standard_wallet.make_solution(primaries=primaries)
         db_layer_sol = Program.to([0, inner_sol, current_inner_puzzle])
         full_sol = Program.to(
             [
-                parent_singleton.lineage_proof.to_program(),
+                parent_lineage.to_program(),
                 singleton_record.lineage_proof.amount,
                 db_layer_sol,
             ]
@@ -373,7 +379,7 @@ class DataLayerWallet:
 
         # Create the spend
         current_coin = Coin(
-            singleton_record.lineage_proof.parent_coin_info,
+            singleton_record.lineage_proof.parent_name,
             current_full_puz.get_tree_hash(),
             singleton_record.lineage_proof.amount,
         )
@@ -408,6 +414,7 @@ class DataLayerWallet:
             ).name(),
             launcher_id=launcher_id,
             root=root_hash,
+            inner_puzzle_hash=next_inner_puzzle.get_tree_hash(),
             confirmed=False,
             confirmed_at_height=uint32(0),
             lineage_proof=LineageProof(
@@ -415,12 +422,13 @@ class DataLayerWallet:
                 next_inner_puzzle.get_tree_hash(),
                 singleton_record.lineage_proof.amount,
             ),
+            generation=uint32(singleton_record.generation + 1),
         )
-        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record)
+        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, False)
         return dl_record
 
     async def create_report_spend(self, launcher_id: bytes32) -> Tuple[TransactionRecord, Announcement]:
-        singleton_record, parent_singleton = await self.get_spendable_singleton_records(launcher_id)
+        singleton_record, parent_lineage = await self.get_spendable_singleton_info(launcher_id)
 
         # Create the puzzle
         current_full_puz = create_host_fullpuz(
@@ -441,7 +449,7 @@ class DataLayerWallet:
         )
         full_sol = Program.to(
             [
-                parent_singleton.lineage_proof.to_program(),
+                parent_lineage.to_program(),
                 singleton_record.lineage_proof.amount,
                 db_layer_sol,
             ]
@@ -449,7 +457,9 @@ class DataLayerWallet:
 
         # Create the spend
         current_coin = Coin(
-            parent_singleton.coin_id, current_full_puz.get_tree_hash(), singleton_record.lineage_proof.amount
+            singleton_record.lineage_proof.parent_name,
+            current_full_puz.get_tree_hash(),
+            singleton_record.lineage_proof.amount,
         )
         coin_spend = CoinSpend(
             current_coin,
@@ -493,9 +503,39 @@ class DataLayerWallet:
                 ).get_tree_hash(),
                 singleton_record.lineage_proof.amount,
             ),
+            generation=uint32(singleton_record.generation + 1),
         )
-        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record)
+        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, False)
         return dl_record, Announcement(current_full_puz.get_tree_hash(), singleton_record.root)
+
+    async def get_spendable_singleton_info(self, launcher_id: bytes32) -> Tuple[SingletonRecord, LineageProof]:
+        # First, let's make sure this is a singleton that we track and that we can spend
+        singleton_record: Optional[SingletonRecord] = await self.get_latest_singleton(launcher_id)
+        if singleton_record is None:
+            raise ValueError(f"Singleton with launcher ID {launcher_id} is not tracked by DL Wallet")
+
+        # Next, let's verify we have all of the relevant coin information
+        if singleton_record.lineage_proof.parent_name is None or singleton_record.lineage_proof.amount is None:
+            raise ValueError(f"Singleton with launcher ID {launcher_id} has insufficient information to spend")
+
+        # Finally, let's get the parent record for its lineage proof
+        parent_singleton: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singleton_record(
+            singleton_record.lineage_proof.parent_name
+        )
+        parent_lineage: LineageProof
+        if parent_singleton is None:
+            if singleton_record.lineage_proof.parent_name != launcher_id:
+                raise ValueError(f"Have not found the parent of singleton with launcher ID {launcher_id}")
+            else:
+                launcher_coin: Optional[Coin] = await self.wallet_state_manager.dl_store.get_launcher(launcher_id)
+                if launcher_coin is None:
+                    raise ValueError(f"DL Wallet does not have launcher info for id {launcher_id}")
+                else:
+                    parent_lineage = LineageProof(launcher_coin.parent_coin_info, None, launcher_coin.amount)
+        else:
+            parent_lineage = parent_singleton.lineage_proof
+
+        return singleton_record, parent_lineage
 
     async def get_info_for_offer_claim(
         self,
@@ -514,91 +554,114 @@ class DataLayerWallet:
         )
         return current_full_puz, singleton_record.inner_puzzle_hash, singleton_record.root
 
-    async def coin_added(self, coin: Coin, height: uint32):
-        """Notification from wallet state manager that coin has been received."""
-        self.log.info(f"DL wallet has been notified that {coin} was added")
+    # async def coin_added(self, coin: Coin, height: uint32):
+    #     """Notification from wallet state manager that coin has been received."""
+    #     self.log.info(f"DL wallet has been notified that {coin} was added")
+    #
+    #     existing_singleton_records: List[
+    #         SingletonRecord
+    #     ] = await self.wallet_state_manager.dl_store.get_all_singletons_for_launcher(coin.parent_coin_info)
+    #     if len(existing_singleton_records) > 0:
+    #         if len(existing_singleton_records) > 1:
+    #             self.log.warning(f"Unexpected singleton received for launcher id {coin.parent_coin_info}")
+    #             return
+    #         elif len(existing_singleton_records) == 1:
+    #             await self.wallet_state_manager.dl_store.set_confirmed(existing_singleton_records[0].coin_id, height)
+    #     else:
+    #         data: Dict[str, Any] = {
+    #             "data": {
+    #                 "action_data": {
+    #                     "api_name": "request_puzzle_solution",
+    #                     "height": height,
+    #                     "coin_name": coin.parent_coin_info,
+    #                     "received_coin": coin.name(),
+    #                 }
+    #             }
+    #         }
+    #
+    #         data_str = dict_to_json_str(data)
+    #         await self.wallet_state_manager.create_action(
+    #             name="request_puzzle_solution",
+    #             wallet_id=self.id(),
+    #             wallet_type=self.type(),
+    #             callback="puzzle_solution_received",
+    #             done=False,
+    #             data=data_str,
+    #             in_transaction=True,
+    #         )
 
-        existing_singleton_records: List[
-            SingletonRecord
-        ] = await self.wallet_state_manager.dl_store.get_all_singletons_for_launcher(coin.parent_coin_info)
-        if len(existing_singleton_records) > 0:
-            if len(existing_singleton_records) > 1:
-                self.log.warning(f"Unexpected singleton received for launcher id {coin.parent_coin_info}")
-                return
-            elif len(existing_singleton_records) == 1:
-                await self.wallet_state_manager.dl_store.set_confirmed(existing_singleton_records[0].coin_id, height)
-        else:
-            data: Dict[str, Any] = {
-                "data": {
-                    "action_data": {
-                        "api_name": "request_puzzle_solution",
-                        "height": height,
-                        "coin_name": coin.parent_coin_info,
-                        "received_coin": coin.name(),
-                    }
-                }
-            }
-
-            data_str = dict_to_json_str(data)
-            await self.wallet_state_manager.create_action(
-                name="request_puzzle_solution",
-                wallet_id=self.id(),
-                wallet_type=self.type(),
-                callback="puzzle_solution_received",
-                done=False,
-                data=data_str,
-                in_transaction=True,
-            )
-
-    async def puzzle_solution_received(self, response: PuzzleSolutionResponse, action_id: int) -> None:
-        coin_name = response.coin_name
-        puzzle: Program = response.puzzle
-        solution: Program = response.solution
+    async def singleton_removed(self, parent_spend: CoinSpend, height: uint32) -> None:
+        parent_name = parent_spend.coin.name()
+        puzzle: Program = parent_spend.puzzle_reveal.to_program()
+        solution: Program = parent_spend.solution.to_program()
 
         matched, curried_args = match_dl_singleton(puzzle)
         if matched:
             singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singleton_record(
-                coin_name
+                parent_name
             )
             if singleton_record is None:
-                self.log.warning(f"DL wallet received a coin it does not have parent for. Expected parent {coin_name}.")
+                self.log.warning(f"DL wallet received coin it does not have parent for. Expected parent {parent_name}.")
                 return
 
             # Information we need to create the singleton record
-            root: bytes32
-            inner_puzzle_hash: bytes32
             full_puzzle_hash: bytes32
             amount: uint64
+            hint: bytes32
+            root: bytes32
+            inner_puzzle_hash: bytes32
 
             conditions = puzzle.run(solution).as_python()
             found_singleton: bool = False
             for condition in conditions:
-                if condition[0] == ConditionOpcode.CREATE_COIN and condition[2] % 2 == 1:
+                if condition[0] == ConditionOpcode.CREATE_COIN and int.from_bytes(condition[2], "big") % 2 == 1:
                     try:
-                        root = bytes32(condition[3][1])
-                        inner_puzzle_hash = bytes32(condition[3][1])
                         full_puzzle_hash = bytes32(condition[1])
-                        amount = uint64(condition[2])
+                        amount = uint64(int.from_bytes(condition[2], "big"))
+                        hint = bytes32(condition[3][0])
+                        root = bytes32(condition[3][1])
+                        inner_puzzle_hash = bytes32(condition[3][2])
+
+                        found_singleton = True
                         break
                     except IndexError:
                         self.log.warning(
-                            f"Parent {coin_name} with launcher {singleton_record.launcher_id} "
+                            f"Parent {parent_name} with launcher {singleton_record.launcher_id} "
                             "did not hint its child properly"
                         )
                         return
 
-            await self.add_singleton_record(
+            if not found_singleton:
+                self.log.warning(f"Singleton with launcher ID {singleton_record.launcher_id} was melted")
+                return
+
+            new_singleton = Coin(parent_name, full_puzzle_hash, amount)
+            await self.wallet_state_manager.dl_store.add_singleton_record(
                 SingletonRecord(
-                    coin_id=Coin(coin_name, full_puzzle_hash, amount).name(),
+                    coin_id=new_singleton.name(),
                     launcher_id=singleton_record.launcher_id,
                     root=root,
+                    inner_puzzle_hash=inner_puzzle_hash,
                     confirmed=True,
-                    confirmed_at_height=uint32(response.height),
+                    confirmed_at_height=height,
                     lineage_proof=LineageProof(
-                        coin_name,
+                        parent_name,
                         create_host_layer_puzzle(inner_puzzle_hash, root).get_tree_hash(),
                         amount,
                     ),
+                    generation=uint32(singleton_record.generation + 1),
+                ),
+                True,
+            )
+            await self.wallet_state_manager.coin_store.add_coin_record(
+                WalletCoinRecord(
+                    new_singleton,
+                    height,
+                    uint32(0),
+                    False,
+                    False,
+                    self.type(),
+                    self.id(),
                 )
             )
 

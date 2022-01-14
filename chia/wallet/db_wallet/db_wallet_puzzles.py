@@ -59,11 +59,11 @@ def match_dl_singleton(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
     """
     mod, singleton_curried_args = puzzle.uncurry()
     if mod == SINGLETON_TOP_LAYER_MOD:
-        mod, dl_curried_args = singleton_curried_args.at("rf")
+        mod, dl_curried_args = singleton_curried_args.at("rf").uncurry()
         if mod == DB_HOST_MOD:
             launcher_id = singleton_curried_args.at("frf")
-            root = singleton_curried_args.at("rf")
-            innerpuz_hash = singleton_curried_args.at("rrf")
+            root = dl_curried_args.at("rf")
+            innerpuz_hash = dl_curried_args.at("rrf")
             return True, iter((innerpuz_hash, root, launcher_id))
 
     return False, iter(())
