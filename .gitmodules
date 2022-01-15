@@ -1,8 +1,0 @@
-[submodule "chinilla-blockchain-gui"]
-	path = chinilla-blockchain-gui
-	url = https://github.com/Chinilla/chinilla-blockchain-gui.git
-	branch = pools
-[submodule "mozilla-ca"]
-	path = mozilla-ca
-	url = https://github.com/Chinilla/mozilla-ca.git
-        branch = main
