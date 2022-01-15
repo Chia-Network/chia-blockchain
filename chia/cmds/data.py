@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Coroutine, Dict, Optional, TYPE_CHECKING, TypeVar
+from typing import Any, Coroutine, Dict, Optional, TypeVar
 
 import click
 from typing_extensions import Protocol
