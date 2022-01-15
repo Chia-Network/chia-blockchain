@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 from clvm_rs import STRICT_MODE as MEMPOOL_MODE
 
 from clvm.casts import int_from_bytes, int_to_bytes
@@ -125,7 +125,6 @@ def get_name_puzzle_conditions(
             return NPCResult(uint16(err), [], uint64(0))
 
         # Handling this awkward tuple awkwardly so mypy can tell what is going on.
-        from typing import TYPE_CHECKING
         if TYPE_CHECKING:
             assert result is not None
 
