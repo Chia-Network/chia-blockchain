@@ -50,7 +50,7 @@ dev_dependencies = [
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
     "types-aiofiles",
-    "types-click==0.1.12",
+    "types-click~=7.1",
     "types-cryptography",
     "types-pkg_resources",
     "types-pyyaml",
