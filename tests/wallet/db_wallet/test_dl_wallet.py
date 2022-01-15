@@ -188,7 +188,7 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_update(self, wallet_node: SimulatorsAndWallets, trusted: bool) -> None:
+    async def test_lifecycle(self, wallet_node: SimulatorsAndWallets, trusted: bool) -> None:
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -243,136 +243,32 @@ class TestDLWallet:
         await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
         await asyncio.sleep(0.5)
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
-    @pytest.mark.asyncio
-    async def test_update_coin(self, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
-        full_nodes, wallets = three_wallet_nodes
-        full_node_api = full_nodes[0]
-        full_node_server = full_node_api.server
-        wallet_node_0, server_0 = wallets[0]
-        wallet_node_1, server_1 = wallets[1]
-        wallet_node_2, server_2 = wallets[2]
-        assert wallet_node_0.wallet_state_manager is not None
-        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+        for _ in range(0, 2):
+            current_record = await dl_wallet.get_latest_singleton(launcher_id)
+            dl_tx, _ = await dl_wallet.create_report_spend(launcher_id)
+            new_record = await dl_wallet.get_latest_singleton(launcher_id)
+            assert new_record != current_record
+            assert not new_record.confirmed
 
-        if trusted:
-            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_1.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-        else:
-            wallet_node_0.config["trusted_peers"] = {}
-            wallet_node_1.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_tx)
+            await full_node_api.process_transaction_records(records=[dl_tx])
 
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+            await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
+            await asyncio.sleep(0.5)
 
-        funds = await full_node_api.farm_blocks(count=1, wallet=wallet_0)
+        previous_record = await dl_wallet.get_latest_singleton(launcher_id)
 
-        await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
-        await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+        new_root = MerkleTree([Program.to("new root").get_tree_hash()]).calculate_root()
+        dl_tx = await dl_wallet.create_update_state_spend(launcher_id, new_root)
+        new_record = await dl_wallet.get_latest_singleton(launcher_id)
+        assert new_record != previous_record
+        assert not new_record.confirmed
 
-        nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
-        current_tree = MerkleTree(nodes)
-        current_root = current_tree.calculate_root()
+        await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_tx)
+        await full_node_api.process_transaction_records(records=[dl_tx])
 
-        assert wallet_node_0.wallet_state_manager is not None
-        # Wallet1 sets up DLWallet1 without any backup set
-        async with wallet_node_0.wallet_state_manager.lock:
-            creation_record = await DataLayerWallet.create_new_dl_wallet(
-                wallet_node_0.wallet_state_manager, wallet_0, current_root
-            )
-
-        dl_wallet_0: DataLayerWallet = creation_record.item
-
-        await full_node_api.process_transaction_records(records=creation_record.transaction_records)
-
-        assert dl_wallet_0.dl_info.root_hash == current_root
-
-        nodes.append(Program.to("beep").get_tree_hash())
-        new_merkle_tree = MerkleTree(nodes)
-        transaction_record = await dl_wallet_0.create_update_state_spend(new_merkle_tree.calculate_root())
-        await full_node_api.process_transaction_records(records=[transaction_record])
-
-        assert dl_wallet_0.dl_info.root_hash == new_merkle_tree.calculate_root()
-        assert (
-            dl_wallet_0.tip_coin.puzzle_hash
-            == create_host_fullpuz(
-                dl_wallet_0.dl_info.current_inner_inner,
-                new_merkle_tree.calculate_root(),
-                dl_wallet_0.dl_info.origin_coin.name(),
-            ).get_tree_hash()
-        )
-        assert dl_wallet_0.get_history() == [current_root, new_merkle_tree.calculate_root()]
-
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
-    @pytest.mark.asyncio
-    async def test_announce_coin(self, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
-        full_nodes, wallets = three_wallet_nodes
-        full_node_api = full_nodes[0]
-        full_node_server = full_node_api.server
-        wallet_node_0, server_0 = wallets[0]
-        wallet_node_1, server_1 = wallets[1]
-        wallet_node_2, server_2 = wallets[2]
-        assert wallet_node_0.wallet_state_manager is not None
-        assert wallet_node_1.wallet_state_manager is not None
-        assert wallet_node_2.wallet_state_manager is not None
-        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-        wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
-
-        ph2 = await wallet_2.get_new_puzzlehash()
-
-        if trusted:
-            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_1.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-        else:
-            wallet_node_0.config["trusted_peers"] = {}
-            wallet_node_1.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
-
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-
-        funds = await full_node_api.farm_blocks(count=1, wallet=wallet_0)
-
-        await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
-        await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
-
-        nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
-        current_tree = MerkleTree(nodes)
-        current_root = current_tree.calculate_root()
-
-        # Wallet1 sets up DLWallet1 without any backup set
-        async with wallet_node_0.wallet_state_manager.lock:
-            creation_record = await DataLayerWallet.create_new_dl_wallet(
-                wallet_node_0.wallet_state_manager, wallet_0, current_root
-            )
-
-        dl_wallet_0: DataLayerWallet = creation_record.item
-
-        await full_node_api.process_transaction_records(records=creation_record.transaction_records)
-
-        await full_node_api.farm_blocks(count=1, wallet=wallet_1)
-
-        sb, ann = await dl_wallet_0.create_report_spend()
-        tr = await wallet_1.generate_signed_transaction(uint64(200), ph2, puzzle_announcements_to_consume={ann})
-        agg_sb = SpendBundle.aggregate([tr.spend_bundle, sb])
-        new_tr = dataclasses.replace(tr, spend_bundle=agg_sb)
-        await wallet_1.push_transaction(new_tr)
-        await full_node_api.process_transaction_records(records=[new_tr])
-
-        await time_out_assert(15, wallet_2.get_confirmed_balance, 200)
-        await time_out_assert(15, wallet_2.get_unconfirmed_balance, 200)
+        await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
+        await asyncio.sleep(0.5)
 
     @pytest.mark.parametrize(
         "trusted",
