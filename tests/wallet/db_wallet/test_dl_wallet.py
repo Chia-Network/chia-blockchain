@@ -163,7 +163,7 @@ class TestDLWallet:
         await time_out_assert(15, dl_wallet_0.get_unconfirmed_balance, 101)
         sb = await dl_wallet_0.create_report_spend()
         ann = Announcement(sb.coin_spends[0].coin.puzzle_hash, current_root)
-        announcements = {ann.name()}
+        announcements = {ann}
         tr = await wallet_1.generate_signed_transaction(uint64(200), ph2, puzzle_announcements_to_consume=announcements)
         sb = SpendBundle.aggregate([tr.spend_bundle, sb])
         tr = TransactionRecord(
@@ -177,6 +177,7 @@ class TestDLWallet:
             spend_bundle=sb,
             additions=sb.additions(),
             removals=sb.removals(),
+            memos=list(sb.get_memos().items()),
             wallet_id=dl_wallet_0.id(),
             sent_to=[],
             trade_id=None,
@@ -292,6 +293,7 @@ class TestDLWallet:
             spend_bundle=sb,
             additions=sb.additions(),
             removals=sb.removals(),
+            memos=list(sb.get_memos().items()),
             wallet_id=dl_wallet_0.id(),
             sent_to=[],
             trade_id=None,

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Generic, List, Optional, Tuple, TypeVar
+from typing import Generic, List, Optional, Tuple, TypeVar, Dict
 
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.types.blockchain_format.coin import Coin

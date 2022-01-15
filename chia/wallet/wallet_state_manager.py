@@ -351,23 +351,24 @@ class WalletStateManager:
             if unused is None:
                 # This handles the case where the database is empty
                 unused = uint32(0)
-        for index in range(unused, last):
-            # Since DID are not released yet we can assume they are only using unhardened keys derivation
-            pubkey: G1Element = self.get_public_key_unhardened(uint32(index))
-            puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
-            puzzlehash: bytes32 = puzzle.get_tree_hash()
-            self.log.info(f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}")
-            derivation_paths.append(
-                DerivationRecord(
-                    uint32(index),
-                    puzzlehash,
-                    pubkey,
-                    target_wallet.wallet_info.type,
-                    uint32(target_wallet.wallet_info.id),
-                    False,
+        if last is not None:
+            for index in range(unused, last):
+                # Since DID are not released yet we can assume they are only using unhardened keys derivation
+                pubkey: G1Element = self.get_public_key_unhardened(uint32(index))
+                puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
+                puzzlehash: bytes32 = puzzle.get_tree_hash()
+                self.log.info(f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}")
+                derivation_paths.append(
+                    DerivationRecord(
+                        uint32(index),
+                        puzzlehash,
+                        pubkey,
+                        target_wallet.wallet_info.type,
+                        uint32(target_wallet.wallet_info.id),
+                        False,
+                    )
                 )
-            )
-        await self.puzzle_store.add_derivation_paths(derivation_paths)
+            await self.puzzle_store.add_derivation_paths(derivation_paths)
 
     async def get_unused_derivation_record(
         self, wallet_id: uint32, in_transaction=False, hardened=False

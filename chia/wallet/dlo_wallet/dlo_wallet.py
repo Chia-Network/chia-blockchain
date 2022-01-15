@@ -215,6 +215,7 @@ class DLOWallet:
             spend_bundle=sb,
             additions=list(sb.additions()),
             removals=list(sb.removals()),
+            memos=list(sb.get_memos().items()),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
