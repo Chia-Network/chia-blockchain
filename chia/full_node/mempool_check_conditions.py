@@ -8,10 +8,10 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.generator import create_generator_args, setup_generator_args
 from chia.types.blockchain_format.program import NIL
 from chia.types.coin_record import CoinRecord
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
 from chia.types.name_puzzle_condition import NPC
-from chia.util.condition_tools import ConditionOpcode
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint16
 from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
@@ -118,11 +118,15 @@ def get_name_puzzle_conditions(
 
     flags = MEMPOOL_MODE if mempool_mode else 0
     try:
-        err, result = GENERATOR_MOD.run_as_generator(max_cost, flags, block_program, block_program_args)
+        err_result = GENERATOR_MOD.run_as_generator(max_cost, flags, block_program, block_program_args)
+        # Handling this awkward tuple awkwardly so mypy can tell what is going on.
 
-        if err is not None:
+        if err_result[0] is not None:
+            err, _ = err_result
             assert err != 0
             return NPCResult(uint16(err), [], uint64(0))
+
+        _, result = err_result
 
         condition_cost = 0
         first = True

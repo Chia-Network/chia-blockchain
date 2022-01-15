@@ -1,5 +1,5 @@
 import io
-from typing import List, Set, Tuple, Optional, Any
+from typing import List, Set, Tuple, Union, Any
 
 from clvm import SExp
 from clvm import run_program as default_run_program
@@ -246,7 +246,7 @@ class SerializedProgram:
 
     # returns an optional error code and an optional PySpendBundleConditions (from clvm_rs)
     # exactly one of those will hold a value
-    def run_as_generator(self, max_cost: int, flags: int, *args) -> Tuple[Optional[uint16], Optional[Any]]:
+    def run_as_generator(self, max_cost: int, flags: int, *args) -> Union[Tuple[None, Any], Tuple[uint16, None]]:
         serialized_args = b""
         if len(args) > 1:
             # when we have more than one argument, serialize them into a list
