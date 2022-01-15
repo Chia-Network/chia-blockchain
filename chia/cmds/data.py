@@ -1,12 +1,16 @@
 import json
 import logging
-from typing import Any, Coroutine, Dict, Optional, TYPE_CHECKING
+from typing import Any, Coroutine, Dict, Optional, TYPE_CHECKING, TypeVar
 
 import click
+from typing_extensions import Protocol
 
 
-if TYPE_CHECKING:
-    from _typeshed import IdentityFunction
+_T = TypeVar("_T")
+
+
+class IdentityFunction(Protocol):
+    def __call__(self, __x: _T) -> _T: ...
 
 
 logger = logging.getLogger(__name__)
@@ -34,7 +38,7 @@ def data_cmd() -> None:
 #       malformed inputs.
 
 
-def create_changelist_option() -> "IdentityFunction":
+def create_changelist_option() -> IdentityFunction:
     return click.option(
         "-d",
         "--changelist",
@@ -45,7 +49,7 @@ def create_changelist_option() -> "IdentityFunction":
     )
 
 
-def create_key_option() -> "IdentityFunction":
+def create_key_option() -> IdentityFunction:
     return click.option(
         "-h",
         "--key",
@@ -56,7 +60,7 @@ def create_key_option() -> "IdentityFunction":
     )
 
 
-def create_kv_store_id_option() -> "IdentityFunction":
+def create_kv_store_id_option() -> IdentityFunction:
     return click.option(
         "-store",
         "-id",
@@ -66,7 +70,7 @@ def create_kv_store_id_option() -> "IdentityFunction":
     )
 
 
-def create_kv_store_name_option() -> "IdentityFunction":
+def create_kv_store_name_option() -> IdentityFunction:
     return click.option(
         "-n",
         "--table_name",
@@ -77,7 +81,7 @@ def create_kv_store_name_option() -> "IdentityFunction":
     )
 
 
-def create_rpc_port_option() -> "IdentityFunction":
+def create_rpc_port_option() -> IdentityFunction:
     return click.option(
         "-dp",
         "--data-rpc-port",
