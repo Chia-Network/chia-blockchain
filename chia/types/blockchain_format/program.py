@@ -1,17 +1,18 @@
 import io
 from typing import List, Set, Tuple, Optional, Any
 
-from clvm import KEYWORD_FROM_ATOM, KEYWORD_TO_ATOM, SExp
+from clvm import SExp
 from clvm import run_program as default_run_program
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
-from clvm.operators import OP_REWRITE, OPERATOR_LOOKUP
+from clvm.operators import OPERATOR_LOOKUP
 from clvm.serialize import sexp_from_stream, sexp_to_stream
-from clvm_rs import STRICT_MODE as MEMPOOL_MODE, deserialize_and_run_program2, serialized_length, run_generator
+from clvm_rs import STRICT_MODE as MEMPOOL_MODE, run_chia_program, serialized_length, run_generator2
 from clvm_tools.curry import curry, uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
+from chia.util.ints import uint16
 from chia.util.byte_types import hexstr_to_bytes
 
 from .tree_hash import sha256_treehash
@@ -243,7 +244,9 @@ class SerializedProgram:
     def run_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
         return self._run(max_cost, 0, *args)
 
-    def run_as_generator(self, max_cost: int, flags: int, *args) -> Tuple[Optional[int], List[Any], int]:
+    # returns an optional error code and an optional PySpendBundleConditions (from clvm_rs)
+    # exactly one of those will hold a value
+    def run_as_generator(self, max_cost: int, flags: int, *args) -> Tuple[Optional[uint16], Optional[Any]]:
         serialized_args = b""
         if len(args) > 1:
             # when we have more than one argument, serialize them into a list
@@ -254,19 +257,12 @@ class SerializedProgram:
         else:
             serialized_args += _serialize(args[0])
 
-        native_opcode_names_by_opcode = dict(
-            ("op_%s" % OP_REWRITE.get(k, k), op) for op, k in KEYWORD_FROM_ATOM.items() if k not in "qa."
-        )
-        err, npc_list, cost = run_generator(
+        return run_generator2(
             self._buf,
             serialized_args,
-            KEYWORD_TO_ATOM["q"][0],
-            KEYWORD_TO_ATOM["a"][0],
-            native_opcode_names_by_opcode,
             max_cost,
             flags,
         )
-        return None if err == 0 else err, npc_list, cost
 
     def _run(self, max_cost: int, flags, *args) -> Tuple[int, Program]:
         # when multiple arguments are passed, concatenate them into a serialized
@@ -283,16 +279,9 @@ class SerializedProgram:
         else:
             serialized_args += _serialize(args[0])
 
-        # TODO: move this ugly magic into `clvm` "dialects"
-        native_opcode_names_by_opcode = dict(
-            ("op_%s" % OP_REWRITE.get(k, k), op) for op, k in KEYWORD_FROM_ATOM.items() if k not in "qa."
-        )
-        cost, ret = deserialize_and_run_program2(
+        cost, ret = run_chia_program(
             self._buf,
             serialized_args,
-            KEYWORD_TO_ATOM["q"][0],
-            KEYWORD_TO_ATOM["a"][0],
-            native_opcode_names_by_opcode,
             max_cost,
             flags,
         )

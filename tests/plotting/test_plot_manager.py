@@ -1,9 +1,11 @@
 import logging
+import time
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
-from typing import Callable, List, Optional
+from typing import Callable, Iterator, List, Optional
 import pytest
+from blspy import G1Element
 
 from dataclasses import dataclass
 from chia.plotting.util import (
@@ -19,6 +21,7 @@ from chia.util.config import create_default_chia_config
 from chia.util.path import mkdir
 from chia.plotting.manager import PlotManager
 from tests.block_tools import get_plot_dir
+from tests.plotting.util import get_test_plots
 from tests.setup_nodes import bt
 from tests.time_out_assert import time_out_assert
 
@@ -76,6 +79,11 @@ class PlotRefreshTester:
 
     def __init__(self, root_path: Path):
         self.plot_manager = PlotManager(root_path, self.refresh_callback)
+        # Set a very high refresh interval here to avoid unintentional refresh cycles
+        self.plot_manager.refresh_parameter.interval_seconds = 10000
+        # Set to the current time to avoid automated refresh after we start below.
+        self.plot_manager.last_refresh_time = time.time()
+        self.plot_manager.start_refreshing()
 
     def refresh_callback(self, event: PlotRefreshEvents, refresh_result: PlotRefreshResult):
         if event != PlotRefreshEvents.done:
@@ -108,14 +116,15 @@ class PlotRefreshTester:
                         log.error(f"{name} invalid: actual {actual_value} expected {expected_value}")
                         return
 
-                self.expected_result_matched = True
             except AttributeError as error:
                 log.error(f"{error}")
+                return
+
+        self.expected_result_matched = True
 
     async def run(self, expected_result: PlotRefreshResult):
         self.expected_result = expected_result
         self.expected_result_matched = False
-        self.plot_manager.start_refreshing()
         self.plot_manager.trigger_refresh()
         await time_out_assert(5, self.plot_manager.needs_refresh, value=False)
         assert self.expected_result_matched
@@ -130,10 +139,10 @@ class TestEnvironment:
 
 
 @pytest.fixture(scope="function")
-def test_environment(tmp_path) -> TestEnvironment:
+def test_environment(tmp_path) -> Iterator[TestEnvironment]:
     dir_1_count: int = 7
     dir_2_count: int = 3
-    plots: List[Path] = list(sorted(get_plot_dir().glob("*.plot")))
+    plots: List[Path] = get_test_plots()
     assert len(plots) >= dir_1_count + dir_2_count
 
     dir_1: TestDirectory = TestDirectory(tmp_path / "plots" / "1", plots[0:dir_1_count])
@@ -143,7 +152,9 @@ def test_environment(tmp_path) -> TestEnvironment:
     refresh_tester = PlotRefreshTester(tmp_path)
     refresh_tester.plot_manager.set_public_keys(bt.plot_manager.farmer_public_keys, bt.plot_manager.pool_public_keys)
 
-    return TestEnvironment(tmp_path, refresh_tester, dir_1, dir_2)
+    yield TestEnvironment(tmp_path, refresh_tester, dir_1, dir_2)
+
+    refresh_tester.plot_manager.stop_refreshing()
 
 
 # Wrap `remove_plot` to give it the same interface as the other triggers, e.g. `add_plot_directory(Path, str)`.
@@ -345,7 +356,6 @@ async def test_plot_refreshing(test_environment):
         expected_directories=0,
         expect_total_plots=0,
     )
-    env.refresh_tester.plot_manager.stop_refreshing()
 
 
 @pytest.mark.asyncio
@@ -369,6 +379,20 @@ async def test_invalid_plots(test_environment):
     await env.refresh_tester.run(expected_result)
     assert len(env.refresh_tester.plot_manager.failed_to_open_filenames) == 1
     assert retry_test_plot in env.refresh_tester.plot_manager.failed_to_open_filenames
+    # Give it a non .plot ending and make sure it gets removed from the invalid list on the next refresh
+    retry_test_plot_unload = Path(env.dir_1.path / ".unload").resolve()
+    move(retry_test_plot, retry_test_plot_unload)
+    expected_result.processed -= 1
+    expected_result.loaded = []
+    await env.refresh_tester.run(expected_result)
+    assert len(env.refresh_tester.plot_manager.failed_to_open_filenames) == 0
+    assert retry_test_plot not in env.refresh_tester.plot_manager.failed_to_open_filenames
+    # Recover the name and make sure it reappears in the invalid list
+    move(retry_test_plot_unload, retry_test_plot)
+    expected_result.processed += 1
+    await env.refresh_tester.run(expected_result)
+    assert len(env.refresh_tester.plot_manager.failed_to_open_filenames) == 1
+    assert retry_test_plot in env.refresh_tester.plot_manager.failed_to_open_filenames
     # Make sure the file stays in `failed_to_open_filenames` and doesn't get loaded in the next refresh cycle
     expected_result.loaded = []
     expected_result.processed = len(env.dir_1)
@@ -383,7 +407,44 @@ async def test_invalid_plots(test_environment):
     await env.refresh_tester.run(expected_result)
     assert len(env.refresh_tester.plot_manager.failed_to_open_filenames) == 0
     assert retry_test_plot not in env.refresh_tester.plot_manager.failed_to_open_filenames
-    env.refresh_tester.plot_manager.stop_refreshing()
+
+
+@pytest.mark.asyncio
+async def test_keys_missing(test_environment: TestEnvironment) -> None:
+    env: TestEnvironment = test_environment
+    not_in_keychain_plots: List[Path] = get_test_plots("not_in_keychain")
+    dir_not_in_keychain: TestDirectory = TestDirectory(
+        env.root_path / "plots" / "not_in_keychain", not_in_keychain_plots
+    )
+    expected_result = PlotRefreshResult()
+    # The plots in "not_in_keychain" directory have infinity g1 elements as farmer/pool key so they should be plots
+    # with missing keys for now
+    add_plot_directory(env.root_path, str(dir_not_in_keychain.path))
+    expected_result.loaded = []
+    expected_result.removed = []
+    expected_result.processed = len(dir_not_in_keychain)
+    expected_result.remaining = 0
+    for i in range(2):
+        await env.refresh_tester.run(expected_result)
+        assert len(env.refresh_tester.plot_manager.no_key_filenames) == len(dir_not_in_keychain)
+        for path in env.refresh_tester.plot_manager.no_key_filenames:
+            assert path in dir_not_in_keychain.plots
+    # Delete one of the plots and make sure it gets dropped from the no key filenames list
+    drop_plot = dir_not_in_keychain.path_list()[0]
+    dir_not_in_keychain.drop(drop_plot)
+    drop_plot.unlink()
+    assert drop_plot in env.refresh_tester.plot_manager.no_key_filenames
+    expected_result.processed -= 1
+    await env.refresh_tester.run(expected_result)
+    assert drop_plot not in env.refresh_tester.plot_manager.no_key_filenames
+    # Now add the missing keys to the plot manager's key lists and make sure the plots are getting loaded
+    env.refresh_tester.plot_manager.farmer_public_keys.append(G1Element())
+    env.refresh_tester.plot_manager.pool_public_keys.append(G1Element())
+    expected_result.loaded = dir_not_in_keychain.plot_info_list()  # type: ignore[assignment]
+    expected_result.processed = len(dir_not_in_keychain)
+    await env.refresh_tester.run(expected_result)
+    # And make sure they are dropped from the list of plots with missing keys
+    assert len(env.refresh_tester.plot_manager.no_key_filenames) == 0
 
 
 @pytest.mark.asyncio
@@ -461,14 +522,14 @@ async def test_callback_event_raises(test_environment, event_to_raise: PlotRefre
     expected_result = PlotRefreshResult()
     # Load dir_1
     add_plot_directory(env.root_path, str(env.dir_1.path))
-    expected_result.loaded = env.dir_1.plot_info_list()
+    expected_result.loaded = env.dir_1.plot_info_list()  # type: ignore[assignment]
     expected_result.removed = []
     expected_result.processed = len(env.dir_1)
     expected_result.remaining = 0
     await env.refresh_tester.run(expected_result)
     # Load dir_2
     add_plot_directory(env.root_path, str(env.dir_2.path))
-    expected_result.loaded = env.dir_2.plot_info_list()
+    expected_result.loaded = env.dir_2.plot_info_list()  # type: ignore[assignment]
     expected_result.removed = []
     expected_result.processed = len(env.dir_1) + len(env.dir_2)
     expected_result.remaining = 0
@@ -488,9 +549,8 @@ async def test_callback_event_raises(test_environment, event_to_raise: PlotRefre
     assert len(env.refresh_tester.plot_manager.no_key_filenames) == 0
     # The next run without the valid callback should lead to re-loading of all plot
     env.refresh_tester.plot_manager.set_refresh_callback(default_callback)
-    expected_result.loaded = env.dir_1.plot_info_list() + env.dir_2.plot_info_list()
+    expected_result.loaded = env.dir_1.plot_info_list() + env.dir_2.plot_info_list()  # type: ignore[assignment]
     expected_result.removed = []
     expected_result.processed = len(env.dir_1) + len(env.dir_2)
     expected_result.remaining = 0
     await env.refresh_tester.run(expected_result)
-    env.refresh_tester.plot_manager.stop_refreshing()
