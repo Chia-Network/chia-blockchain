@@ -206,7 +206,7 @@ class TestRpc:
                 master_sk_to_wallet_sk(bt.pool_master_sk, uint32(472)).get_g1()
             )
 
-            await client.set_reward_targets(encode_puzzle_hash(new_ph, "xch"), encode_puzzle_hash(new_ph_2, "xch"))
+            await client.set_reward_targets(encode_puzzle_hash(new_ph, "xchi"), encode_puzzle_hash(new_ph_2, "xchi"))
             targets_3 = await client.get_reward_targets(True)
             assert decode_puzzle_hash(targets_3["farmer_target"]) == new_ph
             assert decode_puzzle_hash(targets_3["pool_target"]) == new_ph_2
@@ -215,7 +215,7 @@ class TestRpc:
             new_ph_3: bytes32 = create_puzzlehash_for_pk(
                 master_sk_to_wallet_sk(bt.pool_master_sk, uint32(1888)).get_g1()
             )
-            await client.set_reward_targets(None, encode_puzzle_hash(new_ph_3, "xch"))
+            await client.set_reward_targets(None, encode_puzzle_hash(new_ph_3, "xchi"))
             targets_4 = await client.get_reward_targets(True)
             assert decode_puzzle_hash(targets_4["farmer_target"]) == new_ph
             assert decode_puzzle_hash(targets_4["pool_target"]) == new_ph_3
@@ -223,10 +223,10 @@ class TestRpc:
 
             root_path = farmer_api.farmer._root_path
             config = load_config(root_path, "config.yaml")
-            assert config["farmer"]["xch_target_address"] == encode_puzzle_hash(new_ph, "xch")
-            assert config["pool"]["xch_target_address"] == encode_puzzle_hash(new_ph_3, "xch")
+            assert config["farmer"]["xchi_target_address"] == encode_puzzle_hash(new_ph, "xchi")
+            assert config["pool"]["xchi_target_address"] == encode_puzzle_hash(new_ph_3, "xchi")
 
-            new_ph_3_encoded = encode_puzzle_hash(new_ph_3, "xch")
+            new_ph_3_encoded = encode_puzzle_hash(new_ph_3, "xchi")
             added_char = new_ph_3_encoded + "a"
             with pytest.raises(ValueError):
                 await client.set_reward_targets(None, added_char)

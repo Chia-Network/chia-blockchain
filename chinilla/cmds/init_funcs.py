@@ -72,8 +72,8 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
     config: Dict = load_config(new_root, "config.yaml")
     pool_child_pubkeys = [master_sk_to_pool_sk(sk).get_g1() for sk, _ in all_sks]
     all_targets = []
-    stop_searching_for_farmer = "xch_target_address" not in config["farmer"]
-    stop_searching_for_pool = "xch_target_address" not in config["pool"]
+    stop_searching_for_farmer = "xchi_target_address" not in config["farmer"]
+    stop_searching_for_pool = "xchi_target_address" not in config["pool"]
     number_of_ph_to_search = 500
     selected = config["selected_network"]
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
@@ -84,41 +84,41 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
             all_targets.append(
                 encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()), prefix)
             )
-            if all_targets[-1] == config["farmer"].get("xch_target_address"):
+            if all_targets[-1] == config["farmer"].get("xchi_target_address"):
                 stop_searching_for_farmer = True
-            if all_targets[-1] == config["pool"].get("xch_target_address"):
+            if all_targets[-1] == config["pool"].get("xchi_target_address"):
                 stop_searching_for_pool = True
 
     # Set the destinations, if necessary
     updated_target: bool = False
-    if "xch_target_address" not in config["farmer"]:
+    if "xchi_target_address" not in config["farmer"]:
         print(
-            f"Setting the xch destination for the farmer reward (1/8 plus fees, solo and pooling) to {all_targets[0]}"
+            f"Setting the xchi destination for the farmer reward (1/8 plus fees, solo and pooling) to {all_targets[0]}"
         )
-        config["farmer"]["xch_target_address"] = all_targets[0]
+        config["farmer"]["xchi_target_address"] = all_targets[0]
         updated_target = True
-    elif config["farmer"]["xch_target_address"] not in all_targets:
+    elif config["farmer"]["xchi_target_address"] not in all_targets:
         print(
             f"WARNING: using a farmer address which we don't have the private"
             f" keys for. We searched the first {number_of_ph_to_search} addresses. Consider overriding "
-            f"{config['farmer']['xch_target_address']} with {all_targets[0]}"
+            f"{config['farmer']['xchi_target_address']} with {all_targets[0]}"
         )
 
     if "pool" not in config:
         config["pool"] = {}
-    if "xch_target_address" not in config["pool"]:
-        print(f"Setting the xch destination address for pool reward (7/8 for solo only) to {all_targets[0]}")
-        config["pool"]["xch_target_address"] = all_targets[0]
+    if "xchi_target_address" not in config["pool"]:
+        print(f"Setting the xchi destination address for pool reward (7/8 for solo only) to {all_targets[0]}")
+        config["pool"]["xchi_target_address"] = all_targets[0]
         updated_target = True
-    elif config["pool"]["xch_target_address"] not in all_targets:
+    elif config["pool"]["xchi_target_address"] not in all_targets:
         print(
             f"WARNING: using a pool address which we don't have the private"
             f" keys for. We searched the first {number_of_ph_to_search} addresses. Consider overriding "
-            f"{config['pool']['xch_target_address']} with {all_targets[0]}"
+            f"{config['pool']['xchi_target_address']} with {all_targets[0]}"
         )
     if updated_target:
         print(
-            f"To change the XCH destination addresses, edit the `xch_target_address` entries in"
+            f"To change the XCHI destination addresses, edit the `xchi_target_address` entries in"
             f" {(new_root / 'config' / 'config.yaml').absolute()}."
         )
 

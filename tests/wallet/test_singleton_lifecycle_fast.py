@@ -120,7 +120,7 @@ def solve_anyone_can_spend_with_padding(
 def solve_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict) -> Program:
     """
     `lineage_proof`: a `Program` that proves the parent is also a singleton (or the launcher).
-    `coin_amount`: a necessarily-odd value of mojos in this coin.
+    `coin_amount`: a necessarily-odd value of chins in this coin.
     """
     singleton_struct, inner_puzzle = args
     inner_solution = solver.solve(puzzle_db, inner_puzzle, **kwargs)

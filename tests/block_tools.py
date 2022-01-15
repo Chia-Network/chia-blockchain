@@ -284,7 +284,7 @@ class BlockTools:
                 if pool_contract_puzzle_hash is None:
                     pool_pk = self.pool_pk
                 else:
-                    pool_address = encode_puzzle_hash(pool_contract_puzzle_hash, "xch")
+                    pool_address = encode_puzzle_hash(pool_contract_puzzle_hash, "xchi")
 
                 plot_keys = PlotKeys(self.farmer_pk, pool_pk, pool_address)
             # No datetime in the filename, to get deterministic filenames and not re-plot

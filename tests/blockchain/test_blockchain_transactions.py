@@ -978,9 +978,9 @@ class TestBlockchainTransactions:
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
 
-        # This condition requires fee to be 10 mojo
+        # This condition requires fee to be 10 chin
         cvp_fee = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(10)])
-        # This spend bundle has 9 mojo as fee
+        # This spend bundle has 9 chin as fee
         block1_dic_bad = {cvp_fee.opcode: [cvp_fee]}
         block1_dic_good = {cvp_fee.opcode: [cvp_fee]}
         block1_spend_bundle_bad = wallet_a.generate_signed_transaction(

@@ -2554,7 +2554,7 @@ class TestBodyValidation:
 
         spend = list(blocks[-1].get_included_reward_coins())[0]
         print("spend=", spend)
-        # this create coin will spend all of the coin, so the 10 mojos below
+        # this create coin will spend all of the coin, so the 10 chins below
         # will be "minted".
         output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(spend.amount)])
         condition_dict = {ConditionOpcode.CREATE_COIN: [output]}

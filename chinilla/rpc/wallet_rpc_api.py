@@ -275,8 +275,8 @@ class WalletRpcApi:
             return False, False
 
         config: Dict = load_config(new_root, "config.yaml")
-        farmer_target = config["farmer"].get("xch_target_address")
-        pool_target = config["pool"].get("xch_target_address")
+        farmer_target = config["farmer"].get("xchi_target_address")
+        pool_target = config["pool"].get("xchi_target_address")
         found_farmer = False
         found_pool = False
         selected = config["selected_network"]

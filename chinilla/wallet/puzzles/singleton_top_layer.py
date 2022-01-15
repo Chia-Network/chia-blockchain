@@ -49,7 +49,7 @@ def launch_conditions_and_coinsol(
     amount: uint64,
 ) -> Tuple[List[Program], CoinSpend]:
     if (amount % 2) == 0:
-        raise ValueError("Coin amount cannot be even. Subtract one mojo.")
+        raise ValueError("Coin amount cannot be even. Subtract one chin.")
 
     launcher_coin: Coin = generate_launcher_coin(coin, amount)
     curried_singleton: Program = SINGLETON_MOD.curry(
