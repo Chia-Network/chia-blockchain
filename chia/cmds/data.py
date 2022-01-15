@@ -6,9 +6,7 @@ import click
 
 
 if TYPE_CHECKING:
-    # Will be located here in the next mypy release
-    # from _typeshed import IdentityFunction
-    from click.decorators import _IdentityFunction as IdentityFunction
+    from _typeshed import IdentityFunction
 
 
 logger = logging.getLogger(__name__)
