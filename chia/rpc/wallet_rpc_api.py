@@ -1202,7 +1202,7 @@ class WalletRpcApi:
                     coins=coins,
                     ignore_max_send_amount=True,
                     primaries=additional_outputs,
-                    announcements_to_consume=coin_announcements,
+                    coin_announcements_to_consume=coin_announcements,
                 )
         else:
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
@@ -1212,7 +1212,7 @@ class WalletRpcApi:
                 coins=coins,
                 ignore_max_send_amount=True,
                 primaries=additional_outputs,
-                announcements_to_consume=coin_announcements,
+                coin_announcements_to_consume=coin_announcements,
             )
         return {"signed_tx": signed_tx}
 
