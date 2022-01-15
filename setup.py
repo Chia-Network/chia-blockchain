@@ -32,6 +32,7 @@ dependencies = [
     "dnslib==0.9.14",  # dns lib
     "typing-extensions==4.0.1",  # typing backports like Protocol and TypedDict
     "zstd==1.5.0.4",
+    "packaging==21.0",
 ]
 
 upnp_dependencies = [
@@ -105,7 +106,7 @@ kwargs = dict(
         "chia.wallet",
         "chia.wallet.puzzles",
         "chia.wallet.rl_wallet",
-        "chia.wallet.cc_wallet",
+        "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
         "chia.wallet.settings",
         "chia.wallet.trading",
