@@ -29,7 +29,7 @@ dependencies = [
     "click==7.1.2",  # For the CLI
     "dnspythonchia==2.2.0",  # Query DNS seeds
     "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
-    "dnslib==0.9.14",  # dns lib
+    "dnslib==0.9.17",  # dns lib
     "typing-extensions==4.0.1",  # typing backports like Protocol and TypedDict
     "zstd==1.5.0.4",
     "packaging==21.0",
