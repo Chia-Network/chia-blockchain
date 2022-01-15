@@ -10,7 +10,8 @@ _T = TypeVar("_T")
 
 
 class IdentityFunction(Protocol):
-    def __call__(self, __x: _T) -> _T: ...
+    def __call__(self, __x: _T) -> _T:
+        ...
 
 
 logger = logging.getLogger(__name__)
