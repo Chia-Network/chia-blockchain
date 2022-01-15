@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from chia.server.address_manager import AddressManager, ExtendedPeerInfo
-from chia.server.address_manager_store import AddressManagerStore
-from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
-from chia.util.ints import uint16, uint64
+from chinilla.server.address_manager import AddressManager, ExtendedPeerInfo
+from chinilla.server.address_manager_store import AddressManagerStore
+from chinilla.types.peer_info import PeerInfo, TimestampedPeerInfo
+from chinilla.util.ints import uint16, uint64
 
 
 @pytest.fixture(scope="module")

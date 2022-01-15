@@ -5,7 +5,7 @@ from asyncio import CancelledError
 
 import pytest
 
-from chia.full_node.lock_queue import LockQueue, LockClient
+from chinilla.full_node.lock_queue import LockQueue, LockClient
 
 log = logging.getLogger(__name__)
 

@@ -76,7 +76,7 @@ def generate_replacements(conf, dir):
     if not conf["checkout_blocks_and_plots"]:
         replacements[
             "CHECKOUT_TEST_BLOCKS_AND_PLOTS"
-        ] = "# Omitted checking out blocks and plots repo Chia-Network/test-cache"
+        ] = "# Omitted checking out blocks and plots repo Chinilla/test-cache"
     if not conf["install_timelord"]:
         replacements["INSTALL_TIMELORD"] = "# Omitted installing Timelord"
     if conf["parallel"]:

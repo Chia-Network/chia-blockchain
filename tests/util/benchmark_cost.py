@@ -4,14 +4,14 @@ from secrets import token_bytes
 from blspy import AugSchemeMPL, PrivateKey
 from clvm_tools import binutils
 
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.blockchain_format.program import Program, INFINITE_COST
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.ints import uint32
+from chinilla.consensus.default_constants import DEFAULT_CONSTANTS
+from chinilla.types.blockchain_format.program import Program, INFINITE_COST
+from chinilla.types.condition_opcodes import ConditionOpcode
+from chinilla.types.condition_with_args import ConditionWithArgs
+from chinilla.util.ints import uint32
 from tests.wallet_tools import WalletTool
-from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from chia.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
+from chinilla.wallet.derive_keys import master_sk_to_wallet_sk
+from chinilla.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 
 
 def float_to_str(f):
@@ -29,7 +29,7 @@ def float_to_str(f):
     return float_string
 
 
-def run_and_return_cost_time(chialisp):
+def run_and_return_cost_time(chinillalisp):
 
     start = time.time()
     clvm_loop = "((c (q ((c (f (a)) (c (f (a)) (c (f (r (a))) (c (f (r (r (a))))"
@@ -37,7 +37,7 @@ def run_and_return_cost_time(chialisp):
     " (c (- (f (r (a))) (q 1)) (c (f (r (r (a)))) (q ()))))))"
     " ((c (f (r (r (a)))) (q ()))))) (q (q ()))) (a)))) (a))))"
     loop_program = Program.to(binutils.assemble(clvm_loop))
-    clvm_loop_solution = f"(1000 {chialisp})"
+    clvm_loop_solution = f"(1000 {chinillalisp})"
     solution_program = Program.to(binutils.assemble(clvm_loop_solution))
 
     cost, sexp = loop_program.run_with_cost(solution_program, INFINITE_COST)

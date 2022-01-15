@@ -3,8 +3,8 @@ from pathlib import Path
 
 from blspy import AugSchemeMPL, PrivateKey
 
-from chia.pools.pool_config import PoolWalletConfig
-from chia.util.config import load_config, save_config, create_default_chia_config
+from chinilla.pools.pool_config import PoolWalletConfig
+from chinilla.util.config import load_config, save_config, create_default_chinilla_config
 
 
 def test_pool_config():
@@ -13,7 +13,7 @@ def test_pool_config():
     eg_config = test_path / "config.yaml"
     to_config = test_path / "test_pool_config.yaml"
 
-    create_default_chia_config(test_root, ["config.yaml"])
+    create_default_chinilla_config(test_root, ["config.yaml"])
     assert eg_config.exists()
     eg_config.rename(to_config)
     config = load_config(test_root, "test_pool_config.yaml")

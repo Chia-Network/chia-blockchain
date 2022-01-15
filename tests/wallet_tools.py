@@ -2,21 +2,21 @@ from typing import Dict, List, Optional, Tuple, Any
 
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
-from chia.consensus.constants import ConsensusConstants
-from chia.util.hash import std_hash
-from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import SpendBundle
-from chia.util.clvm import int_from_bytes, int_to_bytes
-from chia.util.condition_tools import conditions_by_opcode, conditions_for_solution
-from chia.util.ints import uint32, uint64
-from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+from chinilla.consensus.constants import ConsensusConstants
+from chinilla.util.hash import std_hash
+from chinilla.types.announcement import Announcement
+from chinilla.types.blockchain_format.coin import Coin
+from chinilla.types.blockchain_format.program import Program
+from chinilla.types.blockchain_format.sized_bytes import bytes32
+from chinilla.types.coin_spend import CoinSpend
+from chinilla.types.condition_opcodes import ConditionOpcode
+from chinilla.types.condition_with_args import ConditionWithArgs
+from chinilla.types.spend_bundle import SpendBundle
+from chinilla.util.clvm import int_from_bytes, int_to_bytes
+from chinilla.util.condition_tools import conditions_by_opcode, conditions_for_solution
+from chinilla.util.ints import uint32, uint64
+from chinilla.wallet.derive_keys import master_sk_to_wallet_sk
+from chinilla.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
     puzzle_for_pk,

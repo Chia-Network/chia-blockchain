@@ -7,19 +7,19 @@ from typing import List, Optional
 
 import pytest
 
-from chia.consensus.blockchain import ReceiveBlockResult
-from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.consensus.pot_iterations import is_overflow_block
-from chia.full_node.full_node_store import FullNodeStore
-from chia.full_node.signage_point import SignagePoint
-from chia.protocols import timelord_protocol
-from chia.protocols.timelord_protocol import NewInfusionPointVDF
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.block_cache import BlockCache
+from chinilla.consensus.blockchain import ReceiveBlockResult
+from chinilla.consensus.multiprocess_validation import PreValidationResult
+from chinilla.consensus.pot_iterations import is_overflow_block
+from chinilla.full_node.full_node_store import FullNodeStore
+from chinilla.full_node.signage_point import SignagePoint
+from chinilla.protocols import timelord_protocol
+from chinilla.protocols.timelord_protocol import NewInfusionPointVDF
+from chinilla.types.blockchain_format.sized_bytes import bytes32
+from chinilla.types.unfinished_block import UnfinishedBlock
+from chinilla.util.block_cache import BlockCache
 from tests.block_tools import get_signage_point, create_block_tools
-from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chinilla.util.hash import std_hash
+from chinilla.util.ints import uint8, uint32, uint64, uint128
 from tests.setup_nodes import test_constants as test_constants_original
 from tests.util.blockchain import create_blockchain
 from tests.util.keyring import TempKeyring

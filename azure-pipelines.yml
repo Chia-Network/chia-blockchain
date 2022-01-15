@@ -43,8 +43,8 @@ steps:
   # Install an Apple certificate required to build on a macOS agent machine
   - task: InstallAppleCertificate@2
     inputs:
-      certSecureFile: 'chia-apple-dev-id-app.p12'
-      certPwd: $(CHIA_APPLE_DEV_ID_APP_PASS)
+      certSecureFile: 'chinilla-apple-dev-id-app.p12'
+      certPwd: $(CHINILLA_APPLE_DEV_ID_APP_PASS)
       keychain: temp
       deleteCert: true
 
@@ -60,13 +60,13 @@ steps:
 
   - script: |
       set -o errexit -o pipefail
-      MADMAX_VERSION=$(curl -u "$(GithubUsername):$(GithubToken)" --fail --silent "https://api.github.com/repos/Chia-Network/chia-plotter-madmax/releases/latest" | jq -r '.tag_name')
+      MADMAX_VERSION=$(curl -u "$(GithubUsername):$(GithubToken)" --fail --silent "https://api.github.com/repos/Chinilla/chinilla-plotter-madmax/releases/latest" | jq -r '.tag_name')
 
       mkdir "$(System.DefaultWorkingDirectory)/madmax"
-      wget -O "$(System.DefaultWorkingDirectory)/madmax/chia_plot" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${MADMAX_VERSION}/chia_plot-${MADMAX_VERSION}-macos-intel
-      wget -O "$(System.DefaultWorkingDirectory)/madmax/chia_plot_k34" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${MADMAX_VERSION}/chia_plot_k34-${MADMAX_VERSION}-macos-intel
-      chmod +x "$(System.DefaultWorkingDirectory)/madmax/chia_plot"
-      chmod +x "$(System.DefaultWorkingDirectory)/madmax/chia_plot_k34"
+      wget -O "$(System.DefaultWorkingDirectory)/madmax/chinilla_plot" https://github.com/Chinilla/chinilla-plotter-madmax/releases/download/${MADMAX_VERSION}/chinilla_plot-${MADMAX_VERSION}-macos-intel
+      wget -O "$(System.DefaultWorkingDirectory)/madmax/chinilla_plot_k34" https://github.com/Chinilla/chinilla-plotter-madmax/releases/download/${MADMAX_VERSION}/chinilla_plot_k34-${MADMAX_VERSION}-macos-intel
+      chmod +x "$(System.DefaultWorkingDirectory)/madmax/chinilla_plot"
+      chmod +x "$(System.DefaultWorkingDirectory)/madmax/chinilla_plot_k34"
     displayName: "Get latest madmax release"
 
   - script: |
@@ -99,8 +99,8 @@ steps:
   - bash: |
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
       cd $(System.DefaultWorkingDirectory)/build_scripts/
-      export CHIA_VERSION="Chia-"$(<version.txt)
-      shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256
+      export CHINILLA_VERSION="Chinilla-"$(<version.txt)
+      shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHINILLA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHINILLA_VERSION.dmg.sha256
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
     displayName: "Create Checksums"
 
@@ -108,15 +108,15 @@ steps:
       export AWS_ACCESS_KEY_ID=$(AccessKey)
       export AWS_SECRET_ACCESS_KEY=$(SecretKey)
       export AWS_DEFAULT_REGION=us-west-2
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-chia-net/builds/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-chinilla-net/builds/
     displayName: "Upload to S3"
 
   - bash: |
       cd $(System.DefaultWorkingDirectory)/build_scripts/
-      export CHIA_VERSION="Chia-"$(<version.txt)
+      export CHINILLA_VERSION="Chinilla-"$(<version.txt)
 
       pip3 install py3createtorrent
-      py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg -o $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.torrent --webseed https://download-chia-net.s3.us-west-2.amazonaws.com/install/$CHIA_VERSION.dmg
+      py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHINILLA_VERSION.dmg -o $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHINILLA_VERSION.dmg.torrent --webseed https://download-chinilla-net.s3.us-west-2.amazonaws.com/install/$CHINILLA_VERSION.dmg
       ls
     displayName: "Create torrent file"
     condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/tags/'))
@@ -126,9 +126,9 @@ steps:
       export AWS_SECRET_ACCESS_KEY=$(SecretKey)
       export AWS_DEFAULT_REGION=us-west-2
       cd $(System.DefaultWorkingDirectory)/build_scripts/
-      export CHIA_VERSION="Chia-"$(<version.txt)
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-chia-net/beta/Chia-intel_latest_beta.dmg
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256 s3://download-chia-net/beta/Chia-intel_latest_beta.dmg.sha256
+      export CHINILLA_VERSION="Chinilla-"$(<version.txt)
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHINILLA_VERSION.dmg s3://download-chinilla-net/beta/Chinilla-intel_latest_beta.dmg
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHINILLA_VERSION.dmg.sha256 s3://download-chinilla-net/beta/Chinilla-intel_latest_beta.dmg.sha256
     displayName: "Upload Beta Files"
     condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/heads/main'))
 
@@ -137,17 +137,17 @@ steps:
       export AWS_SECRET_ACCESS_KEY=$(SecretKey)
       export AWS_DEFAULT_REGION=us-west-2
       cd $(System.DefaultWorkingDirectory)/build_scripts/
-      export CHIA_VERSION="Chia-"$(<version.txt)
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-chia-net/install/
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256 s3://download-chia-net/install/
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.torrent s3://download-chia-net/torrents/
+      export CHINILLA_VERSION="Chinilla-"$(<version.txt)
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHINILLA_VERSION.dmg s3://download-chinilla-net/install/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHINILLA_VERSION.dmg.sha256 s3://download-chinilla-net/install/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHINILLA_VERSION.dmg.torrent s3://download-chinilla-net/torrents/
     displayName: "Upload Release Files"
     condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/tags/'))
 
   - bash: |
       cd $(System.DefaultWorkingDirectory)/build_scripts/
-      export CHIA_TAG=$(<version.txt)
+      export CHINILLA_TAG=$(<version.txt)
       export REPO_NAME=$(echo $(Build.Repository.Name) | cut -d'/' -f 2)
-      curl -s -XPOST -H "Authorization: Bearer $(GLUE_ACCESS_TOKEN)" --data "{\"chia_ref\": \"$CHIA_TAG\"}" $(GLUE_API_URL)/api/v1/${REPO_NAME}/${CHIA_TAG}/success/build-macos
+      curl -s -XPOST -H "Authorization: Bearer $(GLUE_ACCESS_TOKEN)" --data "{\"chinilla_ref\": \"$CHINILLA_TAG\"}" $(GLUE_API_URL)/api/v1/${REPO_NAME}/${CHINILLA_TAG}/success/build-macos
     displayName: "Mark installer complete"
     condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/tags/'))

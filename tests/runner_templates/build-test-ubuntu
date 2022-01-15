@@ -1,5 +1,5 @@
 #
-# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+# THIS FILE IS GENERATED. SEE https://github.com/Chinilla/chinilla-blockchain/tree/main/tests#readme
 #
 name: Ubuntu TEST_NAME Test
 
@@ -87,5 +87,5 @@ INSTALL_TIMELORD
 
 CHECK_RESOURCE_USAGE
 #
-# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+# THIS FILE IS GENERATED. SEE https://github.com/Chinilla/chinilla-blockchain/tree/main/tests#readme
 #

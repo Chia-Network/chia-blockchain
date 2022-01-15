@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from chia.types.blockchain_format.program import Program
+from chinilla.types.blockchain_format.program import Program
 from clvm.EvalError import EvalError
 
 

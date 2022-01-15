@@ -2,8 +2,8 @@ import asyncio
 
 import pytest
 
-from chia.farmer.farmer import Farmer
-from chia.util.keychain import generate_mnemonic
+from chinilla.farmer.farmer import Farmer
+from chinilla.util.keychain import generate_mnemonic
 from tests.setup_nodes import bt, setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert
 

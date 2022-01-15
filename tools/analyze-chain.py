@@ -10,11 +10,11 @@ from clvm import KEYWORD_FROM_ATOM, KEYWORD_TO_ATOM
 from clvm.casts import int_from_bytes
 from clvm.operators import OP_REWRITE
 
-from chia.types.full_block import FullBlock
-from chia.types.blockchain_format.program import Program
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-from chia.types.condition_opcodes import ConditionOpcode
+from chinilla.types.full_block import FullBlock
+from chinilla.types.blockchain_format.program import Program
+from chinilla.consensus.default_constants import DEFAULT_CONSTANTS
+from chinilla.wallet.puzzles.rom_bootstrap_generator import get_generator
+from chinilla.types.condition_opcodes import ConditionOpcode
 
 GENERATOR_ROM = bytes(get_generator())
 

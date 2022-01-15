@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Dict
 
-from chia.server.peer_store_resolver import PeerStoreResolver
+from chinilla.server.peer_store_resolver import PeerStoreResolver
 
 
 class TestPeerStoreResolver:

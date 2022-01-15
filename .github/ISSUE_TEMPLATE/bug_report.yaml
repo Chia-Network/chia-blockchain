@@ -19,7 +19,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: What version of Chia are you running?
+      description: What version of Chinilla are you running?
     validations:
       required: true
   - type: dropdown

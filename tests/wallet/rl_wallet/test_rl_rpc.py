@@ -2,16 +2,16 @@ import asyncio
 
 import pytest
 
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.peer_info import PeerInfo
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint16
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.wallet_types import WalletType
+from chinilla.rpc.wallet_rpc_api import WalletRpcApi
+from chinilla.simulator.simulator_protocol import FarmNewBlockProtocol
+from chinilla.types.blockchain_format.coin import Coin
+from chinilla.types.blockchain_format.sized_bytes import bytes32
+from chinilla.types.mempool_inclusion_status import MempoolInclusionStatus
+from chinilla.types.peer_info import PeerInfo
+from chinilla.util.bech32m import encode_puzzle_hash
+from chinilla.util.ints import uint16
+from chinilla.wallet.transaction_record import TransactionRecord
+from chinilla.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from tests.wallet.sync.test_wallet_sync import wallet_height_at_least

@@ -1,7 +1,7 @@
 from secrets import token_bytes
 
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace  # pylint: disable=E0401
+from chinilla.consensus.default_constants import DEFAULT_CONSTANTS
+from chinilla.types.blockchain_format.proof_of_space import ProofOfSpace  # pylint: disable=E0401
 
 
 class TestProofOfSpace:

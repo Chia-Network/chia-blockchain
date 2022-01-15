@@ -42,9 +42,9 @@ fi
 if [ "$(uname -m)" = "armv7l" ]; then
   echo ""
 	echo "WARNING:"
-	echo "The Chia Blockchain requires a 64 bit OS and this is 32 bit armv7l"
+	echo "The Chinilla Blockchain requires a 64 bit OS and this is 32 bit armv7l"
 	echo "For more information, see"
-	echo "https://github.com/Chia-Network/chia-blockchain/wiki/Raspberry-Pi"
+	echo "https://github.com/Chinilla/chinilla-blockchain/wiki/Raspberry-Pi"
 	echo "Exiting."
 	exit 1
 fi
@@ -130,7 +130,7 @@ find_python() {
 				if [ "$BEST_VERSION" = "3" ]; then
 					PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
 					if [[ "$PY3_VERSION" =~ 3.10.* ]]; then
-						echo "Chia requires Python version <= 3.9.9"
+						echo "Chinilla requires Python version <= 3.9.9"
 						echo "Current Python version = $PY3_VERSION"
 						exit 1
 					fi
@@ -174,13 +174,13 @@ python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc=
 python -m pip install -e ."${EXTRAS}" --extra-index-url https://pypi.chia.net/simple/
 
 echo ""
-echo "Chia blockchain install.sh complete."
+echo "Chinilla blockchain install.sh complete."
 echo "For assistance join us on Keybase in the #support chat channel:"
-echo "https://keybase.io/team/chia_network.public"
+echo "https://keybase.io/team/chinilla_network.public"
 echo ""
-echo "Try the Quick Start Guide to running chia-blockchain:"
-echo "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"
+echo "Try the Quick Start Guide to running chinilla-blockchain:"
+echo "https://github.com/Chinilla/chinilla-blockchain/wiki/Quick-Start-Guide"
 echo ""
 echo "To install the GUI type 'sh install-gui.sh' after '. ./activate'."
 echo ""
-echo "Type '. ./activate' and then 'chia init' to begin."
+echo "Type '. ./activate' and then 'chinilla init' to begin."

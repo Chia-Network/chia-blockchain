@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Create missing `__init__.py` files in the source code folders (in "chia/" and "tests/").
+# Create missing `__init__.py` files in the source code folders (in "chinilla/" and "tests/").
 #
 # They are required by the python interpreter to properly identify modules/packages so that tools like `mypy` or an IDE
 # can work with their full capabilities.
@@ -35,7 +35,7 @@ def command(verbose, root_str):
     stream_handler = logging.StreamHandler()
     logger.addHandler(stream_handler)
 
-    tree_roots = ["chia", "tests"]
+    tree_roots = ["chinilla", "tests"]
     failed = False
     root = pathlib.Path(root_str).resolve()
     directories = sorted(

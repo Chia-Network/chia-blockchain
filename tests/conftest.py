@@ -5,7 +5,7 @@ from pathlib import Path
 
 # TODO: tests.setup_nodes (which is also imported by tests.util.blockchain) creates a
 #       global BlockTools at tests.setup_nodes.bt.  This results in an attempt to create
-#       the chia root directory which the build scripts symlink to a sometimes-not-there
+#       the chinilla root directory which the build scripts symlink to a sometimes-not-there
 #       directory.  When not there Python complains since, well, the symlink is a file
 #       not a directory and also not pointing to a directory.  In those same cases,
 #       these fixtures are not used.  It would be good to refactor that global state

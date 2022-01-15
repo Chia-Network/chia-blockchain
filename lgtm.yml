@@ -2,4 +2,4 @@ extraction:
   javascript:
     index:
       include:
-        - chia-blockchain-gui
+        - chinilla-blockchain-gui

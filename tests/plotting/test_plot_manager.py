@@ -8,7 +8,7 @@ import pytest
 from blspy import G1Element
 
 from dataclasses import dataclass
-from chia.plotting.util import (
+from chinilla.plotting.util import (
     PlotInfo,
     PlotRefreshResult,
     PlotRefreshEvents,
@@ -17,9 +17,9 @@ from chia.plotting.util import (
     add_plot_directory,
     remove_plot_directory,
 )
-from chia.util.config import create_default_chia_config
-from chia.util.path import mkdir
-from chia.plotting.manager import PlotManager
+from chinilla.util.config import create_default_chinilla_config
+from chinilla.util.path import mkdir
+from chinilla.plotting.manager import PlotManager
 from tests.block_tools import get_plot_dir
 from tests.plotting.util import get_test_plots
 from tests.setup_nodes import bt
@@ -147,7 +147,7 @@ def test_environment(tmp_path) -> Iterator[TestEnvironment]:
 
     dir_1: TestDirectory = TestDirectory(tmp_path / "plots" / "1", plots[0:dir_1_count])
     dir_2: TestDirectory = TestDirectory(tmp_path / "plots" / "2", plots[dir_1_count : dir_1_count + dir_2_count])
-    create_default_chia_config(tmp_path)
+    create_default_chinilla_config(tmp_path)
 
     refresh_tester = PlotRefreshTester(tmp_path)
     refresh_tester.plot_manager.set_public_keys(bt.plot_manager.farmer_public_keys, bt.plot_manager.pool_public_keys)

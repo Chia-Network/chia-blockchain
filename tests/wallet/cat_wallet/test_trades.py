@@ -4,14 +4,14 @@ from typing import List
 
 import pytest
 
-from chia.full_node.mempool_manager import MempoolManager
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint64
-from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.trading.offer import Offer
-from chia.wallet.trading.trade_status import TradeStatus
-from chia.wallet.transaction_record import TransactionRecord
+from chinilla.full_node.mempool_manager import MempoolManager
+from chinilla.simulator.simulator_protocol import FarmNewBlockProtocol
+from chinilla.types.peer_info import PeerInfo
+from chinilla.util.ints import uint16, uint64
+from chinilla.wallet.cat_wallet.cat_wallet import CATWallet
+from chinilla.wallet.trading.offer import Offer
+from chinilla.wallet.trading.trade_status import TradeStatus
+from chinilla.wallet.transaction_record import TransactionRecord
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -117,20 +117,20 @@ class TestCATTrades:
         )
 
         # Create the trade parameters
-        MAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
-        TAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
-        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
-        await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
+        MAKER_CHINILLA_BALANCE = 20 * 1000000000000 - 100
+        TAKER_CHINILLA_BALANCE = 20 * 1000000000000 - 100
+        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHINILLA_BALANCE)
+        await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHINILLA_BALANCE)
         MAKER_CAT_BALANCE = 100
         MAKER_NEW_CAT_BALANCE = 0
         TAKER_CAT_BALANCE = 0
         TAKER_NEW_CAT_BALANCE = 100
 
-        chia_for_cat = {
+        chinilla_for_cat = {
             wallet_maker.id(): -1,
             new_cat_wallet_maker.id(): 2,  # This is the CAT that the taker made
         }
-        cat_for_chia = {
+        cat_for_chinilla = {
             wallet_maker.id(): 3,
             cat_wallet_maker.id(): -4,  # The taker has no knowledge of this CAT yet
         }
@@ -138,17 +138,17 @@ class TestCATTrades:
             cat_wallet_maker.id(): -5,
             new_cat_wallet_maker.id(): 6,
         }
-        chia_for_multiple_cat = {
+        chinilla_for_multiple_cat = {
             wallet_maker.id(): -7,
             cat_wallet_maker.id(): 8,
             new_cat_wallet_maker.id(): 9,
         }
-        multiple_cat_for_chia = {
+        multiple_cat_for_chinilla = {
             wallet_maker.id(): 10,
             cat_wallet_maker.id(): -11,
             new_cat_wallet_maker.id(): -12,
         }
-        chia_and_cat_for_cat = {
+        chinilla_and_cat_for_cat = {
             wallet_maker.id(): -13,
             cat_wallet_maker.id(): -14,
             new_cat_wallet_maker.id(): 15,
@@ -158,8 +158,8 @@ class TestCATTrades:
         trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
 
         # Execute all of the trades
-        # chia_for_cat
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, fee=uint64(1))
+        # chinilla_for_cat
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chinilla_for_cat, fee=uint64(1))
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -173,23 +173,23 @@ class TestCATTrades:
         assert success is True
         assert trade_take is not None
 
-        MAKER_CHIA_BALANCE -= 2  # -1 and -1 for fee
+        MAKER_CHINILLA_BALANCE -= 2  # -1 and -1 for fee
         MAKER_NEW_CAT_BALANCE += 2
-        TAKER_CHIA_BALANCE += 0  # +1 and -1 for fee
+        TAKER_CHINILLA_BALANCE += 0  # +1 and -1 for fee
         TAKER_NEW_CAT_BALANCE -= 2
 
-        await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
+        await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHINILLA_BALANCE)
         await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
-        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
-        await time_out_assert(15, wallet_maker.get_unconfirmed_balance, MAKER_CHIA_BALANCE)
+        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHINILLA_BALANCE)
+        await time_out_assert(15, wallet_maker.get_unconfirmed_balance, MAKER_CHINILLA_BALANCE)
         await time_out_assert(15, new_cat_wallet_maker.get_confirmed_balance, MAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, new_cat_wallet_maker.get_unconfirmed_balance, MAKER_NEW_CAT_BALANCE)
-        await time_out_assert(15, wallet_taker.get_confirmed_balance, TAKER_CHIA_BALANCE)
-        await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
+        await time_out_assert(15, wallet_taker.get_confirmed_balance, TAKER_CHINILLA_BALANCE)
+        await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHINILLA_BALANCE)
         await time_out_assert(15, new_cat_wallet_taker.get_confirmed_balance, TAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
 
@@ -200,8 +200,8 @@ class TestCATTrades:
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
-        # cat_for_chia
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia)
+        # cat_for_chinilla
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chinilla)
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -214,26 +214,26 @@ class TestCATTrades:
         assert trade_take is not None
 
         MAKER_CAT_BALANCE -= 4
-        MAKER_CHIA_BALANCE += 3
+        MAKER_CHINILLA_BALANCE += 3
         TAKER_CAT_BALANCE += 4
-        TAKER_CHIA_BALANCE -= 3
+        TAKER_CHINILLA_BALANCE -= 3
 
         cat_wallet_taker: CATWallet = await wallet_node_taker.wallet_state_manager.get_wallet_for_asset_id(
             cat_wallet_maker.get_asset_id()
         )
 
-        await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
+        await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHINILLA_BALANCE)
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
-        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
-        await time_out_assert(15, wallet_maker.get_unconfirmed_balance, MAKER_CHIA_BALANCE)
+        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHINILLA_BALANCE)
+        await time_out_assert(15, wallet_maker.get_unconfirmed_balance, MAKER_CHINILLA_BALANCE)
         await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, MAKER_CAT_BALANCE)
         await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, MAKER_CAT_BALANCE)
-        await time_out_assert(15, wallet_taker.get_confirmed_balance, TAKER_CHIA_BALANCE)
-        await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
+        await time_out_assert(15, wallet_taker.get_confirmed_balance, TAKER_CHINILLA_BALANCE)
+        await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHINILLA_BALANCE)
         await time_out_assert(15, cat_wallet_taker.get_confirmed_balance, TAKER_CAT_BALANCE)
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -273,8 +273,8 @@ class TestCATTrades:
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
-        # chia_for_multiple_cat
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_multiple_cat)
+        # chinilla_for_multiple_cat
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chinilla_for_multiple_cat)
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -285,10 +285,10 @@ class TestCATTrades:
         assert success is True
         assert trade_take is not None
 
-        MAKER_CHIA_BALANCE -= 7
+        MAKER_CHINILLA_BALANCE -= 7
         MAKER_CAT_BALANCE += 8
         MAKER_NEW_CAT_BALANCE += 9
-        TAKER_CHIA_BALANCE += 7
+        TAKER_CHINILLA_BALANCE += 7
         TAKER_CAT_BALANCE -= 8
         TAKER_NEW_CAT_BALANCE -= 9
 
@@ -309,8 +309,8 @@ class TestCATTrades:
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
-        # multiple_cat_for_chia
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(multiple_cat_for_chia)
+        # multiple_cat_for_chinilla
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(multiple_cat_for_chinilla)
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -323,10 +323,10 @@ class TestCATTrades:
 
         MAKER_CAT_BALANCE -= 11
         MAKER_NEW_CAT_BALANCE -= 12
-        MAKER_CHIA_BALANCE += 10
+        MAKER_CHINILLA_BALANCE += 10
         TAKER_CAT_BALANCE += 11
         TAKER_NEW_CAT_BALANCE += 12
-        TAKER_CHIA_BALANCE -= 10
+        TAKER_CHINILLA_BALANCE -= 10
 
         await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
@@ -345,8 +345,8 @@ class TestCATTrades:
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
-        # chia_and_cat_for_cat
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_and_cat_for_cat)
+        # chinilla_and_cat_for_cat
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chinilla_and_cat_for_cat)
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -357,10 +357,10 @@ class TestCATTrades:
         assert success is True
         assert trade_take is not None
 
-        MAKER_CHIA_BALANCE -= 13
+        MAKER_CHINILLA_BALANCE -= 13
         MAKER_CAT_BALANCE -= 14
         MAKER_NEW_CAT_BALANCE += 15
-        TAKER_CHIA_BALANCE += 13
+        TAKER_CHINILLA_BALANCE += 13
         TAKER_CAT_BALANCE += 14
         TAKER_NEW_CAT_BALANCE -= 15
 
@@ -408,17 +408,17 @@ class TestCATTrades:
 
         await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, 100)
         await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, 100)
-        MAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
+        MAKER_CHINILLA_BALANCE = 20 * 1000000000000 - 100
         MAKER_CAT_BALANCE = 100
-        TAKER_CHIA_BALANCE = 20 * 1000000000000
-        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
+        TAKER_CHINILLA_BALANCE = 20 * 1000000000000
+        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHINILLA_BALANCE)
 
-        cat_for_chia = {
+        cat_for_chinilla = {
             wallet_maker.id(): 1,
             cat_wallet_maker.id(): -2,
         }
 
-        chia_for_cat = {
+        chinilla_for_cat = {
             wallet_maker.id(): -3,
             cat_wallet_maker.id(): 4,
         }
@@ -430,7 +430,7 @@ class TestCATTrades:
             trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
             return TradeStatus(trade_rec.status)
 
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia)
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chinilla)
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -470,9 +470,9 @@ class TestCATTrades:
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
         # await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, trade_take)
         await time_out_assert(15, wallet_maker.get_pending_change_balance, 0)
-        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE - FEE)
+        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHINILLA_BALANCE - FEE)
         await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, MAKER_CAT_BALANCE)
-        await time_out_assert(15, wallet_taker.get_confirmed_balance, TAKER_CHIA_BALANCE)
+        await time_out_assert(15, wallet_taker.get_confirmed_balance, TAKER_CHINILLA_BALANCE)
 
         success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
         await asyncio.sleep(1)
@@ -481,7 +481,7 @@ class TestCATTrades:
         assert trade_take is None
 
         # Now we're going to create the other way around for test coverage sake
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chinilla_for_cat)
         await asyncio.sleep(1)
         assert error is None
         assert success is True

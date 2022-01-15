@@ -1,9 +1,9 @@
 import pytest
 
 from tests.setup_nodes import setup_daemon
-from chia.daemon.client import connect_to_daemon
+from chinilla.daemon.client import connect_to_daemon
 from tests.setup_nodes import bt
-from chia import __version__
+from chinilla import __version__
 
 
 class TestDaemonRpc:
