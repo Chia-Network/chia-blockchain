@@ -16,10 +16,10 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.transaction_record import TransactionRecord
 
-GENESIS_BY_ID_MOD = load_clvm("genesis-by-coin-id-with-0.clvm")
-GENESIS_BY_PUZHASH_MOD = load_clvm("genesis-by-puzzle-hash-with-0.clvm")
+GENESIS_BY_ID_MOD = load_clvm("genesis_by_coin_id.clvm")
+GENESIS_BY_PUZHASH_MOD = load_clvm("genesis_by_puzzle_hash.clvm")
 EVERYTHING_WITH_SIG_MOD = load_clvm("everything_with_signature.clvm")
-DELEGATED_LIMITATIONS_MOD = load_clvm("delegated_genesis_checker.clvm")
+DELEGATED_LIMITATIONS_MOD = load_clvm("delegated_tail.clvm")
 
 
 class LimitationsProgram:

@@ -45,7 +45,6 @@ wallet_program_files = set(
         "chia/wallet/puzzles/delegated_tail.clvm",
         "chia/wallet/puzzles/settlement_payments.clvm",
         "chia/wallet/puzzles/genesis_by_coin_id.clvm",
-        "chia/wallet/puzzles/delegated_genesis_checker.clvm",
         "chia/wallet/puzzles/singleton_top_layer_v1_1.clvm",
         "chia/wallet/puzzles/database_layer.clvm",
         "chia/wallet/puzzles/database_offer.clvm",
