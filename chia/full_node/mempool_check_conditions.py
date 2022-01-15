@@ -118,15 +118,16 @@ def get_name_puzzle_conditions(
 
     flags = MEMPOOL_MODE if mempool_mode else 0
     try:
-        err_result = GENERATOR_MOD.run_as_generator(max_cost, flags, block_program, block_program_args)
-        # Handling this awkward tuple awkwardly so mypy can tell what is going on.
+        err, result = GENERATOR_MOD.run_as_generator(max_cost, flags, block_program, block_program_args)
 
-        if err_result[0] is not None:
-            err, _ = err_result
+        if err is not None:
             assert err != 0
             return NPCResult(uint16(err), [], uint64(0))
 
-        _, result = err_result
+        # Handling this awkward tuple awkwardly so mypy can tell what is going on.
+        from typing import TYPE_CHECKING
+        if TYPE_CHECKING:
+            assert result is not None
 
         condition_cost = 0
         first = True
