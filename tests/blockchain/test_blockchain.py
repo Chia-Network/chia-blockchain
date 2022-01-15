@@ -12,7 +12,7 @@ from blspy import AugSchemeMPL, G2Element
 from clvm.casts import int_to_bytes
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.consensus.blockchain import ReceiveBlockResult
+from chia.consensus.blockchain import ReceiveBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
@@ -566,7 +566,6 @@ class TestBlockHeaderValidation:
         db_path.unlink()
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_invalid_icc_sub_slot_vdf(self, db_version):
         with TempKeyring() as keychain:
             await self.do_test_invalid_icc_sub_slot_vdf(keychain, db_version)
@@ -1645,6 +1644,7 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
@@ -1674,6 +1674,7 @@ class TestBodyValidation:
             time_per_block=10,
         )
         assert (await b.receive_block(blocks[-1]))[0:-1] == expected
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -1710,6 +1711,7 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
@@ -1732,6 +1734,7 @@ class TestBodyValidation:
             time_per_block=10,
         )
         assert (await b.receive_block(blocks[-1]))[0] == expected
+        await check_block_store_invariant(b)
 
         if expected == ReceiveBlockResult.NEW_PEAK:
             # ensure coin1 was in fact spent
@@ -1749,10 +1752,12 @@ class TestBodyValidation:
         while blocks[-1].foliage_transaction_block is not None:
             assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+        await check_block_store_invariant(b)
         original_block: FullBlock = blocks[-1]
 
         block = recursive_replace(original_block, "transactions_generator", SerializedProgram())
         assert (await b.receive_block(block))[1] == Err.NOT_BLOCK_BUT_HAS_DATA
+        await check_block_store_invariant(b)
         h = std_hash(b"")
         i = uint64(1)
         block = recursive_replace(
@@ -1761,9 +1766,11 @@ class TestBodyValidation:
             TransactionsInfo(h, h, G2Element(), uint64(1), uint64(1), []),
         )
         assert (await b.receive_block(block))[1] == Err.NOT_BLOCK_BUT_HAS_DATA
+        await check_block_store_invariant(b)
 
         block = recursive_replace(original_block, "transactions_generator_ref_list", [i])
         assert (await b.receive_block(block))[1] == Err.NOT_BLOCK_BUT_HAS_DATA
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_tx_block_missing_data(self, empty_blockchain):
@@ -1771,6 +1778,7 @@ class TestBodyValidation:
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
         block = recursive_replace(
             blocks[-1],
             "foliage_transaction_block",
@@ -1778,6 +1786,7 @@ class TestBodyValidation:
         )
         err = (await b.receive_block(block))[1]
         assert err == Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA or err == Err.INVALID_FOLIAGE_BLOCK_PRESENCE
+        await check_block_store_invariant(b)
 
         block = recursive_replace(
             blocks[-1],
@@ -1789,6 +1798,7 @@ class TestBodyValidation:
         except AssertionError:
             return None
         assert err == Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA or err == Err.INVALID_FOLIAGE_BLOCK_PRESENCE
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_invalid_transactions_info_hash(self, empty_blockchain):
@@ -1796,6 +1806,7 @@ class TestBodyValidation:
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
         h = std_hash(b"")
         block = recursive_replace(
             blocks[-1],
@@ -1811,6 +1822,7 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block))[1]
         assert err == Err.INVALID_TRANSACTIONS_INFO_HASH
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_invalid_transactions_block_hash(self, empty_blockchain):
@@ -1818,6 +1830,7 @@ class TestBodyValidation:
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
         h = std_hash(b"")
         block = recursive_replace(blocks[-1], "foliage.foliage_transaction_block_hash", h)
         new_m = block.foliage.foliage_transaction_block_hash
@@ -1826,6 +1839,7 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block))[1]
         assert err == Err.INVALID_FOLIAGE_BLOCK_HASH
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_invalid_reward_claims(self, empty_blockchain):
@@ -1834,6 +1848,7 @@ class TestBodyValidation:
         blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block: FullBlock = blocks[-1]
+        await check_block_store_invariant(b)
 
         # Too few
         assert block.transactions_info
@@ -1855,6 +1870,7 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_REWARD_COINS
+        await check_block_store_invariant(b)
 
         # Too many
         h = std_hash(b"")
@@ -1876,6 +1892,7 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_REWARD_COINS
+        await check_block_store_invariant(b)
 
         # Duplicates
         duplicate_reward_claims = block.transactions_info.reward_claims_incorporated + [
@@ -1896,6 +1913,7 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_REWARD_COINS
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_invalid_transactions_generator_hash(self, empty_blockchain):
@@ -1903,6 +1921,7 @@ class TestBodyValidation:
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         # No tx should have all zeroes
         block: FullBlock = blocks[-1]
@@ -1919,6 +1938,7 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+        await check_block_store_invariant(b)
 
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
         blocks = bt.get_consecutive_blocks(
@@ -1930,6 +1950,7 @@ class TestBodyValidation:
         )
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[3]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx: SpendBundle = wt.generate_signed_transaction(
@@ -1954,6 +1975,7 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_invalid_transactions_ref_list(self, empty_blockchain):
@@ -1967,6 +1989,7 @@ class TestBodyValidation:
         )
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         block: FullBlock = blocks[-1]
         block_2 = recursive_replace(block, "transactions_info.generator_refs_root", bytes([0] * 32))
@@ -1982,15 +2005,18 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
+        await check_block_store_invariant(b)
 
         # No generator should have no refs list
         block_2 = recursive_replace(block, "transactions_generator_ref_list", [uint32(0)])
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
+        await check_block_store_invariant(b)
 
         # Hash should be correct when there is a ref list
         assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx: SpendBundle = wt.generate_signed_transaction(
             10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
@@ -1998,11 +2024,13 @@ class TestBodyValidation:
         blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, guarantee_transaction_block=False)
         for block in blocks[-5:]:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
         assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
         generator_arg = detect_potential_template_generator(blocks[-1].height, blocks[-1].transactions_generator)
         assert generator_arg is not None
 
@@ -2029,12 +2057,14 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
+        await check_block_store_invariant(b)
 
         # Too many heights
         block_2 = recursive_replace(block, "transactions_generator_ref_list", [block.height - 2, block.height - 1])
         err = (await b.receive_block(block_2))[1]
         assert err == Err.GENERATOR_REF_HAS_NO_GENERATOR
         assert (await b.pre_validate_blocks_multiprocessing([block_2], {})) is None
+        await check_block_store_invariant(b)
 
         # Not tx block
         for h in range(0, block.height - 1):
@@ -2042,6 +2072,7 @@ class TestBodyValidation:
             err = (await b.receive_block(block_2))[1]
             assert err == Err.GENERATOR_REF_HAS_NO_GENERATOR or err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
             assert (await b.pre_validate_blocks_multiprocessing([block_2], {})) is None
+            await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_cost_exceeds_max(self, empty_blockchain):
@@ -2056,6 +2087,7 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
@@ -2072,6 +2104,7 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
         assert (await b.receive_block(blocks[-1]))[1] in [Err.BLOCK_COST_EXCEEDS_MAX, Err.INVALID_BLOCK_COST]
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_clvm_must_not_fail(self, empty_blockchain):
@@ -2091,6 +2124,7 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
@@ -2119,6 +2153,7 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_BLOCK_COST
+        await check_block_store_invariant(b)
 
         # too low
         block_2: FullBlock = recursive_replace(block, "transactions_info.cost", uint64(1))
@@ -2135,6 +2170,7 @@ class TestBodyValidation:
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_BLOCK_COST
+        await check_block_store_invariant(b)
 
         # too high
         block_2: FullBlock = recursive_replace(block, "transactions_info.cost", uint64(1000000))
@@ -2154,12 +2190,13 @@ class TestBodyValidation:
         # when the CLVM program exceeds cost during execution, it will fail with
         # a general runtime error
         assert err == Err.GENERATOR_RUNTIME_ERROR
+        await check_block_store_invariant(b)
 
         err = (await b.receive_block(block))[1]
         assert err is None
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_max_coin_amount(self, db_version):
         # 10
         # TODO: fix, this is not reaching validation. Because we can't create a block with such amounts due to uint64
@@ -2221,6 +2258,7 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
@@ -2245,6 +2283,7 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.BAD_ADDITION_ROOT
+        await check_block_store_invariant(b)
 
         # removals
         merkle_set.add_already_hashed(std_hash(b"1"))
@@ -2258,6 +2297,7 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.BAD_REMOVAL_ROOT
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_invalid_filter(self, empty_blockchain):
@@ -2272,6 +2312,7 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
@@ -2293,6 +2334,7 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_TRANSACTIONS_FILTER_HASH
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_duplicate_outputs(self, empty_blockchain):
@@ -2307,6 +2349,7 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
@@ -2323,6 +2366,7 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
         assert (await b.receive_block(blocks[-1]))[1] == Err.DUPLICATE_OUTPUT
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_duplicate_removals(self, empty_blockchain):
@@ -2337,6 +2381,7 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
@@ -2352,6 +2397,7 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=agg
         )
         assert (await b.receive_block(blocks[-1]))[1] == Err.DOUBLE_SPEND
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_double_spent_in_coin_store(self, empty_blockchain):
@@ -2366,6 +2412,7 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
@@ -2377,6 +2424,7 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
         assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         tx_2: SpendBundle = wt.generate_signed_transaction(
             10, wt.get_new_puzzlehash(), list(blocks[-2].get_included_reward_coins())[0]
@@ -2386,6 +2434,7 @@ class TestBodyValidation:
         )
 
         assert (await b.receive_block(blocks[-1]))[1] == Err.DOUBLE_SPEND
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_double_spent_in_reorg(self, empty_blockchain):
@@ -2401,6 +2450,7 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
 
+        await check_block_store_invariant(b)
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
@@ -2410,6 +2460,7 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
         assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         new_coin: Coin = tx.additions()[0]
         tx_2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), new_coin)
@@ -2418,13 +2469,17 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_2
         )
         assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
         blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, guarantee_transaction_block=True)
         for block in blocks[-5:]:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         blocks_reorg = bt.get_consecutive_blocks(2, block_list_input=blocks[:-7], guarantee_transaction_block=True)
         assert (await b.receive_block(blocks_reorg[-2]))[0] == ReceiveBlockResult.ADDED_AS_ORPHAN
+        await check_block_store_invariant(b)
         assert (await b.receive_block(blocks_reorg[-1]))[0] == ReceiveBlockResult.ADDED_AS_ORPHAN
+        await check_block_store_invariant(b)
 
         # Coin does not exist in reorg
         blocks_reorg = bt.get_consecutive_blocks(
@@ -2432,6 +2487,7 @@ class TestBodyValidation:
         )
 
         assert (await b.receive_block(blocks_reorg[-1]))[1] == Err.UNKNOWN_UNSPENT
+        await check_block_store_invariant(b)
 
         # Finally add the block to the fork (spending both in same bundle, this is ephemeral)
         agg = SpendBundle.aggregate([tx, tx_2])
@@ -2444,6 +2500,7 @@ class TestBodyValidation:
             1, block_list_input=blocks_reorg, guarantee_transaction_block=True, transaction_data=tx_2
         )
         assert (await b.receive_block(blocks_reorg[-1]))[1] == Err.DOUBLE_SPEND_IN_FORK
+        await check_block_store_invariant(b)
 
         rewards_ph = wt.get_new_puzzlehash()
         blocks_reorg = bt.get_consecutive_blocks(
@@ -2455,6 +2512,7 @@ class TestBodyValidation:
         for block in blocks_reorg[-10:]:
             r, e, _, _ = await b.receive_block(block)
             assert e is None
+            await check_block_store_invariant(b)
 
         # ephemeral coin is spent
         first_coin = await b.coin_store.get_coin_record(new_coin.name())
@@ -2558,6 +2616,7 @@ class TestBodyValidation:
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_BLOCK_FEE_AMOUNT
+        await check_block_store_invariant(b)
 
 
 class TestReorgs:
@@ -2569,10 +2628,12 @@ class TestReorgs:
         for block in blocks:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
         assert b.get_peak().height == 14
+        await check_block_store_invariant(b)
 
         blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
         for reorg_block in blocks_reorg_chain:
             result, error_code, fork_height, _ = await b.receive_block(reorg_block)
+            await check_block_store_invariant(b)
             if reorg_block.height < 10:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
             elif reorg_block.height < 14:
@@ -2596,6 +2657,7 @@ class TestReorgs:
 
         for block in blocks:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
         chain_1_height = b.get_peak().height
         chain_1_weight = b.get_peak().weight
         assert chain_1_height == (num_blocks_chain_1 - 1)
@@ -2611,6 +2673,7 @@ class TestReorgs:
         found_orphan = False
         for reorg_block in blocks_reorg_chain:
             result, error_code, fork_height, _ = await b.receive_block(reorg_block)
+            await check_block_store_invariant(b)
             if reorg_block.height < num_blocks_chain_2_start:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
             if reorg_block.weight <= chain_1_weight:
@@ -2633,6 +2696,7 @@ class TestReorgs:
         for block in default_10000_blocks_compact:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
         assert b.get_peak().height == len(default_10000_blocks_compact) - 1
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self, empty_blockchain):
@@ -2646,6 +2710,8 @@ class TestReorgs:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
         assert b.get_peak().height == 14
 
+        await check_block_store_invariant(b)
+
         # Reorg to alternate chain that is 1 height longer
         found_orphan = False
         blocks_reorg_chain = bt.get_consecutive_blocks(16, [], seed=b"2")
@@ -2658,20 +2724,24 @@ class TestReorgs:
             elif reorg_block.height >= 15:
                 assert result == ReceiveBlockResult.NEW_PEAK
             assert error_code is None
+            await check_block_store_invariant(b)
 
         # Back to original chain
         blocks_reorg_chain_2 = bt.get_consecutive_blocks(3, blocks, seed=b"3")
 
         result, error_code, fork_height, _ = await b.receive_block(blocks_reorg_chain_2[-3])
         assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
+        await check_block_store_invariant(b)
 
         result, error_code, fork_height, _ = await b.receive_block(blocks_reorg_chain_2[-2])
         assert result == ReceiveBlockResult.NEW_PEAK
+        await check_block_store_invariant(b)
 
         result, error_code, fork_height, _ = await b.receive_block(blocks_reorg_chain_2[-1])
         assert result == ReceiveBlockResult.NEW_PEAK
         assert found_orphan
         assert b.get_peak().height == 17
+        await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_reorg_transaction(self, empty_blockchain):
@@ -2715,10 +2785,12 @@ class TestReorgs:
         for block in blocks:
             result, error_code, _, _ = await b.receive_block(block)
             assert error_code is None and result == ReceiveBlockResult.NEW_PEAK
+            await check_block_store_invariant(b)
 
         for block in blocks_fork:
             result, error_code, _, _ = await b.receive_block(block)
             assert error_code is None
+            await check_block_store_invariant(b)
 
     @pytest.mark.asyncio
     async def test_get_header_blocks_in_range_tx_filter(self, empty_blockchain):
@@ -2762,8 +2834,37 @@ class TestReorgs:
             heights.append(block.height)
             result, error_code, _, _ = await b.receive_block(block)
             assert error_code is None and result == ReceiveBlockResult.NEW_PEAK
+            await check_block_store_invariant(b)
 
         blocks = await b.get_block_records_at(heights, batch_size=2)
         assert blocks
         assert len(blocks) == 200
         assert blocks[-1].height == 199
+
+
+async def check_block_store_invariant(bc: Blockchain):
+    db_wrapper = bc.block_store.db_wrapper
+
+    if db_wrapper.db_version == 1:
+        return
+
+    in_chain = set()
+    max_height = 0
+    async with db_wrapper.db.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
+        rows = await cursor.fetchall()
+        for row in rows:
+            height = row[0]
+
+            # if this block is in-chain, ensure we haven't found another block
+            # at this height that's also in chain. That would be an invariant
+            # violation
+            if row[1]:
+                # make sure we don't have any duplicate heights. Each block
+                # height can only have a single block with in_main_chain set
+                assert height not in in_chain
+                in_chain.add(height)
+                if height > max_height:
+                    max_height = height
+
+        # make sure every height is represented in the set
+        assert len(in_chain) == max_height + 1

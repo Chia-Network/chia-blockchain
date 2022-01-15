@@ -83,7 +83,8 @@ class TestSSL:
 
     @pytest.mark.asyncio
     async def test_farmer(self, harvester_farmer):
-        harvester_api, farmer_api = harvester_farmer
+        harvester_service, farmer_service = harvester_farmer
+        farmer_api = farmer_service._api
 
         farmer_server = farmer_api.farmer.server
         # Create valid cert (valid meaning signed with private CA)
@@ -174,7 +175,7 @@ class TestSSL:
     @pytest.mark.asyncio
     async def test_harvester(self, harvester_farmer):
         harvester, farmer_api = harvester_farmer
-        harvester_server = harvester.server
+        harvester_server = harvester._server
 
         # harvester should not accept incoming connections
         pub_crt = harvester_server._private_key_path.parent / "p2p.crt"

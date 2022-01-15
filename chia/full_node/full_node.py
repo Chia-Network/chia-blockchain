@@ -158,9 +158,9 @@ class FullNode:
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
 
-        await self.connection.execute(
-            "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path))
-        )
+        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
+        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
+        await self.connection.execute("pragma synchronous={}".format(db_sync))
 
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
@@ -185,8 +185,9 @@ class FullNode:
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
+        reserved_cores = self.config.get("reserved_cores", 2)
         self.blockchain = await Blockchain.create(
-            self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent
+            self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent, reserved_cores
         )
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
 
@@ -893,7 +894,7 @@ class FullNode:
                         if peer.closed:
                             peers_with_peak.remove(peer)
                             continue
-                        response = await peer.request_blocks(request, timeout=10)
+                        response = await peer.request_blocks(request, timeout=30)
                         if response is None:
                             await peer.close()
                             peers_with_peak.remove(peer)

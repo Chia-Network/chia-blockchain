@@ -129,7 +129,6 @@ class WalletStateManager:
         name: str = None,
     ):
         self = WalletStateManager()
-        self.new_wallet = False
         self.config = config
         self.constants = constants
         self.server = server
@@ -157,6 +156,8 @@ class WalletStateManager:
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
         self.pool_store = await WalletPoolStore.create(self.db_wrapper)
 
+        reserved_cores = self.config.get("reserved_cores", 2)
+
         self.blockchain = await WalletBlockchain.create(
             self.block_store,
             self.coin_store,
@@ -166,6 +167,7 @@ class WalletStateManager:
             self.new_transaction_block_callback,
             self.reorg_rollback,
             self.lock,
+            reserved_cores,
         )
         self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
 
@@ -283,10 +285,7 @@ class WalletStateManager:
                 # This handles the case where the database is empty
                 unused = uint32(0)
 
-        if self.new_wallet:
-            to_generate = self.config["initial_num_public_keys_new_wallet"]
-        else:
-            to_generate = self.config["initial_num_public_keys"]
+        to_generate = self.config["initial_num_public_keys"]
 
         for wallet_id in targets:
             target_wallet = self.wallets[wallet_id]

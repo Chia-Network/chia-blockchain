@@ -7,7 +7,6 @@ from typing import Any, Dict, Optional
 
 import websockets
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -16,8 +15,8 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 class DaemonProxy:
     def __init__(self, uri: str, ssl_context: Optional[ssl.SSLContext]):
         self._uri = uri
-        self._request_dict: Dict[bytes32, asyncio.Event] = {}
-        self.response_dict: Dict[bytes32, Any] = {}
+        self._request_dict: Dict[str, asyncio.Event] = {}
+        self.response_dict: Dict[str, Any] = {}
         self.ssl_context = ssl_context
 
     def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
