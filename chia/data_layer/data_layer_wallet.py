@@ -106,9 +106,9 @@ class DataLayerWallet:
 
         return self
 
-    #######################
-    # LAUNCHER PROCESSING #
-    #######################
+    #############
+    # LAUNCHING #
+    #############
 
     @staticmethod
     async def match_dl_launcher(launcher_spend: CoinSpend) -> Tuple[bool, Optional[bytes32]]:
@@ -145,7 +145,7 @@ class DataLayerWallet:
 
         return coin_states[0]
 
-    async def track_new_launcher_id(
+    async def track_new_launcher_id(  # This is the entry point for non-owned singletons
         self,
         launcher_id: bytes32,
         spend: Optional[CoinSpend] = None,
@@ -447,15 +447,7 @@ class DataLayerWallet:
         )
 
         # Create the solution
-        db_layer_sol = Program.to(
-            [
-                1,
-                (  # (my_puzhash . my_amount)
-                    current_full_puz.get_tree_hash(),
-                    singleton_record.lineage_proof.amount,
-                ),
-            ]
-        )
+        db_layer_sol = Program.to([1, singleton_record.lineage_proof.amount, []])
         full_sol = Program.to(
             [
                 parent_lineage.to_program(),
@@ -504,6 +496,7 @@ class DataLayerWallet:
             root=singleton_record.root,
             confirmed=False,
             confirmed_at_height=uint32(0),
+            inner_puzzle_hash=singleton_record.inner_puzzle_hash,
             lineage_proof=LineageProof(
                 singleton_record.coin_id,
                 create_host_layer_puzzle(
@@ -546,58 +539,9 @@ class DataLayerWallet:
 
         return singleton_record, parent_lineage
 
-    async def get_info_for_offer_claim(
-        self,
-        launcher_id: bytes32,
-    ) -> Tuple[Program, Optional[Program], bytes32]:
-        singleton_record: Optional[SingletonRecord] = await self.get_latest_singleton(launcher_id)
-        if singleton_record is None:
-            raise ValueError(f"Singleton with launcher ID {launcher_id} is not tracked by DL Wallet")
-        elif not singleton_record.confirmed:
-            raise ValueError(f"Singleton with launcher ID {launcher_id} is in an unconfirmed state")
-
-        current_full_puz = create_host_fullpuz(
-            singleton_record.inner_puzzle_hash,
-            singleton_record.root,
-            launcher_id,
-        )
-        return current_full_puz, singleton_record.inner_puzzle_hash, singleton_record.root
-
-    # async def coin_added(self, coin: Coin, height: uint32):
-    #     """Notification from wallet state manager that coin has been received."""
-    #     self.log.info(f"DL wallet has been notified that {coin} was added")
-    #
-    #     existing_singleton_records: List[
-    #         SingletonRecord
-    #     ] = await self.wallet_state_manager.dl_store.get_all_singletons_for_launcher(coin.parent_coin_info)
-    #     if len(existing_singleton_records) > 0:
-    #         if len(existing_singleton_records) > 1:
-    #             self.log.warning(f"Unexpected singleton received for launcher id {coin.parent_coin_info}")
-    #             return
-    #         elif len(existing_singleton_records) == 1:
-    #             await self.wallet_state_manager.dl_store.set_confirmed(existing_singleton_records[0].coin_id, height)
-    #     else:
-    #         data: Dict[str, Any] = {
-    #             "data": {
-    #                 "action_data": {
-    #                     "api_name": "request_puzzle_solution",
-    #                     "height": height,
-    #                     "coin_name": coin.parent_coin_info,
-    #                     "received_coin": coin.name(),
-    #                 }
-    #             }
-    #         }
-    #
-    #         data_str = dict_to_json_str(data)
-    #         await self.wallet_state_manager.create_action(
-    #             name="request_puzzle_solution",
-    #             wallet_id=self.id(),
-    #             wallet_type=self.type(),
-    #             callback="puzzle_solution_received",
-    #             done=False,
-    #             data=data_str,
-    #             in_transaction=True,
-    #         )
+    ###########
+    # SYNCING #
+    ###########
 
     async def singleton_removed(self, parent_spend: CoinSpend, height: uint32) -> None:
         parent_name = parent_spend.coin.name()
@@ -613,10 +557,16 @@ class DataLayerWallet:
                 self.log.warning(f"DL wallet received coin it does not have parent for. Expected parent {parent_name}.")
                 return
 
+            # First let's create the singleton's full puz to check if it's the same (report spend)
+            current_full_puz: Program = create_host_fullpuz(
+                singleton_record.inner_puzzle_hash,
+                singleton_record.root,
+                singleton_record.launcher_id,
+            )
+
             # Information we need to create the singleton record
             full_puzzle_hash: bytes32
             amount: uint64
-            hint: bytes32
             root: bytes32
             inner_puzzle_hash: bytes32
 
@@ -624,21 +574,23 @@ class DataLayerWallet:
             found_singleton: bool = False
             for condition in conditions:
                 if condition[0] == ConditionOpcode.CREATE_COIN and int.from_bytes(condition[2], "big") % 2 == 1:
-                    try:
-                        full_puzzle_hash = bytes32(condition[1])
-                        amount = uint64(int.from_bytes(condition[2], "big"))
-                        hint = bytes32(condition[3][0])
-                        root = bytes32(condition[3][1])
-                        inner_puzzle_hash = bytes32(condition[3][2])
-
-                        found_singleton = True
-                        break
-                    except IndexError:
-                        self.log.warning(
-                            f"Parent {parent_name} with launcher {singleton_record.launcher_id} "
-                            "did not hint its child properly"
-                        )
-                        return
+                    full_puzzle_hash = bytes32(condition[1])
+                    amount = uint64(int.from_bytes(condition[2], "big"))
+                    if current_full_puz.get_tree_hash() == full_puzzle_hash:
+                        root = singleton_record.root
+                        inner_puzzle_hash = singleton_record.inner_puzzle_hash
+                    else:
+                        try:
+                            root = bytes32(condition[3][1])
+                            inner_puzzle_hash = bytes32(condition[3][2])
+                        except IndexError:
+                            self.log.warning(
+                                f"Parent {parent_name} with launcher {singleton_record.launcher_id} "
+                                "did not hint its child properly"
+                            )
+                            return
+                    found_singleton = True
+                    break
 
             if not found_singleton:
                 self.log.warning(f"Singleton with launcher ID {singleton_record.launcher_id} was melted")
@@ -674,11 +626,40 @@ class DataLayerWallet:
                 )
             )
 
+    #############
+    # DL OFFERS #
+    #############
+
+    async def get_info_for_offer_claim(
+        self,
+        launcher_id: bytes32,
+    ) -> Tuple[Program, Optional[Program], bytes32]:
+        singleton_record: Optional[SingletonRecord] = await self.get_latest_singleton(launcher_id)
+        if singleton_record is None:
+            raise ValueError(f"Singleton with launcher ID {launcher_id} is not tracked by DL Wallet")
+        elif not singleton_record.confirmed:
+            raise ValueError(f"Singleton with launcher ID {launcher_id} is in an unconfirmed state")
+
+        current_full_puz = create_host_fullpuz(
+            singleton_record.inner_puzzle_hash,
+            singleton_record.root,
+            launcher_id,
+        )
+        return current_full_puz, singleton_record.inner_puzzle_hash, singleton_record.root
+
+    ###########
+    # UTILITY #
+    ###########
+
     async def get_latest_singleton(self, launcher_id: bytes32) -> Optional[SingletonRecord]:
         return await self.wallet_state_manager.dl_store.get_latest_singleton(launcher_id)
 
     async def get_history(self, launcher_id: bytes32) -> List[SingletonRecord]:
         return await self.wallet_state_manager.dl_store.get_all_singletons_for_launcher(launcher_id)
+
+    ##########
+    # WALLET #
+    ##########
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return self.standard_wallet.puzzle_for_pk(pubkey)
