@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import pytest
 
@@ -84,22 +85,35 @@ class TestWalletRpc:
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
         await validate_get_routes(client, wallet_rpc_api)
 
+        wsm = wallet_node.wallet_state_manager
+
         try:
             merkle_root: bytes32 = bytes32([0] * 32)
-            dl_wallet_id, txs = await client.create_new_dl_wallet(merkle_root, uint64(50))
-            assert len(txs) == 2
-            current_root: bytes32 = await client.dl_current_root(dl_wallet_id)
-            assert current_root == merkle_root
-            new_root: bytes32 = bytes32([1] * 32)
-            tx_record: TransactionRecord = await client.dl_update_root(dl_wallet_id, new_root)
-            assert tx_record
+            txs, launcher_id = await client.create_new_dl(merkle_root, uint64(50))
 
             for i in range(0, 5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await asyncio.sleep(0.5)
 
-            time_out_assert(15, client.dl_current_root, new_root, dl_wallet_id)
+            async def is_singleton_confirmed(lid) -> bool:
+                return (await client.dl_latest_singleton(lid)).confirmed
 
-            assert await client.dl_history(dl_wallet_id) == [current_root, new_root]
+            await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
+            singleton_record: SingletonRecord = await client.dl_latest_singleton(launcher_id)
+            assert singleton_record.root == merkle_root
+
+            new_root: bytes32 = bytes32([1] * 32)
+            tx: TransactionRecord = await client.dl_update_root(launcher_id, new_root)
+
+            for i in range(0, 5):
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await asyncio.sleep(0.5)
+
+            new_singleton_record: SingletonRecord = await client.dl_latest_singleton(launcher_id)
+            assert new_singleton_record.root == new_root
+            assert new_singleton_record.confirmed
+
+            assert await client.dl_history(launcher_id) == [singleton_record, new_singleton_record]
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
