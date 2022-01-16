@@ -174,6 +174,7 @@ async def pprint_pool_wallet_state(
 
 
 async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     self_hostname = config["self_hostname"]
     farmer_rpc_port = config["farmer"]["rpc_port"]
