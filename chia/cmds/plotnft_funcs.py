@@ -383,7 +383,7 @@ async def change_payout_instructions(launcher_id: str, address: str) -> None:
         for pool_config in old_configs:
             if pool_config.launcher_id == hexstr_to_bytes(launcher_id):
                 id_found = True
-                payout_instructions = address
+                payout_instructions = decode_puzzle_hash(address).hex()
             else:
                 payout_instructions = pool_config.payout_instructions
             new_pool_configs.append(
