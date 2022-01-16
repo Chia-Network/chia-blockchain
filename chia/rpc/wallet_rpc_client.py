@@ -148,6 +148,14 @@ class WalletRpcClient(RpcClient):
             )
         return TransactionRecord.from_json_dict(response["transaction"])
 
+    async def push_transaction(
+        self,
+        wallet_id: str,
+        transaction: TransactionRecord,
+    ) -> None:
+        await self.fetch("push_transaction", {"wallet_id": wallet_id, "transaction": transaction.to_json_dict()})
+        return None
+
     async def delete_unconfirmed_transactions(self, wallet_id: str) -> None:
         await self.fetch(
             "delete_unconfirmed_transactions",
