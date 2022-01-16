@@ -469,9 +469,14 @@ async def test_plot_info_caching(test_environment):
     refresh_tester: PlotRefreshTester = PlotRefreshTester(env.root_path)
     plot_manager = refresh_tester.plot_manager
     plot_manager.cache.load()
-    assert len(plot_manager.cache) == len(plot_manager.cache)
+    assert len(plot_manager.cache) == len(env.refresh_tester.plot_manager.cache)
+    for plot_id, cache_entry in env.refresh_tester.plot_manager.cache.items():
+        cache_entry_new = plot_manager.cache.get(plot_id)
+        assert cache_entry_new.pool_public_key == cache_entry.pool_public_key
+        assert cache_entry_new.pool_contract_puzzle_hash == cache_entry.pool_contract_puzzle_hash
+        assert cache_entry_new.plot_public_key == cache_entry.plot_public_key
     await refresh_tester.run(expected_result)
-    for path, plot_info in plot_manager.plots.items():
+    for path, plot_info in env.refresh_tester.plot_manager.plots.items():
         assert path in plot_manager.plots
         assert plot_manager.plots[path].prover.get_filename() == plot_info.prover.get_filename()
         assert plot_manager.plots[path].prover.get_id() == plot_info.prover.get_id()
@@ -482,9 +487,9 @@ async def test_plot_info_caching(test_environment):
         assert plot_manager.plots[path].plot_public_key == plot_info.plot_public_key
         assert plot_manager.plots[path].file_size == plot_info.file_size
         assert plot_manager.plots[path].time_modified == plot_info.time_modified
-    assert plot_manager.plot_filename_paths == plot_manager.plot_filename_paths
-    assert plot_manager.failed_to_open_filenames == plot_manager.failed_to_open_filenames
-    assert plot_manager.no_key_filenames == plot_manager.no_key_filenames
+    assert plot_manager.plot_filename_paths == env.refresh_tester.plot_manager.plot_filename_paths
+    assert plot_manager.failed_to_open_filenames == env.refresh_tester.plot_manager.failed_to_open_filenames
+    assert plot_manager.no_key_filenames == env.refresh_tester.plot_manager.no_key_filenames
     plot_manager.stop_refreshing()
     # Modify the content of the plot_manager.dat
     with open(plot_manager.cache.path(), "r+b") as file:
