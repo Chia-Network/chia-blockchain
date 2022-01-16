@@ -96,7 +96,7 @@ def configure(
         if testnet == "true" or testnet == "t":
             print("Updating Chinilla Seeder to testnet settings")
             port = 58444
-            network = "testnet10"
+            network = "testnet0"
             bootstrap = ["testnet-node.chinilla.net"]
 
             config["seeder"]["port"] = port

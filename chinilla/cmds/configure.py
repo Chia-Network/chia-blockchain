@@ -93,9 +93,9 @@ def configure(
         if testnet == "true" or testnet == "t":
             print("Setting Testnet")
             testnet_port = "58444"
-            testnet_introducer = "introducer-testnet10.chinilla.net"
-            testnet_dns_introducer = "dns-introducer-testnet10.chinilla.net"
-            testnet = "testnet10"
+            testnet_introducer = "introducer-testnet0.chinilla.net"
+            testnet_dns_introducer = "dns-introducer-testnet0.chinilla.net"
+            testnet = "testnet0"
             config["full_node"]["port"] = int(testnet_port)
             config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
             config["farmer"]["full_node_peer"]["port"] = int(testnet_port)
