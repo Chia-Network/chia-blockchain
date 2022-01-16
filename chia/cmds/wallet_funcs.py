@@ -1,5 +1,4 @@
 import asyncio
-import pathlib
 import sys
 import time
 from datetime import datetime
@@ -119,7 +118,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
                 print("Submitting transaction...")
                 res = await wallet_client.send_transaction(wallet_id, final_amount, address, final_fee, memos)
                 break
-            elif typ == WalletType.CAT:
+            elif typ == WalletType.COLOURED_COIN:
                 final_amount = uint64(int(amount * units["colouredcoin"]))
                 print("Submitting transaction...")
                 res = await wallet_client.cat_spend(wallet_id, final_amount, address, final_fee, memos)
@@ -246,7 +245,7 @@ async def print_offer_summary(wallet_client: WalletRpcClient, sum_dict: dict):
             name: str = "XCH"
             unit: int = units["chia"]
         else:
-            result = await wallet_client.cat_asset_id_to_name(bytes32.fromhex(asset_id))
+            result = await wallet_client.cat_asset_id_to_name(bytes.fromhex(asset_id))
             wid = "Unknown"
             name = asset_id
             unit = units["colouredcoin"]
@@ -284,7 +283,7 @@ async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     if id is None:
         records = await wallet_client.get_all_offers(file_contents=file_contents)
     else:
-        records = [await wallet_client.get_offer(bytes32.from_hexstr(id), file_contents)]
+        records = [await wallet_client.get_offer(hexstr_to_bytes(id), file_contents)]
         if filepath is not None:
             with open(pathlib.Path(filepath), "w") as file:
                 file.write(Offer.from_bytes(records[0].offer).to_bech32())
@@ -330,7 +329,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
 
 async def cancel_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    id = bytes32.from_hexstr(args["id"])
+    id = hexstr_to_bytes(args["id"])
     secure: bool = not args["insecure"]
     fee: int = int(Decimal(args["fee"]) * units["chia"])
 
