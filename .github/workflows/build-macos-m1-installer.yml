@@ -79,7 +79,7 @@ jobs:
           p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
 
       # Get the most recent release from chia-plotter-madmax
-      - uses: actions/github-script@v4
+      - uses: actions/github-script@v5.1.0
         id: 'latest-madmax'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

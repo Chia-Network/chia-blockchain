@@ -94,7 +94,7 @@ jobs:
         SECRET: "${{ secrets.INSTALLER_UPLOAD_SECRET }}"
 
       # Get the most recent release from chia-plotter-madmax
-    - uses: actions/github-script@v4
+    - uses: actions/github-script@v5.1.0
       id: 'latest-madmax'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -115,7 +115,7 @@ jobs:
         chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
 
       # Get the most recent release from bladebit
-    - uses: actions/github-script@v4
+    - uses: actions/github-script@v5.1.0
       id: 'latest-bladebit'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
