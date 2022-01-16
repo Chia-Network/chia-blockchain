@@ -95,7 +95,7 @@ def configure(
     if testnet is not None:
         if testnet == "true" or testnet == "t":
             print("Updating Chinilla Seeder to testnet settings")
-            port = 58444
+            port = 40444
             network = "testnet11"
             bootstrap = ["testnet-node.chinilla.net"]
 
@@ -108,7 +108,7 @@ def configure(
 
         elif testnet == "false" or testnet == "f":
             print("Updating Chinilla Seeder to vanillanet settings")
-            port = 8444
+            port = 42444
             network = "vanillanet"
             bootstrap = ["node.chinilla.net"]
 

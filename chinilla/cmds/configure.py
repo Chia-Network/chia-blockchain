@@ -92,7 +92,7 @@ def configure(
     if testnet:
         if testnet == "true" or testnet == "t":
             print("Setting Testnet")
-            testnet_port = "58444"
+            testnet_port = "40444"
             testnet_introducer = "introducer-testnet11.chinilla.net"
             testnet_dns_introducer = "dns-introducer-testnet11.chinilla.net"
             testnet = "testnet11"
@@ -119,7 +119,7 @@ def configure(
 
         elif testnet == "false" or testnet == "f":
             print("Setting Vanillanet")
-            vanillanet_port = "8444"
+            vanillanet_port = "42444"
             vanillanet_introducer = "introducer.chinilla.net"
             vanillanet_dns_introducer = "dns-introducer.chinilla.net"
             net = "vanillanet"
