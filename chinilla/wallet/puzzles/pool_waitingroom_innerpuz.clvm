@@ -12,7 +12,7 @@
   ; POOL_PUZZLE_HASH is commitment to the pool's puzzle hash
   ; P2_SINGLETON_PUZZLE_HASH is the puzzlehash for your pay_to_singleton puzzle
   ; OWNER_PUBKEY is the farmer pubkey which signs the exit puzzle_hash
-  ; POOL_REWARD_PREFIX is network-specific data (mainnet vs testnet) that helps determine if a coin is a pool reward
+  ; POOL_REWARD_PREFIX is network-specific data (vanillanet vs testnet) that helps determine if a coin is a pool reward
   ; RELATIVE_LOCK_HEIGHT is how long it takes to leave
 
   ; spend_type is: 0 for absorbing money, 1 to escape

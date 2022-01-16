@@ -100,7 +100,7 @@ def generate_and_print_cmd():
     type=int,
     required=True,
 )
-@click.option("--hd_path", "-t", help="Enter the HD path in the form 'm/12381/8444/n/n'", type=str, required=True)
+@click.option("--hd_path", "-t", help="Enter the HD path in the form 'm/12381/42444/n/n'", type=str, required=True)
 @click.option(
     "--as-bytes",
     "-b",
