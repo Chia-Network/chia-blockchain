@@ -14,7 +14,6 @@ from chia.data_layer.data_layer_errors import (
 )
 from chia.data_layer.data_layer_types import (
     InternalNode,
-    KeyIndex,
     Node,
     NodeType,
     Root,
@@ -248,15 +247,6 @@ class DataStore:
                 "value_hash": value_hash,
                 "present": present,
             },
-        )
-
-    async def _insert_keys(self, key_indexes: Iterable[KeyIndex]) -> None:
-        await self.db.executemany(
-            """
-            INSERT INTO key_index(tree_id, generation, key_hash, node_hash, value_hash)
-            VALUES(:tree_id, :generation, :key_hash, :node_hash, :value_hash)
-            """,
-            (key_index.to_table_values() for key_index in key_indexes),
         )
 
     async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> None:
