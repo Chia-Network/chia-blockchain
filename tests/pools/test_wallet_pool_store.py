@@ -13,7 +13,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
-
 from chia.wallet.wallet_pool_store import WalletPoolStore
 
 

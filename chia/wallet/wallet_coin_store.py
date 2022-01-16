@@ -1,7 +1,7 @@
+import sqlite3
 from typing import Dict, List, Optional, Set
 
 import aiosqlite
-import sqlite3
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32

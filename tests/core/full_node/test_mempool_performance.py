@@ -1,10 +1,10 @@
 # flake8: noqa: F811, F401
 
 import asyncio
+import logging
 import time
 
 import pytest
-import logging
 
 from chia.protocols import full_node_protocol
 from chia.types.peer_info import PeerInfo

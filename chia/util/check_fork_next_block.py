@@ -1,4 +1,4 @@
-from typing import List, Callable
+from typing import Callable, List
 
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.util.ints import uint32

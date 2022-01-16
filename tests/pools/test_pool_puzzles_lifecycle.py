@@ -1,49 +1,44 @@
 import copy
-
 from typing import List
 from unittest import TestCase
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64, uint32
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    puzzle_for_pk,
-    solution_for_conditions,
-    calculate_synthetic_secret_key,
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-)
-from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions
-from chia.wallet.puzzles import singleton_top_layer
-from chia.pools.pool_wallet_info import PoolState
 from chia.pools.pool_puzzles import (
-    create_waiting_room_inner_puzzle,
-    create_pooling_inner_puzzle,
-    create_p2_singleton_puzzle,
-    create_absorb_spend,
-    create_travel_spend,
-    get_most_recent_singleton_coin_from_coin_spend,
-    get_delayed_puz_info_from_launcher_spend,
     SINGLETON_MOD_HASH,
-    launcher_id_to_p2_puzzle_hash,
-    is_pool_singleton_inner_puzzle,
+    create_absorb_spend,
+    create_p2_singleton_puzzle,
+    create_pooling_inner_puzzle,
+    create_travel_spend,
+    create_waiting_room_inner_puzzle,
+    get_delayed_puz_info_from_launcher_spend,
+    get_most_recent_singleton_coin_from_coin_spend,
     get_pubkey_from_member_inner_puzzle,
+    get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle,
+    is_pool_singleton_inner_puzzle,
+    launcher_id_to_p2_puzzle_hash,
     solution_to_pool_state,
     uncurry_pool_waitingroom_inner_puzzle,
-    get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle,
 )
+from chia.pools.pool_wallet_info import PoolState
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
+from chia.types.spend_bundle import SpendBundle
+from chia.util.ints import uint32, uint64
+from chia.wallet.puzzles import singleton_top_layer
+from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_secret_key,
+    puzzle_for_pk,
+    solution_for_conditions,
+)
+from tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
+from tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from tests.util.key_tool import KeyTool
-from tests.clvm.test_puzzles import (
-    public_key_for_index,
-    secret_exponent_for_index,
-)
-
-from tests.clvm.coin_store import CoinStore, CoinTimestamp, BadSpendBundleError
 
 """
 This test suite aims to test:

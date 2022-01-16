@@ -1,5 +1,6 @@
 import logging
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, List, Optional, Tuple
+
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult

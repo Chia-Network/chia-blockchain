@@ -9,8 +9,8 @@ from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.peer_info import PeerInfo
-from tests.block_tools import test_constants
 from chia.util.ints import uint16
+from tests.block_tools import test_constants
 from tests.setup_nodes import (
     bt,
     self_hostname,

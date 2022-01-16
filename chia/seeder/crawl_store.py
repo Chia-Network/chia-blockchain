@@ -4,7 +4,7 @@ import ipaddress
 import logging
 import random
 import time
-from typing import List, Dict
+from typing import Dict, List
 
 import aiosqlite
 

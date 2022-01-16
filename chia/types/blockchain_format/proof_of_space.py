@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from bitstring import BitArray
-from blspy import G1Element, AugSchemeMPL, PrivateKey
+from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import Verifier
 
 from chia.consensus.constants import ConsensusConstants

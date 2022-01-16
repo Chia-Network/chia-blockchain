@@ -1,18 +1,13 @@
 import asyncio
+import logging
+from operator import attrgetter
 from typing import Optional
 
+import pytest
 from blspy import G2Element
 
-from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
-from chia.util.config import load_config, save_config
-from operator import attrgetter
-import logging
-
-import pytest
-
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import start_rpc_server
@@ -21,16 +16,19 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
+from chia.types.coin_record import CoinRecord
+from chia.types.coin_spend import CoinSpend
 from chia.types.peer_info import PeerInfo
+from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
-from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
-from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
-from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
+from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)

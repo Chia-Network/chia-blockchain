@@ -6,13 +6,10 @@ or that they're failing for the right reason when they're invalid.
 import atexit
 import logging
 import time
-
 from typing import List, Optional, Tuple
 
 import pytest
-
 from blspy import G2Element
-
 from clvm_tools.binutils import assemble
 
 from chia.consensus.blockchain import ReceiveBlockResult

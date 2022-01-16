@@ -1,17 +1,18 @@
-import click
-import colorama
 import os
 import sys
+from getpass import getpass
+from io import TextIOWrapper
+from pathlib import Path
+from typing import Optional, Tuple
+
+import click
+import colorama
 
 from chia.daemon.client import acquire_connection_to_daemon
 from chia.util.keychain import Keychain, obtain_current_passphrase, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.misc import prompt_yes_no
 from chia.util.ws_message import WsRpcMessage
-from getpass import getpass
-from io import TextIOWrapper
-from pathlib import Path
-from typing import Optional, Tuple
 
 # Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-passphrase -> 'set_passphrase'
 PASSPHRASE_CLI_OPTION_NAMES = ["keys_root_path", "set_passphrase", "passphrase_file", "current_passphrase_file"]

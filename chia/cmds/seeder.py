@@ -9,8 +9,8 @@ from chia import __version__
 from chia.cmds.chia import monkey_patch_click
 from chia.cmds.init_funcs import init
 from chia.seeder.util.config import patch_default_seeder_config
+from chia.seeder.util.service import kill_service, launch_service
 from chia.seeder.util.service_groups import all_groups, services_for_groups
-from chia.seeder.util.service import launch_service, kill_service
 from chia.util.config import load_config, save_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 

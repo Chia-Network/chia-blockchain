@@ -1,5 +1,4 @@
 import asyncio
-
 from typing import Optional
 
 from chia.server.server import ChiaServer

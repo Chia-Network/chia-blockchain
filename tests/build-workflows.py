@@ -3,12 +3,12 @@
 # Run from the current directory.
 
 import argparse
-import sys
-
-import testconfig
 import logging
+import sys
 from pathlib import Path
 from typing import Dict, List
+
+import testconfig
 
 root_path = Path(__file__).parent.resolve()
 

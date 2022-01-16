@@ -8,8 +8,7 @@ from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
-from chia.plotting.util import add_plot_directory
-from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk
+from chia.plotting.util import add_plot_directory, stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash

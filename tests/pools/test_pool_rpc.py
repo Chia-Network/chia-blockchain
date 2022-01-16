@@ -2,14 +2,14 @@ import asyncio
 import logging
 from pathlib import Path
 from shutil import rmtree
-from typing import Optional, List, Dict
+from typing import Dict, List, Optional
 
 import pytest
 from blspy import G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
-from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
+from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols import full_node_protocol
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.rpc.rpc_server import start_rpc_server
@@ -17,16 +17,15 @@ from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
-
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from tests.block_tools import get_plot_dir
 from chia.util.config import load_config
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
+from tests.block_tools import get_plot_dir
+from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 # TODO: Compare deducted fees in all tests against reported total_fee

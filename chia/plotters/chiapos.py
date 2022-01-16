@@ -4,10 +4,12 @@ After `chia plots create` becomes obsolete, consider removing it from there.
 """
 import asyncio
 import logging
-import pkg_resources
-from chia.plotting.create_plots import create_plots, resolve_plot_keys
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+import pkg_resources
+
+from chia.plotting.create_plots import create_plots, resolve_plot_keys
 
 log = logging.getLogger(__name__)
 

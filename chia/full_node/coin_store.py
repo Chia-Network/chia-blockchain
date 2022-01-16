@@ -1,5 +1,9 @@
-from typing import List, Optional, Set, Dict, Any, Tuple
+import logging
+from time import time
+from typing import Any, Dict, List, Optional, Set, Tuple
+
 import aiosqlite
+
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -7,8 +11,6 @@ from chia.types.coin_record import CoinRecord
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
-from time import time
-import logging
 
 log = logging.getLogger(__name__)
 

@@ -1,12 +1,12 @@
 import asyncio
-import os
 import logging
 import logging.config
+import os
 import signal
 from sys import platform
 from typing import Any, Callable, List, Optional, Tuple
 
-from chia.daemon.server import singleton, service_launch_lock_path
+from chia.daemon.server import service_launch_lock_path, singleton
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 
 try:
@@ -21,11 +21,10 @@ from chia.server.upnp import UPnP
 from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
-from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
+from chia.util.setproctitle import setproctitle
 
 from .reconnect_task import start_reconnect_task
-
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.

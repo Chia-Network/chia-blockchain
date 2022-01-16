@@ -2,8 +2,8 @@ import logging
 import traceback
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional
 from functools import lru_cache
+from typing import Optional
 
 from chiavdf import create_discriminant, verify_n_wesolowski
 

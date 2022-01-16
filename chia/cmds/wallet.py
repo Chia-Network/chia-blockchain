@@ -24,6 +24,7 @@ def wallet_cmd() -> None:
 def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, tx_id: str, verbose: int) -> None:
     extra_params = {"id": id, "tx_id": tx_id, "verbose": verbose}
     import asyncio
+
     from .wallet_funcs import execute_with_wallet, get_transaction
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transaction))
@@ -64,6 +65,7 @@ def get_transactions_cmd(
 ) -> None:
     extra_params = {"id": id, "verbose": verbose, "offset": offset, "paginate": paginate}
     import asyncio
+
     from .wallet_funcs import execute_with_wallet, get_transactions
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transactions))
@@ -106,6 +108,7 @@ def send_cmd(
 ) -> None:
     extra_params = {"id": id, "amount": amount, "fee": fee, "address": address, "override": override}
     import asyncio
+
     from .wallet_funcs import execute_with_wallet, send
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, send))
@@ -122,6 +125,7 @@ def send_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
     import asyncio
+
     from .wallet_funcs import execute_with_wallet, print_balances
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, print_balances))
@@ -140,6 +144,7 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
 def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int) -> None:
     extra_params = {"id": id}
     import asyncio
+
     from .wallet_funcs import execute_with_wallet, get_address
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_address))
@@ -160,6 +165,7 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int) -> Non
 def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int) -> None:
     extra_params = {"id": id}
     import asyncio
-    from .wallet_funcs import execute_with_wallet, delete_unconfirmed_transactions
+
+    from .wallet_funcs import delete_unconfirmed_transactions, execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_unconfirmed_transactions))

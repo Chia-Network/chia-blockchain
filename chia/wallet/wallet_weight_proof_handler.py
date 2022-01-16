@@ -4,25 +4,21 @@ import pathlib
 import random
 import tempfile
 from concurrent.futures.process import ProcessPoolExecutor
-from typing import IO, List, Tuple, Optional
+from typing import IO, List, Optional, Tuple
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.weight_proof import (
-    _validate_sub_epoch_summaries,
-    vars_to_bytes,
-    validate_sub_epoch_sampling,
-    _validate_sub_epoch_segments,
     _validate_recent_blocks_and_get_records,
-    chunks,
+    _validate_sub_epoch_segments,
+    _validate_sub_epoch_summaries,
     _validate_vdf_batch,
+    chunks,
+    validate_sub_epoch_sampling,
+    vars_to_bytes,
 )
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-
-from chia.types.weight_proof import (
-    WeightProof,
-)
-
+from chia.types.weight_proof import WeightProof
 from chia.util.ints import uint32
 
 log = logging.getLogger(__name__)

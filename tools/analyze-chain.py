@@ -2,19 +2,19 @@
 
 import sqlite3
 import sys
-from typing import List
 from time import time
+from typing import List
 
-from clvm_rs import run_generator
 from clvm import KEYWORD_FROM_ATOM, KEYWORD_TO_ATOM
 from clvm.casts import int_from_bytes
 from clvm.operators import OP_REWRITE
+from clvm_rs import run_generator
 
-from chia.types.full_block import FullBlock
-from chia.types.blockchain_format.program import Program
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
+from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.full_block import FullBlock
+from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 
 GENERATOR_ROM = bytes(get_generator())
 

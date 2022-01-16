@@ -1,10 +1,11 @@
 import logging
-
-from blspy import PrivateKey
-from chia.cmds.init_funcs import check_keys
-from chia.util.keychain import Keychain
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
+
+from blspy import PrivateKey
+
+from chia.cmds.init_funcs import check_keys
+from chia.util.keychain import Keychain
 
 # Commands that are handled by the KeychainServer
 keychain_commands = [

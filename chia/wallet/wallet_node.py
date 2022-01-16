@@ -4,9 +4,9 @@ import logging
 import time
 import traceback
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, Union, Any
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
-from blspy import PrivateKey, AugSchemeMPL
+from blspy import AugSchemeMPL, PrivateKey
 from packaging.version import Version
 
 from chia.consensus.block_record import BlockRecord
@@ -14,11 +14,11 @@ from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.daemon.keychain_proxy import (
+    KeychainProxy,
     KeychainProxyConnectionFailure,
+    KeyringIsEmpty,
     connect_to_keychain_and_validate,
     wrap_local_keychain,
-    KeychainProxy,
-    KeyringIsEmpty,
 )
 from chia.full_node.weight_proof import chunks
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
@@ -27,19 +27,19 @@ from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
-    RespondToCoinUpdates,
     CoinState,
-    RespondToPhUpdates,
-    RespondBlockHeader,
-    RequestAdditions,
-    RespondAdditions,
     RejectAdditionsRequest,
-    RequestSESInfo,
-    RespondSESInfo,
-    RespondRemovals,
     RejectRemovalsRequest,
+    RequestAdditions,
     RequestHeaderBlocks,
+    RequestSESInfo,
+    RespondAdditions,
+    RespondBlockHeader,
     RespondHeaderBlocks,
+    RespondRemovals,
+    RespondSESInfo,
+    RespondToCoinUpdates,
+    RespondToPhUpdates,
 )
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -53,26 +53,26 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.types.weight_proof import WeightProof, SubEpochData
+from chia.types.weight_proof import SubEpochData, WeightProof
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.ints import uint32, uint64
-from chia.util.keychain import KeyringIsLocked, Keychain
+from chia.util.keychain import Keychain, KeyringIsLocked
 from chia.util.network import get_host_addr
 from chia.util.path import mkdir, path_from_root
+from chia.util.profiler import profile_task
 from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_sync_utils import (
+    request_and_validate_additions,
+    request_and_validate_removals,
     validate_additions,
     validate_removals,
-    request_and_validate_removals,
-    request_and_validate_additions,
 )
-from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_state_manager import WalletStateManager
-from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action import WalletAction
-from chia.util.profiler import profile_task
+from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 class PeerRequestCache:

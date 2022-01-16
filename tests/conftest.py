@@ -1,7 +1,7 @@
-import pytest
 import tempfile
 from pathlib import Path
 
+import pytest
 
 # TODO: tests.setup_nodes (which is also imported by tests.util.blockchain) creates a
 #       global BlockTools at tests.setup_nodes.bt.  This results in an attempt to create
@@ -19,8 +19,8 @@ async def empty_blockchain(request):
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
-    from tests.util.blockchain import create_blockchain
     from tests.setup_nodes import test_constants
+    from tests.util.blockchain import create_blockchain
 
     bc1, connection, db_path = await create_blockchain(test_constants, request.param)
     yield bc1

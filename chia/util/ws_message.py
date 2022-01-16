@@ -1,10 +1,9 @@
 from secrets import token_bytes
 from typing import Any, Dict
 
-from chia.util.json_util import dict_to_json_str
-
 from typing_extensions import TypedDict
 
+from chia.util.json_util import dict_to_json_str
 
 # Messages must follow this format
 # Message = { "command" "command_name",

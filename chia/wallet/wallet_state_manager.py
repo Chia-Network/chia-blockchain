@@ -11,12 +11,13 @@ import aiosqlite
 from blspy import G1Element, PrivateKey
 from chiabip158 import PyBIP158
 
-from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
+from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
-from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution, CoinState
+from chia.protocols.wallet_protocol import CoinState, PuzzleSolutionResponse, RespondPuzzleSolution
+from chia.server.server import ChiaServer
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -26,15 +27,16 @@ from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.weight_proof import WeightProof
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64, uint128, uint8
-from chia.util.db_synchronous import db_synchronous_on
-from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle, construct_cat_puzzle
-from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
+from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
@@ -56,8 +58,6 @@ from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_sync_store import WalletSyncStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
-from chia.server.server import ChiaServer
-from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 
 

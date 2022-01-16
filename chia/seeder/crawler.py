@@ -1,8 +1,8 @@
 import asyncio
+import ipaddress
 import logging
 import time
 import traceback
-import ipaddress
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -16,8 +16,8 @@ from chia.seeder.crawl_store import CrawlStore
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.server import ChiaServer
 from chia.types.peer_info import PeerInfo
-from chia.util.path import mkdir, path_from_root
 from chia.util.ints import uint32, uint64
+from chia.util.path import mkdir, path_from_root
 
 log = logging.getLogger(__name__)
 

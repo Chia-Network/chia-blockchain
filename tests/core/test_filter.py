@@ -4,7 +4,7 @@ from typing import List
 import pytest
 from chiabip158 import PyBIP158
 
-from tests.setup_nodes import setup_simulators_and_wallets, bt
+from tests.setup_nodes import bt, setup_simulators_and_wallets
 
 
 @pytest.fixture(scope="module")

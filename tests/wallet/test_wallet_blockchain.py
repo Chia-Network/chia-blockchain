@@ -13,7 +13,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.generator_tools import get_block_header
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
-from tests.setup_nodes import test_constants, setup_node_and_wallet
+from tests.setup_nodes import setup_node_and_wallet, test_constants
 
 
 @pytest.fixture(scope="session")

@@ -1,4 +1,5 @@
 from typing import Any, Iterator, List, Tuple
+
 from chiabip158 import PyBIP158
 
 from chia.types.blockchain_format.coin import Coin

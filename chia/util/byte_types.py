@@ -1,5 +1,5 @@
 import io
-from typing import BinaryIO, Type, TypeVar, TYPE_CHECKING
+from typing import TYPE_CHECKING, BinaryIO, Type, TypeVar
 
 _T_SizedBytes = TypeVar("_T_SizedBytes", bound="SizedBytes")
 

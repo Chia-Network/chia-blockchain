@@ -1,7 +1,10 @@
 import logging
 import ssl
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 from blspy import AugSchemeMPL, PrivateKey
+
 from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
 from chia.daemon.keychain_server import (
@@ -20,8 +23,6 @@ from chia.util.keychain import (
     supports_keyring_passphrase,
 )
 from chia.util.ws_message import WsRpcMessage
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
 
 
 class KeyringIsEmpty(Exception):

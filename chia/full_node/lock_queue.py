@@ -4,7 +4,6 @@ import logging
 import traceback
 from typing import Awaitable, Callable
 
-
 log = logging.getLogger(__name__)
 
 

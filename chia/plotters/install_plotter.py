@@ -1,4 +1,5 @@
 import os
+
 from chia.plotters.bladebit import install_bladebit
 from chia.plotters.madmax import install_madmax
 

@@ -2,11 +2,10 @@ import asyncio
 import logging
 import os
 import shutil
-
-from aiofiles import tempfile  # type: ignore
 from pathlib import Path
 from typing import Union
 
+from aiofiles import tempfile  # type: ignore
 
 log = logging.getLogger(__name__)
 

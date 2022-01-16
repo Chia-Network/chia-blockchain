@@ -1,11 +1,12 @@
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
+
 from blspy import G2Element
 
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.announcement import Announcement
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
@@ -17,8 +18,8 @@ from chia.wallet.cat_wallet.cat_utils import (
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.payment import Payment
+from chia.wallet.puzzles.load_clvm import load_clvm
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 ZERO_32 = bytes32([0] * 32)

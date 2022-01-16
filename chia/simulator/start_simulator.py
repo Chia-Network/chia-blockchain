@@ -1,6 +1,6 @@
 import sys
-from pathlib import Path
 from multiprocessing import freeze_support
+from pathlib import Path
 from typing import Dict
 
 from chia.full_node.full_node import FullNode

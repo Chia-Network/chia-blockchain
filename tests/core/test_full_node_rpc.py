@@ -15,14 +15,14 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtoco
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from tests.block_tools import get_signage_point
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint8
-from tests.wallet_tools import WalletTool
+from chia.util.ints import uint8, uint16
+from tests.block_tools import get_signage_point
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
+from tests.wallet_tools import WalletTool
 
 
 class TestRpc:

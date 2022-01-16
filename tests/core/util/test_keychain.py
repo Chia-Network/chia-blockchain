@@ -4,8 +4,8 @@ from secrets import token_bytes
 
 from blspy import AugSchemeMPL, PrivateKey
 
-from tests.util.keyring import using_temp_file_keyring
 from chia.util.keychain import Keychain, bytes_from_mnemonic, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
+from tests.util.keyring import using_temp_file_keyring
 
 
 class TestKeychain(unittest.TestCase):

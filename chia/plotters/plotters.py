@@ -2,12 +2,13 @@ import argparse
 import binascii
 import os
 from enum import Enum
-from chia.plotters.bladebit import get_bladebit_install_info, plot_bladebit
-from chia.plotters.chiapos import get_chiapos_install_info, plot_chia
-from chia.plotters.madmax import get_madmax_install_info, plot_madmax
-from chia.plotters.install_plotter import install_plotter
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+from chia.plotters.bladebit import get_bladebit_install_info, plot_bladebit
+from chia.plotters.chiapos import get_chiapos_install_info, plot_chia
+from chia.plotters.install_plotter import install_plotter
+from chia.plotters.madmax import get_madmax_install_info, plot_madmax
 
 
 class Options(Enum):

@@ -2,9 +2,10 @@
 
 import os
 from pathlib import Path
+
+from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 from tests.util.network_protocol_data import *
-from chia.util.ints import uint32
 
 version = "1.0"
 

@@ -3,7 +3,6 @@ from typing import Optional
 
 import click
 
-
 MAX_CMDLINE_FEE = Decimal(0.5)
 
 
@@ -34,8 +33,9 @@ def plotnft_cmd() -> None:
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
-    from .wallet_funcs import execute_with_wallet
+
     from .plotnft_funcs import show
+    from .wallet_funcs import execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {"id": id}, show))
 
@@ -46,6 +46,7 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
 @click.option("-l", "--launcher_id", help="Launcher ID of the plotnft", type=str, required=True)
 def get_login_link_cmd(launcher_id: str) -> None:
     import asyncio
+
     from .plotnft_funcs import get_login_link
 
     asyncio.run(get_login_link(launcher_id))
@@ -77,8 +78,9 @@ def create_cmd(
     wallet_rpc_port: Optional[int], fingerprint: int, pool_url: str, state: str, fee: int, yes: bool
 ) -> None:
     import asyncio
-    from .wallet_funcs import execute_with_wallet
+
     from .plotnft_funcs import create
+    from .wallet_funcs import execute_with_wallet
 
     if pool_url is not None and state.lower() == "local":
         print(f"  pool_url argument [{pool_url}] is not allowed when creating in 'local' state")
@@ -122,8 +124,9 @@ def create_cmd(
 )
 def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int, pool_url: str, yes: bool) -> None:
     import asyncio
-    from .wallet_funcs import execute_with_wallet
+
     from .plotnft_funcs import join_pool
+    from .wallet_funcs import execute_with_wallet
 
     extra_params = {"pool_url": pool_url, "id": id, "fee": fee, "yes": yes}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, join_pool))
@@ -159,8 +162,9 @@ def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int
 )
 def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int, yes: bool) -> None:
     import asyncio
-    from .wallet_funcs import execute_with_wallet
+
     from .plotnft_funcs import self_pool
+    from .wallet_funcs import execute_with_wallet
 
     extra_params = {"id": id, "fee": fee, "yes": yes}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, self_pool))
@@ -178,8 +182,9 @@ def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee
 )
 def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
-    from .wallet_funcs import execute_with_wallet
+
     from .plotnft_funcs import inspect_cmd
+    from .wallet_funcs import execute_with_wallet
 
     extra_params = {"id": id}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, inspect_cmd))
@@ -207,8 +212,9 @@ def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
 )
 def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int) -> None:
     import asyncio
-    from .wallet_funcs import execute_with_wallet
+
     from .plotnft_funcs import claim_cmd
+    from .wallet_funcs import execute_with_wallet
 
     extra_params = {"id": id, "fee": fee}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, claim_cmd))

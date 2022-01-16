@@ -1,9 +1,9 @@
 import asyncio
 import logging
+import os
 import pathlib
 import signal
 import time
-import os
 from typing import Dict, List, Optional
 
 import pkg_resources

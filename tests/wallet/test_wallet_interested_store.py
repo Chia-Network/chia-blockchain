@@ -1,13 +1,13 @@
 import asyncio
 from pathlib import Path
 from secrets import token_bytes
+
 import aiosqlite
 import pytest
 
 from chia.types.blockchain_format.coin import Coin
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
-
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 
 

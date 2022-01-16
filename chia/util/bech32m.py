@@ -22,7 +22,7 @@
 # https://github.com/sipa/bips/blob/bip-bech32m/bip-bech32m.mediawiki
 
 """Reference implementation for Bech32m and segwit addresses."""
-from typing import List, Iterable, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 

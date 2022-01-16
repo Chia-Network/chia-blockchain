@@ -1,26 +1,25 @@
-import pytest
+from typing import Dict, List, Optional
 
-from typing import Dict, Optional, List
+import pytest
 from blspy import G2Element
 
-from chia.clvm.spend_sim import SpendSim, SimClient
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.program import Program
+from chia.clvm.spend_sim import SimClient, SpendSim
 from chia.types.announcement import Announcement
-from chia.types.spend_bundle import SpendBundle
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
-    construct_cat_puzzle,
     SpendableCAT,
+    construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.payment import Payment
-from chia.wallet.trading.offer import Offer, NotarizedPayment
-
+from chia.wallet.trading.offer import NotarizedPayment, Offer
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 
 acs = Program.to(1)

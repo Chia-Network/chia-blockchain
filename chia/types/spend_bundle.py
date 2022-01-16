@@ -1,8 +1,7 @@
 import dataclasses
 import warnings
-
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import Dict, List
 
 from blspy import AugSchemeMPL, G2Element
 from clvm.casts import int_from_bytes
@@ -12,8 +11,8 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.streamable import Streamable, dataclass_from_dict, recurse_jsonify, streamable
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
-from .blockchain_format.program import Program
 
+from .blockchain_format.program import Program
 from .coin_spend import CoinSpend
 from .condition_opcodes import ConditionOpcode
 

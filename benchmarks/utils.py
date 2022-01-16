@@ -1,17 +1,19 @@
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.util.ints import uint64, uint32
+import os
+import random
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Tuple
+
+import aiosqlite
+from blspy import AugSchemeMPL, G1Element, G2Element
+
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
-from typing import Tuple
-from pathlib import Path
-from datetime import datetime
-import aiosqlite
-import os
-import sys
-import random
-from blspy import G2Element, G1Element, AugSchemeMPL
+from chia.util.ints import uint32, uint64
 
 # farmer puzzle hash
 ph = bytes32(b"a" * 32)

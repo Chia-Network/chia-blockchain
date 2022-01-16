@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Optional, Set
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.program import SerializedProgram

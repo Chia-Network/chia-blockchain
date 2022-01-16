@@ -1,8 +1,9 @@
 import asyncio
-import click
 import sys
 from io import TextIOWrapper
 from typing import Optional
+
+import click
 
 
 @click.group("passphrase", short_help="Manage your keyring passphrase")

@@ -1,5 +1,5 @@
 import io
-from typing import List, Set, Tuple, Optional, Any
+from typing import Any, List, Optional, Set, Tuple
 
 from clvm import SExp
 from clvm import run_program as default_run_program
@@ -7,13 +7,14 @@ from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.operators import OPERATOR_LOOKUP
 from clvm.serialize import sexp_from_stream, sexp_to_stream
-from clvm_rs import STRICT_MODE as MEMPOOL_MODE, run_chia_program, serialized_length, run_generator2
+from clvm_rs import STRICT_MODE as MEMPOOL_MODE
+from clvm_rs import run_chia_program, run_generator2, serialized_length
 from clvm_tools.curry import curry, uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import uint16
-from chia.util.byte_types import hexstr_to_bytes
 
 from .tree_hash import sha256_treehash
 

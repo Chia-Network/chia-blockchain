@@ -1,16 +1,17 @@
 import asyncio
 import copy
-import pytest
 import random
-import yaml
-
-from chia.util.config import create_default_chia_config, initial_config_file, load_config, save_config
-from chia.util.path import mkdir
 from multiprocessing import Pool
 from pathlib import Path
 from threading import Thread
 from time import sleep
 from typing import Dict
+
+import pytest
+import yaml
+
+from chia.util.config import create_default_chia_config, initial_config_file, load_config, save_config
+from chia.util.path import mkdir
 
 # Commented-out lines are preserved to aide in debugging the multiprocessing tests
 # import logging

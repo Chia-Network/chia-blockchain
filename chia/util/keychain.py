@@ -1,19 +1,19 @@
-import colorama
 import os
-import pkg_resources
 import sys
 import unicodedata
-
-from bitstring import BitArray  # pyright: reportMissingImports=false
-from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
-from chia.util.hash import std_hash
-from chia.util.keyring_wrapper import KeyringWrapper
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
 from time import sleep
 from typing import Any, Dict, List, Optional, Tuple
 
+import colorama
+import pkg_resources
+from bitstring import BitArray  # pyright: reportMissingImports=false
+from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
+
+from chia.util.hash import std_hash
+from chia.util.keyring_wrapper import KeyringWrapper
 
 CURRENT_KEY_VERSION = "1.8"
 DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8

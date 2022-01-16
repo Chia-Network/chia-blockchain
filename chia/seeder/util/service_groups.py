@@ -1,4 +1,4 @@
-from typing import KeysView, Generator
+from typing import Generator, KeysView
 
 SERVICES_FOR_GROUP = {
     "all": "chia_seeder_crawler chia_seeder_server".split(),

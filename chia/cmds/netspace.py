@@ -39,6 +39,7 @@ def netspace_cmd(rpc_port: Optional[int], delta_block_height: str, start: str) -
     Calculates the estimated space on the network given two block header hashes.
     """
     import asyncio
+
     from .netspace_funcs import netstorge_async
 
     asyncio.run(netstorge_async(rpc_port, delta_block_height, start))

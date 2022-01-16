@@ -13,7 +13,7 @@ from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16
-from tests.core.node_height import node_height_exactly, node_height_between
+from tests.core.node_height import node_height_between, node_height_exactly
 from tests.setup_nodes import bt, self_hostname, setup_n_nodes, setup_two_nodes, test_constants
 from tests.time_out_assert import time_out_assert
 

@@ -2,8 +2,9 @@
 
 import logging
 import os
+
 import pytest
-from tests.util.build_network_protocol_files import get_network_protocol_filename
+
 from chia.protocols import (
     farmer_protocol,
     full_node_protocol,
@@ -13,6 +14,7 @@ from chia.protocols import (
     timelord_protocol,
     wallet_protocol,
 )
+from tests.util.build_network_protocol_files import get_network_protocol_filename
 from tests.util.network_protocol_data import *
 
 log = logging.getLogger(__name__)

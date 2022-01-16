@@ -1,5 +1,5 @@
-from typing import List, Optional
 from operator import attrgetter
+from typing import List, Optional
 
 import aiosqlite
 

@@ -10,8 +10,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
-from chia.util.misc import format_bytes
-from chia.util.misc import format_minutes
+from chia.util.misc import format_bytes, format_minutes
 from chia.util.network import is_localhost
 
 SECONDS_PER_BLOCK = (24 * 3600) / 4608

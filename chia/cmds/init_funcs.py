@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import yaml
 
 from chia import __version__
+from chia.cmds.configure import configure
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.ssl.create_ssl import (
     ensure_ssl_dirs,
@@ -34,7 +35,6 @@ from chia.util.ssl_check import (
     fix_ssl,
 )
 from chia.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
-from chia.cmds.configure import configure
 
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
 public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord"}

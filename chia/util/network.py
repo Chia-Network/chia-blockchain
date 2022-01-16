@@ -1,6 +1,7 @@
 import socket
-from ipaddress import ip_address, IPv4Network, IPv6Network
-from typing import Iterable, List, Tuple, Union, Any, Optional
+from ipaddress import IPv4Network, IPv6Network, ip_address
+from typing import Any, Iterable, List, Optional, Tuple, Union
+
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16

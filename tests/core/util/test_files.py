@@ -1,11 +1,12 @@
 import os
-import pytest
 import shutil
 import sys
+from pathlib import Path
+
+import pytest
 
 from chia.util import files
 from chia.util.files import move_file, move_file_async, write_file_async
-from pathlib import Path
 
 
 class TestMoveFile:

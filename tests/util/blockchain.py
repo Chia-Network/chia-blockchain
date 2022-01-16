@@ -13,7 +13,6 @@ from chia.full_node.hint_store import HintStore
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper
 from chia.util.path import mkdir
-
 from tests.setup_nodes import bt
 
 blockchain_db_counter: int = 0

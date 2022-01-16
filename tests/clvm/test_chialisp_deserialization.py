@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.puzzles.load_clvm import load_clvm
 

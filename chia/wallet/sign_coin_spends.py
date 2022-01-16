@@ -1,5 +1,5 @@
 import inspect
-from typing import List, Any
+from typing import Any, List
 
 import blspy
 from blspy import AugSchemeMPL

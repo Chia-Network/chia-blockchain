@@ -28,12 +28,12 @@ from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import (
+    RecentChainData,
     SubEpochChallengeSegment,
     SubEpochData,
+    SubEpochSegments,
     SubSlotData,
     WeightProof,
-    SubEpochSegments,
-    RecentChainData,
 )
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash

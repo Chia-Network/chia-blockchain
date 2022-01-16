@@ -1,7 +1,7 @@
 import logging
 import time
 import traceback
-from typing import Any, Dict, List, Optional, Tuple, Union, Set
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
@@ -14,7 +14,7 @@ from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.payment import Payment
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer, NotarizedPayment
+from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord

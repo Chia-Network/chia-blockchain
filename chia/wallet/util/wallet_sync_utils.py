@@ -1,18 +1,18 @@
-from typing import List, Optional, Tuple, Union, Dict
+from typing import Dict, List, Optional, Tuple, Union
 
 from chia.consensus.constants import ConsensusConstants
 from chia.protocols.wallet_protocol import (
-    RequestAdditions,
-    RespondAdditions,
     RejectAdditionsRequest,
     RejectRemovalsRequest,
-    RespondRemovals,
+    RequestAdditions,
     RequestRemovals,
+    RespondAdditions,
+    RespondRemovals,
 )
-from chia.types.blockchain_format.coin import hash_coin_list, Coin
+from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
-from chia.util.merkle_set import confirm_not_included_already_hashed, confirm_included_already_hashed, MerkleSet
+from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
 
 
 def validate_additions(

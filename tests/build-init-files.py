@@ -15,7 +15,6 @@ import sys
 
 import click
 
-
 log_levels = {
     0: logging.ERROR,
     1: logging.WARNING,
