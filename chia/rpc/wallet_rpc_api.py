@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, Set, Any
 
 from blspy import PrivateKey, G1Element
-from clvm_tools import binutils
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
@@ -1185,7 +1184,7 @@ class WalletRpcApi:
             coin_announcements = {
                 Announcement(
                     bytes32.from_hexstr(announcement["coin_id"]),
-                    bytes(Program.to(binutils.assemble(announcement["message"]))),
+                    bytes(Program.to(hexstr_to_bytes(announcement["message"]))),
                     hexstr_to_bytes(announcement["morph_bytes"]) if "morph_bytes" in announcement else None,
                 )
                 for announcement in request["coin_announcements"]
@@ -1200,7 +1199,7 @@ class WalletRpcApi:
             puzzle_announcements = {
                 Announcement(
                     bytes32.from_hexstr(announcement["puzzle_hash"]),
-                    bytes(Program.to(binutils.assemble(announcement["message"]))),
+                    bytes(Program.to(hexstr_to_bytes(announcement["message"]))),
                     hexstr_to_bytes(announcement["morph_bytes"]) if "morph_bytes" in announcement else None,
                 )
                 for announcement in request["puzzle_announcements"]
