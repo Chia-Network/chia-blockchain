@@ -41,3 +41,7 @@ repos:
       # check and a strict CI check. This difference may or may not be retained long
       # term.
       args: [--no-warn-unused-ignores]
+-   repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+    -   id: isort
