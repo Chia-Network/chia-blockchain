@@ -54,7 +54,7 @@ class PeerStoreResolver:
         """
         Internal property to get the name component of the peers data file path
         """
-        if self.selected_network == "vanillanet":
+        if self.selected_network == "mainnet":
             return Path(self.default_peers_file_path).name
         else:
             # For testnets, we include the network name in the peers data filename
@@ -73,7 +73,7 @@ class PeerStoreResolver:
         """
         Path to the legacy peer db file, resolved using data from the config. The legacy
         peer db is only used for migration to the new format. We're only concerned about
-        migrating vanillanet users, so we purposefully omit the testnet filename change.
+        migrating mainnet users, so we purposefully omit the testnet filename change.
         """
         peer_db_path: Optional[str] = self.config.get(self.legacy_peer_db_path_key)
         if peer_db_path is not None:

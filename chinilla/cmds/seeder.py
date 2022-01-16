@@ -107,9 +107,9 @@ def configure(
             change_made = True
 
         elif testnet == "false" or testnet == "f":
-            print("Updating Chinilla Seeder to vanillanet settings")
-            port = 42444
-            network = "vanillanet"
+            print("Updating Chinilla Seeder to mainnet settings")
+            port = 8444
+            network = "mainnet"
             bootstrap = ["node.chinilla.net"]
 
             config["seeder"]["port"] = port

@@ -477,7 +477,7 @@ respond_compact_vdf = full_node_protocol.RespondCompactVDF(
 
 request_peers = full_node_protocol.RequestPeers()
 
-timestamped_peer_info = TimestampedPeerInfo("127.0.0.1", uint16(42444), uint64(10796))
+timestamped_peer_info = TimestampedPeerInfo("127.0.0.1", uint16(8444), uint64(10796))
 
 respond_peers = full_node_protocol.RespondPeers([timestamped_peer_info])
 

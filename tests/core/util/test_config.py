@@ -148,11 +148,11 @@ class TestConfig:
         config: Dict = load_config(root_path=root_path, filename="config.yaml")
         assert config is not None
         # Expect: config values should match the defaults (from a small sampling)
-        assert config["daemon_port"] == default_config_dict["daemon_port"] == 42400
+        assert config["daemon_port"] == default_config_dict["daemon_port"] == 55400
         assert config["self_hostname"] == default_config_dict["self_hostname"] == "localhost"
         assert (
-            config["farmer"]["network_overrides"]["constants"]["vanillanet"]["GENESIS_CHALLENGE"]
-            == default_config_dict["farmer"]["network_overrides"]["constants"]["vanillanet"]["GENESIS_CHALLENGE"]
+            config["farmer"]["network_overrides"]["constants"]["mainnet"]["GENESIS_CHALLENGE"]
+            == default_config_dict["farmer"]["network_overrides"]["constants"]["mainnet"]["GENESIS_CHALLENGE"]
             == "ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb"
         )
 

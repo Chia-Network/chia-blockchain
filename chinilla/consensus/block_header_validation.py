@@ -772,7 +772,7 @@ def validate_unfinished_header_block(
             ):
                 return None, ValidationError(Err.INVALID_POOL_TARGET)
 
-    # 21. Check extension data if applicable. None for vanillanet.
+    # 21. Check extension data if applicable. None for mainnet.
     # 22. Check if foliage block is present
     if (header_block.foliage.foliage_transaction_block_hash is not None) != (
         header_block.foliage_transaction_block is not None

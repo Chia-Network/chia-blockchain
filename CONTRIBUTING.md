@@ -14,7 +14,7 @@ If you want to learn more about this project, read the [wiki](https://github.com
 Please review this [diagram](https://drive.google.com/file/d/1r7AXTrj7gtD0Xy-9BtTZR6yv7WXMPgeM/view?usp=sharing), to better understand the git workflow.
 
 We would be pleased to accept code contributions to this project.
-As we have now released, the main priority is improving the vanillanet blockchain.
+As we have now released, the main priority is improving the mainnet blockchain.
 You can visit our [Trello project board](https://trello.com/b/ZuNx7sET) to get a sense of what is in the backlog.
 Generally, things to the left are in progress or done. Some things go through "Coming up soon", but some will come directly out of other columns.
 Usually, the things closer to the top of each column are the ones that will be worked on soonest.
