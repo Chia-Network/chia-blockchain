@@ -12,8 +12,6 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed, unlocks_keyring
 from chia.wallet.derive_keys import (
-    _derive_path,
-    _derive_path_unhardened,
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
@@ -120,36 +118,18 @@ def delete(fingerprint: int):
     keychain.delete_key_by_fingerprint(fingerprint)
 
 
-@unlocks_keyring(use_passphrase_cache=True)
-def sign(message: str, fingerprint: int, hd_path: str, as_bytes: bool):
-    k = Keychain()
-    private_keys = k.get_all_private_keys()
-
-    path: List[uint32] = [uint32(int(i)) for i in hd_path.split("/") if i != "m"]
-    for sk, _ in private_keys:
-        if sk.get_g1().get_fingerprint() == fingerprint:
-            for c in path:
-                sk = AugSchemeMPL.derive_child_sk(sk, c)
-            data = bytes.fromhex(message) if as_bytes else bytes(message, "utf-8")
-            print("Public key:", sk.get_g1())
-            print("Signature:", AugSchemeMPL.sign(sk, data))
-            return None
-    print(f"Fingerprint {fingerprint} not found in keychain")
-
-
-def verify(message: str, public_key: str, signature: str):
-    messageBytes = bytes(message, "utf-8")
-    public_key = G1Element.from_bytes(bytes.fromhex(public_key))
-    signature = G2Element.from_bytes(bytes.fromhex(signature))
-    print(AugSchemeMPL.verify(public_key, messageBytes, signature))
-
-
-class DerivationType(Enum):
-    HARDENED = 0
-    UNHARDENED = 1
-
-
 def derive_sk_from_hd_path(master_sk: PrivateKey, hd_path_root: str) -> Tuple[PrivateKey, str]:
+    """
+    Derive a private key from the provided HD path. Takes a master key and HD path as input,
+    and returns the derived key and the HD path that was used to derive it.
+    """
+
+    from chia.wallet.derive_keys import _derive_path, _derive_path_unhardened
+
+    class DerivationType(Enum):
+        HARDENED = 0
+        UNHARDENED = 1
+
     path: List[str] = hd_path_root.split("/")
     if len(path) == 0 or path[0] != "m":
         raise ValueError("Invalid HD path. Must start with 'm'")
@@ -175,6 +155,7 @@ def derive_sk_from_hd_path(master_sk: PrivateKey, hd_path_root: str) -> Tuple[Pr
 
     current_sk: PrivateKey = master_sk
 
+    # Derive keys along the path
     for (current_index, derivation_type) in index_and_derivation_types:
         if derivation_type == DerivationType.HARDENED:
             current_sk = _derive_path(current_sk, [current_index])
@@ -186,10 +167,18 @@ def derive_sk_from_hd_path(master_sk: PrivateKey, hd_path_root: str) -> Tuple[Pr
     return (current_sk, "m/" + "/".join(path) + "/")
 
 
-class DerivedSearchResultType(Enum):
-    PUBLIC_KEY = "public key"
-    PRIVATE_KEY = "private key"
-    WALLET_ADDRESS = "wallet address"
+def sign(message: str, private_key: PrivateKey, hd_path: str, as_bytes: bool):
+    sk: PrivateKey = derive_sk_from_hd_path(private_key, hd_path)[0]
+    data = bytes.fromhex(message) if as_bytes else bytes(message, "utf-8")
+    print("Public key:", sk.get_g1())
+    print("Signature:", AugSchemeMPL.sign(sk, data))
+
+
+def verify(message: str, public_key: str, signature: str):
+    messageBytes = bytes(message, "utf-8")
+    public_key = G1Element.from_bytes(bytes.fromhex(public_key))
+    signature = G2Element.from_bytes(bytes.fromhex(signature))
+    print(AugSchemeMPL.verify(public_key, messageBytes, signature))
 
 
 def _search_derived(
@@ -203,7 +192,19 @@ def _search_derived(
     search_public_key: bool,
     search_private_key: bool,
     search_address: bool,
-) -> List[str]:  # Return found terms
+) -> List[str]:  # Return subset of search_terms that were found
+    """
+    Performs a shallow search of keys derived from the current sk for items matching
+    the provided search terms.
+    """
+
+    from chia.wallet.derive_keys import _derive_path, _derive_path_unhardened
+
+    class DerivedSearchResultType(Enum):
+        PUBLIC_KEY = "public key"
+        PRIVATE_KEY = "private key"
+        WALLET_ADDRESS = "wallet address"
+
     remaining_search_terms: Dict[str, None] = dict.fromkeys(search_terms)
     current_path: str = path
     current_path_indices: List[int] = path_indices if path_indices is not None else []
@@ -216,27 +217,35 @@ def _search_derived(
         current_path += f"{current_index_str}"
         current_path_indices.append(index)
         if show_progress:
+            # Output just the current index e.g. "25" or "25h"
             sys.stdout.write(f"{current_index_str}")
             sys.stdout.flush()
+
+        # Derive the private key
         if hardened_derivation:
             child_sk = _derive_path(current_sk, current_path_indices)
         else:
             child_sk = _derive_path_unhardened(current_sk, current_path_indices)
+
         child_pk: Optional[G1Element] = None
 
+        # Public key is needed for searching against wallet addresses or public keys
         if search_public_key or search_address:
             child_pk = child_sk.get_g1()
 
         address: Optional[str] = None
 
         if search_address:
+            # Generate a wallet address using the standard p2_delegated_puzzle_or_hidden_puzzle puzzle
+            # TODO: consider generating addresses using other puzzles
             address = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), "xch")
 
         for term in remaining_search_terms:
             found_item: Any = None
             found_item_type: Optional[DerivedSearchResultType] = None
+
             if search_private_key and term in str(child_sk):
-                found_item = child_sk
+                found_item = private_key_string_repr(child_sk)
                 found_item_type = DerivedSearchResultType.PRIVATE_KEY
             elif search_public_key and child_pk is not None and term in str(child_pk):
                 found_item = child_pk
@@ -252,37 +261,39 @@ def _search_derived(
             print()
 
         for (term, found_item, found_item_type) in found_items:
+            # Update remaining_search_terms and found_search_terms
             del remaining_search_terms[term]
             found_search_terms.append(term)
 
             print(
                 f"Found {found_item_type.value}: {found_item} (HD path: {current_path})"
             )  # lgtm [py/clear-text-logging-sensitive-data]
+
             printed_match = True
 
         if len(remaining_search_terms) == 0:
             break
 
+        # Remove the last index from the path
         current_path = current_path[: -len(str(current_index_str))]
         current_path_indices = current_path_indices[:-1]
 
         if show_progress:
             if printed_match:
-                if index == limit - 1:
-                    sys.stdout.write(
-                        f"{current_path}{current_index_str}"
-                    )  # lgtm [py/clear-text-logging-sensitive-data]
-                else:
-                    sys.stdout.write(f"{current_path}")  # lgtm [py/clear-text-logging-sensitive-data]
+                # Write the path (without current_index_str) since we printed out a match
+                # e.g. m/12381/8444/2/
+                sys.stdout.write(f"{current_path}")  # lgtm [py/clear-text-logging-sensitive-data]
+            # Remove the last index from the output
             else:
-                sys.stdout.write("\b" * len(str(current_index_str)))
-            sys.stdout.flush()
+                # Move backward, overwrite with spaces, then move backward again
+                sys.stdout.write("\b" * len(current_index_str))
+                sys.stdout.write(" " * len(current_index_str))
+                sys.stdout.write("\b" * len(current_index_str))
 
     return found_search_terms
 
 
 def search_derive(
-    root_path: Path,
     private_key: Optional[PrivateKey],
     search_terms: Tuple[str, ...],
     limit: int,
@@ -291,11 +302,16 @@ def search_derive(
     search_types: Tuple[str, ...],
     derive_from_hd_path: Optional[str],
 ) -> bool:
+    """
+    Searches for items derived from the provided private key, or if not specified,
+    search each private key in the keyring.
+    """
+
     from time import perf_counter
 
     start_time = perf_counter()
     private_keys: List[PrivateKey]
-    remaining_search_terms: Dict[str, None] = dict.fromkeys(search_terms)
+    remaining_search_terms: Dict[str, None] = dict.fromkeys(search_terms)  # poor man's ordered set
     search_address = "address" in search_types
     search_public_key = "public_key" in search_types
     search_private_key = "private_key" in search_types
@@ -317,6 +333,7 @@ def search_derive(
         if show_progress:
             print(f"Searching keys derived from: {sk.get_g1().get_fingerprint()}")
 
+        # Derive from the provided HD path if provided
         if derive_from_hd_path is not None:
             derivation_root_sk, hd_path_root = derive_sk_from_hd_path(sk, derive_from_hd_path)
 
@@ -336,6 +353,7 @@ def search_derive(
                 search_address,
             )
 
+            # Update remaining_search_terms
             for term in found_terms:
                 del remaining_search_terms[term]
 
@@ -343,6 +361,7 @@ def search_derive(
                 break
 
             current_path = hd_path_root
+        # Otherwise derive from well-known derivation paths
         else:
             current_path_indices: List[int] = [12381, 8444]
             path_root: str = "m/"
@@ -350,21 +369,25 @@ def search_derive(
                 path_root += f"{i}{'h' if hardened_derivation else ''}/"
 
             if show_progress:
+                # Print the path root (without last index)
+                # e.g. m/12381/8444/
                 sys.stdout.write(path_root)
 
             # 7 account levels for derived keys (0-6):
-            # 0, 1, 2, 3, 4, 5, 6 farmer, pool, wallet, local, backup key, singleton, pooling authentication key numbers
+            # 0 = farmer, 1 = pool, 2 = wallet, 3 = local, 4 = backup key, 5 = singleton, 6 = pooling authentication
             for account in range(7):
-                account_str = str(account) + "h" if hardened_derivation else ""
+                account_str = str(account) + ("h" if hardened_derivation else "")
                 current_path = path_root + f"{account_str}/"
                 current_path_indices.append(account)
                 if show_progress:
+                    # Print the current path index
+                    # e.g. 2/ (example full output: m/12381/8444/2/)
                     sys.stdout.write(f"{account_str}/")  # lgtm [py/clear-text-logging-sensitive-data]
 
                 found_terms = _search_derived(
                     sk,
                     tuple(remaining_search_terms.keys()),
-                    str(current_path),  # copy
+                    current_path,
                     list(current_path_indices),  # copy
                     limit,
                     hardened_derivation,
@@ -374,6 +397,7 @@ def search_derive(
                     search_address,
                 )
 
+                # Update remaining_search_terms
                 for found_term in found_terms:
                     del remaining_search_terms[found_term]
 
@@ -381,6 +405,10 @@ def search_derive(
                     break
 
                 if show_progress:
+                    # Move backward, overwrite with spaces, then move backward again
+                    # +1 to remove the trailing slash
+                    sys.stdout.write("\b" * (1 + len(str(account_str))))
+                    sys.stdout.write(" " * (1 + len(str(account_str))))
                     sys.stdout.write("\b" * (1 + len(str(account_str))))
                 current_path_indices = current_path_indices[:-1]
 
@@ -388,9 +416,13 @@ def search_derive(
             break
 
         if show_progress:
+            # Move backward, overwrite with spaces, then move backward again
+            # +1 to remove the trailing slash
+            sys.stdout.write("\b" * (1 + len(current_path)))
+            sys.stdout.write(" " * (1 + len(current_path)))
             sys.stdout.write("\b" * (1 + len(current_path)))
             sys.stdout.flush()
-            print()
+
     end_time = perf_counter()
     if len(remaining_search_terms) > 0:
         for term in remaining_search_terms:
@@ -440,7 +472,6 @@ def private_key_string_repr(private_key: PrivateKey):
 
 
 def derive_child_key(
-    root_path: Path,
     master_sk: PrivateKey,
     key_type: Optional[str],
     derive_from_hd_path: Optional[str],
@@ -450,6 +481,8 @@ def derive_child_key(
     show_private_keys: bool,
     show_hd_path: bool,
 ):
+    from chia.wallet.derive_keys import _derive_path, _derive_path_unhardened
+
     derivation_root_sk: Optional[PrivateKey] = None
     hd_path_root: Optional[str] = None
     current_sk: Optional[PrivateKey] = None
@@ -501,6 +534,7 @@ def derive_child_key(
                 print(f"{key_type_str} private key {i}{hd_path}: {private_key_string_repr(sk)}")
 
 
+@unlocks_keyring(use_passphrase_cache=True)
 def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:
     private_keys = keychain.get_all_private_keys()
 

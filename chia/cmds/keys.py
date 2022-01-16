@@ -100,7 +100,15 @@ def generate_and_print_cmd():
     default=None,
     help="Enter the fingerprint of the key you want to use",
     type=int,
-    required=True,
+    required=False,
+)
+@click.option(
+    "--mnemonic-seed-filename",
+    "filename",  # Rename the target argument
+    default=None,
+    help="The filename containing the mnemonic seed of the master key used for signing.",
+    type=str,
+    required=False,
 )
 @click.option("--hd_path", "-t", help="Enter the HD path in the form 'm/12381/8444/n/n'", type=str, required=True)
 @click.option(
@@ -111,10 +119,11 @@ def generate_and_print_cmd():
     show_default=True,
     is_flag=True,
 )
-def sign_cmd(message: str, fingerprint: int, hd_path: str, as_bytes: bool):
-    from .keys_funcs import sign
+def sign_cmd(message: str, fingerprint: Optional[int], filename: Optional[str], hd_path: str, as_bytes: bool):
+    from .keys_funcs import resolve_derivation_master_key, sign
 
-    sign(message, fingerprint, hd_path, as_bytes)
+    private_key = resolve_derivation_master_key(fingerprint, filename)
+    sign(message, private_key, hd_path, as_bytes)
 
 
 @keys_cmd.command("verify", short_help="Verify a signature with a pk")
@@ -140,7 +149,7 @@ def verify_cmd(message: str, public_key: str, signature: str):
     "--mnemonic-seed-filename",
     "filename",  # Rename the target argument
     default=None,
-    help="The filename containing the mnemonic seed of the secret key to derive from.",
+    help="The filename containing the mnemonic seed of the master key to derive from.",
     type=str,
     required=False,
 )
@@ -152,11 +161,13 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
 
 @derive_cmd.command("search", short_help="Search the keyring for one or more matching derived keys or wallet addresses")
 @click.argument("search-terms", type=str, nargs=-1)
-@click.option("--limit", "-l", default=500, help="Limit the number of derivations to search against", type=int)
+@click.option(
+    "--limit", "-l", default=100, show_default=True, help="Limit the number of derivations to search against", type=int
+)
 @click.option(
     "--hardened-derivation",
     "-d",
-    help="Search against keys derived using hardened derivation.",
+    help="Search will be performed against keys derived using hardened derivation.",
     default=False,
     show_default=True,
     is_flag=True,
@@ -173,15 +184,16 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
     "--search-type",
     "-t",
     help="Limit the search to include just the specified types",
-    default=["address"],
+    default=["address", "public_key"],
     show_default=True,
     multiple=True,
     type=click.Choice(["public_key", "private_key", "address", "all"], case_sensitive=True),
 )
 @click.option(
     "--derive-from-hd-path",
-    "-d",
-    help="Search for items derived from a specific HD path. Example HD path: m/12381h/8444h/2/",
+    "-p",
+    help="Search for items derived from a specific HD path. Indices ending in an 'h' indicate that "
+    "hardened derivation should used at that index. Example HD path: m/12381h/8444h/2/",
     type=str,
 )
 @click.pass_context
@@ -207,7 +219,6 @@ def search_cmd(
         private_key = resolve_derivation_master_key(ctx.obj["fingerprint"], ctx.obj["filename"])
 
     found: bool = search_derive(
-        ctx.obj["root_path"],
         private_key,
         search_terms,
         limit,
@@ -264,8 +275,9 @@ def wallet_address_cmd(
 )
 @click.option(
     "--derive-from-hd-path",
-    "-d",
-    help="Derive child keys rooted from a specific HD path. Example HD path: m/12381h/8444h/2/",
+    "-p",
+    help="Derive child keys rooted from a specific HD path. Indices ending in an 'h' indicate that "
+    "hardened derivation should used at that index. Example HD path: m/12381h/8444h/2/",
     type=str,
 )
 @click.option(
@@ -274,7 +286,7 @@ def wallet_address_cmd(
 @click.option("--count", "-n", help="Number of child keys to derive, starting at index.", default=1)
 @click.option(
     "--hardened-derivation",
-    "-p",
+    "-d",
     help="Derive keys using hardened derivation.",
     default=False,
     show_default=True,
@@ -314,7 +326,6 @@ def child_key_cmd(
     private_key = resolve_derivation_master_key(ctx.obj["fingerprint"], ctx.obj["filename"])
 
     derive_child_key(
-        ctx.obj["root_path"],
         private_key,
         key_type,
         derive_from_hd_path.lower() if derive_from_hd_path is not None else None,
