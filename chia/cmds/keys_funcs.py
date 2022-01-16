@@ -181,6 +181,13 @@ def verify(message: str, public_key: str, signature: str):
     print(AugSchemeMPL.verify(public_key, messageBytes, signature))
 
 
+def _clear_line_part(n: int):
+    # Move backward, overwrite with spaces, then move backward again
+    sys.stdout.write("\b" * n)
+    sys.stdout.write(" " * n)
+    sys.stdout.write("\b" * n)
+
+
 def _search_derived(
     current_sk: PrivateKey,
     search_terms: Tuple[str, ...],
@@ -192,7 +199,7 @@ def _search_derived(
     search_public_key: bool,
     search_private_key: bool,
     search_address: bool,
-) -> List[str]:  # Return subset of search_terms that were found
+) -> List[str]:  # Return a subset of search_terms that were found
     """
     Performs a shallow search of keys derived from the current sk for items matching
     the provided search terms.
@@ -285,10 +292,7 @@ def _search_derived(
                 sys.stdout.write(f"{current_path}")  # lgtm [py/clear-text-logging-sensitive-data]
             # Remove the last index from the output
             else:
-                # Move backward, overwrite with spaces, then move backward again
-                sys.stdout.write("\b" * len(current_index_str))
-                sys.stdout.write(" " * len(current_index_str))
-                sys.stdout.write("\b" * len(current_index_str))
+                _clear_line_part(len(current_index_str))
 
     return found_search_terms
 
@@ -333,13 +337,14 @@ def search_derive(
         if show_progress:
             print(f"Searching keys derived from: {sk.get_g1().get_fingerprint()}")
 
-        # Derive from the provided HD path if provided
+        # Derive from the provided HD path
         if derive_from_hd_path is not None:
             derivation_root_sk, hd_path_root = derive_sk_from_hd_path(sk, derive_from_hd_path)
 
             if show_progress:
                 sys.stdout.write(hd_path_root)
 
+            # Shallow search under hd_path_root
             found_terms = _search_derived(
                 derivation_root_sk,
                 tuple(remaining_search_terms.keys()),
@@ -358,6 +363,7 @@ def search_derive(
                 del remaining_search_terms[term]
 
             if len(remaining_search_terms) == 0:
+                # Found everything we were looking for
                 break
 
             current_path = hd_path_root
@@ -402,25 +408,22 @@ def search_derive(
                     del remaining_search_terms[found_term]
 
                 if len(remaining_search_terms) == 0:
+                    # Found everything we were looking for
                     break
 
                 if show_progress:
-                    # Move backward, overwrite with spaces, then move backward again
                     # +1 to remove the trailing slash
-                    sys.stdout.write("\b" * (1 + len(str(account_str))))
-                    sys.stdout.write(" " * (1 + len(str(account_str))))
-                    sys.stdout.write("\b" * (1 + len(str(account_str))))
+                    _clear_line_part(1 + len(str(account_str)))
+
                 current_path_indices = current_path_indices[:-1]
 
         if len(remaining_search_terms) == 0:
+            # Found everything we were looking for
             break
 
         if show_progress:
-            # Move backward, overwrite with spaces, then move backward again
             # +1 to remove the trailing slash
-            sys.stdout.write("\b" * (1 + len(current_path)))
-            sys.stdout.write(" " * (1 + len(current_path)))
-            sys.stdout.write("\b" * (1 + len(current_path)))
+            _clear_line_part(1 + len(current_path))
             sys.stdout.flush()
 
     end_time = perf_counter()
@@ -444,6 +447,10 @@ def derive_wallet_address(
     hardened_derivation: bool,
     show_hd_path: bool,
 ):
+    """
+    Generate wallet addresses using keys derived from the provided private key.
+    """
+
     if prefix is None:
         config: Dict = load_config(root_path, "config.yaml")
         selected: str = config["selected_network"]
@@ -457,6 +464,8 @@ def derive_wallet_address(
             sk = master_sk_to_wallet_sk(private_key, uint32(i))
         else:
             sk = master_sk_to_wallet_sk_unhardened(private_key, uint32(i))
+        # Generate a wallet address using the standard p2_delegated_puzzle_or_hidden_puzzle puzzle
+        # TODO: consider generating addresses using other puzzles
         address = encode_puzzle_hash(create_puzzlehash_for_pk(sk.get_g1()), prefix)
         if show_hd_path:
             print(
@@ -467,6 +476,8 @@ def derive_wallet_address(
 
 
 def private_key_string_repr(private_key: PrivateKey):
+    """Print a PrivateKey in a human-readable formats"""
+
     s: str = str(private_key)
     return s[len("<PrivateKey ") : s.rfind(">")] if s.startswith("<PrivateKey ") else s
 
@@ -481,12 +492,17 @@ def derive_child_key(
     show_private_keys: bool,
     show_hd_path: bool,
 ):
+    """
+    Derive child keys from the provided master key.
+    """
+
     from chia.wallet.derive_keys import _derive_path, _derive_path_unhardened
 
     derivation_root_sk: Optional[PrivateKey] = None
     hd_path_root: Optional[str] = None
     current_sk: Optional[PrivateKey] = None
 
+    # Key type was specified
     if key_type is not None:
         path_indices: List[int] = [12381, 8444]
         path_indices.append(
@@ -510,9 +526,11 @@ def derive_child_key(
         hd_path_root = "m/"
         for i in path_indices:
             hd_path_root += f"{i}{'h' if hardened_derivation else ''}/"
+    # Arbitrary HD path was specified
     elif derive_from_hd_path is not None:
         derivation_root_sk, hd_path_root = derive_sk_from_hd_path(master_sk, derive_from_hd_path)
 
+    # Derive child keys from derivation_root_sk
     if derivation_root_sk is not None and hd_path_root is not None:
         for i in range(index, index + count):
             if hardened_derivation:
@@ -545,6 +563,12 @@ def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:
 
 
 def get_private_key_with_fingerprint_or_prompt(fingerprint: Optional[int]):
+    """
+    Get a private key with the specified fingerprint. If fingerprint is not
+    specified, prompt the user to select a key.
+    """
+
+    # Return the private key matching the specified fingerprint
     if fingerprint is not None:
         return private_key_for_fingerprint(fingerprint)
 
@@ -571,12 +595,20 @@ def get_private_key_with_fingerprint_or_prompt(fingerprint: Optional[int]):
 
 
 def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
+    """
+    Create a private key from a mnemonic seed file.
+    """
+
     mnemonic = filename.read_text().rstrip()
     seed = mnemonic_to_seed(mnemonic, "")
     return AugSchemeMPL.key_gen(seed)
 
 
 def resolve_derivation_master_key(fingerprint: Optional[int], filename: Optional[str]) -> PrivateKey:
+    """
+    Given a key fingerprint of file containing a mnemonic seed, return the private key.
+    """
+
     if filename:
         return private_key_from_mnemonic_seed_file(Path(filename))
     else:
