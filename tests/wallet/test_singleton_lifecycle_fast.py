@@ -30,7 +30,7 @@ P2_SINGLETON_MOD_HASH = P2_SINGLETON_MOD.get_tree_hash()
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)
 ANYONE_CAN_SPEND_WITH_PADDING_PUZZLE_HASH = Program.to(binutils.assemble("(a (q . 1) 3)")).get_tree_hash()
 
-POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
+POOL_REWARD_PREFIX_VANILLANET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
 MAX_BLOCK_COST_CLVM = int(1e18)
 COST_PER_BYTE = int(12000)
@@ -478,7 +478,7 @@ def test_lifecycle_with_coinstore_as_wallet():
     #######
     # farm a coin
 
-    coin_store = CoinStore(int.from_bytes(POOL_REWARD_PREFIX_MAINNET, "big"))
+    coin_store = CoinStore(int.from_bytes(POOL_REWARD_PREFIX_VANILLANET, "big"))
     now = CoinTimestamp(10012300, 1)
 
     DELAY_SECONDS = 86400
@@ -573,7 +573,7 @@ def test_lifecycle_with_coinstore_as_wallet():
 
     owner_public_key = bytes(create_throwaway_pubkey(b"foo"))
     pool_puzzle_hash = Program.to(bytes(create_throwaway_pubkey(b""))).get_tree_hash()
-    pool_reward_prefix = POOL_REWARD_PREFIX_MAINNET
+    pool_reward_prefix = POOL_REWARD_PREFIX_VANILLANET
     relative_lock_height = 1440
 
     pool_escaping_puzzle = POOL_WAITINGROOM_MOD.curry(

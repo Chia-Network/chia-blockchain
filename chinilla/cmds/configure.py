@@ -93,9 +93,9 @@ def configure(
         if testnet == "true" or testnet == "t":
             print("Setting Testnet")
             testnet_port = "58444"
-            testnet_introducer = "introducer-testnet10.chinilla.net"
-            testnet_dns_introducer = "dns-introducer-testnet10.chinilla.net"
-            testnet = "testnet10"
+            testnet_introducer = "introducer-testnet11.chinilla.net"
+            testnet_dns_introducer = "dns-introducer-testnet11.chinilla.net"
+            testnet = "testnet11"
             config["full_node"]["port"] = int(testnet_port)
             config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
             config["farmer"]["full_node_peer"]["port"] = int(testnet_port)
@@ -118,20 +118,20 @@ def configure(
             change_made = True
 
         elif testnet == "false" or testnet == "f":
-            print("Setting Mainnet")
-            mainnet_port = "8444"
-            mainnet_introducer = "introducer.chinilla.net"
-            mainnet_dns_introducer = "dns-introducer.chinilla.net"
-            net = "mainnet"
-            config["full_node"]["port"] = int(mainnet_port)
-            config["full_node"]["introducer_peer"]["port"] = int(mainnet_port)
-            config["farmer"]["full_node_peer"]["port"] = int(mainnet_port)
-            config["timelord"]["full_node_peer"]["port"] = int(mainnet_port)
-            config["wallet"]["full_node_peer"]["port"] = int(mainnet_port)
-            config["wallet"]["introducer_peer"]["port"] = int(mainnet_port)
-            config["introducer"]["port"] = int(mainnet_port)
-            config["full_node"]["introducer_peer"]["host"] = mainnet_introducer
-            config["full_node"]["dns_servers"] = [mainnet_dns_introducer]
+            print("Setting Vanillanet")
+            vanillanet_port = "8444"
+            vanillanet_introducer = "introducer.chinilla.net"
+            vanillanet_dns_introducer = "dns-introducer.chinilla.net"
+            net = "vanillanet"
+            config["full_node"]["port"] = int(vanillanet_port)
+            config["full_node"]["introducer_peer"]["port"] = int(vanillanet_port)
+            config["farmer"]["full_node_peer"]["port"] = int(vanillanet_port)
+            config["timelord"]["full_node_peer"]["port"] = int(vanillanet_port)
+            config["wallet"]["full_node_peer"]["port"] = int(vanillanet_port)
+            config["wallet"]["introducer_peer"]["port"] = int(vanillanet_port)
+            config["introducer"]["port"] = int(vanillanet_port)
+            config["full_node"]["introducer_peer"]["host"] = vanillanet_introducer
+            config["full_node"]["dns_servers"] = [vanillanet_dns_introducer]
             config["selected_network"] = net
             config["harvester"]["selected_network"] = net
             config["pool"]["selected_network"] = net

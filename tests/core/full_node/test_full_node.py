@@ -135,7 +135,7 @@ async def setup_two_nodes_and_wallet(db_version):
 
 
 @pytest.fixture(scope="function")
-async def wallet_nodes_mainnet(db_version):
+async def wallet_nodes_vanillanet(db_version):
     async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK_TYPE": 0}, starting_port=40000, db_version=db_version)
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
@@ -1439,10 +1439,10 @@ class TestFullNodeProtocol:
 
         await time_out_assert(20, caught_up_slots)
 
-    @pytest.mark.skip("a timebomb causes mainnet to stop after transactions start, so this test doesn't work yet")
+    @pytest.mark.skip("a timebomb causes vanillanet to stop after transactions start, so this test doesn't work yet")
     @pytest.mark.asyncio
-    async def test_mainnet_softfork(self, wallet_nodes_mainnet):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes_mainnet
+    async def test_vanillanet_softfork(self, wallet_nodes_vanillanet):
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes_vanillanet
         blocks = await full_node_1.get_all_full_blocks()
 
         wallet_ph = wallet_a.get_new_puzzlehash()

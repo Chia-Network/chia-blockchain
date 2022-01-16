@@ -25,9 +25,9 @@ MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
 MAX_CONCURRENT_OUTBOUND_CONNECTIONS = 70
 NETWORK_ID_DEFAULT_PORTS = {
-    "mainnet": 8444,
+    "vanillanet": 8444,
     "testnet7": 58444,
-    "testnet10": 58444,
+    "testnet11": 58444,
     "testnet8": 58445,
 }
 

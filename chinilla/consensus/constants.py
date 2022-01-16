@@ -35,7 +35,7 @@ class ConsensusConstants:
     MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
     NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
-    # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
+    # We override this value based on the chain being run (testnet0, testnet1, vanillanet, etc)
     GENESIS_CHALLENGE: bytes32
     # Forks of chinilla should change this value to provide replay attack protection
     AGG_SIG_ME_ADDITIONAL_DATA: bytes
