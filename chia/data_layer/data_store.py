@@ -115,6 +115,7 @@ class DataStore:
                     key_hash BLOB NOT NULL REFERENCES blob(hash),
                     node_hash TEXT NOT NULL REFERENCES node(hash),
                     value_hash BLOB NOT NULL REFERENCES blob(hash),
+                    present INT2 NOT NULL,
                     PRIMARY KEY(tree_id, generation, key_hash),
                     FOREIGN KEY(tree_id, generation) REFERENCES root(tree_id, generation)
                 )
@@ -232,11 +233,12 @@ class DataStore:
         key_hash: bytes32,
         node_hash: bytes32,
         value_hash: bytes32,
+        present: bool,
     ) -> None:
         await self.db.execute(
             """
-            INSERT INTO key_index(tree_id, generation, key_hash, node_hash, value_hash)
-            VALUES(:tree_id, :generation, :key_hash, :node_hash, :value_hash)
+            INSERT INTO key_index(tree_id, generation, key_hash, node_hash, value_hash, present)
+            VALUES(:tree_id, :generation, :key_hash, :node_hash, :value_hash, :present)
             """,
             {
                 "tree_id": tree_id.hex(),
@@ -244,6 +246,7 @@ class DataStore:
                 "key_hash": key_hash,
                 "node_hash": node_hash.hex(),
                 "value_hash": value_hash,
+                "present": present,
             },
         )
 
@@ -465,11 +468,24 @@ class DataStore:
 
             async with self.db.execute(
                 """
-                SELECT key_index.node_hash AS hash, key_blob.value AS key_bytes, value_blob.value AS value_bytes
-                FROM key_index
-                LEFT JOIN blob AS key_blob ON key_index.key_hash == key_blob.hash
-                LEFT JOIN blob AS value_blob ON key_index.value_hash == value_blob.hash
-                WHERE key_index.tree_id == :tree_id AND key_index.generation == :generation
+                SELECT *
+                FROM (
+                    SELECT
+                        key_index.node_hash AS hash,
+                        key_blob.value AS key_bytes,
+                        value_blob.value AS value_bytes,
+                        key_index.present AS present,
+                        MAX(key_index.generation) as max_generation
+                    FROM key_index
+                    LEFT JOIN blob AS key_blob ON key_index.key_hash == key_blob.hash
+                    LEFT JOIN blob AS value_blob ON key_index.value_hash == value_blob.hash
+                    WHERE (
+                        key_index.tree_id == :tree_id
+                        AND key_index.generation <= :generation
+                    )
+                    GROUP BY key_index.tree_id, key_index.key_hash
+                )
+                WHERE present == TRUE
                 """,
                 {"tree_id": tree_id.hex(), "generation": generation},
             ) as cursor:
@@ -725,28 +741,13 @@ class DataStore:
 
                 await self._insert_root(tree_id=tree_id, generation=generation, node_hash=new_hash, status=status)
 
-            # TODO: this could probably be a direct sql statement instead of query then insert
-            existing_terminal_nodes = await self.get_pairs(tree_id=tree_id, generation=existing_generation, lock=False)
-
-            await self._insert_keys(
-                key_indexes=(
-                    KeyIndex(
-                        tree_id=tree_id,
-                        generation=generation,
-                        key_hash=std_hash(node.key),
-                        node_hash=node.hash,
-                        value_hash=std_hash(node.value),
-                    )
-                    for node in existing_terminal_nodes
-                ),
-            )
-
             await self._insert_key(
                 tree_id=tree_id,
                 generation=generation,
                 key_hash=key_hash,
                 node_hash=new_terminal_node_hash,
                 value_hash=value_hash,
+                present=True,
             )
 
         return new_terminal_node_hash
@@ -793,19 +794,14 @@ class DataStore:
             generation = existing_generation + 1
 
             await self._insert_root(tree_id=tree_id, generation=generation, node_hash=new_child_hash, status=status)
-            # TODO: this could probably be a direct sql statement instead of query then insert
-            existing_terminal_nodes = await self.get_pairs(tree_id=tree_id, generation=existing_generation, lock=False)
-            for node in existing_terminal_nodes:
-                if node.key == key:
-                    continue
-
-                await self._insert_key(
-                    tree_id=tree_id,
-                    generation=generation,
-                    key_hash=std_hash(node.key),
-                    node_hash=node.hash,
-                    value_hash=std_hash(node.value),
-                )
+            await self._insert_key(
+                tree_id=tree_id,
+                generation=generation,
+                key_hash=std_hash(node.key),
+                node_hash=node.hash,
+                value_hash=std_hash(node.value),
+                present=False,
+            )
 
         return
 
@@ -814,11 +810,15 @@ class DataStore:
             generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
             async with self.db.execute(
                 """
-                SELECT key_index.node_hash AS hash, key_blob.value AS key_bytes, value_blob.value AS value_bytes
-                FROM key_index
-                LEFT JOIN blob AS key_blob ON key_index.key_hash == key_blob.hash
-                LEFT JOIN blob AS value_blob ON key_index.value_hash == value_blob.hash
-                WHERE key_index.tree_id == :tree_id AND key_index.generation == :generation AND key_blob.value == :key
+                SELECT *
+                FROM (
+                    SELECT key_index.node_hash AS hash, key_blob.value AS key_bytes, value_blob.value AS value_bytes, key_index.present as present, MAX(key_index.generation)
+                    FROM key_index
+                    LEFT JOIN blob AS key_blob ON key_index.key_hash == key_blob.hash
+                    LEFT JOIN blob AS value_blob ON key_index.value_hash == value_blob.hash
+                    WHERE key_index.tree_id == :tree_id AND key_index.generation <= :generation AND key_blob.value == :key
+                )
+                WHERE present == TRUE
                 """,
                 {"tree_id": tree_id.hex(), "generation": generation, "key": key},
             ) as cursor:

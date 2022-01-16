@@ -171,6 +171,7 @@ class KeyIndexTableValues(TypedDict):
     key_hash: bytes32
     node_hash: str
     value_hash: bytes32
+    present: bool
 
 
 @dataclass(frozen=True)
@@ -180,6 +181,7 @@ class KeyIndex:
     key_hash: bytes32
     node_hash: bytes32
     value_hash: bytes32
+    present: bool
 
     def to_table_values(self) -> KeyIndexTableValues:
         return {
@@ -188,6 +190,7 @@ class KeyIndex:
             "key_hash": self.key_hash,
             "node_hash": self.node_hash.hex(),
             "value_hash": self.value_hash,
+            "present": self.present,
         }
 
 
