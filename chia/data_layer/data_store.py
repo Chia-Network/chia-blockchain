@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 import aiosqlite
 
@@ -802,11 +802,20 @@ class DataStore:
                 """
                 SELECT *
                 FROM (
-                    SELECT key_index.node_hash AS hash, key_blob.value AS key_bytes, value_blob.value AS value_bytes, key_index.present as present, MAX(key_index.generation)
+                    SELECT
+                        key_index.node_hash AS hash,
+                        key_blob.value AS key_bytes,
+                        value_blob.value AS value_bytes,
+                        key_index.present as present,
+                        MAX(key_index.generation)
                     FROM key_index
                     LEFT JOIN blob AS key_blob ON key_index.key_hash == key_blob.hash
                     LEFT JOIN blob AS value_blob ON key_index.value_hash == value_blob.hash
-                    WHERE key_index.tree_id == :tree_id AND key_index.generation <= :generation AND key_blob.value == :key
+                    WHERE (
+                        key_index.tree_id == :tree_id
+                        AND key_index.generation <= :generation
+                        AND key_blob.value == :key
+                    )
                 )
                 WHERE present == TRUE
                 """,
