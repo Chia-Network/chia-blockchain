@@ -12,6 +12,7 @@ from typing import List, Dict, Optional, Callable
 
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
+from chia.pools.pool_config import load_pool_config, PoolWalletConfig, update_pool_config
 from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
@@ -19,7 +20,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -173,7 +174,6 @@ async def pprint_pool_wallet_state(
 
 
 async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     self_hostname = config["self_hostname"]
     farmer_rpc_port = config["farmer"]["rpc_port"]
@@ -373,3 +373,35 @@ async def claim_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int
         fee_mojos,
     )
     await submit_tx_with_confirmation(msg, False, func, wallet_client, fingerprint, wallet_id)
+
+
+async def change_payout_instructions(launcher_id: str, address: str) -> None:
+    new_pool_configs: List[PoolWalletConfig] = []
+    id_found = False
+    if decode_puzzle_hash(address):
+        old_configs: List[PoolWalletConfig] = load_pool_config(DEFAULT_ROOT_PATH)
+        for pool_config in old_configs:
+            if pool_config.launcher_id == hexstr_to_bytes(launcher_id):
+                id_found = True
+                payout_instructions = address
+            else:
+                payout_instructions = pool_config.payout_instructions
+            new_pool_configs.append(
+                PoolWalletConfig(
+                    pool_config.launcher_id,
+                    pool_config.pool_url,
+                    payout_instructions,
+                    pool_config.target_puzzle_hash,
+                    pool_config.p2_singleton_puzzle_hash,
+                    pool_config.owner_public_key,
+                    pool_config.authentication_public_key,
+                )
+            )
+        if id_found:
+            print(f"Launcher Id: {launcher_id} Found, Updating Config.")
+            await update_pool_config(DEFAULT_ROOT_PATH, new_pool_configs)
+            print(f"Payout Instructions for launcher id: {launcher_id} successfully updated to: {address}.")
+        else:
+            print(f"Launcher Id: {launcher_id} Not found.")
+    else:
+        print(f"Invalid Address: {address}")
