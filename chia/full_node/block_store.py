@@ -97,15 +97,7 @@ class BlockStore:
 
             await self.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
 
-            if self.db_wrapper.allow_upgrades:
-                await self.db.execute("DROP INDEX IF EXISTS hh")
-                await self.db.execute("DROP INDEX IF EXISTS is_block")
-                await self.db.execute("DROP INDEX IF EXISTS peak")
-                await self.db.execute(
-                    "CREATE INDEX IF NOT EXISTS is_peak_eq_1_idx on block_records(is_peak) where is_peak = 1"
-                )
-            else:
-                await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak) where is_peak = 1")
+            await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak) where is_peak = 1")
 
         await self.db.commit()
         self.block_cache = LRUCache(1000)

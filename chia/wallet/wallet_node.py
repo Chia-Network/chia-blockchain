@@ -4,83 +4,98 @@ import logging
 import time
 import traceback
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union, Any
 
-from blspy import PrivateKey
+from blspy import PrivateKey, AugSchemeMPL
+from packaging.version import Version
+
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.daemon.keychain_proxy import (
-    KeychainProxy,
     KeychainProxyConnectionFailure,
-    KeyringIsEmpty,
-    KeyringIsLocked,
     connect_to_keychain_and_validate,
     wrap_local_keychain,
+    KeychainProxy,
+    KeyringIsEmpty,
 )
-from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
+from chia.full_node.weight_proof import chunks
+from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
+from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
-    RejectAdditionsRequest,
-    RejectRemovalsRequest,
-    RequestAdditions,
-    RequestHeaderBlocks,
-    RespondAdditions,
+    RespondToCoinUpdates,
+    CoinState,
+    RespondToPhUpdates,
     RespondBlockHeader,
-    RespondHeaderBlocks,
+    RequestAdditions,
+    RespondAdditions,
+    RejectAdditionsRequest,
+    RequestSESInfo,
+    RespondSESInfo,
     RespondRemovals,
+    RejectRemovalsRequest,
+    RequestHeaderBlocks,
+    RespondHeaderBlocks,
 )
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.coin import Coin, hash_coin_list
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_spend import CoinSpend
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
+from chia.types.weight_proof import WeightProof, SubEpochData
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.check_fork_next_block import check_fork_next_block
-from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, load_config
-from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint32, uint128
-from chia.util.keychain import Keychain
-from chia.util.lru_cache import LRUCache
-from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
+from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
+from chia.util.ints import uint32, uint64
+from chia.util.keychain import KeyringIsLocked, Keychain
 from chia.util.network import get_host_addr
 from chia.util.path import mkdir, path_from_root
-from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.settings.settings_objects import BackupInitialized
+from chia.wallet.util.wallet_sync_utils import (
+    validate_additions,
+    validate_removals,
+    request_and_validate_removals,
+    request_and_validate_additions,
+)
+from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.backup_utils import open_backup_file
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action import WalletAction
-from chia.wallet.wallet_blockchain import ReceiveBlockResult
-from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.util.profiler import profile_task
+
+
+class PeerRequestCache:
+    blocks: Dict[uint32, HeaderBlock]
+    block_requests: Dict[bytes32, Any]
+    ses_requests: Dict[bytes32, Any]
+    states_validated: Dict[bytes32, CoinState]
+
+    def __init__(self):
+        self.blocks = {}
+        self.ses_requests = {}
+        self.block_requests = {}
+        self.states_validated = {}
 
 
 class WalletNode:
     key_config: Dict
     config: Dict
     constants: ConsensusConstants
-    keychain_proxy: Optional[KeychainProxy]
-    local_keychain: Optional[Keychain]  # For testing only. KeychainProxy is used in normal cases
     server: Optional[ChiaServer]
     log: logging.Logger
-    wallet_peers: WalletPeers
     # Maintains the state of the wallet (blockchain and transactions), handles DB connections
     wallet_state_manager: Optional[WalletStateManager]
-
-    # How far away from LCA we must be to perform a full sync. Before then, do a short sync,
-    # which is consecutive requests for the previous block
-    short_sync_threshold: int
     _shut_down: bool
     root_path: Path
     state_changed_callback: Optional[Callable]
@@ -89,6 +104,8 @@ class WalletNode:
     peer_task: Optional[asyncio.Task]
     logged_in: bool
     wallet_peers_initialized: bool
+    keychain_proxy: Optional[KeychainProxy]
+    wallet_peers: Optional[WalletPeers]
 
     def __init__(
         self,
@@ -100,10 +117,7 @@ class WalletNode:
     ):
         self.config = config
         self.constants = consensus_constants
-        self.keychain_proxy = None
-        self.local_keychain = local_keychain
         self.root_path = root_path
-        self.base_config = load_config(root_path, "config.yaml")
         self.log = logging.getLogger(name if name else __name__)
         # Normal operation data
         self.cached_blocks: Dict = {}
@@ -112,22 +126,22 @@ class WalletNode:
         # Sync data
         self._shut_down = False
         self.proof_hashes: List = []
-        self.header_hashes: List = []
-        self.header_hashes_error = False
-        self.short_sync_threshold = 15  # Change the test when changing this
-        self.potential_blocks_received: Dict = {}
-        self.potential_header_hashes: Dict = {}
         self.state_changed_callback = None
         self.wallet_state_manager = None
-        self.backup_initialized = False  # Delay first launch sync after user imports backup info or decides to skip
         self.server = None
         self.wsm_close_task = None
         self.sync_task: Optional[asyncio.Task] = None
         self.logged_in_fingerprint: Optional[int] = None
         self.peer_task = None
         self.logged_in = False
+        self.keychain_proxy = None
+        self.local_keychain = local_keychain
+        self.height_to_time: Dict[uint32, uint64] = {}
+        self.synced_peers: Set[bytes32] = set()
+        self.wallet_peers = None
         self.wallet_peers_initialized = False
-        self.last_new_peak_messages = LRUCache(5)
+        self.valid_wp_cache: Dict[bytes32, Any] = {}
+        self.untrusted_caches: Dict[bytes32, Any] = {}
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
@@ -140,7 +154,6 @@ class WalletNode:
         return self.keychain_proxy
 
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
-        key: PrivateKey = None
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
             key = await keychain_proxy.get_key_for_fingerprint(fingerprint)
@@ -159,16 +172,9 @@ class WalletNode:
     async def _start(
         self,
         fingerprint: Optional[int] = None,
-        new_wallet: bool = False,
-        backup_file: Optional[Path] = None,
-        skip_backup_import: bool = False,
     ) -> bool:
-        try:
-            private_key = await self.get_key_for_fingerprint(fingerprint)
-        except KeychainProxyConnectionFailure:
-            self.log.error("Failed to connect to keychain service")
-            return False
-
+        self.synced_peers = set()
+        private_key = await self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
             self.logged_in = False
             return False
@@ -182,52 +188,29 @@ class WalletNode:
             .replace("CHALLENGE", self.config["selected_network"])
             .replace("KEY", db_path_key_suffix)
         )
-        path = path_from_root(self.root_path, db_path_replaced)
+        path = path_from_root(self.root_path, f"{db_path_replaced}_new")
         mkdir(path.parent)
         self.new_peak_lock = asyncio.Lock()
         assert self.server is not None
         self.wallet_state_manager = await WalletStateManager.create(
-            private_key, self.config, path, self.constants, self.server, self.root_path
+            private_key,
+            self.config,
+            path,
+            self.constants,
+            self.server,
+            self.root_path,
+            self.new_puzzle_hash_created,
+            self.get_coin_state,
+            self.subscribe_to_coin_updates,
+            self,
         )
-
-        self.wsm_close_task = None
 
         assert self.wallet_state_manager is not None
 
-        backup_settings: BackupInitialized = self.wallet_state_manager.user_settings.get_backup_settings()
-        if backup_settings.user_initialized is False:
-            if new_wallet is True:
-                await self.wallet_state_manager.user_settings.user_created_new_wallet()
-            elif skip_backup_import is True:
-                await self.wallet_state_manager.user_settings.user_skipped_backup_import()
-            elif backup_file is not None:
-                await self.wallet_state_manager.import_backup_info(backup_file)
-            else:
-                self.backup_initialized = False
-                await self.wallet_state_manager.close_all_stores()
-                self.wallet_state_manager = None
-                self.logged_in = False
-                return False
+        self.config["starting_height"] = 0
 
-        self.backup_initialized = True
-
-        # Start peers here after the backup initialization has finished
-        # We only want to do this once per instantiation
-        # However, doing it earlier before backup initialization causes
-        # the wallet to spam the introducer
-        if self.wallet_peers_initialized is False:
-            asyncio.create_task(self.wallet_peers.start())
-            self.wallet_peers_initialized = True
-
-        if backup_file is not None:
-            json_dict = open_backup_file(backup_file, self.wallet_state_manager.private_key)
-            if "start_height" in json_dict["data"]:
-                start_height = json_dict["data"]["start_height"]
-                self.config["starting_height"] = max(0, start_height - self.config["start_height_buffer"])
-            else:
-                self.config["starting_height"] = 0
-        else:
-            self.config["starting_height"] = 0
+        if self.wallet_peers is None:
+            self.initialize_wallet_peers()
 
         if self.state_changed_callback is not None:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
@@ -237,13 +220,27 @@ class WalletNode:
 
         self.peer_task = asyncio.create_task(self._periodically_check_full_node())
         self.sync_event = asyncio.Event()
-        self.sync_task = asyncio.create_task(self.sync_job())
         if fingerprint is None:
             self.logged_in_fingerprint = private_key.get_g1().get_fingerprint()
         else:
             self.logged_in_fingerprint = fingerprint
         self.logged_in = True
+        self.wallet_state_manager.set_sync_mode(False)
+
+        async with self.wallet_state_manager.puzzle_store.lock:
+            index = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
+            if index is None or index < self.config["initial_num_public_keys"] - 1:
+                await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
+                self.wsm_close_task = None
         return True
+
+    async def new_puzzle_hash_created(self, puzzle_hashes: List[bytes32]):
+        if len(puzzle_hashes) == 0:
+            return
+        assert self.server is not None
+        full_nodes: Dict[bytes32, WSChiaConnection] = self.server.connection_by_type.get(NodeType.FULL_NODE, {})
+        for node_id, node in full_nodes.copy().items():
+            await self.subscribe_to_phs(puzzle_hashes, node)
 
     def _close(self):
         self.log.info("self._close")
@@ -252,18 +249,15 @@ class WalletNode:
 
     async def _await_closed(self):
         self.log.info("self._await_closed")
-        await self.server.close_all_connections()
-        asyncio.create_task(self.wallet_peers.ensure_is_closed())
+        if self.server is not None:
+            await self.server.close_all_connections()
+        if self.wallet_peers is not None:
+            await self.wallet_peers.ensure_is_closed()
         if self.wallet_state_manager is not None:
-            await self.wallet_state_manager.close_all_stores()
+            await self.wallet_state_manager._await_closed()
             self.wallet_state_manager = None
-        if self.sync_task is not None:
-            self.sync_task.cancel()
-            self.sync_task = None
-        if self.peer_task is not None:
-            self.peer_task.cancel()
-            self.peer_task = None
         self.logged_in = False
+        self.wallet_peers = None
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -273,12 +267,12 @@ class WalletNode:
             self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
 
     def _pending_tx_handler(self):
-        if self.wallet_state_manager is None or self.backup_initialized is False:
+        if self.wallet_state_manager is None:
             return None
         asyncio.create_task(self._resend_queue())
 
     async def _action_messages(self) -> List[Message]:
-        if self.wallet_state_manager is None or self.backup_initialized is False:
+        if self.wallet_state_manager is None:
             return []
         actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
         result: List[Message] = []
@@ -297,21 +291,11 @@ class WalletNode:
         return result
 
     async def _resend_queue(self):
-        if (
-            self._shut_down
-            or self.server is None
-            or self.wallet_state_manager is None
-            or self.backup_initialized is None
-        ):
+        if self._shut_down or self.server is None or self.wallet_state_manager is None:
             return None
 
         for msg, sent_peers in await self._messages_to_resend():
-            if (
-                self._shut_down
-                or self.server is None
-                or self.wallet_state_manager is None
-                or self.backup_initialized is None
-            ):
+            if self._shut_down or self.server is None or self.wallet_state_manager is None:
                 return None
             full_nodes = self.server.get_full_node_connections()
             for peer in full_nodes:
@@ -320,17 +304,12 @@ class WalletNode:
                 await peer.send_message(msg)
 
         for msg in await self._action_messages():
-            if (
-                self._shut_down
-                or self.server is None
-                or self.wallet_state_manager is None
-                or self.backup_initialized is None
-            ):
+            if self._shut_down or self.server is None or self.wallet_state_manager is None:
                 return None
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def _messages_to_resend(self) -> List[Tuple[Message, Set[bytes32]]]:
-        if self.wallet_state_manager is None or self.backup_initialized is False or self._shut_down:
+        if self.wallet_state_manager is None or self._shut_down:
             return []
         messages: List[Tuple[Message, Set[bytes32]]] = []
 
@@ -353,45 +332,218 @@ class WalletNode:
 
     def set_server(self, server: ChiaServer):
         self.server = server
-        DNS_SERVERS_EMPTY: list = []
-        network_name: str = self.config["selected_network"]
-        # TODO: Perhaps use a different set of DNS seeders for wallets, to split the traffic.
-        self.wallet_peers = WalletPeers(
-            self.server,
-            self.config["target_peer_count"],
-            PeerStoreResolver(
-                self.root_path,
-                self.config,
-                selected_network=network_name,
-                peers_file_path_key="wallet_peers_file_path",
-                legacy_peer_db_path_key=WALLET_PEERS_PATH_KEY_DEPRECATED,
-                default_peers_file_path="wallet/db/wallet_peers.dat",
-            ),
-            self.config["introducer_peer"],
-            DNS_SERVERS_EMPTY,
-            self.config["peer_connect_interval"],
-            network_name,
-            None,
-            self.log,
-        )
+        self.initialize_wallet_peers()
+
+    def initialize_wallet_peers(self):
+        self.server.on_connect = self.on_connect
+        network_name = self.config["selected_network"]
+
+        connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", False)
+        if connect_to_unknown_peers:
+            self.wallet_peers = WalletPeers(
+                self.server,
+                self.config["target_peer_count"],
+                PeerStoreResolver(
+                    self.root_path,
+                    self.config,
+                    selected_network=network_name,
+                    peers_file_path_key="wallet_peers_file_path",
+                    legacy_peer_db_path_key=WALLET_PEERS_PATH_KEY_DEPRECATED,
+                    default_peers_file_path="wallet/db/wallet_peers.dat",
+                ),
+                self.config["introducer_peer"],
+                self.config["dns_servers"],
+                self.config["peer_connect_interval"],
+                network_name,
+                None,
+                self.log,
+            )
+            asyncio.create_task(self.wallet_peers.start())
+
+    def on_disconnect(self, peer: WSChiaConnection):
+        if peer.peer_node_id in self.untrusted_caches:
+            self.untrusted_caches.pop(peer.peer_node_id)
 
     async def on_connect(self, peer: WSChiaConnection):
-        if self.wallet_state_manager is None or self.backup_initialized is False:
+        if self.wallet_state_manager is None:
             return None
+
+        if Version(peer.protocol_version) < Version("0.0.33"):
+            self.log.info("Disconnecting, full node running old software")
+            await peer.close()
+
+        trusted = self.is_trusted(peer)
+        self.log.info(f"Connected peer {peer} is {trusted}")
         messages_peer_ids = await self._messages_to_resend()
         self.wallet_state_manager.state_changed("add_connection")
         for msg, peer_ids in messages_peer_ids:
             if peer.peer_node_id in peer_ids:
                 continue
             await peer.send_message(msg)
+
         if not self.has_full_node() and self.wallet_peers is not None:
             asyncio.create_task(self.wallet_peers.on_connect(peer))
+
+    async def trusted_sync(self, full_node: WSChiaConnection):
+        """
+        Performs a one-time sync with each trusted peer, subscribing to interested puzzle hashes and coin ids.
+        """
+        self.log.info("Starting trusted sync")
+        assert self.wallet_state_manager is not None
+        self.wallet_state_manager.set_sync_mode(True)
+        start_time = time.time()
+        current_height: uint32 = self.wallet_state_manager.blockchain.get_peak_height()
+        request_height: uint32 = uint32(max(0, current_height - 1000))
+
+        already_checked: Set[bytes32] = set()
+        continue_while: bool = True
+        while continue_while:
+            # Get all phs from puzzle store
+            all_puzzle_hashes: List[bytes32] = await self.get_puzzle_hashes_to_subscribe()
+            to_check: List[bytes32] = []
+            for ph in all_puzzle_hashes:
+                if ph in already_checked:
+                    continue
+                else:
+                    to_check.append(ph)
+                    already_checked.add(ph)
+                    if len(to_check) == 1000:
+                        break
+
+            await self.subscribe_to_phs(to_check, full_node, request_height)
+
+            # Check if new puzzle hashed have been created
+            check_again = await self.get_puzzle_hashes_to_subscribe()
+            await self.wallet_state_manager.create_more_puzzle_hashes()
+
+            continue_while = False
+            for ph in check_again:
+                if ph not in already_checked:
+                    continue_while = True
+                    break
+
+        all_coins: Set[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_coins_to_check(request_height)
+        all_coin_names: List[bytes32] = [coin_record.name() for coin_record in all_coins]
+        removed_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+        all_coin_names.extend(removed_dict.keys())
+
+        one_k_chunks = chunks(all_coin_names, 1000)
+        for chunk in one_k_chunks:
+            await self.subscribe_to_coin_updates(chunk, full_node, request_height)
+        self.wallet_state_manager.set_sync_mode(False)
+        end_time = time.time()
+        duration = end_time - start_time
+        self.log.info(f"Trusted sync duration was: {duration}")
+        # Refresh wallets
+        for wallet_id, wallet in self.wallet_state_manager.wallets.items():
+            self.wallet_state_manager.state_changed("coin_removed", wallet_id)
+            self.wallet_state_manager.state_changed("coin_added", wallet_id)
+        self.synced_peers.add(full_node.peer_node_id)
+
+    async def subscribe_to_phs(self, puzzle_hashes: List[bytes32], peer: WSChiaConnection, height=uint32(0)):
+        """
+        Tell full nodes that we are interested in puzzle hashes, and for trusted connections, add the new coin state
+        for the puzzle hashes.
+        """
+
+        msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, height)
+        all_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
+        # State for untrusted sync is processed only in wp sync | or short  sync backwards
+        if all_state is not None and self.is_trusted(peer):
+            assert self.wallet_state_manager is not None
+            await self.wallet_state_manager.new_coin_state(all_state.coin_states, peer)
+
+    async def subscribe_to_coin_updates(self, coin_names, peer, height=uint32(0)):
+        """
+        Tell full nodes that we are interested in coin ids, and for trusted connections, add the new coin state
+        for the coin changes.
+        """
+        msg = wallet_protocol.RegisterForCoinUpdates(coin_names, height)
+        all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
+        # State for untrusted sync is processed only in wp sync | or short  sync backwards
+        if all_coins_state is not None and self.is_trusted(peer):
+            await self.wallet_state_manager.new_coin_state(all_coins_state.coin_states, peer)
+
+    async def get_coin_state(self, coin_names: List[bytes32]) -> List[CoinState]:
+        assert self.server is not None
+        # TODO Use trusted peer, otherwise try untrusted
+        all_nodes = self.server.connection_by_type[NodeType.FULL_NODE]
+        if len(all_nodes.keys()) == 0:
+            raise ValueError("Not connected to the full node")
+        first_node = list(all_nodes.values())[0]
+        msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
+        coin_state: Optional[RespondToCoinUpdates] = await first_node.register_interest_in_coin(msg)
+        # TODO validate state if received from untrusted peer
+        assert coin_state is not None
+        return coin_state.coin_states
+
+    async def get_coins_with_puzzle_hash(self, puzzle_hash) -> List[CoinState]:
+        assert self.wallet_state_manager is not None
+        assert self.server is not None
+        all_nodes = self.server.connection_by_type[NodeType.FULL_NODE]
+        if len(all_nodes.keys()) == 0:
+            raise ValueError("Not connected to the full node")
+        first_node = list(all_nodes.values())[0]
+        msg = wallet_protocol.RegisterForPhUpdates(puzzle_hash, uint32(0))
+        coin_state: Optional[RespondToPhUpdates] = await first_node.register_interest_in_puzzle_hash(msg)
+        assert coin_state is not None
+        return coin_state.coin_states
+
+    def is_trusted(self, peer):
+        return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
+
+    async def state_update_received(self, request: wallet_protocol.CoinStateUpdate, peer: WSChiaConnection):
+        assert self.wallet_state_manager is not None
+        assert self.server is not None
+        async with self.new_peak_lock:
+            async with self.wallet_state_manager.lock:
+                if self.is_trusted(peer):
+                    await self.wallet_state_manager.new_coin_state(
+                        request.items, peer, request.fork_height, request.height
+                    )
+                    await self.update_ui()
+                else:
+                    # Ignore state_update_received if untrusted, we'll sync from block messages where we check filter
+                    for coin_state in request.items:
+                        info = await self.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash(
+                            coin_state.coin.puzzle_hash
+                        )
+                        if coin_state.created_height is None or info is not None:
+                            continue
+
+                        # We need to check the hints and see if there is a new CAT sent to us, so we can create
+                        # a new CAT wallet
+                        wallet_id, wallet_type = await self.wallet_state_manager.fetch_parent_and_check_for_cat(
+                            peer, coin_state
+                        )
+
+                        if wallet_id is not None:
+                            # If there is a new wallet, check if we have this height already in the blockchain
+                            if self.wallet_state_manager.blockchain.contains_height(request.height):
+                                # If we do, complete the blocks
+                                header_blocks: Optional[RespondHeaderBlocks] = await peer.request_header_blocks(
+                                    wallet_protocol.RequestHeaderBlocks(
+                                        request.height, self.wallet_state_manager.blockchain.get_peak_height()
+                                    )
+                                )
+                                assert header_blocks is not None and isinstance(
+                                    header_blocks, wallet_protocol.RespondHeaderBlocks
+                                )
+                                # re-check the block filter for any new addition /removals, for all of the blocks
+                                # that have been added to the blockchain since this CAT was created
+                                await self.complete_blocks(header_blocks.header_blocks, peer)
+
+    def get_full_node_peer(self):
+        nodes = self.server.get_full_node_connections()
+        if len(nodes) > 0:
+            return nodes[0]
+        else:
+            return None
 
     async def _periodically_check_full_node(self) -> None:
         tries = 0
         while not self._shut_down and tries < 5:
             if self.has_full_node():
-                await self.wallet_peers.ensure_is_closed()
                 if self.wallet_state_manager is not None:
                     self.wallet_state_manager.state_changed("add_connection")
                 break
@@ -413,7 +565,7 @@ class WalletNode:
                 full_node_resolved = full_node_peer
             else:
                 full_node_resolved = PeerInfo(
-                    get_host_addr(full_node_peer.host, self.base_config.get("prefer_ipv6")), full_node_peer.port
+                    get_host_addr(full_node_peer.host, self.config.get("prefer_ipv6")), full_node_peer.port
                 )
             if full_node_peer in peers or full_node_resolved in peers:
                 self.log.info(f"Will not attempt to connect to other nodes, already connected to {full_node_peer}")
@@ -422,133 +574,204 @@ class WalletNode:
                         connection.get_peer_info() != full_node_peer
                         and connection.get_peer_info() != full_node_resolved
                     ):
-                        self.log.info(f"Closing unnecessary connection to {connection.get_peer_logging()}.")
+                        self.log.info(f"Closing unnecessary connection to {connection.get_peer_info()}.")
                         asyncio.create_task(connection.close())
                 return True
         return False
 
-    async def complete_blocks(self, header_blocks: List[HeaderBlock], peer: WSChiaConnection):
-        if self.wallet_state_manager is None:
-            return None
-        header_block_records: List[HeaderBlockRecord] = []
-        assert self.server
-        trusted = self.server.is_trusted_peer(peer, self.config["trusted_peers"])
-        async with self.wallet_state_manager.blockchain.lock:
-            for block in header_blocks:
-                if block.is_transaction_block:
-                    # Find additions and removals
-                    (additions, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
-                        block, block.transactions_filter, None
-                    )
+    async def fetch_last_tx_from_peer(self, height: uint32, peer: WSChiaConnection) -> Optional[HeaderBlock]:
+        request_height = height
+        while True:
+            if request_height == 0:
+                return None
+            request = wallet_protocol.RequestBlockHeader(request_height)
+            response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+            if response is not None and isinstance(response, RespondBlockHeader):
+                if response.header_block.is_transaction_block:
+                    return response.header_block
+            else:
+                break
+            request_height = uint32(request_height - 1)
+        return None
 
-                    # Get Additions
-                    added_coins = await self.get_additions(peer, block, additions)
-                    if added_coins is None:
-                        raise ValueError("Failed to fetch additions")
+    async def get_timestamp_for_height(self, height: uint32) -> uint64:
+        """
+        Returns the timestamp for transaction block at h=height, if not transaction block, backtracks until it finds
+        a transaction block
+        """
+        if height in self.height_to_time:
+            return self.height_to_time[height]
 
-                    # Get removals
-                    removed_coins = await self.get_removals(peer, block, added_coins, removals)
-                    if removed_coins is None:
-                        raise ValueError("Failed to fetch removals")
-
-                    # If there is a launcher created, or we have a singleton spent, fetches the required solutions
-                    additional_coin_spends: List[CoinSpend] = await self.get_additional_coin_spends(
-                        peer, block, added_coins, removed_coins
-                    )
-
-                    hbr = HeaderBlockRecord(block, added_coins, removed_coins)
-                else:
-                    hbr = HeaderBlockRecord(block, [], [])
-                    header_block_records.append(hbr)
-                    additional_coin_spends = []
-                (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
-                    hbr, trusted=trusted, additional_coin_spends=additional_coin_spends
-                )
-                if result == ReceiveBlockResult.NEW_PEAK:
-                    if not self.wallet_state_manager.sync_mode:
-                        self.wallet_state_manager.blockchain.clean_block_records()
-                    self.wallet_state_manager.state_changed("new_block")
-                    self.wallet_state_manager.state_changed("sync_changed")
-                    await self.wallet_state_manager.new_peak()
-                elif result == ReceiveBlockResult.INVALID_BLOCK:
-                    self.log.info(f"Invalid block from peer: {peer.get_peer_logging()} {error}")
-                    await peer.close()
-                    return
-                else:
-                    self.log.debug(f"Result: {result}")
+        peer = self.get_full_node_peer()
+        assert peer is not None
+        curr_height: uint32 = height
+        while True:
+            request = wallet_protocol.RequestBlockHeader(curr_height)
+            response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+            if response is None or not isinstance(response, RespondBlockHeader):
+                raise ValueError(f"Invalid response from {peer}, {response}")
+            if response.header_block.foliage_transaction_block is not None:
+                self.height_to_time[height] = response.header_block.foliage_transaction_block.timestamp
+                return response.header_block.foliage_transaction_block.timestamp
+            curr_height = uint32(curr_height - 1)
 
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
-        if self.wallet_state_manager is None:
-            return
-
-        if self.wallet_state_manager.blockchain.contains_block(peak.header_hash):
-            self.log.debug(f"known peak {peak.header_hash}")
-            return
-
-        if self.wallet_state_manager.sync_mode:
-            self.last_new_peak_messages.put(peer, peak)
-            return
-
+        assert self.wallet_state_manager is not None
+        assert self.server is not None
         async with self.new_peak_lock:
-            curr_peak = self.wallet_state_manager.blockchain.get_peak()
-            if curr_peak is not None and curr_peak.weight >= peak.weight:
+            if self.wallet_state_manager is None:
+                # When logging out of wallet
                 return
+            if self.is_trusted(peer):
+                async with self.wallet_state_manager.lock:
+                    request = wallet_protocol.RequestBlockHeader(peak.height)
+                    header_response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+                    assert header_response is not None
 
-            request = wallet_protocol.RequestBlockHeader(peak.height)
-            response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
-            if response is None or not isinstance(response, RespondBlockHeader) or response.header_block is None:
-                self.log.warning(f"bad peak response from peer {response}")
-                return
-            header_block = response.header_block
-            curr_peak_height = 0 if curr_peak is None else curr_peak.height
-            if (curr_peak_height == 0 and peak.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS) or (
-                curr_peak_height > peak.height - 200
-            ):
+                    last_tx: Optional[HeaderBlock] = await self.fetch_last_tx_from_peer(peak.height, peer)
+                    latest_timestamp: Optional[uint64] = None
+                    if last_tx is not None:
+                        assert last_tx.foliage_transaction_block is not None
+                        latest_timestamp = last_tx.foliage_transaction_block.timestamp
 
-                if peak.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]:
-                    await self.wallet_short_sync_backtrack(header_block, peer)
+                    if peer.peer_node_id not in self.synced_peers:
+                        await self.trusted_sync(peer)
+
+                    await self.wallet_state_manager.blockchain.set_peak_block(
+                        header_response.header_block, latest_timestamp
+                    )
+
+                    self.wallet_state_manager.state_changed("new_block")
+                    self.wallet_state_manager.set_sync_mode(False)
+            else:
+                request = wallet_protocol.RequestBlockHeader(peak.height)
+                response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+                if response is None or not isinstance(response, RespondBlockHeader) or response.header_block is None:
+                    self.log.debug(f"bad peak response from peer {response}, perhaps connection was closed")
+                    return
+                peak_block = response.header_block
+                current_peak: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
+                if current_peak is not None and peak_block.weight < current_peak.weight:
+                    if peak_block.height < current_peak.height - 20:
+                        await peer.close(120)
+                    return
+
+                # don't sync if full node is not synced it self, since we want to fully sync to a few peers
+                if (
+                    not response.header_block.is_transaction_block
+                    and current_peak is not None
+                    and peak_block.prev_header_hash == current_peak.header_hash
+                ):
+                    # This block is after our peak, so we don't need to check if node is synced
+                    pass
                 else:
-                    await self.batch_sync_to_peak(curr_peak_height, peak)
-            elif peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
-                # Request weight proof
-                # Sync if PoW validates
-                weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
-                weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
-                    weight_request, timeout=360
-                )
-                if weight_proof_response is None:
-                    return
+                    if not response.header_block.is_transaction_block:
+                        last_tx_block = await self.fetch_last_tx_from_peer(response.header_block.height, peer)
+                    else:
+                        last_tx_block = response.header_block
 
-                weight_proof = weight_proof_response.wp
-                if self.wallet_state_manager is None:
-                    return
-                if self.server is not None and self.server.is_trusted_peer(peer, self.config["trusted_peers"]):
-                    valid, fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point_no_validations(
-                        weight_proof
-                    )
+                    if last_tx_block is None:
+                        return
+                    assert last_tx_block is not None
+                    assert last_tx_block.foliage_transaction_block is not None
+                    if (
+                        self.config["testing"] is False
+                        and last_tx_block.foliage_transaction_block.timestamp < int(time.time()) - 600
+                    ):
+                        # Full node not synced, don't sync to it
+                        self.log.info("Peer we connected to is not fully synced, dropping connection...")
+                        await peer.close()
+                        return
+
+                long_sync_threshold = 100
+                far_behind: bool = (
+                    peak.height - self.wallet_state_manager.blockchain.get_peak_height() > long_sync_threshold
+                )
+                fork_point = -1
+                if current_peak is not None:
+                    # Force a long sync if it's a very deep reorg
+                    try:
+                        fork_point = find_fork_point_in_chain(
+                            self.wallet_state_manager.blockchain, peak_block, current_peak
+                        )
+                        if peak.height - fork_point > long_sync_threshold:
+                            far_behind = True
+                    except KeyError:
+                        # If we don't have the blocks to find fork point, it's a deep reorg
+                        far_behind = True
+
+                # check if claimed peak is heavier or same as our current peak
+                # if we haven't synced fully to this peer sync again
+                if (
+                    peer.peer_node_id not in self.synced_peers or far_behind
+                ) and peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+                    syncing = False
+                    if far_behind or len(self.synced_peers) == 0:
+                        syncing = True
+                        self.wallet_state_manager.set_sync_mode(True)
+                    try:
+                        (
+                            valid_weight_proof,
+                            weight_proof,
+                            summaries,
+                            block_records,
+                        ) = await self.fetch_and_validate_the_weight_proof(peer, response.header_block)
+                        if valid_weight_proof is False:
+                            if syncing:
+                                self.wallet_state_manager.set_sync_mode(False)
+                            await peer.close()
+                            return
+                        assert weight_proof is not None
+                        if syncing:
+                            async with self.wallet_state_manager.lock:
+                                await self.untrusted_sync_to_peer(peer, weight_proof, syncing, fork_point)
+                        else:
+                            await self.untrusted_sync_to_peer(peer, weight_proof, syncing, fork_point)
+                        if (
+                            self.wallet_state_manager.blockchain.synced_weight_proof is None
+                            or weight_proof.recent_chain_data[-1].weight
+                            > self.wallet_state_manager.blockchain.synced_weight_proof.recent_chain_data[-1].weight
+                        ):
+                            await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
+
+                        self.synced_peers.add(peer.peer_node_id)
+
+                        self.wallet_state_manager.state_changed("new_block")
+                        await self.update_ui()
+                    except Exception:
+                        if syncing:
+                            self.wallet_state_manager.set_sync_mode(False)
+                        tb = traceback.format_exc()
+                        self.log.error(f"Error syncing to {peer.get_peer_info()} {tb}")
+                        await peer.close()
+                        return
+                    if syncing:
+                        self.wallet_state_manager.set_sync_mode(False)
+
                 else:
-                    valid, fork_point, _ = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(
-                        weight_proof
-                    )
-                if not valid:
-                    self.log.error(
-                        f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
-                        f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
-                    )
-                    self.log.debug(f"{weight_proof}")
-                    return
-                self.log.info(f"Validated, fork point is {fork_point}")
-                self.wallet_state_manager.sync_store.add_potential_fork_point(
-                    header_block.header_hash, uint32(fork_point)
-                )
-                self.wallet_state_manager.sync_store.add_potential_peak(header_block)
-                self.start_sync()
+                    if peer.peer_node_id not in self.synced_peers:
+                        # Edge case, we still want to subscribe for all phs
+                        # (Hints are not in filter)
+                        await self.untrusted_subscribe_to_puzzle_hashes(peer, False, None, None)
+                        self.synced_peers.add(peer.peer_node_id)
+                    await self.wallet_short_sync_backtrack(peak_block, peer)
+                    self.wallet_state_manager.set_sync_mode(False)
+                    self.wallet_state_manager.state_changed("new_block")
 
-    async def wallet_short_sync_backtrack(self, header_block, peer):
+        await self.wallet_state_manager.new_peak(peak)
+        self._pending_tx_handler()
+
+    async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer):
+        assert self.wallet_state_manager is not None
+
         top = header_block
         blocks = [top]
         # Fetch blocks backwards until we hit the one that we have,
         # then complete them with additions / removals going forward
+        fork_height = 0
+        if self.wallet_state_manager.blockchain.contains_block(header_block.prev_header_hash):
+            fork_height = header_block.height - 1
+
         while not self.wallet_state_manager.blockchain.contains_block(top.prev_header_hash) and top.height > 0:
             request_prev = wallet_protocol.RequestBlockHeader(top.height - 1)
             response_prev: Optional[RespondBlockHeader] = await peer.request_block_header(request_prev)
@@ -557,401 +780,167 @@ class WalletNode:
             prev_head = response_prev.header_block
             blocks.append(prev_head)
             top = prev_head
+            fork_height = top.height - 1
+
         blocks.reverse()
+        # Roll back coins and transactions
+        await self.wallet_state_manager.reorg_rollback(fork_height)
+        peak = await self.wallet_state_manager.blockchain.get_peak_block()
+        if peak is not None:
+            assert header_block.weight >= peak.weight
+        for block in blocks:
+            # Set blockchain to the latest peak
+            res, err = await self.wallet_state_manager.blockchain.receive_block(block)
+            if res == ReceiveBlockResult.INVALID_BLOCK:
+                raise ValueError(err)
+
+        # Add new coins and transactions
         await self.complete_blocks(blocks, peer)
-        await self.wallet_state_manager.create_more_puzzle_hashes()
 
-    async def batch_sync_to_peak(self, fork_height, peak):
-        advanced_peak = False
-        batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
-        for i in range(max(0, fork_height - 1), peak.height, batch_size):
-            start_height = i
-            end_height = min(peak.height, start_height + batch_size)
-            peers = self.server.get_full_node_connections()
-            added = False
-            for peer in peers:
-                try:
-                    added, advanced_peak = await self.fetch_blocks_and_validate(
-                        peer, uint32(start_height), uint32(end_height), None if advanced_peak else fork_height
-                    )
-                    if added:
-                        break
-                except Exception as e:
-                    await peer.close()
-                    exc = traceback.format_exc()
-                    self.log.error(f"Error while trying to fetch from peer:{e} {exc}")
-            if not added:
-                raise RuntimeError(f"Was not able to add blocks {start_height}-{end_height}")
-
-            curr_peak = self.wallet_state_manager.blockchain.get_peak()
-            assert peak is not None
-            self.wallet_state_manager.blockchain.clean_block_record(
-                min(end_height, curr_peak.height) - self.constants.BLOCKS_CACHE_SIZE
-            )
-
-    def start_sync(self) -> None:
-        self.log.info("self.sync_event.set()")
-        self.sync_event.set()
-
-    async def check_new_peak(self) -> None:
+    async def complete_blocks(self, header_blocks: List[HeaderBlock], peer: WSChiaConnection):
         if self.wallet_state_manager is None:
             return None
+        all_outgoing_per_wallet: Dict[int, List[TransactionRecord]] = {}
 
-        current_peak: Optional[BlockRecord] = self.wallet_state_manager.blockchain.get_peak()
-        if current_peak is None:
-            return None
-        potential_peaks: List[
-            Tuple[bytes32, HeaderBlock]
-        ] = self.wallet_state_manager.sync_store.get_potential_peaks_tuples()
-        for _, block in potential_peaks:
-            if current_peak.weight < block.weight:
-                await asyncio.sleep(5)
-                self.start_sync()
-                return None
-
-    async def sync_job(self) -> None:
-        while True:
-            self.log.info("Loop start in sync job")
-            if self._shut_down is True:
-                break
-            asyncio.create_task(self.check_new_peak())
-            await self.sync_event.wait()
-            self.last_new_peak_messages = LRUCache(5)
-            self.sync_event.clear()
-
-            if self._shut_down is True:
-                break
-            try:
-                assert self.wallet_state_manager is not None
-                self.wallet_state_manager.set_sync_mode(True)
-                await self._sync()
-            except Exception as e:
-                tb = traceback.format_exc()
-                self.log.error(f"Loop exception in sync {e}. {tb}")
-            finally:
-                if self.wallet_state_manager is not None:
-                    self.wallet_state_manager.set_sync_mode(False)
-                for peer, peak in self.last_new_peak_messages.cache.items():
-                    asyncio.create_task(self.new_peak_wallet(peak, peer))
-            self.log.info("Loop end in sync job")
-
-    async def _sync(self) -> None:
-        """
-        Wallet has fallen far behind (or is starting up for the first time), and must be synced
-        up to the LCA of the blockchain.
-        """
-        if self.wallet_state_manager is None or self.backup_initialized is False or self.server is None:
-            return None
-
-        highest_weight: uint128 = uint128(0)
-        peak_height: uint32 = uint32(0)
-        peak: Optional[HeaderBlock] = None
-        potential_peaks: List[
-            Tuple[bytes32, HeaderBlock]
-        ] = self.wallet_state_manager.sync_store.get_potential_peaks_tuples()
-
-        self.log.info(f"Have collected {len(potential_peaks)} potential peaks")
-
-        for header_hash, potential_peak_block in potential_peaks:
-            if potential_peak_block.weight > highest_weight:
-                highest_weight = potential_peak_block.weight
-                peak_height = potential_peak_block.height
-                peak = potential_peak_block
-
-        if peak_height is None or peak_height == 0:
-            return None
-
-        if self.wallet_state_manager.peak is not None and highest_weight <= self.wallet_state_manager.peak.weight:
-            self.log.info("Not performing sync, already caught up.")
-            return None
-
-        peers: List[WSChiaConnection] = self.server.get_full_node_connections()
-        if len(peers) == 0:
-            self.log.info("No peers to sync to")
-            return None
-
-        async with self.wallet_state_manager.blockchain.lock:
-            fork_height = None
-            if peak is not None:
-                fork_height = self.wallet_state_manager.sync_store.get_potential_fork_point(peak.header_hash)
-                assert fork_height is not None
-                # This is the fork point in SES in the case where no fork was detected
-                peers = self.server.get_full_node_connections()
-                fork_height = await check_fork_next_block(
-                    self.wallet_state_manager.blockchain, fork_height, peers, wallet_next_block_check
-                )
-
-            if fork_height is None:
-                fork_height = uint32(0)
-            await self.wallet_state_manager.blockchain.warmup(fork_height)
-            await self.batch_sync_to_peak(fork_height, peak)
-
-    async def fetch_blocks_and_validate(
-        self,
-        peer: WSChiaConnection,
-        height_start: uint32,
-        height_end: uint32,
-        fork_point_with_peak: Optional[uint32],
-    ) -> Tuple[bool, bool]:
-        """
-        Returns whether the blocks validated, and whether the peak was advanced
-        """
-        if self.wallet_state_manager is None:
-            return False, False
-
-        self.log.info(f"Requesting blocks {height_start}-{height_end}")
-        request = RequestHeaderBlocks(uint32(height_start), uint32(height_end))
-        res: Optional[RespondHeaderBlocks] = await peer.request_header_blocks(request)
-        if res is None or not isinstance(res, RespondHeaderBlocks):
-            raise ValueError("Peer returned no response")
-        header_blocks: List[HeaderBlock] = res.header_blocks
-        advanced_peak = False
-        if header_blocks is None:
-            raise ValueError(f"No response from peer {peer}")
-        assert self.server
-        trusted = self.server.is_trusted_peer(peer, self.config["trusted_peers"])
-        pre_validation_results: Optional[List[PreValidationResult]] = None
-        if not trusted:
-            pre_validation_results = await self.wallet_state_manager.blockchain.pre_validate_blocks_multiprocessing(
-                header_blocks
-            )
-            if pre_validation_results is None:
-                return False, advanced_peak
-            assert len(header_blocks) == len(pre_validation_results)
-
-        for i in range(len(header_blocks)):
-            header_block = header_blocks[i]
-            if not trusted and pre_validation_results is not None and pre_validation_results[i].error is not None:
-                raise ValidationError(Err(pre_validation_results[i].error))
-
-            fork_point_with_old_peak = None if advanced_peak else fork_point_with_peak
-            if header_block.is_transaction_block:
+        for block in header_blocks:
+            if block.is_transaction_block:
                 # Find additions and removals
                 (additions, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
-                    header_block, header_block.transactions_filter, fork_point_with_old_peak
+                    block, block.transactions_filter, None
                 )
 
                 # Get Additions
-                added_coins = await self.get_additions(peer, header_block, additions)
+                added_coins = await self.get_additions(peer, block, additions)
                 if added_coins is None:
                     raise ValueError("Failed to fetch additions")
 
                 # Get removals
-                removed_coins = await self.get_removals(peer, header_block, added_coins, removals)
+                removed_coins = await self.get_removals(peer, block, added_coins, removals)
                 if removed_coins is None:
                     raise ValueError("Failed to fetch removals")
 
-                # If there is a launcher created, or we have a singleton spent, fetches the required solutions
-                additional_coin_spends: List[CoinSpend] = await self.get_additional_coin_spends(
-                    peer, header_block, added_coins, removed_coins
-                )
-
-                header_block_record = HeaderBlockRecord(header_block, added_coins, removed_coins)
-            else:
-                header_block_record = HeaderBlockRecord(header_block, [], [])
-                additional_coin_spends = []
-            start_t = time.time()
-            if trusted:
-                (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
-                    header_block_record,
-                    None,
-                    trusted,
-                    fork_point_with_old_peak,
-                    additional_coin_spends=additional_coin_spends,
-                )
-            else:
-                assert pre_validation_results is not None
-                (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
-                    header_block_record,
-                    pre_validation_results[i],
-                    trusted,
-                    fork_point_with_old_peak,
-                    additional_coin_spends=additional_coin_spends,
-                )
-            self.log.debug(
-                f"Time taken to validate {header_block.height} with fork "
-                f"{fork_point_with_old_peak}: {time.time() - start_t}"
-            )
-            if result == ReceiveBlockResult.NEW_PEAK:
-                advanced_peak = True
-                self.wallet_state_manager.state_changed("new_block")
-            elif result == ReceiveBlockResult.INVALID_BLOCK:
-                raise ValueError("Value error peer sent us invalid block")
-        if advanced_peak:
-            await self.wallet_state_manager.create_more_puzzle_hashes()
-        return True, advanced_peak
-
-    def validate_additions(
-        self,
-        coins: List[Tuple[bytes32, List[Coin]]],
-        proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]],
-        root,
-    ):
-        if proofs is None:
-            # Verify root
-            additions_merkle_set = MerkleSet()
-
-            # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-            for puzzle_hash, coins_l in coins:
-                additions_merkle_set.add_already_hashed(puzzle_hash)
-                additions_merkle_set.add_already_hashed(hash_coin_list(coins_l))
-
-            additions_root = additions_merkle_set.get_root()
-            if root != additions_root:
-                return False
-        else:
-            for i in range(len(coins)):
-                assert coins[i][0] == proofs[i][0]
-                coin_list_1: List[Coin] = coins[i][1]
-                # TODO: address hint error and remove ignore
-                #       error: Incompatible types in assignment (expression has type "bytes", variable has type
-                #       "bytes32")  [assignment]
-                puzzle_hash_proof: bytes32 = proofs[i][1]  # type: ignore[assignment]
-                # TODO: address hint error and remove ignore
-                #       error: Incompatible types in assignment (expression has type "Optional[bytes]", variable has
-                #       type "Optional[bytes32]")  [assignment]
-                coin_list_proof: Optional[bytes32] = proofs[i][2]  # type: ignore[assignment]
-                if len(coin_list_1) == 0:
-                    # Verify exclusion proof for puzzle hash
-                    not_included = confirm_not_included_already_hashed(
-                        root,
-                        coins[i][0],
-                        puzzle_hash_proof,
-                    )
-                    if not_included is False:
-                        return False
-                else:
-                    try:
-                        # Verify inclusion proof for coin list
-                        # TODO: address hint error and remove ignore
-                        #       error: Argument 3 to "confirm_included_already_hashed" has incompatible type
-                        #       "Optional[bytes32]"; expected "bytes32"  [arg-type]
-                        included = confirm_included_already_hashed(
-                            root,
-                            hash_coin_list(coin_list_1),
-                            coin_list_proof,  # type: ignore[arg-type]
+                for added_coin in added_coins:
+                    self.log.info(f"coin added {added_coin}")
+                    wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(added_coin.puzzle_hash)
+                    if wallet_info is None:
+                        continue
+                    wallet_id, wallet_type = wallet_info
+                    if wallet_id in all_outgoing_per_wallet:
+                        all_outgoing = all_outgoing_per_wallet[wallet_id]
+                    else:
+                        all_outgoing = await self.wallet_state_manager.tx_store.get_all_transactions_for_wallet(
+                            wallet_id
                         )
-                        if included is False:
-                            return False
-                    except AssertionError:
-                        return False
-                    try:
-                        # Verify inclusion proof for puzzle hash
-                        included = confirm_included_already_hashed(
-                            root,
-                            coins[i][0],
-                            puzzle_hash_proof,
+                        all_outgoing_per_wallet[wallet_id] = all_outgoing
+                    derivation_index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
+                        added_coin.puzzle_hash
+                    )
+                    if derivation_index is not None:
+                        await self.wallet_state_manager.puzzle_store.set_used_up_to(derivation_index, False)
+                    await self.wallet_state_manager.coin_added(
+                        added_coin, block.height, all_outgoing, wallet_id, wallet_type
+                    )
+
+                all_unconfirmed: List[
+                    TransactionRecord
+                ] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
+
+                all_removed_coins = None
+                trade_removals = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+
+                for removed_coin in removed_coins:
+                    self.log.info(f"coin removed {removed_coin}")
+                    if removed_coin.name() in trade_removals:
+                        await self.wallet_state_manager.trade_manager.coins_of_interest_farmed(
+                            CoinState(removed_coin, block.height, None)  # `None` is a lie but it shouldn't matter
                         )
-                        if included is False:
-                            return False
-                    except AssertionError:
-                        return False
+                    for unconfirmed_record in all_unconfirmed:
+                        if removed_coin in unconfirmed_record.removals:
+                            self.log.info(f"Setting tx_id: {unconfirmed_record.name} to confirmed")
+                            await self.wallet_state_manager.tx_store.set_confirmed(
+                                unconfirmed_record.name, block.height
+                            )
 
-        return True
+                    record = await self.wallet_state_manager.coin_store.get_coin_record(removed_coin.name())
+                    if record is None:
+                        continue
+                    await self.wallet_state_manager.coin_store.set_spent(removed_coin.name(), block.height)
+                    removed_record = await self.wallet_state_manager.coin_store.get_coin_record(removed_coin.name())
 
-    def validate_removals(self, coins, proofs, root):
-        if proofs is None:
-            # If there are no proofs, it means all removals were returned in the response.
-            # we must find the ones relevant to our wallets.
+                    if removed_record is not None and removed_record.wallet_type == WalletType.POOLING_WALLET:
+                        if all_removed_coins is None:
+                            all_removed_coins = await self.get_removals(peer, block, added_coins, removals, True)
+                        pool_spend = await self.fetch_puzzle_solution(peer, block.height, removed_coin)
+                        if len(pool_spend.additions()) > 0:
+                            pool_added_coin = pool_spend.additions()[0]
+                            await self.wallet_state_manager.coin_added(
+                                pool_added_coin,
+                                block.height,
+                                [],
+                                uint32(removed_record.wallet_id),
+                                removed_record.wallet_type,
+                            )
+                            pool_wallet = self.wallet_state_manager.wallets[uint32(removed_record.wallet_id)]
+                            await pool_wallet.apply_state_transitions(pool_spend, block.height)
+                            assert all_removed_coins is not None
+                            if pool_added_coin in all_removed_coins:
+                                pool_spend_2 = await self.fetch_puzzle_solution(peer, block.height, pool_added_coin)
+                                if len(pool_spend_2.additions()) > 0:
+                                    pool_added_coin_2 = pool_spend_2.additions()[0]
+                                    await self.wallet_state_manager.coin_added(
+                                        pool_added_coin_2,
+                                        block.height,
+                                        [],
+                                        uint32(removed_record.wallet_id),
+                                        removed_record.wallet_type,
+                                    )
+                                    pool_wallet = self.wallet_state_manager.wallets[uint32(removed_record.wallet_id)]
+                                    await pool_wallet.apply_state_transitions(pool_spend_2, block.height)
 
-            # Verify removals root
-            removals_merkle_set = MerkleSet()
-            for name_coin in coins:
-                # TODO review all verification
-                name, coin = name_coin
-                if coin is not None:
-                    removals_merkle_set.add_already_hashed(coin.name())
-            removals_root = removals_merkle_set.get_root()
-            if root != removals_root:
-                return False
-        else:
-            # This means the full node has responded only with the relevant removals
-            # for our wallet. Each merkle proof must be verified.
-            if len(coins) != len(proofs):
-                return False
-            for i in range(len(coins)):
-                # Coins are in the same order as proofs
-                if coins[i][0] != proofs[i][0]:
-                    return False
-                coin = coins[i][1]
-                if coin is None:
-                    # Verifies merkle proof of exclusion
-                    not_included = confirm_not_included_already_hashed(
-                        root,
-                        coins[i][0],
-                        proofs[i][1],
-                    )
-                    if not_included is False:
-                        return False
-                else:
-                    # Verifies merkle proof of inclusion of coin name
-                    if coins[i][0] != coin.name():
-                        return False
-                    included = confirm_included_already_hashed(
-                        root,
-                        coin.name(),
-                        proofs[i][1],
-                    )
-                    if included is False:
-                        return False
-        return True
+                    # Check if we have created a pool wallet
+                    children: List[CoinState] = await self.fetch_children(peer, removed_coin.name(), None)
+                    for child in children:
+                        if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
+                            continue
+                        if await self.wallet_state_manager.have_a_pool_wallet_with_launched_id(child.coin.name()):
+                            continue
+                        if child.spent_height is None:
+                            continue
 
-    async def fetch_puzzle_solution(self, peer, height: uint32, coin: Coin) -> CoinSpend:
-        solution_response = await peer.request_puzzle_solution(
-            wallet_protocol.RequestPuzzleSolution(coin.name(), height)
-        )
-        if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
-            raise ValueError(f"Was not able to obtain solution {solution_response}")
-        return CoinSpend(coin, solution_response.response.puzzle, solution_response.response.solution)
+                        launcher_spend: CoinSpend = await self.fetch_puzzle_solution(peer, block.height, child.coin)
+                        pool_state = None
+                        try:
+                            pool_state = solution_to_pool_state(launcher_spend)
+                        except Exception as e:
+                            self.log.debug(f"Not a pool wallet launcher {e}")
+                            continue
+                        assert pool_state is not None
+                        assert child.spent_height is not None
+                        pool_wallet = await PoolWallet.create(
+                            self.wallet_state_manager,
+                            self.wallet_state_manager.main_wallet,
+                            child.coin.name(),
+                            [launcher_spend],
+                            child.spent_height,
+                            False,
+                            "pool_wallet",
+                        )
+                        await pool_wallet.apply_state_transitions(launcher_spend, block.height)
+                        pool_added_coin = launcher_spend.additions()[0]
+                        await self.wallet_state_manager.coin_added(
+                            pool_added_coin,
+                            block.height,
+                            [],
+                            uint32(pool_wallet.wallet_id),
+                            WalletType(pool_wallet.type()),
+                        )
 
-    async def get_additional_coin_spends(
-        self, peer, block, added_coins: List[Coin], removed_coins: List[Coin]
-    ) -> List[CoinSpend]:
-        assert self.wallet_state_manager is not None
-        additional_coin_spends: List[CoinSpend] = []
-        if len(removed_coins) > 0:
-            removed_coin_ids = set([coin.name() for coin in removed_coins])
-            all_added_coins = await self.get_additions(peer, block, [], get_all_additions=True)
-            assert all_added_coins is not None
-            if all_added_coins is not None:
-                all_added_coin_parents = [c.parent_coin_info for c in all_added_coins]
-                for coin in all_added_coins:
-                    # This searches specifically for a launcher being created, and adds the solution of the launcher
-                    if (
-                        coin.puzzle_hash == SINGLETON_LAUNCHER_HASH  # Check that it's a launcher
-                        and coin.name() in all_added_coin_parents  # Check that it's ephemermal
-                        and coin.parent_coin_info in removed_coin_ids  # Check that an interesting coin created it
-                    ):
-                        cs: CoinSpend = await self.fetch_puzzle_solution(peer, block.height, coin)
-                        additional_coin_spends.append(cs)
-                        # Apply this coin solution, which might add things to interested list
-                        await self.wallet_state_manager.get_next_interesting_coin_ids(cs, False)
+        await self.update_ui()
 
-                all_removed_coins: Optional[List[Coin]] = await self.get_removals(
-                    peer, block, added_coins, removed_coins, request_all_removals=True
-                )
-                assert all_removed_coins is not None
-                all_removed_coins_dict: Dict[bytes32, Coin] = {coin.name(): coin for coin in all_removed_coins}
-                keep_searching = True
-                while keep_searching:
-                    # This keeps fetching solutions for coins we are interested list, in this block, until
-                    # there are no more interested things to fetch
-                    keep_searching = False
-                    interested_ids: List[
-                        bytes32
-                    ] = await self.wallet_state_manager.interested_store.get_interested_coin_ids()
-                    for coin_id in interested_ids:
-                        if coin_id in all_removed_coins_dict:
-                            coin = all_removed_coins_dict[coin_id]
-                            cs = await self.fetch_puzzle_solution(peer, block.height, coin)
-
-                            # Apply this coin solution, which might add things to interested list
-                            await self.wallet_state_manager.get_next_interesting_coin_ids(cs, False)
-                            additional_coin_spends.append(cs)
-                            keep_searching = True
-                            all_removed_coins_dict.pop(coin_id)
-                            break
-        return additional_coin_spends
+    async def update_ui(self):
+        for wallet_id, wallet in self.wallet_state_manager.wallets.items():
+            self.wallet_state_manager.state_changed("coin_removed", wallet_id)
+            self.wallet_state_manager.state_changed("coin_added", wallet_id)
 
     async def get_additions(
         self, peer: WSChiaConnection, block_i, additions: Optional[List[bytes32]], get_all_additions: bool = False
@@ -967,7 +956,7 @@ class WalletNode:
                 await peer.close()
                 return None
             elif isinstance(additions_res, RespondAdditions):
-                validated = self.validate_additions(
+                validated = validate_additions(
                     additions_res.coins,
                     additions_res.proofs,
                     block_i.foliage_transaction_block.additions_root,
@@ -997,8 +986,7 @@ class WalletNode:
             record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
                 coin.puzzle_hash
             )
-            if record_info is not None and record_info.wallet_type == WalletType.COLOURED_COIN:
-                # TODO why ?
+            if record_info is not None and record_info.wallet_type == WalletType.CAT:
                 request_all_removals = True
                 break
             if record_info is not None and record_info.wallet_type == WalletType.DISTRIBUTED_ID:
@@ -1015,7 +1003,7 @@ class WalletNode:
             if removals_res is None:
                 return None
             elif isinstance(removals_res, RespondRemovals):
-                validated = self.validate_removals(
+                validated = validate_removals(
                     removals_res.coins,
                     removals_res.proofs,
                     block_i.foliage_transaction_block.removals_root,
@@ -1037,15 +1025,483 @@ class WalletNode:
         else:
             return []
 
+    async def fetch_and_validate_the_weight_proof(
+        self, peer: WSChiaConnection, peak: HeaderBlock
+    ) -> Tuple[bool, Optional[WeightProof], List[SubEpochSummary], List[BlockRecord]]:
+        assert self.wallet_state_manager is not None
+        assert self.wallet_state_manager.weight_proof_handler is not None
 
-async def wallet_next_block_check(
-    peer: WSChiaConnection, potential_peek: uint32, blockchain: BlockchainInterface
-) -> bool:
-    block_response = await peer.request_header_blocks(
-        wallet_protocol.RequestHeaderBlocks(potential_peek, potential_peek)
-    )
-    if block_response is not None and isinstance(block_response, wallet_protocol.RespondHeaderBlocks):
-        our_peak = blockchain.get_peak()
-        if our_peak is not None and block_response.header_blocks[0].prev_header_hash == our_peak.header_hash:
+        weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
+        weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(weight_request, timeout=60)
+
+        if weight_proof_response is None:
+            return False, None, [], []
+        start_validation = time.time()
+
+        weight_proof = weight_proof_response.wp
+
+        if weight_proof.recent_chain_data[-1].reward_chain_block.height != peak.height:
+            return False, None, [], []
+        if weight_proof.recent_chain_data[-1].reward_chain_block.weight != peak.weight:
+            return False, None, [], []
+
+        if weight_proof.get_hash() in self.valid_wp_cache:
+            valid, fork_point, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
+        else:
+            start_validation = time.time()
+            (
+                valid,
+                fork_point,
+                summaries,
+                block_records,
+            ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
+            if valid:
+                self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point, summaries, block_records
+
+        end_validation = time.time()
+        self.log.info(f"It took {end_validation - start_validation} time to validate the weight proof")
+        return valid, weight_proof, summaries, block_records
+
+    async def get_puzzle_hashes_to_subscribe(self) -> List[bytes32]:
+        assert self.wallet_state_manager is not None
+        all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+        # Get all phs from interested store
+        interested_puzzle_hashes = [
+            t[0] for t in await self.wallet_state_manager.interested_store.get_interested_puzzle_hashes()
+        ]
+        all_puzzle_hashes.extend(interested_puzzle_hashes)
+        return all_puzzle_hashes
+
+    async def untrusted_subscribe_to_puzzle_hashes(
+        self,
+        peer: WSChiaConnection,
+        save_state: bool,
+        peer_request_cache: Optional[PeerRequestCache],
+        weight_proof: Optional[WeightProof],
+    ):
+        assert self.wallet_state_manager is not None
+        already_checked = set()
+        continue_while = True
+        while continue_while:
+            all_puzzle_hashes = await self.get_puzzle_hashes_to_subscribe()
+            to_check = []
+            for ph in all_puzzle_hashes:
+                if ph in already_checked:
+                    continue
+                else:
+                    to_check.append(ph)
+                    already_checked.add(ph)
+                    if len(to_check) == 1000:
+                        break
+            msg = wallet_protocol.RegisterForPhUpdates(to_check, uint32(0))
+            all_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
+            assert all_state is not None
+
+            if save_state:
+                assert weight_proof is not None
+                assert peer_request_cache is not None
+                validated_state = await self.validate_received_state_from_peer(
+                    all_state.coin_states, peer, weight_proof, peer_request_cache, False
+                )
+                await self.wallet_state_manager.new_coin_state(validated_state, peer, weight_proof=weight_proof)
+
+            # Check if new puzzle hashed have been created
+            check_again = await self.get_puzzle_hashes_to_subscribe()
+
+            continue_while = False
+            for ph in check_again:
+                if ph not in already_checked:
+                    continue_while = True
+                    break
+
+    async def untrusted_sync_to_peer(
+        self, peer: WSChiaConnection, weight_proof: WeightProof, syncing: bool, fork_height: int
+    ):
+        assert self.wallet_state_manager is not None
+        # If new weight proof is higher than the old one, rollback to the fork point and than apply new coin_states
+        if fork_height == -1:
+            wp_fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point(
+                old_wp=self.wallet_state_manager.blockchain.synced_weight_proof, new_wp=weight_proof
+            )
+            # Extra conservative
+            fork_height = max(0, wp_fork_point - 10)
+        self.log.info(f"Starting untrusted sync to: {peer.get_peer_info()}, syncing: {syncing}, fork at: {fork_height}")
+        if syncing:
+            self.log.info(f"Rollback for {fork_height}")
+            await self.wallet_state_manager.reorg_rollback(fork_height)
+
+        start_time: float = time.time()
+        peer_request_cache: PeerRequestCache = PeerRequestCache()
+        self.untrusted_caches[peer.peer_node_id] = peer_request_cache
+        # Always sync fully from untrusted
+        # Get state for puzzle hashes
+        self.log.debug("Start untrusted_subscribe_to_puzzle_hashes  ")
+        await self.untrusted_subscribe_to_puzzle_hashes(peer, True, peer_request_cache, weight_proof)
+        self.log.debug("End untrusted_subscribe_to_puzzle_hashes  ")
+
+        checked_call_coins = False
+        checked_coins: Set[bytes32] = set()
+        while not checked_call_coins:
+            # Get state for coins ids
+            all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(uint32(0))
+            all_coin_names = [coin_record.name() for coin_record in all_coins]
+            removed_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+            all_coin_names.extend(removed_dict.keys())
+
+            to_check: List[bytes32] = []
+            for coin_name in all_coin_names:
+                if coin_name in checked_coins:
+                    continue
+                else:
+                    to_check.append(coin_name)
+                    checked_coins.add(coin_name)
+                    if len(to_check) == 1000:
+                        break
+
+            msg1 = wallet_protocol.RegisterForCoinUpdates(to_check, uint32(0))
+            new_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg1)
+
+            assert new_state is not None
+            if syncing:
+                # If syncing, completely change over to this peer's information
+                coin_state_before_fork: List[CoinState] = new_state.coin_states
+            else:
+                # Otherwise, we only want to apply changes before the fork point, since we are synced to another peer
+                # We are just validating that there is no missing information
+                coin_state_before_fork = []
+                for coin_state_entry in new_state.coin_states:
+                    if coin_state_entry.spent_height is not None:
+                        if coin_state_entry.spent_height <= fork_height:
+                            coin_state_before_fork.append(coin_state_entry)
+                    elif coin_state_entry.created_height is not None:
+                        if coin_state_entry.created_height <= fork_height:
+                            coin_state_before_fork.append(coin_state_entry)
+
+            validated_state = await self.validate_received_state_from_peer(
+                coin_state_before_fork, peer, weight_proof, peer_request_cache, False
+            )
+            # Apply validated state
+            await self.wallet_state_manager.new_coin_state(validated_state, peer, weight_proof=weight_proof)
+
+            all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(uint32(0))
+            all_coin_names = [coin_record.name() for coin_record in all_coins]
+            removed_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+            all_coin_names.extend(removed_dict.keys())
+
+            checked_call_coins = True
+            for coin_name in all_coin_names:
+                if coin_name not in checked_coins:
+                    checked_call_coins = False
+                    break
+
+        end_time = time.time()
+        duration = end_time - start_time
+        self.log.info(f"Sync duration was: {duration}")
+
+    async def validate_received_state_from_peer(
+        self,
+        coin_states: List[CoinState],
+        peer,
+        weight_proof: WeightProof,
+        peer_request_cache: PeerRequestCache,
+        return_old_state: bool,
+    ) -> List[CoinState]:
+        """
+        Returns all state that is valid and included in the blockchain proved by the weight proof. If return_old_states
+        is False, only new states that are not in the coin_store are returned.
+        """
+        assert self.wallet_state_manager is not None
+        all_validated_states = []
+        total = len(coin_states)
+        for coin_idx, coin_state in enumerate(coin_states):
+            looked_up_coin: Optional[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_coin_record(
+                coin_state.coin.name()
+            )
+            if (
+                looked_up_coin is not None
+                and coin_state.created_height is not None
+                and looked_up_coin.confirmed_block_height == coin_state.created_height
+            ):
+                if looked_up_coin.spent:
+                    if looked_up_coin.spent_block_height == coin_state.spent_height:
+                        # Both are spent and created at same height, no need to validate
+                        if return_old_state:
+                            all_validated_states.append(coin_state)
+                        continue
+                else:
+                    if coin_state.spent_height is None:
+                        # Both are not spent, no need to validate
+                        if return_old_state:
+                            all_validated_states.append(coin_state)
+                        continue
+            if coin_state.get_hash() in peer_request_cache.states_validated:
+                all_validated_states.append(coin_state)
+                continue
+            self.log.info(f"Validating {coin_idx + 1} of {total}")
+            spent_height = coin_state.spent_height
+            confirmed_height = coin_state.created_height
+
+            current = await self.wallet_state_manager.coin_store.get_coin_record(coin_state.coin.name())
+            # if remote state is same as current local state we skip validation
+
+            # CoinRecord unspent = height 0, coin state = None. We adjust for comparison bellow
+            current_spent_height = None
+            if current is not None and current.spent_block_height != 0:
+                current_spent_height = current.spent_block_height
+
+            # It's possible that new state has been added before we finished validating weight proof
+            # We'll just ignore it here, backward sync will pick it up
+            wp_tip_height = weight_proof.recent_chain_data[-1].height
+            if (confirmed_height is not None and confirmed_height > wp_tip_height) or (
+                spent_height is not None and spent_height > wp_tip_height
+            ):
+                continue
+            elif (
+                current is not None
+                and current_spent_height == spent_height
+                and current.confirmed_block_height == confirmed_height
+            ):
+                all_validated_states.append(coin_state)
+                continue
+            else:
+                # Full info validation
+                if confirmed_height is None:
+                    # We shouldn't receive state for non-existing coin unless we specifically ask for it
+                    peer.close(9999)
+                    raise ValueError("Should not receive state for non-existing coin")
+
+                self.log.debug(f"Validating state: {coin_state}")
+                # request header block for created height
+                if confirmed_height in peer_request_cache.blocks:
+                    state_block: HeaderBlock = peer_request_cache.blocks[confirmed_height]
+                else:
+                    request = RequestHeaderBlocks(confirmed_height, confirmed_height)
+                    res = await peer.request_header_blocks(request)
+                    state_block = res.header_blocks[0]
+                    peer_request_cache.blocks[confirmed_height] = state_block
+
+                # get proof of inclusion
+                assert state_block.foliage_transaction_block is not None
+                validate_additions_result = await request_and_validate_additions(
+                    peer,
+                    state_block.height,
+                    state_block.header_hash,
+                    coin_state.coin.puzzle_hash,
+                    state_block.foliage_transaction_block.additions_root,
+                )
+
+                if validate_additions_result is False:
+                    peer.close(9999)
+                    raise ValueError(f"Addition did not validate: {state_block}, {coin_state}")
+
+                # get blocks on top of this block
+
+                validated = await self.validate_state(weight_proof, state_block, peer, peer_request_cache)
+                if not validated:
+                    raise ValueError("Validation failed")
+
+                if spent_height is None and current is not None and current.spent_block_height != 0:
+                    # Peer is telling us that coin that was previously known to be spent is not spent anymore
+                    # Check old state
+                    if spent_height in peer_request_cache.blocks:
+                        spent_state_block: HeaderBlock = peer_request_cache.blocks[current.spent_block_height]
+                    else:
+                        request = RequestHeaderBlocks(current.spent_block_height, current.spent_block_height)
+                        res = await peer.request_header_blocks(request)
+                        spent_state_block = res.header_blocks[0]
+                        assert spent_state_block.height == current.spent_block_height
+                        peer_request_cache.blocks[current.spent_block_height] = spent_state_block
+                    assert spent_state_block.foliage_transaction_block is not None
+                    validate_removals_result: bool = await request_and_validate_removals(
+                        peer,
+                        current.spent_block_height,
+                        spent_state_block.header_hash,
+                        coin_state.coin.name(),
+                        spent_state_block.foliage_transaction_block.removals_root,
+                    )
+                    if validate_removals_result is False:
+                        peer.close(9999)
+                        raise ValueError("Validation failed")
+                    validated = await self.validate_state(weight_proof, spent_state_block, peer, peer_request_cache)
+                    if not validated:
+                        raise ValueError("Validation failed")
+
+                if spent_height is not None:
+                    # request header block for created height
+                    if spent_height in peer_request_cache.blocks:
+                        spent_state_block = peer_request_cache.blocks[spent_height]
+                    else:
+                        request = RequestHeaderBlocks(spent_height, spent_height)
+                        res = await peer.request_header_blocks(request)
+                        spent_state_block = res.header_blocks[0]
+                        assert spent_state_block.height == spent_height
+                        peer_request_cache.blocks[spent_height] = spent_state_block
+                    assert spent_state_block.foliage_transaction_block is not None
+                    validate_removals_result = await request_and_validate_removals(
+                        peer,
+                        spent_state_block.height,
+                        spent_state_block.header_hash,
+                        coin_state.coin.name(),
+                        spent_state_block.foliage_transaction_block.removals_root,
+                    )
+                    if validate_removals_result is False:
+                        peer.close(9999)
+                        raise ValueError(f"Removals did not validate {spent_state_block}, {coin_state}")
+                    validated = await self.validate_state(weight_proof, spent_state_block, peer, peer_request_cache)
+                    if not validated:
+                        raise ValueError("Validation failed")
+                all_validated_states.append(coin_state)
+            peer_request_cache.states_validated[coin_state.get_hash()] = coin_state
+        return all_validated_states
+
+    async def validate_state(
+        self, weight_proof: WeightProof, block: HeaderBlock, peer, peer_request_cache: PeerRequestCache
+    ) -> bool:
+        assert self.wallet_state_manager is not None
+
+        if block.height >= weight_proof.recent_chain_data[0].height:
+            # this was already validated as part of the wp validation
+            index = block.height - weight_proof.recent_chain_data[0].height
+            if weight_proof.recent_chain_data[index].header_hash != block.header_hash:
+                self.log.error("Failed validation 1")
+                return False
             return True
-    return False
+        else:
+            start = block.height + 1
+            compare_to_recent = False
+            current_ses: Optional[SubEpochData] = None
+            inserted: Optional[SubEpochData] = None
+            first_height_recent = weight_proof.recent_chain_data[0].height
+            if start > first_height_recent - 1000:
+                compare_to_recent = True
+                end = first_height_recent
+            else:
+                request = RequestSESInfo(block.height, block.height + 32)
+                if request.get_hash() in peer_request_cache.ses_requests:
+                    res_ses: RespondSESInfo = peer_request_cache.ses_requests[request.get_hash()]
+                else:
+                    res_ses = await peer.request_ses_hashes(request)
+                ses_0 = res_ses.reward_chain_hash[0]
+                last_height = res_ses.heights[0][-1]  # Last height in sub epoch
+                end = last_height
+                for idx, ses in enumerate(weight_proof.sub_epochs):
+                    if idx > len(weight_proof.sub_epochs) - 3:
+                        break
+                    if ses.reward_chain_hash == ses_0:
+                        current_ses = ses
+                        inserted = weight_proof.sub_epochs[idx + 2]
+                        break
+                if current_ses is None:
+                    self.log.error("Failed validation 2")
+                    return False
+
+            blocks = []
+
+            for i in range(start - (start % 32), end + 1, 32):
+                request_start = min(uint32(i), end)
+                request_end = min(uint32(i + 31), end)
+                request_h_response = RequestHeaderBlocks(request_start, request_end)
+                if request_h_response.get_hash() in peer_request_cache.block_requests:
+                    res_h_blocks: RespondHeaderBlocks = peer_request_cache.block_requests[request_h_response.get_hash()]
+                else:
+                    res_h_blocks = await peer.request_header_blocks(request_h_response)
+                    peer_request_cache.block_requests[request_h_response.get_hash()] = res_h_blocks
+                self.log.info(f"Fetching blocks: {request_start} - {request_end}")
+                blocks.extend([bl for bl in res_h_blocks.header_blocks if bl.height >= start])
+
+            if compare_to_recent and weight_proof.recent_chain_data[0].header_hash != blocks[-1].header_hash:
+                self.log.error("Failed validation 3")
+                return False
+
+            reversed_blocks = blocks.copy()
+            reversed_blocks.reverse()
+
+            if not compare_to_recent:
+                last = reversed_blocks[0].finished_sub_slots[-1].reward_chain.get_hash()
+                if inserted is None or last != inserted.reward_chain_hash:
+                    self.log.error("Failed validation 4")
+                    return False
+
+            for idx, en_block in enumerate(reversed_blocks):
+                if idx == len(reversed_blocks) - 1:
+                    next_block_rc_hash = block.reward_chain_block.get_hash()
+                    prev_hash = block.header_hash
+                else:
+                    next_block_rc_hash = reversed_blocks[idx + 1].reward_chain_block.get_hash()
+                    prev_hash = reversed_blocks[idx + 1].header_hash
+
+                if not en_block.prev_header_hash == prev_hash:
+                    self.log.error("Failed validation 5")
+                    return False
+
+                if len(en_block.finished_sub_slots) > 0:
+                    #  What to do here
+                    reversed_slots = en_block.finished_sub_slots.copy()
+                    reversed_slots.reverse()
+                    for slot_idx, slot in enumerate(reversed_slots[:-1]):
+                        hash_val = reversed_slots[slot_idx + 1].reward_chain.get_hash()
+                        if not hash_val == slot.reward_chain.end_of_slot_vdf.challenge:
+                            self.log.error("Failed validation 6")
+                            return False
+                    if not next_block_rc_hash == reversed_slots[-1].reward_chain.end_of_slot_vdf.challenge:
+                        self.log.error("Failed validation 7")
+                        return False
+                else:
+                    if not next_block_rc_hash == en_block.reward_chain_block.reward_chain_ip_vdf.challenge:
+                        self.log.error("Failed validation 8")
+                        return False
+
+                if idx > len(reversed_blocks) - 50:
+                    if not AugSchemeMPL.verify(
+                        en_block.reward_chain_block.proof_of_space.plot_public_key,
+                        en_block.foliage.foliage_block_data.get_hash(),
+                        en_block.foliage.foliage_block_data_signature,
+                    ):
+                        self.log.error("Failed validation 9")
+                        return False
+            return True
+
+    async def fetch_puzzle_solution(self, peer, height: uint32, coin: Coin) -> CoinSpend:
+        solution_response = await peer.request_puzzle_solution(
+            wallet_protocol.RequestPuzzleSolution(coin.name(), height)
+        )
+        if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
+            raise ValueError(f"Was not able to obtain solution {solution_response}")
+        assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
+        assert solution_response.response.coin_name == coin.name()
+
+        return CoinSpend(
+            coin,
+            solution_response.response.puzzle.to_serialized_program(),
+            solution_response.response.solution.to_serialized_program(),
+        )
+
+    async def fetch_children_and_validate(
+        self, peer, coin_name, weight_proof: Optional[WeightProof]
+    ) -> List[CoinState]:
+        response: Optional[wallet_protocol.RespondChildren] = await peer.request_children(
+            wallet_protocol.RequestChildren(coin_name)
+        )
+        if response is None or not isinstance(response, wallet_protocol.RespondChildren):
+            raise ValueError(f"Was not able to obtain children {response}")
+        if not self.is_trusted(peer):
+            if peer.peer_node_id in self.untrusted_caches:
+                request_cache = self.untrusted_caches[peer.peer_node_id]
+            else:
+                request_cache = PeerRequestCache()
+            assert weight_proof is not None
+            validated_states = await self.validate_received_state_from_peer(
+                response.coin_states, peer, weight_proof, request_cache, True
+            )
+            return validated_states
+
+        return response.coin_states
+
+    async def fetch_children(self, peer, coin_name, weight_proof: Optional[WeightProof]) -> List[CoinState]:
+        response: Optional[wallet_protocol.RespondChildren] = await peer.request_children(
+            wallet_protocol.RequestChildren(coin_name)
+        )
+        if response is None or not isinstance(response, wallet_protocol.RespondChildren):
+            raise ValueError(f"Was not able to obtain children {response}")
+
+        return response.coin_states

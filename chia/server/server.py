@@ -4,11 +4,12 @@ import ssl
 import time
 import traceback
 from collections import Counter
-from ipaddress import IPv6Address, ip_address, ip_network, IPv4Network, IPv6Network
+from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable, Dict, List, Optional, Union, Set, Tuple
+from typing import Any, Callable
 from typing import Counter as typing_Counter
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, client_exceptions, web
 from aiohttp.web_app import Application
@@ -19,7 +20,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
-from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS, API_EXCEPTION_BAN_SECONDS
+from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INVALID_PROTOCOL_BAN_SECONDS
 from chia.protocols.shared_protocol import protocol_version
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
@@ -29,7 +30,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
-from chia.util.network import is_localhost, is_in_network
+from chia.util.network import is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 
@@ -47,6 +48,21 @@ def ssl_context_for_server(
 
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
+    ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+    ssl_context.set_ciphers(
+        (
+            "ECDHE-ECDSA-AES256-GCM-SHA384:"
+            "ECDHE-RSA-AES256-GCM-SHA384:"
+            "ECDHE-ECDSA-CHACHA20-POLY1305:"
+            "ECDHE-RSA-CHACHA20-POLY1305:"
+            "ECDHE-ECDSA-AES128-GCM-SHA256:"
+            "ECDHE-RSA-AES128-GCM-SHA256:"
+            "ECDHE-ECDSA-AES256-SHA384:"
+            "ECDHE-RSA-AES256-SHA384:"
+            "ECDHE-ECDSA-AES128-SHA256:"
+            "ECDHE-RSA-AES128-SHA256"
+        )
+    )
     ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED
     return ssl_context
@@ -787,13 +803,9 @@ class ChiaServer:
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict) -> bool:
         if trusted_peers is None:
             return False
-        for trusted_peer in trusted_peers:
-            cert = self.root_path / trusted_peers[trusted_peer]
-            pem_cert = x509.load_pem_x509_certificate(cert.read_bytes())
-            cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
-            der_cert = x509.load_der_x509_certificate(cert_bytes)
-            peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
-            if peer_id == peer.peer_node_id:
-                self.log.debug(f"trusted node {peer.peer_node_id} {peer.peer_host}")
-                return True
-        return False
+        if not self.config["testing"] and peer.peer_host == "127.0.0.1":
+            return True
+        if peer.peer_node_id.hex() not in trusted_peers:
+            return False
+
+        return True

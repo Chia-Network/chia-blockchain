@@ -158,9 +158,9 @@ class FullNode:
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
 
-        await self.connection.execute(
-            "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path))
-        )
+        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
+        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
+        await self.connection.execute("pragma synchronous={}".format(db_sync))
 
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
@@ -176,17 +176,16 @@ class FullNode:
 
         db_version: int = await lookup_db_version(self.connection)
 
-        self.db_wrapper = DBWrapper(
-            self.connection, self.config.get("allow_database_upgrades", False), db_version=db_version
-        )
+        self.db_wrapper = DBWrapper(self.connection, db_version=db_version)
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
         self.hint_store = await HintStore.create(self.db_wrapper)
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
+        reserved_cores = self.config.get("reserved_cores", 2)
         self.blockchain = await Blockchain.create(
-            self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent
+            self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent, reserved_cores
         )
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
 
@@ -213,6 +212,13 @@ class FullNode:
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
             self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
+            num_unspent = await self.coin_store.num_unspent()
+            if num_unspent > 0:
+                self.log.error(
+                    f"Inconsistent blockchain DB file! Could not find peak block but found {num_unspent} coins! "
+                    "This is a fatal error. The blockchain database may be corrupt"
+                )
+                raise RuntimeError("corrupt blockchain DB")
         else:
             self.log.info(
                 f"Blockchain initialized to peak {self.blockchain.get_peak().header_hash} height"

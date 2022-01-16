@@ -74,9 +74,6 @@ class CoinStore:
 
         await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
 
-        if self.db_wrapper.allow_upgrades:
-            await self.coin_record_db.execute("DROP INDEX IF EXISTS coin_spent")
-
         await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)")
 
         await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_parent_index on coin_record(coin_parent)")
@@ -84,6 +81,13 @@ class CoinStore:
         await self.coin_record_db.commit()
         self.coin_record_cache = LRUCache(cache_size)
         return self
+
+    async def num_unspent(self) -> int:
+        async with self.coin_record_db.execute("SELECT COUNT(*) FROM coin_record WHERE spent_index=0") as cursor:
+            row = await cursor.fetchone()
+            if row is not None:
+                return row[0]
+        return 0
 
     def maybe_from_hex(self, field: Any) -> bytes:
         if self.db_wrapper.db_version == 2:

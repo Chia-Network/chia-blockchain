@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: Ubuntu wallet-cc_wallet Test
+name: Ubuntu wallet-cat_wallet Test
 
 on:
   push:
@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: Ubuntu wallet-cc_wallet Test
+    name: Ubuntu wallet-cat_wallet Test
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -99,10 +99,10 @@ jobs:
         sh install-timelord.sh
         ./vdf_bench square_asm 400000
 
-    - name: Test wallet-cc_wallet code with pytest
+    - name: Test wallet-cat_wallet code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/wallet/cc_wallet/test_*.py -s -v --durations 0
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/wallet/cat_wallet/test_*.py -s -v --durations 0
 
     - name: Process coverage data
       run: |

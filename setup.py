@@ -8,7 +8,7 @@ dependencies = [
     "chiabip158==1.0",  # bip158-style wallet filters
     "chiapos==1.0.7",  # proof of space
     "clvm==0.9.7",
-    "clvm_rs==0.1.16",
+    "clvm_rs==0.1.17",
     "clvm_tools==0.4.3",
     "aiohttp==3.7.4",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
@@ -29,9 +29,10 @@ dependencies = [
     "click==7.1.2",  # For the CLI
     "dnspythonchia==2.2.0",  # Query DNS seeds
     "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
-    "dnslib==0.9.14",  # dns lib
+    "dnslib==0.9.17",  # dns lib
     "typing-extensions==4.0.1",  # typing backports like Protocol and TypedDict
     "zstd==1.5.0.4",
+    "packaging==21.0",
 ]
 
 upnp_dependencies = [
@@ -101,7 +102,7 @@ kwargs = dict(
         "chia.wallet",
         "chia.wallet.puzzles",
         "chia.wallet.rl_wallet",
-        "chia.wallet.cc_wallet",
+        "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
         "chia.wallet.settings",
         "chia.wallet.trading",
