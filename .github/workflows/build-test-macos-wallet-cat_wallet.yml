@@ -25,7 +25,7 @@ jobs:
         python-version: [3.8, 3.9]
         os: [macOS-latest]
     env:
-      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet-cc_wallet
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet-cat_wallet
 
     steps:
     - name: Cancel previous runs on the same branch
