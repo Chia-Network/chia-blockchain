@@ -42,10 +42,10 @@ class PlotKeys:
 class PlotKeysResolver:
     def __init__(
         self,
-        farmer_public_key: str,
-        alt_fingerprint: int,
-        pool_public_key: str,
-        pool_contract_address: str,
+        farmer_public_key: Optional[str],
+        alt_fingerprint: Optional[int],
+        pool_public_key: Optional[str],
+        pool_contract_address: Optional[str],
         root_path: Path,
         log: logging.Logger,
         connect_to_daemon=False,
@@ -128,10 +128,10 @@ class PlotKeysResolver:
 
 
 async def resolve_plot_keys(
-    farmer_public_key: str,
-    alt_fingerprint: int,
-    pool_public_key: str,
-    pool_contract_address: str,
+    farmer_public_key: Optional[str],
+    alt_fingerprint: Optional[int],
+    pool_public_key: Optional[str],
+    pool_contract_address: Optional[str],
     root_path: Path,
     log: logging.Logger,
     connect_to_daemon=False,

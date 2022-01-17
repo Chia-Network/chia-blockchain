@@ -15,6 +15,23 @@ async def sign_coin_spends(
     additional_data: bytes,
     max_cost: int,
 ) -> SpendBundle:
+    """
+    Sign_coin_spends runs the puzzle code with the given argument and searches the
+    result for an AGG_SIG_ME condition, which it attempts to sign by requesting a
+    matching PrivateKey corresponding with the given G1Element (public key) specified
+    in the resulting condition output.
+
+    It's important to note that as mentioned in the documentation about the standard
+    spend that the public key presented to the secret_key_for_public_key_f function
+    provided to sign_coin_spends must be prepared to do the key derivations required
+    by the coin types it's allowed to spend (at least the derivation of the standard
+    spend as done by calculate_synthetic_secret_key with DEFAULT_PUZZLE_HASH).
+
+    If a coin performed a different key derivation, the pk presented to this function
+    would be similarly alien, and would need to be tried against the first stage
+    derived keys (those returned by master_sk_to_wallet_sk from the ['sk'] member of
+    wallet rpc's get_private_key method).
+    """
     signatures: List[blspy.G2Element] = []
     pk_list: List[blspy.G1Element] = []
     msg_list: List[bytes] = []
