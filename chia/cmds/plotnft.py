@@ -32,7 +32,9 @@ def plotnft_cmd() -> None:
 )
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=False)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-@click.option("-l", "--limit", help="The Number Of Plot NFT's to show", type=int, default=20, show_default=True, required=False)
+@click.option(
+    "-l", "--limit", help="The Number Of Plot NFT's to show", type=int, default=20, show_default=True, required=False
+)
 def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, limit: int) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet
