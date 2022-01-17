@@ -181,7 +181,7 @@ class Service:
         signal.signal(signal.SIGTERM, self._accept_signal)
         if platform == "win32" or platform == "cygwin":
             # pylint: disable=E1101
-            signal.signal(signal.SIGBREAK, self._accept_signal)
+            signal.signal(signal.SIGBREAK, self._accept_signal)  # type: ignore
 
     def _accept_signal(self, signal_number: int, stack_frame):
         self._log.info(f"got signal {signal_number}")

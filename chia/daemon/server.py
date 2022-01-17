@@ -1191,13 +1191,13 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
     service_array[0] = service_executable
     startupinfo = None
     if os.name == "nt":
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo = subprocess.STARTUPINFO()  # type: ignore
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
 
     # Windows-specific.
     # If the current process group is used, CTRL_C_EVENT will kill the parent and everyone in the group!
     try:
-        creationflags: int = subprocess.CREATE_NEW_PROCESS_GROUP
+        creationflags: int = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore
     except AttributeError:  # Not on Windows.
         creationflags = 0
 
@@ -1254,8 +1254,8 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
 
     startupinfo = None
     if os.name == "nt":
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo = subprocess.STARTUPINFO()  # type: ignore
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
 
     # CREATE_NEW_PROCESS_GROUP allows graceful shutdown on windows, by CTRL_BREAK_EVENT signal
     if sys.platform == "win32" or sys.platform == "cygwin":

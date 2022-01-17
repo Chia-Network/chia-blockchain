@@ -96,7 +96,9 @@ class DataLayerWallet:
         if root_hash is None:
             root_hash = Program.to(0).get_tree_hash()
 
-        txs, parents, launcher_coin, inner_inner_puz = await self.generate_launcher_spend(uint64(1), root_hash)
+        dl_record, std_record, parents, launcher_coin, inner_inner_puz = await self.generate_launcher_spend(
+            uint64(1), root_hash
+        )
 
         self.dl_info = DataLayerInfo(
             launcher_coin, root_hash, parents, [(self.tip_coin.name(), root_hash)], inner_inner_puz
@@ -109,57 +111,20 @@ class DataLayerWallet:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
-
-        dl_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=dl_puzzle_hash,
-            amount=uint64(amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(10),
-            spend_bundle=None,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            memos=list(spend_bundle.get_memos().items()),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
-        )
-        regular_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=dl_puzzle_hash,
-            amount=uint64(amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            memos=list(spend_bundle.get_memos().items()),
-            wallet_id=self.wallet_state_manager.main_wallet.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
-        )
-        await self.standard_wallet.push_transaction(regular_record)
+        await self.standard_wallet.push_transaction(std_record)
         await self.standard_wallet.push_transaction(dl_record)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
-        return ItemAndTransactionRecords(item=self, transaction_records=txs)
+        return ItemAndTransactionRecords(item=self, transaction_records=[dl_record, std_record])
 
     async def generate_launcher_spend(
         self,
         fee: uint64,
         initial_root: bytes32,
-    ) -> Tuple[List[TransactionRecord], List[Tuple[bytes32, Optional[LineageProof]]], Coin, Program]:
+    ) -> Tuple[TransactionRecord, TransactionRecord, List[Tuple[bytes32, Optional[LineageProof]]], Coin, Program]:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         """
-
+        amount = uint64(1)
         coins: Set[Coin] = await self.standard_wallet.select_coins(1)
         if coins is None:
             raise ValueError("Not enough coins to create pool wallet")
@@ -232,7 +197,7 @@ class DataLayerWallet:
             type=uint32(TransactionType.INCOMING_TX.value),
             name=launcher_sb.name(),
         )
-        return [dl_record, std_record], parents, launcher_coin, inner_puzzle
+        return dl_record, std_record, parents, launcher_coin, inner_puzzle
 
     async def create_update_state_spend(
         self,
