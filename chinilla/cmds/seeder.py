@@ -97,7 +97,7 @@ def configure(
             print("Updating Chinilla Seeder to testnet settings")
             port = 40444
             network = "testnet11"
-            bootstrap = ["testnet-node.chinilla.net"]
+            bootstrap = ["testnet-node.chinilla.com"]
 
             config["seeder"]["port"] = port
             config["seeder"]["other_peers_port"] = port
@@ -110,7 +110,7 @@ def configure(
             print("Updating Chinilla Seeder to vanillanet settings")
             port = 42444
             network = "vanillanet"
-            bootstrap = ["node.chinilla.net"]
+            bootstrap = ["node.chinilla.com"]
 
             config["seeder"]["port"] = port
             config["seeder"]["other_peers_port"] = port

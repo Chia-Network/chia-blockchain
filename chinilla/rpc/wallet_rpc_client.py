@@ -28,7 +28,7 @@ class WalletRpcClient(RpcClient):
         try:
             return await self.fetch(
                 "log_in",
-                {"host": "https://backup.chinilla.net", "fingerprint": fingerprint, "type": "start"},
+                {"host": "https://backup.chinilla.com", "fingerprint": fingerprint, "type": "start"},
             )
 
         except ValueError as e:
@@ -39,7 +39,7 @@ class WalletRpcClient(RpcClient):
             return await self.fetch(
                 "log_in",
                 {
-                    "host": "https://backup.chinilla.net",
+                    "host": "https://backup.chinilla.com",
                     "fingerprint": fingerprint,
                     "type": "restore_backup",
                     "file_path": file_path,
@@ -52,7 +52,7 @@ class WalletRpcClient(RpcClient):
         try:
             return await self.fetch(
                 "log_in",
-                {"host": "https://backup.chinilla.net", "fingerprint": fingerprint, "type": "skip"},
+                {"host": "https://backup.chinilla.com", "fingerprint": fingerprint, "type": "skip"},
             )
         except ValueError as e:
             return e.args[0]

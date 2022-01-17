@@ -1,6 +1,6 @@
 # chinilla-blockchain
 
-![Alt text](https://www.chinilla.net/img/chinilla_logo.svg)
+![Alt text](https://www.chinilla.com/img/chinilla_logo.svg)
 
 | Current Release/main | Development Branch/dev |
 |         :---:          |          :---:         |

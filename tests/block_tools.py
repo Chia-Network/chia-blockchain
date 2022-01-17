@@ -147,9 +147,9 @@ class BlockTools:
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
         self._config = load_config(self.root_path, "config.yaml")
         self._config["logging"]["log_stdout"] = True
-        self._config["selected_network"] = "testnet0"
+        self._config["selected_network"] = "testnet11"
         for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
-            self._config[service]["selected_network"] = "testnet0"
+            self._config[service]["selected_network"] = "testnet11"
         save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = constants.replace_str_to_bytes(**overrides)

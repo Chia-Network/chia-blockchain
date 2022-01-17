@@ -93,8 +93,8 @@ def configure(
         if testnet == "true" or testnet == "t":
             print("Setting Testnet")
             testnet_port = "40444"
-            testnet_introducer = "introducer-testnet11.chinilla.net"
-            testnet_dns_introducer = "dns-introducer-testnet11.chinilla.net"
+            testnet_introducer = "introducer-testnet11.chinilla.com"
+            testnet_dns_introducer = "dns-introducer-testnet11.chinilla.com"
             testnet = "testnet11"
             config["full_node"]["port"] = int(testnet_port)
             config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
@@ -120,8 +120,8 @@ def configure(
         elif testnet == "false" or testnet == "f":
             print("Setting Vanillanet")
             vanillanet_port = "42444"
-            vanillanet_introducer = "introducer.chinilla.net"
-            vanillanet_dns_introducer = "dns-introducer.chinilla.net"
+            vanillanet_introducer = "introducer.chinilla.com"
+            vanillanet_dns_introducer = "dns-introducer.chinilla.com"
             net = "vanillanet"
             config["full_node"]["port"] = int(vanillanet_port)
             config["full_node"]["introducer_peer"]["port"] = int(vanillanet_port)

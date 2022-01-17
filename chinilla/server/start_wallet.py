@@ -87,7 +87,7 @@ def main() -> None:
         constants = test_constants
         current = config["database_path"]
         config["database_path"] = f"{current}_simulation"
-        config["selected_network"] = "testnet0"
+        config["selected_network"] = "testnet11"
     else:
         constants = DEFAULT_CONSTANTS
     kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants)
