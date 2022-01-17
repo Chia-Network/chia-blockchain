@@ -181,6 +181,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     summaries_response = await wallet_client.get_wallets()
     wallet_id_passed_in = args.get("id", None)
+    total_plotnfts_to_display = args.get("id", 20)
     plot_counts: Counter = Counter()
     try:
         pool_state_list: List = (await farmer_client.get_pool_state())["pool_state"]
@@ -223,21 +224,24 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     else:
         print(f"Wallet height: {await wallet_client.get_height_info()}")
         print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
-        for summary in summaries_response:
-            wallet_id = summary["id"]
-            typ = WalletType(int(summary["type"]))
-            if typ == WalletType.POOLING_WALLET:
-                print(f"Wallet id {wallet_id}: ")
-                pool_wallet_info, _ = await wallet_client.pw_status(wallet_id)
-                await pprint_pool_wallet_state(
-                    wallet_client,
-                    wallet_id,
-                    pool_wallet_info,
-                    address_prefix,
-                    pool_state_dict,
-                    plot_counts,
-                )
-                print("")
+        cur_plotnft_num = 0
+        while cur_plotnft_num <= total_plotnfts_to_display:
+            for summary in summaries_response:
+                wallet_id = summary["id"]
+                typ = WalletType(int(summary["type"]))
+                if typ == WalletType.POOLING_WALLET:
+                    print(f"Wallet id {wallet_id}: ")
+                    pool_wallet_info, _ = await wallet_client.pw_status(wallet_id)
+                    await pprint_pool_wallet_state(
+                        wallet_client,
+                        wallet_id,
+                        pool_wallet_info,
+                        address_prefix,
+                        pool_state_dict,
+                        plot_counts,
+                    )
+                    print("")
+                    cur_plotnft_num += cur_plotnft_num
     farmer_client.close()
     await farmer_client.await_closed()
 
