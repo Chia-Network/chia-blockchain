@@ -10,12 +10,12 @@ from chinilla.util.ints import uint32
 from chinilla.types.blockchain_format.sized_bytes import bytes32
 
 # Testnet Addresses
-#address1 = "txchi1f2z7dcn93tw9dyxdpf80qpv85n9x823gku7lkum5xr34gr690z5sg6h2lc"  # Teach Wallet (m/12381/8444/2/42):
-#address2 = "txchi1ptm5fdhku9luzr4gyl664r63mjk4fxk7wnag27wen0e7c7zr3wkse9vr8q"  # Teach Wallet (m/12381/8444/2/0)
+address1 = "txchi1f2z7dcn93tw9dyxdpf80qpv85n9x823gku7lkum5xr34gr690z5sg6h2lc"  # Teach Wallet (m/12381/8444/2/42):
+address2 = "txchi1ptm5fdhku9luzr4gyl664r63mjk4fxk7wnag27wen0e7c7zr3wkse9vr8q"  # Teach Wallet (m/12381/8444/2/0)
 
 # Vanillanet Addresses
-address1 = "xchi1ckat2n56cem29k9rslrq7xtwyp75fsl2ahz3m660c2s2vy5u0g9s0rdge3"  # Teach Wallet (m/12381/8444/2/42):
-address2 = "xchi1ckat2n56cem29k9rslrq7xtwyp75fsl2ahz3m660c2s2vy5u0g9s0rdge3"  # Teach Wallet (m/12381/8444/2/0)
+#address1 = "xchi1ckat2n56cem29k9rslrq7xtwyp75fsl2ahz3m660c2s2vy5u0g9s0rdge3"  # Teach Wallet (m/12381/8444/2/42):
+#address2 = "xchi1ckat2n56cem29k9rslrq7xtwyp75fsl2ahz3m660c2s2vy5u0g9s0rdge3"  # Teach Wallet (m/12381/8444/2/0)
 
 ph1 = decode_puzzle_hash(address1)
 ph2 = decode_puzzle_hash(address2)
