@@ -69,7 +69,7 @@ proof_of_space = ProofOfSpace(
 # TODO: address hint error and remove ignore
 #       error: Argument 1 to "PoolTarget" has incompatible type "bytes"; expected "bytes32"  [arg-type]
 pool_target = PoolTarget(
-    bytes.fromhex("d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"),  # type: ignore[arg-type]
+    bytes.fromhex("4a85e6e2658adc5690cd0a4ef00587a4ca63aa28b73dfb737430e3540f4578a9"),  # type: ignore[arg-type]
     uint32(421941852),
 )
 g2_element = G2Element(

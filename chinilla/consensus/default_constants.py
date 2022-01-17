@@ -32,10 +32,10 @@ testnet_kwargs = {
     # Forks of chinilla should change this value to provide replay attack protection. This is set to vanillanet genesis chall
     "AGG_SIG_ME_ADDITIONAL_DATA": bytes.fromhex("57885b6b6c35647f7e3fe0a001d18be61a4a587f84215094ad93836d48299a56"),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
-        "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
+        "4a85e6e2658adc5690cd0a4ef00587a4ca63aa28b73dfb737430e3540f4578a9"
     ),
     "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bytes.fromhex(
-        "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
+        "0af744b6f6e17fc10ea827f5aa8f51dcad549ade74fa8579d99bf3ec78438bad"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Size of mempool = 50x the size of block # temporary change until #9125 gets in
