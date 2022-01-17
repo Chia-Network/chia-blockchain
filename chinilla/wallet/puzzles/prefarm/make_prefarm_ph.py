@@ -9,8 +9,8 @@ from chinilla.util.condition_tools import parse_sexp_to_conditions
 from chinilla.util.ints import uint32
 from chinilla.types.blockchain_format.sized_bytes import bytes32
 
-address1 = "txchi15gx26ndmacfaqlq8m0yajeggzceu7cvmaz4df0hahkukes695rss6lej7h"  # Faucet wallet (m/12381/8444/2/42):
-address2 = "txchi1c2cguswhvmdyz9hr3q6hak2h6p9dw4rz82g4707k2xy2sarv705qcce4pn"  # Faucet address (m/12381/8444/2/0)
+address1 = "xchi1ckat2n56cem29k9rslrq7xtwyp75fsl2ahz3m660c2s2vy5u0g9s0rdge3"  # Teach Wallet (m/12381/8444/2/42):
+address2 = "xchi1ckat2n56cem29k9rslrq7xtwyp75fsl2ahz3m660c2s2vy5u0g9s0rdge3"  # Teach Wallet (m/12381/8444/2/0)
 
 ph1 = decode_puzzle_hash(address1)
 ph2 = decode_puzzle_hash(address2)
