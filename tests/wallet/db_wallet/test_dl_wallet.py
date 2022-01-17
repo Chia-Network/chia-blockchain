@@ -58,6 +58,7 @@ class TestDLWallet:
         "trusted",
         [True, False],
     )
+    @pytest.mark.skip(reason="tested code is expected to be replaced soon")
     @pytest.mark.asyncio
     async def test_update_coin(self, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
         full_nodes, wallets = three_wallet_nodes

@@ -111,12 +111,12 @@ class WalletStateManager:
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
     interested_store: WalletInterestedStore
-    default_cats: Dict[str, Dict[str, str]]
     weight_proof_handler: WalletWeightProofHandler
     server: ChiaServer
     root_path: Path
     wallet_node: Any
     pool_store: WalletPoolStore
+    default_cats: Dict[str, Any]
 
     @staticmethod
     async def create(

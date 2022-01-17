@@ -57,7 +57,7 @@ from chia.types.weight_proof import WeightProof, SubEpochData
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.ints import uint32, uint64
-from chia.util.keychain import KeyringIsLocked
+from chia.util.keychain import KeyringIsLocked, Keychain
 from chia.util.network import get_host_addr
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.derivation_record import DerivationRecord

@@ -110,11 +110,44 @@ class DataLayerWallet:
         self.wallet_id = self.wallet_info.id
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
 
-        for tx in txs:
-            if tx.wallet_id == uint32(0):
-                tx = replace(tx, wallet_id=self.wallet_id)
-            await self.standard_wallet.push_transaction(tx)
-
+        dl_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=dl_puzzle_hash,
+            amount=uint64(amount),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(10),
+            spend_bundle=None,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            memos=list(spend_bundle.get_memos().items()),
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.INCOMING_TX.value),
+            name=bytes32(token_bytes()),
+        )
+        regular_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=dl_puzzle_hash,
+            amount=uint64(amount),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            memos=list(spend_bundle.get_memos().items()),
+            wallet_id=self.wallet_state_manager.main_wallet.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=bytes32(token_bytes()),
+        )
+        await self.standard_wallet.push_transaction(regular_record)
+        await self.standard_wallet.push_transaction(dl_record)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         return ItemAndTransactionRecords(item=self, transaction_records=txs)
 
@@ -143,9 +176,9 @@ class DataLayerWallet:
         puzzle_hash: bytes32 = full_puzzle.get_tree_hash()
 
         announcement_set: Set[Announcement] = set()
-        announcement_message = Program.to([puzzle_hash, 1, initial_root]).get_tree_hash()
+        announcement_message = Program.to([puzzle_hash, amount, initial_root]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
-        eve_coin = Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), uint64(1))
+        eve_coin = Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), amount)
         future_parent = LineageProof(
             eve_coin.parent_coin_info,
             create_host_layer_puzzle(inner_puzzle, initial_root).get_tree_hash(),
