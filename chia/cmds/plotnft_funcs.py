@@ -1,5 +1,6 @@
 from collections import Counter
 from decimal import Decimal
+from dataclasses import replace
 
 import aiohttp
 import asyncio
@@ -384,20 +385,8 @@ async def change_payout_instructions(launcher_id: str, address: str) -> None:
         for pool_config in old_configs:
             if pool_config.launcher_id == hexstr_to_bytes(launcher_id):
                 id_found = True
-                payout_instructions = decode_puzzle_hash(address).hex()
-            else:
-                payout_instructions = pool_config.payout_instructions
-            new_pool_configs.append(
-                PoolWalletConfig(
-                    pool_config.launcher_id,
-                    pool_config.pool_url,
-                    payout_instructions,
-                    pool_config.target_puzzle_hash,
-                    pool_config.p2_singleton_puzzle_hash,
-                    pool_config.owner_public_key,
-                    pool_config.authentication_public_key,
-                )
-            )
+                pool_config = replace(pool_config, payout_instructions=decode_puzzle_hash(address).hex())
+            new_pool_configs.append(pool_config)
         if id_found:
             print(f"Launcher Id: {launcher_id} Found, Updating Config.")
             await update_pool_config(DEFAULT_ROOT_PATH, new_pool_configs)
