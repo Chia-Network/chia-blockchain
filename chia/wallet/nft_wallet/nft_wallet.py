@@ -282,7 +282,6 @@ class NFTWallet:
         eve_spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         #eve_spend = await self.generate_eve_spend(eve_coin, , did_inner)
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend_bundle, launcher_sb, message_sb])
-        breakpoint()
         nft_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -304,6 +303,10 @@ class NFTWallet:
         return nft_record
 
     async def transfer_nft(self):
+
+        return
+
+    async def get_current_nfts(self):
 
         return
 
