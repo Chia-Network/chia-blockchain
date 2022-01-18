@@ -49,7 +49,7 @@ def test_create_db_update() -> None:
     new_root = new_tree.calculate_root()
     host_puz = create_host_layer_puzzle(innerpuz.get_tree_hash(), new_root)
     inner_solution = Program.to([[51, host_puz.get_tree_hash(), 201]])
-    db_solution = Program.to([0, inner_solution])
+    db_solution = Program.to([0, inner_solution, innerpuz])
     # lineage_proof my_amount inner_solution
     launcher_amount = 201
     lineage_proof = Program.to([current_root, launcher_amount])
@@ -78,7 +78,7 @@ def test_valid_offer_claim() -> None:
     inclusion_proof = current_tree.generate_proof(leaf)
     expected_announcement = Announcement(full_puz.get_tree_hash(), current_root)
     cost, result = offer_puz.run_with_cost(INFINITE_COST, Program.to([1, 201, leaf, current_root, inclusion_proof]))
-    assert result.as_python()[2][1] == expected_announcement.name()
+    assert bytes32(result.as_python()[2][1]) == expected_announcement.name()
 
 
 def test_bad_info_and_recover() -> None:
