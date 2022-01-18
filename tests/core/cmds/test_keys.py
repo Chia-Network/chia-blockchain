@@ -1,5 +1,6 @@
 import os
 import pytest
+import pytest_asyncio
 import re
 
 from chia.cmds.chia import cli
@@ -22,7 +23,7 @@ TEST_FINGERPRINT = 2877570395
 
 
 class TestKeysCommands:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     def empty_keyring(self):
         with TempKeyring(user="user-chia-1.8", service="chia-user-chia-1.8") as keychain:
             yield keychain
