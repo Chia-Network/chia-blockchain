@@ -384,10 +384,15 @@ class TestKeysCommands:
         # assert result.exit_code == 0
         assert result.output.find("True") == 0
 
-    def test_derive_search(self, keyring_with_one_key):
+    def test_derive_search(self, tmp_path, keyring_with_one_key):
         """
         Test the `chia keys derive search` command, searching a public and private key
         """
+
+        runner = CliRunner()
+        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+
+        assert init_result.exit_code == 0
 
         keychain = keyring_with_one_key
         assert len(keychain.get_all_private_keys()) == 1
@@ -430,10 +435,15 @@ class TestKeysCommands:
             != -1
         )
 
-    def test_derive_search_wallet_address(self, keyring_with_one_key):
+    def test_derive_search_wallet_address(self, tmp_path, keyring_with_one_key):
         """
         Test the `chia keys derive search` command, searching for a wallet address
         """
+
+        runner = CliRunner()
+        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+
+        assert init_result.exit_code == 0
 
         keychain = keyring_with_one_key
         assert len(keychain.get_all_private_keys()) == 1
@@ -466,10 +476,15 @@ class TestKeysCommands:
             != -1
         )
 
-    def test_derive_search_failure(self, keyring_with_one_key):
+    def test_derive_search_failure(self, tmp_path, keyring_with_one_key):
         """
         Test the `chia keys derive search` command with a failing search.
         """
+
+        runner = CliRunner()
+        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+
+        assert init_result.exit_code == 0
 
         keychain = keyring_with_one_key
         assert len(keychain.get_all_private_keys()) == 1
@@ -493,10 +508,15 @@ class TestKeysCommands:
 
         # assert result.exit_code != 0
 
-    def test_derive_search_hd_path(self, empty_keyring, mnemonic_seed_file):
+    def test_derive_search_hd_path(self, tmp_path, empty_keyring, mnemonic_seed_file):
         """
         Test the `chia keys derive search` command, searching under a provided HD path.
         """
+
+        runner = CliRunner()
+        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+
+        assert init_result.exit_code == 0
 
         keychain = empty_keyring
         assert len(keychain.get_all_private_keys()) == 0
@@ -531,10 +551,15 @@ class TestKeysCommands:
             != -1
         )
 
-    def test_derive_wallet_address(self, keyring_with_one_key):
+    def test_derive_wallet_address(self, tmp_path, keyring_with_one_key):
         """
         Test the `chia keys derive wallet-address` command, generating a couple of wallet addresses.
         """
+
+        runner = CliRunner()
+        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+
+        assert init_result.exit_code == 0
 
         keychain = keyring_with_one_key
         assert len(keychain.get_all_private_keys()) == 1
@@ -577,10 +602,15 @@ class TestKeysCommands:
             != -1
         )
 
-    def test_derive_child_keys(self, keyring_with_one_key):
+    def test_derive_child_keys(self, tmp_path, keyring_with_one_key):
         """
         Test the `chia keys derive child-keys` command, generating a couple of derived keys.
         """
+
+        runner = CliRunner()
+        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+
+        assert init_result.exit_code == 0
 
         keychain = keyring_with_one_key
         assert len(keychain.get_all_private_keys()) == 1
