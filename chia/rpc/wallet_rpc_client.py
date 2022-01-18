@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 
+from chia.data_layer.data_layer_wallet import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.types.announcement import Announcement
@@ -467,3 +468,31 @@ class WalletRpcClient(RpcClient):
 
     async def cancel_offer(self, trade_id: bytes32, fee=uint64(0), secure: bool = True):
         await self.fetch("cancel_offer", {"trade_id": trade_id.hex(), "secure": secure, "fee": fee})
+
+    # DataLayer
+    async def create_new_dl(self, root: bytes32, fee: uint64) -> Tuple[List[TransactionRecord], bytes32]:
+        request = {"root": root.hex(), "fee": fee}
+        response = await self.fetch("create_new_dl", request)
+        txs: List[TransactionRecord] = [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+        launcher_id: bytes32 = bytes32.from_hexstr(response["launcher_id"])
+        return txs, launcher_id
+
+    async def dl_track_new(self, launcher_id: bytes32) -> None:
+        request = {"launcher_id": launcher_id.hex()}
+        response = await self.fetch("dl_track_new", request)
+        return None
+
+    async def dl_latest_singleton(self, launcher_id: bytes32) -> SingletonRecord:
+        request = {"launcher_id": launcher_id.hex()}
+        response = await self.fetch("dl_latest_singleton", request)
+        return SingletonRecord.from_json_dict(response["singleton"])
+
+    async def dl_update_root(self, launcher_id: bytes32,  new_root: bytes32) -> TransactionRecord:
+        request = {"launcher_id": launcher_id.hex(), "new_root": new_root.hex()}
+        response = await self.fetch("dl_update_root", request)
+        return TransactionRecord.from_json_dict_convenience(response["tx_record"])
+
+    async def dl_history(self, launcher_id: bytes32) -> List[SingletonRecord]:
+        request = {"launcher_id": launcher_id.hex()}
+        response = await self.fetch("dl_history", request)
+        return [SingletonRecord.from_json_dict(single) for single in response["history"]]
