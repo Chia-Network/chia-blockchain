@@ -391,6 +391,7 @@ async def change_payout_instructions(launcher_id: str, address: str) -> None:
             print(f"Launcher Id: {launcher_id} Found, Updating Config.")
             await update_pool_config(DEFAULT_ROOT_PATH, new_pool_configs)
             print(f"Payout Instructions for launcher id: {launcher_id} successfully updated to: {address}.")
+            print(f"You will need to change the payout instructions on every device you use to: {address}.")
         else:
             print(f"Launcher Id: {launcher_id} Not found.")
     else:
