@@ -205,10 +205,6 @@ class NFTWallet:
         # TODO: check we aren't bricking ourself if someone is stupid enough to actually send to this address
         return Program.to([8, pk])
 
-    async def mint_new_nft(self):
-
-        return
-
     async def generate_new_nft(
         self,
         uri: str,
@@ -229,27 +225,24 @@ class NFTWallet:
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), amount)
 
         nft_transfer_program = nft_puzzles.create_transfer_puzzle(uri, percentage, backpayment_address)
-        nft_layer_puzzle = nft_puzzles.create_nft_layer_puzzle(launcher_coin.name(), self.nft_wallet_info.my_did, nft_transfer_program.get_tree_hash())
-
+        eve_fullpuz = nft_puzzles.create_full_puzzle(
+            launcher_coin.name(),
+            self.nft_wallet_info.my_did,
+            nft_transfer_program.get_tree_hash()
+        )
         announcement_set: Set[Announcement] = set()
-        announcement_message = Program.to([nft_layer_puzzle.get_tree_hash(), amount, bytes(0x80)]).get_tree_hash()
+        announcement_message = Program.to([eve_fullpuz.get_tree_hash(), amount, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             amount, genesis_launcher_puz.get_tree_hash(), uint64(0), origin.name(), coins, None, False, announcement_set
         )
 
-        nft_layer_puzhash = nft_layer_puzzle.get_tree_hash()
-        genesis_launcher_solution = Program.to([nft_layer_puzhash, amount, bytes(0x80)])
+        genesis_launcher_solution = Program.to([eve_fullpuz.get_tree_hash(), amount, bytes(0x80)])
 
         launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
 
-        eve_fullpuz = nft_puzzles.create_full_puzzle(
-            launcher_coin.name(),
-            self.nft_wallet_info.my_did,
-            nft_transfer_program.get_tree_hash()
-        )
         eve_coin = Coin(launcher_coin.name(), eve_fullpuz.get_tree_hash(), amount)
 
         if tx_record is None or tx_record.spend_bundle is None:
@@ -282,6 +275,7 @@ class NFTWallet:
         eve_spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         #eve_spend = await self.generate_eve_spend(eve_coin, , did_inner)
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend_bundle, launcher_sb, message_sb])
+        # breakpoint()
         nft_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -308,7 +302,7 @@ class NFTWallet:
 
     async def get_current_nfts(self):
 
-        return
+        return self.nft_wallet_info.my_nft_coins
 
     async def save_info(self, nft_info: NFTWalletInfo, in_transaction):
         self.nft_wallet_info = nft_info
