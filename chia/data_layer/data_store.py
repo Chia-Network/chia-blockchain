@@ -82,14 +82,21 @@ class DataStore:
                 )
                 """
             )
+            # TODO: Add ancestor -> hash relationship, this might involve temporarily
+            # deferring the foreign key enforcement due to the insertion order
+            # and the node table also enforcing a similar relationship in the
+            # other direction.
+            # FOREIGN KEY(ancestor) REFERENCES ancestors(ancestor)
             await self.db.execute(
                 """
                 CREATE TABLE IF NOT EXISTS ancestors(
-                    hash TEXT NOT NULL,
+                    hash TEXT NOT NULL REFERENCES node,
                     ancestor TEXT,
                     tree_id TEXT NOT NULL,
                     generation INTEGER NOT NULL,
-                    PRIMARY KEY(hash, tree_id, generation)
+                    PRIMARY KEY(hash, tree_id, generation),
+                    FOREIGN KEY(tree_id, generation) REFERENCES root(tree_id, generation),
+                    FOREIGN KEY(ancestor) REFERENCES node(hash)
                 )
                 """
             )
@@ -171,7 +178,6 @@ class DataStore:
         left_hash: bytes32,
         right_hash: bytes32,
         tree_id: bytes32,
-        generation: int,
     ) -> bytes32:
         node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
 
@@ -184,7 +190,17 @@ class DataStore:
             value=None,
         )
 
-        # Update ancestors table.
+        return node_hash  # type: ignore[no-any-return]
+
+    async def _insert_ancestor_table(
+        self,
+        left_hash: bytes32,
+        right_hash: bytes32,
+        tree_id: bytes32,
+        generation: int,
+    ) -> None:
+        node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
+
         for hash in (left_hash, right_hash):
             values = {
                 "hash": hash.hex(),
@@ -199,8 +215,6 @@ class DataStore:
                 """,
                 values,
             )
-
-        return node_hash  # type: ignore[no-any-return]
 
     async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
         node_hash = Program.to((key, value)).get_tree_hash()
@@ -400,13 +414,17 @@ class DataStore:
 
         return ancestors
 
-    async def get_ancestors_2(
+    async def get_ancestors_optimized(
         self, node_hash: bytes32, tree_id: bytes32, generation: Optional[int] = None, lock: bool = True
     ) -> List[InternalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             nodes = []
             if generation is None:
                 generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
+            root = await self.get_tree_root(tree_id=tree_id, generation=generation, lock=False)
+            if root.node_hash is None:
+                return []
+
             while True:
                 cursor = await self.db.execute(
                     """
@@ -431,8 +449,7 @@ class DataStore:
 
             # Check if the root from `generation` is at the top of ancestors list.
             # If it misses, this node is an orphan for `generation`.
-            root = await self.get_tree_root(tree_id=tree_id, generation=generation, lock=False)
-            if root.node_hash is None or len(nodes) == 0 or root.node_hash != nodes[-1].hash:
+            if len(nodes) > 0 and root.node_hash != nodes[-1].hash:
                 return []
 
             return nodes
@@ -575,7 +592,6 @@ class DataStore:
 
                 await self._insert_root(tree_id=tree_id, node_hash=new_terminal_node_hash, status=status)
             else:
-                new_generation = root.generation + 1
                 if side is None:
                     raise Exception("Tree was not empty, side must be specified.")
                 if reference_node_hash is None:
@@ -592,11 +608,12 @@ class DataStore:
                     left = reference_node_hash
                     right = new_terminal_node_hash
 
+                # update ancestors after inserting root, to keep table constraints.
+                insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
+                new_generation = root.generation + 1
                 # create first new internal node
-                new_hash = await self._insert_internal_node(
-                    left_hash=left, right_hash=right, tree_id=tree_id, generation=new_generation
-                )
-
+                new_hash = await self._insert_internal_node(left_hash=left, right_hash=right, tree_id=tree_id)
+                insert_ancestors_cache.append((left, right, tree_id))
                 traversal_node_hash = reference_node_hash
 
                 # create updated replacements for the rest of the internal nodes
@@ -613,11 +630,12 @@ class DataStore:
 
                     traversal_node_hash = ancestor.hash
 
-                    new_hash = await self._insert_internal_node(
-                        left_hash=left, right_hash=right, tree_id=tree_id, generation=new_generation
-                    )
+                    new_hash = await self._insert_internal_node(left_hash=left, right_hash=right, tree_id=tree_id)
+                    insert_ancestors_cache.append((left, right, tree_id))
 
                 await self._insert_root(tree_id=tree_id, node_hash=new_hash, status=status)
+                for left_hash, right_hash, tree_id in insert_ancestors_cache:
+                    await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
 
         return new_terminal_node_hash
 
@@ -644,6 +662,8 @@ class DataStore:
             old_child_hash = parent.hash
             new_child_hash = other_hash
             new_generation = await self.get_tree_generation(tree_id, lock=False) + 1
+            # update ancestors after inserting root, to keep table constraints.
+            insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
             # more parents to handle so let's traverse them
             for ancestor in ancestors[1:]:
                 if ancestor.left_hash == old_child_hash:
@@ -656,12 +676,14 @@ class DataStore:
                     raise Exception("Internal error.")
 
                 new_child_hash = await self._insert_internal_node(
-                    left_hash=left_hash, right_hash=right_hash, tree_id=tree_id, generation=new_generation
+                    left_hash=left_hash, right_hash=right_hash, tree_id=tree_id
                 )
-
+                insert_ancestors_cache.append((left_hash, right_hash, tree_id))
                 old_child_hash = ancestor.hash
 
             await self._insert_root(tree_id=tree_id, node_hash=new_child_hash, status=status)
+            for left_hash, right_hash, tree_id in insert_ancestors_cache:
+                await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
 
         return
 

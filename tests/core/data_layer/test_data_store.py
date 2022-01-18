@@ -170,10 +170,9 @@ async def test_insert_internal_node_does_nothing_if_matching(data_store: DataSto
         cursor = await data_store.db.execute("SELECT * FROM node")
         before = await cursor.fetchall()
 
-    generation = await data_store.get_tree_generation(tree_id=tree_id) + 1
     async with data_store.db_wrapper.locked_transaction():
         await data_store._insert_internal_node(
-            left_hash=parent.left_hash, right_hash=parent.right_hash, tree_id=tree_id, generation=generation
+            left_hash=parent.left_hash, right_hash=parent.right_hash, tree_id=tree_id
         )
 
     async with data_store.db_wrapper.locked_transaction():
@@ -245,12 +244,12 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
         "c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2",
     ]
 
-    ancestors_2 = await data_store.get_ancestors_2(node_hash=reference_node_hash, tree_id=tree_id)
+    ancestors_2 = await data_store.get_ancestors_optimized(node_hash=reference_node_hash, tree_id=tree_id)
     assert ancestors == ancestors_2
 
 
 @pytest.mark.asyncio
-async def test_get_ancestors_2(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) -> None:
     ancestors: List[Tuple[int, bytes32, List[InternalNode]]] = []
     random = Random()
     random.seed(100, version=2)
@@ -264,7 +263,7 @@ async def test_get_ancestors_2(data_store: DataStore, tree_id: bytes32) -> None:
             value = (i + 200).to_bytes(4, byteorder="big")
             side = None if node_hash is None else Side.LEFT if random.randint(0, 1) == 0 else Side.RIGHT
 
-            _ = await data_store.insert(
+            await data_store.insert(
                 key=key,
                 value=value,
                 tree_id=tree_id,
@@ -281,13 +280,13 @@ async def test_get_ancestors_2(data_store: DataStore, tree_id: bytes32) -> None:
             assert isinstance(node, TerminalNode)
             await data_store.delete(key=node.key, tree_id=tree_id)
             generation = await data_store.get_tree_generation(tree_id=tree_id)
-            current_ancestors = await data_store.get_ancestors_2(
+            current_ancestors = await data_store.get_ancestors_optimized(
                 node_hash=node_hash, tree_id=tree_id, generation=generation
             )
             assert current_ancestors == []
 
     for generation, node_hash, expected_ancestors in ancestors:
-        current_ancestors = await data_store.get_ancestors_2(
+        current_ancestors = await data_store.get_ancestors_optimized(
             node_hash=node_hash, tree_id=tree_id, generation=generation
         )
         assert current_ancestors == expected_ancestors
