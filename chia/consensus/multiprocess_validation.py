@@ -329,7 +329,7 @@ def _run_generator(
     constants_dict: bytes,
     unfinished_block_bytes: bytes,
     block_generator_bytes: bytes,
-) -> Tuple[Optional[Err], Optional[bytes]]:
+) -> Optional[bytes]:
     """
     Runs the CLVM generator from bytes inputs. This is meant to be called under a ProcessPoolExecutor, in order to
     validate the heavy parts of a block (clvm program) in a different process.
@@ -346,11 +346,8 @@ def _run_generator(
             cost_per_byte=constants.COST_PER_BYTE,
             mempool_mode=False,
         )
-        if npc_result.error is not None:
-            return Err(npc_result.error), None
+        return bytes(npc_result)
     except ValidationError as e:
-        return e.code, None
+        return bytes(NPCResult(uint16(e.code.value), [], uint64(0)))
     except Exception:
-        return Err.UNKNOWN, None
-
-    return None, bytes(npc_result)
+        return bytes(NPCResult(uint16(Err.UNKNOWN.value), [], uint64(0)))
