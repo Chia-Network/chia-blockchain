@@ -940,7 +940,7 @@ class WalletNode:
                                     height=child.spent_height,
                                     in_transaction=True,
                                 )
-                            break
+                            continue
                         assert child.spent_height is not None
                         pool_wallet = await PoolWallet.create(
                             self.wallet_state_manager,

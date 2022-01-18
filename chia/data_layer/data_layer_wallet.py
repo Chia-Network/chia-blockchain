@@ -657,6 +657,9 @@ class DataLayerWallet:
     async def get_history(self, launcher_id: bytes32) -> List[SingletonRecord]:
         return await self.wallet_state_manager.dl_store.get_all_singletons_for_launcher(launcher_id)
 
+    async def get_singleton_record(self, coin_id: bytes32) -> Optional[SingletonRecord]:
+        return await self.wallet_state_manager.dl_store.get_singleton_record(coin_id)
+
     ##########
     # WALLET #
     ##########

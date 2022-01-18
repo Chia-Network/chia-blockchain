@@ -13,6 +13,7 @@ from chiabip158 import PyBIP158
 
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
+from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
@@ -667,6 +668,11 @@ class WalletStateManager:
                 wallet_type = local_record.wallet_type
             elif coin_state.created_height is not None:
                 wallet_id, wallet_type = await self.fetch_parent_and_check_for_cat(peer, coin_state)
+                potential_dl = self.get_dl_wallet()
+                if potential_dl is not None:
+                    if await potential_dl.get_singleton_record(coin_state.coin.name()) is not None:
+                        wallet_id = potential_dl.id()
+                        wallet_type = potential_dl.type()
 
             if wallet_id is None or wallet_type is None:
                 self.log.info(f"No wallet for coin state: {coin_state}")
@@ -832,6 +838,10 @@ class WalletStateManager:
                             record.wallet_type,
                         )
                         await self.add_interested_coin_id(added_pool_coin.name())
+                if record.wallet_type == WalletType.DATA_LAYER:
+                    singleton_spend = await self.wallet_node.fetch_puzzle_solution(peer, coin_state.spent_height, coin_state.coin)
+                    dl_wallet = self.wallets[uint32(record.wallet_id)]
+                    await dl_wallet.singleton_removed(singleton_spend, coin_state.spent_height)
 
                 # Check if a child is a singleton launcher
                 if children is None:
@@ -848,8 +858,29 @@ class WalletStateManager:
                     pool_state = None
                     try:
                         pool_state = solution_to_pool_state(launcher_spend)
-                    except Exception as e:
+                        assert pool_state is not None
+                    except (AssertionError, ValueError) as e:
                         self.log.debug(f"Not a pool wallet launcher {e}")
+                        matched, inner_puzhash = await DataLayerWallet.match_dl_launcher(launcher_spend)
+                        if (
+                            matched
+                            and inner_puzhash is not None
+                            and (await self.puzzle_store.puzzle_hash_exists(inner_puzhash))
+                        ):
+                            for _, wallet in self.wallets.items():
+                                if wallet.type() == WalletType.DATA_LAYER.value:
+                                    dl_wallet: DataLayerWallet = wallet
+                                    break
+                            else:  # No DL wallet exists yet
+                                dl_wallet = await DataLayerWallet.create(
+                                    self, self.main_wallet
+                                )
+                            await dl_wallet.track_new_launcher_id(
+                                child.coin.name(),
+                                spend=launcher_spend,
+                                height=child.spent_height,
+                                in_transaction=True,
+                            )
                         continue
                     assert pool_state is not None
                     assert child.spent_height is not None
@@ -1297,3 +1328,9 @@ class WalletStateManager:
         txs: List[TransactionRecord] = await self.tx_store.get_transactions_by_trade_id(trade_id)
         for tx in txs:
             await self.tx_store.delete_transaction_record(tx.name)
+
+    def get_dl_wallet(self):
+        for _, wallet in self.wallets.items():
+            if wallet.type() == WalletType.DATA_LAYER.value:
+                return wallet
+        return None

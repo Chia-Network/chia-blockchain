@@ -25,9 +25,14 @@ class TestWalletRpc:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction(self, two_wallet_nodes):
+    async def test_wallet_make_transaction(self, two_wallet_nodes, trusted):
         test_rpc_port = uint16(21529)
+        test_rpc_port_2 = uint16(21536)
         test_rpc_port_node = uint16(21530)
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
@@ -36,9 +41,18 @@ class TestWalletRpc:
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -48,6 +62,7 @@ class TestWalletRpc:
         )
 
         wallet_rpc_api = WalletRpcApi(wallet_node)
+        wallet_rpc_api_2 = WalletRpcApi(wallet_node_2)
 
         config = bt.config
         hostname = config["self_hostname"]
@@ -78,12 +93,24 @@ class TestWalletRpc:
             config,
             connect_to_daemon=False,
         )
+        rpc_cleanup = await start_rpc_server(
+            wallet_rpc_api_2,
+            hostname,
+            daemon_port,
+            test_rpc_port_2,
+            stop_node_cb,
+            bt.root_path,
+            config,
+            connect_to_daemon=False,
+        )
 
         await time_out_assert(5, wallet.get_confirmed_balance, initial_funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
 
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
         await validate_get_routes(client, wallet_rpc_api)
+        client_2 = await WalletRpcClient.create(self_hostname, test_rpc_port_2, bt.root_path, config)
+        await validate_get_routes(client_2, wallet_rpc_api_2)
 
         wsm = wallet_node.wallet_state_manager
 
