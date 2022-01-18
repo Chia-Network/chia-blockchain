@@ -402,38 +402,42 @@ class DataStore:
     async def get_ancestors_2(
         self, node_hash: bytes32, tree_id: bytes32, generation: Optional[int] = None, lock: bool = True
     ) -> List[InternalNode]:
-        nodes = []
-        if generation is None:
-            generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
-        while True:
-            cursor = await self.db.execute(
-                """
-                SELECT * from node INNER JOIN (
-                    SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
-                    FROM ancestors
-                    WHERE ancestors.hash == :hash
-                    AND ancestors.tree_id == :tree_id
-                    AND ancestors.generation <= :generation
-                    AND ancestors.ancestor is NOT NULL
-                    GROUP BY hash
-                ) asc on asc.hash == node.hash
-                """,
-                {"hash": node_hash.hex(), "tree_id": tree_id.hex(), "generation": generation},
-            )
-            row = await cursor.fetchone()
-            if row is None:
-                break
-            internal_node = InternalNode.from_row(row=row)
-            nodes.append(internal_node)
-            node_hash = internal_node.hash
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            nodes = []
+            if generation is None:
+                generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
+            root = await self.get_tree_root(tree_id=tree_id, generation=generation, lock=False)
+            if root.node_hash is None:
+                return []
 
-        # Check if the root from `generation` is at the top of ancestors list.
-        # If it misses, this node is an orphan for `generation`.
-        root = await self.get_tree_root(tree_id=tree_id, generation=generation, lock=False)
-        if root.node_hash is None or root.node_hash != nodes[-1].hash:
-            return []
+            while True:
+                cursor = await self.db.execute(
+                    """
+                    SELECT * from node INNER JOIN (
+                        SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
+                        FROM ancestors
+                        WHERE ancestors.hash == :hash
+                        AND ancestors.tree_id == :tree_id
+                        AND ancestors.generation <= :generation
+                        AND ancestors.ancestor is NOT NULL
+                        GROUP BY hash
+                    ) asc on asc.hash == node.hash
+                    """,
+                    {"hash": node_hash.hex(), "tree_id": tree_id.hex(), "generation": generation},
+                )
+                row = await cursor.fetchone()
+                if row is None:
+                    break
+                internal_node = InternalNode.from_row(row=row)
+                nodes.append(internal_node)
+                node_hash = internal_node.hash
 
-        return nodes
+            # Check if the root from `generation` is at the top of ancestors list.
+            # If it misses, this node is an orphan for `generation`.
+            if len(nodes) > 0 and root.node_hash != nodes[-1].hash:
+                return []
+
+            return nodes
 
     async def get_pairs(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
