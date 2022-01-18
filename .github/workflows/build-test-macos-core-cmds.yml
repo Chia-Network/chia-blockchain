@@ -63,6 +63,14 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
+    - name: Checkout test blocks and plots
+      uses: actions/checkout@v2
+      with:
+        repository: 'Chia-Network/test-cache'
+        path: '.chia'
+        ref: '0.28.0'
+        fetch-depth: 1
+
     - name: Link home directory
       run: |
         cd $HOME
@@ -78,10 +86,16 @@ jobs:
         brew install boost
         sh install.sh -d
 
+    - name: Install timelord
+      run: |
+        . ./activate
+        sh install-timelord.sh
+        ./vdf_bench square_asm 400000
+
     - name: Test core-cmds code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/cmds/test_*.py -s -v --durations 0 --asyncio-mode=auto
+        ./venv/bin/py.test tests/core/cmds/test_*.py -s -v --durations 0
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
