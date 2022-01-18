@@ -270,6 +270,7 @@ class TestDLWallet:
         await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
         await asyncio.sleep(0.5)
 
+    @pytest.mark.skip(reason="DLO Wallet is not supported yet")
     @pytest.mark.asyncio
     async def test_dlo_wallet(self, three_wallet_nodes: SimulatorsAndWallets) -> None:
         time_lock = uint64(10)
@@ -386,6 +387,7 @@ class TestDLWallet:
         await time_out_assert(15, wallet_2.get_confirmed_balance, 201)
         await time_out_assert(15, wallet_2.get_unconfirmed_balance, 201)
 
+    @pytest.mark.skip(reason="DLO wallet is not supported yet")
     @pytest.mark.asyncio
     async def test_dlo_wallet_reclaim(self, three_wallet_nodes: SimulatorsAndWallets) -> None:
         time_lock = uint64(10)
