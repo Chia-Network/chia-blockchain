@@ -889,7 +889,7 @@ msgstr ""
 #~ msgid "Enter a strong passphrase to secure your keys:"
 #~ msgstr ""
 
-#: src/components/WalletImport.tsx:79
+#: src/components/WalletImport.tsx:84
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "Unesi 24 mnemonic riječi koje su kreirane prilikom kreiranja novčanika kako bi mogao vratiti postojeći Chia novčanik."
 
@@ -1179,7 +1179,7 @@ msgstr "IP adresa"
 #~ msgid "If none selected, then it will default to the temporary directory."
 #~ msgstr "Ako ništa nije odabrano, automatski će ići u privremeni direktorij."
 
-#: src/components/WalletImport.tsx:76
+#: src/components/WalletImport.tsx:81
 msgid "Import Wallet from Mnemonics"
 msgstr "Uvezi Novčanik sa Mnemonics"
 
@@ -1485,7 +1485,7 @@ msgstr "Novi novčanik"
 #~ msgstr ""
 
 #: src/components/WalletAdd.tsx:107
-#: src/components/WalletImport.tsx:107
+#: src/components/WalletImport.tsx:111
 msgid "Next"
 msgstr "Dalje"
 

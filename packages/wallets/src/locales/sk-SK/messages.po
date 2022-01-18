@@ -889,7 +889,7 @@ msgstr "Pretiahnite myšou obnovovací záložný súbor"
 #~ msgid "Enter a strong passphrase to secure your keys:"
 #~ msgstr ""
 
-#: src/components/WalletImport.tsx:79
+#: src/components/WalletImport.tsx:84
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "Zadajte 24 slov, ktoré ste si uložili pre účely obnovenia vašej peňaženky Chia."
 
@@ -1179,7 +1179,7 @@ msgstr "IP Adresa"
 #~ msgid "If none selected, then it will default to the temporary directory."
 #~ msgstr "Ak nie je vybraný žiadny adresár, použije sa ako predvolený, dočasný adresár."
 
-#: src/components/WalletImport.tsx:76
+#: src/components/WalletImport.tsx:81
 msgid "Import Wallet from Mnemonics"
 msgstr "Obnoviť peňaženku pomocou mnemotechnickej pomôcky"
 
@@ -1485,7 +1485,7 @@ msgstr "Nová peňaženka"
 #~ msgstr ""
 
 #: src/components/WalletAdd.tsx:107
-#: src/components/WalletImport.tsx:107
+#: src/components/WalletImport.tsx:111
 msgid "Next"
 msgstr "Ďalej"
 

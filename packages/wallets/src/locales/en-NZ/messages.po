@@ -889,7 +889,7 @@ msgstr "Drag and drop your recovery backup file"
 #~ msgid "Enter a strong passphrase to secure your keys:"
 #~ msgstr ""
 
-#: src/components/WalletImport.tsx:79
+#: src/components/WalletImport.tsx:84
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 
@@ -1179,7 +1179,7 @@ msgstr "IP address"
 #~ msgid "If none selected, then it will default to the temporary directory."
 #~ msgstr "If none selected, then it will default to the temporary directory."
 
-#: src/components/WalletImport.tsx:76
+#: src/components/WalletImport.tsx:81
 msgid "Import Wallet from Mnemonics"
 msgstr "Import Wallet from Mnemonics"
 
@@ -1485,7 +1485,7 @@ msgstr "New Wallet"
 #~ msgstr ""
 
 #: src/components/WalletAdd.tsx:107
-#: src/components/WalletImport.tsx:107
+#: src/components/WalletImport.tsx:111
 msgid "Next"
 msgstr "Next"
 

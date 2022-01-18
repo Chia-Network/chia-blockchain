@@ -889,7 +889,7 @@ msgstr "Húzza ide a biztonsági mentés fájlt"
 #~ msgid "Enter a strong passphrase to secure your keys:"
 #~ msgstr ""
 
-#: src/components/WalletImport.tsx:79
+#: src/components/WalletImport.tsx:84
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "A Chia pénztárca visszaállításához írja be az elmentett 24 szóból álló mnemonikát."
 
@@ -1179,7 +1179,7 @@ msgstr "IP-cím"
 #~ msgid "If none selected, then it will default to the temporary directory."
 #~ msgstr "Ha egyik sincs kiválasztva, akkor az alapértelmezés szerint az ideiglenes könyvtár lesz"
 
-#: src/components/WalletImport.tsx:76
+#: src/components/WalletImport.tsx:81
 msgid "Import Wallet from Mnemonics"
 msgstr "A Wallet importálása a Mnemonicsból"
 
@@ -1485,7 +1485,7 @@ msgstr "Új tárca hozzáadása"
 #~ msgstr ""
 
 #: src/components/WalletAdd.tsx:107
-#: src/components/WalletImport.tsx:107
+#: src/components/WalletImport.tsx:111
 msgid "Next"
 msgstr "Következő"
 

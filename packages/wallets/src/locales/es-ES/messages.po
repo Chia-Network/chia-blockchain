@@ -889,7 +889,7 @@ msgstr ""
 #~ msgid "Enter a strong passphrase to secure your keys:"
 #~ msgstr ""
 
-#: src/components/WalletImport.tsx:79
+#: src/components/WalletImport.tsx:84
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "Introduzca las 24 palabras mnemotécnicas que has guardado en orden para restaurar su cartera Chia."
 
@@ -1179,7 +1179,7 @@ msgstr "Dirección IP"
 #~ msgid "If none selected, then it will default to the temporary directory."
 #~ msgstr "Si no se selecciona ninguno, se establecerá de forma predeterminada en el directorio temporal."
 
-#: src/components/WalletImport.tsx:76
+#: src/components/WalletImport.tsx:81
 msgid "Import Wallet from Mnemonics"
 msgstr "Importar Cartera desde Mnemotécnica"
 
@@ -1485,7 +1485,7 @@ msgstr "Nueva Cartera"
 #~ msgstr ""
 
 #: src/components/WalletAdd.tsx:107
-#: src/components/WalletImport.tsx:107
+#: src/components/WalletImport.tsx:111
 msgid "Next"
 msgstr "Siguiente"
 
