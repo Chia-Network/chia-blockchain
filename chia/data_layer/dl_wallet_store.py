@@ -1,4 +1,5 @@
-from typing import List, Optional
+from aiosqlite import Row
+from typing import List, Optional, Tuple, Type, TypeVar
 
 import aiosqlite
 import dataclasses
@@ -9,8 +10,11 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
+
+_T_DataLayerStore = TypeVar("_T_DataLayerStore", bound="DataLayerStore")
 
 
 class DataLayerStore:
@@ -22,7 +26,7 @@ class DataLayerStore:
     db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper):
+    async def create(cls: Type[_T_DataLayerStore], db_wrapper: DBWrapper) -> _T_DataLayerStore:
         self = cls()
 
         self.db_wrapper = db_wrapper
@@ -57,12 +61,12 @@ class DataLayerStore:
         await self.db_connection.commit()
         return self
 
-    async def _clear_database(self):
+    async def _clear_database(self) -> None:
         cursor = await self.db_connection.execute("DELETE FROM singleton_records")
         await cursor.close()
         await self.db_connection.commit()
 
-    def _row_to_singleton_record(self, row) -> SingletonRecord:
+    def _row_to_singleton_record(self, row: Row) -> SingletonRecord:
         return SingletonRecord(
             bytes32(row[0]),
             bytes32(row[1]),
@@ -151,17 +155,17 @@ class DataLayerStore:
             return self._row_to_singleton_record(row)
         return None
 
-    async def set_confirmed(self, coin_id: bytes32, height: uint32):
+    async def set_confirmed(self, coin_id: bytes32, height: uint32) -> None:
         """
         Updates singleton record to be confirmed.
         """
-        current: Optional[TransactionRecord] = await self.get_singleton_record(coin_id)
+        current: Optional[SingletonRecord] = await self.get_singleton_record(coin_id)
         if current is None or current.confirmed_at_height == height:
             return
 
         await self.add_singleton_record(dataclasses.replace(current, confirmed=True, confirmed_at_height=height), True)
 
-    async def add_launcher(self, launcher: Coin, in_transaction: bool):
+    async def add_launcher(self, launcher: Coin, in_transaction: bool) -> None:
         """
         Add a new launcher coin's information to the DB
         """
@@ -201,8 +205,10 @@ class DataLayerStore:
         rows = await cursor.fetchall()
         await cursor.close()
 
-        coins = []
+        coins: List[Coin] = []
         for row in rows:
-            return Coin(bytes32(row[1][0:32]), bytes32(row[1][32:64]), uint64(int.from_bytes(row[1][64:72], "big")))
+            coins.append(
+                Coin(bytes32(row[1][0:32]), bytes32(row[1][32:64]), uint64(int.from_bytes(row[1][64:72], "big")))
+            )
 
         return coins

@@ -70,7 +70,7 @@ def match_dl_singleton(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
 
 
 def launch_solution_to_singleton_info(launch_solution: Program) -> Tuple[bytes32, uint64, bytes32, bytes32]:
-    solution = launch_solution.to_program().as_python()
+    solution = launch_solution.as_python()
     try:
         full_puzzle_hash = bytes32(solution[0])
         amount = uint64(int.from_bytes(solution[1], "big"))

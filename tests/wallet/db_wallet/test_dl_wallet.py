@@ -3,6 +3,7 @@ import pytest
 import time
 from typing import AsyncIterator, Iterator
 
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
@@ -86,8 +87,11 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        async def is_singleton_confirmed(lid) -> bool:
-            return (await dl_wallet.get_latest_singleton(lid)).confirmed
+        async def is_singleton_confirmed(lid: bytes32) -> bool:
+            rec = await dl_wallet.get_latest_singleton(lid)
+            if rec is None:
+                return False
+            return rec.confirmed
 
         for i in range(0, 2):
             dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(
@@ -147,7 +151,7 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        async def is_singleton_confirmed(wallet, lid) -> bool:
+        async def is_singleton_confirmed(wallet: DataLayerWallet, lid: bytes32) -> bool:
             latest_singleton = await wallet.get_latest_singleton(lid)
             if latest_singleton is None:
                 return False
@@ -216,8 +220,11 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        async def is_singleton_confirmed(lid) -> bool:
-            return (await dl_wallet.get_latest_singleton(lid)).confirmed
+        async def is_singleton_confirmed(lid: bytes32) -> bool:
+            latest_singleton = await dl_wallet.get_latest_singleton(lid)
+            if latest_singleton is None:
+                return False
+            return latest_singleton.confirmed
 
         dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(current_root)
 
@@ -235,6 +242,7 @@ class TestDLWallet:
         new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
         dl_tx = await dl_wallet.create_update_state_spend(launcher_id, new_root)
         new_record = await dl_wallet.get_latest_singleton(launcher_id)
+        assert new_record is not None
         assert new_record != previous_record
         assert not new_record.confirmed
 
@@ -248,6 +256,7 @@ class TestDLWallet:
             current_record = await dl_wallet.get_latest_singleton(launcher_id)
             dl_tx, _ = await dl_wallet.create_report_spend(launcher_id)
             new_record = await dl_wallet.get_latest_singleton(launcher_id)
+            assert new_record is not None
             assert new_record != current_record
             assert not new_record.confirmed
 
@@ -262,6 +271,7 @@ class TestDLWallet:
         new_root = MerkleTree([Program.to("new root").get_tree_hash()]).calculate_root()
         dl_tx = await dl_wallet.create_update_state_spend(launcher_id, new_root)
         new_record = await dl_wallet.get_latest_singleton(launcher_id)
+        assert new_record is not None
         assert new_record != previous_record
         assert not new_record.confirmed
 
@@ -274,6 +284,7 @@ class TestDLWallet:
     @pytest.mark.skip(reason="DLO Wallet is not supported yet")
     @pytest.mark.asyncio
     async def test_dlo_wallet(self, three_wallet_nodes: SimulatorsAndWallets) -> None:
+        raise  # for ignoring mypy :)
         time_lock = uint64(10)
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -351,7 +362,7 @@ class TestDLWallet:
             )
 
         offer_coin = await dlo_wallet_1.get_coin()
-        offer_full_puzzle = dlo_wallet_1.puzzle_for_pk(0x00)  # type: ignore[arg-type]
+        offer_full_puzzle = dlo_wallet_1.puzzle_for_pk(0x00)
         db_puzzle, db_innerpuz, current_root = await dl_wallet_0.get_info_for_offer_claim()
         inclusion_proof = current_tree.generate_proof(Program.to("thing").get_tree_hash())
         assert db_innerpuz is not None
@@ -391,6 +402,7 @@ class TestDLWallet:
     @pytest.mark.skip(reason="DLO wallet is not supported yet")
     @pytest.mark.asyncio
     async def test_dlo_wallet_reclaim(self, three_wallet_nodes: SimulatorsAndWallets) -> None:
+        raise  # for ignoring mypy :)
         time_lock = uint64(10)
 
         full_nodes, wallets = three_wallet_nodes

@@ -29,6 +29,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.json_util import dict_to_json_str
 from secrets import token_bytes
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -61,6 +62,7 @@ class DataLayerWallet:
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
+    wallet_id: uint8
     standard_wallet: Wallet
     """
     interface used by datalayer for interacting with the chain
@@ -84,7 +86,7 @@ class DataLayerWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         name: Optional[str] = "DataLayer Wallet",
-    ) -> ItemAndTransactionRecords[_T_DataLayerWallet]:
+    ) -> _T_DataLayerWallet:
         """
         This must be called under the wallet state manager lock
         """
@@ -101,7 +103,7 @@ class DataLayerWallet:
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.DATA_LAYER.value, "")
         if self.wallet_info is None:
             raise ValueError("Internal Error")
-        self.wallet_id = self.wallet_info.id
+        self.wallet_id = uint8(self.wallet_info.id)
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
 
@@ -119,7 +121,9 @@ class DataLayerWallet:
 
         # Let's make sure the solution looks how we expect it to
         try:
-            full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(launcher_spend.solution)
+            full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(
+                launcher_spend.solution.to_program()
+            )
         except ValueError:
             return False, None
 
@@ -188,9 +192,9 @@ class DataLayerWallet:
         action = await self.wallet_state_manager.action_store.get_wallet_action(action_id)
         coin_dict = json.loads(action.data)["data"]["action_data"]["launcher_coin"]
         launcher_coin = Coin(
-            bytes.fromhex(coin_dict["parent_id"]),
-            bytes.fromhex(coin_dict["puzzle_hash"]),
-            int(coin_dict["amount"]),
+            bytes32.from_hexstr(coin_dict["parent_id"]),
+            bytes32.from_hexstr(coin_dict["puzzle_hash"]),
+            uint64(int(coin_dict["amount"])),
         )
         await self.new_launcher_spend(
             CoinSpend(launcher_coin, response.puzzle, response.solution),
@@ -206,8 +210,11 @@ class DataLayerWallet:
         launcher_id: bytes32 = launcher_spend.coin.name()
         if height is None:
             height = (await self.get_launcher_coin_state(launcher_id)).spent_height
+            assert height is not None
 
-        full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(launcher_spend.solution)
+        full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(
+            launcher_spend.solution.to_program()
+        )
         new_singleton = Coin(launcher_id, full_puzhash, amount)
 
         singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_latest_singleton(
@@ -234,7 +241,7 @@ class DataLayerWallet:
                         create_host_layer_puzzle(inner_puzhash, root).get_tree_hash(),
                         amount,
                     ),
-                    generation=0,
+                    generation=uint32(0),
                 ),
                 in_transaction,
             )
@@ -248,7 +255,7 @@ class DataLayerWallet:
                 uint32(0),
                 False,
                 False,
-                self.type(),
+                WalletType(self.type()),
                 self.id(),
             )
         )
@@ -260,7 +267,7 @@ class DataLayerWallet:
         all_coin_states: Set[CoinState] = set()
 
         # First we need to make sure we have all of the coin states
-        puzzle_hashes_to_search_for: Set[bytes32] = set(launcher_id)
+        puzzle_hashes_to_search_for: Set[bytes32] = set({launcher_id})
         while len(puzzle_hashes_to_search_for) != 0:
             coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coins_with_puzzle_hash(
                 [launcher_id, new_singleton.puzzle_hash]
@@ -377,9 +384,9 @@ class DataLayerWallet:
             lineage_proof=LineageProof(
                 launcher_coin.name(),
                 create_host_layer_puzzle(inner_puzzle.get_tree_hash(), initial_root).get_tree_hash(),
-                1,
+                uint64(1),
             ),
-            generation=0,
+            generation=uint32(0),
         )
 
         await self.wallet_state_manager.dl_store.add_singleton_record(singleton_record, False)
@@ -416,6 +423,8 @@ class DataLayerWallet:
         )
 
         # Make the solution to the current coin
+        assert singleton_record.lineage_proof.parent_name is not None
+        assert singleton_record.lineage_proof.amount is not None
         primaries: List[AmountWithPuzzlehash] = [
             {
                 "puzzlehash": next_db_layer_puzzle.get_tree_hash(),
@@ -494,6 +503,8 @@ class DataLayerWallet:
         )
 
         # Create the solution
+        assert singleton_record.lineage_proof.parent_name is not None
+        assert singleton_record.lineage_proof.amount is not None
         db_layer_sol = Program.to([1, singleton_record.lineage_proof.amount, []])
         full_sol = Program.to(
             [
@@ -668,7 +679,7 @@ class DataLayerWallet:
                     uint32(0),
                     False,
                     False,
-                    self.type(),
+                    WalletType(self.type()),
                     self.id(),
                 )
             )
@@ -680,7 +691,7 @@ class DataLayerWallet:
     async def get_info_for_offer_claim(
         self,
         launcher_id: bytes32,
-    ) -> Tuple[Program, Optional[Program], bytes32]:
+    ) -> Tuple[Program, bytes32, bytes32]:
         singleton_record: Optional[SingletonRecord] = await self.get_latest_singleton(launcher_id)
         if singleton_record is None:
             raise ValueError(f"Singleton with launcher ID {launcher_id} is not tracked by DL Wallet")
@@ -699,13 +710,20 @@ class DataLayerWallet:
     ###########
 
     async def get_latest_singleton(self, launcher_id: bytes32) -> Optional[SingletonRecord]:
-        return await self.wallet_state_manager.dl_store.get_latest_singleton(launcher_id)
+        singleton: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_latest_singleton(
+            launcher_id
+        )
+        return singleton
 
     async def get_history(self, launcher_id: bytes32) -> List[SingletonRecord]:
-        return await self.wallet_state_manager.dl_store.get_all_singletons_for_launcher(launcher_id)
+        history: List[SingletonRecord] = await self.wallet_state_manager.dl_store.get_all_singletons_for_launcher(
+            launcher_id
+        )
+        return history
 
     async def get_singleton_record(self, coin_id: bytes32) -> Optional[SingletonRecord]:
-        return await self.wallet_state_manager.dl_store.get_singleton_record(coin_id)
+        singleton: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singleton_record(coin_id)
+        return singleton
 
     ##########
     # WALLET #

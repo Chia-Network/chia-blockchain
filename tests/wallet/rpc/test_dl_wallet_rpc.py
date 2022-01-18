@@ -151,6 +151,8 @@ class TestWalletRpc:
                 if await is_singleton_confirmed(rpc_client, lid):
                     rec = await rpc_client.dl_latest_singleton(lid)
                     return rec.generation == generation
+                else:
+                    return False
 
             await time_out_assert(15, is_singleton_generation, True, client_2, launcher_id, 1)
             assert await client_2.dl_history(launcher_id) == [singleton_record, new_singleton_record]

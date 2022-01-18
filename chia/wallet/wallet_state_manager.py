@@ -118,6 +118,7 @@ class WalletStateManager:
     root_path: Path
     wallet_node: Any
     pool_store: WalletPoolStore
+    dl_store: DataLayerStore
     default_cats: Dict[str, Any]
 
     @staticmethod
@@ -871,10 +872,10 @@ class WalletStateManager:
                         ):
                             for _, wallet in self.wallets.items():
                                 if wallet.type() == WalletType.DATA_LAYER.value:
-                                    dl_wallet: DataLayerWallet = wallet
+                                    dl_wallet = wallet
                                     break
                             else:  # No DL wallet exists yet
-                                dl_wallet = await DataLayerWallet.create(self, self.main_wallet)
+                                dl_wallet = await DataLayerWallet.create_new_dl_wallet(self, self.main_wallet)
                             await dl_wallet.track_new_launcher_id(
                                 child.coin.name(),
                                 spend=launcher_spend,

@@ -71,12 +71,8 @@ class DataLayer:
         self.data_store = await DataStore.create(self.db_wrapper)
         assert self.wallet_node.wallet_state_manager
         main_wallet = self.wallet_node.wallet_state_manager.main_wallet
-        amount = uint64(1)  # todo what should amount be ?
         async with self.wallet_node.wallet_state_manager.lock:
-            creation_record = await self.wallet.create_new_dl_wallet(
-                self.wallet_node.wallet_state_manager, main_wallet, amount, None
-            )
-            self.wallet = creation_record.item
+            self.wallet = await self.wallet.create_new_dl_wallet(self.wallet_node.wallet_state_manager, main_wallet)
         self.initialized = True
         return True
 
@@ -90,12 +86,15 @@ class DataLayer:
             await self.connection.close()
 
     async def create_store(self) -> bytes32:
-        assert self.wallet.dl_info.origin_coin
-        tree_id = self.wallet.dl_info.origin_coin.name()
+        # TODO: remove type ignore
+        assert self.wallet.dl_info.origin_coin  # type: ignore
+        # TODO: remove type ignore
+        tree_id = self.wallet.dl_info.origin_coin.name()  # type: ignore
         res = await self.data_store.create_tree(tree_id)
         if res is None:
             self.log.fatal("failed creating store")
-        return tree_id
+        # TODO: remove type ignore
+        return tree_id  # type: ignore
 
     async def insert(
         self,
@@ -118,7 +117,8 @@ class DataLayer:
 
         root = await self.data_store.get_tree_root(tree_id)
         assert root.node_hash
-        res = await self.wallet.create_update_state_spend(root.node_hash)
+        # TODO: remove type ignore
+        res = await self.wallet.create_update_state_spend(root.node_hash)  # type: ignore
         assert res
         # todo need to mark data as pending and change once tx is confirmed
         return True

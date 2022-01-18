@@ -932,10 +932,10 @@ class WalletNode:
                             ):
                                 for _, wallet in self.wallet_state_manager.wallets.items():
                                     if wallet.type() == WalletType.DATA_LAYER.value:
-                                        dl_wallet: DataLayerWallet = wallet
+                                        dl_wallet = wallet
                                         break
                                 else:  # No DL wallet exists yet
-                                    dl_wallet = await DataLayerWallet.create(
+                                    dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                                         self.wallet_state_manager, self.wallet_state_manager.main_wallet
                                     )
                                 await dl_wallet.track_new_launcher_id(
