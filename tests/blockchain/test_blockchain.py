@@ -144,7 +144,7 @@ class TestBlockHeaderValidation:
                 header_block_bad = get_block_header(block_bad, [], [])
                 _, error = validate_finished_header_block(
                     empty_blockchain.constants,
-                    empty_blockchain,  # type: ignore[arg-type]
+                    empty_blockchain,
                     header_block_bad,
                     False,
                     block.finished_sub_slots[0].challenge_chain.new_difficulty,
@@ -169,7 +169,7 @@ class TestBlockHeaderValidation:
                 header_block_bad_2 = get_block_header(block_bad_2, [], [])
                 _, error = validate_finished_header_block(
                     empty_blockchain.constants,
-                    empty_blockchain,  # type: ignore[arg-type]
+                    empty_blockchain,
                     header_block_bad_2,
                     False,
                     block.finished_sub_slots[0].challenge_chain.new_difficulty,
@@ -200,7 +200,7 @@ class TestBlockHeaderValidation:
                 header_block_bad_3 = get_block_header(block_bad_3, [], [])
                 _, error = validate_finished_header_block(
                     empty_blockchain.constants,
-                    empty_blockchain,  # type: ignore[arg-type]
+                    empty_blockchain,
                     header_block_bad_3,
                     False,
                     block.finished_sub_slots[0].challenge_chain.new_difficulty,
@@ -231,7 +231,7 @@ class TestBlockHeaderValidation:
                 header_block_bad_4 = get_block_header(block_bad_4, [], [])
                 _, error = validate_finished_header_block(
                     empty_blockchain.constants,
-                    empty_blockchain,  # type: ignore[arg-type]
+                    empty_blockchain,
                     header_block_bad_4,
                     False,
                     block.finished_sub_slots[0].challenge_chain.new_difficulty,
@@ -453,9 +453,18 @@ class TestBlockHeaderValidation:
             blocks[0], "finished_sub_slots", [new_finished_ss] + blocks[0].finished_sub_slots[1:]
         )
 
-        await _validate_and_add_block(
-            empty_blockchain, block_0_bad, expected_error=Err.INVALID_PREV_CHALLENGE_SLOT_HASH
+        header_block_bad = get_block_header(block_0_bad, [], [])
+        _, error = validate_finished_header_block(
+            empty_blockchain.constants,
+            empty_blockchain,
+            header_block_bad,
+            False,
+            empty_blockchain.constants.DIFFICULTY_STARTING,
+            empty_blockchain.constants.SUB_SLOT_ITERS_STARTING,
         )
+
+        assert error.code == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
+        await _validate_and_add_block(empty_blockchain, block_0_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
     async def test_invalid_sub_slot_challenge_hash_non_genesis(self, empty_blockchain):
@@ -472,9 +481,17 @@ class TestBlockHeaderValidation:
         )
 
         await _validate_and_add_block(empty_blockchain, blocks[0])
-        await _validate_and_add_block(
-            empty_blockchain, block_1_bad, expected_error=Err.INVALID_PREV_CHALLENGE_SLOT_HASH
+        header_block_bad = get_block_header(block_1_bad, [], [])
+        _, error = validate_finished_header_block(
+            empty_blockchain.constants,
+            empty_blockchain,
+            header_block_bad,
+            False,
+            blocks[1].finished_sub_slots[0].challenge_chain.new_difficulty,
+            blocks[1].finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
         )
+        assert error.code == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
+        await _validate_and_add_block(empty_blockchain, block_1_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
     async def test_invalid_sub_slot_challenge_hash_empty_ss(self, empty_blockchain):
@@ -490,9 +507,18 @@ class TestBlockHeaderValidation:
             blocks[1], "finished_sub_slots", blocks[1].finished_sub_slots[:-1] + [new_finished_ss]
         )
         await _validate_and_add_block(empty_blockchain, blocks[0])
-        await _validate_and_add_block(
-            empty_blockchain, block_1_bad, expected_error=Err.INVALID_PREV_CHALLENGE_SLOT_HASH
+
+        header_block_bad = get_block_header(block_1_bad, [], [])
+        _, error = validate_finished_header_block(
+            empty_blockchain.constants,
+            empty_blockchain,
+            header_block_bad,
+            False,
+            blocks[1].finished_sub_slots[0].challenge_chain.new_difficulty,
+            blocks[1].finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
         )
+        assert error.code == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
+        await _validate_and_add_block(empty_blockchain, block_1_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
     async def test_genesis_no_icc(self, empty_blockchain):
@@ -637,7 +663,18 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
                 )
-                await _validate_and_add_block(blockchain, block_bad, expected_error=Err.INVALID_ICC_HASH_CC)
+
+                header_block_bad = get_block_header(block_bad, [], [])
+                _, error = validate_finished_header_block(
+                    empty_blockchain.constants,
+                    empty_blockchain,
+                    header_block_bad,
+                    False,
+                    block.finished_sub_slots[0].challenge_chain.new_difficulty,
+                    block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
+                )
+                assert error.code == Err.INVALID_ICC_HASH_CC
+                await _validate_and_add_block(blockchain, block_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK)
 
                 # 2i
                 new_finished_ss_bad_rc = recursive_replace(
@@ -696,7 +733,18 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(
             blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
         )
-        await _validate_and_add_block(blockchain, block_bad, expected_error=Err.INVALID_SUB_EPOCH_SUMMARY_HASH)
+
+        header_block_bad = get_block_header(block_bad, [], [])
+        _, error = validate_finished_header_block(
+            empty_blockchain.constants,
+            empty_blockchain,
+            header_block_bad,
+            False,
+            empty_blockchain.constants.DIFFICULTY_STARTING,
+            empty_blockchain.constants.SUB_SLOT_ITERS_STARTING,
+        )
+        assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY_HASH
+        await _validate_and_add_block(blockchain, block_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
     async def test_empty_sub_slots_epoch(self, empty_blockchain):
