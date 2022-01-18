@@ -19,7 +19,7 @@ from chia.full_node.mempool_check_conditions import mempool_check_conditions_dic
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -57,8 +57,8 @@ def validate_clvm_and_signature(
         if result.error is not None:
             return Err(result.error), b"", {}
 
-        pks: List[G1Element] = []
-        msgs: List[bytes] = []
+        pks: List[bytes48]
+        msgs: List[bytes]
         pks, msgs = pkm_pairs(result.npc_list, additional_data)
 
         # Verify aggregated signature

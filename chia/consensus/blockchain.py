@@ -233,7 +233,7 @@ class Blockchain(BlockchainInterface):
             fork_point_with_peak,
             self.get_block_generator,
             # If we did not already validate the signature, validate it now
-            validate_signature=pre_validation_result.validated_signature,
+            validate_signature=not pre_validation_result.validated_signature,
         )
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code, None, ([], {})
