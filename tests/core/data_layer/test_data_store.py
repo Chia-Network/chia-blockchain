@@ -263,7 +263,7 @@ async def test_get_ancestors_2(data_store: DataStore, tree_id: bytes32) -> None:
             value = (i + 200).to_bytes(4, byteorder="big")
             side = None if node_hash is None else Side.LEFT if random.randint(0, 1) == 0 else Side.RIGHT
 
-            _ = await data_store.insert(
+            await data_store.insert(
                 key=key,
                 value=value,
                 tree_id=tree_id,
