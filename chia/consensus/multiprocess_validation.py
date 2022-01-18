@@ -112,20 +112,23 @@ def batch_pre_validate_blocks(
                 if error is not None:
                     error_int = uint16(error.code.value)
 
-                # If this is False, it means either we don't have a signature (not a tx block) or we have an invalid
-                # signature (which also puts in an error) or we didn't validate the signature because we want to
-                # validate it later. receive_block will attempt to validate the signature later.
                 successfully_validated_signatures = False
-                if validate_signatures:
-                    if npc_result is not None and block.transactions_info is not None:
-                        pairs_pks, pairs_msgs = pkm_pairs(npc_result.npc_list, constants.AGG_SIG_ME_ADDITIONAL_DATA)
-                        pks_objects: List[G1Element] = [G1Element.from_bytes(pk) for pk in pairs_pks]
-                        if not AugSchemeMPL.aggregate_verify(
-                            pks_objects, pairs_msgs, block.transactions_info.aggregated_signature
-                        ):
-                            error_int = uint16(Err.BAD_AGGREGATE_SIGNATURE.value)
-                        else:
-                            successfully_validated_signatures = True
+                # If we failed CLVM, no need to validate signature, the block is already invalid
+                if error_int is not None:
+
+                    # If this is False, it means either we don't have a signature (not a tx block) or we have an invalid
+                    # signature (which also puts in an error) or we didn't validate the signature because we want to
+                    # validate it later. receive_block will attempt to validate the signature later.
+                    if validate_signatures:
+                        if npc_result is not None and block.transactions_info is not None:
+                            pairs_pks, pairs_msgs = pkm_pairs(npc_result.npc_list, constants.AGG_SIG_ME_ADDITIONAL_DATA)
+                            pks_objects: List[G1Element] = [G1Element.from_bytes(pk) for pk in pairs_pks]
+                            if not AugSchemeMPL.aggregate_verify(
+                                pks_objects, pairs_msgs, block.transactions_info.aggregated_signature
+                            ):
+                                error_int = uint16(Err.BAD_AGGREGATE_SIGNATURE.value)
+                            else:
+                                successfully_validated_signatures = True
 
                 results.append(
                     PreValidationResult(error_int, required_iters, npc_result, successfully_validated_signatures)

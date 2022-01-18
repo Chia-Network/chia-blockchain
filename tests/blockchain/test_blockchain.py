@@ -2080,12 +2080,6 @@ class TestBodyValidation:
             )
             assert (await b.pre_validate_blocks_multiprocessing([block_2], {}, validate_signatures=False)) is None
 
-        # Bad signature
-        block_2 = recursive_replace(block, "transactions_info.aggregated_signature", G2Element.generator())
-        preval_results = await b.pre_validate_blocks_multiprocessing([block_2], {}, validate_signatures=True)
-        assert preval_results is not None
-        assert preval_results[0].error == Err.BAD_AGGREGATE_SIGNATURE.value
-
     @pytest.mark.asyncio
     async def test_cost_exceeds_max(self, empty_blockchain):
         # 7
@@ -2632,6 +2626,50 @@ class TestBodyValidation:
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         await _validate_and_add_block(b, block_2, expected_error=Err.INVALID_BLOCK_FEE_AMOUNT)
+
+    @pytest.mark.asyncio
+    async def test_invalid_agg_sig(self, empty_blockchain):
+        # 22
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+            pool_reward_puzzle_hash=bt.pool_ph,
+        )
+        await _validate_and_add_block(b, blocks[0])
+        await _validate_and_add_block(b, blocks[1])
+        await _validate_and_add_block(b, blocks[2])
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+
+        tx: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+        )
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        )
+
+        last_block = recursive_replace(blocks[-1], "transactions_info.aggregated_signature", G2Element.generator())
+        assert last_block.transactions_info
+        last_block = recursive_replace(
+            last_block, "foliage_transaction_block.transactions_info_hash", last_block.transactions_info.get_hash()
+        )
+        assert last_block.foliage_transaction_block
+        last_block = recursive_replace(
+            last_block, "foliage.foliage_transaction_block_hash", last_block.foliage_transaction_block.get_hash()
+        )
+        new_m = last_block.foliage.foliage_transaction_block_hash
+        new_fsb_sig = bt.get_plot_signature(new_m, last_block.reward_chain_block.proof_of_space.plot_public_key)
+        last_block = recursive_replace(last_block, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+
+        # Bad signature fails during receive_block
+        await _validate_and_add_block(b, last_block, expected_error=Err.BAD_AGGREGATE_SIGNATURE)
+
+        # Bad signature also fails in prevalidation
+        preval_results = await b.pre_validate_blocks_multiprocessing([last_block], {}, validate_signatures=True)
+        assert preval_results is not None
+        assert preval_results[0].error == Err.BAD_AGGREGATE_SIGNATURE.value
 
 
 class TestReorgs:
