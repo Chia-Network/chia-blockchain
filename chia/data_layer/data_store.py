@@ -399,7 +399,7 @@ class DataStore:
 
         return ancestors
 
-    async def get_ancestors_2(
+    async def get_ancestors_optimized(
         self, node_hash: bytes32, tree_id: bytes32, generation: Optional[int] = None, lock: bool = True
     ) -> List[InternalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
