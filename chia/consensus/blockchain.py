@@ -661,12 +661,13 @@ class Blockchain(BlockchainInterface):
             unfinished_block,
             bytes(generator),
         )
-        error, npc_result_bytes = await task
-        if error is not None:
-            raise ConsensusError(error)
+        npc_result_bytes = await task
         if npc_result_bytes is None:
             raise ConsensusError(Err.UNKNOWN)
-        return NPCResult.from_bytes(npc_result_bytes)
+        ret = NPCResult.from_bytes(npc_result_bytes)
+        if ret.error is not None:
+            raise ConsensusError(ret.error)
+        return ret
 
     def contains_block(self, header_hash: bytes32) -> bool:
         """
