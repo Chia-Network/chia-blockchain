@@ -45,8 +45,8 @@ async def _validate_and_add_block(
     # Tries to validate and add the block, and checks that there are no errors in the process and that the
     # block is added to the peak.
     # If expected_result is not None, that result will be enforced.
-    # If expected_error is not None, that error will be enforced (unless prevalidation fails, in which
-    # case we return with no errors). If expected_error is not None, receive_block must return Err.INVALID_BLOCK.
+    # If expected_error is not None, that error will be enforced. If expected_error is not None,
+    # receive_block must return Err.INVALID_BLOCK.
     # If expected_result == INVALID_BLOCK but expected_error is None, we will allow for errors to happen
 
     await check_block_store_invariant(blockchain)
@@ -60,38 +60,42 @@ async def _validate_and_add_block(
         assert pre_validation_results is not None
         results = pre_validation_results[0]
     if results.error is not None:
-        if expected_result == ReceiveBlockResult.INVALID_BLOCK:
+        if expected_result == ReceiveBlockResult.INVALID_BLOCK and expected_error is None:
+            # We expected an error but didn't specify which one
             await check_block_store_invariant(blockchain)
             return None
         if expected_error is None:
-            raise ValueError(Err(results.error))
+            # We did not expect an error
+            raise AssertionError(Err(results.error))
         elif Err(results.error) != expected_error:
-            raise ValueError(f"Expected {expected_error} but got {Err(results.error)}")
+            # We expected an error but a different one
+            raise AssertionError(f"Expected {expected_error} but got {Err(results.error)}")
         await check_block_store_invariant(blockchain)
         return None
 
     result, err, _, _ = await blockchain.receive_block(block, results)
     await check_block_store_invariant(blockchain)
+
     if expected_error is None and expected_result != ReceiveBlockResult.INVALID_BLOCK:
-        # Not expecting any errors
+        # Expecting an error here (but didn't specify which), let's check if we actually got an error
         if err is not None:
             # Got an error
-            raise ValueError(err)
+            raise AssertionError(err)
     else:
-        # Expecting an error
+        # Here we will enforce checking of the exact error
         if err != expected_error:
             # Did not get the right error, or did not get an error
-            raise ValueError(f"Expected {expected_error} but got {err}")
+            raise AssertionError(f"Expected {expected_error} but got {err}")
 
     if expected_result is not None and expected_result != result:
-        raise ValueError(f"Expected {expected_result} but got {result}")
+        raise AssertionError(f"Expected {expected_result} but got {result}")
     elif expected_result is None:
         # If we expected an error assume that expected_result = INVALID_BLOCK
         if expected_error is not None and result != ReceiveBlockResult.INVALID_BLOCK:
-            raise ValueError(f"Block should be invalid, but received: {result}")
+            raise AssertionError(f"Block should be invalid, but received: {result}")
         # Otherwise, assume that expected_result = NEW_PEAK
         if expected_error is None and result != ReceiveBlockResult.NEW_PEAK:
-            raise ValueError(f"Block was not added: {result}")
+            raise AssertionError(f"Block was not added: {result}")
 
 
 async def _validate_and_add_block_multi_error(
@@ -101,11 +105,11 @@ async def _validate_and_add_block_multi_error(
     try:
         await _validate_and_add_block(blockchain, block, skip_prevalidation=skip_prevalidation)
     except Exception as e:
-        assert isinstance(e, ValueError)
+        assert isinstance(e, AssertionError)
         assert e.args[0] in expected_errors
         return
 
-    raise ValueError("Did not return an error")
+    raise AssertionError("Did not return an error")
 
 
 async def _validate_and_add_block_multi_result(
@@ -116,11 +120,11 @@ async def _validate_and_add_block_multi_result(
     try:
         await _validate_and_add_block(blockchain, block)
     except Exception as e:
-        assert isinstance(e, ValueError)
+        assert isinstance(e, AssertionError)
         assert "Block was not added" in e.args[0]
         expected_list: List[str] = [f"Block was not added: {res}" for res in expected_result]
         if e.args[0] not in expected_list:
-            raise ValueError(f"{e.args[0].split('Block was not added: ')[1]} not in {expected_result}")
+            raise AssertionError(f"{e.args[0].split('Block was not added: ')[1]} not in {expected_result}")
 
 
 async def _validate_and_add_block_no_error(blockchain: Blockchain, block: FullBlock) -> None:
