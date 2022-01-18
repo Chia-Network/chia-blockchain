@@ -54,16 +54,10 @@ async def _validate_and_add_block(
         results = PreValidationResult(None, uint64(1), None, False)
     else:
         # Do not change this, validate_signatures must be False
-        pre_validation_results: Optional[
-            List[PreValidationResult]
-        ] = await blockchain.pre_validate_blocks_multiprocessing([block], {}, validate_signatures=False)
-
-        if pre_validation_results is None:
-            # Returning None from pre validation means an error occurred
-            if expected_error is not None or expected_result == ReceiveBlockResult.INVALID_BLOCK:
-                return None
-            else:
-                raise ValueError("Prevalidation returned None")
+        pre_validation_results: List[PreValidationResult] = await blockchain.pre_validate_blocks_multiprocessing(
+            [block], {}, validate_signatures=False
+        )
+        assert pre_validation_results is not None
         results = pre_validation_results[0]
     if results.error is not None:
         if expected_result == ReceiveBlockResult.INVALID_BLOCK:

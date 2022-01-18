@@ -614,7 +614,7 @@ class Blockchain(BlockchainInterface):
         wp_summaries: Optional[List[SubEpochSummary]] = None,
         *,
         validate_signatures: bool,
-    ) -> Optional[List[PreValidationResult]]:
+    ) -> List[PreValidationResult]:
         return await pre_validate_blocks_multiprocessing(
             self.constants,
             self.constants_json,

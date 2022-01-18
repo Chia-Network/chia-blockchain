@@ -50,8 +50,8 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: Optional[
-                    List[PreValidationResult]
+                pre_validation_results: List[
+                    PreValidationResult
                 ] = await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
                     [genesis], {}, validate_signatures=True
                 )
@@ -92,8 +92,8 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: Optional[
-                    List[PreValidationResult]
+                pre_validation_results: List[
+                    PreValidationResult
                 ] = await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
                     [genesis], {}, validate_signatures=True
                 )

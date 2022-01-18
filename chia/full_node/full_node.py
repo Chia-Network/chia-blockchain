@@ -1048,9 +1048,7 @@ class FullNode:
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.time()
-        pre_validation_results: Optional[
-            List[PreValidationResult]
-        ] = await self.blockchain.pre_validate_blocks_multiprocessing(
+        pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
             blocks_to_validate, {}, wp_summaries=wp_summaries, validate_signatures=True
         )
         pre_validate_end = time.time()
@@ -1058,8 +1056,6 @@ class FullNode:
             self.log.warning(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
         else:
             self.log.debug(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
-        if pre_validation_results is None:
-            return False, False, None, ([], {})
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
@@ -1468,7 +1464,7 @@ class FullNode:
             added: Optional[ReceiveBlockResult] = None
             pre_validation_time = time.time() - validation_start
             try:
-                if pre_validation_results is None:
+                if len(pre_validation_results) < 1:
                     raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
                 if pre_validation_results[0].error is not None:
                     if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:

@@ -177,7 +177,7 @@ async def pre_validate_blocks_multiprocessing(
     wp_summaries: Optional[List[SubEpochSummary]] = None,
     *,
     validate_signatures: bool = True,
-) -> Optional[List[PreValidationResult]]:
+) -> List[PreValidationResult]:
     """
     This method must be called under the blockchain lock
     If all the full blocks pass pre-validation, (only validates header), returns the list of required iters.
@@ -249,7 +249,7 @@ async def pre_validate_blocks_multiprocessing(
             for i, block_i in enumerate(blocks):
                 if not block_record_was_present[i] and block_records.contains_block(block_i.header_hash):
                     block_records.remove_block_record(block_i.header_hash)
-            return None
+            return [PreValidationResult(uint16(Err.INVALID_POSPACE.value), None, None, False)]
 
         required_iters: uint64 = calculate_iterations_quality(
             constants.DIFFICULTY_CONSTANT_FACTOR,
@@ -259,20 +259,23 @@ async def pre_validate_blocks_multiprocessing(
             cc_sp_hash,
         )
 
-        block_rec = block_to_block_record(
-            constants,
-            block_records,
-            required_iters,
-            block,
-            None,
-        )
+        try:
+            block_rec = block_to_block_record(
+                constants,
+                block_records,
+                required_iters,
+                block,
+                None,
+            )
+        except ValueError:
+            return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False)]
 
         if block_rec.sub_epoch_summary_included is not None and wp_summaries is not None:
             idx = int(block.height / constants.SUB_EPOCH_BLOCKS) - 1
             next_ses = wp_summaries[idx]
             if not block_rec.sub_epoch_summary_included.get_hash() == next_ses.get_hash():
                 log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
-                return None
+                return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False)]
         # Makes sure to not override the valid blocks already in block_records
         if not block_records.contains_block(block_rec.header_hash):
             block_records.add_block_record(block_rec)  # Temporarily add block to dict
@@ -324,8 +327,12 @@ async def pre_validate_blocks_multiprocessing(
                 b_pickled.append(bytes(block))
                 try:
                     block_generator: Optional[BlockGenerator] = await get_block_generator(block, prev_blocks_dict)
-                except ValueError:
-                    return None
+                except ValueError as e:
+                    return [
+                        PreValidationResult(
+                            uint16(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING.value), None, None, False
+                        )
+                    ]
                 if block_generator is not None:
                     previous_generators.append(bytes(block_generator))
                 else:

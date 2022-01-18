@@ -6,12 +6,14 @@ import multiprocessing
 import time
 from dataclasses import replace
 from secrets import token_bytes
-from typing import Optional, Tuple, List
+from typing import List
+from chia.util.block_cache import BlockCache
 
 import pytest
 from blspy import AugSchemeMPL, G2Element
 from clvm.casts import int_to_bytes
 
+from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import ReceiveBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
@@ -33,6 +35,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.generator_tools import get_block_header
 from tests.block_tools import create_block_tools_async, get_vdf_info_and_proof
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -138,13 +141,22 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(
                     block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:]
                 )
-                try:
-                    await _validate_and_add_block(
-                        empty_blockchain, block_bad, expected_error=Err.INVALID_NEW_SUB_SLOT_ITERS
-                    )
-                except AssertionError:
-                    # This can also fail in prevalidation through an assertion error
-                    pass
+                header_block_bad = get_block_header(block_bad, [], [])
+                _, error = validate_finished_header_block(
+                    empty_blockchain.constants,
+                    empty_blockchain,  # type: ignore[arg-type]
+                    header_block_bad,
+                    False,
+                    block.finished_sub_slots[0].challenge_chain.new_difficulty,
+                    block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
+                )
+                assert error.code == Err.INVALID_NEW_SUB_SLOT_ITERS
+
+                # Also fails calling the outer methods, but potentially with a different error
+                await _validate_and_add_block(
+                    empty_blockchain, block_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK
+                )
+
                 new_finished_ss_2 = recursive_replace(
                     block.finished_sub_slots[0],
                     "challenge_chain.new_difficulty",
@@ -153,13 +165,22 @@ class TestBlockHeaderValidation:
                 block_bad_2 = recursive_replace(
                     block, "finished_sub_slots", [new_finished_ss_2] + block.finished_sub_slots[1:]
                 )
-                try:
-                    await _validate_and_add_block(
-                        empty_blockchain, block_bad_2, expected_error=Err.INVALID_NEW_DIFFICULTY
-                    )
-                except AssertionError:
-                    # This can also fail in prevalidation through an assertion error
-                    pass
+
+                header_block_bad_2 = get_block_header(block_bad_2, [], [])
+                _, error = validate_finished_header_block(
+                    empty_blockchain.constants,
+                    empty_blockchain,  # type: ignore[arg-type]
+                    header_block_bad_2,
+                    False,
+                    block.finished_sub_slots[0].challenge_chain.new_difficulty,
+                    block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
+                )
+                assert error.code == Err.INVALID_NEW_DIFFICULTY
+
+                # Also fails calling the outer methods, but potentially with a different error
+                await _validate_and_add_block(
+                    empty_blockchain, block_bad_2, expected_result=ReceiveBlockResult.INVALID_BLOCK
+                )
 
                 # 3c
                 new_finished_ss_3: EndOfSubSlotBundle = recursive_replace(
@@ -175,19 +196,28 @@ class TestBlockHeaderValidation:
                 block_bad_3 = recursive_replace(
                     block, "finished_sub_slots", [new_finished_ss_3] + block.finished_sub_slots[1:]
                 )
-                try:
-                    await _validate_and_add_block(
-                        empty_blockchain, block_bad_3, expected_error=Err.INVALID_SUB_EPOCH_SUMMARY
-                    )
-                except AssertionError:
-                    # This can also fail in prevalidation through an assertion error
-                    pass
+
+                header_block_bad_3 = get_block_header(block_bad_3, [], [])
+                _, error = validate_finished_header_block(
+                    empty_blockchain.constants,
+                    empty_blockchain,  # type: ignore[arg-type]
+                    header_block_bad_3,
+                    False,
+                    block.finished_sub_slots[0].challenge_chain.new_difficulty,
+                    block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
+                )
+                assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY
+
+                # Also fails calling the outer methods, but potentially with a different error
+                await _validate_and_add_block(
+                    empty_blockchain, block_bad_3, expected_result=ReceiveBlockResult.INVALID_BLOCK
+                )
 
                 # 3d
                 new_finished_ss_4 = recursive_replace(
                     block.finished_sub_slots[0],
                     "challenge_chain.subepoch_summary_hash",
-                    None,
+                    std_hash(b"123"),
                 )
                 new_finished_ss_4 = recursive_replace(
                     new_finished_ss_4,
@@ -197,16 +227,22 @@ class TestBlockHeaderValidation:
                 block_bad_4 = recursive_replace(
                     block, "finished_sub_slots", [new_finished_ss_4] + block.finished_sub_slots[1:]
                 )
-                try:
-                    await _validate_and_add_block(empty_blockchain, block_bad_4)
-                except Exception as e:
-                    assert isinstance(e, ValueError)
-                    assert e.args[0] in [
-                        Err.INVALID_SUB_EPOCH_SUMMARY,
-                        Err.INVALID_NEW_SUB_SLOT_ITERS,
-                        "Prevalidation returned None",
-                    ]
 
+                header_block_bad_4 = get_block_header(block_bad_4, [], [])
+                _, error = validate_finished_header_block(
+                    empty_blockchain.constants,
+                    empty_blockchain,  # type: ignore[arg-type]
+                    header_block_bad_4,
+                    False,
+                    block.finished_sub_slots[0].challenge_chain.new_difficulty,
+                    block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
+                )
+                assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY
+
+                # Also fails calling the outer methods, but potentially with a different error
+                await _validate_and_add_block(
+                    empty_blockchain, block_bad_4, expected_result=ReceiveBlockResult.INVALID_BLOCK
+                )
             await _validate_and_add_block(empty_blockchain, block)
             log.info(
                 f"Added block {block.height} total iters {block.total_iters} "
@@ -953,17 +989,14 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(
                     blocks[-1], "finished_sub_slots", [new_finished_ss] + blocks[-1].finished_sub_slots[1:]
                 )
-                try:
-                    await _validate_and_add_block(
-                        empty_blockchain, block_bad, expected_error=Err.INVALID_SUB_EPOCH_SUMMARY_HASH
-                    )
-                except AssertionError:
-                    pass
-                except ValueError as e:
-                    if "returned None" in e.args[0]:
-                        pass
-                    else:
-                        raise
+                await _validate_and_add_block_multi_error(
+                    empty_blockchain,
+                    block_bad,
+                    expected_errors=[
+                        Err.INVALID_SUB_EPOCH_SUMMARY_HASH,
+                        Err.INVALID_SUB_EPOCH_SUMMARY,
+                    ],
+                )
                 return None
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
@@ -1685,10 +1718,9 @@ class TestBodyValidation:
             time_per_block=10,
         )
 
-        pre_validation_results: Optional[List[PreValidationResult]] = await b.pre_validate_blocks_multiprocessing(
+        pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
             [blocks[-1]], {}, validate_signatures=False
         )
-        assert pre_validation_results is not None
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = dataclasses.replace(pre_validation_results[0], error=None, required_iters=uint64(1))
         assert (await b.receive_block(blocks[-1], repl_preval_results))[0:-1] == expected
@@ -1750,7 +1782,7 @@ class TestBodyValidation:
             time_per_block=10,
         )
 
-        pre_validation_results: Optional[List[PreValidationResult]] = await b.pre_validate_blocks_multiprocessing(
+        pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
             [blocks[-1]], {}, validate_signatures=True
         )
         assert pre_validation_results is not None
@@ -2061,24 +2093,26 @@ class TestBodyValidation:
 
         # Too many heights
         block_2 = recursive_replace(block, "transactions_generator_ref_list", [block.height - 2, block.height - 1])
+        # Fails preval
+        await _validate_and_add_block(b, block_2, expected_error=Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING)
+        # Fails receive_block
         await _validate_and_add_block_multi_error(
             b,
             block_2,
             [Err.GENERATOR_REF_HAS_NO_GENERATOR, Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT],
             skip_prevalidation=True,
         )
-        assert (await b.pre_validate_blocks_multiprocessing([block_2], {}, validate_signatures=False)) is None
 
         # Not tx block
         for h in range(0, block.height - 1):
             block_2 = recursive_replace(block, "transactions_generator_ref_list", [h])
+            await _validate_and_add_block(b, block_2, expected_error=Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING)
             await _validate_and_add_block_multi_error(
                 b,
                 block_2,
                 [Err.GENERATOR_REF_HAS_NO_GENERATOR, Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT],
                 skip_prevalidation=True,
             )
-            assert (await b.pre_validate_blocks_multiprocessing([block_2], {}, validate_signatures=False)) is None
 
     @pytest.mark.asyncio
     async def test_cost_exceeds_max(self, empty_blockchain):
@@ -2119,7 +2153,7 @@ class TestBodyValidation:
         err = (await b.receive_block(blocks[-1], PreValidationResult(None, uint64(1), npc_result, True)))[1]
         assert err in [Err.BLOCK_COST_EXCEEDS_MAX]
 
-        results: Optional[List[PreValidationResult]] = await b.pre_validate_blocks_multiprocessing(
+        results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
             [blocks[-1]], {}, validate_signatures=False
         )
         assert results is not None
