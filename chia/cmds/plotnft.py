@@ -52,6 +52,9 @@ def get_login_link_cmd(launcher_id: str) -> None:
 
 
 @plotnft_cmd.command("create", short_help="Create a plot NFT")
+@click.option(
+    "--override_limit", help="Override Default Limit of 20 PlotNFT's.", type=bool, required=False, default=False
+)
 @click.option("-y", "--yes", help="No prompts", is_flag=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=False)
@@ -74,7 +77,13 @@ def get_login_link_cmd(launcher_id: str) -> None:
     default=None,
 )
 def create_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, pool_url: str, state: str, fee: int, yes: bool
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    pool_url: str,
+    state: str,
+    fee: int,
+    yes: bool,
+    override_limit: bool,
 ) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet
@@ -87,7 +96,13 @@ def create_cmd(
         print("  pool_url argument (-u) is required for pool starting state")
         return
     valid_initial_states = {"pool": "FARMING_TO_POOL", "local": "SELF_POOLING"}
-    extra_params = {"pool_url": pool_url, "state": valid_initial_states[state], "fee": fee, "yes": yes}
+    extra_params = {
+        "pool_url": pool_url,
+        "state": valid_initial_states[state],
+        "fee": fee,
+        "yes": yes,
+        "override_limit": override_limit,
+    }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create))
 
 
