@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import time
-from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import traceback
@@ -19,7 +18,7 @@ from chia.daemon.keychain_proxy import (
     connect_to_keychain_and_validate,
     wrap_local_keychain,
 )
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
     ErrorResponse,
@@ -406,7 +405,6 @@ class Farmer:
     async def update_pool_state(self):
         config = load_config(self._root_path, "config.yaml")
         pool_config_list: List[PoolWalletConfig] = load_pool_config(self._root_path)
-        new_pool_config_list: List[PoolWalletConfig] = []
         for pool_config in pool_config_list:
             p2_singleton_puzzle_hash = pool_config.p2_singleton_puzzle_hash
 
@@ -498,14 +496,12 @@ class Farmer:
                                 farmer_info, farmer_is_known = await update_pool_farmer_info()
                                 if farmer_info is None and not farmer_is_known:
                                     self.log.error("Failed to update farmer info after POST /farmer.")
-                        if pool_config.payout_instructions.lower() != farmer_info.payout_instructions.lower():
-                            pool_config = replace(pool_config, payout_instructions=farmer_info.payout_instructions)
-                            just_updated = True
-                        else:
-                            just_updated = False
 
                         # Update the payout instructions on the pool if required
-                        if farmer_info is not None and just_updated:
+                        if (
+                            farmer_info is not None
+                            and pool_config.payout_instructions.lower() != farmer_info.payout_instructions.lower()
+                        ):
                             owner_sk = await find_owner_sk(self.all_root_sks, pool_config.owner_public_key)
                             put_farmer_response_dict = await self._pool_put_farmer(
                                 pool_config, authentication_token_timeout, owner_sk
@@ -539,8 +535,6 @@ class Farmer:
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception in update_pool_state for {pool_config.pool_url}, {e} {tb}")
-        if pool_config_list != new_pool_config_list and len(pool_config_list) == len(new_pool_config_list):
-            await update_pool_config(self._root_path, new_pool_config_list)
 
     def get_public_keys(self):
         return [child_sk.get_g1() for child_sk in self._private_keys]
