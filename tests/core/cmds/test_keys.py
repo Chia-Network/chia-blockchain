@@ -401,6 +401,8 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--root-path",
+                os.fspath(tmp_path),
                 "keys",
                 "derive",
                 "--fingerprint",
@@ -452,6 +454,8 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--root-path",
+                os.fspath(tmp_path),
                 "keys",
                 "derive",
                 "--fingerprint",
@@ -493,6 +497,8 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--root-path",
+                os.fspath(tmp_path),
                 "keys",
                 "derive",
                 "--fingerprint",
@@ -525,6 +531,8 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--root-path",
+                os.fspath(tmp_path),
                 "keys",
                 "derive",
                 "--mnemonic-seed-filename",
@@ -568,6 +576,10 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--root-path",
+                os.fspath(tmp_path),
                 "keys",
                 "derive",
                 "--fingerprint",
