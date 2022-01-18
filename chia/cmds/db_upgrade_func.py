@@ -89,9 +89,8 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         async with aiosqlite.connect(out_path) as out_db:
             await out_db.execute("pragma journal_mode=OFF")
             await out_db.execute("pragma synchronous=OFF")
-            await out_db.execute("pragma cache_size=1000000")
+            await out_db.execute("pragma cache_size=131072")
             await out_db.execute("pragma locking_mode=exclusive")
-            await out_db.execute("pragma temp_store=memory")
 
             print("initializing v2 version")
             await out_db.execute("CREATE TABLE database_version(version int)")
