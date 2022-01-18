@@ -68,8 +68,8 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
 
     if total_plot_nfts >= 20 and not override_limit:
         raise Exception(
-            "20 PlotNFT's Already exist. "
-            "If you need to override this limit (Most users should not) use  '--override_limit'."
+            "20 PlotNFT's already exist. "
+            "If you need to override this limit (most users should not) use '--override_limit'."
         )
 
     target_puzzle_hash: Optional[bytes32]
