@@ -1411,6 +1411,8 @@ class FullNode:
                 and unf_block.transactions_generator is not None
                 and unf_block.foliage_transaction_block == block.foliage_transaction_block
             ):
+                # We checked that the transaction block is the same, therefore all transactions and the signature
+                # must be identical in the unfinished and finished blocks. We can therefore use the cache.
                 pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
                 assert pre_validation_result is not None
                 block = dataclasses.replace(
@@ -1669,6 +1671,9 @@ class FullNode:
                     return
                 raise ConsensusError(Err(validate_result.error))
             validation_time = time.time() - validation_start
+
+        # respond_block will later use the cache (validate_signature=True)
+        validate_result = dataclasses.replace(validate_result, validated_signature=True)
 
         assert validate_result.required_iters is not None
 
