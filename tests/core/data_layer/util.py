@@ -114,7 +114,9 @@ async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Examp
     return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash, e_hash, f_hash, g_hash, h_hash])
 
 
-async def get_random_terminal_node(data_store: DataStore, tree_id: bytes32, random: Random) -> Optional[bytes32]:
+async def get_terminal_node_for_random_seed(
+    data_store: DataStore, tree_id: bytes32, random: Random
+) -> Optional[bytes32]:
     root = await data_store.get_tree_root(tree_id)
     if root is None or root.node_hash is None:
         return None

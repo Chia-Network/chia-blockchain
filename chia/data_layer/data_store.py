@@ -13,6 +13,7 @@ from chia.data_layer.data_layer_errors import (
     TreeGenerationIncrementingError,
 )
 from chia.data_layer.data_layer_types import (
+    OperationType,
     InternalNode,
     Node,
     NodeType,
@@ -458,7 +459,7 @@ class DataStore:
         self, node_hash: bytes32, tree_id: bytes32, generation: Optional[int] = None, *, lock: bool = True
     ) -> bool:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            ancestors = await self.get_ancestors_2(node_hash, tree_id, generation, lock=False)
+            ancestors = await self.get_ancestors_optimized(node_hash, tree_id, generation, lock=False)
             if ancestors != []:
                 return True
 
@@ -784,7 +785,7 @@ class DataStore:
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             return await self.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id, lock=False)
 
-    async def get_tree_diff_terminal_nodes(
+    async def get_kv_diff_terminal_nodes(
         self,
         tree_id: bytes32,
         hash: Optional[bytes32],
@@ -811,25 +812,25 @@ class DataStore:
 
             return result
 
-    async def get_tree_diff(
+    async def get_kv_diff(
         self,
         tree_id: bytes32,
         root_1: Root,
         root_2: Root,
         *,
         lock: bool = True,
-    ) -> List[DiffData]:
+    ) -> Set[DiffData]:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            result: List[DiffData] = []
-            deletions = await self.get_tree_diff_terminal_nodes(
+            result: Set[DiffData] = set()
+            deletions = await self.get_kv_diff_terminal_nodes(
                 tree_id, root_1.node_hash, root_1.generation, root_2.generation, lock=False
             )
             for node in deletions:
-                result.append(DiffData("delete", node.key, node.value))
-            additions = await self.get_tree_diff_terminal_nodes(
+                result.add(DiffData(OperationType.DELETE, node.key, node.value))
+            additions = await self.get_kv_diff_terminal_nodes(
                 tree_id, root_2.node_hash, root_2.generation, root_1.generation, lock=False
             )
             for node in additions:
-                result.append(DiffData("insert", node.key, node.value))
+                result.add(DiffData(OperationType.INSERT, node.key, node.value))
 
             return result

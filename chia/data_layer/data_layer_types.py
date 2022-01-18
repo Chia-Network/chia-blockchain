@@ -166,7 +166,7 @@ class Root:
 
 @dataclass(frozen=True)
 class DiffData:
-    type: str
+    type: OperationType
     key: bytes
     value: bytes
 
