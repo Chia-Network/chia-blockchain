@@ -18,8 +18,6 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk_unhardened,
 )
 
-keychain: Keychain = Keychain()
-
 
 def generate_and_print():
     """
@@ -58,7 +56,7 @@ def add_private_key_seed(mnemonic: str):
 
     try:
         passphrase = ""
-        sk = keychain.add_private_key(mnemonic, passphrase)
+        sk = Keychain().add_private_key(mnemonic, passphrase)
         fingerprint = sk.get_g1().get_fingerprint()
         print(f"Added private key with public key fingerprint {fingerprint}")
 
@@ -74,7 +72,7 @@ def show_all_keys(show_mnemonic: bool):
     """
     root_path = DEFAULT_ROOT_PATH
     config = load_config(root_path, "config.yaml")
-    private_keys = keychain.get_all_private_keys()
+    private_keys = Keychain().get_all_private_keys()
     selected = config["selected_network"]
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
     if len(private_keys) == 0:
@@ -115,7 +113,7 @@ def delete(fingerprint: int):
     Delete a key by its public key fingerprint (which is an integer).
     """
     print(f"Deleting private_key with fingerprint {fingerprint}")
-    keychain.delete_key_by_fingerprint(fingerprint)
+    Keychain().delete_key_by_fingerprint(fingerprint)
 
 
 def derive_sk_from_hd_path(master_sk: PrivateKey, hd_path_root: str) -> Tuple[PrivateKey, str]:
@@ -326,7 +324,7 @@ def search_derive(
         search_private_key = True
 
     if private_key is None:
-        private_keys = [sk for sk, _ in keychain.get_all_private_keys()]
+        private_keys = [sk for sk, _ in Keychain().get_all_private_keys()]
     else:
         private_keys = [private_key]
 
@@ -554,7 +552,7 @@ def derive_child_key(
 
 @unlocks_keyring(use_passphrase_cache=True)
 def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:
-    private_keys = keychain.get_all_private_keys()
+    private_keys = Keychain().get_all_private_keys()
 
     for sk, _ in private_keys:
         if sk.get_g1().get_fingerprint() == fingerprint:
@@ -572,7 +570,7 @@ def get_private_key_with_fingerprint_or_prompt(fingerprint: Optional[int]):
     if fingerprint is not None:
         return private_key_for_fingerprint(fingerprint)
 
-    fingerprints: List[int] = [pk.get_fingerprint() for pk in keychain.get_all_public_keys()]
+    fingerprints: List[int] = [pk.get_fingerprint() for pk in Keychain().get_all_public_keys()]
     while True:
         print("Choose key:")
         for i, fp in enumerate(fingerprints):

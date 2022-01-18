@@ -80,9 +80,9 @@ def delete_cmd(ctx: click.Context, fingerprint: int):
 
 @keys_cmd.command("delete_all", short_help="Delete all private keys in keychain")
 def delete_all_cmd():
-    from .keys_funcs import keychain
+    from chia.util.keychain import Keychain
 
-    keychain.delete_all_keys()
+    Keychain().delete_all_keys()
 
 
 @keys_cmd.command("generate_and_print", short_help="Generates but does NOT add to keychain")
