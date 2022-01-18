@@ -1338,11 +1338,16 @@ class WalletRpcApi:
                     self.service.wallet_state_manager.main_wallet,
                 )
 
-        dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(bytes32.from_hexstr(request["root"]), fee=request.get("fee", uint64(0)))
+        dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(
+            bytes32.from_hexstr(request["root"]), fee=request.get("fee", uint64(0))
+        )
         await self.service.wallet_state_manager.add_pending_transaction(dl_tx)
         await self.service.wallet_state_manager.add_pending_transaction(std_tx)
 
-        return {"transactions": [tx.to_json_dict_convenience(self.service.config) for tx in (dl_tx, std_tx)], "launcher_id": launcher_id}
+        return {
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in (dl_tx, std_tx)],
+            "launcher_id": launcher_id,
+        }
 
     async def dl_track_new(self, request) -> Dict:
         """Initialize the DataLayer Wallet (only one can exist)"""
@@ -1382,7 +1387,9 @@ class WalletRpcApi:
 
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                record = await wallet.create_update_state_spend(bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["new_root"]))
+                record = await wallet.create_update_state_spend(
+                    bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["new_root"])
+                )
                 await self.service.wallet_state_manager.add_pending_transaction(record)
                 return {"tx_record": record.to_json_dict_convenience(self.service.config)}
 

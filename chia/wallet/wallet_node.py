@@ -898,7 +898,9 @@ class WalletNode:
                                             uint32(removed_record.wallet_id),
                                             removed_record.wallet_type,
                                         )
-                                        pool_wallet = self.wallet_state_manager.wallets[uint32(removed_record.wallet_id)]
+                                        pool_wallet = self.wallet_state_manager.wallets[
+                                            uint32(removed_record.wallet_id)
+                                        ]
                                         await pool_wallet.apply_state_transitions(pool_spend_2, block.height)
                         if removed_record.wallet_type == WalletType.DATA_LAYER:
                             singleton_spend = await self.fetch_puzzle_solution(peer, block.height, removed_coin)

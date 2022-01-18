@@ -189,11 +189,7 @@ class DataLayerStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            return Coin(
-                bytes32(row[1][0:32]),
-                bytes32(row[1][32:64]),
-                uint64(int.from_bytes(row[1][64:72], "big"))
-            )
+            return Coin(bytes32(row[1][0:32]), bytes32(row[1][32:64]), uint64(int.from_bytes(row[1][64:72], "big")))
         return None
 
     async def get_all_launchers(self) -> List[Coin]:
@@ -207,10 +203,6 @@ class DataLayerStore:
 
         coins = []
         for row in rows:
-            return Coin(
-                bytes32(row[1][0:32]),
-                bytes32(row[1][32:64]),
-                uint64(int.from_bytes(row[1][64:72], "big"))
-            )
+            return Coin(bytes32(row[1][0:32]), bytes32(row[1][32:64]), uint64(int.from_bytes(row[1][64:72], "big")))
 
         return coins

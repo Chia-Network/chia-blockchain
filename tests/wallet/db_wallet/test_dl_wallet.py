@@ -181,6 +181,7 @@ class TestDLWallet:
         async def is_tip_updated() -> bool:
             latest_singleton = await dl_wallet_1.get_latest_singleton(launcher_id)
             return latest_singleton != current_record
+
         await time_out_assert(15, is_tip_updated, True)
 
     @pytest.mark.parametrize(

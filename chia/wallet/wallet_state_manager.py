@@ -839,7 +839,9 @@ class WalletStateManager:
                         )
                         await self.add_interested_coin_id(added_pool_coin.name())
                 if record.wallet_type == WalletType.DATA_LAYER:
-                    singleton_spend = await self.wallet_node.fetch_puzzle_solution(peer, coin_state.spent_height, coin_state.coin)
+                    singleton_spend = await self.wallet_node.fetch_puzzle_solution(
+                        peer, coin_state.spent_height, coin_state.coin
+                    )
                     dl_wallet = self.wallets[uint32(record.wallet_id)]
                     await dl_wallet.singleton_removed(singleton_spend, coin_state.spent_height)
 
@@ -872,9 +874,7 @@ class WalletStateManager:
                                     dl_wallet: DataLayerWallet = wallet
                                     break
                             else:  # No DL wallet exists yet
-                                dl_wallet = await DataLayerWallet.create(
-                                    self, self.main_wallet
-                                )
+                                dl_wallet = await DataLayerWallet.create(self, self.main_wallet)
                             await dl_wallet.track_new_launcher_id(
                                 child.coin.name(),
                                 spend=launcher_spend,
@@ -1047,10 +1047,7 @@ class WalletStateManager:
         )
         await self.coin_store.add_coin_record(coin_record_1)
 
-        if (
-            wallet_type == WalletType.CAT
-            or wallet_type == WalletType.DISTRIBUTED_ID
-        ):
+        if wallet_type == WalletType.CAT or wallet_type == WalletType.DISTRIBUTED_ID:
             wallet = self.wallets[wallet_id]
             await wallet.coin_added(coin, height)
 

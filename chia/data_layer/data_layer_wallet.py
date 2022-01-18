@@ -262,8 +262,12 @@ class DataLayerWallet:
         # First we need to make sure we have all of the coin states
         puzzle_hashes_to_search_for: Set[bytes32] = set(launcher_id)
         while len(puzzle_hashes_to_search_for) != 0:
-            coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coins_with_puzzle_hash([launcher_id, new_singleton.puzzle_hash])
-            state_set = set(filter(lambda cs: cs.coin.puzzle_hash != launcher_id, coin_states)) # Sanity check for troublemakers
+            coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coins_with_puzzle_hash(
+                [launcher_id, new_singleton.puzzle_hash]
+            )
+            state_set = set(
+                filter(lambda cs: cs.coin.puzzle_hash != launcher_id, coin_states)
+            )  # Sanity check for troublemakers
             all_coin_states.update(state_set)
             puzzle_hashes_to_search_for = set()
             all_coin_ids: Set[bytes32] = {cs.coin.name() for cs in all_coin_states}
@@ -283,7 +287,9 @@ class DataLayerWallet:
             # Sync the singleton history
             previous_coin_id: bytes32 = launcher_id
             while True:
-                next_coin_state: CoinState = list(filter(lambda cs: cs.coin.parent_coin_info == previous_coin_id, all_coin_states))[0]
+                next_coin_state: CoinState = list(
+                    filter(lambda cs: cs.coin.parent_coin_info == previous_coin_id, all_coin_states)
+                )[0]
                 if next_coin_state.spent_height is None:
                     break
                 else:
@@ -292,7 +298,6 @@ class DataLayerWallet:
                     )
                     await self.singleton_removed(cs, next_coin_state.spent_height)
                     previous_coin_id = next_coin_state.coin.name()
-
 
     ################
     # TRANSACTIONS #
