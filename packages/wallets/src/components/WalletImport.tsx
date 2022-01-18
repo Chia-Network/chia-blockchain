@@ -17,10 +17,16 @@ const shuffledEnglish = shuffle(english);
 const test = new Array(24).fill('').map((item, index) => shuffledEnglish[index].word);
 */
 
+const emptyMnemonic = Array.from(Array(24).keys()).map((i) => ({
+  word: '',
+}))
+
 const options = english.map((item) => item.word);
 
 type FormData = {
-  mnemonic: string[];
+  mnemonic: {
+    word: string;
+  }[];
 };
 
 export default function WalletImport() {
@@ -28,13 +34,12 @@ export default function WalletImport() {
   const [addKey, { isLoading: isAddKeyLoading }] = useAddKeyMutation();
   const [logIn, { isLoading: isLogInLoading }] = useLogInMutation();
   const trans = useTrans();
-  const showError = useShowError();
 
   const isProcessing = isAddKeyLoading || isLogInLoading;
 
   const methods = useForm<FormData>({
     defaultValues: {
-      mnemonic: new Array(24).fill(''),
+      mnemonic: emptyMnemonic,
     },
   });
 
@@ -43,23 +48,20 @@ export default function WalletImport() {
     name: 'mnemonic',
   });
 
-  function handleBack() {
-    navigate('/');
-  }
-
   async function handleSubmit(values: FormData) {
     if (isProcessing) {
       return;
     }
 
     const { mnemonic } = values;
-    const hasEmptyWord = !!mnemonic.find((word) => !word);
+    const mnemonicWords = mnemonic.map((item) => item.word);
+    const hasEmptyWord = !!mnemonicWords.filter((word) => !word).length;
     if (hasEmptyWord) {
       throw new Error(trans('Please fill all words'));
     }
 
     const fingerprint = await addKey({
-      mnemonic,
+      mnemonic: mnemonicWords,
       type: 'new_wallet',
     }).unwrap();
 
@@ -89,7 +91,7 @@ export default function WalletImport() {
               <Grid key={field.id} xs={2} item>
                 <Autocomplete
                   options={options}
-                  name={`mnemonic.${index}`}
+                  name={`mnemonic.${index}.word`}
                   label={index + 1}
                   autoFocus={index === 0}
                   variant="filled"

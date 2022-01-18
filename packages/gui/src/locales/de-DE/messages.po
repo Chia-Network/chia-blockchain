@@ -34,6 +34,10 @@ msgstr "(Optional)"
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 msgstr "*Möchtest du mehr über Chia's Blocks erfahren? Besuche <0>Chia Explorer</0>, entwickelt von einem Open Source Entwickler."
 
+#: src/components/app/AppSelectMode.tsx:61
+msgid "+"
+msgstr ""
+
 #: src/components/plot/add/PlotAddNFT.tsx:128
 msgid "+ Add New Plot NFT"
 msgstr "+ Neues Plot-NFT hinzufügen"
@@ -196,7 +200,7 @@ msgstr "Bist du sicher, dass du beenden willst? GUI Plotting und farming werden 
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Bist du sicher, dass du k={plotSize} nutzen möchtest?"
 
-#: src/components/app/AppState.tsx:151
+#: src/components/app/AppState.tsx:140
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -347,6 +351,7 @@ msgstr "Ändern"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:232
 #: src/components/settings/Settings.tsx:160
+#: src/components/settings/SettingsPanel.tsx:166
 msgid "Change Passphrase"
 msgstr ""
 
@@ -394,7 +399,7 @@ msgstr "Belohnung einfordern"
 msgid "Close"
 msgstr "Schließen"
 
-#: src/components/app/AppState.tsx:109
+#: src/components/app/AppState.tsx:98
 msgid "Closing down node and server"
 msgstr "Schließe Node und Server"
 
@@ -481,8 +486,8 @@ msgstr "Mit Pool verbinden"
 msgid "Connected"
 msgstr "Verbunden"
 
-#: src/components/app/AppState.tsx:144
-#: src/components/app/AppState.tsx:148
+#: src/components/app/AppState.tsx:133
+#: src/components/app/AppState.tsx:137
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -536,6 +541,10 @@ msgstr "Kopieren"
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
 msgid "Create"
 msgstr "Erstellen"
+
+#: src/components/app/AppSelectMode.tsx:64
+msgid "Create & Manage plots"
+msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:970
 msgid "Create An Attestation Packet"
@@ -914,7 +923,7 @@ msgstr ""
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:610
 #: src/components/_wallet_old/standard/WalletStandard.tsx:525
-#: src/components/dashboard/DashboardSideBar.tsx:67
+#: src/components/dashboard/DashboardSideBar.tsx:70
 msgid "Farm"
 msgstr "Farm"
 
@@ -966,6 +975,10 @@ msgstr "Farmer erhalten Block Belohnungen und Transaktionsgebühren indem dem Ne
 #: src/components/plot/PlotStatus.tsx:17
 msgid "Farming"
 msgstr "Farming"
+
+#: src/components/app/AppSelectMode.tsx:53
+msgid "Farming Mode"
+msgstr ""
 
 #: src/components/farm/card/FarmCardStatus.tsx:15
 #: src/components/farm/card/FarmCardStatus.tsx:26
@@ -1041,7 +1054,7 @@ msgstr "Folge auf Twitter"
 msgid "Frequently Asked Questions"
 msgstr "Häufig gestellte Fragen"
 
-#: src/components/dashboard/DashboardSideBar.tsx:51
+#: src/components/dashboard/DashboardSideBar.tsx:54
 #: src/components/fullNode/FullNode.jsx:137
 msgid "Full Node"
 msgstr "Full Node"
@@ -1214,6 +1227,10 @@ msgstr "Trete einem Pool bei und erhalte konsistente XCH Farming-Belohnungen. De
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr "Trete einem Pool bei und erhalte konsistente XCH Farming-Belohnungen. Erstelle ein Plot-NFT und weise deine neuen Plots einer Gruppe zu."
 
+#: src/components/app/AppSelectMode.tsx:67
+msgid "Join farming pools"
+msgstr ""
+
 #: src/components/plot/overview/PlotOverviewPlots.tsx:63
 msgid "K-Size"
 msgstr "K-Größe"
@@ -1227,8 +1244,8 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:85
-msgid "Keys"
-msgstr "Schlüssel"
+#~ msgid "Keys"
+#~ msgstr "Schlüssel"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:65
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:64
@@ -1269,11 +1286,11 @@ msgstr "Listenansicht"
 #~ msgid "Loading Plot NFTs"
 #~ msgstr "Lade Plot-NFTs"
 
-#: src/components/app/App.tsx:66
+#: src/components/app/AppProviders.tsx:66
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:117
+#: src/components/app/AppState.tsx:106
 msgid "Loading keyring status"
 msgstr ""
 
@@ -1333,6 +1350,10 @@ msgstr "Lädt..."
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
+#: src/components/app/AppSelectMode.tsx:89
+msgid "Manage CAT tokens"
+msgstr ""
+
 #: src/components/farm/overview/FarmOverview.tsx:49
 msgid "Manage Farming Rewards"
 msgstr "Farming Belohnungen verwalten"
@@ -1354,6 +1375,7 @@ msgid "Migrate"
 msgstr ""
 
 #: src/components/settings/Settings.tsx:182
+#: src/components/settings/SettingsPanel.tsx:187
 msgid "Migrate Keyring"
 msgstr ""
 
@@ -1367,6 +1389,7 @@ msgid "Migration required"
 msgstr ""
 
 #: src/components/settings/Settings.tsx:123
+#: src/components/settings/SettingsPanel.tsx:131
 msgid "Migration required to support passphrase protection"
 msgstr ""
 
@@ -1551,6 +1574,7 @@ msgstr "Ausgehend"
 #: src/components/app/AppPassPrompt.tsx:120
 #: src/components/settings/RemovePassphrasePrompt.tsx:112
 #: src/components/settings/SetPassphrasePrompt.tsx:151
+#: src/components/settings/SettingsPanel.tsx:218
 msgid "Passphrase"
 msgstr ""
 
@@ -1576,18 +1600,22 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/settings/Settings.tsx:96
+#: src/components/settings/SettingsPanel.tsx:102
 msgid "Passphrase protection has been disabled"
 msgstr ""
 
 #: src/components/settings/Settings.tsx:133
+#: src/components/settings/SettingsPanel.tsx:143
 msgid "Passphrase protection is disabled"
 msgstr ""
 
 #: src/components/settings/Settings.tsx:130
+#: src/components/settings/SettingsPanel.tsx:139
 msgid "Passphrase protection is enabled"
 msgstr ""
 
 #: src/components/settings/Settings.tsx:124
+#: src/components/settings/SettingsPanel.tsx:132
 msgid "Passphrase support requires migrating your keys to a new keyring"
 msgstr ""
 
@@ -1817,7 +1845,7 @@ msgstr "Plot ist ein Duplikat von {0}"
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
 msgstr "PlotNFT verändert sich zum (target state). Das kann eine Weile dauern. Bitte schließe die Anwendung nicht bis dies abgeschlossen ist."
 
-#: src/components/dashboard/DashboardSideBar.tsx:62
+#: src/components/dashboard/DashboardSideBar.tsx:65
 #: src/components/plot/Plot.tsx:14
 msgid "Plots"
 msgstr "Plots"
@@ -1867,7 +1895,7 @@ msgstr "Punkte in den letzten 24 Stunden gefunden"
 msgid "Points Successful in Last 24 Hours"
 msgstr "Punkte Erfolgreich in den letzten 24 Stunden"
 
-#: src/components/dashboard/DashboardSideBar.tsx:72
+#: src/components/dashboard/DashboardSideBar.tsx:75
 #: src/components/pool/Pool.tsx:17
 msgid "Pool"
 msgstr "Pool"
@@ -2105,6 +2133,7 @@ msgstr "Versionshinweise"
 #: src/components/settings/RemovePassphrasePrompt.tsx:100
 #: src/components/settings/RemovePassphrasePrompt.tsx:147
 #: src/components/settings/Settings.tsx:194
+#: src/components/settings/SettingsPanel.tsx:197
 msgid "Remove Passphrase"
 msgstr ""
 
@@ -2166,6 +2195,7 @@ msgid "Second temporary folder location"
 msgstr "Temporärer Verzeichnisort"
 
 #: src/components/settings/Settings.tsx:126
+#: src/components/settings/SettingsPanel.tsx:134
 msgid "Secure your keychain using a strong passphrase"
 msgstr ""
 
@@ -2200,6 +2230,10 @@ msgstr "Wähle temporäres Verzeichnis"
 #: src/components/_wallet_old/create/WalletCreateList.tsx:21
 msgid "Select Wallet Type"
 msgstr "Wähle Wallet Typ"
+
+#: src/components/app/AppSelectMode.tsx:42
+msgid "Select Your Client Mode"
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:36
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -2263,6 +2297,7 @@ msgstr "Sende deinen Pubkey an deinen Rate Limited Wallet Administrator:"
 #: src/components/settings/SetPassphrasePrompt.tsx:137
 #: src/components/settings/SetPassphrasePrompt.tsx:216
 #: src/components/settings/Settings.tsx:205
+#: src/components/settings/SettingsPanel.tsx:206
 msgid "Set Passphrase"
 msgstr ""
 
@@ -2270,7 +2305,6 @@ msgstr ""
 #~ msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:78
 #: src/components/settings/Settings.tsx:241
 msgid "Settings"
 msgstr ""
@@ -2357,7 +2391,7 @@ msgstr "Länge des Ausgabenintervalls (Anzahl der Blöcke)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Ausgabenlimit (Chia pro Intervall): {0}"
 
-#: src/components/app/AppState.tsx:164
+#: src/components/app/AppState.tsx:161
 msgid "Starting services"
 msgstr ""
 
@@ -2397,6 +2431,10 @@ msgstr "Status:"
 #: src/components/wallet/Wallets.tsx:93
 #~ msgid "StatusCard.title"
 #~ msgstr ""
+
+#: src/components/app/AppSelectMode.tsx:86
+msgid "Store and Send XCH"
+msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 #~ msgid "Stripe Size"
@@ -2709,6 +2747,10 @@ msgstr "Handel ID:"
 msgid "Trade Overview"
 msgstr "Handel Überblick"
 
+#: src/components/app/AppSelectMode.tsx:92
+msgid "Trade tokens"
+msgstr ""
+
 #: src/components/trading/TradingOverview.jsx:152
 msgid "Trades will show up here"
 msgstr "Handel wird hier auftauchen"
@@ -2836,6 +2878,11 @@ msgstr "Warten auf Synchronisation"
 msgid "Waiting for the transaction to be confirmed"
 msgstr "Warten auf Transaktionsbestätigung"
 
+#: src/components/app/AppSelectMode.tsx:58
+#: src/components/app/AppSelectMode.tsx:81
+msgid "Wallet Mode"
+msgstr ""
+
 #: src/components/_wallet_old/standard/WalletStandard.tsx:649
 #: src/components/pool/PoolOverview.tsx:182
 msgid "Wallet Status:"
@@ -2878,7 +2925,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/_wallet_old/Wallets.tsx:118
-#: src/components/dashboard/DashboardSideBar.tsx:57
+#: src/components/dashboard/DashboardSideBar.tsx:60
 msgid "Wallets"
 msgstr "Wallets"
 
@@ -2957,6 +3004,10 @@ msgstr "Du bist im Wartezustand. Bitte warte auf die Bestätigung"
 #: src/hooks/useAbsorbRewards.tsx:35
 msgid "You are not self pooling"
 msgstr "Du betreibst kein Selbst-Pooling"
+
+#: src/components/app/AppSelectMode.tsx:102
+msgid "You can always change your mode later in the settings"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:421
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
@@ -3061,10 +3112,12 @@ msgid "Your passphrase can be stored in your system's secure credential store. C
 msgstr ""
 
 #: src/components/settings/Settings.tsx:85
+#: src/components/settings/SettingsPanel.tsx:91
 msgid "Your passphrase has been set"
 msgstr ""
 
 #: src/components/settings/Settings.tsx:74
+#: src/components/settings/SettingsPanel.tsx:80
 msgid "Your passphrase has been updated"
 msgstr ""
 

@@ -889,7 +889,7 @@ msgstr "Raahaa ja pudota palautuksen varmuuskopiotiedosto"
 #~ msgid "Enter a strong passphrase to secure your keys:"
 #~ msgstr ""
 
-#: src/components/WalletImport.tsx:82
+#: src/components/WalletImport.tsx:79
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "Anna tallentamasi 24 muistisanaa palauttaaksesi Chia-lompakon."
 
@@ -1179,7 +1179,7 @@ msgstr "IP-osoite"
 #~ msgid "If none selected, then it will default to the temporary directory."
 #~ msgstr "Käyttää väliaikaishakemistoa, jos ei valittu."
 
-#: src/components/WalletImport.tsx:79
+#: src/components/WalletImport.tsx:76
 msgid "Import Wallet from Mnemonics"
 msgstr "Tuo Lompakko Muistisanoista"
 
@@ -1485,7 +1485,7 @@ msgstr "Uusi Lompakko"
 #~ msgstr ""
 
 #: src/components/WalletAdd.tsx:107
-#: src/components/WalletImport.tsx:109
+#: src/components/WalletImport.tsx:107
 msgid "Next"
 msgstr "Seuraava"
 

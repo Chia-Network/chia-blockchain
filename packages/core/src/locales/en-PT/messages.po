@@ -165,6 +165,10 @@ msgstr "Amount"
 #~ msgid "Amount must be an even amount."
 #~ msgstr ""
 
+#: src/components/Settings/SettingsApp.tsx:54
+msgid "Appearance"
+msgstr ""
+
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:47
 #~ msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
@@ -652,6 +656,10 @@ msgstr "Arrr: Burn all your treasure maps"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
+#: src/components/Settings/SettingsApp.tsx:61
+msgid "Dark"
+msgstr ""
+
 #: src/components/_wallet_old/WalletHistory.tsx:46
 #: src/components/farm/FarmLastAttemptedProof.tsx:31
 #: src/components/trading/TradingOverview.jsx:136
@@ -923,12 +931,9 @@ msgstr ""
 #~ msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 #~ msgstr "Plunderers get booty 'n transaction fees by givin' space t' the ocean (t' \"help secure transactions\"). 'tis where yer plunderer will be once ye add a crewdog. <0>Look fer more</0>"
 
-#: src/components/farm/Farm.tsx:19
-#: src/components/farm/FarmerStatus.tsx:18
-#: src/components/farm/card/FarmCardStatus.tsx:62
-#: src/components/plot/PlotStatus.tsx:17
-#~ msgid "Farming"
-#~ msgstr "Under Full Sail"
+#: src/components/Settings/SettingsApp.tsx:44
+msgid "Farming"
+msgstr "Under Full Sail"
 
 #: src/components/farm/card/FarmCardStatus.tsx:15
 #: src/components/farm/card/FarmCardStatus.tsx:26
@@ -1054,7 +1059,7 @@ msgstr "Fee"
 #~ msgid "Help"
 #~ msgstr "Help"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:68
+#: src/components/LocaleToggle/LocaleToggle.tsx:69
 msgid "Help translate"
 msgstr "Help translate"
 
@@ -1189,6 +1194,10 @@ msgstr ""
 #~ msgid "KiB Up/Down"
 #~ msgstr "KiB Out/In"
 
+#: src/components/Settings/SettingsApp.tsx:68
+msgid "Language"
+msgstr ""
+
 #: src/components/farm/FarmLastAttemptedProof.tsx:45
 #~ msgid "Last Attempted Proof"
 #~ msgstr "Last Attempted Boarding"
@@ -1214,6 +1223,10 @@ msgstr ""
 #: src/components/plotNFT/PlotNFTState.tsx:58
 #~ msgid "Leaving Pool"
 #~ msgstr "Abandon da fleet"
+
+#: src/components/Settings/SettingsApp.tsx:58
+msgid "Light"
+msgstr ""
 
 #: src/components/pool/PoolOverview.tsx:173
 #~ msgid "List view"
@@ -1247,13 +1260,19 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:117
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:95
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:122
 msgid "Log Out"
 msgstr ""
 
 #: src/components/app/AppRouter.tsx:68
 #~ msgid "Logging in"
 #~ msgstr "Goin' in"
+
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:94
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:121
+msgid "Logout"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 #~ msgid "MainWalletList.colouredCoin"
@@ -1339,6 +1358,10 @@ msgstr ""
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:98
 #~ msgid "Minutes"
 #~ msgstr "Minutes"
+
+#: src/components/Settings/SettingsApp.tsx:40
+msgid "Mode"
+msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:118
 #~ msgid "More memory slightly increases speed"
@@ -2246,10 +2269,10 @@ msgstr ""
 msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:78
-#: src/components/settings/Settings.tsx:241
-#~ msgid "Settings"
-#~ msgstr ""
+#: src/components/Settings/Settings.tsx:47
+#: src/components/Settings/Settings.tsx:57
+msgid "Settings"
+msgstr ""
 
 #: src/components/AdvancedOptions/AdvancedOptions.tsx:74
 msgid "Show Advanced Options"
@@ -2741,7 +2764,7 @@ msgstr ""
 #~ msgid "Unique identifier"
 #~ msgstr "Unique identifier"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:46
+#: src/components/LocaleToggle/LocaleToggle.tsx:47
 msgid "Unknown"
 msgstr "Unknown"
 
@@ -2830,6 +2853,10 @@ msgstr ""
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:84
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr ""
+
+#: src/components/Settings/SettingsApp.tsx:47
+msgid "Wallet"
+msgstr ""
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:649
 #: src/components/pool/PoolOverview.tsx:182

@@ -24,7 +24,6 @@ export const harvesterApi = apiWithTag2.injectEndpoints({
         service: Harvester,
       }),
       transformResponse: (response: any) => { 
-        console.log('get plots respojnse', response);
         return response?.plots;
       },
       providesTags: (plots) => plots

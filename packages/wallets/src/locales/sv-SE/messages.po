@@ -889,7 +889,7 @@ msgstr "Drag och släpp din säkerhetskopierade fil"
 #~ msgid "Enter a strong passphrase to secure your keys:"
 #~ msgstr ""
 
-#: src/components/WalletImport.tsx:82
+#: src/components/WalletImport.tsx:79
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "Skriv in din sparade minnesfras på 24 ord för att återställa din Chia-plånbok."
 
@@ -1179,7 +1179,7 @@ msgstr "IP-adress"
 #~ msgid "If none selected, then it will default to the temporary directory."
 #~ msgstr "Om ingen anges kommer den tillfälliga mappen att användas."
 
-#: src/components/WalletImport.tsx:79
+#: src/components/WalletImport.tsx:76
 msgid "Import Wallet from Mnemonics"
 msgstr "Importera plånbok från minnesfras"
 
@@ -1485,7 +1485,7 @@ msgstr "Ny plånbok"
 #~ msgstr ""
 
 #: src/components/WalletAdd.tsx:107
-#: src/components/WalletImport.tsx:109
+#: src/components/WalletImport.tsx:107
 msgid "Next"
 msgstr "Nästa"
 

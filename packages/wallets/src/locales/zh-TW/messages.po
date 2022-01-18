@@ -889,7 +889,7 @@ msgstr "拖放您的備份檔案"
 #~ msgid "Enter a strong passphrase to secure your keys:"
 #~ msgstr ""
 
-#: src/components/WalletImport.tsx:82
+#: src/components/WalletImport.tsx:79
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "輸入你已存的 24 字助記符號以復原您的 Chia 錢包。"
 
@@ -1179,7 +1179,7 @@ msgstr "IP位址"
 #~ msgid "If none selected, then it will default to the temporary directory."
 #~ msgstr "如無選擇，將會預設至臨時資料夾。"
 
-#: src/components/WalletImport.tsx:79
+#: src/components/WalletImport.tsx:76
 msgid "Import Wallet from Mnemonics"
 msgstr "以助記符號匯入錢包"
 
@@ -1485,7 +1485,7 @@ msgstr "新錢包"
 #~ msgstr ""
 
 #: src/components/WalletAdd.tsx:107
-#: src/components/WalletImport.tsx:109
+#: src/components/WalletImport.tsx:107
 msgid "Next"
 msgstr "下一步"
 

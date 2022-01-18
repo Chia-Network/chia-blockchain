@@ -165,6 +165,10 @@ msgstr "Jumlah"
 #~ msgid "Amount must be an even amount."
 #~ msgstr "Jumlah mesti genap, bukan ganjil."
 
+#: src/components/Settings/SettingsApp.tsx:54
+msgid "Appearance"
+msgstr ""
+
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:47
 #~ msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
@@ -652,6 +656,10 @@ msgstr "BAHAYA: menghapus permanen private key"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
+#: src/components/Settings/SettingsApp.tsx:61
+msgid "Dark"
+msgstr ""
+
 #: src/components/_wallet_old/WalletHistory.tsx:46
 #: src/components/farm/FarmLastAttemptedProof.tsx:31
 #: src/components/trading/TradingOverview.jsx:136
@@ -923,12 +931,9 @@ msgstr "Kunci Publik Farmer:"
 #~ msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 #~ msgstr "Para farmer mendapatkan upah blok dan biaya transaksi dengan mengalokasikan ruang kosong untuk membantu pengamanan transaksi. Ini adalah tempat farm anda setelah anda menambahkan sebuah plot. <0>Pelajari lebih lanjut</0>"
 
-#: src/components/farm/Farm.tsx:19
-#: src/components/farm/FarmerStatus.tsx:18
-#: src/components/farm/card/FarmCardStatus.tsx:62
-#: src/components/plot/PlotStatus.tsx:17
-#~ msgid "Farming"
-#~ msgstr "Farming"
+#: src/components/Settings/SettingsApp.tsx:44
+msgid "Farming"
+msgstr "Farming"
 
 #: src/components/farm/card/FarmCardStatus.tsx:15
 #: src/components/farm/card/FarmCardStatus.tsx:26
@@ -1054,7 +1059,7 @@ msgstr "Biaya"
 #~ msgid "Help"
 #~ msgstr "Bantuan"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:68
+#: src/components/LocaleToggle/LocaleToggle.tsx:69
 msgid "Help translate"
 msgstr "Bantu menterjemahkan"
 
@@ -1189,6 +1194,10 @@ msgstr "Nilai Salah"
 #~ msgid "KiB Up/Down"
 #~ msgstr "KiB Naik/Turun"
 
+#: src/components/Settings/SettingsApp.tsx:68
+msgid "Language"
+msgstr ""
+
 #: src/components/farm/FarmLastAttemptedProof.tsx:45
 #~ msgid "Last Attempted Proof"
 #~ msgstr "Percobaan Bukti Terakhir"
@@ -1214,6 +1223,10 @@ msgstr "Nilai Salah"
 #: src/components/plotNFT/PlotNFTState.tsx:58
 #~ msgid "Leaving Pool"
 #~ msgstr "Meninggalkan Pool"
+
+#: src/components/Settings/SettingsApp.tsx:58
+msgid "Light"
+msgstr ""
 
 #: src/components/pool/PoolOverview.tsx:173
 #~ msgid "List view"
@@ -1247,13 +1260,19 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:117
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:95
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:122
 msgid "Log Out"
 msgstr ""
 
 #: src/components/app/AppRouter.tsx:68
 #~ msgid "Logging in"
 #~ msgstr "Sedang masuk"
+
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:94
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:121
+msgid "Logout"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 #~ msgid "MainWalletList.colouredCoin"
@@ -1339,6 +1358,10 @@ msgstr ""
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:98
 #~ msgid "Minutes"
 #~ msgstr "Menit"
+
+#: src/components/Settings/SettingsApp.tsx:40
+msgid "Mode"
+msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:118
 #~ msgid "More memory slightly increases speed"
@@ -2248,10 +2271,10 @@ msgstr ""
 msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:78
-#: src/components/settings/Settings.tsx:241
-#~ msgid "Settings"
-#~ msgstr ""
+#: src/components/Settings/Settings.tsx:47
+#: src/components/Settings/Settings.tsx:57
+msgid "Settings"
+msgstr ""
 
 #: src/components/AdvancedOptions/AdvancedOptions.tsx:74
 msgid "Show Advanced Options"
@@ -2743,7 +2766,7 @@ msgstr ""
 #~ msgid "Unique identifier"
 #~ msgstr "Identifikasi unik"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:46
+#: src/components/LocaleToggle/LocaleToggle.tsx:47
 msgid "Unknown"
 msgstr "Diketahui"
 
@@ -2832,6 +2855,10 @@ msgstr "Nilai Kelihatan terlalu tinggi"
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:84
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Menunggu transaksi untuk di konfirmasi"
+
+#: src/components/Settings/SettingsApp.tsx:47
+msgid "Wallet"
+msgstr ""
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:649
 #: src/components/pool/PoolOverview.tsx:182
