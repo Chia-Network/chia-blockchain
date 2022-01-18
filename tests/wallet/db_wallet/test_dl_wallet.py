@@ -9,9 +9,7 @@ from chia.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.wallet.dlo_wallet.dlo_wallet import DLOWallet
-from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 from chia.types.blockchain_format.program import Program
-from chia.types.announcement import Announcement
 from chia.types.spend_bundle import SpendBundle
 from tests.time_out_assert import time_out_assert
 from chia.wallet.util.merkle_tree import MerkleTree

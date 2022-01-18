@@ -1,5 +1,5 @@
 from aiosqlite import Row
-from typing import List, Optional, Tuple, Type, TypeVar
+from typing import List, Optional, Type, TypeVar
 
 import aiosqlite
 import dataclasses
@@ -10,9 +10,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_info import WalletInfo
 
 _T_DataLayerStore = TypeVar("_T_DataLayerStore", bound="DataLayerStore")
 

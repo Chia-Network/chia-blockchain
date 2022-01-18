@@ -11,7 +11,6 @@ from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint64
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.wallet_node import WalletNode
 

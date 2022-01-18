@@ -77,6 +77,6 @@ def launch_solution_to_singleton_info(launch_solution: Program) -> Tuple[bytes32
         root = bytes32(solution[2][0])
         inner_puzzle_hash = bytes32(solution[2][1])
     except (IndexError, TypeError):
-        raise ValueError(f"Launcher is not a data layer launcher")
+        raise ValueError("Launcher is not a data layer launcher")
 
     return full_puzzle_hash, amount, root, inner_puzzle_hash

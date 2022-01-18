@@ -5,7 +5,7 @@ import time
 import dataclasses
 from typing import Any, Optional, Tuple, Set, List, Dict, Type, TypeVar
 
-from blspy import G2Element, AugSchemeMPL
+from blspy import G2Element
 
 from chia.consensus.block_record import BlockRecord
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
@@ -14,7 +14,6 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_host_fullpuz,
     SINGLETON_LAUNCHER,
     create_host_layer_puzzle,
-    create_singleton_fullpuz,
     launch_solution_to_singleton_info,
     match_dl_singleton,
 )
@@ -27,18 +26,15 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.json_util import dict_to_json_str
-from secrets import token_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.transaction_record import ItemAndTransactionRecords
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
 

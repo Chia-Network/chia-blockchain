@@ -3,6 +3,7 @@ import logging
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.data_layer.data_layer_wallet import SingletonRecord
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -11,7 +12,6 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.transaction_record import TransactionRecord
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
@@ -41,7 +41,6 @@ class TestWalletRpc:
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
-        wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         if trusted:
@@ -112,8 +111,6 @@ class TestWalletRpc:
         client_2 = await WalletRpcClient.create(self_hostname, test_rpc_port_2, bt.root_path, config)
         await validate_get_routes(client_2, wallet_rpc_api_2)
 
-        wsm = wallet_node.wallet_state_manager
-
         try:
             merkle_root: bytes32 = bytes32([0] * 32)
             txs, launcher_id = await client.create_new_dl(merkle_root, uint64(50))
@@ -133,7 +130,7 @@ class TestWalletRpc:
             assert singleton_record.root == merkle_root
 
             new_root: bytes32 = bytes32([1] * 32)
-            tx: TransactionRecord = await client.dl_update_root(launcher_id, new_root)
+            await client.dl_update_root(launcher_id, new_root)
 
             for i in range(0, 5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))

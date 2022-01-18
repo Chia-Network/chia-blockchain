@@ -1378,7 +1378,7 @@ class WalletRpcApi:
                 record = await wallet.get_latest_singleton(bytes32.from_hexstr(request["launcher_id"]))
                 return {"singleton": None if record is None else record.to_json_dict()}
 
-        raise ValueError(f"No DataLayer wallet has been initialized")
+        raise ValueError("No DataLayer wallet has been initialized")
 
     async def dl_update_root(self, request) -> Dict:
         """Get the singleton record for the latest singleton of a launcher ID"""
@@ -1393,7 +1393,7 @@ class WalletRpcApi:
                 await self.service.wallet_state_manager.add_pending_transaction(record)
                 return {"tx_record": record.to_json_dict_convenience(self.service.config)}
 
-        raise ValueError(f"No DataLayer wallet has been initialized")
+        raise ValueError("No DataLayer wallet has been initialized")
 
     async def dl_history(self, request) -> Dict:
         """Get the singleton record for the latest singleton of a launcher ID"""
@@ -1406,4 +1406,4 @@ class WalletRpcApi:
                 history_json = [rec.to_json_dict() for rec in history]
                 return {"history": history_json}
 
-        raise ValueError(f"No DataLayer wallet has been initialized")
+        raise ValueError("No DataLayer wallet has been initialized")
