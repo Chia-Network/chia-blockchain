@@ -122,10 +122,13 @@ class TestWalletRpc:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
                 await asyncio.sleep(0.5)
 
-            async def is_singleton_confirmed(lid) -> bool:
-                return (await client.dl_latest_singleton(lid)).confirmed
+            async def is_singleton_confirmed(rpc_client, lid) -> bool:
+                rec = await rpc_client.dl_latest_singleton(lid)
+                if rec is None:
+                    return False
+                return rec.confirmed
 
-            await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
+            await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id)
             singleton_record: SingletonRecord = await client.dl_latest_singleton(launcher_id)
             assert singleton_record.root == merkle_root
 
@@ -141,6 +144,15 @@ class TestWalletRpc:
             assert new_singleton_record.confirmed
 
             assert await client.dl_history(launcher_id) == [singleton_record, new_singleton_record]
+
+            await client_2.dl_track_new(launcher_id)
+
+            async def is_singleton_generation(rpc_client, lid, generation) -> bool:
+                if await is_singleton_confirmed(rpc_client, lid):
+                    rec = await rpc_client.dl_latest_singleton(lid)
+                    return rec.generation == generation
+            await time_out_assert(15, is_singleton_generation, True, client_2, launcher_id, 1)
+            assert await client_2.dl_history(launcher_id) == [singleton_record, new_singleton_record]
         finally:
             # Checks that the RPC manages to stop the node
             client.close()

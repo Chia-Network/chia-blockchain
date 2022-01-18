@@ -482,10 +482,10 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("dl_track_new", request)
         return None
 
-    async def dl_latest_singleton(self, launcher_id: bytes32) -> SingletonRecord:
+    async def dl_latest_singleton(self, launcher_id: bytes32) -> Optional[SingletonRecord]:
         request = {"launcher_id": launcher_id.hex()}
         response = await self.fetch("dl_latest_singleton", request)
-        return SingletonRecord.from_json_dict(response["singleton"])
+        return None if response["singleton"] is None else SingletonRecord.from_json_dict(response["singleton"])
 
     async def dl_update_root(self, launcher_id: bytes32,  new_root: bytes32) -> TransactionRecord:
         request = {"launcher_id": launcher_id.hex(), "new_root": new_root.hex()}

@@ -1371,7 +1371,7 @@ class WalletRpcApi:
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
                 record = await wallet.get_latest_singleton(bytes32.from_hexstr(request["launcher_id"]))
-                return {"singleton": record.to_json_dict()}
+                return {"singleton": None if record is None else record.to_json_dict()}
 
         raise ValueError(f"No DataLayer wallet has been initialized")
 
