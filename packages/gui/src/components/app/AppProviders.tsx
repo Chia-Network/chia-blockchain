@@ -7,7 +7,6 @@ import { store, api } from '@chia/api-react';
 import { Trans } from '@lingui/macro';
 import { i18n, defaultLocale, locales } from '../../config/locales';
 import AppState from './AppState';
-import ModeProvider from '../mode/ModeProvider';
 
 async function waitForConfig() {
   while(true) {

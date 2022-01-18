@@ -1,13 +1,14 @@
 import React, { ReactNode } from 'react';
 import styled from 'styled-components';
+import { Box } from '@material-ui/core';
 import Loading from '../Loading';
 
-const StyledRoot = styled.div`
+const StyledRoot = styled(Box)`
   position: relative;
   width: 100%;
 `;
 
-const StyledLoadingContainer = styled.div`
+const StyledLoadingContainer = styled(Box)`
   position: absolute;
   left: 0;
   right: 0;

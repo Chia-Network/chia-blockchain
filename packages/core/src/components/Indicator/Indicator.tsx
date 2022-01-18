@@ -1,9 +1,9 @@
 import React, { ReactNode } from 'react';
-import { LinearProgress, Typography } from '@material-ui/core';
+import { Box, LinearProgress, Typography } from '@material-ui/core';
 import styled from 'styled-components';
 import Flex from '../Flex';
 
-const StyledIndicator = styled.div`
+const StyledIndicator = styled(Box)`
   display: inline-block;
   height: 10px;
   width: 75px;

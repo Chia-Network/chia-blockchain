@@ -1,6 +1,6 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { SelectKey, LayoutHero, LayoutMain, LayoutDashboard } from '@chia/core';
+import { SelectKey, LayoutHero, LayoutMain, LayoutDashboard, Mode, useMode } from '@chia/core';
 import { WalletAdd, WalletImport, Wallets } from '@chia/wallets';
 import AppProviders from './AppProviders';
 import FullNode from '../fullNode/FullNode';
@@ -10,8 +10,6 @@ import Plot from '../plot/Plot';
 import Farm from '../farm/Farm';
 import Pool from '../pool/Pool';
 import DashboardSideBar from '../dashboard/DashboardSideBar';
-import useMode from '../../hooks/useMode';
-import Mode from '../../constants/Mode';
 
 export default function AppRouter() {
   const [mode] = useMode();

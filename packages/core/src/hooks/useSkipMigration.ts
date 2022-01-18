@@ -7,7 +7,7 @@ export default function useSkipMigration(): [boolean, (skip: boolean) => void] {
   const [skip] = useLocalStorage<boolean>(LOCAL_STORAGE_KEY, false);
 
   const handleSetSkipMigration = useCallback((newSkip: boolean) => {
-    writeStorage('locale', newSkip);
+    writeStorage(LOCAL_STORAGE_KEY, newSkip);
   }, []);
 
   return [skip, handleSetSkipMigration];

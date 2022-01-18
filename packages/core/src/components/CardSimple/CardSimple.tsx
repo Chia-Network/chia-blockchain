@@ -18,7 +18,7 @@ const StyledCard = styled(Card)`
   margin-bottom: -0.5rem;
 `;
 
-const StyledTitle = styled.div`
+const StyledTitle = styled(Box)`
   margin-bottom: 0.5rem;
 `;
 

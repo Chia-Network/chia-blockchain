@@ -7,7 +7,8 @@ import useLocale from '../../hooks/useLocale';
 import useOpenExternal from '../../hooks/useOpenExternal';
 import { LocaleContext } from '../LocaleProvider';
 
-export default function LocaleToggle() {
+export default function LocaleToggle(props) {
+  const { ...rest } = props;
   const { locales } = useContext(LocaleContext);
   const [currentLocale, setLocale] = useLocale();
   const [open, toggleOpen] = useToggle(false);
@@ -53,7 +54,7 @@ export default function LocaleToggle() {
         onClick={handleClick}
         startIcon={<Translate />}
         endIcon={<ExpandMore />}
-        disableFocusRipple
+        {...rest}
       >
         {currentLocaleLabel}
       </Button>

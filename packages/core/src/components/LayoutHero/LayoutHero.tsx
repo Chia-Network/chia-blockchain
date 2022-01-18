@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { Outlet, Link } from 'react-router-dom';
 import { Flex, DarkModeToggle, LocaleToggle } from '@chia/core';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
+import Settings from '../Settings';
 
 const StyledWrapper = styled(Box)`
   padding-top: ${({ theme }) => `${theme.spacing(3)}px`};
@@ -45,12 +46,11 @@ export default function LayoutHero(props: Props) {
             </Link>
           )}
           <Flex flexGrow={1} />
-          <LocaleToggle />
-          <DarkModeToggle />
+          <Settings />
         </Toolbar>
       </AppBar>
       <StyledBody>
-        <Flex flexDirection="column" gap={2} alignItems="center">
+        <Flex flexDirection="column" gap={2} alignItems="center" alignSelf="stretch">
           {outlet ? <Outlet /> : children}
         </Flex>
       </StyledBody>

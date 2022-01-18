@@ -46,6 +46,7 @@ export { default as LocaleProvider, LocaleContext } from './LocaleProvider';
 export { default as LocaleToggle } from './LocaleToggle';
 export { default as Log } from './Log';
 export { default as Logo } from './Logo';
+export { ModeProvider } from './Mode';
 export { default as ModalDialogs, ModalDialogsProvider } from './ModalDialogs';
 export { default as More } from './More';
 export { default as TextFieldNumber } from './TextFieldNumber';

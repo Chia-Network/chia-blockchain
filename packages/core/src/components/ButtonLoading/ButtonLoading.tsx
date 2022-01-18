@@ -1,9 +1,9 @@
 import React from 'react';
 import styled from 'styled-components';
-import { CircularProgress } from '@material-ui/core';
+import { Box, CircularProgress } from '@material-ui/core';
 import Button, { ButtonProps } from '../Button';
 
-const StyledWrapper = styled.div`
+const StyledWrapper = styled(Box)`
   position: relative;
   display: ${({ fullWidth }) => fullWidth ?'block' : 'inline-block'};
 `;

@@ -6,10 +6,23 @@ import {
   ButtonProps as BaseButtonProps,
 } from '@material-ui/core';
 
-const StyledBaseButton = styled(({ nowrap: boolean, ...rest }) => (
+const StyledBaseButton = styled(({ nowrap: boolean, selected, ...rest }) => (
   <BaseButton {...rest} />
 ))`
   white-space: ${({ nowrap }) => (nowrap ? 'nowrap' : 'normal')};
+  ${({ selected, theme }) => {
+    if (!selected) {
+      return '';
+    }
+
+    const isDark = theme.palette.type === 'dark';
+    const color = isDark ? '255' : '0';
+
+    return `
+      background-color: rgba(${color}, ${color}, ${color}, 0.1);
+      border-color: rgba(${color}, ${color}, ${color}, 0.3) !important;
+    `;
+  }}
 `;
 
 function getColor(theme, variant) {
@@ -41,6 +54,7 @@ export type ButtonProps = Omit<BaseButtonProps, 'color'> & {
   color?: BaseButtonProps['color'] | 'danger';
   to?: string | Object;
   nowrap?: boolean;
+  selected?: boolean;
 };
 
 export default function Button(props: ButtonProps) {

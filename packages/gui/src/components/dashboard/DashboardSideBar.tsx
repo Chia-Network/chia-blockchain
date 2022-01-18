@@ -25,8 +25,10 @@ const StyledList = styled(List)`
 `;
 
 export default function DashboardSideBar() {
+  /*
   const logout = useLogout();
   const navigate = useNavigate();
+
   const { data, isLoading, error } = useGetKeyringStatusQuery();
 
   if (isLoading) {
@@ -41,6 +43,7 @@ export default function DashboardSideBar() {
     logout();
     navigate('/');
   }
+  */
 
   return (
     <StyledRoot>
@@ -71,20 +74,13 @@ export default function DashboardSideBar() {
           icon={<PoolIcon fontSize="large" />}
           title={<Trans>Pool</Trans>}
         />
-        {passphraseSupportEnabled && (
+        {/* passphraseSupportEnabled && (
           <SideBarItem
             to="/dashboard/settings"
             icon={<SettingsIcon fontSize="large" />}
             title={<Trans>Settings</Trans>}
           />
-        )}
-        <SideBarItem
-          to="/"
-          icon={<KeysIcon fontSize="large" />}
-          onSelect={handleLogOut}
-          title={<Trans>Keys</Trans>}
-          end
-        />
+        ) */}
       </StyledList>
     </StyledRoot>
   );

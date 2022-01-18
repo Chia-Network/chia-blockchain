@@ -3,12 +3,11 @@ import isElectron from 'is-electron';
 import { Trans } from '@lingui/macro';
 import { ConnectionState, ServiceHumanName, ServiceName, PassphrasePromptReason } from '@chia/api';
 import { useCloseMutation, useGetStateQuery, useGetKeyringStatusQuery, useServices } from '@chia/api-react';
-import { Flex, useSkipMigration, LayoutHero, LayoutLoading } from '@chia/core';
+import { Flex, useSkipMigration, LayoutHero, LayoutLoading, useMode } from '@chia/core';
 import { Typography, Collapse } from '@material-ui/core';
 import AppKeyringMigrator from './AppKeyringMigrator';
 import AppPassPrompt from './AppPassPrompt';
 import config from '../../config/config';
-import useMode from '../../hooks/useMode';
 import AppSelectMode from './AppSelectMode';
 import ModeServices, { SimulatorServices } from '../../constants/ModeServices';
 

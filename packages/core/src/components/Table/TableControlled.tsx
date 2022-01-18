@@ -2,6 +2,7 @@ import React, { ReactNode, useMemo, useState, SyntheticEvent, Fragment } from 'r
 import styled from 'styled-components';
 import { get } from 'lodash';
 import {
+  Box,
   TableContainer,
   TableHead,
   Table as TableBase,
@@ -46,7 +47,7 @@ const StyledTableCell = styled(({ width, minWidth, maxWidth, ...rest }) => (
     theme.palette.type === 'dark' ? '#353535' : '#e0e0e0'};
 `;
 
-const StyledTableCellContent = styled.div`
+const StyledTableCellContent = styled(Box)`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -55,7 +56,7 @@ const StyledTableCellContent = styled.div`
 const StyledExpandedTableCell = styled(({ isExpanded, ...rest}) => <TableCell {...rest} />)`
 `;
 
-const StyledExpandedTableCellContent = styled.div`
+const StyledExpandedTableCellContent = styled(Box)`
   padding: 1rem 0;
 `;
 

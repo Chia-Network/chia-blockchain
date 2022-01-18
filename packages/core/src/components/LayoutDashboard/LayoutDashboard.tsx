@@ -1,11 +1,9 @@
 import React, { ReactNode, Suspense } from 'react';
 import styled from 'styled-components';
 import { useNavigate, Outlet } from 'react-router-dom';
-import { t } from '@lingui/macro';
+import { t, Trans } from '@lingui/macro';
 import { AppBar, Toolbar, Drawer, Divider, Container, IconButton } from '@material-ui/core';
 import {
-  DarkModeToggle,
-  LocaleToggle,
   Flex,
   Logo,
   ToolbarSpacing,
@@ -14,6 +12,8 @@ import {
 import { DashboardTitleTarget } from '../DashboardTitle';
 import { useLogout } from '@chia/api-react';
 import { ExitToApp as ExitToAppIcon } from '@material-ui/icons';
+import Settings from '../Settings';
+import Tooltip from '../Tooltip';
 
 const StyledRoot = styled(Flex)`
   height: 100%;
@@ -90,8 +90,12 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                   <Flex alignItems="center">
                     <DashboardTitleTarget />
                     <Flex flexGrow={1} />
-                    <LocaleToggle />
-                    <DarkModeToggle />
+                    <Tooltip title={<Trans>Logout</Trans>}>
+                      <IconButton color="inherit" onClick={handleLogout} title={t`Log Out`}>
+                        <ExitToAppIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Settings />
                   </Flex>
                 </Container>
               </StyledToolbar>
@@ -111,11 +115,12 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                 <Flex alignItems="center">
                   <Logo width="100px" />
                   <Flex flexGrow={1} />
-                  <LocaleToggle />
-                  <DarkModeToggle />
-                  <IconButton color="inherit" onClick={handleLogout} title={t`Log Out`}>
-                    <ExitToAppIcon />
-                  </IconButton>
+                  <Tooltip title={<Trans>Logout</Trans>}>
+                    <IconButton color="inherit" onClick={handleLogout} title={t`Log Out`}>
+                      <ExitToAppIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Settings />
                 </Flex>
               </Container>
             </StyledToolbar>

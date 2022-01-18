@@ -1,10 +1,8 @@
 import React from 'react';
-import useMode from '../../hooks/useMode';
-import Mode from '../../constants/Mode';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Flex, Logo, Card } from '@chia/core';
-import { AccountBalanceWallet as AccountBalanceWalletIcon } from '@material-ui/icons';
+import { Flex, Logo, Card, useMode, Mode } from '@chia/core';
+import { AccountBalanceWallet as AccountBalanceWalletIcon, Eco as EcoIcon } from '@material-ui/icons';
 import { Typography, Container, Grid } from '@material-ui/core';
 
 const StyledCardContent = styled.div`
@@ -20,15 +18,23 @@ const StyledGridItem = styled(Grid)`
   flex-direction: column;
 `;
 
+const StyledEcoIcon = styled(EcoIcon)`
+  font-size: 3.4rem;
+`;
+
+const StyledAccountBalanceWalletIcon = styled(AccountBalanceWalletIcon)`
+  font-size: 3.4rem;
+`;
+
 export default function AppSelectMode() {
-  const [mode, setMode] = useMode();
+  const [_mode, setMode] = useMode();
 
   const handleModeChange = (newMode: Mode) => {
     setMode(newMode);
   };
 
   return (
-    <StyledContainer maxWidth="lg">
+    <StyledContainer maxWidth="sm">
       <Flex flexDirection="column" alignItems="center" gap={3}>
         <Logo width={130} />
         
@@ -36,12 +42,12 @@ export default function AppSelectMode() {
           <Trans>Select Your Client Mode</Trans>
         </Typography>
 
-        <Grid container spacing={3} alignItems="stretch">
+        <Grid container spacing={5} alignItems="stretch">
           <Grid xs={12} sm={6} item>
             <Card onSelect={() => handleModeChange(Mode.FARMING)} fullHeight>
               <StyledCardContent>
                 <Flex flexDirection="column" gap={2} alignItems="center">
-                  <AccountBalanceWalletIcon fontSize="large" />
+                  <StyledEcoIcon />
 
                   <Typography variant="h5" align="center">
                     <Trans>Farming Mode</Trans>
@@ -69,7 +75,7 @@ export default function AppSelectMode() {
             <Card onSelect={() => handleModeChange(Mode.WALLET)} fullHeight>
               <StyledCardContent>
                 <Flex flexDirection="column" gap={2} alignItems="center">
-                  <AccountBalanceWalletIcon fontSize="large" />
+                  <StyledAccountBalanceWalletIcon />
 
                   <Typography variant="h5" align="center">
                     <Trans>Wallet Mode</Trans>
