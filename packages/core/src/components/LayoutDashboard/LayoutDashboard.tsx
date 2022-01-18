@@ -65,10 +65,11 @@ export type LayoutDashboardProps = {
   children?: ReactNode;
   sidebar?: ReactNode;
   outlet?: boolean;
+  settings?: ReactNode;
 };
 
 export default function LayoutDashboard(props: LayoutDashboardProps) {
-  const { children, sidebar, outlet } = props;
+  const { children, sidebar, settings, outlet } = props;
 
   const navigate = useNavigate();
   const logout = useLogout();
@@ -95,7 +96,9 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                         <ExitToAppIcon />
                       </IconButton>
                     </Tooltip>
-                    <Settings />
+                    <Settings>
+                      {settings}
+                    </Settings>
                   </Flex>
                 </Container>
               </StyledToolbar>
@@ -120,7 +123,9 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                       <ExitToAppIcon />
                     </IconButton>
                   </Tooltip>
-                  <Settings />
+                  <Settings>
+                    {settings}
+                  </Settings>
                 </Flex>
               </Container>
             </StyledToolbar>

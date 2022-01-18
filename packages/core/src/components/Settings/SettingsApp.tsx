@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import useDarkMode from 'use-dark-mode';
 import Button from '../Button';
 import { ButtonGroup } from '@material-ui/core';
-import { useGetKeyringStatusQuery } from '@chia/api-react';
 import { 
   WbSunny as WbSunnyIcon, 
   NightsStay as NightsStayIcon,
@@ -16,8 +15,13 @@ import Flex from '../Flex';
 import Mode from '../../constants/Mode';
 import LocaleToggle from '../LocaleToggle';
 
-export default function SettingsApp() {
-  const { data, isLoading, error } = useGetKeyringStatusQuery();
+export type SettingsAppProps = {
+  children?: ReactNode;
+};
+
+export default function SettingsApp(props: SettingsAppProps) {
+  const { children } = props;
+
   const [mode, setMode] = useMode();
   const { enable, disable, value: darkMode } = useDarkMode();
 
@@ -28,8 +32,6 @@ export default function SettingsApp() {
   function handleSetWalletMode() {
     setMode(Mode.WALLET);
   }
-
-  const passphraseSupportEnabled = data?.passphraseSupportEnabled ?? false; 
 
   return (
     <Flex flexDirection="column" gap={3}>
@@ -70,15 +72,7 @@ export default function SettingsApp() {
         />
       </Flex>
 
-      {passphraseSupportEnabled && (
-        <Flex flexDirection="column" gap={1}>
-          <SettingsLabel>
-            <Trans>Passphrase</Trans>
-          </SettingsLabel>
-          
-        </Flex>
-      )}
-
+      {children}
     </Flex>
   );
 }

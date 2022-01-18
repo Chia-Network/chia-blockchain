@@ -50,10 +50,8 @@ export default function AppState(props: Props) {
 
   const servicesState = useServices(ALL_SERVICES, {
     keepRunning: runServices,
-    disabled: !isKeyringReady || !runServices,
+    disabled: !isKeyringReady || !runServices || !!closing,
   });
-
-  
 
   const allServicesRunning = useMemo<boolean>(() => {
     if (!runServices) {

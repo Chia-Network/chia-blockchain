@@ -30,10 +30,11 @@ type Props = {
   header?: ReactNode;
   back?: boolean;
   outlet?: boolean;
+  settings?: ReactNode;
 };
 
 export default function LayoutHero(props: Props) {
-  const { children, header, back, outlet } = props;
+  const { children, header, back, outlet, settings } = props;
 
   return (
     <StyledWrapper>
@@ -46,7 +47,9 @@ export default function LayoutHero(props: Props) {
             </Link>
           )}
           <Flex flexGrow={1} />
-          <Settings />
+          <Settings>
+            {settings}
+          </Settings>
         </Toolbar>
       </AppBar>
       <StyledBody>

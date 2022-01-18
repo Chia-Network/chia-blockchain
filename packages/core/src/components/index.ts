@@ -53,6 +53,7 @@ export { default as TextFieldNumber } from './TextFieldNumber';
 export { default as PrivateRoute } from './PrivateRoute';
 export { default as RadioGroup } from './RadioGroup';
 export { default as Select } from './Select';
+export { SettingsApp, SettingsLabel } from './Settings';
 export { default as SideBarItem } from './SideBarItem';
 export { default as Spacer } from './Spacer';
 export { default as Spinner } from './Spinner';
