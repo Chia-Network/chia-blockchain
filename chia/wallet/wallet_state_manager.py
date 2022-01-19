@@ -686,6 +686,7 @@ class WalletStateManager:
             if coin_state.created_height is None:
                 # TODO implements this coin got reorged
                 pass
+            # if the new coin has not been spent (i.e not ephemeral)
             elif coin_state.created_height is not None and coin_state.spent_height is None:
                 await self.coin_added(coin_state.coin, coin_state.created_height, all_txs, wallet_id, wallet_type)
             elif coin_state.created_height is not None and coin_state.spent_height is not None:
@@ -1040,6 +1041,9 @@ class WalletStateManager:
         if wallet_type == WalletType.CAT or wallet_type == WalletType.DISTRIBUTED_ID:
             wallet = self.wallets[wallet_id]
             await wallet.coin_added(coin, height)
+
+        if wallet_type == WalletType.NFT:
+            await self.wallets[wallet_id].add_nft_coin(coin, height)
 
         await self.create_more_puzzle_hashes()
         return coin_record_1

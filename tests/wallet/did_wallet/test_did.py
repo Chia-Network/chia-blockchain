@@ -11,7 +11,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
-pytestmark = pytest.mark.skip("TODO: Fix tests")
+# pytestmark = pytest.mark.skip("TODO: Fix tests")
 
 
 @pytest.fixture(scope="module")
@@ -46,8 +46,12 @@ class TestDIDWallet:
         async for _ in setup_simulators_and_wallets(3, 2, {}):
             yield _
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True],
+    )
     @pytest.mark.asyncio
-    async def test_creation_from_backup_file(self, three_wallet_nodes):
+    async def test_creation_from_backup_file(self, three_wallet_nodes, trusted):
         num_blocks = 5
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -62,6 +66,21 @@ class TestDIDWallet:
         ph = await wallet_0.get_new_puzzlehash()
         ph1 = await wallet_1.get_new_puzzlehash()
         ph2 = await wallet_2.get_new_puzzlehash()
+
+        if trusted:
+            wallet_node_0.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+            }
+            wallet_node_1.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+            }
+            wallet_node_2.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+            }
+        else:
+            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_1.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
 
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
@@ -90,6 +109,11 @@ class TestDIDWallet:
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101)
             )
 
+        spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
@@ -103,6 +127,11 @@ class TestDIDWallet:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node_1.wallet_state_manager, wallet_1, uint64(201), backup_ids
             )
+
+        spend_bundle_list = await wallet_node_1.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_1.id())
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -129,6 +158,12 @@ class TestDIDWallet:
         message_spend_bundle = await did_wallet_0.create_attestment(
             did_wallet_2.did_info.temp_coin.name(), newpuzhash, pubkey, "test.attest"
         )
+        spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            did_wallet_0.id()
+        )
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         print(f"pubkey: {pubkey}")
 
         for i in range(1, num_blocks):
@@ -140,7 +175,7 @@ class TestDIDWallet:
         ) = await did_wallet_2.load_attest_files_for_recovery_spend(["test.attest"])
         assert message_spend_bundle == test_message_spend_bundle
 
-        await did_wallet_2.recovery_spend(
+        spend_bundle = await did_wallet_2.recovery_spend(
             did_wallet_2.did_info.temp_coin,
             newpuzhash,
             test_info_list,
@@ -148,6 +183,8 @@ class TestDIDWallet:
             test_message_spend_bundle,
         )
         print(f"pubkey: {did_wallet_2}")
+
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -157,6 +194,13 @@ class TestDIDWallet:
 
         some_ph = 32 * b"\2"
         await did_wallet_2.create_exit_spend(some_ph)
+
+        spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            did_wallet_2.id()
+        )
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -171,12 +215,16 @@ class TestDIDWallet:
         await time_out_assert(45, did_wallet_2.get_confirmed_balance, 0)
         await time_out_assert(45, did_wallet_2.get_unconfirmed_balance, 0)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True],
+    )
     @pytest.mark.asyncio
-    async def test_did_recovery_with_multiple_backup_dids(self, two_wallet_nodes):
+    async def test_did_recovery_with_multiple_backup_dids(self, two_wallet_nodes, trusted):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
-        full_node_1 = full_nodes[0]
-        server_1 = full_node_1.server
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.server
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -184,11 +232,23 @@ class TestDIDWallet:
 
         ph = await wallet.get_new_puzzlehash()
 
+        if trusted:
+            wallet_node.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+            }
+
+            wallet_node_2.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+            }
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
@@ -204,9 +264,14 @@ class TestDIDWallet:
                 wallet_node.wallet_state_manager, wallet, uint64(101)
             )
 
+        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet.id())
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+
         ph = await wallet2.get_new_puzzlehash()
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
@@ -218,8 +283,13 @@ class TestDIDWallet:
                 wallet_node_2.wallet_state_manager, wallet2, uint64(101), recovery_list
             )
 
+        spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet2.id())
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(15, did_wallet_2.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_2.get_unconfirmed_balance, 101)
@@ -233,9 +303,14 @@ class TestDIDWallet:
                 wallet_node_2.wallet_state_manager, wallet2, uint64(201), recovery_list
             )
 
+        spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet2.id())
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+
         ph2 = await wallet.get_new_puzzlehash()
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
 
         assert did_wallet_3.did_info.backup_ids == recovery_list
         await time_out_assert(15, did_wallet_3.get_confirmed_balance, 201)
@@ -257,7 +332,17 @@ class TestDIDWallet:
         ).pubkey
         new_ph = await did_wallet_4.get_new_inner_hash()
         message_spend_bundle = await did_wallet.create_attestment(coin.name(), new_ph, pubkey, "test1.attest")
+        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         message_spend_bundle2 = await did_wallet_2.create_attestment(coin.name(), new_ph, pubkey, "test2.attest")
+        spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            did_wallet_2.id()
+        )
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         message_spend_bundle = message_spend_bundle.aggregate([message_spend_bundle, message_spend_bundle2])
 
         (
@@ -267,35 +352,57 @@ class TestDIDWallet:
         assert message_spend_bundle == test_message_spend_bundle
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
 
         await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, message_spend_bundle)
+        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            did_wallet_4.id()
+        )
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
 
         await time_out_assert(15, did_wallet_4.get_confirmed_balance, 201)
         await time_out_assert(15, did_wallet_4.get_unconfirmed_balance, 201)
         await time_out_assert(15, did_wallet_3.get_confirmed_balance, 0)
         await time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 0)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True],
+    )
     @pytest.mark.asyncio
-    async def test_did_recovery_with_empty_set(self, two_wallet_nodes):
+    async def test_did_recovery_with_empty_set(self, two_wallet_nodes, trusted):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
-        full_node_1 = full_nodes[0]
-        server_1 = full_node_1.server
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.server
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         ph = await wallet.get_new_puzzlehash()
 
+        if trusted:
+            wallet_node.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+            }
+
+            wallet_node_2.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+            }
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
@@ -311,8 +418,13 @@ class TestDIDWallet:
                 wallet_node.wallet_state_manager, wallet, uint64(101)
             )
 
+        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet.id())
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
@@ -326,22 +438,38 @@ class TestDIDWallet:
         additions = spend_bundle.additions()
         assert additions == []
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True],
+    )
     @pytest.mark.asyncio
-    async def test_did_attest_after_recovery(self, two_wallet_nodes):
+    async def test_did_attest_after_recovery(self, two_wallet_nodes, trusted):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
-        full_node_1 = full_nodes[0]
-        server_1 = full_node_1.server
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.server
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallet2 = wallet_node_2.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
+        if trusted:
+            wallet_node.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+            }
+
+            wallet_node_2.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+            }
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
@@ -356,10 +484,13 @@ class TestDIDWallet:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node.wallet_state_manager, wallet, uint64(101)
             )
+        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet.id())
 
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         ph2 = await wallet2.get_new_puzzlehash()
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
@@ -369,9 +500,13 @@ class TestDIDWallet:
             did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node_2.wallet_state_manager, wallet2, uint64(101), recovery_list
             )
+        spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet2.id())
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         ph = await wallet.get_new_puzzlehash()
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         await time_out_assert(15, did_wallet_2.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_2.get_unconfirmed_balance, 101)
         assert did_wallet_2.did_info.backup_ids == recovery_list
@@ -382,8 +517,13 @@ class TestDIDWallet:
         assert did_wallet.did_info.backup_ids == recovery_list
         await did_wallet.create_update_spend()
 
+        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
@@ -405,17 +545,27 @@ class TestDIDWallet:
             await did_wallet_3.wallet_state_manager.get_unused_derivation_record(did_wallet_3.wallet_info.id)
         ).pubkey
         message_spend_bundle = await did_wallet.create_attestment(coin.name(), new_ph, pubkey, "test.attest")
+        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
 
         (
             info,
             message_spend_bundle,
         ) = await did_wallet_3.load_attest_files_for_recovery_spend(["test.attest"])
         await did_wallet_3.recovery_spend(coin, new_ph, info, pubkey, message_spend_bundle)
+        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            did_wallet_3.id()
+        )
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(15, did_wallet_3.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 101)
@@ -438,19 +588,29 @@ class TestDIDWallet:
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)
         ).pubkey
         await did_wallet_3.create_attestment(coin.name(), new_ph, pubkey, "test.attest")
+        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            did_wallet_3.id()
+        )
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
         (
             test_info_list,
             test_message_spend_bundle,
         ) = await did_wallet_4.load_attest_files_for_recovery_spend(["test.attest"])
-        spend_bundle = await did_wallet_4.recovery_spend(
-            coin, new_ph, test_info_list, pubkey, test_message_spend_bundle
+        await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, test_message_spend_bundle)
+
+        spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            did_wallet_4.id()
         )
-        await time_out_assert_not_none(15, full_node_1.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(15, did_wallet_4.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_4.get_unconfirmed_balance, 101)
