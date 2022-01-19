@@ -338,7 +338,7 @@ class WalletNode:
         self.server.on_connect = self.on_connect
         network_name = self.config["selected_network"]
 
-        connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", False)
+        connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", True)
         if connect_to_unknown_peers:
             self.wallet_peers = WalletPeers(
                 self.server,
