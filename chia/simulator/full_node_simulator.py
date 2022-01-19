@@ -267,7 +267,7 @@ class FullNodeSimulator(FullNodeAPI):
         ids_to_check: Set[bytes32] = set()
         for record in records:
             if record.spend_bundle is None:
-                raise ValueError(f"Transaction record has no spend bundle: {record!r}")
+                continue
 
             ids_to_check.add(record.spend_bundle.name())
 
