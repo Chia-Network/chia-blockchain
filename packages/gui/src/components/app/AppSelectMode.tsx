@@ -1,11 +1,19 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Flex, Logo, Card, useMode, Mode } from '@chia/core';
-import { AccountBalanceWallet as AccountBalanceWalletIcon, Eco as EcoIcon } from '@material-ui/icons';
-import { Typography, Container, Grid } from '@material-ui/core';
+import { Flex, Logo, Card, useMode, Mode, Tooltip } from '@chia/core';
+import { 
+  AccountBalanceWallet as AccountBalanceWalletIcon, 
+  Eco as EcoIcon,
+  Settings as SettingsIcon,
+} from '@material-ui/icons';
+import { Box, Typography, Container, Grid } from '@material-ui/core';
 
-const StyledCardContent = styled.div`
+const StyledSettingsIcon = styled(SettingsIcon)`
+  vertical-align: sub;
+`;
+
+const StyledCardContent = styled(Box)`
   padding: 3rem 0rem;
 `;
 
@@ -44,6 +52,31 @@ export default function AppSelectMode() {
 
         <Grid container spacing={5} alignItems="stretch">
           <Grid xs={12} sm={6} item>
+            <Card onSelect={() => handleModeChange(Mode.WALLET)} fullHeight>
+              <StyledCardContent>
+                <Flex flexDirection="column" gap={2} alignItems="center">
+                  <StyledAccountBalanceWalletIcon />
+
+                  <Typography variant="h5" align="center">
+                    <Trans>Wallet Mode</Trans>
+                  </Typography>
+
+                  <Flex flexDirection="column" gap={0.5}>
+                    <Typography variant="body2" align="center">
+                      <Trans>Store and Send XCH</Trans>
+                    </Typography>
+                    <Typography variant="body2" align="center">
+                      <Trans>Manage CAT tokens</Trans>
+                    </Typography>
+                    <Typography variant="body2" align="center">
+                      <Trans>Trade tokens</Trans>
+                    </Typography>
+                  </Flex>
+                </Flex>
+              </StyledCardContent>
+            </Card>
+          </Grid>
+          <Grid xs={12} sm={6} item>
             <Card onSelect={() => handleModeChange(Mode.FARMING)} fullHeight>
               <StyledCardContent>
                 <Flex flexDirection="column" gap={2} alignItems="center">
@@ -71,36 +104,15 @@ export default function AppSelectMode() {
               </StyledCardContent>
             </Card>
           </Grid>
-          <Grid xs={12} sm={6} item>
-            <Card onSelect={() => handleModeChange(Mode.WALLET)} fullHeight>
-              <StyledCardContent>
-                <Flex flexDirection="column" gap={2} alignItems="center">
-                  <StyledAccountBalanceWalletIcon />
-
-                  <Typography variant="h5" align="center">
-                    <Trans>Wallet Mode</Trans>
-                  </Typography>
-
-                  <Flex flexDirection="column" gap={0.5}>
-                    <Typography variant="body2" align="center">
-                      <Trans>Store and Send XCH</Trans>
-                    </Typography>
-                    <Typography variant="body2" align="center">
-                      <Trans>Manage CAT tokens</Trans>
-                    </Typography>
-                    <Typography variant="body2" align="center">
-                      <Trans>Trade tokens</Trans>
-                    </Typography>
-                  </Flex>
-                </Flex>
-              </StyledCardContent>
-            </Card>
-          </Grid>
         </Grid>
 
+        <Tooltip title={<Trans>Settings are located at the upper right corner</Trans>}>
         <Typography>
           <Trans>You can always change your mode later in the settings</Trans>
+          &nbsp;
+          <SettingsIcon fontSize="small" />
         </Typography>
+        </Tooltip>
       </Flex>
     </StyledContainer>
   );
