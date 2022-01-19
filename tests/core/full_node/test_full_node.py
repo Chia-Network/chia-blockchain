@@ -408,7 +408,7 @@ class TestFullNodeBlockCompression:
             reog_blocks = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
                 for reorg_block in reog_blocks[:r]:
-                    await _validate_and_add_block_no_error(blockchain, reorg_block)
+                    await _validate_and_add_block_no_error(blockchain, reorg_block, skip_prevalidation=True)
                 for i in range(1, height):
                     for batch_size in range(1, height):
                         results = await blockchain.pre_validate_blocks_multiprocessing(
@@ -420,7 +420,7 @@ class TestFullNodeBlockCompression:
 
             for r in range(0, len(all_blocks), 3):
                 for block in all_blocks[:r]:
-                    await _validate_and_add_block_no_error(blockchain, block)
+                    await _validate_and_add_block_no_error(blockchain, block, skip_prevalidation=True)
                 for i in range(1, height):
                     for batch_size in range(1, height):
                         results = await blockchain.pre_validate_blocks_multiprocessing(

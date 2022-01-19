@@ -116,9 +116,13 @@ async def _validate_and_add_block_multi_result(
     blockchain: Blockchain,
     block: FullBlock,
     expected_result: List[ReceiveBlockResult],
+    skip_prevalidation: Optional[bool],
 ) -> None:
     try:
-        await _validate_and_add_block(blockchain, block)
+        if skip_prevalidation is not None:
+            await _validate_and_add_block(blockchain, block, skip_prevalidation=skip_prevalidation)
+        else:
+            await _validate_and_add_block(blockchain, block)
     except Exception as e:
         assert isinstance(e, AssertionError)
         assert "Block was not added" in e.args[0]
@@ -127,7 +131,9 @@ async def _validate_and_add_block_multi_result(
             raise AssertionError(f"{e.args[0].split('Block was not added: ')[1]} not in {expected_result}")
 
 
-async def _validate_and_add_block_no_error(blockchain: Blockchain, block: FullBlock) -> None:
+async def _validate_and_add_block_no_error(
+    blockchain: Blockchain, block: FullBlock, skip_prevalidation: Optional[bool] = None
+) -> None:
     # adds a block and ensures that there is no error. However, does not ensure that block extended the peak of
     # the blockchain
     await _validate_and_add_block_multi_result(
@@ -138,4 +144,5 @@ async def _validate_and_add_block_no_error(blockchain: Blockchain, block: FullBl
             ReceiveBlockResult.NEW_PEAK,
             ReceiveBlockResult.ADDED_AS_ORPHAN,
         ],
+        skip_prevalidation=skip_prevalidation,
     )
