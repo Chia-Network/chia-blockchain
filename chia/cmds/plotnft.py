@@ -212,3 +212,16 @@ def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int) -
 
     extra_params = {"id": id, "fee": fee}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, claim_cmd))
+
+
+@plotnft_cmd.command(
+    "change_payout_instructions",
+    short_help="Change the payout instructions for a pool. To get the launcher id, use plotnft show.",
+)
+@click.option("-l", "--launcher_id", help="Launcher ID of the plotnft", type=str, required=True)
+@click.option("-a", "--address", help="New address for payout instructions", type=str, required=True)
+def change_payout_instructions_cmd(launcher_id: str, address: str) -> None:
+    import asyncio
+    from .plotnft_funcs import change_payout_instructions
+
+    asyncio.run(change_payout_instructions(launcher_id, address))
