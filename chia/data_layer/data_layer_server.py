@@ -1,15 +1,21 @@
 import aiosqlite
 import aiohttp
 import json
-from random import Random
-from typing import Dict
-from aiohttp import web
+
+# from random import Random
+from typing import Any, Dict
+from aiohttp import web  # lgtm [py/import and import from]
+from dataclasses import dataclass
+from pathlib import Path
 from chia.data_layer.data_store import DataStore
 from chia.util.db_wrapper import DBWrapper
 from chia.types.blockchain_format.tree_hash import bytes32
-from tests.core.data_layer.util import generate_big_datastore
 from chia.data_layer.data_layer_types import TerminalNode, InsertionData
-from dataclasses import dataclass
+from chia.util.config import load_config
+from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.path import path_from_root, mkdir
+
+# from tests.core.data_layer.util import generate_big_datastore
 
 
 @dataclass
@@ -97,14 +103,6 @@ class DataLayerServer:
 
         return json.dumps(answer)
 
-    async def init_example_data_store(self) -> None:
-        tree_id = bytes32(b"\0" * 32)
-        await self.data_store.create_tree(tree_id=tree_id)
-        random = Random()
-        random.seed(100, version=2)
-        await generate_big_datastore(data_store=self.data_store, tree_id=tree_id, random=random)
-        print("Generated datastore.")
-
     async def websocket_handler(self, request: web.Request) -> web.WebSocketResponse:
         ws = aiohttp.web.WebSocketResponse()
         await ws.prepare(request)
@@ -125,12 +123,23 @@ class DataLayerServer:
 
         return ws
 
-    async def start(self) -> web.Application:
-        self.db_connection = await aiosqlite.connect(":memory:")
-        await self.db_connection.execute("PRAGMA foreign_keys = ON")
-        self.db_wrapper = DBWrapper(self.db_connection)
+    async def start(self, config: Dict[Any, Any], db_path: Path) -> web.Application:
+        self.config = config
+        self.db_path = db_path
+        mkdir(self.db_path.parent)
+        self.connection = await aiosqlite.connect(self.db_path)
+        self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(db_wrapper=self.db_wrapper)
-        await self.init_example_data_store()
+
+        """
+        Uncomment if you need mock data, for testing purposes.
+        random = Random()
+        random.seed(100, version=2)
+        tree_id = bytes32(b"\0" * 32)
+        await self.data_store.create_tree(tree_id=tree_id)
+        await generate_big_datastore(data_store=self.data_store, tree_id=tree_id, random=random)
+        print("Generated datastore.")
+        """
 
         app = web.Application()
         app.router.add_route("GET", "/ws", self.websocket_handler)
@@ -138,5 +147,9 @@ class DataLayerServer:
 
 
 if __name__ == "__main__":
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "data_layer")
+    db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+    db_path = path_from_root(DEFAULT_ROOT_PATH, db_path_replaced)
+
     data_layer_server = DataLayerServer()
-    web.run_app(data_layer_server.start())
+    web.run_app(data_layer_server.start(config, db_path), host=config["host_ip"], port=config["host_port"])
