@@ -163,6 +163,7 @@ class BlockTools:
         mkdir(self.plot_dir)
         mkdir(self.temp_dir)
         self.expected_plots: Dict[bytes32, Path] = {}
+        self.created_plots: int = 0
         self.total_result = PlotRefreshResult()
 
         def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult):
@@ -230,7 +231,7 @@ class BlockTools:
         save_config(self.root_path, "config.yaml", self._config)
 
     async def setup_plots(self):
-        assert len(self.expected_plots) == 0
+        assert self.created_plots == 0
         # OG Plots
         for i in range(15):
             await self.new_plot()
@@ -292,8 +293,9 @@ class BlockTools:
                 plot_keys,
                 self.root_path,
                 use_datetime=False,
-                test_private_keys=[AugSchemeMPL.key_gen(std_hash(len(self.expected_plots).to_bytes(2, "big")))],
+                test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots.to_bytes(2, "big")))],
             )
+            self.created_plots += 1
 
             plot_id_new: Optional[bytes32] = None
             path_new: Path = Path()

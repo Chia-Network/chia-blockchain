@@ -187,6 +187,38 @@ class TestCoinStoreWithBlocks:
                         assert record.spent_block_index == block.height
 
     @pytest.mark.asyncio
+    async def test_num_unspent(self, db_version):
+        blocks = bt.get_consecutive_blocks(37, [])
+
+        expect_unspent = 0
+        test_excercised = False
+
+        async with DBConnection(db_version) as db_wrapper:
+            coin_store = await CoinStore.create(db_wrapper)
+
+            for block in blocks:
+                if not block.is_transaction_block():
+                    continue
+
+                if block.is_transaction_block():
+                    assert block.foliage_transaction_block is not None
+                    removals: List[bytes32] = []
+                    additions: List[Coin] = []
+                    await coin_store.new_block(
+                        block.height,
+                        block.foliage_transaction_block.timestamp,
+                        block.get_included_reward_coins(),
+                        additions,
+                        removals,
+                    )
+
+                    expect_unspent += len(block.get_included_reward_coins())
+                    assert await coin_store.num_unspent() == expect_unspent
+                    test_excercised = expect_unspent > 0
+
+        assert test_excercised
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
     async def test_rollback(self, cache_size: uint32, db_version):
         blocks = bt.get_consecutive_blocks(20)

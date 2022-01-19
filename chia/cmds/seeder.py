@@ -96,7 +96,7 @@ def configure(
         if testnet == "true" or testnet == "t":
             print("Updating Chia Seeder to testnet settings")
             port = 58444
-            network = "testnet7"
+            network = "testnet10"
             bootstrap = ["testnet-node.chia.net"]
 
             config["seeder"]["port"] = port
