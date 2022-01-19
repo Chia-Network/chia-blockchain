@@ -58,10 +58,10 @@ def db_upgrade_func(
     print(f"\n\nLEAVING PREVIOUS DB FILE UNTOUCHED {in_db_path}\n")
 
 
-BLOCK_COMMIT_RATE = 5000
-SES_COMMIT_RATE = 1000
-HINT_COMMIT_RATE = 1000
-COIN_COMMIT_RATE = 15000
+BLOCK_COMMIT_RATE = 10000
+SES_COMMIT_RATE = 2000
+HINT_COMMIT_RATE = 2000
+COIN_COMMIT_RATE = 30000
 
 
 async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
