@@ -58,11 +58,8 @@ def validate_clvm_and_signature(
             return Err(result.error), b"", {}
 
         pks: List[G1Element] = []
-        msgs: List[bytes32] = []
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "List[bytes]", variable has type
-        #       "List[bytes32]")  [assignment]
-        pks, msgs = pkm_pairs(result.npc_list, additional_data)  # type: ignore[assignment]
+        msgs: List[bytes] = []
+        pks, msgs = pkm_pairs(result.npc_list, additional_data)
 
         # Verify aggregated signature
         cache: LRUCache = LRUCache(10000)
@@ -249,6 +246,7 @@ class MempoolManager:
         start_time = time.time()
         if new_spend_bytes is None:
             new_spend_bytes = bytes(new_spend)
+
         err, cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
             self.pool,
             validate_clvm_and_signature,
@@ -257,6 +255,7 @@ class MempoolManager:
             self.constants.COST_PER_BYTE,
             self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
+
         if err is not None:
             raise ValidationError(err)
         for cache_entry_key, cached_entry_value in new_cache_entries.items():

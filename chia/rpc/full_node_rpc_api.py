@@ -556,10 +556,8 @@ class FullNodeRpcApi:
             raise ValueError(f"Invalid height {height}. coin record {coin_record}")
 
         header_hash = self.service.blockchain.height_to_hash(height)
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
-        #       expected "bytes32"  [arg-type]
-        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
+        assert header_hash is not None
+        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
 
         if block is None or block.transactions_generator is None:
             raise ValueError("Invalid block or block generator")

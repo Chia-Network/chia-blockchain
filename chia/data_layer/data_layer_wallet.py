@@ -143,6 +143,7 @@ class DataLayerWallet:
             spend_bundle=None,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
+            memos=list(spend_bundle.get_memos().items()),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
@@ -160,6 +161,7 @@ class DataLayerWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
+            memos=list(spend_bundle.get_memos().items()),
             wallet_id=self.wallet_state_manager.main_wallet.id(),
             sent_to=[],
             trade_id=None,
@@ -195,9 +197,9 @@ class DataLayerWallet:
         full_puzzle: Program = create_host_fullpuz(inner_puzzle, initial_root, launcher_coin.name())
         puzzle_hash: bytes32 = full_puzzle.get_tree_hash()
 
-        announcement_set: Set[bytes32] = set()
+        announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([puzzle_hash, amount, initial_root]).get_tree_hash()
-        announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
+        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
         eve_coin = Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), amount)
         future_parent = LineageProof(
             eve_coin.parent_coin_info,
@@ -242,7 +244,7 @@ class DataLayerWallet:
         assert coins is not None and coins != set()
         my_coin = coins.pop()
         primaries: List[AmountWithPuzzlehash] = [
-            {"puzzlehash": new_db_layer_puzzle.get_tree_hash(), "amount": my_coin.amount}
+            {"puzzlehash": new_db_layer_puzzle.get_tree_hash(), "amount": my_coin.amount, "memos": []}
         ]
         inner_inner_sol = self.standard_wallet.make_solution(primaries=primaries)
         db_layer_sol = Program.to([0, inner_inner_sol])
@@ -299,6 +301,7 @@ class DataLayerWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
+            memos=list(spend_bundle.get_memos().items()),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
@@ -415,7 +418,7 @@ class DataLayerWallet:
             bytes((await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey)
         )
 
-    async def get_parent_for_coin(self, coin: Coin) -> Optional[List[Any]]:
+    async def get_parent_for_coin(self, coin: Coin) -> Program:
         parent_info = None
         for name, ccparent in self.dl_info.parent_info:
             if name == coin.parent_coin_info:
@@ -426,11 +429,11 @@ class DataLayerWallet:
             raise ValueError("Unable to find parent info")
 
         if self.dl_info.origin_coin is None:
-            ret = parent_info.as_list()
+            ret = parent_info.to_program()
         elif parent_info.parent_name == self.dl_info.origin_coin.parent_coin_info:
-            ret = [parent_info.parent_name, parent_info.amount]
+            ret = Program.to([parent_info.parent_name, parent_info.amount])
         else:
-            ret = parent_info.as_list()
+            ret = parent_info.to_program()
         return ret
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof], in_transaction: bool) -> None:

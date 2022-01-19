@@ -9,7 +9,7 @@ from chia.types.blockchain_format.program import Program
 from blspy import AugSchemeMPL
 from chia.types.spend_bundle import SpendBundle
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
-from tests.time_out_assert import time_out_assert
+from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 pytestmark = pytest.mark.skip("TODO: Fix tests")
 
@@ -444,7 +444,10 @@ class TestDIDWallet:
             test_info_list,
             test_message_spend_bundle,
         ) = await did_wallet_4.load_attest_files_for_recovery_spend(["test.attest"])
-        await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, test_message_spend_bundle)
+        spend_bundle = await did_wallet_4.recovery_spend(
+            coin, new_ph, test_info_list, pubkey, test_message_spend_bundle
+        )
+        await time_out_assert_not_none(15, full_node_1.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
