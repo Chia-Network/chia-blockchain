@@ -22,6 +22,14 @@ const StyledCardMaterial = styled(({ cursor, opacity, clickable, fullHeight, ...
   height: ${({ fullHeight }) => fullHeight ? '100%': 'auto'};
 `;
 
+const StyledCardContent = styled(({ fullHeight, ...rest }) => (
+  <CardContent {...rest}/>
+))`
+  display: flex;
+  flex-direction: column;
+  height: ${({ fullHeight }) => fullHeight ? '100%': 'auto'};
+`;
+
 type Props = {
   children?: ReactNode;
   title?: ReactNode;
@@ -65,9 +73,9 @@ export default function Card(props: Props) {
           </Flex>
         </StyledCardTitle>
       )}
-      <CardContent>
-        <Flex flexDirection="column" gap={3}>
-          <Flex flexDirection="column" gap={gap}>
+      <StyledCardContent fullHeight={fullHeight}>
+        <Flex flexDirection="column" gap={3} flexGrow={1}>
+          <Flex flexDirection="column" gap={gap} flexGrow={1}>
             {children}
           </Flex>
           {actions && (
@@ -76,7 +84,7 @@ export default function Card(props: Props) {
             </Grid>
           )}
         </Flex>
-      </CardContent>
+      </StyledCardContent>
     </StyledCardMaterial>
   );
 }

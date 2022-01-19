@@ -1,11 +1,12 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Flex, Logo, Card, useMode, Mode, Tooltip } from '@chia/core';
+import { Button, Flex, Logo, Card, useMode, Mode, Tooltip } from '@chia/core';
 import { 
   AccountBalanceWallet as AccountBalanceWalletIcon, 
   Eco as EcoIcon,
   Settings as SettingsIcon,
+  Check as CheckIcon,
 } from '@material-ui/icons';
 import { Box, Typography, Container, Grid } from '@material-ui/core';
 
@@ -14,7 +15,11 @@ const StyledSettingsIcon = styled(SettingsIcon)`
 `;
 
 const StyledCardContent = styled(Box)`
-  padding: 3rem 0rem;
+  display: flex;
+  padding: 0.5rem 0rem;
+  flex-direction: column;
+  height: 100%;
+  flex-grow: 1;
 `;
 
 const StyledContainer = styled(Container)`
@@ -54,24 +59,39 @@ export default function AppSelectMode() {
           <Grid xs={12} sm={6} item>
             <Card onSelect={() => handleModeChange(Mode.WALLET)} fullHeight>
               <StyledCardContent>
-                <Flex flexDirection="column" gap={2} alignItems="center">
-                  <StyledAccountBalanceWalletIcon />
+                <Flex flexDirection="column" gap={4} flexGrow={1} alignItems="center">
+                  <Flex flexDirection="column" gap={1} alignItems="center">
+                    <StyledAccountBalanceWalletIcon />
 
-                  <Typography variant="h5" align="center">
-                    <Trans>Wallet Mode</Trans>
-                  </Typography>
-
-                  <Flex flexDirection="column" gap={0.5}>
-                    <Typography variant="body2" align="center">
-                      <Trans>Store and Send XCH</Trans>
-                    </Typography>
-                    <Typography variant="body2" align="center">
-                      <Trans>Manage CAT tokens</Trans>
-                    </Typography>
-                    <Typography variant="body2" align="center">
-                      <Trans>Trade tokens</Trans>
+                    <Typography variant="h5" align="center">
+                      <Trans>Wallet Mode</Trans>
                     </Typography>
                   </Flex>
+
+                  <Flex flexDirection="column" gap={0.5} flexGrow={1}>
+                    <Flex gap={1}>
+                      <CheckIcon color="primary" />
+                      <Typography variant="body2">
+                        <Trans>Store and Send XCH</Trans>
+                      </Typography>
+                    </Flex>
+                    <Flex gap={1}>
+                      <CheckIcon color="primary" />
+                      <Typography variant="body2">
+                        <Trans>Manage CAT tokens</Trans>
+                      </Typography>
+                    </Flex>
+                    <Flex gap={1}>
+                      <CheckIcon color="primary" />
+                      <Typography variant="body2">
+                        <Trans>Trade tokens</Trans>
+                      </Typography>
+                    </Flex>
+                  </Flex>
+
+                  <Button variant="outlined" fullWidth>
+                    <Trans>Choose Wallet Mode</Trans>
+                  </Button>
                 </Flex>
               </StyledCardContent>
             </Card>
@@ -79,27 +99,43 @@ export default function AppSelectMode() {
           <Grid xs={12} sm={6} item>
             <Card onSelect={() => handleModeChange(Mode.FARMING)} fullHeight>
               <StyledCardContent>
-                <Flex flexDirection="column" gap={2} alignItems="center">
-                  <StyledEcoIcon />
+                <Flex flexDirection="column" gap={4} alignItems="center">
+                  <Flex flexDirection="column" gap={1} alignItems="center">
+                    <StyledEcoIcon />
 
-                  <Typography variant="h5" align="center">
-                    <Trans>Farming Mode</Trans>
-                  </Typography>
-
-                  <Flex flexDirection="column" gap={0.5}>
-                    <Typography variant="body2" align="center">
-                      <Trans>Wallet Mode</Trans>
+                    <Typography variant="h5" align="center">
+                      <Trans>Farming Mode</Trans>
                     </Typography>
+                  </Flex>
+
+                  <Flex flexDirection="column" gap={0.5} flexGrow={1}>
+                    <Flex gap={1}>
+                      <CheckIcon color="primary" />
+                      <Typography variant="body2">
+                        <Trans>Wallet Mode</Trans>
+                      </Typography>
+                    </Flex>
+
                     <Typography variant="body2" align="center">
                       <Trans>+</Trans>
                     </Typography>
-                    <Typography variant="body2" align="center">
-                      <Trans>Create &amp; Manage plots</Trans>
-                    </Typography>
-                    <Typography variant="body2" align="center">
-                      <Trans>Join farming pools</Trans>
-                    </Typography>
+                    <Flex gap={1}>
+                      <CheckIcon color="primary" />
+                      <Typography variant="body2">
+                        <Trans>Create &amp; Manage plots</Trans>
+                      </Typography>
+                    </Flex>
+                    <Flex gap={1}>
+                      <CheckIcon color="primary" />
+                      <Typography variant="body2">
+                        <Trans>Join farming pools</Trans>
+                      </Typography>
+                    </Flex>
                   </Flex>
+
+                  <Button color="primary" variant="outlined" fullWidth>
+                    <Trans>Choose Farming Mode</Trans>
+                  </Button>
                 </Flex>
               </StyledCardContent>
             </Card>
