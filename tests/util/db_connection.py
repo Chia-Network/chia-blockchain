@@ -13,7 +13,7 @@ class DBConnection:
         if self.db_path.exists():
             self.db_path.unlink()
         self.connection = await aiosqlite.connect(self.db_path)
-        return DBWrapper(self.connection, False, self.db_version)
+        return DBWrapper(self.connection, self.db_version)
 
     async def __aexit__(self, exc_t, exc_v, exc_tb):
         await self.connection.close()

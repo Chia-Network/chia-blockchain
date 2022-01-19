@@ -10,10 +10,10 @@ MARMOT = {
     "symbol": "MRMT",
 }
 
-DUCK_SAUCE = {
+STABLY_USDS = {
     "asset_id": "6d95dae356e32a71db5ddcb42224754a02524c615c5fc35f568c2af04774e589",
-    "name": "Duck Sauce",
-    "symbol": "DSC",
+    "name": "Stably USD",
+    "symbol": "USDS",
 }
 
 CHIA_HOLIDAY_TOKEN = {
@@ -25,6 +25,6 @@ CHIA_HOLIDAY_TOKEN = {
 DEFAULT_CATS = {
     SPACEBUCKS["asset_id"]: SPACEBUCKS,
     MARMOT["asset_id"]: MARMOT,
-    DUCK_SAUCE["asset_id"]: DUCK_SAUCE,
+    STABLY_USDS["asset_id"]: STABLY_USDS,
     CHIA_HOLIDAY_TOKEN["asset_id"]: CHIA_HOLIDAY_TOKEN,
 }
