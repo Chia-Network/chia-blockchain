@@ -110,7 +110,7 @@ export default function AppSelectMode() {
         <Typography>
           <Trans>You can always change your mode later in the settings</Trans>
           &nbsp;
-          <SettingsIcon fontSize="small" />
+          <StyledSettingsIcon fontSize="small" />
         </Typography>
         </Tooltip>
       </Flex>
