@@ -163,8 +163,6 @@ if (!handleSquirrelEvent()) {
             slashes: true,
           });
 
-      console.log('startUrl', startUrl);
-
       mainWindow.loadURL(startUrl);
       require("@electron/remote/main").enable(mainWindow.webContents)
 

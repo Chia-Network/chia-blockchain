@@ -45,7 +45,7 @@ export default function Settings(props: SettingsProps) {
   return (
     <>
       <Tooltip title={<Trans>Settings</Trans>}>
-      <IconButton color="inherit" onClick={handleOpen}>
+      <IconButton color="inherit" onClick={handleOpen} disableFocusRipple>
         <SettingsIcon />
       </IconButton>
       </Tooltip>

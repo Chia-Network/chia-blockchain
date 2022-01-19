@@ -4,17 +4,18 @@
 This library provides react hooks on the top of @chia/api and uses [RTK Query](https://redux-toolkit.js.org/rtk-query/overview) under do hood.
 It is designed to simplify common cases for loading data in a web application, eliminating the need to hand-write data fetching & caching logic yourself. Providing much more benefits:
 
- - Automatically refresh queries when data changed (using events from Chia Blockchain).
- - Tracking loading state in order to show UI spinners.
- - Avoiding duplicate requests for the same data.
- - Optimistic updates to make the UI feel faster.
- - Managing cache lifetimes as the user interacts with the UI.
- - Ability to use it without React library
- - Support for polling and parallel queries
+- Automatically refresh queries when data changed (using events from Chia Blockchain).
+- Tracking loading state in order to show UI spinners.
+- Avoiding duplicate requests for the same data.
+- Optimistic updates to make the UI feel faster.
+- Managing cache lifetimes as the user interacts with the UI.
+- Ability to use it without React library
+- Support for polling and parallel queries
 
 ## Query Example
 
-#### **`PublicKeys.tsx`**
+### **`PublicKeys.tsx`**
+
 ```tsx
 import React from 'react';
 import { useGetPublicKeysQuery } from '@chia/api-react';
@@ -49,7 +50,8 @@ export default function PublicKeys() {
 }
 ```
 
-#### **`Application.tsx`**
+### **`Application.tsx`**
+
 ```tsx
 import React, { Suspense } from 'react';
 import Websocket from 'ws'; // or read this value from electron main application

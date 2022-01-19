@@ -20,14 +20,10 @@ const guessPackaged = () => {
   if (process.platform === 'win32') {
     const fullPath = path.join(__dirname, PY_WIN_DIST_FOLDER);
     packed = fs.existsSync(fullPath);
-    console.log(fullPath);
-    console.log(packed);
     return packed;
   }
   const fullPath = path.join(__dirname, PY_MAC_DIST_FOLDER);
   packed = fs.existsSync(fullPath);
-  console.log(fullPath);
-  console.log(packed);
   return packed;
 };
 

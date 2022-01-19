@@ -34,7 +34,7 @@ msgstr ""
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 msgstr "*Хочаце даведацца больш пра блокчэйн Chia? Паглядзіце <0>Chia Explorer</0>, створаны распрацоўшчыкам па прынцыпах адкрытага зыходнага кода."
 
-#: src/components/app/AppSelectMode.tsx:61
+#: src/components/app/AppSelectMode.tsx:94
 msgid "+"
 msgstr ""
 
@@ -62,8 +62,8 @@ msgstr "Камбайн — сэрвіс, які выконваецца на к�
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:433
-#: src/electron/main.tsx:520
+#: src/electron/main.tsx:431
+#: src/electron/main.tsx:518
 msgid "About Chia Blockchain"
 msgstr "Аб праграме Chia Blockchain"
 
@@ -188,7 +188,7 @@ msgstr ""
 msgid "Are you sure you want to disconnect?"
 msgstr "Сапраўды адлучыцца?"
 
-#: src/electron/main.tsx:201
+#: src/electron/main.tsx:199
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Сапраўды хочаце выйсці? Засяванне і фермерства, запушчаныя праз графічны інтэрфейс, будуць спынены."
 
@@ -361,15 +361,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr ""
 
-#: src/electron/main.tsx:412
+#: src/electron/main.tsx:410
 msgid "Chat on KeyBase"
 msgstr "Чат у KeyBase"
 
-#: src/electron/main.tsx:430
+#: src/electron/main.tsx:428
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:369
+#: src/electron/main.tsx:367
 msgid "Chia Blockchain Wiki"
 msgstr "Вікі блокчэйна Chia"
 
@@ -437,7 +437,7 @@ msgid "Coloured Coin Options"
 msgstr "Параметры каляровай манеты"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:197
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Пацвердзіць"
@@ -512,7 +512,7 @@ msgstr "Тып падлучэння"
 msgid "Connections"
 msgstr "Падлучэнні"
 
-#: src/electron/main.tsx:393
+#: src/electron/main.tsx:391
 msgid "Contribute on GitHub"
 msgstr "Дапамагчы ў распрацоўцы на GitHub"
 
@@ -542,7 +542,7 @@ msgstr "Скапіраваць"
 msgid "Create"
 msgstr "Стварыць"
 
-#: src/components/app/AppSelectMode.tsx:64
+#: src/components/app/AppSelectMode.tsx:97
 msgid "Create & Manage plots"
 msgstr ""
 
@@ -746,11 +746,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:315
+#: src/electron/main.tsx:313
 msgid "Developer"
 msgstr "Распрацоўшчык"
 
-#: src/electron/main.tsx:318
+#: src/electron/main.tsx:316
 msgid "Developer Tools"
 msgstr "Інструменты для распрацоўшчыкаў"
 
@@ -821,7 +821,7 @@ msgstr "Перацягніце сюды файл рэзервовай копіі
 msgid "Drag and drop your recovery backup file"
 msgstr ""
 
-#: src/electron/main.tsx:274
+#: src/electron/main.tsx:272
 msgid "Edit"
 msgstr "Рэдагаваць"
 
@@ -956,8 +956,8 @@ msgid "Farmer is not running"
 msgstr "Фермер не працуе"
 
 #: src/_middleware_old/middleware_api.jsx:247
-msgid "Farmer public key:"
-msgstr ""
+#~ msgid "Farmer public key:"
+#~ msgstr ""
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:32
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -970,7 +970,7 @@ msgstr "Фермеры зарабляюць ўзнагароду за блокі
 msgid "Farming"
 msgstr "Ідзе фермерства"
 
-#: src/components/app/AppSelectMode.tsx:53
+#: src/components/app/AppSelectMode.tsx:86
 msgid "Farming Mode"
 msgstr ""
 
@@ -1019,8 +1019,8 @@ msgstr "Сума камісійных"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:266
-#: src/electron/main.tsx:467
+#: src/electron/main.tsx:264
+#: src/electron/main.tsx:465
 msgid "File"
 msgstr "Файл"
 
@@ -1040,11 +1040,11 @@ msgstr "Размяшчэнне канцавой папкі"
 msgid "Finished"
 msgstr "Завершана"
 
-#: src/electron/main.tsx:418
+#: src/electron/main.tsx:416
 msgid "Follow on Twitter"
 msgstr "Падпісацца ў Twitter"
 
-#: src/electron/main.tsx:377
+#: src/electron/main.tsx:375
 msgid "Frequently Asked Questions"
 msgstr "Частыя пытанні"
 
@@ -1061,7 +1061,7 @@ msgstr ""
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:343
+#: src/electron/main.tsx:341
 msgid "Full Screen"
 msgstr "На ўвесь экран"
 
@@ -1103,7 +1103,7 @@ msgstr "Хэш загалоўка"
 msgid "Height"
 msgstr "Вышыня"
 
-#: src/electron/main.tsx:365
+#: src/electron/main.tsx:363
 msgid "Help"
 msgstr "Даведка"
 
@@ -1221,7 +1221,7 @@ msgstr ""
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:67
+#: src/components/app/AppSelectMode.tsx:100
 msgid "Join farming pools"
 msgstr ""
 
@@ -1344,7 +1344,7 @@ msgstr "Ідзе загрузка..."
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:89
+#: src/components/app/AppSelectMode.tsx:69
 msgid "Manage CAT tokens"
 msgstr ""
 
@@ -1447,13 +1447,13 @@ msgid "Nickname"
 msgstr "Псеўданім"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:196
+#: src/electron/main.tsx:194
 msgid "No"
 msgstr "Не"
 
 #: src/_middleware_old/middleware_api.jsx:273
-msgid "No 24 word seed, since this key is imported."
-msgstr "Мнеманічнае зерне (24 ключавыя словы) адсутнічае, паколькі гэты ключ імпартаваны."
+#~ msgid "No 24 word seed, since this key is imported."
+#~ msgstr "Мнеманічнае зерне (24 ключавыя словы) адсутнічае, паколькі гэты ключ імпартаваны."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:16
 msgid "No blocks farmed yet"
@@ -1954,8 +1954,8 @@ msgstr ""
 #~ msgstr ""
 
 #: src/_middleware_old/middleware_api.jsx:255
-msgid "Pool public key:"
-msgstr ""
+#~ msgid "Pool public key:"
+#~ msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:271
 #: src/components/plotNFT/PlotNFTCard.tsx:324
@@ -2005,12 +2005,12 @@ msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Закрыты ключ з адкрытым лічбавым адбіткам {fingerprint}"
 
 #: src/_middleware_old/middleware_api.jsx:221
-msgid "Private key {0}"
-msgstr "Закрыты ключ {0}"
+#~ msgid "Private key {0}"
+#~ msgstr "Закрыты ключ {0}"
 
 #: src/_middleware_old/middleware_api.jsx:231
-msgid "Private key:"
-msgstr "Закрыты ключ:"
+#~ msgid "Private key:"
+#~ msgstr "Закрыты ключ:"
 
 #: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
@@ -2030,8 +2030,8 @@ msgid "Pubkey"
 msgstr "Адкрыты ключ"
 
 #: src/_middleware_old/middleware_api.jsx:239
-msgid "Public key:"
-msgstr "Адкрыты ключ:"
+#~ msgid "Public key:"
+#~ msgstr "Адкрыты ключ:"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:1005
 msgid "Puzzlehash"
@@ -2118,7 +2118,7 @@ msgstr "Абнавіць дзялянкі"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:385
+#: src/electron/main.tsx:383
 msgid "Release Notes"
 msgstr "Заўвагі да выпуску"
 
@@ -2141,7 +2141,7 @@ msgstr "Ідзе выдаленне"
 msgid "Rename"
 msgstr "Перайменаваць"
 
-#: src/electron/main.tsx:404
+#: src/electron/main.tsx:402
 msgid "Report an Issue..."
 msgstr "Паведаміць аб праблеме..."
 
@@ -2196,8 +2196,8 @@ msgid "See private key"
 msgstr "Паглядзець закрыты ключ"
 
 #: src/_middleware_old/middleware_api.jsx:265
-msgid "Seed:"
-msgstr "Зерне:"
+#~ msgid "Seed:"
+#~ msgstr "Зерне:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:100
 msgid "Select 2nd Temporary Directory"
@@ -2223,7 +2223,7 @@ msgstr "Выберыце часовы каталог"
 msgid "Select Wallet Type"
 msgstr "Выберыце тып кашалька"
 
-#: src/components/app/AppSelectMode.tsx:42
+#: src/components/app/AppSelectMode.tsx:50
 msgid "Select Your Client Mode"
 msgstr ""
 
@@ -2301,6 +2301,10 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+#: src/components/app/AppSelectMode.tsx:109
+msgid "Settings are located at the upper right corner"
+msgstr ""
+
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
 #~ msgid "Show Advanced Options"
 #~ msgstr "Паказаць дадатковыя параметры"
@@ -2351,7 +2355,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:481
+#: src/electron/main.tsx:479
 msgid "Speech"
 msgstr "Маўленне"
 
@@ -2424,7 +2428,7 @@ msgstr "Стан:"
 #~ msgid "StatusCard.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:86
+#: src/components/app/AppSelectMode.tsx:66
 msgid "Store and Send XCH"
 msgstr ""
 
@@ -2739,7 +2743,7 @@ msgstr "Ідэнтыфікатар здзелкі:"
 msgid "Trade Overview"
 msgstr "Агляд здзелкі"
 
-#: src/components/app/AppSelectMode.tsx:92
+#: src/components/app/AppSelectMode.tsx:72
 msgid "Trade tokens"
 msgstr ""
 
@@ -2821,7 +2825,7 @@ msgstr "Ітэрацый VDF падслота"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:306
+#: src/electron/main.tsx:304
 msgid "View"
 msgstr "Выгляд"
 
@@ -2870,8 +2874,8 @@ msgstr "Чаканне сінхранізацыі"
 msgid "Waiting for the transaction to be confirmed"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:58
-#: src/components/app/AppSelectMode.tsx:81
+#: src/components/app/AppSelectMode.tsx:61
+#: src/components/app/AppSelectMode.tsx:91
 msgid "Wallet Mode"
 msgstr ""
 
@@ -2974,7 +2978,7 @@ msgstr "Вітаем! Ніжэйпададзеныя словы выкарыст
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Атрымаўшы ад свайго адміністратара інфармацыйны пакет, увядзіце яго ніжэй, каб завяршыць наладжванне кашалька з абмежаваннямі вываду:"
 
-#: src/electron/main.tsx:351
+#: src/electron/main.tsx:349
 msgid "Window"
 msgstr "Акно"
 
@@ -2984,7 +2988,7 @@ msgstr "Без камісійных"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:195
 msgid "Yes"
 msgstr "Так"
 
@@ -2997,7 +3001,7 @@ msgstr ""
 msgid "You are not self pooling"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:102
+#: src/components/app/AppSelectMode.tsx:111
 msgid "You can always change your mode later in the settings"
 msgstr ""
 

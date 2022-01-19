@@ -34,7 +34,7 @@ msgstr "(選用)"
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 msgstr "＊想更進一步探索 Chia 區塊鍵？看看開源開發者打造的 <0>Chia Explorer</0>"
 
-#: src/components/app/AppSelectMode.tsx:61
+#: src/components/app/AppSelectMode.tsx:94
 msgid "+"
 msgstr ""
 
@@ -62,8 +62,8 @@ msgstr "收割機是在實際存放耕地的機器上運作的服務。塊農和
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:433
-#: src/electron/main.tsx:520
+#: src/electron/main.tsx:431
+#: src/electron/main.tsx:518
 msgid "About Chia Blockchain"
 msgstr "關於 Chia 區塊鏈"
 
@@ -188,7 +188,7 @@ msgstr "你確認要刪除未確認的交易?"
 msgid "Are you sure you want to disconnect?"
 msgstr "您確定要斷線嗎？"
 
-#: src/electron/main.tsx:201
+#: src/electron/main.tsx:199
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "你確定要退出？耕地規劃和耕種將會停止。"
 
@@ -361,15 +361,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "變更農會"
 
-#: src/electron/main.tsx:412
+#: src/electron/main.tsx:410
 msgid "Chat on KeyBase"
 msgstr "在 KeyBase 上閒聊"
 
-#: src/electron/main.tsx:430
+#: src/electron/main.tsx:428
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:369
+#: src/electron/main.tsx:367
 msgid "Chia Blockchain Wiki"
 msgstr "Chia 區塊鏈維基"
 
@@ -437,7 +437,7 @@ msgid "Coloured Coin Options"
 msgstr "有色代幣選項"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:197
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "確認"
@@ -512,7 +512,7 @@ msgstr "連線類型"
 msgid "Connections"
 msgstr "連線"
 
-#: src/electron/main.tsx:393
+#: src/electron/main.tsx:391
 msgid "Contribute on GitHub"
 msgstr "在 GitHub 上貢獻"
 
@@ -542,7 +542,7 @@ msgstr "複製"
 msgid "Create"
 msgstr "建立"
 
-#: src/components/app/AppSelectMode.tsx:64
+#: src/components/app/AppSelectMode.tsx:97
 msgid "Create & Manage plots"
 msgstr ""
 
@@ -746,11 +746,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:315
+#: src/electron/main.tsx:313
 msgid "Developer"
 msgstr "開發者"
 
-#: src/electron/main.tsx:318
+#: src/electron/main.tsx:316
 msgid "Developer Tools"
 msgstr "開發者工具"
 
@@ -821,7 +821,7 @@ msgstr "拖放你的備份檔案"
 msgid "Drag and drop your recovery backup file"
 msgstr "拖放您的備份檔案"
 
-#: src/electron/main.tsx:274
+#: src/electron/main.tsx:272
 msgid "Edit"
 msgstr "編輯"
 
@@ -956,8 +956,8 @@ msgid "Farmer is not running"
 msgstr "塊農未運作"
 
 #: src/_middleware_old/middleware_api.jsx:247
-msgid "Farmer public key:"
-msgstr "農夫公鑰:"
+#~ msgid "Farmer public key:"
+#~ msgstr "農夫公鑰:"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:32
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -970,7 +970,7 @@ msgstr "農夫可通過提交閒置空間到網路上來幫助保護交易，從
 msgid "Farming"
 msgstr "耕種中"
 
-#: src/components/app/AppSelectMode.tsx:53
+#: src/components/app/AppSelectMode.tsx:86
 msgid "Farming Mode"
 msgstr ""
 
@@ -1019,8 +1019,8 @@ msgstr "費用數量"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:266
-#: src/electron/main.tsx:467
+#: src/electron/main.tsx:264
+#: src/electron/main.tsx:465
 msgid "File"
 msgstr "檔案"
 
@@ -1040,11 +1040,11 @@ msgstr "最終資料夾位置"
 msgid "Finished"
 msgstr "已完成"
 
-#: src/electron/main.tsx:418
+#: src/electron/main.tsx:416
 msgid "Follow on Twitter"
 msgstr "Twitter 上追隨"
 
-#: src/electron/main.tsx:377
+#: src/electron/main.tsx:375
 msgid "Frequently Asked Questions"
 msgstr "常見問題"
 
@@ -1061,7 +1061,7 @@ msgstr "完整節點概觀"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:343
+#: src/electron/main.tsx:341
 msgid "Full Screen"
 msgstr "全畫面"
 
@@ -1103,7 +1103,7 @@ msgstr "表頭雜湊值"
 msgid "Height"
 msgstr "高度"
 
-#: src/electron/main.tsx:365
+#: src/electron/main.tsx:363
 msgid "Help"
 msgstr "幫助"
 
@@ -1221,7 +1221,7 @@ msgstr "加入農會並獲得持續的XCH 耕種獎勵。雖然平均報酬一�
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr "加入農會以獲得更多持續性的 XCH 耕種獎勵。建立農場並分配您的新耕地到群組。"
 
-#: src/components/app/AppSelectMode.tsx:67
+#: src/components/app/AppSelectMode.tsx:100
 msgid "Join farming pools"
 msgstr ""
 
@@ -1344,7 +1344,7 @@ msgstr "載入中..."
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:89
+#: src/components/app/AppSelectMode.tsx:69
 msgid "Manage CAT tokens"
 msgstr ""
 
@@ -1447,13 +1447,13 @@ msgid "Nickname"
 msgstr "暱稱"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:196
+#: src/electron/main.tsx:194
 msgid "No"
 msgstr "否"
 
 #: src/_middleware_old/middleware_api.jsx:273
-msgid "No 24 word seed, since this key is imported."
-msgstr "由這個鑰匙是匯入的，沒有 24 個字種子。"
+#~ msgid "No 24 word seed, since this key is imported."
+#~ msgstr "由這個鑰匙是匯入的，沒有 24 個字種子。"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:16
 msgid "No blocks farmed yet"
@@ -1954,8 +1954,8 @@ msgstr ""
 #~ msgstr "農會未提供 目標_拼圖_雜湊值。"
 
 #: src/_middleware_old/middleware_api.jsx:255
-msgid "Pool public key:"
-msgstr "礦池公鑰 (PPK):"
+#~ msgid "Pool public key:"
+#~ msgstr "礦池公鑰 (PPK):"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:271
 #: src/components/plotNFT/PlotNFTCard.tsx:324
@@ -2005,12 +2005,12 @@ msgid "Private key with public fingerprint {fingerprint}"
 msgstr "帶有公有指紋 {fingerprint} 的私鑰"
 
 #: src/_middleware_old/middleware_api.jsx:221
-msgid "Private key {0}"
-msgstr "私鑰 {0}"
+#~ msgid "Private key {0}"
+#~ msgstr "私鑰 {0}"
 
 #: src/_middleware_old/middleware_api.jsx:231
-msgid "Private key:"
-msgstr "私鑰："
+#~ msgid "Private key:"
+#~ msgstr "私鑰："
 
 #: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
@@ -2030,8 +2030,8 @@ msgid "Pubkey"
 msgstr "公鑰"
 
 #: src/_middleware_old/middleware_api.jsx:239
-msgid "Public key:"
-msgstr "公鑰："
+#~ msgid "Public key:"
+#~ msgstr "公鑰："
 
 #: src/components/_wallet_old/did/WalletDID.tsx:1005
 msgid "Puzzlehash"
@@ -2118,7 +2118,7 @@ msgstr "刷新耕地"
 msgid "Relative Lock Height"
 msgstr "相對鎖定高度"
 
-#: src/electron/main.tsx:385
+#: src/electron/main.tsx:383
 msgid "Release Notes"
 msgstr "發行說明"
 
@@ -2141,7 +2141,7 @@ msgstr "移除中"
 msgid "Rename"
 msgstr "更改名稱"
 
-#: src/electron/main.tsx:404
+#: src/electron/main.tsx:402
 msgid "Report an Issue..."
 msgstr "回報問題..."
 
@@ -2196,8 +2196,8 @@ msgid "See private key"
 msgstr "看私鑰"
 
 #: src/_middleware_old/middleware_api.jsx:265
-msgid "Seed:"
-msgstr "種子："
+#~ msgid "Seed:"
+#~ msgstr "種子："
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:100
 msgid "Select 2nd Temporary Directory"
@@ -2223,7 +2223,7 @@ msgstr "選擇暫存資料夾"
 msgid "Select Wallet Type"
 msgstr "選擇錢包類型"
 
-#: src/components/app/AppSelectMode.tsx:42
+#: src/components/app/AppSelectMode.tsx:50
 msgid "Select Your Client Mode"
 msgstr ""
 
@@ -2301,6 +2301,10 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+#: src/components/app/AppSelectMode.tsx:109
+msgid "Settings are located at the upper right corner"
+msgstr ""
+
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
 #~ msgid "Show Advanced Options"
 #~ msgstr "顯示進階選項"
@@ -2351,7 +2355,7 @@ msgstr "加入農會來獲得穩定的XCH獎勵。"
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:481
+#: src/electron/main.tsx:479
 msgid "Speech"
 msgstr "語音"
 
@@ -2424,7 +2428,7 @@ msgstr "狀態："
 #~ msgid "StatusCard.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:86
+#: src/components/app/AppSelectMode.tsx:66
 msgid "Store and Send XCH"
 msgstr ""
 
@@ -2739,7 +2743,7 @@ msgstr "貿易 ID:"
 msgid "Trade Overview"
 msgstr "貿易概觀"
 
-#: src/components/app/AppSelectMode.tsx:92
+#: src/components/app/AppSelectMode.tsx:72
 msgid "Trade tokens"
 msgstr ""
 
@@ -2821,7 +2825,7 @@ msgstr "VDF 子欄位疊代次數"
 msgid "Verify Pool Details"
 msgstr "驗證農會細節"
 
-#: src/electron/main.tsx:306
+#: src/electron/main.tsx:304
 msgid "View"
 msgstr "檢視"
 
@@ -2870,8 +2874,8 @@ msgstr "等待同步中"
 msgid "Waiting for the transaction to be confirmed"
 msgstr "正在等待交易結算"
 
-#: src/components/app/AppSelectMode.tsx:58
-#: src/components/app/AppSelectMode.tsx:81
+#: src/components/app/AppSelectMode.tsx:61
+#: src/components/app/AppSelectMode.tsx:91
 msgid "Wallet Mode"
 msgstr ""
 
@@ -2974,7 +2978,7 @@ msgstr "歡迎！以下的字是用來為你的錢包備份。沒有這些你將
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "當你從你的管理員收到設定資訊封包時，在下面輸入以完成你的速率限制錢包設定："
 
-#: src/electron/main.tsx:351
+#: src/electron/main.tsx:349
 msgid "Window"
 msgstr "視窗"
 
@@ -2984,7 +2988,7 @@ msgstr "未計雜費"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:195
 msgid "Yes"
 msgstr "是"
 
@@ -2997,7 +3001,7 @@ msgstr "您處於待確認的狀態。請等待確認"
 msgid "You are not self pooling"
 msgstr "你目前不在自己的農會。"
 
-#: src/components/app/AppSelectMode.tsx:102
+#: src/components/app/AppSelectMode.tsx:111
 msgid "You can always change your mode later in the settings"
 msgstr ""
 

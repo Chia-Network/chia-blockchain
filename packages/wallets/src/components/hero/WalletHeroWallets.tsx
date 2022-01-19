@@ -1,62 +1,45 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import {
-  Box,
   Button,
-  Container,
-  Typography,
   Card,
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
 } from '@material-ui/core';
 import styled from 'styled-components';
-import { ChevronRight as ChevronRightIcon, Eco as EcoIcon } from '@material-ui/icons';
-import {  useSelector } from 'react-redux';
-import { Back, Flex, FormatLargeNumber, Loading, Logo } from '@chia/core';
-import StandardWallet from '../standard/WalletStandard';
-import { CreateWalletView } from '../create/WalletCreate';
-import WalletCAT from '../cat/WalletCAT';
-import RateLimitedWallet from '../rateLimited/WalletRateLimited';
-import DistributedWallet from '../did/WalletDID';
+import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
+import { useSelector } from 'react-redux';
+import { Flex, Loading, Logo } from '@chia/core';
 import type { RootState } from '../../../modules/rootReducer';
-import WalletType from '../../../constants/WalletType';
 import WalletName from '../../../constants/WalletName';
-import LayoutMain from '../../layout/LayoutMain';
-import LayoutHero from '../../layout/LayoutHero';
 import config from '../../../config/config';
-import { Switch, Route, useHistory, useRouteMatch, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import useTrans from '../../../hooks/useTrans';
-import WalletsList from '../WalletsList';
 import WalletHeroLayout from './WalletHeroLayout';
 
 const StyledListItem = styled(ListItem)`
   min-width: 300px;
 `;
 
-const { multipleWallets, asteroid } = config;
+const { asteroid } = config;
 
 export default function Wallets() {
-  const history = useHistory();
-  const { walletId } = useParams();
-  const { path, ...rest } = useRouteMatch();
+  const navigate = useNavigate();
   const trans = useTrans();
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
-  const loading = !wallets;
 
   function handleChange(_, newValue) {
     if (asteroid && newValue === 'create') {
-      history.push('/dashboard/wallets/create/simple');
+      navigate('/dashboard/wallets/create/simple');
       return;
     }
 
-    history.push(`/dashboard/wallets/${newValue}`);
+    navigate(`/dashboard/wallets/${newValue}`);
   }
 
-
   function handleAddToken() {
-    history.push(`/wallets/add`);
+    navigate(`/wallets/add`);
   }
 
   return (

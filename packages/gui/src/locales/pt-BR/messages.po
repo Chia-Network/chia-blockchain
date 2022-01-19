@@ -34,7 +34,7 @@ msgstr "(Opcional)"
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 msgstr "Quer explorar os blocos de Chia mais à fundo? Dê uma olhada no <0>Chia Explorer</0> construído por um desenvolvedor de código aberto."
 
-#: src/components/app/AppSelectMode.tsx:61
+#: src/components/app/AppSelectMode.tsx:94
 msgid "+"
 msgstr ""
 
@@ -62,8 +62,8 @@ msgstr "Harvester é um serviço executado em uma máquina onde os plots estão 
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:433
-#: src/electron/main.tsx:520
+#: src/electron/main.tsx:431
+#: src/electron/main.tsx:518
 msgid "About Chia Blockchain"
 msgstr "Sobre Chia Blockchain"
 
@@ -188,7 +188,7 @@ msgstr "Tem certeza que deseja excluir as transações não confirmadas?"
 msgid "Are you sure you want to disconnect?"
 msgstr "Tem certeza que quer se desconectar?"
 
-#: src/electron/main.tsx:201
+#: src/electron/main.tsx:199
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Você tem certeza que quer sair? O loteamento e o cultivo da GUI serão interrompidos."
 
@@ -361,15 +361,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "Trocar Bolão"
 
-#: src/electron/main.tsx:412
+#: src/electron/main.tsx:410
 msgid "Chat on KeyBase"
 msgstr "Chat no KeyBase"
 
-#: src/electron/main.tsx:430
+#: src/electron/main.tsx:428
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:369
+#: src/electron/main.tsx:367
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki da Chia Blockchain"
 
@@ -437,7 +437,7 @@ msgid "Coloured Coin Options"
 msgstr "Opções da Moeda Colorida"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:197
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Confirmar"
@@ -512,7 +512,7 @@ msgstr "Tipo de conexão"
 msgid "Connections"
 msgstr "Conexões"
 
-#: src/electron/main.tsx:393
+#: src/electron/main.tsx:391
 msgid "Contribute on GitHub"
 msgstr "Contribua no GitHub"
 
@@ -542,7 +542,7 @@ msgstr "Copiar"
 msgid "Create"
 msgstr "Criar"
 
-#: src/components/app/AppSelectMode.tsx:64
+#: src/components/app/AppSelectMode.tsx:97
 msgid "Create & Manage plots"
 msgstr ""
 
@@ -746,11 +746,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:315
+#: src/electron/main.tsx:313
 msgid "Developer"
 msgstr "Desenvolvedor"
 
-#: src/electron/main.tsx:318
+#: src/electron/main.tsx:316
 msgid "Developer Tools"
 msgstr "Ferramentas de desenvolvimento"
 
@@ -821,7 +821,7 @@ msgstr "Arraste e solte seu arquivo de backup"
 msgid "Drag and drop your recovery backup file"
 msgstr "Arraste e solte seu arquivo de backup"
 
-#: src/electron/main.tsx:274
+#: src/electron/main.tsx:272
 msgid "Edit"
 msgstr "Editar"
 
@@ -956,8 +956,8 @@ msgid "Farmer is not running"
 msgstr "Fazendeiro não está correndo"
 
 #: src/_middleware_old/middleware_api.jsx:247
-msgid "Farmer public key:"
-msgstr "Chave Pública do Fazendeiro:"
+#~ msgid "Farmer public key:"
+#~ msgstr "Chave Pública do Fazendeiro:"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:32
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -970,7 +970,7 @@ msgstr "Os fazendeiros ganham recompensas em bloco e taxas de transação, reser
 msgid "Farming"
 msgstr "Cultivando"
 
-#: src/components/app/AppSelectMode.tsx:53
+#: src/components/app/AppSelectMode.tsx:86
 msgid "Farming Mode"
 msgstr ""
 
@@ -1019,8 +1019,8 @@ msgstr "Montante das taxas"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:266
-#: src/electron/main.tsx:467
+#: src/electron/main.tsx:264
+#: src/electron/main.tsx:465
 msgid "File"
 msgstr "Arquivo"
 
@@ -1040,11 +1040,11 @@ msgstr "Local da pasta final"
 msgid "Finished"
 msgstr "Concluído"
 
-#: src/electron/main.tsx:418
+#: src/electron/main.tsx:416
 msgid "Follow on Twitter"
 msgstr "Siga no Twitter"
 
-#: src/electron/main.tsx:377
+#: src/electron/main.tsx:375
 msgid "Frequently Asked Questions"
 msgstr "Perguntas Frequentes"
 
@@ -1061,7 +1061,7 @@ msgstr "Resumo do nó completo"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:343
+#: src/electron/main.tsx:341
 msgid "Full Screen"
 msgstr "Tela Cheia"
 
@@ -1103,7 +1103,7 @@ msgstr "Hash do cabeçalho"
 msgid "Height"
 msgstr "Altura"
 
-#: src/electron/main.tsx:365
+#: src/electron/main.tsx:363
 msgid "Help"
 msgstr "Ajuda"
 
@@ -1221,7 +1221,7 @@ msgstr "Junte-se a um bolão e obtenha recompensas consistentes de cultivo em XC
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr "Junte-se a um bolão e obtenha recompensas de cultivo XCH mais consistentes. Crie um lote NFT e atribua seu lote a um bolão."
 
-#: src/components/app/AppSelectMode.tsx:67
+#: src/components/app/AppSelectMode.tsx:100
 msgid "Join farming pools"
 msgstr ""
 
@@ -1344,7 +1344,7 @@ msgstr "Carregando..."
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:89
+#: src/components/app/AppSelectMode.tsx:69
 msgid "Manage CAT tokens"
 msgstr ""
 
@@ -1447,13 +1447,13 @@ msgid "Nickname"
 msgstr "Apelido"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:196
+#: src/electron/main.tsx:194
 msgid "No"
 msgstr "Não"
 
 #: src/_middleware_old/middleware_api.jsx:273
-msgid "No 24 word seed, since this key is imported."
-msgstr "Sem semente de 24 palavras, uma vez que esta chave é importada."
+#~ msgid "No 24 word seed, since this key is imported."
+#~ msgstr "Sem semente de 24 palavras, uma vez que esta chave é importada."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:16
 msgid "No blocks farmed yet"
@@ -1954,8 +1954,8 @@ msgstr ""
 #~ msgstr "O bolão não fornece o alvo_desafio_hash."
 
 #: src/_middleware_old/middleware_api.jsx:255
-msgid "Pool public key:"
-msgstr "Chave pública do bolão:"
+#~ msgid "Pool public key:"
+#~ msgstr "Chave pública do bolão:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:271
 #: src/components/plotNFT/PlotNFTCard.tsx:324
@@ -2005,12 +2005,12 @@ msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Chave privada com impressão digital pública {fingerprint}"
 
 #: src/_middleware_old/middleware_api.jsx:221
-msgid "Private key {0}"
-msgstr "Chave privada {0}"
+#~ msgid "Private key {0}"
+#~ msgstr "Chave privada {0}"
 
 #: src/_middleware_old/middleware_api.jsx:231
-msgid "Private key:"
-msgstr "Chave privada:"
+#~ msgid "Private key:"
+#~ msgstr "Chave privada:"
 
 #: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
@@ -2030,8 +2030,8 @@ msgid "Pubkey"
 msgstr "Pubkey"
 
 #: src/_middleware_old/middleware_api.jsx:239
-msgid "Public key:"
-msgstr "Chave pública:"
+#~ msgid "Public key:"
+#~ msgstr "Chave pública:"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:1005
 msgid "Puzzlehash"
@@ -2118,7 +2118,7 @@ msgstr "Atualizar Lotes"
 msgid "Relative Lock Height"
 msgstr "Altura relativa bloqueada"
 
-#: src/electron/main.tsx:385
+#: src/electron/main.tsx:383
 msgid "Release Notes"
 msgstr "Notas de Lançamento"
 
@@ -2141,7 +2141,7 @@ msgstr "Removendo"
 msgid "Rename"
 msgstr "Renomear"
 
-#: src/electron/main.tsx:404
+#: src/electron/main.tsx:402
 msgid "Report an Issue..."
 msgstr "Reportar um problema..."
 
@@ -2196,8 +2196,8 @@ msgid "See private key"
 msgstr "Ver chave privada"
 
 #: src/_middleware_old/middleware_api.jsx:265
-msgid "Seed:"
-msgstr "Semente:"
+#~ msgid "Seed:"
+#~ msgstr "Semente:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:100
 msgid "Select 2nd Temporary Directory"
@@ -2223,7 +2223,7 @@ msgstr "Selecione o Diretório Temporário"
 msgid "Select Wallet Type"
 msgstr "Selecione o tipo de carteira"
 
-#: src/components/app/AppSelectMode.tsx:42
+#: src/components/app/AppSelectMode.tsx:50
 msgid "Select Your Client Mode"
 msgstr ""
 
@@ -2301,6 +2301,10 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+#: src/components/app/AppSelectMode.tsx:109
+msgid "Settings are located at the upper right corner"
+msgstr ""
+
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
 #~ msgid "Show Advanced Options"
 #~ msgstr "Mostrar opções avançadas"
@@ -2351,7 +2355,7 @@ msgstr "Suavize suas recompensas de coleta XCH ao se juntar a um bolão."
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:481
+#: src/electron/main.tsx:479
 msgid "Speech"
 msgstr "Fala"
 
@@ -2424,7 +2428,7 @@ msgstr "Estado:"
 #~ msgid "StatusCard.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:86
+#: src/components/app/AppSelectMode.tsx:66
 msgid "Store and Send XCH"
 msgstr ""
 
@@ -2739,7 +2743,7 @@ msgstr "ID de negociação:"
 msgid "Trade Overview"
 msgstr "Visão geral de Negociações"
 
-#: src/components/app/AppSelectMode.tsx:92
+#: src/components/app/AppSelectMode.tsx:72
 msgid "Trade tokens"
 msgstr ""
 
@@ -2821,7 +2825,7 @@ msgstr "VDF Sub Slot Iterações"
 msgid "Verify Pool Details"
 msgstr "Verificar Detalhes do bolão"
 
-#: src/electron/main.tsx:306
+#: src/electron/main.tsx:304
 msgid "View"
 msgstr "Exibir"
 
@@ -2870,8 +2874,8 @@ msgstr "Aguarde a sincronização"
 msgid "Waiting for the transaction to be confirmed"
 msgstr "Aguardando confirmação da transação"
 
-#: src/components/app/AppSelectMode.tsx:58
-#: src/components/app/AppSelectMode.tsx:81
+#: src/components/app/AppSelectMode.tsx:61
+#: src/components/app/AppSelectMode.tsx:91
 msgid "Wallet Mode"
 msgstr ""
 
@@ -2974,7 +2978,7 @@ msgstr "Bem-vinda! As palavras a seguir são usadas para o backup da carteira. S
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Quando você receber o pacote de informações de configuração de seu administrador, digite-o abaixo para concluir a configuração de sua carteira limitada:"
 
-#: src/electron/main.tsx:351
+#: src/electron/main.tsx:349
 msgid "Window"
 msgstr "Janela"
 
@@ -2984,7 +2988,7 @@ msgstr "Sem taxas"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:195
 msgid "Yes"
 msgstr "Sim"
 
@@ -2997,7 +3001,7 @@ msgstr "Você está em estado pendente. Por favor, aguarde a confirmação"
 msgid "You are not self pooling"
 msgstr "Você não está fazendo um bolão próprio"
 
-#: src/components/app/AppSelectMode.tsx:102
+#: src/components/app/AppSelectMode.tsx:111
 msgid "You can always change your mode later in the settings"
 msgstr ""
 

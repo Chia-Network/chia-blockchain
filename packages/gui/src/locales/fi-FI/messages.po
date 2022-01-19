@@ -34,7 +34,7 @@ msgstr "(Valinnainen)"
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 msgstr "Haluatko tarkastella lohkoja? Katso avoimen koodin <0>Chia Explorer</0>."
 
-#: src/components/app/AppSelectMode.tsx:61
+#: src/components/app/AppSelectMode.tsx:94
 msgid "+"
 msgstr ""
 
@@ -62,8 +62,8 @@ msgstr "Harvesteri on palvelu koneella, jolle plot-tiedostot on tallennettu. Far
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:433
-#: src/electron/main.tsx:520
+#: src/electron/main.tsx:431
+#: src/electron/main.tsx:518
 msgid "About Chia Blockchain"
 msgstr "Chia Lohkoketjusta"
 
@@ -188,7 +188,7 @@ msgstr "Haluatko varmasti poistaa nämä vahvistamattomat tapahtumat?"
 msgid "Are you sure you want to disconnect?"
 msgstr "Katkaise yhteys?"
 
-#: src/electron/main.tsx:201
+#: src/electron/main.tsx:199
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Haluatko lopettaa? Käyttöliittymäplottaus ja farmi sammutetaan."
 
@@ -361,15 +361,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "Vaihda Poolia"
 
-#: src/electron/main.tsx:412
+#: src/electron/main.tsx:410
 msgid "Chat on KeyBase"
 msgstr "Keskustele KeyBasessa"
 
-#: src/electron/main.tsx:430
+#: src/electron/main.tsx:428
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:369
+#: src/electron/main.tsx:367
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Wiki"
 
@@ -437,7 +437,7 @@ msgid "Coloured Coin Options"
 msgstr "Värikolikon Valinnat"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:197
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Vahvista"
@@ -512,7 +512,7 @@ msgstr "Yhteystyyppi"
 msgid "Connections"
 msgstr "Yhteydet"
 
-#: src/electron/main.tsx:393
+#: src/electron/main.tsx:391
 msgid "Contribute on GitHub"
 msgstr "Anna panoksesi GitHubissa"
 
@@ -542,7 +542,7 @@ msgstr "Kopioi"
 msgid "Create"
 msgstr "Luo"
 
-#: src/components/app/AppSelectMode.tsx:64
+#: src/components/app/AppSelectMode.tsx:97
 msgid "Create & Manage plots"
 msgstr ""
 
@@ -746,11 +746,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:315
+#: src/electron/main.tsx:313
 msgid "Developer"
 msgstr "Kehittäjä"
 
-#: src/electron/main.tsx:318
+#: src/electron/main.tsx:316
 msgid "Developer Tools"
 msgstr "Kehitystyökalut"
 
@@ -821,7 +821,7 @@ msgstr "Raahaa ja pudota varmuuskopiotiedosto"
 msgid "Drag and drop your recovery backup file"
 msgstr "Raahaa ja pudota palautuksen varmuuskopiotiedosto"
 
-#: src/electron/main.tsx:274
+#: src/electron/main.tsx:272
 msgid "Edit"
 msgstr "Muokkaa"
 
@@ -956,8 +956,8 @@ msgid "Farmer is not running"
 msgstr "Farmari ei ole käynnissä"
 
 #: src/_middleware_old/middleware_api.jsx:247
-msgid "Farmer public key:"
-msgstr "Farmarin julkinen avain:"
+#~ msgid "Farmer public key:"
+#~ msgstr "Farmarin julkinen avain:"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:32
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -970,7 +970,7 @@ msgstr "Farmarit ansaitsevat lohkopalkkioita ja transaktioveloituksia varaamalla
 msgid "Farming"
 msgstr "Tuotetaan Farmissa"
 
-#: src/components/app/AppSelectMode.tsx:53
+#: src/components/app/AppSelectMode.tsx:86
 msgid "Farming Mode"
 msgstr ""
 
@@ -1019,8 +1019,8 @@ msgstr "Palkkiosumma"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:266
-#: src/electron/main.tsx:467
+#: src/electron/main.tsx:264
+#: src/electron/main.tsx:465
 msgid "File"
 msgstr "Tiedosto"
 
@@ -1040,11 +1040,11 @@ msgstr "Lopullinen hakemisto"
 msgid "Finished"
 msgstr "Valmis"
 
-#: src/electron/main.tsx:418
+#: src/electron/main.tsx:416
 msgid "Follow on Twitter"
 msgstr "Seuraa Twitterissä"
 
-#: src/electron/main.tsx:377
+#: src/electron/main.tsx:375
 msgid "Frequently Asked Questions"
 msgstr "Usein Kysytyt Kysymykset"
 
@@ -1061,7 +1061,7 @@ msgstr "Koko Noodin Yleiskatsaus"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:343
+#: src/electron/main.tsx:341
 msgid "Full Screen"
 msgstr "Kokoruutu"
 
@@ -1103,7 +1103,7 @@ msgstr "Lohkotunniste"
 msgid "Height"
 msgstr "Lohkokorkeus"
 
-#: src/electron/main.tsx:365
+#: src/electron/main.tsx:363
 msgid "Help"
 msgstr "Apuja"
 
@@ -1221,7 +1221,7 @@ msgstr "Liity pooliin ja saat tasaisen XCH-tuoton. Keskimääräinen tuotto on s
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr "Liity pooliin ja saat tasaisen XCH-tuoton. Keskimääräinen tuotto on sama, mutta hajonta on pienempi kuin itse poolaamalla. Luo Plot-NFT ja aseta uudet plotit osoittamaan Plot-NFT:hen."
 
-#: src/components/app/AppSelectMode.tsx:67
+#: src/components/app/AppSelectMode.tsx:100
 msgid "Join farming pools"
 msgstr ""
 
@@ -1344,7 +1344,7 @@ msgstr "Lataa..."
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:89
+#: src/components/app/AppSelectMode.tsx:69
 msgid "Manage CAT tokens"
 msgstr ""
 
@@ -1447,13 +1447,13 @@ msgid "Nickname"
 msgstr "Alias"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:196
+#: src/electron/main.tsx:194
 msgid "No"
 msgstr "Ei"
 
 #: src/_middleware_old/middleware_api.jsx:273
-msgid "No 24 word seed, since this key is imported."
-msgstr "Tuotu avain, ei 24 muistisanaa."
+#~ msgid "No 24 word seed, since this key is imported."
+#~ msgstr "Tuotu avain, ei 24 muistisanaa."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:16
 msgid "No blocks farmed yet"
@@ -1954,8 +1954,8 @@ msgstr ""
 #~ msgstr "Pool ei tarjoa target_puzzle_hashia."
 
 #: src/_middleware_old/middleware_api.jsx:255
-msgid "Pool public key:"
-msgstr "Poolin julkinen avain:"
+#~ msgid "Pool public key:"
+#~ msgstr "Poolin julkinen avain:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:271
 #: src/components/plotNFT/PlotNFTCard.tsx:324
@@ -2005,12 +2005,12 @@ msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Yksityinen avain julkisella sormenjäljellä {fingerprint}"
 
 #: src/_middleware_old/middleware_api.jsx:221
-msgid "Private key {0}"
-msgstr "Yksityinen avain {0}"
+#~ msgid "Private key {0}"
+#~ msgstr "Yksityinen avain {0}"
 
 #: src/_middleware_old/middleware_api.jsx:231
-msgid "Private key:"
-msgstr "Yksityinen avain:"
+#~ msgid "Private key:"
+#~ msgstr "Yksityinen avain:"
 
 #: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
@@ -2030,8 +2030,8 @@ msgid "Pubkey"
 msgstr "Julkinen avain"
 
 #: src/_middleware_old/middleware_api.jsx:239
-msgid "Public key:"
-msgstr "Julkinen avain:"
+#~ msgid "Public key:"
+#~ msgstr "Julkinen avain:"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:1005
 msgid "Puzzlehash"
@@ -2118,7 +2118,7 @@ msgstr "Päivitä Plot-tiedostot"
 msgid "Relative Lock Height"
 msgstr "Suhteellisen Lukituksen Korkeus"
 
-#: src/electron/main.tsx:385
+#: src/electron/main.tsx:383
 msgid "Release Notes"
 msgstr "Version Muutokset"
 
@@ -2141,7 +2141,7 @@ msgstr "Poistetaan"
 msgid "Rename"
 msgstr "Nimeä Uudelleen"
 
-#: src/electron/main.tsx:404
+#: src/electron/main.tsx:402
 msgid "Report an Issue..."
 msgstr "Raportoi Ongelma..."
 
@@ -2196,8 +2196,8 @@ msgid "See private key"
 msgstr "Katso yksityinen avain"
 
 #: src/_middleware_old/middleware_api.jsx:265
-msgid "Seed:"
-msgstr "Siemenarvo:"
+#~ msgid "Seed:"
+#~ msgstr "Siemenarvo:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:100
 msgid "Select 2nd Temporary Directory"
@@ -2223,7 +2223,7 @@ msgstr "Valitse Väliaikaistyöhakemisto"
 msgid "Select Wallet Type"
 msgstr "Valitse Lompakkotyyppi"
 
-#: src/components/app/AppSelectMode.tsx:42
+#: src/components/app/AppSelectMode.tsx:50
 msgid "Select Your Client Mode"
 msgstr ""
 
@@ -2301,6 +2301,10 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+#: src/components/app/AppSelectMode.tsx:109
+msgid "Settings are located at the upper right corner"
+msgstr ""
+
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
 #~ msgid "Show Advanced Options"
 #~ msgstr "Näytä Lisävalinnat"
@@ -2351,7 +2355,7 @@ msgstr "Tasaa XCH-farmauspalkkioita liittymällä pooliin."
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:481
+#: src/electron/main.tsx:479
 msgid "Speech"
 msgstr "Puhe"
 
@@ -2424,7 +2428,7 @@ msgstr "Tila:"
 #~ msgid "StatusCard.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:86
+#: src/components/app/AppSelectMode.tsx:66
 msgid "Store and Send XCH"
 msgstr ""
 
@@ -2739,7 +2743,7 @@ msgstr "Kauppan tunnus:"
 msgid "Trade Overview"
 msgstr "Kaupankäynnin Yleiskuva"
 
-#: src/components/app/AppSelectMode.tsx:92
+#: src/components/app/AppSelectMode.tsx:72
 msgid "Trade tokens"
 msgstr ""
 
@@ -2821,7 +2825,7 @@ msgstr "VDF -alaiteraatioita"
 msgid "Verify Pool Details"
 msgstr "Tarkista Poolin Tiedot"
 
-#: src/electron/main.tsx:306
+#: src/electron/main.tsx:304
 msgid "View"
 msgstr "Näkymä"
 
@@ -2870,8 +2874,8 @@ msgstr "Odota synkroinointia"
 msgid "Waiting for the transaction to be confirmed"
 msgstr "Odotetaan, että tapahtuma on vahvistettu"
 
-#: src/components/app/AppSelectMode.tsx:58
-#: src/components/app/AppSelectMode.tsx:81
+#: src/components/app/AppSelectMode.tsx:61
+#: src/components/app/AppSelectMode.tsx:91
 msgid "Wallet Mode"
 msgstr ""
 
@@ -2974,7 +2978,7 @@ msgstr "Tervetuloa! Seuraavia muistisanoja käytetään lompakon varmuuskopioint
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistelläksesi Siirtorajoitetun Lompakon asennuksen:"
 
-#: src/electron/main.tsx:351
+#: src/electron/main.tsx:349
 msgid "Window"
 msgstr "Ikkuna"
 
@@ -2984,7 +2988,7 @@ msgstr "Ilman veloituksia"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:195
 msgid "Yes"
 msgstr "Kyllä"
 
@@ -2997,7 +3001,7 @@ msgstr "Keskeneräinen tila. Odota vahvistusta"
 msgid "You are not self pooling"
 msgstr "Et ole itsepoolaamassa"
 
-#: src/components/app/AppSelectMode.tsx:102
+#: src/components/app/AppSelectMode.tsx:111
 msgid "You can always change your mode later in the settings"
 msgstr ""
 

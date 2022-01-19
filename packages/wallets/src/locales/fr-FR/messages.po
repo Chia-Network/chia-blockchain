@@ -121,7 +121,7 @@ msgstr ""
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:62
 #: src/components/cat/WalletCATCreateSimple.tsx:70
 #: src/components/hero/WalletHeroAdd.tsx:64
-#: src/components/hero/WalletHeroWallets.tsx:100
+#: src/components/hero/WalletHeroWallets.tsx:83
 msgid "Add Token"
 msgstr ""
 
@@ -2291,7 +2291,7 @@ msgstr "Enregistrer"
 #~ msgstr "Sélectionner un Répertoire Temporaire"
 
 #: src/components/WalletsList.tsx:32
-#: src/components/hero/WalletHeroWallets.tsx:64
+#: src/components/hero/WalletHeroWallets.tsx:47
 msgid "Select Wallet"
 msgstr ""
 

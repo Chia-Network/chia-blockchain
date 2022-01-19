@@ -1,5 +1,4 @@
-import { useMemo, useState } from 'react';
-import { orderBy } from 'lodash';
+import { useState } from 'react';
 import { useGetTransactionsQuery, useGetTransactionsCountQuery } from '@chia/api-react';
 import Transaction from '../types/Transaction';
 
