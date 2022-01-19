@@ -7,7 +7,6 @@ export type ServiceState = 'starting' | 'running' | 'stopping' | 'stopped';
 
 type Options = {
   keepState?: ServiceState,
-  disableWait?: boolean,
   disabled?: boolean,
 };
 
@@ -22,7 +21,6 @@ export default function useService(service: ServiceName, options: Options): {
 } {
   const { 
     keepState,
-    disableWait = false,
     disabled = false,
   } = options;
 
@@ -45,6 +43,8 @@ export default function useService(service: ServiceName, options: Options): {
     },
   });
 
+  console.log('useService', service, isRunning, isLoading, error);
+
   const isProcessing = isStarting || isStopping;
 
   let state: ServiceState = 'stopped';
@@ -65,7 +65,6 @@ export default function useService(service: ServiceName, options: Options): {
       setIsStarting(true);
       await startService({
         service,
-        disableWait,
       }).unwrap();
 
       refetch();

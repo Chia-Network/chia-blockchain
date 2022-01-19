@@ -29,7 +29,6 @@ function getServiceOptions(service: ServiceName, services: ServiceName[], option
   return {
     keepState,
     disabled,
-    disableWait: service === ServiceName.SIMULATOR,
   };
 }
 
