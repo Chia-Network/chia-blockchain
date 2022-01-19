@@ -7,6 +7,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
 from chia.data_layer.data_layer_wallet import DataLayerWallet
+
 # from chia.wallet.dlo_wallet.dlo_wallet import DLOWallet
 from chia.types.blockchain_format.program import Program
 from tests.time_out_assert import time_out_assert
