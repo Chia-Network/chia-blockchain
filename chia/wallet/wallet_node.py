@@ -1381,7 +1381,13 @@ class WalletNode:
                     res_ses: RespondSESInfo = peer_request_cache.ses_requests[request.get_hash()]
                 else:
                     res_ses = await peer.request_ses_hashes(request)
+                if len(res_ses.reward_chain_hash) == 0:
+                    self.log.error("Failed validation 12")
+                    return False
                 ses_0 = res_ses.reward_chain_hash[0]
+                if len(res_ses.heights[0]) == 0:
+                    self.log.error("Failed validation 13")
+                    return False
                 last_height = res_ses.heights[0][-1]  # Last height in sub epoch
                 end = last_height
                 for idx, ses in enumerate(weight_proof.sub_epochs):
