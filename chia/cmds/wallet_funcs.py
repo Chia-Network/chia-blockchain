@@ -14,7 +14,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -116,6 +116,28 @@ async def delete_unconfirmed_transactions(args: dict, wallet_client: WalletRpcCl
     wallet_id = args["id"]
     await wallet_client.delete_unconfirmed_transactions(wallet_id)
     print(f"Successfully deleted all unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}")
+
+
+async def add_token(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    asset_id = args["asset_id"]
+    token_name = args["token_name"]
+    try:
+        asset_id_bytes: bytes32 = bytes32.from_hexstr(asset_id)
+        existing_info: Optional[Tuple[Optional[uint32], str]] = await wallet_client.cat_asset_id_to_name(asset_id_bytes)
+        if existing_info is None or existing_info[0] is None:
+            response = await wallet_client.create_wallet_for_existing_cat(asset_id_bytes)
+            wallet_id = response["wallet_id"]
+            await wallet_client.set_cat_name(wallet_id, token_name)
+            print(f"Successfully added {token_name} with wallet id {wallet_id} on key {fingerprint}")
+        else:
+            wallet_id, old_name = existing_info
+            await wallet_client.set_cat_name(wallet_id, token_name)
+            print(f"Successfully renamed {old_name} with wallet_id {wallet_id} on key {fingerprint} to {token_name}")
+    except ValueError as e:
+        if "fromhex()" in str(e):
+            print(f"{asset_id} is not a valid Asset ID")
+        else:
+            raise e
 
 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
