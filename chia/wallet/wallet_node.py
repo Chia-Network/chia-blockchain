@@ -1403,8 +1403,14 @@ class WalletNode:
                 request_h_response = RequestHeaderBlocks(request_start, request_end)
                 if request_h_response.get_hash() in peer_request_cache.block_requests:
                     res_h_blocks: RespondHeaderBlocks = peer_request_cache.block_requests[request_h_response.get_hash()]
+                    if res_h_blocks is None:
+                        self.log.error("Failed validation 10")
+                        return False
                 else:
                     res_h_blocks = await peer.request_header_blocks(request_h_response)
+                    if res_h_blocks is None:
+                        self.log.error("Failed validation 11")
+                        return False
                     peer_request_cache.block_requests[request_h_response.get_hash()] = res_h_blocks
                 self.log.info(f"Fetching blocks: {request_start} - {request_end}")
                 blocks.extend([bl for bl in res_h_blocks.header_blocks if bl.height >= start])
