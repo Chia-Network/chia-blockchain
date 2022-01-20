@@ -61,6 +61,7 @@ if $UBUNTU; then
 	# Mint 20.04 repsonds with 20 here so 20 instead of 20.04
 	UBUNTU_PRE_2004=$(echo "$LSB_RELEASE<20" | bc)
 	UBUNTU_2100=$(echo "$LSB_RELEASE>=21" | bc)
+	UBUNTU_2110_PLUS=$(echo "$LSB_RELEASE>=21.10" | bc)
 fi
 
 # Manage npm and other install requirements on an OS specific basis
@@ -166,8 +167,16 @@ fi
 # shellcheck disable=SC1091
 . ./activate
 # pip 20.x+ supports Linux binary wheels
-python -m pip install --upgrade pip
-python -m pip install wheel
+
+if [ "$UBUNTU_2110_PLUS" = "true" ]; then
+	# https://github.com/pypa/setuptools/issues/2956
+	SETUPTOOLS_FOR_PIP='setuptools<60'
+else
+	SETUPTOOLS_FOR_PIP='setuptools'
+fi
+
+python -m pip install --upgrade pip wheel "${SETUPTOOLS_FOR_PIP}"
+
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
 python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
