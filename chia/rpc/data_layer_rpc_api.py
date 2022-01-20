@@ -60,8 +60,9 @@ class DataLayerRpcApi:
     async def create_data_store(self, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         if self.service is None:
             raise Exception("Data layer not created")
-        value = await self.service.create_store()
-        return {"id": value.hex()}
+        root = bytes32([0] * 32)
+        txs, value = await self.service.create_store(root)
+        return {"txs": txs, "id": value.hex()}
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32.from_hexstr(request["id"])

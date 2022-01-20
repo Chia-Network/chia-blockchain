@@ -24,7 +24,7 @@ class DataLayer:
     log: logging.Logger
     wallet_rpc: WalletRpcClient
     state_changed_callback: Optional[Callable[..., object]]
-    wallet_id:uint64
+    wallet_id: uint64
     initialized: bool
 
     def __init__(
@@ -59,7 +59,6 @@ class DataLayer:
         self.data_store = await DataStore.create(self.db_wrapper)
         return True
 
-
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
         # self._shut_down = True
@@ -69,16 +68,15 @@ class DataLayer:
         if self.connection is not None:
             await self.connection.close()
 
-    async def create_store(self,root:bytes32) -> Tuple[List[TransactionRecord], bytes32]:
+    async def create_store(self, root: bytes32) -> Tuple[List[TransactionRecord], bytes32]:
         # TODO: review for anything else we need to do here
-        node_hash = bytes32([0] * 32)
         fee = uint64(1)
-        txs,tree_id = await self.wallet_rpc.create_new_dl(node_hash,fee)
+        txs, tree_id = await self.wallet_rpc.create_new_dl(root, fee)
         res = await self.data_store.create_tree(root)
         if res is None:
             self.log.fatal("failed creating store")
         self.initialized = True
-        return txs,tree_id
+        return txs, tree_id
 
     async def batch_update(
         self,
@@ -106,7 +104,7 @@ class DataLayer:
             node_hash = root.node_hash
         else:
             node_hash = bytes32([0] * 32)  # todo change
-        res = await self.wallet_rpc.dl_update_root(tree_id,node_hash)
+        res = await self.wallet_rpc.dl_update_root(tree_id, node_hash)
         assert res
         # todo register callback to change status in data store
         # await self.data_store.change_root_status(root, Status.COMMITTED)

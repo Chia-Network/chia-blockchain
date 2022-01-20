@@ -1,11 +1,14 @@
 import asyncio
+from shutil import rmtree
 from typing import AsyncIterator, Dict, List, Tuple, Any
 import pytest
 
 # flake8: noqa: F401
 from chia.data_layer.data_layer import DataLayer
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
+from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
+from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -17,7 +20,8 @@ from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from tests.core.data_layer.util import ChiaRoot
-from tests.setup_nodes import setup_simulators_and_wallets, self_hostname
+from tests.pools.test_pool_rpc import PREFARMED_BLOCKS
+from tests.setup_nodes import setup_simulators_and_wallets, self_hostname, bt
 from tests.time_out_assert import time_out_assert
 from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
 
@@ -26,21 +30,20 @@ nodes = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]
 
 
 async def init_data_layer(
-    full_node_api: Any, num_blocks: int, ph: bytes32, wallet_node: WalletNode, wallet_rpc_api: WalletRpcApi
+    full_node_api: Any, num_blocks: int, ph: bytes32, wallet_rpc_api: WalletRpcClient, root_path
 ) -> DataLayerRpcApi:
-    assert wallet_node.wallet_state_manager
-    data_layer = DataLayer(wallet_node.root_path, wallet_node)
+    data_layer = DataLayer(root_path, wallet_rpc_api)
     data_rpc_api = DataLayerRpcApi(data_layer)
-    # res = await data_rpc_api.create_data_layer({"fee": 1})
-    # await asyncio.sleep(1)
-    # assert res["result"]
-    # tx0: TransactionRecord = res["result"][0]
-    # tx1: TransactionRecord = res["result"][1]
-    # await asyncio.sleep(1)
-    # for i in range(0, num_blocks):
-    #     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    # await time_out_assert(15, is_transaction_confirmed, True, tx0.wallet_id, wallet_rpc_api, tx0.name)
-    # await time_out_assert(15, is_transaction_confirmed, True, tx1.wallet_id, wallet_rpc_api, tx1.name)
+    res = await data_rpc_api.create_wallet({"fee": 1})
+    await asyncio.sleep(1)
+    assert res["result"]
+    tx0: TransactionRecord = res["result"][0]
+    tx1: TransactionRecord = res["result"][1]
+    await asyncio.sleep(1)
+    for i in range(0, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await time_out_assert(15, is_transaction_confirmed, True, tx0.wallet_id, wallet_rpc_api, tx0.name)
+    await time_out_assert(15, is_transaction_confirmed, True, tx1.wallet_id, wallet_rpc_api, tx1.name)
     return data_rpc_api
 
 
@@ -50,24 +53,51 @@ async def one_wallet_node() -> AsyncIterator[nodes]:
         yield _
 
 
+@pytest.fixture(scope="function")
+async def one_wallet_node_and_rpc():
+    async for nodes in setup_simulators_and_wallets(1, 1, {}):
+        full_nodes, wallets = nodes
+        full_node_api = full_nodes[0]
+        wallet_node_0, wallet_server_0 = wallets[0]
+        api_user = WalletRpcApi(wallet_node_0)
+        config = bt.config
+        hostname = config["self_hostname"]
+        daemon_port = config["daemon_port"]
+        test_rpc_port = uint16(21529)
+
+        rpc_cleanup = await start_rpc_server(
+            api_user,
+            hostname,
+            daemon_port,
+            test_rpc_port,
+            lambda x: None,
+            bt.root_path,
+            config,
+            connect_to_daemon=False,
+        )
+        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+
+        yield client, wallet_node_0, full_node_api
+
+        client.close()
+        await client.await_closed()
+        await rpc_cleanup()
+
+
 @pytest.mark.asyncio
-async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node: nodes) -> None:
-    root = chia_root.path
-    config = load_config(root, "config.yaml")
+async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node_and_rpc) -> None:
+    root_path = chia_root.path
+    client, wallet_node, full_node_api = one_wallet_node_and_rpc
+    config = load_config(root_path, "config.yaml")
     config["data_layer"]["database_path"] = "data_layer_test.sqlite"
     num_blocks = 5
-    full_nodes, wallets = one_wallet_node
-    full_node_api = full_nodes[0]
-    server_1 = full_node_api.full_node.server
-    wallet_node, server_2 = wallets[0]
     assert wallet_node.wallet_state_manager is not None
-    wallet = wallet_node.wallet_state_manager.main_wallet
-    ph = await wallet.get_new_puzzlehash()
-    await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+    ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    data_rpc_api = await init_data_layer(full_node_api, num_blocks, ph, wallet_node, wallet_rpc_api)
+    data_layer = DataLayer(root_path, client)
+    data_rpc_api = DataLayerRpcApi(data_layer)
     key = b"a"
     value = b"\x00\x01"
     changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
