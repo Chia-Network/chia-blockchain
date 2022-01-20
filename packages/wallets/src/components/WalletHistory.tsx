@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Trans } from '@lingui/macro';
 import moment from 'moment';
 import { Box, IconButton, Table as TableBase, TableBody, TableCell, TableRow, Tooltip, Typography, Chip } from '@material-ui/core';
 import { CallReceived as CallReceivedIcon, CallMade as CallMadeIcon, ExpandLess as ExpandLessIcon, ExpandMore as ExpandMoreIcon } from '@material-ui/icons';
-import { Card, CardKeyValue, CopyToClipboard, Flex, Loading, TableControlled, toBech32m, useCurrencyCode, mojoToChiaLocaleString, mojoToCATLocaleString } from '@chia/core';
+import { Card, CardKeyValue, CopyToClipboard, Flex, Loading, StateColor, TableControlled, toBech32m, useCurrencyCode, mojoToChiaLocaleString, mojoToCATLocaleString } from '@chia/core';
+import { useGetOfferRecordMutation, useGetSyncStatusQuery } from '@chia/api-react';
 import styled from 'styled-components';
 import type { Row } from '@chia/core';
 import { WalletType, TransactionType } from '@chia/api';
@@ -22,7 +24,29 @@ const StyledTableCellSmallRight = styled(StyledTableCellSmall)`
   padding-left: 1rem;
 `;
 
-const getCols = (type: WalletType) => [
+const StyledWarning = styled(Box)`
+  color: ${StateColor.WARNING};
+`;
+
+async function handleRowClick(event: React.MouseEvent<HTMLTableRowElement>, row: Row, getOfferRecord, navigate) {
+  if (row.tradeId) {
+    try {
+      const { data: response } = await getOfferRecord(row.tradeId);
+      const { tradeRecord, success } = response;
+
+      if (success === true && tradeRecord) {
+        navigate('/dashboard/wallets/offers/view', {
+          state: { tradeRecord: tradeRecord },
+        });
+      }
+    }
+    catch (e) {
+      console.error(e);
+    }
+  }
+}
+
+const getCols = (type: WalletType, isSyncing, getOfferRecord, navigate) => [
   {
     field: (row: Row) => {
       const isOutgoing = [
@@ -49,19 +73,38 @@ const getCols = (type: WalletType) => [
       const { confirmed: isConfirmed, memos  } = row;
       const hasMemos = !!memos && !!Object.values(memos).length;
       const isRetire = row.toAddress === metadata.retireAddress;
+      const isOffer = row.toAddress === metadata.offerTakerAddress;
+      const shouldObscureAddress = isRetire || isOffer;
 
       return (
-        <Flex flexDirection="column" gap={1}>
+        <Flex flexDirection="column" gap={1} onClick={(event) => {
+            if (!isSyncing) {
+              handleRowClick(event, row, getOfferRecord, navigate);
+            }
+          }}>
           <Tooltip
             title={
-              <Flex alignItems="center" gap={1}>
-                <Box maxWidth={200}>{row.toAddress}</Box>
-                <CopyToClipboard value={row.toAddress} fontSize="small" />
+              <Flex flexDirection="column" gap={1}>
+                {shouldObscureAddress && (
+                  <StyledWarning>
+                    <Trans>This is not a valid address for sending funds to</Trans>
+                  </StyledWarning>
+                )}
+                <Flex flexDirection="row" alignItems="center" gap={1}>
+                  <Box maxWidth={200}>{row.toAddress}</Box>
+                  {!shouldObscureAddress && (
+                    <CopyToClipboard value={row.toAddress} fontSize="small" />
+                  )}
+                </Flex>
               </Flex>
             }
             interactive
           >
-            <span>{row.toAddress}</span>
+            <span>{shouldObscureAddress ?
+                (row.toAddress.slice(0, 20) + '...')
+              :
+                row.toAddress
+            }</span>
           </Tooltip>
           <Flex gap={0.5}>
             {isConfirmed ? (
@@ -74,6 +117,9 @@ const getCols = (type: WalletType) => [
             )}
             {isRetire && (
               <Chip size="small" variant="outlined" label={<Trans>Retire</Trans>} />
+            )}
+            {isOffer && (
+              <Chip size="small" variant="outlined" label={<Trans>Offer Accepted</Trans>} />
             )}
           </Flex>
         </Flex>
@@ -106,8 +152,8 @@ const getCols = (type: WalletType) => [
           &nbsp;
           <strong>
             {type === WalletType.CAT
-            ? mojoToCATLocaleString(row.amount)
-            : mojoToChiaLocaleString(row.amount)}
+              ? mojoToCATLocaleString(row.amount)
+              : mojoToChiaLocaleString(row.amount)}
           </strong>
           &nbsp;
           {metadata.unit}
@@ -146,9 +192,10 @@ type Props = {
 export default function WalletHistory(props: Props) {
   const { walletId } = props;
 
+  const { data: walletState, isLoading: isWalletSyncLoading } = useGetSyncStatusQuery();
   const { wallet, loading: isWalletLoading, unit } = useWallet(walletId);
-  const { 
-    transactions, 
+  const {
+    transactions,
     isLoading: isWalletTransactionsLoading,
     page,
     rowsPerPage,
@@ -156,12 +203,20 @@ export default function WalletHistory(props: Props) {
     pageChange,
   } = useWalletTransactions(walletId, 10, 0, 'RELEVANCE');
   const feeUnit = useCurrencyCode();
+  const [getOfferRecord] = useGetOfferRecordMutation();
+  const navigate = useNavigate();
 
   const isLoading = isWalletTransactionsLoading || isWalletLoading;
+  const isSyncing = isWalletSyncLoading || walletState.syncing;
 
   const metadata = useMemo(() => {
     const retireAddress = feeUnit && toBech32m(
-      '0000000000000000000000000000000000000000000000000000000000000000', 
+      '0000000000000000000000000000000000000000000000000000000000000000',
+      feeUnit,
+    );
+
+    const offerTakerAddress = feeUnit && toBech32m(
+      '0101010101010101010101010101010101010101010101010101010101010101',
       feeUnit,
     );
 
@@ -169,6 +224,7 @@ export default function WalletHistory(props: Props) {
       unit,
       feeUnit,
       retireAddress,
+      offerTakerAddress,
     };
   }, [unit, feeUnit]);
 
@@ -177,7 +233,7 @@ export default function WalletHistory(props: Props) {
       return [];
     }
 
-    return getCols(wallet.type);
+    return getCols(wallet.type, isSyncing, getOfferRecord, navigate);
   }, [wallet?.type]);
 
   return (
