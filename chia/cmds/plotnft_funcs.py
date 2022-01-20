@@ -58,6 +58,21 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
     prompt = not args.get("yes", False)
     fee = Decimal(args.get("fee", 0))
     fee_mojos = uint64(int(fee * units["chia"]))
+    override_limit = args.get("override_limit", False)
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    self_hostname = config["self_hostname"]
+    farmer_rpc_port = config["farmer"]["rpc_port"]
+    # get total amount of plotnft's
+    farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
+    total_plot_nfts = len((await farmer_client.get_pool_state())["pool_state"])
+    farmer_client.close()
+    await farmer_client.await_closed()
+
+    if total_plot_nfts >= 18 and not override_limit:
+        raise Exception(
+            "18 or more PlotNFT's already exist. "
+            "If you need to override this limit (most users should not) use '--override_limit'."
+        )
 
     target_puzzle_hash: Optional[bytes32]
     # Could use initial_pool_state_from_dict to simplify
