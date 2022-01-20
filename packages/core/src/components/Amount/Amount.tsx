@@ -10,6 +10,7 @@ import {
 import { useWatch, useFormContext } from 'react-hook-form';
 import TextField, { TextFieldProps } from '../TextField';
 import chiaToMojo from '../../utils/chiaToMojo';
+import catToMojo from '../../utils/catToMojo';
 import useCurrencyCode from '../../hooks/useCurrencyCode';
 import FormatLargeNumber from '../FormatLargeNumber';
 import Flex from '../Flex';
@@ -42,19 +43,23 @@ function NumberFormatCustom(props: NumberFormatCustomProps) {
 export type AmountProps = TextFieldProps & {
   children?: (props: { mojo: number; value: string | undefined }) => ReactNode;
   name?: string;
+  symbol?: string; // if set, overrides the currencyCode. empty string is allowed
+  showAmountInMojos?: boolean; // if true, shows the mojo amount below the input field
+  feeMode?: boolean // if true, amounts are expressed in mojos used to set a transaction fee
 };
 
 export default function Amount(props: AmountProps) {
-  const { children, name, variant, fullWidth, ...rest } = props;
+  const { children, name, symbol, showAmountInMojos, variant, fullWidth, ...rest } = props;
   const { control } = useFormContext();
-  const currencyCode = useCurrencyCode();
+  const defaultCurrencyCode = useCurrencyCode();
 
   const value = useWatch<string>({
     control,
     name,
   });
 
-  const mojo = chiaToMojo(value);
+  const currencyCode = symbol === undefined ? defaultCurrencyCode : symbol;
+  const mojo = currencyCode === 'XCH' ? chiaToMojo(value) : catToMojo(value);
 
   return (
     <FormControl variant={variant} fullWidth={fullWidth}>
@@ -65,25 +70,29 @@ export default function Amount(props: AmountProps) {
         InputProps={{
           spellCheck: false,
           inputComponent: NumberFormatCustom as any,
+          inputProps: {
+            decimalScale: currencyCode === 'XCH' ? 12 : 3,
+          },
           endAdornment: (
             <InputAdornment position="end">{currencyCode}</InputAdornment>
           ),
         }}
         {...rest}
       />
-
         <FormHelperText component='div' >
           <Flex alignItems="center" gap={2}>
-            <Flex flexGrow={1} gap={1}>
-              {!!value && (
-                <>
-                  <FormatLargeNumber value={mojo} />
-                  <Box>
-                    <Plural value={mojo} one="mojo" other="mojos" />
-                  </Box>
-                </>
-              )}
-            </Flex>
+            {showAmountInMojos && (
+              <Flex flexGrow={1} gap={1}>
+                {!!mojo && (
+                  <>
+                    <FormatLargeNumber value={mojo} />
+                    <Box>
+                      <Plural value={mojo} one="mojo" other="mojos" />
+                    </Box>
+                  </>
+                )}
+              </Flex>
+            )}
             {children &&
               children({
                 mojo,
@@ -99,4 +108,6 @@ Amount.defaultProps = {
   label: <Trans>Amount</Trans>,
   name: 'amount',
   children: undefined,
+  showAmountInMojos: true,
+  feeMode: false,
 };
