@@ -1672,7 +1672,7 @@ class FullNode:
                 raise ConsensusError(Err(validate_result.error))
             validation_time = time.time() - validation_start
 
-        # respond_block will later use the cache (validate_signature=True)
+        # respond_block will later use the cache (validated_signature=True)
         validate_result = dataclasses.replace(validate_result, validated_signature=True)
 
         assert validate_result.required_iters is not None
