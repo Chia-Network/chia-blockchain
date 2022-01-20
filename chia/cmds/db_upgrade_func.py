@@ -58,10 +58,10 @@ def db_upgrade_func(
     print(f"\n\nLEAVING PREVIOUS DB FILE UNTOUCHED {in_db_path}\n")
 
 
-BLOCK_COMMIT_RATE = 5000
-SES_COMMIT_RATE = 1000
-HINT_COMMIT_RATE = 1000
-COIN_COMMIT_RATE = 15000
+BLOCK_COMMIT_RATE = 10000
+SES_COMMIT_RATE = 2000
+HINT_COMMIT_RATE = 2000
+COIN_COMMIT_RATE = 30000
 
 
 async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
@@ -89,16 +89,31 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         async with aiosqlite.connect(out_path) as out_db:
             await out_db.execute("pragma journal_mode=OFF")
             await out_db.execute("pragma synchronous=OFF")
-            await out_db.execute("pragma cache_size=1000000")
+            await out_db.execute("pragma cache_size=131072")
             await out_db.execute("pragma locking_mode=exclusive")
-            await out_db.execute("pragma temp_store=memory")
 
             print("initializing v2 version")
             await out_db.execute("CREATE TABLE database_version(version int)")
             await out_db.execute("INSERT INTO database_version VALUES(?)", (2,))
 
             print("initializing v2 block store")
-            await BlockStore.create(DBWrapper(out_db, db_version=2))
+            await out_db.execute(
+                "CREATE TABLE full_blocks("
+                "header_hash blob PRIMARY KEY,"
+                "prev_hash blob,"
+                "height bigint,"
+                "sub_epoch_summary blob,"
+                "is_fully_compactified tinyint,"
+                "in_main_chain tinyint,"
+                "block blob,"
+                "block_record blob)"
+            )
+            await out_db.execute(
+                "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
+                "ses_block_hash blob PRIMARY KEY,"
+                "challenge_segments blob)"
+            )
+            await out_db.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
 
             peak_hash, peak_height = await store_v1.get_peak()
             print(f"peak: {peak_hash.hex()} height: {peak_height}")
@@ -106,7 +121,7 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             await out_db.execute("INSERT INTO current_peak VALUES(?, ?)", (0, peak_hash))
             await out_db.commit()
 
-            print("[1/4] converting full_blocks")
+            print("[1/5] converting full_blocks")
             height = peak_height + 1
             hh = peak_hash
 
@@ -186,7 +201,7 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             end_time = time()
             print(f"\r      {end_time - block_start_time:.2f} seconds                             ")
 
-            print("[2/4] converting sub_epoch_segments_v3")
+            print("[2/5] converting sub_epoch_segments_v3")
 
             commit_in = SES_COMMIT_RATE
             ses_values = []
@@ -217,12 +232,12 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             end_time = time()
             print(f"\r      {end_time - ses_start_time:.2f} seconds                             ")
 
-            print("[3/4] converting hint_store")
+            print("[3/5] converting hint_store")
 
             commit_in = HINT_COMMIT_RATE
             hint_start_time = time()
             hint_values = []
-            await HintStore.create(DBWrapper(out_db, db_version=2))
+            await out_db.execute("CREATE TABLE hints(id INTEGER PRIMARY KEY AUTOINCREMENT, coin_id blob,  hint blob)")
             await out_db.commit()
             async with in_db.execute("SELECT coin_id, hint FROM hints") as cursor:
                 count = 0
@@ -243,8 +258,18 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             end_time = time()
             print(f"\r      {end_time - hint_start_time:.2f} seconds                             ")
 
-            print("[4/4] converting coin_store")
-            await CoinStore.create(DBWrapper(out_db, db_version=2))
+            print("[4/5] converting coin_store")
+            await out_db.execute(
+                "CREATE TABLE coin_record("
+                "coin_name blob PRIMARY KEY,"
+                " confirmed_index bigint,"
+                " spent_index bigint,"  # if this is zero, it means the coin has not been spent
+                " coinbase int,"
+                " puzzle_hash blob,"
+                " coin_parent blob,"
+                " amount blob,"  # we use a blob of 8 bytes to store uint64
+                " timestamp bigint)"
+            )
             await out_db.commit()
 
             commit_in = COIN_COMMIT_RATE
@@ -299,3 +324,14 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             await out_db.commit()
             end_time = time()
             print(f"\r      {end_time - coin_start_time:.2f} seconds                             ")
+
+            print("[5/5] build indices")
+            index_start_time = time()
+            print("      block store")
+            await BlockStore.create(DBWrapper(out_db, db_version=2))
+            print("      coin store")
+            await CoinStore.create(DBWrapper(out_db, db_version=2))
+            print("      hint store")
+            await HintStore.create(DBWrapper(out_db, db_version=2))
+            end_time = time()
+            print(f"\r      {end_time - index_start_time:.2f} seconds                             ")
