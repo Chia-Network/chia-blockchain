@@ -116,7 +116,7 @@ async def _validate_and_add_block_multi_result(
     blockchain: Blockchain,
     block: FullBlock,
     expected_result: List[ReceiveBlockResult],
-    skip_prevalidation: Optional[bool],
+    skip_prevalidation: Optional[bool] = None,
 ) -> None:
     try:
         if skip_prevalidation is not None:
