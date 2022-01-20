@@ -1,4 +1,5 @@
 # @chia/api
+
 ![Alt text](https://www.chia.net/img/chia_logo.svg)
 
 This library provides support for TypeScript/JavaScript [Chia](https://www.chia.net) apps to access the [Chia Blockchain RPC](https://github.com/Chia-Network/chia-blockchain/wiki/RPC-Interfaces), by making it easier to perform the following actions:
