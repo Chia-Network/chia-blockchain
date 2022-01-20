@@ -14,7 +14,7 @@ from chia.wallet.util.puzzle_compression import (
     compress_object_with_puzzles,
     decompress_object_with_puzzles,
 )
-from chia.wallet.cc_wallet.cc_utils import CC_MOD, construct_cc_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 
 ZERO_32 = bytes32([0] * 32)
@@ -40,7 +40,7 @@ class TestPuzzleCompression:
     def test_cat_puzzle(self):
         coin_spend = CoinSpend(
             COIN,
-            construct_cc_puzzle(CC_MOD, Program.to([]).get_tree_hash(), Program.to(1)),
+            construct_cat_puzzle(CAT_MOD, Program.to([]).get_tree_hash(), Program.to(1)),
             SOLUTION,
         )
         compressed = compress_object_with_puzzles(bytes(coin_spend), LATEST_VERSION)
@@ -62,7 +62,7 @@ class TestPuzzleCompression:
     def test_nesting_puzzles(self):
         coin_spend = CoinSpend(
             COIN,
-            construct_cc_puzzle(CC_MOD, Program.to([]).get_tree_hash(), puzzle_for_pk(G1Element())),
+            construct_cat_puzzle(CAT_MOD, Program.to([]).get_tree_hash(), puzzle_for_pk(G1Element())),
             SOLUTION,
         )
         compressed = compress_object_with_puzzles(bytes(coin_spend), LATEST_VERSION)
@@ -83,7 +83,7 @@ class TestPuzzleCompression:
         self.compression_factors["unknown_and_standard"] = len(bytes(compressed)) / len(bytes(coin_spend))
 
     def test_lowest_best_version(self):
-        assert lowest_best_version([bytes(CC_MOD)]) == 1
+        assert lowest_best_version([bytes(CAT_MOD)]) == 1
         assert lowest_best_version([bytes(OFFER_MOD)]) == 2
 
     def test_version_override(self):
