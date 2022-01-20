@@ -1,6 +1,6 @@
 import logging
 import pathlib
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 
@@ -21,13 +21,14 @@ log = logging.getLogger(__name__)
 
 
 # TODO: Review need for config and if retained then hint it properly.
-def service_kwargs_for_data_layer(root_path: pathlib.Path, wallet_rpc_port=None) -> Dict[str, Any]:
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    dl_config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "data_layer")
+def service_kwargs_for_data_layer(
+    root_path: pathlib.Path, config: Dict[str, Any], wallet_rpc_port: Optional[uint16] = None
+) -> Dict[str, Any]:
+    dl_config = config["data_layer"]
     self_hostname = config["self_hostname"]
     if wallet_rpc_port is None:
         wallet_rpc_port = dl_config["wallet_peer"]["port"]
-    wallet_rpc_init = WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), DEFAULT_ROOT_PATH, config)
+    wallet_rpc_init = WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), root_path, config)
     data_layer = DataLayer(root_path=root_path, wallet_rpc_init=wallet_rpc_init)
     api = DataLayerAPI(data_layer)
     network_id = dl_config["selected_network"]
@@ -52,7 +53,8 @@ def service_kwargs_for_data_layer(root_path: pathlib.Path, wallet_rpc_port=None)
 
 
 def main() -> None:
-    kwargs = service_kwargs_for_data_layer(DEFAULT_ROOT_PATH)
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    kwargs = service_kwargs_for_data_layer(DEFAULT_ROOT_PATH, config)
     return run_service(**kwargs)
 
 

@@ -56,7 +56,7 @@ class DataLayerRpcApi:
             "/insert": self.insert,
         }
 
-    async def create_data_store(self, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def create_data_store(self, request: Dict[str, Any] = None) -> Dict[str, Any]:
         if self.service is None:
             raise Exception("Data layer not created")
         root = request.get("root")
