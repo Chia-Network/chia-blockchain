@@ -24,9 +24,10 @@ fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
-npm install electron-packager -g
-npm install electron-installer-debian -g
-npm install lerna -g
+cd npm_linux_deb || exit
+npm ci
+PATH=$(npm bin):$PATH
+cd .. || exit
 
 echo "Create dist/"
 rm -rf dist
@@ -48,7 +49,7 @@ cd chia-blockchain-gui || exit
 
 echo "npm build"
 lerna clean -y
-npm install
+npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
 # npm audit fix
 npm run build
