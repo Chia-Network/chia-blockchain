@@ -1,12 +1,10 @@
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
-
+from typing import Any, Callable, Dict, List, Optional, Tuple
 import aiosqlite
-from chia.daemon.keychain_proxy import KeychainProxyConnectionFailure
 from chia.data_layer.data_layer_types import InternalNode, TerminalNode
-from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.data_store import DataStore
+from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -14,7 +12,6 @@ from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
 from chia.util.path import mkdir, path_from_root
-from chia.wallet.wallet_node import WalletNode
 from chia.wallet.transaction_record import TransactionRecord
 
 
@@ -25,15 +22,15 @@ class DataLayer:
     connection: Optional[aiosqlite.Connection]
     config: Dict[str, Any]
     log: logging.Logger
-    wallet: DataLayerWallet
-    wallet_node: Optional[WalletNode]
+    wallet_rpc: WalletRpcClient
     state_changed_callback: Optional[Callable[..., object]]
+    wallet_id:uint64
     initialized: bool
 
     def __init__(
         self,
         root_path: Path,
-        wallet_node: WalletNode,
+        wallet_rpc: WalletRpcClient,
         name: Optional[str] = None,
     ):
         if name == "":
@@ -44,7 +41,7 @@ class DataLayer:
         self.initialized = False
         self.config = config
         self.connection = None
-        self.wallet_node = wallet_node
+        self.wallet_rpc = wallet_rpc
         self.log = logging.getLogger(name if name is None else __name__)
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
@@ -57,35 +54,11 @@ class DataLayer:
         self.server = server
 
     async def _start(self) -> bool:
-        # create the store (db) and data store instance
-        assert self.wallet_node
-        try:
-            private_key = await self.wallet_node.get_key_for_fingerprint(None)
-        except KeychainProxyConnectionFailure:
-            self.log.error("Failed to connect to keychain service")
-            return False
-
-        if private_key is None:
-            self.logged_in = False
-            return False
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
         return True
 
-    async def create_wallet(self) -> Optional[List[TransactionRecord]]:
-        # TODO: review for anything else we need to do here
-        assert self.wallet_node
-        assert self.wallet_node.wallet_state_manager
-        main_wallet = self.wallet_node.wallet_state_manager.main_wallet
-        amount = uint64(1)  # todo what should amount be ?
-        async with self.wallet_node.wallet_state_manager.lock:
-            creation_record = await DataLayerWallet.create_new_dl_wallet(
-                self.wallet_node.wallet_state_manager, main_wallet, amount, None
-            )
-            self.wallet = creation_record.item
-        self.initialized = True
-        return creation_record.transaction_records
 
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
@@ -96,13 +69,16 @@ class DataLayer:
         if self.connection is not None:
             await self.connection.close()
 
-    async def create_store(self) -> bytes32:
-        assert self.wallet.dl_info.origin_coin
-        tree_id = self.wallet.dl_info.origin_coin.name()
-        res = await self.data_store.create_tree(tree_id)
+    async def create_store(self,root:bytes32) -> Tuple[List[TransactionRecord], bytes32]:
+        # TODO: review for anything else we need to do here
+        node_hash = bytes32([0] * 32)
+        fee = uint64(1)
+        txs,tree_id = await self.wallet_rpc.create_new_dl(node_hash,fee)
+        res = await self.data_store.create_tree(root)
         if res is None:
             self.log.fatal("failed creating store")
-        return tree_id
+        self.initialized = True
+        return txs,tree_id
 
     async def batch_update(
         self,
@@ -130,7 +106,7 @@ class DataLayer:
             node_hash = root.node_hash
         else:
             node_hash = bytes32([0] * 32)  # todo change
-        res = await self.wallet.create_update_state_spend(node_hash)
+        res = await self.wallet_rpc.dl_update_root(tree_id,node_hash)
         assert res
         # todo register callback to change status in data store
         # await self.data_store.change_root_status(root, Status.COMMITTED)
