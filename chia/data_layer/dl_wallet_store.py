@@ -129,7 +129,7 @@ class DataLayerStore:
         # if tx_id in self.tx_record_cache:
         #     return self.tx_record_cache[tx_id]
 
-        cursor = await self.db_connection.execute("SELECT * from singleton_records WHERE coin_id=?", (coin_id,))
+        cursor = await self.db_connection.execute("SELECT * from singleton_records WHERE launcher_id=?", (coin_id,))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
