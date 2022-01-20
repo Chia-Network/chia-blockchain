@@ -4,24 +4,26 @@ from typing import AsyncIterator, Dict, List, Tuple, Any
 import pytest
 
 # flake8: noqa: F401
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
+from chia.server.start_data_layer import service_kwargs_for_data_layer
+from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
-from chia.util.ints import uint16
+from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from tests.core.data_layer.util import ChiaRoot
-from tests.pools.test_pool_rpc import PREFARMED_BLOCKS
-from tests.setup_nodes import setup_simulators_and_wallets, self_hostname, bt
+from tests.setup_nodes import setup_simulators_and_wallets, self_hostname, bt, _teardown_nodes
 from tests.time_out_assert import time_out_assert
 from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
 
@@ -29,22 +31,14 @@ pytestmark = pytest.mark.data_layer
 nodes = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]
 
 
-async def init_data_layer(
-    full_node_api: Any, num_blocks: int, ph: bytes32, wallet_rpc_api: WalletRpcClient, root_path
-) -> DataLayerRpcApi:
-    data_layer = DataLayer(root_path, wallet_rpc_api)
-    data_rpc_api = DataLayerRpcApi(data_layer)
-    res = await data_rpc_api.create_wallet({"fee": 1})
-    await asyncio.sleep(1)
-    assert res["result"]
-    tx0: TransactionRecord = res["result"][0]
-    tx1: TransactionRecord = res["result"][1]
-    await asyncio.sleep(1)
-    for i in range(0, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(15, is_transaction_confirmed, True, tx0.wallet_id, wallet_rpc_api, tx0.name)
-    await time_out_assert(15, is_transaction_confirmed, True, tx1.wallet_id, wallet_rpc_api, tx1.name)
-    return data_rpc_api
+async def init_data_layer(root_path):
+    test_rpc_port = uint16(21529)
+    kwargs = service_kwargs_for_data_layer(root_path,test_rpc_port)
+    service = Service(**kwargs,parse_cli_args=False)
+    await service.start()
+    yield service._api
+    service.stop()
+    await service.wait_closed()
 
 
 @pytest.fixture(scope="function")
@@ -65,23 +59,24 @@ async def one_wallet_node_and_rpc():
         daemon_port = config["daemon_port"]
         test_rpc_port = uint16(21529)
 
-        rpc_cleanup = await start_rpc_server(
-            api_user,
-            hostname,
-            daemon_port,
-            test_rpc_port,
-            lambda x: None,
-            bt.root_path,
-            config,
-            connect_to_daemon=False,
-        )
-        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+        # rpc_cleanup = await start_rpc_server(
+        #     api_user,
+        #     hostname,
+        #     daemon_port,
+        #     test_rpc_port,
+        #     lambda x: None,
+        #     bt.root_path,
+        #     config,
+        #     connect_to_daemon=False,
+        # )
+
+        client = WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
 
         yield client, wallet_node_0, full_node_api
 
-        client.close()
-        await client.await_closed()
-        await rpc_cleanup()
+        # client.close()
+        # await client.await_closed()
+        # await rpc_cleanup()
 
 
 @pytest.mark.asyncio
@@ -91,42 +86,49 @@ async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node_and_rpc) -
     config = load_config(root_path, "config.yaml")
     config["data_layer"]["database_path"] = "data_layer_test.sqlite"
     num_blocks = 5
+    await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
     assert wallet_node.wallet_state_manager is not None
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await asyncio.sleep(0.5)
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+    )
+    await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    data_layer = DataLayer(root_path, client)
-    data_rpc_api = DataLayerRpcApi(data_layer)
-    key = b"a"
-    value = b"\x00\x01"
-    changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
-    res = await data_rpc_api.create_data_store()
-    await asyncio.sleep(1)
-    assert res is not None
-    store_id = bytes32(hexstr_to_bytes(res["id"]))
-    res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
-    update_tx_rec0 = res["tx_id"]
-    await asyncio.sleep(1)
-    for i in range(0, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(
-        15, is_transaction_confirmed, True, update_tx_rec0.wallet_id, wallet_rpc_api, update_tx_rec0.name
-    )
-    res = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
-    assert hexstr_to_bytes(res["data"]) == value
-    changelist = [{"action": "delete", "key": key.hex()}]
-    res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
-    update_tx_rec1 = res["tx_id"]
-    await asyncio.sleep(1)
-    for i in range(0, num_blocks):
+    async for data_layer in init_data_layer(root_path):
+        data_rpc_api = DataLayerRpcApi(data_layer.data_layer)
+        res = await client.get_wallets()
+        key = b"a"
+        value = b"\x00\x01"
+        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        res = await data_rpc_api.create_data_store({})
         await asyncio.sleep(1)
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(
-        15, is_transaction_confirmed, True, update_tx_rec1.wallet_id, wallet_rpc_api, update_tx_rec1.name
-    )
-    with pytest.raises(Exception):
-        val = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
+        assert res is not None
+        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec0 = res["tx_id"]
+        await asyncio.sleep(1)
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await time_out_assert(
+            15, is_transaction_confirmed, True, update_tx_rec0.wallet_id, wallet_rpc_api, update_tx_rec0.name
+        )
+        res = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
+        assert hexstr_to_bytes(res["data"]) == value
+        changelist = [{"action": "delete", "key": key.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec1 = res["tx_id"]
+        await asyncio.sleep(1)
+        for i in range(0, num_blocks):
+            await asyncio.sleep(1)
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await time_out_assert(
+            15, is_transaction_confirmed, True, update_tx_rec1.wallet_id, wallet_rpc_api, update_tx_rec1.name
+        )
+        with pytest.raises(Exception):
+            val = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
 
 
 @pytest.mark.asyncio

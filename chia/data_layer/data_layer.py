@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable
 import aiosqlite
 from chia.data_layer.data_layer_types import InternalNode, TerminalNode
 from chia.data_layer.data_store import DataStore
@@ -22,7 +22,7 @@ class DataLayer:
     connection: Optional[aiosqlite.Connection]
     config: Dict[str, Any]
     log: logging.Logger
-    wallet_rpc: WalletRpcClient
+    wallet_rpc_init: Awaitable[WalletRpcClient]
     state_changed_callback: Optional[Callable[..., object]]
     wallet_id: uint64
     initialized: bool
@@ -30,7 +30,7 @@ class DataLayer:
     def __init__(
         self,
         root_path: Path,
-        wallet_rpc: WalletRpcClient,
+        wallet_rpc_init: Awaitable[WalletRpcClient],
         name: Optional[str] = None,
     ):
         if name == "":
@@ -41,7 +41,7 @@ class DataLayer:
         self.initialized = False
         self.config = config
         self.connection = None
-        self.wallet_rpc = wallet_rpc
+        self.wallet_rpc_init = wallet_rpc_init
         self.log = logging.getLogger(name if name is None else __name__)
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
@@ -57,6 +57,7 @@ class DataLayer:
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
+        self.wallet_rpc = await self.wallet_rpc_init
         return True
 
     def _close(self) -> None:

@@ -54,13 +54,14 @@ class DataLayerRpcApi:
             "/get_roots": self.get_root,
             "/delete_key": self.delete_key,
             "/insert": self.insert,
-            "/create_wallet": self.create_wallet,
         }
 
     async def create_data_store(self, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         if self.service is None:
             raise Exception("Data layer not created")
-        root = bytes32([0] * 32)
+        root = request.get("root")
+        if root is None:
+            root = bytes32([0] * 32)
         txs, value = await self.service.create_store(root)
         return {"txs": txs, "id": value.hex()}
 
