@@ -62,8 +62,8 @@ msgstr "Le moissonneur est un service qui tourne sur une machine qui stocke des 
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:431
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:435
+#: src/electron/main.tsx:522
 msgid "About Chia Blockchain"
 msgstr "À propos de la blockchain Chia"
 
@@ -188,7 +188,7 @@ msgstr "Êtes-vous sûr de vouloir supprimer ces transactions non confirmées ?"
 msgid "Are you sure you want to disconnect?"
 msgstr "Êtes-vous sûr de vouloir vous déconnecter ?"
 
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:203
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Êtes-vous sûr de vouloir quitter ? Le traçage et la culture vont s'arrêter."
 
@@ -361,15 +361,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "Changer de pool"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:414
 msgid "Chat on KeyBase"
 msgstr "Chat sur KeyBase"
 
-#: src/electron/main.tsx:428
+#: src/electron/main.tsx:432
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:367
+#: src/electron/main.tsx:371
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki de la Chia Blockchain"
 
@@ -445,7 +445,7 @@ msgid "Coloured Coin Options"
 msgstr "Option de Coloured Coin"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:201
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Confirmer"
@@ -520,7 +520,7 @@ msgstr "Type de connexion"
 msgid "Connections"
 msgstr "Réseau"
 
-#: src/electron/main.tsx:391
+#: src/electron/main.tsx:395
 msgid "Contribute on GitHub"
 msgstr "Contribuer sur GitHub"
 
@@ -754,11 +754,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:317
 msgid "Developer"
 msgstr "Développeur"
 
-#: src/electron/main.tsx:316
+#: src/electron/main.tsx:320
 msgid "Developer Tools"
 msgstr "Outils Développeur"
 
@@ -829,7 +829,7 @@ msgstr "Glisser-déposer votre fichier de sauvegarde"
 msgid "Drag and drop your recovery backup file"
 msgstr "Glisser-déposer votre fichier de sauvegarde de récupération"
 
-#: src/electron/main.tsx:272
+#: src/electron/main.tsx:276
 msgid "Edit"
 msgstr "Éditer"
 
@@ -1027,8 +1027,8 @@ msgstr "Montant des frais"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:264
-#: src/electron/main.tsx:465
+#: src/electron/main.tsx:268
+#: src/electron/main.tsx:469
 msgid "File"
 msgstr "Fichier"
 
@@ -1048,11 +1048,11 @@ msgstr "Emplacement du dossier final"
 msgid "Finished"
 msgstr "Terminé"
 
-#: src/electron/main.tsx:416
+#: src/electron/main.tsx:420
 msgid "Follow on Twitter"
 msgstr "Suivez-nous sur Twitter"
 
-#: src/electron/main.tsx:375
+#: src/electron/main.tsx:379
 msgid "Frequently Asked Questions"
 msgstr "Question fréquentes"
 
@@ -1069,7 +1069,7 @@ msgstr "Aperçu du nœud complet"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:341
+#: src/electron/main.tsx:345
 msgid "Full Screen"
 msgstr "Plein écran"
 
@@ -1111,7 +1111,7 @@ msgstr "Hash de l'en-tête"
 msgid "Height"
 msgstr "Hauteur"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:367
 msgid "Help"
 msgstr "Aide"
 
@@ -1455,7 +1455,7 @@ msgid "Nickname"
 msgstr "Surnom"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:194
+#: src/electron/main.tsx:198
 msgid "No"
 msgstr "Non"
 
@@ -2126,7 +2126,7 @@ msgstr "Actualiser les parcelles"
 msgid "Relative Lock Height"
 msgstr "Hauteur relative de verrouillage"
 
-#: src/electron/main.tsx:383
+#: src/electron/main.tsx:387
 msgid "Release Notes"
 msgstr "Release Notes"
 
@@ -2149,7 +2149,7 @@ msgstr "Suppression"
 msgid "Rename"
 msgstr "Renommer"
 
-#: src/electron/main.tsx:402
+#: src/electron/main.tsx:406
 msgid "Report an Issue..."
 msgstr "Remonter un problème..."
 
@@ -2363,7 +2363,7 @@ msgstr "Aplanissez le rythme de vos récoltes XCH en rejoignant un pool."
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:479
+#: src/electron/main.tsx:483
 msgid "Speech"
 msgstr "Dicter"
 
@@ -2833,7 +2833,7 @@ msgstr "Itération du sous emplacement VDF"
 msgid "Verify Pool Details"
 msgstr "Vérifier les détails du pool"
 
-#: src/electron/main.tsx:304
+#: src/electron/main.tsx:308
 msgid "View"
 msgstr "Voir"
 
@@ -2986,7 +2986,7 @@ msgstr "Bienvenue ! Les mots suivants sont utilisés pour la sauvegarde de votre
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Lorsque vous recevez le paquet d'informations de configuration de votre administrateur, saisissez-le ci-dessous pour terminer la configuration de votre portefeuille à débit limité :"
 
-#: src/electron/main.tsx:349
+#: src/electron/main.tsx:353
 msgid "Window"
 msgstr "Fenêtre"
 
@@ -2996,7 +2996,7 @@ msgstr "Sans frais"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:195
+#: src/electron/main.tsx:199
 msgid "Yes"
 msgstr "Oui"
 

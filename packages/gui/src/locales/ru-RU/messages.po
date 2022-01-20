@@ -62,8 +62,8 @@ msgstr "Комбайн - это служба, работающая на маши
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:431
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:435
+#: src/electron/main.tsx:522
 msgid "About Chia Blockchain"
 msgstr "О программе Chia Blockchain"
 
@@ -188,7 +188,7 @@ msgstr "Вы действительно хотите удалить неподт
 msgid "Are you sure you want to disconnect?"
 msgstr "Вы уверены, что хотите отключиться?"
 
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:203
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Вы уверены, что хотите выйти? Засеивание и фарминг будут остановлены."
 
@@ -361,15 +361,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "Сменить пул"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:414
 msgid "Chat on KeyBase"
 msgstr "Чат в KeyBase"
 
-#: src/electron/main.tsx:428
+#: src/electron/main.tsx:432
 msgid "Chia"
 msgstr "Чиа"
 
-#: src/electron/main.tsx:367
+#: src/electron/main.tsx:371
 msgid "Chia Blockchain Wiki"
 msgstr ""
 "Блокчейн Chia на Wiki                           Chia coin\n"
@@ -617,7 +617,7 @@ msgid "Coloured Coin Options"
 msgstr "Настройки Цветной Монеты"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:201
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Подтвердить"
@@ -692,7 +692,7 @@ msgstr "Тип подключения"
 msgid "Connections"
 msgstr "Подключения"
 
-#: src/electron/main.tsx:391
+#: src/electron/main.tsx:395
 msgid "Contribute on GitHub"
 msgstr "Сотрудничать на GitHub"
 
@@ -926,11 +926,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:317
 msgid "Developer"
 msgstr "Разработчик"
 
-#: src/electron/main.tsx:316
+#: src/electron/main.tsx:320
 msgid "Developer Tools"
 msgstr "Инструменты разработчика"
 
@@ -1001,7 +1001,7 @@ msgstr "Перетащите файл резервной копии"
 msgid "Drag and drop your recovery backup file"
 msgstr ""
 
-#: src/electron/main.tsx:272
+#: src/electron/main.tsx:276
 msgid "Edit"
 msgstr "Правка"
 
@@ -1199,8 +1199,8 @@ msgstr "Объем коммисий"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:264
-#: src/electron/main.tsx:465
+#: src/electron/main.tsx:268
+#: src/electron/main.tsx:469
 msgid "File"
 msgstr "Файл"
 
@@ -1220,11 +1220,11 @@ msgstr "Путь к папке для окончательного хранен�
 msgid "Finished"
 msgstr "Завершен"
 
-#: src/electron/main.tsx:416
+#: src/electron/main.tsx:420
 msgid "Follow on Twitter"
 msgstr "Следить в Twitter"
 
-#: src/electron/main.tsx:375
+#: src/electron/main.tsx:379
 msgid "Frequently Asked Questions"
 msgstr "Часто задаваемые вопросы"
 
@@ -1241,7 +1241,7 @@ msgstr "Полный обзор узла"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:341
+#: src/electron/main.tsx:345
 msgid "Full Screen"
 msgstr "Полный экран"
 
@@ -1283,7 +1283,7 @@ msgstr "Хэш заголовка"
 msgid "Height"
 msgstr "Высота"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:367
 msgid "Help"
 msgstr "Помощь"
 
@@ -1627,7 +1627,7 @@ msgid "Nickname"
 msgstr "Псевдоним"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:194
+#: src/electron/main.tsx:198
 msgid "No"
 msgstr "Нет"
 
@@ -2298,7 +2298,7 @@ msgstr "Обновить участки"
 msgid "Relative Lock Height"
 msgstr "Относительная высота строки"
 
-#: src/electron/main.tsx:383
+#: src/electron/main.tsx:387
 msgid "Release Notes"
 msgstr "Примечания к релизу"
 
@@ -2321,7 +2321,7 @@ msgstr "Удаление"
 msgid "Rename"
 msgstr "Переименовать"
 
-#: src/electron/main.tsx:402
+#: src/electron/main.tsx:406
 msgid "Report an Issue..."
 msgstr "Сообщить о проблеме..."
 
@@ -2535,7 +2535,7 @@ msgstr "Получите свои награды за фарм XCH, присое
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:479
+#: src/electron/main.tsx:483
 msgid "Speech"
 msgstr "Речь"
 
@@ -3005,7 +3005,7 @@ msgstr "Итерации VDF суб слота"
 msgid "Verify Pool Details"
 msgstr "Подтвердите подробности пула"
 
-#: src/electron/main.tsx:304
+#: src/electron/main.tsx:308
 msgid "View"
 msgstr "Вид"
 
@@ -3158,7 +3158,7 @@ msgstr "Добро пожаловать! Перечисленные слова �
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Когда вы получите пакет информации о настройке от администратора, введите его ниже, чтобы завершить настройку кошелька с ограниченнием скорости вывода:"
 
-#: src/electron/main.tsx:349
+#: src/electron/main.tsx:353
 msgid "Window"
 msgstr "Окно"
 
@@ -3168,7 +3168,7 @@ msgstr "Без комиссии"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:195
+#: src/electron/main.tsx:199
 msgid "Yes"
 msgstr "Да"
 

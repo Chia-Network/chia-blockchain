@@ -62,8 +62,8 @@ msgstr "Żniwiarz to usługa pracująca na maszynie przechowywującej działki (
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:431
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:435
+#: src/electron/main.tsx:522
 msgid "About Chia Blockchain"
 msgstr "O blockchainie Chia"
 
@@ -188,7 +188,7 @@ msgstr ""
 msgid "Are you sure you want to disconnect?"
 msgstr "Czy na pewno chcesz rozłączyć?"
 
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:203
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Czy na pewno? Tworzenie i farming działek zostaną zatrzymane."
 
@@ -361,15 +361,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr ""
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:414
 msgid "Chat on KeyBase"
 msgstr "Czat na KeyBase"
 
-#: src/electron/main.tsx:428
+#: src/electron/main.tsx:432
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:367
+#: src/electron/main.tsx:371
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki Blockchainu Chia"
 
@@ -445,7 +445,7 @@ msgid "Coloured Coin Options"
 msgstr "Opcje pokolorowanej monety"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:201
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Potwierdź"
@@ -520,7 +520,7 @@ msgstr "Typ połączenia"
 msgid "Connections"
 msgstr "Połączenia"
 
-#: src/electron/main.tsx:391
+#: src/electron/main.tsx:395
 msgid "Contribute on GitHub"
 msgstr "Współtwórz na GitHubie"
 
@@ -754,11 +754,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:317
 msgid "Developer"
 msgstr "Developer"
 
-#: src/electron/main.tsx:316
+#: src/electron/main.tsx:320
 msgid "Developer Tools"
 msgstr "Narzędzia Programistyczne"
 
@@ -829,7 +829,7 @@ msgstr "Przesuń i upuść twój plik kopii zapasowej"
 msgid "Drag and drop your recovery backup file"
 msgstr ""
 
-#: src/electron/main.tsx:272
+#: src/electron/main.tsx:276
 msgid "Edit"
 msgstr "Edytuj"
 
@@ -1027,8 +1027,8 @@ msgstr "Kwota opłaty"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:264
-#: src/electron/main.tsx:465
+#: src/electron/main.tsx:268
+#: src/electron/main.tsx:469
 msgid "File"
 msgstr "Plik"
 
@@ -1048,11 +1048,11 @@ msgstr "Lokalizacja folderu docelowego"
 msgid "Finished"
 msgstr "Zakończono"
 
-#: src/electron/main.tsx:416
+#: src/electron/main.tsx:420
 msgid "Follow on Twitter"
 msgstr "Śledź na Twitterze"
 
-#: src/electron/main.tsx:375
+#: src/electron/main.tsx:379
 msgid "Frequently Asked Questions"
 msgstr "Często zadawane pytania"
 
@@ -1069,7 +1069,7 @@ msgstr ""
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:341
+#: src/electron/main.tsx:345
 msgid "Full Screen"
 msgstr "Pełny ekran"
 
@@ -1111,7 +1111,7 @@ msgstr "Hash Nagłówka"
 msgid "Height"
 msgstr "Wysokość"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:367
 msgid "Help"
 msgstr "Pomoc"
 
@@ -1455,7 +1455,7 @@ msgid "Nickname"
 msgstr "Pseudonim"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:194
+#: src/electron/main.tsx:198
 msgid "No"
 msgstr "Nie"
 
@@ -2126,7 +2126,7 @@ msgstr "Odśwież działki"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:383
+#: src/electron/main.tsx:387
 msgid "Release Notes"
 msgstr "Informacje o wydaniu"
 
@@ -2149,7 +2149,7 @@ msgstr "Usuwanie"
 msgid "Rename"
 msgstr "Zmień nazwę"
 
-#: src/electron/main.tsx:402
+#: src/electron/main.tsx:406
 msgid "Report an Issue..."
 msgstr "Zgłoś problem..."
 
@@ -2363,7 +2363,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:479
+#: src/electron/main.tsx:483
 msgid "Speech"
 msgstr "Mowa"
 
@@ -2833,7 +2833,7 @@ msgstr "Podrzędne Iteracje VDF"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:304
+#: src/electron/main.tsx:308
 msgid "View"
 msgstr "Widok"
 
@@ -2986,7 +2986,7 @@ msgstr "Witamy! Poniższe słowa służą do tworzenia kopii zapasowej portfela.
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Gdy otrzymasz pakiet informacji konfiguracyjnych od administratora, wprowadź go poniżej, aby zakończyć konfigurację portfela z ograniczeniami dotyczącymi stawek:"
 
-#: src/electron/main.tsx:349
+#: src/electron/main.tsx:353
 msgid "Window"
 msgstr "Okno"
 
@@ -2996,7 +2996,7 @@ msgstr "Bez opłat"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:195
+#: src/electron/main.tsx:199
 msgid "Yes"
 msgstr "Tak"
 

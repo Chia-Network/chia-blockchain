@@ -62,8 +62,8 @@ msgstr "収穫機は耕地が実際に保存されているデバイス上に走
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:431
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:435
+#: src/electron/main.tsx:522
 msgid "About Chia Blockchain"
 msgstr "チアブロックチェーンについて"
 
@@ -188,7 +188,7 @@ msgstr "未確認の取引を削除してもよろしいですか?"
 msgid "Are you sure you want to disconnect?"
 msgstr "本当に接続を解除しますか？"
 
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:203
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "本当に終了しますか？ GUI 上の耕地作り及び耕作も停止します。"
 
@@ -361,15 +361,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "プールの変更"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:414
 msgid "Chat on KeyBase"
 msgstr "Keybase でチャット"
 
-#: src/electron/main.tsx:428
+#: src/electron/main.tsx:432
 msgid "Chia"
 msgstr "チア"
 
-#: src/electron/main.tsx:367
+#: src/electron/main.tsx:371
 msgid "Chia Blockchain Wiki"
 msgstr "チアブロックチェーンの Wiki"
 
@@ -445,7 +445,7 @@ msgid "Coloured Coin Options"
 msgstr "カラードコインのオプション"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:201
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "了承"
@@ -520,7 +520,7 @@ msgstr "接続の種類"
 msgid "Connections"
 msgstr "接続数"
 
-#: src/electron/main.tsx:391
+#: src/electron/main.tsx:395
 msgid "Contribute on GitHub"
 msgstr "GitHub で開発協力"
 
@@ -754,11 +754,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:317
 msgid "Developer"
 msgstr "開発者"
 
-#: src/electron/main.tsx:316
+#: src/electron/main.tsx:320
 msgid "Developer Tools"
 msgstr "開発者向けツール"
 
@@ -829,7 +829,7 @@ msgstr "バックアップファイルをここにドラッグ&ドロップ"
 msgid "Drag and drop your recovery backup file"
 msgstr ""
 
-#: src/electron/main.tsx:272
+#: src/electron/main.tsx:276
 msgid "Edit"
 msgstr "編集"
 
@@ -1027,8 +1027,8 @@ msgstr "全手数料"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:264
-#: src/electron/main.tsx:465
+#: src/electron/main.tsx:268
+#: src/electron/main.tsx:469
 msgid "File"
 msgstr "ファイル"
 
@@ -1048,11 +1048,11 @@ msgstr "最終フォルダの場所"
 msgid "Finished"
 msgstr "完成"
 
-#: src/electron/main.tsx:416
+#: src/electron/main.tsx:420
 msgid "Follow on Twitter"
 msgstr "Twitter でフォロー"
 
-#: src/electron/main.tsx:375
+#: src/electron/main.tsx:379
 msgid "Frequently Asked Questions"
 msgstr "よくある質問"
 
@@ -1069,7 +1069,7 @@ msgstr ""
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:341
+#: src/electron/main.tsx:345
 msgid "Full Screen"
 msgstr "全画面表示"
 
@@ -1111,7 +1111,7 @@ msgstr "ヘッダーのハッシュ値"
 msgid "Height"
 msgstr "高さ"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:367
 msgid "Help"
 msgstr "ヘルプ"
 
@@ -1455,7 +1455,7 @@ msgid "Nickname"
 msgstr "ニックネーム"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:194
+#: src/electron/main.tsx:198
 msgid "No"
 msgstr "いいえ"
 
@@ -2126,7 +2126,7 @@ msgstr "耕地一覧を更新"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:383
+#: src/electron/main.tsx:387
 msgid "Release Notes"
 msgstr "リリースノート"
 
@@ -2149,7 +2149,7 @@ msgstr "削除中"
 msgid "Rename"
 msgstr "名称変更"
 
-#: src/electron/main.tsx:402
+#: src/electron/main.tsx:406
 msgid "Report an Issue..."
 msgstr "問題を報告"
 
@@ -2363,7 +2363,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:479
+#: src/electron/main.tsx:483
 msgid "Speech"
 msgstr "スピーチ"
 
@@ -2833,7 +2833,7 @@ msgstr "VDF サブスロット評価回数"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:304
+#: src/electron/main.tsx:308
 msgid "View"
 msgstr "表示"
 
@@ -2986,7 +2986,7 @@ msgstr "ご利用ありがとうございます！以下の合言葉はあなた
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "管理者からセットアップ用の情報パケットを受け取ったら、以下に入力してレート制限付きウォレットのセットアップを完了してください:"
 
-#: src/electron/main.tsx:349
+#: src/electron/main.tsx:353
 msgid "Window"
 msgstr "ウィンドウ"
 
@@ -2996,7 +2996,7 @@ msgstr "手数料抜き"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:195
+#: src/electron/main.tsx:199
 msgid "Yes"
 msgstr "はい"
 

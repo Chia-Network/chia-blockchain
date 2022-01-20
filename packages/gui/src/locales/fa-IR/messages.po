@@ -64,8 +64,8 @@ msgstr ""
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:431
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:435
+#: src/electron/main.tsx:522
 msgid "About Chia Blockchain"
 msgstr "درباره بلاکچین چیـا"
 
@@ -190,7 +190,7 @@ msgstr "Are you sure you want to delete unconfirmed transactions?"
 msgid "Are you sure you want to disconnect?"
 msgstr "آیا از قطع ارتباط اطمینان دارید؟"
 
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:203
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "مطمئنید که می‌خواهید خارج شوید؟ فرایند های پلات سازی و واسط گرافیکی مزرعه داری متوقف خواهند شد."
 
@@ -365,15 +365,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "Change Pool"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:414
 msgid "Chat on KeyBase"
 msgstr "در اپلیکیشن KeyBase صبحت کنید"
 
-#: src/electron/main.tsx:428
+#: src/electron/main.tsx:432
 msgid "Chia"
 msgstr "چیـا"
 
-#: src/electron/main.tsx:367
+#: src/electron/main.tsx:371
 msgid "Chia Blockchain Wiki"
 msgstr "ویکی زنجیره بلوکی چیـا"
 
@@ -449,7 +449,7 @@ msgid "Coloured Coin Options"
 msgstr "Coloured Coin Options"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:201
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Confirm"
@@ -524,7 +524,7 @@ msgstr "نوع اتصال"
 msgid "Connections"
 msgstr "اتصال ها"
 
-#: src/electron/main.tsx:391
+#: src/electron/main.tsx:395
 msgid "Contribute on GitHub"
 msgstr "مشارکت در GitHub"
 
@@ -760,11 +760,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:317
 msgid "Developer"
 msgstr "Developer"
 
-#: src/electron/main.tsx:316
+#: src/electron/main.tsx:320
 msgid "Developer Tools"
 msgstr "ابزارهای توسعه دهنده"
 
@@ -835,7 +835,7 @@ msgstr "Drag and drop your backup file"
 msgid "Drag and drop your recovery backup file"
 msgstr ""
 
-#: src/electron/main.tsx:272
+#: src/electron/main.tsx:276
 msgid "Edit"
 msgstr "Edit"
 
@@ -1033,8 +1033,8 @@ msgstr "مبلغ کارمزد ها"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:264
-#: src/electron/main.tsx:465
+#: src/electron/main.tsx:268
+#: src/electron/main.tsx:469
 msgid "File"
 msgstr "File"
 
@@ -1054,11 +1054,11 @@ msgstr "Final folder location"
 msgid "Finished"
 msgstr "Finished"
 
-#: src/electron/main.tsx:416
+#: src/electron/main.tsx:420
 msgid "Follow on Twitter"
 msgstr "Follow on Twitter"
 
-#: src/electron/main.tsx:375
+#: src/electron/main.tsx:379
 msgid "Frequently Asked Questions"
 msgstr "سوالات متداول"
 
@@ -1075,7 +1075,7 @@ msgstr "Full Node Overview"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:341
+#: src/electron/main.tsx:345
 msgid "Full Screen"
 msgstr "Full Screen"
 
@@ -1117,7 +1117,7 @@ msgstr "عنوان هش"
 msgid "Height"
 msgstr "Height"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:367
 msgid "Help"
 msgstr "Help"
 
@@ -1461,7 +1461,7 @@ msgid "Nickname"
 msgstr "Nickname"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:194
+#: src/electron/main.tsx:198
 msgid "No"
 msgstr "No"
 
@@ -2132,7 +2132,7 @@ msgstr "تازه سازی پلات ها"
 msgid "Relative Lock Height"
 msgstr "Relative Lock Height"
 
-#: src/electron/main.tsx:383
+#: src/electron/main.tsx:387
 msgid "Release Notes"
 msgstr "یادداشت‌های انتشار"
 
@@ -2155,7 +2155,7 @@ msgstr "Removing"
 msgid "Rename"
 msgstr "تغییر نام"
 
-#: src/electron/main.tsx:402
+#: src/electron/main.tsx:406
 msgid "Report an Issue..."
 msgstr "گزارش یک مشکل یا خطا..."
 
@@ -2369,7 +2369,7 @@ msgstr "Smooth out your XCH farming rewards by joining a pool."
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:479
+#: src/electron/main.tsx:483
 msgid "Speech"
 msgstr "Speech"
 
@@ -2841,7 +2841,7 @@ msgstr "تکرارهای زیر شکافی VDF"
 msgid "Verify Pool Details"
 msgstr "Verify Pool Details"
 
-#: src/electron/main.tsx:304
+#: src/electron/main.tsx:308
 msgid "View"
 msgstr "View"
 
@@ -2996,7 +2996,7 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "هنگامی که بسته اطلاعات راه‌اندازی را از ادمین خود دریافت می‌کنید، آن را در زیر وارد کنید تا تنظیمات «کیف پول با نرخ محدود» خود را تکمیل کنید:"
 
-#: src/electron/main.tsx:349
+#: src/electron/main.tsx:353
 msgid "Window"
 msgstr "پنجره"
 
@@ -3006,7 +3006,7 @@ msgstr "بدونه کارمزد"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:195
+#: src/electron/main.tsx:199
 msgid "Yes"
 msgstr "بله"
 

@@ -62,8 +62,8 @@ msgstr "Комбайнът е услуга, работеща на машина, 
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:431
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:435
+#: src/electron/main.tsx:522
 msgid "About Chia Blockchain"
 msgstr "Относно Чиа Блокчейн"
 
@@ -188,7 +188,7 @@ msgstr ""
 msgid "Are you sure you want to disconnect?"
 msgstr "Наистина ли искате да прекъснете?"
 
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:203
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Сигурен ли си че искаш да напуснеш? Графичният графичен интерфейс Плотът и фарменето ще спрат."
 
@@ -361,15 +361,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr ""
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:414
 msgid "Chat on KeyBase"
 msgstr "Чат в KeyBase"
 
-#: src/electron/main.tsx:428
+#: src/electron/main.tsx:432
 msgid "Chia"
 msgstr "Чиа"
 
-#: src/electron/main.tsx:367
+#: src/electron/main.tsx:371
 msgid "Chia Blockchain Wiki"
 msgstr "Чиа блокчейн Wiki"
 
@@ -445,7 +445,7 @@ msgid "Coloured Coin Options"
 msgstr "Опции за цветни монети"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:201
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Потвърждаване"
@@ -520,7 +520,7 @@ msgstr "Тип на връзка"
 msgid "Connections"
 msgstr "Връзки"
 
-#: src/electron/main.tsx:391
+#: src/electron/main.tsx:395
 msgid "Contribute on GitHub"
 msgstr "Помогни в GitHub"
 
@@ -754,11 +754,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:317
 msgid "Developer"
 msgstr "Разработчик"
 
-#: src/electron/main.tsx:316
+#: src/electron/main.tsx:320
 msgid "Developer Tools"
 msgstr "Инструменти за разработчици"
 
@@ -829,7 +829,7 @@ msgstr "Плъзнете и пуснете вашият вайл за възст
 msgid "Drag and drop your recovery backup file"
 msgstr ""
 
-#: src/electron/main.tsx:272
+#: src/electron/main.tsx:276
 msgid "Edit"
 msgstr "Редактиране"
 
@@ -1027,8 +1027,8 @@ msgstr "Размер на таксите"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:264
-#: src/electron/main.tsx:465
+#: src/electron/main.tsx:268
+#: src/electron/main.tsx:469
 msgid "File"
 msgstr "Файл"
 
@@ -1048,11 +1048,11 @@ msgstr "Местоположение на финална папка"
 msgid "Finished"
 msgstr "Завършен"
 
-#: src/electron/main.tsx:416
+#: src/electron/main.tsx:420
 msgid "Follow on Twitter"
 msgstr "Последвай в Twitter"
 
-#: src/electron/main.tsx:375
+#: src/electron/main.tsx:379
 msgid "Frequently Asked Questions"
 msgstr "Често задавани въпроси"
 
@@ -1069,7 +1069,7 @@ msgstr ""
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:341
+#: src/electron/main.tsx:345
 msgid "Full Screen"
 msgstr "Пълен екран"
 
@@ -1111,7 +1111,7 @@ msgstr "Хеш на хедъра"
 msgid "Height"
 msgstr "Височина"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:367
 msgid "Help"
 msgstr "Помощ"
 
@@ -1455,7 +1455,7 @@ msgid "Nickname"
 msgstr "Псевдоним"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:194
+#: src/electron/main.tsx:198
 msgid "No"
 msgstr "Не"
 
@@ -2128,7 +2128,7 @@ msgstr "Обнови полета"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:383
+#: src/electron/main.tsx:387
 msgid "Release Notes"
 msgstr "Списък с промени"
 
@@ -2151,7 +2151,7 @@ msgstr "Премахване"
 msgid "Rename"
 msgstr "Преименувай"
 
-#: src/electron/main.tsx:402
+#: src/electron/main.tsx:406
 msgid "Report an Issue..."
 msgstr "Съобщете за проблем..."
 
@@ -2365,7 +2365,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:479
+#: src/electron/main.tsx:483
 msgid "Speech"
 msgstr "Реч"
 
@@ -2835,7 +2835,7 @@ msgstr "VDF под групова итерация"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:304
+#: src/electron/main.tsx:308
 msgid "View"
 msgstr "Виж"
 
@@ -2988,7 +2988,7 @@ msgstr "Добре дошли! Следващите думи се използв
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron/main.tsx:349
+#: src/electron/main.tsx:353
 msgid "Window"
 msgstr "Прозорец"
 
@@ -2998,7 +2998,7 @@ msgstr "Без такси"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:195
+#: src/electron/main.tsx:199
 msgid "Yes"
 msgstr "Да"
 

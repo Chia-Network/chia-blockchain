@@ -62,8 +62,8 @@ msgstr "수확기는 플롯이 실제 저장되어 구동되는 기기입니다.
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:431
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:435
+#: src/electron/main.tsx:522
 msgid "About Chia Blockchain"
 msgstr "치아 블록체인에 대하여"
 
@@ -188,7 +188,7 @@ msgstr ""
 msgid "Are you sure you want to disconnect?"
 msgstr "정말로 접속을 끊으시겠습니까?"
 
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:203
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "정말 종료해도 괜찮습니까? GUI 플로팅과 코인 파밍이 중단됩니다."
 
@@ -361,15 +361,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr ""
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:414
 msgid "Chat on KeyBase"
 msgstr "키베이스에서 채팅하기"
 
-#: src/electron/main.tsx:428
+#: src/electron/main.tsx:432
 msgid "Chia"
 msgstr "치아"
 
-#: src/electron/main.tsx:367
+#: src/electron/main.tsx:371
 msgid "Chia Blockchain Wiki"
 msgstr "치아 블록체인 위키"
 
@@ -445,7 +445,7 @@ msgid "Coloured Coin Options"
 msgstr "컬러드 코인 옵션"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:201
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "확인"
@@ -520,7 +520,7 @@ msgstr "연결 유형"
 msgid "Connections"
 msgstr "연결"
 
-#: src/electron/main.tsx:391
+#: src/electron/main.tsx:395
 msgid "Contribute on GitHub"
 msgstr "GitHub에서 기여"
 
@@ -754,11 +754,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:317
 msgid "Developer"
 msgstr "개발자"
 
-#: src/electron/main.tsx:316
+#: src/electron/main.tsx:320
 msgid "Developer Tools"
 msgstr "개발자 도구"
 
@@ -829,7 +829,7 @@ msgstr "백업 파일을 끌어 놓으세요"
 msgid "Drag and drop your recovery backup file"
 msgstr ""
 
-#: src/electron/main.tsx:272
+#: src/electron/main.tsx:276
 msgid "Edit"
 msgstr "편집"
 
@@ -1027,8 +1027,8 @@ msgstr "수수료 금액"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:264
-#: src/electron/main.tsx:465
+#: src/electron/main.tsx:268
+#: src/electron/main.tsx:469
 msgid "File"
 msgstr "파일"
 
@@ -1048,11 +1048,11 @@ msgstr "최종 폴더 위치"
 msgid "Finished"
 msgstr "완료됨"
 
-#: src/electron/main.tsx:416
+#: src/electron/main.tsx:420
 msgid "Follow on Twitter"
 msgstr "트위터 팔로우하기"
 
-#: src/electron/main.tsx:375
+#: src/electron/main.tsx:379
 msgid "Frequently Asked Questions"
 msgstr "자주 묻는 질문"
 
@@ -1069,7 +1069,7 @@ msgstr ""
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:341
+#: src/electron/main.tsx:345
 msgid "Full Screen"
 msgstr "전체 화면"
 
@@ -1111,7 +1111,7 @@ msgstr "해더 해시"
 msgid "Height"
 msgstr "높이"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:367
 msgid "Help"
 msgstr "도움말"
 
@@ -1455,7 +1455,7 @@ msgid "Nickname"
 msgstr "닉네임"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:194
+#: src/electron/main.tsx:198
 msgid "No"
 msgstr "아니오"
 
@@ -2126,7 +2126,7 @@ msgstr "Plots 새로고침"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:383
+#: src/electron/main.tsx:387
 msgid "Release Notes"
 msgstr "릴리스 노트"
 
@@ -2149,7 +2149,7 @@ msgstr "제거"
 msgid "Rename"
 msgstr "이름 바꾸기"
 
-#: src/electron/main.tsx:402
+#: src/electron/main.tsx:406
 msgid "Report an Issue..."
 msgstr "문제 보고하기..."
 
@@ -2363,7 +2363,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:479
+#: src/electron/main.tsx:483
 msgid "Speech"
 msgstr "말하다"
 
@@ -2833,7 +2833,7 @@ msgstr "VDF 서브 슬롯 반복"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:304
+#: src/electron/main.tsx:308
 msgid "View"
 msgstr "보기"
 
@@ -2986,7 +2986,7 @@ msgstr "환영합니다. 다음의 단어들은 당신의 지갑 백업에 사�
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "관리자로부터 설정 정보 패킷을 받으면 아래에 입력하여 비율 제한 지갑 설정을 완료하세요."
 
-#: src/electron/main.tsx:349
+#: src/electron/main.tsx:353
 msgid "Window"
 msgstr "창"
 
@@ -2996,7 +2996,7 @@ msgstr "무수수료"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:195
+#: src/electron/main.tsx:199
 msgid "Yes"
 msgstr "예"
 

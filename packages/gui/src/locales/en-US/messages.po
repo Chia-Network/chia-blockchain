@@ -62,8 +62,8 @@ msgstr "A harvester is a service running on a machine where plot(s) are actually
 msgid "A value of {0} is recommended"
 msgstr "A value of {0} is recommended"
 
-#: src/electron/main.tsx:431
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:435
+#: src/electron/main.tsx:522
 msgid "About Chia Blockchain"
 msgstr "About Chia Blockchain"
 
@@ -188,7 +188,7 @@ msgstr "Are you sure you want to delete unconfirmed transactions?"
 msgid "Are you sure you want to disconnect?"
 msgstr "Are you sure you want to disconnect?"
 
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:203
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Are you sure you want to quit? GUI plotting and farming will stop."
 
@@ -361,15 +361,15 @@ msgstr "Change Passphrase"
 msgid "Change Pool"
 msgstr "Change Pool"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:414
 msgid "Chat on KeyBase"
 msgstr "Chat on KeyBase"
 
-#: src/electron/main.tsx:428
+#: src/electron/main.tsx:432
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:367
+#: src/electron/main.tsx:371
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -445,7 +445,7 @@ msgid "Coloured Coin Options"
 msgstr "Colored Coin Options"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:201
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Confirm"
@@ -520,7 +520,7 @@ msgstr "Connection type"
 msgid "Connections"
 msgstr "Connections"
 
-#: src/electron/main.tsx:391
+#: src/electron/main.tsx:395
 msgid "Contribute on GitHub"
 msgstr "Contribute on GitHub"
 
@@ -754,11 +754,11 @@ msgstr "Deleting key"
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:317
 msgid "Developer"
 msgstr "Developer"
 
-#: src/electron/main.tsx:316
+#: src/electron/main.tsx:320
 msgid "Developer Tools"
 msgstr "Developer Tools"
 
@@ -829,7 +829,7 @@ msgstr "Drag and drop your backup file"
 msgid "Drag and drop your recovery backup file"
 msgstr "Drag and drop your recovery backup file"
 
-#: src/electron/main.tsx:272
+#: src/electron/main.tsx:276
 msgid "Edit"
 msgstr "Edit"
 
@@ -1027,8 +1027,8 @@ msgstr "Fees Amount"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:264
-#: src/electron/main.tsx:465
+#: src/electron/main.tsx:268
+#: src/electron/main.tsx:469
 msgid "File"
 msgstr "File"
 
@@ -1048,11 +1048,11 @@ msgstr "Final folder location"
 msgid "Finished"
 msgstr "Finished"
 
-#: src/electron/main.tsx:416
+#: src/electron/main.tsx:420
 msgid "Follow on Twitter"
 msgstr "Follow on Twitter"
 
-#: src/electron/main.tsx:375
+#: src/electron/main.tsx:379
 msgid "Frequently Asked Questions"
 msgstr "Frequently Asked Questions"
 
@@ -1069,7 +1069,7 @@ msgstr "Full Node Overview"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:341
+#: src/electron/main.tsx:345
 msgid "Full Screen"
 msgstr "Full Screen"
 
@@ -1111,7 +1111,7 @@ msgstr "Header hash"
 msgid "Height"
 msgstr "Height"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:367
 msgid "Help"
 msgstr "Help"
 
@@ -1455,7 +1455,7 @@ msgid "Nickname"
 msgstr "Nickname"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:194
+#: src/electron/main.tsx:198
 msgid "No"
 msgstr "No"
 
@@ -2126,7 +2126,7 @@ msgstr "Refresh Plots"
 msgid "Relative Lock Height"
 msgstr "Relative Lock Height"
 
-#: src/electron/main.tsx:383
+#: src/electron/main.tsx:387
 msgid "Release Notes"
 msgstr "Release Notes"
 
@@ -2149,7 +2149,7 @@ msgstr "Removing"
 msgid "Rename"
 msgstr "Rename"
 
-#: src/electron/main.tsx:402
+#: src/electron/main.tsx:406
 msgid "Report an Issue..."
 msgstr "Report an Issue..."
 
@@ -2363,7 +2363,7 @@ msgstr "Smooth out your XCH farming rewards by joining a pool."
 msgid "Specify a value of 0 to use all available threads"
 msgstr "Specify a value of 0 to use all available threads"
 
-#: src/electron/main.tsx:479
+#: src/electron/main.tsx:483
 msgid "Speech"
 msgstr "Speech"
 
@@ -2833,7 +2833,7 @@ msgstr "VDF Sub Slot Iterations"
 msgid "Verify Pool Details"
 msgstr "Verify Pool Details"
 
-#: src/electron/main.tsx:304
+#: src/electron/main.tsx:308
 msgid "View"
 msgstr "View"
 
@@ -2986,7 +2986,7 @@ msgstr "Welcome! The following words are used for your wallet backup. Without th
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 
-#: src/electron/main.tsx:349
+#: src/electron/main.tsx:353
 msgid "Window"
 msgstr "Window"
 
@@ -2996,7 +2996,7 @@ msgstr "Without fees"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:195
+#: src/electron/main.tsx:199
 msgid "Yes"
 msgstr "Yes"
 

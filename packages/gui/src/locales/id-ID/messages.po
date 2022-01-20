@@ -62,8 +62,8 @@ msgstr "Harvester adalah layanan yang berjalan pada komputer dimana plot disimpa
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:431
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:435
+#: src/electron/main.tsx:522
 msgid "About Chia Blockchain"
 msgstr "Tentang Chia Blockchain"
 
@@ -188,7 +188,7 @@ msgstr "Yakin ingin menghapus transaksi yang belum ter konfirmasi ini?"
 msgid "Are you sure you want to disconnect?"
 msgstr "Anda yakin ingin memutuskan koneksi?"
 
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:203
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Anda yakin ingin keluar dari program? Plotting dan Farming di GUI akan berhenti."
 
@@ -361,15 +361,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "Ubah Pool"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:414
 msgid "Chat on KeyBase"
 msgstr "Hubung Chat di KeyBase"
 
-#: src/electron/main.tsx:428
+#: src/electron/main.tsx:432
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:367
+#: src/electron/main.tsx:371
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki Chia Blockchain"
 
@@ -445,7 +445,7 @@ msgid "Coloured Coin Options"
 msgstr "Pilihan Koin Berwarna"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:201
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Konfirmasi"
@@ -520,7 +520,7 @@ msgstr "Jenis koneksi"
 msgid "Connections"
 msgstr "Koneksi"
 
-#: src/electron/main.tsx:391
+#: src/electron/main.tsx:395
 msgid "Contribute on GitHub"
 msgstr "Berkontribusi di GitHub"
 
@@ -754,11 +754,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:317
 msgid "Developer"
 msgstr "Developer"
 
-#: src/electron/main.tsx:316
+#: src/electron/main.tsx:320
 msgid "Developer Tools"
 msgstr "Developer Tools"
 
@@ -829,7 +829,7 @@ msgstr "Seret dan lepas berkas cadangan anda"
 msgid "Drag and drop your recovery backup file"
 msgstr "Seret dan lepas berkas cadangan anda"
 
-#: src/electron/main.tsx:272
+#: src/electron/main.tsx:276
 msgid "Edit"
 msgstr "Ubah"
 
@@ -1027,8 +1027,8 @@ msgstr "Jumlah Biaya"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:264
-#: src/electron/main.tsx:465
+#: src/electron/main.tsx:268
+#: src/electron/main.tsx:469
 msgid "File"
 msgstr "File"
 
@@ -1048,11 +1048,11 @@ msgstr "Lokasi folder akhir"
 msgid "Finished"
 msgstr "Selesai"
 
-#: src/electron/main.tsx:416
+#: src/electron/main.tsx:420
 msgid "Follow on Twitter"
 msgstr "Follow di Twitter"
 
-#: src/electron/main.tsx:375
+#: src/electron/main.tsx:379
 msgid "Frequently Asked Questions"
 msgstr "Frequently Asked Questions"
 
@@ -1069,7 +1069,7 @@ msgstr "Gambaran node Total"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:341
+#: src/electron/main.tsx:345
 msgid "Full Screen"
 msgstr "Layar Penuh"
 
@@ -1111,7 +1111,7 @@ msgstr "Kepala hash"
 msgid "Height"
 msgstr "Tinggi"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:367
 msgid "Help"
 msgstr "Bantuan"
 
@@ -1455,7 +1455,7 @@ msgid "Nickname"
 msgstr "Nama Panggilan"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:194
+#: src/electron/main.tsx:198
 msgid "No"
 msgstr "Tidak"
 
@@ -2128,7 +2128,7 @@ msgstr "Segarkan data Plot-Plot"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:383
+#: src/electron/main.tsx:387
 msgid "Release Notes"
 msgstr "Release Notes"
 
@@ -2151,7 +2151,7 @@ msgstr "Menghapus"
 msgid "Rename"
 msgstr "Ubah nama"
 
-#: src/electron/main.tsx:402
+#: src/electron/main.tsx:406
 msgid "Report an Issue..."
 msgstr "Melaporkan sebuah masalah..."
 
@@ -2365,7 +2365,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:479
+#: src/electron/main.tsx:483
 msgid "Speech"
 msgstr "Pertuturan"
 
@@ -2835,7 +2835,7 @@ msgstr "Iterasi VDF Sub Slot"
 msgid "Verify Pool Details"
 msgstr "Verifikasi Detil Pool"
 
-#: src/electron/main.tsx:304
+#: src/electron/main.tsx:308
 msgid "View"
 msgstr "Lihat"
 
@@ -2988,7 +2988,7 @@ msgstr "Selamat datang! kata-kata frasa ini akan diguna untuk simpanan dompet el
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Ketika anda menerima paket informasi setup dari administrator, masukan di bawah untuk menyelesaikan setup dompet rate terbatas anda:"
 
-#: src/electron/main.tsx:349
+#: src/electron/main.tsx:353
 msgid "Window"
 msgstr "Jendela"
 
@@ -2998,7 +2998,7 @@ msgstr "Tanpa biaya"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:195
+#: src/electron/main.tsx:199
 msgid "Yes"
 msgstr "Ya"
 

@@ -62,8 +62,8 @@ msgstr "收割机是一个在存有农田文件的机器上运行的服务。农
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:431
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:435
+#: src/electron/main.tsx:522
 msgid "About Chia Blockchain"
 msgstr "关于奇亚Chia区块链项目"
 
@@ -188,7 +188,7 @@ msgstr "确定要删除未确认的交易吗？"
 msgid "Are you sure you want to disconnect?"
 msgstr "是否要断开连接？"
 
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:203
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "确定要退出吗? 农田开垦和耕种将会停止。"
 
@@ -361,15 +361,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "更换农业合作社"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:414
 msgid "Chat on KeyBase"
 msgstr "在Keybase上参与讨论"
 
-#: src/electron/main.tsx:428
+#: src/electron/main.tsx:432
 msgid "Chia"
 msgstr "奇亚"
 
-#: src/electron/main.tsx:367
+#: src/electron/main.tsx:371
 msgid "Chia Blockchain Wiki"
 msgstr "奇亚区块链项目维基"
 
@@ -445,7 +445,7 @@ msgid "Coloured Coin Options"
 msgstr "染色币选项"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:197
+#: src/electron/main.tsx:201
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "确认"
@@ -520,7 +520,7 @@ msgstr "连接类型"
 msgid "Connections"
 msgstr "连接数"
 
-#: src/electron/main.tsx:391
+#: src/electron/main.tsx:395
 msgid "Contribute on GitHub"
 msgstr "在 GitHub 上贡献"
 
@@ -754,11 +754,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:317
 msgid "Developer"
 msgstr "开发者"
 
-#: src/electron/main.tsx:316
+#: src/electron/main.tsx:320
 msgid "Developer Tools"
 msgstr "开发者工具"
 
@@ -829,7 +829,7 @@ msgstr "拖放你的备份文件"
 msgid "Drag and drop your recovery backup file"
 msgstr ""
 
-#: src/electron/main.tsx:272
+#: src/electron/main.tsx:276
 msgid "Edit"
 msgstr "编辑"
 
@@ -1027,8 +1027,8 @@ msgstr "费用"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:264
-#: src/electron/main.tsx:465
+#: src/electron/main.tsx:268
+#: src/electron/main.tsx:469
 msgid "File"
 msgstr "文件"
 
@@ -1048,11 +1048,11 @@ msgstr "最终输出文件夹位置"
 msgid "Finished"
 msgstr "已完成"
 
-#: src/electron/main.tsx:416
+#: src/electron/main.tsx:420
 msgid "Follow on Twitter"
 msgstr "关注我们的Twitter"
 
-#: src/electron/main.tsx:375
+#: src/electron/main.tsx:379
 msgid "Frequently Asked Questions"
 msgstr "常见问题解答"
 
@@ -1069,7 +1069,7 @@ msgstr "全节点概览"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:341
+#: src/electron/main.tsx:345
 msgid "Full Screen"
 msgstr "全屏"
 
@@ -1111,7 +1111,7 @@ msgstr "头部哈希"
 msgid "Height"
 msgstr "高度"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:367
 msgid "Help"
 msgstr "帮助"
 
@@ -1455,7 +1455,7 @@ msgid "Nickname"
 msgstr "昵称"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:194
+#: src/electron/main.tsx:198
 msgid "No"
 msgstr "否"
 
@@ -2126,7 +2126,7 @@ msgstr "刷新农田列表"
 msgid "Relative Lock Height"
 msgstr "相对锁高度"
 
-#: src/electron/main.tsx:383
+#: src/electron/main.tsx:387
 msgid "Release Notes"
 msgstr "版本发布说明"
 
@@ -2149,7 +2149,7 @@ msgstr "删除中"
 msgid "Rename"
 msgstr "重命名"
 
-#: src/electron/main.tsx:402
+#: src/electron/main.tsx:406
 msgid "Report an Issue..."
 msgstr "报告问题"
 
@@ -2363,7 +2363,7 @@ msgstr "加入农业合作社来稳定XCH耕作收益。"
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:479
+#: src/electron/main.tsx:483
 msgid "Speech"
 msgstr "演说"
 
@@ -2833,7 +2833,7 @@ msgstr "VDF子项迭代数"
 msgid "Verify Pool Details"
 msgstr "验证农业合作社详情"
 
-#: src/electron/main.tsx:304
+#: src/electron/main.tsx:308
 msgid "View"
 msgstr "查看"
 
@@ -2986,7 +2986,7 @@ msgstr "欢迎使用奇亚! 下面的词语列表是你的钱包密语, 请务�
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "当你从管理员那收到这个设置信息后, 请把它输入到下面以便完成费用限定型钱包设置:"
 
-#: src/electron/main.tsx:349
+#: src/electron/main.tsx:353
 msgid "Window"
 msgstr "窗口"
 
@@ -2996,7 +2996,7 @@ msgstr "不含交易费"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:195
+#: src/electron/main.tsx:199
 msgid "Yes"
 msgstr "是"
 
