@@ -58,7 +58,7 @@
    (defun calculate_db_current_puzzlehash (DB_SINGLETON_STRUCT DB_LAYER_MOD_HASH current_root db_innerpuz_hash)
      (puzzle-hash-of-curried-function (f DB_SINGLETON_STRUCT)
          (puzzle-hash-of-curried-function DB_LAYER_MOD_HASH
-                                          db_innerpuz_hash
+                                          (sha256 1 db_innerpuz_hash)
                                           (sha256 1 current_root)
                                           (sha256 1 DB_LAYER_MOD_HASH)
          )
