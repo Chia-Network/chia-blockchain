@@ -1007,8 +1007,8 @@ class TestMempoolManager:
         try:
             await _validate_and_add_block(full_node_1.full_node.blockchain, blocks[-1])
             assert False
-        except ValueError:
-            pass
+        except AssertionError as e:
+            assert e.args[0] == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     # ensure an assert coin announcement is rejected if it doesn't match the
     # create announcement

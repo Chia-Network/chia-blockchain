@@ -755,10 +755,12 @@ class TestBlockHeaderValidation:
         blocks_1 = bt.get_consecutive_blocks(1, block_list_input=blocks_base, force_overflow=True)
         blocks_2 = bt.get_consecutive_blocks(1, skip_slots=3, block_list_input=blocks_base, force_overflow=True)
         for block in blocks_base:
-            await _validate_and_add_block(empty_blockchain, block)
-        await _validate_and_add_block(empty_blockchain, blocks_1[-1], expected_result=ReceiveBlockResult.NEW_PEAK)
+            await _validate_and_add_block(empty_blockchain, block, skip_prevalidation=True)
         await _validate_and_add_block(
-            empty_blockchain, blocks_2[-1], expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN
+            empty_blockchain, blocks_1[-1], expected_result=ReceiveBlockResult.NEW_PEAK, skip_prevalidation=True
+        )
+        await _validate_and_add_block(
+            empty_blockchain, blocks_2[-1], expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN, skip_prevalidation=True
         )
 
     @pytest.mark.asyncio
@@ -2787,7 +2789,7 @@ class TestReorgs:
         blocks = default_10000_blocks[:num_blocks_chain_1]
 
         for block in blocks:
-            await _validate_and_add_block(b, block)
+            await _validate_and_add_block(b, block, skip_prevalidation=True)
         chain_1_height = b.get_peak().height
         chain_1_weight = b.get_peak().weight
         assert chain_1_height == (num_blocks_chain_1 - 1)
@@ -2802,14 +2804,19 @@ class TestReorgs:
         )
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < num_blocks_chain_2_start:
-                await _validate_and_add_block(b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK)
+                await _validate_and_add_block(
+                    b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK, skip_prevalidation=True
+                )
             elif reorg_block.weight <= chain_1_weight:
                 await _validate_and_add_block_multi_result(
-                    b, reorg_block, [ReceiveBlockResult.ADDED_AS_ORPHAN, ReceiveBlockResult.ALREADY_HAVE_BLOCK]
+                    b,
+                    reorg_block,
+                    [ReceiveBlockResult.ADDED_AS_ORPHAN, ReceiveBlockResult.ALREADY_HAVE_BLOCK],
+                    skip_prevalidation=True,
                 )
             elif reorg_block.weight > chain_1_weight:
                 assert reorg_block.height < chain_1_height
-                await _validate_and_add_block(b, reorg_block)
+                await _validate_and_add_block(b, reorg_block, skip_prevalidation=True)
 
         assert b.get_peak().weight > chain_1_weight
         assert b.get_peak().height < chain_1_height
@@ -2818,7 +2825,7 @@ class TestReorgs:
     async def test_long_compact_blockchain(self, empty_blockchain, default_10000_blocks_compact):
         b = empty_blockchain
         for block in default_10000_blocks_compact:
-            await _validate_and_add_block(b, block)
+            await _validate_and_add_block(b, block, skip_prevalidation=True)
         assert b.get_peak().height == len(default_10000_blocks_compact) - 1
 
     @pytest.mark.asyncio
