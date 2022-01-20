@@ -41,7 +41,7 @@ def service_kwargs_for_data_layer(
         consensus_constants=constants,
         local_keychain=keychain,
     )
-    data_layer = DataLayer(root_path=root_path, wallet_node=node)
+    data_layer = DataLayer(root_path=root_path, wallet_rpc=None)
     api = DataLayerAPI(data_layer)
     network_id = config["selected_network"]
     kwargs: Dict[str, Any] = dict(
