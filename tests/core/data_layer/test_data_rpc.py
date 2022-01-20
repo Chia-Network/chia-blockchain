@@ -74,7 +74,7 @@ async def one_wallet_node_and_rpc() -> AsyncIterator[nodes]:
         )
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
 
-        yield  wallet_node_0, full_node_api
+        yield wallet_node_0, full_node_api
 
         client.close()
         await client.await_closed()
@@ -82,7 +82,7 @@ async def one_wallet_node_and_rpc() -> AsyncIterator[nodes]:
 
 
 @pytest.mark.asyncio
-async def test_create_insert_get( one_wallet_node_and_rpc: nodes) -> None:
+async def test_create_insert_get(one_wallet_node_and_rpc: nodes) -> None:
     root_path = bt.root_path
     wallet_node, full_node_api = one_wallet_node_and_rpc
     config = load_config(root_path, "config.yaml")
@@ -106,7 +106,6 @@ async def test_create_insert_get( one_wallet_node_and_rpc: nodes) -> None:
         value = b"\x00\x01"
         changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.create_data_store({})
-        await asyncio.sleep(1)
         assert res is not None
         store_id = bytes32(hexstr_to_bytes(res["id"]))
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})

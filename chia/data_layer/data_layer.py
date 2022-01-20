@@ -69,11 +69,12 @@ class DataLayer:
         if self.connection is not None:
             await self.connection.close()
 
-    async def create_store(self, root: bytes32) -> Tuple[List[TransactionRecord], bytes32]:
+    async def create_store(self) -> Tuple[List[TransactionRecord], bytes32]:
         # TODO: review for anything else we need to do here
         fee = uint64(1)
+        root = bytes32([0] * 32)
         txs, tree_id = await self.wallet_rpc.create_new_dl(root, fee)
-        res = await self.data_store.create_tree(root)
+        res = await self.data_store.create_tree(tree_id=tree_id)
         if res is None:
             self.log.fatal("failed creating store")
         self.initialized = True
