@@ -23,23 +23,6 @@ async def get_client(rpc_port: Optional[int]) -> Tuple[DataLayerRpcClient, int]:
     return client, rpc_port
 
 
-async def create_wallet(rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
-    # TODO: nice cli error handling
-    try:
-        client, rpc_port = await get_client(rpc_port)
-        response = await client.create_wallet()
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running ")
-        return None
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
-        return None
-
-    client.close()
-    await client.await_closed()
-    return response
-
-
 async def create_data_store_cmd(rpc_port: Optional[int], table_string: str) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
 

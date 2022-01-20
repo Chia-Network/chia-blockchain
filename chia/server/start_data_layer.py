@@ -9,11 +9,13 @@ from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
+from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
 
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.ints import uint16
 
 from chia.util.keychain import Keychain
 from chia.wallet.wallet_node import WalletNode
@@ -33,15 +35,10 @@ def service_kwargs_for_data_layer(
     keychain: Optional[Keychain] = None,
 ) -> Dict[str, Any]:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "wallet")
-
-    # add local node to trusted peers if old config
-    node = WalletNode(
-        config,
-        root_path,
-        consensus_constants=constants,
-        local_keychain=keychain,
-    )
-    data_layer = DataLayer(root_path=root_path, wallet_rpc=None)
+    self_hostname = config["self_hostname"]
+    wallet_rpc_port = config["rpc_port"]
+    wallet_client = await WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), DEFAULT_ROOT_PATH,config)
+    data_layer = DataLayer(root_path=root_path, wallet_rpc=wallet_client)
     api = DataLayerAPI(data_layer)
     network_id = config["selected_network"]
     kwargs: Dict[str, Any] = dict(
