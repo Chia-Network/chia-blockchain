@@ -6,6 +6,7 @@ import { Settings as SettingsIcon, Close as CloseIcon } from '@material-ui/icons
 import Flex from '../Flex';
 import Tooltip from '../Tooltip';
 import SettingsApp from './SettingsApp';
+import SettingsFooter from './SettingsFooter';
 
 const StyledHeader = styled(Box)`
   padding: 0.5rem 1rem;
@@ -67,6 +68,7 @@ export default function Settings(props: SettingsProps) {
           <StyledBody>
             {children}
           </StyledBody>
+          <SettingsFooter />
         </Flex>
       </Drawer>
     </>

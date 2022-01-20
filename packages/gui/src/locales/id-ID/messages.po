@@ -34,7 +34,7 @@ msgstr "(Pilihan)"
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 msgstr "*Ingin tahu soal blok Chia lebih jauh? Periksa laman <0>Chia Explorer</0> yang dibuat oleh software sumber terbuka."
 
-#: src/components/app/AppSelectMode.tsx:94
+#: src/components/app/AppSelectMode.tsx:120
 msgid "+"
 msgstr ""
 
@@ -377,6 +377,10 @@ msgstr "Wiki Chia Blockchain"
 msgid "Chia Wallet"
 msgstr "Wallet Chia"
 
+#: src/components/app/AppSelectMode.tsx:137
+msgid "Choose Farming Mode"
+msgstr ""
+
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:34
 msgid "Choose Number of Plots"
 msgstr "Pilih Jumlah Plot"
@@ -387,6 +391,10 @@ msgstr "Pilih Ukuran Plot"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:90
 msgid "Choose Plotter"
+msgstr ""
+
+#: src/components/app/AppSelectMode.tsx:93
+msgid "Choose Wallet Mode"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:381
@@ -542,7 +550,7 @@ msgstr "Salin"
 msgid "Create"
 msgstr "Buat"
 
-#: src/components/app/AppSelectMode.tsx:97
+#: src/components/app/AppSelectMode.tsx:125
 msgid "Create & Manage plots"
 msgstr ""
 
@@ -970,7 +978,7 @@ msgstr "Para farmer mendapatkan upah blok dan biaya transaksi dengan mengalokasi
 msgid "Farming"
 msgstr "Farming"
 
-#: src/components/app/AppSelectMode.tsx:86
+#: src/components/app/AppSelectMode.tsx:107
 msgid "Farming Mode"
 msgstr ""
 
@@ -1221,7 +1229,7 @@ msgstr ""
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:100
+#: src/components/app/AppSelectMode.tsx:131
 msgid "Join farming pools"
 msgstr ""
 
@@ -1344,7 +1352,7 @@ msgstr "Memuat..."
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:69
+#: src/components/app/AppSelectMode.tsx:81
 msgid "Manage CAT tokens"
 msgstr ""
 
@@ -2225,7 +2233,7 @@ msgstr "Pilih Direktori Sementara"
 msgid "Select Wallet Type"
 msgstr "Pilih Jenis Dompet elektronik"
 
-#: src/components/app/AppSelectMode.tsx:50
+#: src/components/app/AppSelectMode.tsx:55
 msgid "Select Your Client Mode"
 msgstr ""
 
@@ -2303,7 +2311,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:109
+#: src/components/app/AppSelectMode.tsx:145
 msgid "Settings are located at the upper right corner"
 msgstr ""
 
@@ -2430,7 +2438,7 @@ msgstr "Status:"
 #~ msgid "StatusCard.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:66
+#: src/components/app/AppSelectMode.tsx:75
 msgid "Store and Send XCH"
 msgstr ""
 
@@ -2745,7 +2753,7 @@ msgstr "Id perdagangan:"
 msgid "Trade Overview"
 msgstr "Overview Perdagangan"
 
-#: src/components/app/AppSelectMode.tsx:72
+#: src/components/app/AppSelectMode.tsx:87
 msgid "Trade tokens"
 msgstr ""
 
@@ -2876,8 +2884,8 @@ msgstr "Menunggu sikronisasi"
 msgid "Waiting for the transaction to be confirmed"
 msgstr "Menunggu transaksi untuk di konfirmasi"
 
-#: src/components/app/AppSelectMode.tsx:61
-#: src/components/app/AppSelectMode.tsx:91
+#: src/components/app/AppSelectMode.tsx:67
+#: src/components/app/AppSelectMode.tsx:115
 msgid "Wallet Mode"
 msgstr ""
 
@@ -3003,7 +3011,7 @@ msgstr "Kamu masi dalam keadaan pending. Tolong tunggu untuk konfirmasi"
 msgid "You are not self pooling"
 msgstr "Kamu tidak sedan membuat pool sendiri"
 
-#: src/components/app/AppSelectMode.tsx:111
+#: src/components/app/AppSelectMode.tsx:147
 msgid "You can always change your mode later in the settings"
 msgstr ""
 

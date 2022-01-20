@@ -6,6 +6,7 @@ import {
   ConfirmDialog,
   useOpenDialog,
   useShowDebugInformation,
+  AlertDialog,
 } from '@chia/core';
 import { useNavigate } from 'react-router';
 import {
@@ -18,7 +19,7 @@ import {
 import {
   Delete as DeleteIcon,
 } from '@material-ui/icons';
-import { useDeleteUnconfirmedTransactionsMutation } from '@chia/api-react';
+import { useDeleteUnconfirmedTransactionsMutation, useGetSyncStatusQuery } from '@chia/api-react';
 import WalletStatus from './WalletStatus';
 import WalletsDropdodown from './WalletsDropdown';
 
@@ -30,6 +31,7 @@ type StandardWalletProps = {
 export default function WalletHeader(props: StandardWalletProps) {
   const { walletId, actions } = props;
   const openDialog = useOpenDialog();
+  const { data: walletState, isLoading: isWalletSyncLoading } = useGetSyncStatusQuery();
   const showDebugInformation = useShowDebugInformation();
   const [deleteUnconfirmedTransactions] = useDeleteUnconfirmedTransactionsMutation();
   const navigate = useNavigate();
@@ -51,6 +53,20 @@ export default function WalletHeader(props: StandardWalletProps) {
     navigate('/dashboard/wallets/create/simple');
   }
 
+  async function handleManageOffers() {
+    if (isWalletSyncLoading || walletState.syncing) {
+      await openDialog(
+        <AlertDialog>
+          <Trans>Please finish syncing before managing offers</Trans>
+        </AlertDialog>,
+      );
+      return;
+    }
+    else {
+      navigate('/dashboard/wallets/offers/manage');
+    }
+  }
+
   return (
     <Flex gap={1} alignItems="center">
       <Flex flexGrow={1} gap={1}>
@@ -60,6 +76,13 @@ export default function WalletHeader(props: StandardWalletProps) {
           onClick={handleAddToken}
         >
           <Trans>+ Add Token</Trans>
+        </Button>
+        <Button
+          color="primary"
+          variant="outlined"
+          onClick={handleManageOffers}
+        >
+          <Trans>Manage Offers</Trans>
         </Button>
       </Flex>
       <Flex gap={1} alignItems="center">

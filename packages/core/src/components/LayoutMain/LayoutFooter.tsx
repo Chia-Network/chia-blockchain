@@ -1,31 +1,20 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Flex } from '@chia/core';
+import { Typography } from '@material-ui/core';
 import styled from 'styled-components';
-import { Remote, Shell } from 'electron';
+import { Shell } from 'electron';
 import { default as walletPackageJson } from '../../../package.json';
+import useAppVersion from '../../hooks/useAppVersion';
 
-const Version = styled.a`
-align-self: flex-end;
-padding-left: ${({ theme }) => `${theme.spacing(3)}px`};
-color: rgb(128, 128, 128);
-`;
+const { productName } = walletPackageJson;
 
 const FAQ = styled.a`
-align-self: flex-end;
 color: rgb(128, 160, 194);
 `;
 
 const SendFeedback = styled.a`
-align-self: flex-end;
-padding-right: ${({ theme }) => `${theme.spacing(3)}px`};
 color: rgb(128, 160, 194);
-`;
-
-const Footer = styled(Flex)`
-width: 100%;
-bottom: 0;
-padding-bottom: ${({ theme }) => `${theme.spacing(3)}px`};
 `;
 
 async function openFAQURL(): Promise<void> {
@@ -49,16 +38,14 @@ async function openSendFeedbackURL(): Promise<void> {
 }
 
 export default function LayoutFooter() {
-  const remote: Remote = (window as any).remote;
-  const version = remote.app.getVersion();
-  const { productName } = walletPackageJson;
+  const { version } = useAppVersion();
 
   return (
-    <Footer flexDirection="row" flexGrow={1} justifyContent="space-between">
-      <Version>
+    <Flex flexDirection="row" flexGrow={1} justifyContent="space-between">
+      <Typography color="textSecondary" variant="body2">
         {productName} {version}
-      </Version>
-      <Flex flexDirection="row" gap={2}>
+      </Typography>
+      <Flex gap={2}>
         <FAQ onClick={openFAQURL}>
           <Trans>FAQ</Trans>
         </FAQ>
@@ -66,6 +53,6 @@ export default function LayoutFooter() {
           <Trans>Send Feedback</Trans>
         </SendFeedback>
       </Flex>
-    </Footer>
+    </Flex>
   )
 }

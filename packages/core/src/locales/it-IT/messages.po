@@ -858,6 +858,10 @@ msgstr "Errore"
 #~ msgid "Expected Time to Win"
 #~ msgstr ""
 
+#: src/components/LayoutMain/LayoutFooter.tsx:63
+msgid "FAQ"
+msgstr ""
+
 #: src/components/plot/PlotsFailed.tsx:34
 #~ msgid "Failed to open (invalid plots)"
 #~ msgstr "Impossibile aprire (plot non validi)"
@@ -2250,6 +2254,10 @@ msgstr ""
 #: src/components/_wallet_old/standard/WalletStandard.tsx:535
 #~ msgid "Send"
 #~ msgstr "Invia"
+
+#: src/components/LayoutMain/LayoutFooter.tsx:66
+msgid "Send Feedback"
+msgstr ""
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:460
 #~ msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"

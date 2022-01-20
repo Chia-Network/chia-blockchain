@@ -14,6 +14,7 @@ import { useLogout } from '@chia/api-react';
 import { ExitToApp as ExitToAppIcon } from '@material-ui/icons';
 import Settings from '../Settings';
 import Tooltip from '../Tooltip';
+// import LayoutFooter from '../LayoutMain/LayoutFooter';
 
 const StyledRoot = styled(Flex)`
   height: 100%;
@@ -139,6 +140,7 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
               <Suspense fallback={<Loading center />}>
                 {outlet ? <Outlet /> : children}
               </Suspense>
+              {/* <LayoutFooter /> */}
             </Flex>
           </StyledContainer>
         </StyledBody>

@@ -34,7 +34,7 @@ msgstr "(Optional)"
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 msgstr "*Möchtest du mehr über Chia's Blocks erfahren? Besuche <0>Chia Explorer</0>, entwickelt von einem Open Source Entwickler."
 
-#: src/components/app/AppSelectMode.tsx:94
+#: src/components/app/AppSelectMode.tsx:120
 msgid "+"
 msgstr ""
 
@@ -377,6 +377,10 @@ msgstr "Chia Blockchain Wiki"
 msgid "Chia Wallet"
 msgstr "Chia Wallet"
 
+#: src/components/app/AppSelectMode.tsx:137
+msgid "Choose Farming Mode"
+msgstr ""
+
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:34
 msgid "Choose Number of Plots"
 msgstr "Anzahl der Plots wählen"
@@ -387,6 +391,10 @@ msgstr "Wähle Plot Größe"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:90
 msgid "Choose Plotter"
+msgstr ""
+
+#: src/components/app/AppSelectMode.tsx:93
+msgid "Choose Wallet Mode"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:381
@@ -542,7 +550,7 @@ msgstr "Kopieren"
 msgid "Create"
 msgstr "Erstellen"
 
-#: src/components/app/AppSelectMode.tsx:97
+#: src/components/app/AppSelectMode.tsx:125
 msgid "Create & Manage plots"
 msgstr ""
 
@@ -976,7 +984,7 @@ msgstr "Farmer erhalten Block Belohnungen und Transaktionsgebühren indem dem Ne
 msgid "Farming"
 msgstr "Farming"
 
-#: src/components/app/AppSelectMode.tsx:86
+#: src/components/app/AppSelectMode.tsx:107
 msgid "Farming Mode"
 msgstr ""
 
@@ -1227,7 +1235,7 @@ msgstr "Trete einem Pool bei und erhalte konsistente XCH Farming-Belohnungen. De
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr "Trete einem Pool bei und erhalte konsistente XCH Farming-Belohnungen. Erstelle ein Plot-NFT und weise deine neuen Plots einer Gruppe zu."
 
-#: src/components/app/AppSelectMode.tsx:100
+#: src/components/app/AppSelectMode.tsx:131
 msgid "Join farming pools"
 msgstr ""
 
@@ -1350,7 +1358,7 @@ msgstr "Lädt..."
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:69
+#: src/components/app/AppSelectMode.tsx:81
 msgid "Manage CAT tokens"
 msgstr ""
 
@@ -2231,7 +2239,7 @@ msgstr "Wähle temporäres Verzeichnis"
 msgid "Select Wallet Type"
 msgstr "Wähle Wallet Typ"
 
-#: src/components/app/AppSelectMode.tsx:50
+#: src/components/app/AppSelectMode.tsx:55
 msgid "Select Your Client Mode"
 msgstr ""
 
@@ -2309,7 +2317,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:109
+#: src/components/app/AppSelectMode.tsx:145
 msgid "Settings are located at the upper right corner"
 msgstr ""
 
@@ -2436,7 +2444,7 @@ msgstr "Status:"
 #~ msgid "StatusCard.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:66
+#: src/components/app/AppSelectMode.tsx:75
 msgid "Store and Send XCH"
 msgstr ""
 
@@ -2751,7 +2759,7 @@ msgstr "Handel ID:"
 msgid "Trade Overview"
 msgstr "Handel Überblick"
 
-#: src/components/app/AppSelectMode.tsx:72
+#: src/components/app/AppSelectMode.tsx:87
 msgid "Trade tokens"
 msgstr ""
 
@@ -2882,8 +2890,8 @@ msgstr "Warten auf Synchronisation"
 msgid "Waiting for the transaction to be confirmed"
 msgstr "Warten auf Transaktionsbestätigung"
 
-#: src/components/app/AppSelectMode.tsx:61
-#: src/components/app/AppSelectMode.tsx:91
+#: src/components/app/AppSelectMode.tsx:67
+#: src/components/app/AppSelectMode.tsx:115
 msgid "Wallet Mode"
 msgstr ""
 
@@ -3009,7 +3017,7 @@ msgstr "Du bist im Wartezustand. Bitte warte auf die Bestätigung"
 msgid "You are not self pooling"
 msgstr "Du betreibst kein Selbst-Pooling"
 
-#: src/components/app/AppSelectMode.tsx:111
+#: src/components/app/AppSelectMode.tsx:147
 msgid "You can always change your mode later in the settings"
 msgstr ""
 

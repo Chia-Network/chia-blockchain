@@ -126,6 +126,10 @@ if (!handleSquirrelEvent()) {
 
       ipcMain.handle('getConfig', () => chiaConfig.loadConfig('mainnet'));
 
+      ipcMain.handle('getVersion', () => app.getVersion());
+
+      
+
       decidedToClose = false;
       mainWindow = new BrowserWindow({
         width: 1200,

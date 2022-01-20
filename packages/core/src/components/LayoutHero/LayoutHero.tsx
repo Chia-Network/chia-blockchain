@@ -1,14 +1,13 @@
 import React, { ReactNode } from 'react';
-import { AppBar, Toolbar, Box } from '@material-ui/core';
+import { AppBar, Toolbar } from '@material-ui/core';
 import styled from 'styled-components';
 import { Outlet, Link } from 'react-router-dom';
-import { Flex, DarkModeToggle, LocaleToggle } from '@chia/core';
+import { Flex } from '@chia/core';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import Settings from '../Settings';
 
-const StyledWrapper = styled(Box)`
+const StyledWrapper = styled(Flex)`
   padding-top: ${({ theme }) => `${theme.spacing(3)}px`};
-  display: flex;
   flex-direction: column;
   flex-grow: 1;
   background: ${({ theme }) =>
@@ -17,8 +16,7 @@ const StyledWrapper = styled(Box)`
       : `linear-gradient(45deg, #ffffff 30%, #fdfdfd 90%)`};
 `;
 
-const StyledBody = styled(Box)`
-  display: flex;
+const StyledBody = styled(Flex)`
   flex-direction: column;
   justify-content: center;
   align-items: center;
@@ -53,7 +51,7 @@ export default function LayoutHero(props: Props) {
         </Toolbar>
       </AppBar>
       <StyledBody>
-        <Flex flexDirection="column" gap={2} alignItems="center" alignSelf="stretch">
+        <Flex flexDirection="column" gap={2} flexGrow={1} alignItems="center" alignSelf="stretch">
           {outlet ? <Outlet /> : children}
         </Flex>
       </StyledBody>

@@ -34,7 +34,7 @@ msgstr ""
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 msgstr "Chia의 블록을 더 탐험하고 싶으십니까? 오픈 소스 개발자가 만든 <0>Chia Explorer</0>를 확인하세요."
 
-#: src/components/app/AppSelectMode.tsx:94
+#: src/components/app/AppSelectMode.tsx:120
 msgid "+"
 msgstr ""
 
@@ -377,6 +377,10 @@ msgstr "치아 블록체인 위키"
 msgid "Chia Wallet"
 msgstr "치아 지갑"
 
+#: src/components/app/AppSelectMode.tsx:137
+msgid "Choose Farming Mode"
+msgstr ""
+
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:34
 msgid "Choose Number of Plots"
 msgstr "몇 개의 플롯을 만들까요?"
@@ -387,6 +391,10 @@ msgstr "플롯 사이즈를 선택해 주십시오."
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:90
 msgid "Choose Plotter"
+msgstr ""
+
+#: src/components/app/AppSelectMode.tsx:93
+msgid "Choose Wallet Mode"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:381
@@ -542,7 +550,7 @@ msgstr "복사"
 msgid "Create"
 msgstr "생성"
 
-#: src/components/app/AppSelectMode.tsx:97
+#: src/components/app/AppSelectMode.tsx:125
 msgid "Create & Manage plots"
 msgstr ""
 
@@ -970,7 +978,7 @@ msgstr "파머(농부)는 남는 공간을 네트워크에 할당하여, 블록 
 msgid "Farming"
 msgstr "재배 중"
 
-#: src/components/app/AppSelectMode.tsx:86
+#: src/components/app/AppSelectMode.tsx:107
 msgid "Farming Mode"
 msgstr ""
 
@@ -1221,7 +1229,7 @@ msgstr ""
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:100
+#: src/components/app/AppSelectMode.tsx:131
 msgid "Join farming pools"
 msgstr ""
 
@@ -1344,7 +1352,7 @@ msgstr "불러오는 중…"
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:69
+#: src/components/app/AppSelectMode.tsx:81
 msgid "Manage CAT tokens"
 msgstr ""
 
@@ -2223,7 +2231,7 @@ msgstr "플롯 생성을 위한 임시 폴더를 선택"
 msgid "Select Wallet Type"
 msgstr "지갑 종류 선택"
 
-#: src/components/app/AppSelectMode.tsx:50
+#: src/components/app/AppSelectMode.tsx:55
 msgid "Select Your Client Mode"
 msgstr ""
 
@@ -2301,7 +2309,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:109
+#: src/components/app/AppSelectMode.tsx:145
 msgid "Settings are located at the upper right corner"
 msgstr ""
 
@@ -2428,7 +2436,7 @@ msgstr "상태:"
 #~ msgid "StatusCard.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:66
+#: src/components/app/AppSelectMode.tsx:75
 msgid "Store and Send XCH"
 msgstr ""
 
@@ -2743,7 +2751,7 @@ msgstr "거래 ID:"
 msgid "Trade Overview"
 msgstr "거래 개요"
 
-#: src/components/app/AppSelectMode.tsx:72
+#: src/components/app/AppSelectMode.tsx:87
 msgid "Trade tokens"
 msgstr ""
 
@@ -2874,8 +2882,8 @@ msgstr "동기화 대기 중"
 msgid "Waiting for the transaction to be confirmed"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:61
-#: src/components/app/AppSelectMode.tsx:91
+#: src/components/app/AppSelectMode.tsx:67
+#: src/components/app/AppSelectMode.tsx:115
 msgid "Wallet Mode"
 msgstr ""
 
@@ -3001,7 +3009,7 @@ msgstr ""
 msgid "You are not self pooling"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:111
+#: src/components/app/AppSelectMode.tsx:147
 msgid "You can always change your mode later in the settings"
 msgstr ""
 
