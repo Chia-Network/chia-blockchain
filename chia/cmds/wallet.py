@@ -163,3 +163,37 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fing
     from .wallet_funcs import execute_with_wallet, delete_unconfirmed_transactions
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_unconfirmed_transactions))
+
+
+@wallet_cmd.command("add_token", short_help="Add/Rename a CAT to the wallet by its asset ID")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option(
+    "-id",
+    "--asset-id",
+    help="The Asset ID of the coin you wish to add/rename (the treehash of the TAIL program)",
+    required=True,
+)
+@click.option(
+    "-n",
+    "--token-name",
+    help="The name you wish to designate to the token",
+)
+@click.option(
+    "-f",
+    "--fingerprint",
+    type=int,
+    default=None,
+    help="The wallet fingerprint you wish to add the token to",
+)
+def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str, fingerprint: int) -> None:
+    extra_params = {"asset_id": asset_id, "token_name": token_name}
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, add_token
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_token))
