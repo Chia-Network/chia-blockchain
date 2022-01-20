@@ -142,7 +142,7 @@ function OfferDetails(props: OfferDetailsProps) {
   const [isMissingRequestedAsset, setIsMissingRequestedAsset] = useState<boolean>(false);
   const [checkOfferValidity] = useCheckOfferValidityMutation();
   const [takeOffer] = useTakeOfferMutation();
-  let detailRows: OfferDetailsRow[] = [];
+  const detailRows: OfferDetailsRow[] = [];
 
   useMemo(async () => {
     if (!offerData) {

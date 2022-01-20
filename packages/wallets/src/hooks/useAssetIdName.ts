@@ -30,7 +30,7 @@ export default function useAssetIdName() {
       let assetId: string | undefined;
       let name: string | undefined;
       let symbol: string | undefined;
-      let isVerified: boolean = false;
+      let isVerified = false;
 
       if (walletType === WalletType.STANDARD_WALLET) {
         assetId = 'xch';

@@ -46,7 +46,7 @@ function buildAssetSelectorList(
     let name: string | undefined;
     let symbol: string | undefined;
     let tail: string | undefined;
-    let disabled: boolean = false;
+    let disabled = false;
 
     if (usedWalletIds.has(walletId)) {
       return;

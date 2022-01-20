@@ -243,7 +243,7 @@ const KeybaseChannelName = 'offers-trading';
 async function execKeybaseCLI(request: KeybaseCLIRequest): Promise<boolean> {
   return new Promise((resolve, reject) => {
     try {
-      let options: any = {};
+      const options: any = {};
 
       if (process.platform === 'darwin') {
         const env = Object.assign({}, process.env);
@@ -327,7 +327,7 @@ async function postToKeybase(
   const filename = suggestedFilenameForOffer(offerRecord.summary, lookupByAssetId);
   const summary = shortSummaryForOffer(offerRecord.summary, lookupByAssetId);
 
-  let filePath: string = '';
+  let filePath = '';
   let success = false;
 
   filePath = await writeTempOfferFile(offerData, filename);

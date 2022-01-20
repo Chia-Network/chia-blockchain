@@ -51,8 +51,8 @@ export default function OfferSummary(props: Props) {
     }
 
     // Identify unknown CATs offered/requested by the maker
-    let takerUnknownCATs = makerEntries.filter(([assetId, _]) => lookupByAssetId(assetId) === undefined).map(([assetId, _]) => assetId);
-    let makerUnknownCATs = takerEntries.filter(([assetId, _]) => lookupByAssetId(assetId) === undefined).map(([assetId, _]) => assetId);
+    const takerUnknownCATs = makerEntries.filter(([assetId, _]) => lookupByAssetId(assetId) === undefined).map(([assetId, _]) => assetId);
+    const makerUnknownCATs = takerEntries.filter(([assetId, _]) => lookupByAssetId(assetId) === undefined).map(([assetId, _]) => assetId);
 
     return [takerUnknownCATs, makerUnknownCATs];
   }, [summary]);

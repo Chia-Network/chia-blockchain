@@ -160,8 +160,8 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
     let canAddTakerRow = false;
 
     if (!isLoading) {
-      let makerWalletIds: Set<number> = new Set();
-      let takerWalletIds: Set<number> = new Set();
+      const makerWalletIds: Set<number> = new Set();
+      const takerWalletIds: Set<number> = new Set();
       makerRows.forEach((makerRow) => {
         if (makerRow.assetWalletId) {
           makerWalletIds.add(makerRow.assetWalletId);
