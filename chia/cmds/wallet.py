@@ -1,5 +1,5 @@
 import sys
-from typing import Optional
+from typing import Optional, Tuple
 
 import click
 
@@ -197,3 +197,108 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     from .wallet_funcs import execute_with_wallet, add_token
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_token))
+
+
+@wallet_cmd.command("make_offer", short_help="Create an offer of XCH/CATs for XCH/CATs")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option(
+    "-o",
+    "--offer",
+    help="A wallet id to offer and the amount to offer (formatted like wallet_id:amount)",
+    required=True,
+    multiple=True,
+)
+@click.option(
+    "-r",
+    "--request",
+    help="A wallet id of an asset to receive and the amount you wish to receive (formatted like wallet_id:amount)",
+    required=True,
+    multiple=True,
+)
+@click.option("-p", "--filepath", help="The path to write the genrated offer file to", required=True)
+@click.option("-m", "--fee", help="A fee to add to the offer when it gets taken", default="0")
+def make_offer_cmd(
+    wallet_rpc_port: Optional[int], fingerprint: int, offer: Tuple[str], request: Tuple[str], filepath: str, fee: str
+) -> None:
+    extra_params = {"offers": offer, "requests": request, "filepath": filepath, "fee": fee}
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, make_offer
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, make_offer))
+
+
+@wallet_cmd.command("get_offers", short_help="Get the status of existing offers")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-id", "--id", help="The ID of the offer that you wish to examine")
+@click.option("-p", "--filepath", help="The path to rewrite the offer file to (must be used in conjunction with --id)")
+@click.option("-ia", "--include-all", help="Include offers that have already been confirmed/cancelled", is_flag=True)
+@click.option("-s", "--summaries", help="Show the assets being offered and requested for each offer", is_flag=True)
+def get_offers_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: Optional[str],
+    filepath: Optional[str],
+    include_all: bool,
+    summaries: bool,
+) -> None:
+    extra_params = {"id": id, "filepath": filepath, "include_all": include_all, "summaries": summaries}
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, get_offers
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_offers))
+
+
+@wallet_cmd.command("take_offer", short_help="Examine or take an offer")
+@click.argument("path_or_hex", type=str, nargs=1, required=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-e", "--examine-only", help="Print the summary of the offer file but do not take it", is_flag=True)
+@click.option("-m", "--fee", help="The fee to use when pushing the completed offer", default="0")
+def take_offer_cmd(
+    path_or_hex: str, wallet_rpc_port: Optional[int], fingerprint: int, examine_only: bool, fee: str
+) -> None:
+    extra_params = {"file": path_or_hex, "examine_only": examine_only, "fee": fee}
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, take_offer
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, take_offer))
+
+
+@wallet_cmd.command("cancel_offer", short_help="Cancel an existing offer")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-id", "--id", help="The offer ID that you wish to cancel")
+@click.option("--insecure", help="Don't make an on-chain transaction, simply mark the offer as cancelled", is_flag=True)
+@click.option("-m", "--fee", help="The fee to use when cancelling the offer securely", default="0")
+def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str) -> None:
+    extra_params = {"id": id, "insecure": insecure, "fee": fee}
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, cancel_offer
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, cancel_offer))

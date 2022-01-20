@@ -6,7 +6,6 @@ from chia.rpc.rpc_client import RpcClient
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -90,6 +89,9 @@ class WalletRpcClient(RpcClient):
 
     async def get_height_info(self) -> uint32:
         return (await self.fetch("get_height_info", {}))["height"]
+
+    async def push_tx(self, spend_bundle):
+        return await self.fetch("push_tx", {"spend_bundle": bytes(spend_bundle).hex()})
 
     async def farm_block(self, address: str) -> None:
         return await self.fetch("farm_block", {"address": address})
@@ -244,6 +246,7 @@ class WalletRpcClient(RpcClient):
         response: Dict = await self.fetch("create_signed_transaction", request)
         return TransactionRecord.from_json_dict_convenience(response["signed_tx"])
 
+    # DID wallet
     async def create_new_did_wallet(self, amount):
         request: Dict[str, Any] = {
             "wallet_type": "did_wallet",
@@ -374,15 +377,17 @@ class WalletRpcClient(RpcClient):
         }
         return bytes.fromhex((await self.fetch("cat_get_asset_id", request))["asset_id"])
 
-    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[Tuple[uint32, str]]:
+    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[Tuple[Optional[uint32], str]]:
         request: Dict[str, Any] = {
             "asset_id": asset_id.hex(),
         }
         try:
             res = await self.fetch("cat_asset_id_to_name", request)
-            return uint32(int(res["wallet_id"])), res["name"]
-        except Exception:
+        except ValueError:
             return None
+
+        wallet_id: Optional[uint32] = None if res["wallet_id"] is None else uint32(int(res["wallet_id"]))
+        return wallet_id, res["name"]
 
     async def get_cat_name(self, wallet_id: str) -> str:
         request: Dict[str, Any] = {
@@ -424,24 +429,25 @@ class WalletRpcClient(RpcClient):
             send_dict[str(key)] = offer_dict[key]
 
         res = await self.fetch("create_offer_for_ids", {"offer": send_dict, "validate_only": validate_only, "fee": fee})
-        offer: Optional[Offer] = None if validate_only else Offer.from_bytes(hexstr_to_bytes(res["offer"]))
-        return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], res["offer"])
+        offer: Optional[Offer] = None if validate_only else Offer.from_bech32(res["offer"])
+        offer_str: str = "" if offer is None else bytes(offer).hex()
+        return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
     async def get_offer_summary(self, offer: Offer) -> Dict[str, Dict[str, int]]:
-        res = await self.fetch("get_offer_summary", {"offer": bytes(offer).hex()})
+        res = await self.fetch("get_offer_summary", {"offer": offer.to_bech32()})
         return res["summary"]
 
     async def check_offer_validity(self, offer: Offer) -> bool:
-        res = await self.fetch("check_offer_validity", {"offer": bytes(offer).hex()})
+        res = await self.fetch("check_offer_validity", {"offer": offer.to_bech32()})
         return res["valid"]
 
     async def take_offer(self, offer: Offer, fee=uint64(0)) -> TradeRecord:
-        res = await self.fetch("take_offer", {"offer": bytes(offer).hex(), "fee": fee})
+        res = await self.fetch("take_offer", {"offer": offer.to_bech32(), "fee": fee})
         return TradeRecord.from_json_dict_convenience(res["trade_record"])
 
     async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:
         res = await self.fetch("get_offer", {"trade_id": trade_id.hex(), "file_contents": file_contents})
-        offer_str = res["offer"] if file_contents else ""
+        offer_str = bytes(Offer.from_bech32(res["offer"])).hex() if file_contents else ""
         return TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
     async def get_all_offers(
@@ -459,7 +465,10 @@ class WalletRpcClient(RpcClient):
         )
 
         records = []
-        optional_offers = res["offers"] if file_contents else ([""] * len(res["trade_records"]))
+        if file_contents:
+            optional_offers = [bytes(Offer.from_bech32(o)).hex() for o in res["offers"]]
+        else:
+            optional_offers = [""] * len(res["trade_records"])
         for record, offer in zip(res["trade_records"], optional_offers):
             records.append(TradeRecord.from_json_dict_convenience(record, offer))
 
