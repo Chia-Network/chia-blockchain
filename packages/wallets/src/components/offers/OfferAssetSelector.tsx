@@ -63,7 +63,7 @@ function buildAssetSelectorList(
     }
     else if (wallet.type === WalletType.CAT) {
       name = wallet.name;
-      tail = wallet.meta.tail;
+      tail = wallet.meta.assetId;
       const cat = catList.find(cat => cat.assetId.toLowerCase() === tail?.toLowerCase());
 
       if (cat) {

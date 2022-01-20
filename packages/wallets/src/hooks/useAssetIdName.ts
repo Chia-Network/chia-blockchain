@@ -39,7 +39,7 @@ export default function useAssetIdName() {
         isVerified = true;
       }
       else if (walletType === WalletType.CAT) {
-        const lowercaseTail = wallet.meta.tail.toLowerCase();
+        const lowercaseTail = wallet.meta.assetId.toLowerCase();
         const cat = catList.find((cat: CATToken) => cat.assetId.toLowerCase() === lowercaseTail);
 
         assetId = lowercaseTail;
