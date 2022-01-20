@@ -134,8 +134,8 @@ async def setup_two_nodes(db_version):
 
 
 @pytest.fixture(scope="function")
-async def setup_two_nodes_and_wallet(db_version):
-    async for _ in setup_simulators_and_wallets(2, 1, {}, starting_port=51200, db_version=db_version):
+async def setup_two_nodes_and_wallet():
+    async for _ in setup_simulators_and_wallets(2, 1, {}, starting_port=51200, db_version=2):
         yield _
 
 
@@ -157,9 +157,8 @@ async def wallet_nodes_mainnet(db_version):
 
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("test_reorgs", [False, True])
     @pytest.mark.parametrize("tx_size", [10000, 3000000000000])
-    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
+    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size):
         nodes, wallets = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -168,6 +167,14 @@ class TestFullNodeBlockCompression:
         full_node_2 = nodes[1]
         wallet_node_1 = wallets[0][0]
         wallet = wallet_node_1.wallet_state_manager.main_wallet
+
+        # Avoid retesting the slow reorg portion, not necessary more than once
+        test_reorgs = (
+            tx_size == 10000
+            and empty_blockchain.block_store.db_wrapper.db_version >= 2
+            and full_node_1.full_node.block_store.db_wrapper.db_version >= 2
+            and full_node_2.full_node.block_store.db_wrapper.db_version >= 2
+        )
         _ = await connect_and_get_peer(server_1, server_2)
         _ = await connect_and_get_peer(server_1, server_3)
 
