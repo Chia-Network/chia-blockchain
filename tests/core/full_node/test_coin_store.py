@@ -57,7 +57,6 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0])
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_basic_coin_store(self, cache_size: uint32, db_version):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
@@ -155,7 +154,6 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_set_spent(self, cache_size: uint32, db_version):
         blocks = bt.get_consecutive_blocks(9, [])
 
@@ -189,8 +187,39 @@ class TestCoinStoreWithBlocks:
                         assert record.spent_block_index == block.height
 
     @pytest.mark.asyncio
+    async def test_num_unspent(self, db_version):
+        blocks = bt.get_consecutive_blocks(37, [])
+
+        expect_unspent = 0
+        test_excercised = False
+
+        async with DBConnection(db_version) as db_wrapper:
+            coin_store = await CoinStore.create(db_wrapper)
+
+            for block in blocks:
+                if not block.is_transaction_block():
+                    continue
+
+                if block.is_transaction_block():
+                    assert block.foliage_transaction_block is not None
+                    removals: List[bytes32] = []
+                    additions: List[Coin] = []
+                    await coin_store.new_block(
+                        block.height,
+                        block.foliage_transaction_block.timestamp,
+                        block.get_included_reward_coins(),
+                        additions,
+                        removals,
+                    )
+
+                    expect_unspent += len(block.get_included_reward_coins())
+                    assert await coin_store.num_unspent() == expect_unspent
+                    test_excercised = expect_unspent > 0
+
+        assert test_excercised
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_rollback(self, cache_size: uint32, db_version):
         blocks = bt.get_consecutive_blocks(20)
 
@@ -243,7 +272,6 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_basic_reorg(self, cache_size: uint32, tmp_dir, db_version):
 
         async with DBConnection(db_version) as db_wrapper:
@@ -253,7 +281,7 @@ class TestCoinStoreWithBlocks:
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
             hint_store = await HintStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir)
+            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir, 2)
             try:
 
                 records: List[Optional[CoinRecord]] = []
@@ -304,7 +332,6 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_get_puzzle_hash(self, cache_size: uint32, tmp_dir, db_version):
         async with DBConnection(db_version) as db_wrapper:
             num_blocks = 20
@@ -324,7 +351,7 @@ class TestCoinStoreWithBlocks:
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
             hint_store = await HintStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir)
+            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir, 2)
             for block in blocks:
                 res, err, _, _ = await b.receive_block(block)
                 assert err is None

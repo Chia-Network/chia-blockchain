@@ -1,6 +1,7 @@
 import asyncio
 import atexit
 import signal
+import sqlite3
 
 from secrets import token_bytes
 from typing import Dict, List, Optional, Tuple
@@ -88,10 +89,18 @@ async def setup_full_node(
     send_uncompact_interval=0,
     sanitize_weight_proof_only=False,
     connect_to_daemon=False,
+    db_version=1,
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()
+
+        if db_version > 1:
+            with sqlite3.connect(db_path) as connection:
+                connection.execute("CREATE TABLE database_version(version int)")
+                connection.execute("INSERT INTO database_version VALUES (?)", (db_version,))
+                connection.commit()
+
     config = local_bt.config["full_node"]
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
@@ -182,6 +191,7 @@ async def setup_wallet_node(
     introducer_port=None,
     key_seed=None,
     starting_height=None,
+    initial_num_public_keys=5,
 ):
     with TempKeyring() as keychain:
         config = bt.config["wallet"]
@@ -189,7 +199,7 @@ async def setup_wallet_node(
         config["rpc_port"] = port + 1000
         if starting_height is not None:
             config["starting_height"] = starting_height
-        config["initial_num_public_keys"] = 5
+        config["initial_num_public_keys"] = initial_num_public_keys
 
         entropy = token_bytes(32)
         if key_seed is None:
@@ -229,7 +239,7 @@ async def setup_wallet_node(
 
         service = Service(**kwargs)
 
-        await service.start(new_wallet=True)
+        await service.start()
 
         yield service._node, service._node.server
 
@@ -240,7 +250,9 @@ async def setup_wallet_node(
         keychain.delete_all_keys()
 
 
-async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConstants, b_tools):
+async def setup_harvester(
+    port, farmer_port, consensus_constants: ConsensusConstants, b_tools, start_service: bool = True
+):
     kwargs = service_kwargs_for_harvester(b_tools.root_path, b_tools.config["harvester"], consensus_constants)
     kwargs.update(
         server_listen_ports=[port],
@@ -252,9 +264,10 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
 
     service = Service(**kwargs)
 
-    await service.start()
+    if start_service:
+        await service.start()
 
-    yield service._node, service._node.server
+    yield service
 
     service.stop()
     await service.wait_closed()
@@ -265,6 +278,7 @@ async def setup_farmer(
     consensus_constants: ConsensusConstants,
     b_tools,
     full_node_port: Optional[uint16] = None,
+    start_service: bool = True,
 ):
     config = bt.config["farmer"]
     config_pool = bt.config["pool"]
@@ -290,9 +304,10 @@ async def setup_farmer(
 
     service = Service(**kwargs)
 
-    await service.start()
+    if start_service:
+        await service.start()
 
-    yield service._api, service._node.server
+    yield service
 
     service.stop()
     await service.wait_closed()
@@ -373,7 +388,7 @@ async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: C
     await service.wait_closed()
 
 
-async def setup_two_nodes(consensus_constants: ConsensusConstants):
+async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: int):
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
@@ -386,6 +401,7 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants):
                 21234,
                 await create_block_tools_async(constants=test_constants, keychain=keychain1),
                 simulator=False,
+                db_version=db_version,
             ),
             setup_full_node(
                 consensus_constants,
@@ -393,6 +409,7 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants):
                 21235,
                 await create_block_tools_async(constants=test_constants, keychain=keychain2),
                 simulator=False,
+                db_version=db_version,
             ),
         ]
 
@@ -404,7 +421,7 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants):
         await _teardown_nodes(node_iters)
 
 
-async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int):
+async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_version: int):
     """
     Setup and teardown of n full nodes, with blockchains and separate DBs.
     """
@@ -421,6 +438,7 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int):
                 port_start + i,
                 await create_block_tools_async(constants=test_constants, keychain=keyring.get_keychain()),
                 simulator=False,
+                db_version=db_version,
             )
         )
     nodes = []
@@ -435,11 +453,15 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int):
         keyring.cleanup()
 
 
-async def setup_node_and_wallet(consensus_constants: ConsensusConstants, starting_height=None, key_seed=None):
+async def setup_node_and_wallet(
+    consensus_constants: ConsensusConstants, starting_height=None, key_seed=None, db_version=1
+):
     with TempKeyring() as keychain:
         btools = await create_block_tools_async(constants=test_constants, keychain=keychain)
         node_iters = [
-            setup_full_node(consensus_constants, "blockchain_test.db", 21234, btools, simulator=False),
+            setup_full_node(
+                consensus_constants, "blockchain_test.db", 21234, btools, simulator=False, db_version=db_version
+            ),
             setup_wallet_node(
                 21235, consensus_constants, btools, None, starting_height=starting_height, key_seed=key_seed
             ),
@@ -460,6 +482,8 @@ async def setup_simulators_and_wallets(
     starting_height=None,
     key_seed=None,
     starting_port=50000,
+    initial_num_public_keys=5,
+    db_version=1,
 ):
     with TempKeyring() as keychain1, TempKeyring() as keychain2:
         simulators: List[FullNodeAPI] = []
@@ -479,6 +503,7 @@ async def setup_simulators_and_wallets(
                 port,
                 bt_tools,
                 simulator=True,
+                db_version=db_version,
             )
             simulators.append(await sim.__anext__())
             node_iters.append(sim)
@@ -499,6 +524,7 @@ async def setup_simulators_and_wallets(
                 None,
                 key_seed=seed,
                 starting_height=starting_height,
+                initial_num_public_keys=initial_num_public_keys,
             )
             wallets.append(await wlt.__anext__())
             node_iters.append(wlt)
@@ -508,22 +534,22 @@ async def setup_simulators_and_wallets(
         await _teardown_nodes(node_iters)
 
 
-async def setup_farmer_harvester(consensus_constants: ConsensusConstants):
+async def setup_farmer_harvester(consensus_constants: ConsensusConstants, start_services: bool = True):
     node_iters = [
-        setup_harvester(21234, 21235, consensus_constants, bt),
-        setup_farmer(21235, consensus_constants, bt),
+        setup_harvester(21234, 21235, consensus_constants, bt, start_services),
+        setup_farmer(21235, consensus_constants, bt, start_service=start_services),
     ]
 
-    harvester, harvester_server = await node_iters[0].__anext__()
-    farmer, farmer_server = await node_iters[1].__anext__()
+    harvester_service = await node_iters[0].__anext__()
+    farmer_service = await node_iters[1].__anext__()
 
-    yield harvester, farmer
+    yield harvester_service, farmer_service
 
     await _teardown_nodes(node_iters)
 
 
 async def setup_full_system(
-    consensus_constants: ConsensusConstants, b_tools=None, b_tools_1=None, connect_to_daemon=False
+    consensus_constants: ConsensusConstants, b_tools=None, b_tools_1=None, connect_to_daemon=False, db_version=1
 ):
     with TempKeyring() as keychain1, TempKeyring() as keychain2:
         if b_tools is None:
@@ -537,18 +563,38 @@ async def setup_full_system(
             setup_vdf_clients(8000),
             setup_timelord(21236, 21237, False, consensus_constants, b_tools),
             setup_full_node(
-                consensus_constants, "blockchain_test.db", 21237, b_tools, 21233, False, 10, True, connect_to_daemon
+                consensus_constants,
+                "blockchain_test.db",
+                21237,
+                b_tools,
+                21233,
+                False,
+                10,
+                True,
+                connect_to_daemon,
+                db_version=db_version,
             ),
             setup_full_node(
-                consensus_constants, "blockchain_test_2.db", 21238, b_tools_1, 21233, False, 10, True, connect_to_daemon
+                consensus_constants,
+                "blockchain_test_2.db",
+                21238,
+                b_tools_1,
+                21233,
+                False,
+                10,
+                True,
+                connect_to_daemon,
+                db_version=db_version,
             ),
             setup_vdf_client(7999),
             setup_timelord(21239, 21238, True, consensus_constants, b_tools_1),
         ]
 
         introducer, introducer_server = await node_iters[0].__anext__()
-        harvester, harvester_server = await node_iters[1].__anext__()
-        farmer, farmer_server = await node_iters[2].__anext__()
+        harvester_service = await node_iters[1].__anext__()
+        harvester = harvester_service._node
+        farmer_service = await node_iters[2].__anext__()
+        farmer = farmer_service._node
 
         async def num_connections():
             count = len(harvester.server.all_connections.items())

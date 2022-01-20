@@ -2,17 +2,20 @@ import dataclasses
 import warnings
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict
 
 from blspy import AugSchemeMPL, G2Element
+from clvm.casts import int_from_bytes
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.streamable import Streamable, dataclass_from_dict, recurse_jsonify, streamable
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
+from .blockchain_format.program import Program
 
 from .coin_spend import CoinSpend
+from .condition_opcodes import ConditionOpcode
 
 
 @dataclass(frozen=True)
@@ -76,6 +79,27 @@ class SpendBundle(Streamable):
             result.append(add)
 
         return result
+
+    def get_memos(self) -> Dict[bytes32, List[bytes]]:
+        """
+        Retrieves the memos for additions in this spend_bundle, which are formatted as a list in the 3rd parameter of
+        CREATE_COIN. If there are no memos, the addition coin_id is not included. If they are not formatted as a list
+        of bytes, they are not included. This is expensive to call, it should not be used in full node code.
+        """
+        memos: Dict[bytes32, List[bytes]] = {}
+        for coin_spend in self.coin_spends:
+            result = Program.from_bytes(bytes(coin_spend.puzzle_reveal)).run(
+                Program.from_bytes(bytes(coin_spend.solution))
+            )
+            for condition in result.as_python():
+                if condition[0] == ConditionOpcode.CREATE_COIN and len(condition) >= 4:
+                    # If only 3 elements (opcode + 2 args), there is no memo, this is ph, amount
+                    coin_added = Coin(coin_spend.coin.name(), bytes32(condition[1]), int_from_bytes(condition[2]))
+                    if type(condition[3]) != list:
+                        # If it's not a list, it's not the correct format
+                        continue
+                    memos[coin_added.name()] = condition[3]
+        return memos
 
     # Note that `coin_spends` used to have the bad name `coin_solutions`.
     # Some API still expects this name. For now, we accept both names.

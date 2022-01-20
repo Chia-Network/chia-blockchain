@@ -1872,7 +1872,7 @@ class TestGeneratorConditions:
             assert c.conditions == [
                 (
                     opcode.value,
-                    [ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([10]), b""])],
+                    [ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([10])])],
                 )
             ]
 
@@ -1886,11 +1886,11 @@ class TestGeneratorConditions:
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode.CREATE_COIN
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash_1.encode("ascii"), bytes([5]), b""])
+            ConditionWithArgs(opcode, [puzzle_hash_1.encode("ascii"), bytes([5])])
             in npc_result.npc_list[0].conditions[0][1]
         )
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash_2.encode("ascii"), bytes([5]), b""])
+            ConditionWithArgs(opcode, [puzzle_hash_2.encode("ascii"), bytes([5])])
             in npc_result.npc_list[0].conditions[0][1]
         )
 
@@ -1903,11 +1903,11 @@ class TestGeneratorConditions:
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode.CREATE_COIN
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([5]), b""])
+            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([5])])
             in npc_result.npc_list[0].conditions[0][1]
         )
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([4]), b""])
+            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([4])])
             in npc_result.npc_list[0].conditions[0][1]
         )
 
@@ -2307,7 +2307,7 @@ class TestPkmPairs:
             )
         ]
         pks, msgs = pkm_pairs(npc_list, b"foobar")
-        assert pks == [bytes(self.pk1), bytes(self.pk2)]
+        assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2" + self.h1 + b"foobar"]
 
     def test_agg_sig_unsafe(self):
@@ -2327,7 +2327,7 @@ class TestPkmPairs:
             )
         ]
         pks, msgs = pkm_pairs(npc_list, b"foobar")
-        assert pks == [bytes(self.pk1), bytes(self.pk2)]
+        assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1", b"msg2"]
 
     def test_agg_sig_mixed(self):
@@ -2336,5 +2336,5 @@ class TestPkmPairs:
             NPC(self.h1, self.h2, [(self.ASU, [ConditionWithArgs(self.ASU, [bytes(self.pk2), b"msg2"])])]),
         ]
         pks, msgs = pkm_pairs(npc_list, b"foobar")
-        assert pks == [bytes(self.pk1), bytes(self.pk2)]
+        assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2"]

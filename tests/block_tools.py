@@ -163,6 +163,7 @@ class BlockTools:
         mkdir(self.plot_dir)
         mkdir(self.temp_dir)
         self.expected_plots: Dict[bytes32, Path] = {}
+        self.created_plots: int = 0
         self.total_result = PlotRefreshResult()
 
         def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult):
@@ -230,17 +231,29 @@ class BlockTools:
         save_config(self.root_path, "config.yaml", self._config)
 
     async def setup_plots(self):
-        assert len(self.expected_plots) == 0
+        assert self.created_plots == 0
         # OG Plots
         for i in range(15):
             await self.new_plot()
         # Pool Plots
         for i in range(5):
             await self.new_plot(self.pool_ph)
+        # Some plots with keys that are not in the keychain
+        for i in range(3):
+            await self.new_plot(
+                path=self.plot_dir / "not_in_keychain",
+                plot_keys=PlotKeys(G1Element(), G1Element(), None),
+                exclude_final_dir=True,
+            )
+
         await self.refresh_plots()
 
     async def new_plot(
-        self, pool_contract_puzzle_hash: Optional[bytes32] = None, path: Path = None
+        self,
+        pool_contract_puzzle_hash: Optional[bytes32] = None,
+        path: Path = None,
+        plot_keys: Optional[PlotKeys] = None,
+        exclude_final_dir: bool = False,
     ) -> Optional[bytes32]:
         final_dir = self.plot_dir
         if path is not None:
@@ -253,7 +266,7 @@ class BlockTools:
         args.num = 1
         args.buffer = 100
         args.tmp_dir = self.temp_dir
-        args.tmp2_dir = final_dir
+        args.tmp2_dir = self.temp_dir
         args.final_dir = final_dir
         args.plotid = None
         args.memo = None
@@ -263,23 +276,26 @@ class BlockTools:
         args.nobitfield = False
         args.exclude_final_dir = False
         args.list_duplicates = False
+        args.exclude_final_dir = exclude_final_dir
         try:
-            pool_pk: Optional[G1Element] = None
-            pool_address: Optional[str] = None
-            if pool_contract_puzzle_hash is None:
-                pool_pk = self.pool_pk
-            else:
-                pool_address = encode_puzzle_hash(pool_contract_puzzle_hash, "xch")
+            if plot_keys is None:
+                pool_pk: Optional[G1Element] = None
+                pool_address: Optional[str] = None
+                if pool_contract_puzzle_hash is None:
+                    pool_pk = self.pool_pk
+                else:
+                    pool_address = encode_puzzle_hash(pool_contract_puzzle_hash, "xch")
 
-            keys = PlotKeys(self.farmer_pk, pool_pk, pool_address)
+                plot_keys = PlotKeys(self.farmer_pk, pool_pk, pool_address)
             # No datetime in the filename, to get deterministic filenames and not re-plot
             created, existed = await create_plots(
                 args,
-                keys,
+                plot_keys,
                 self.root_path,
                 use_datetime=False,
-                test_private_keys=[AugSchemeMPL.key_gen(std_hash(len(self.expected_plots).to_bytes(2, "big")))],
+                test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots.to_bytes(2, "big")))],
             )
+            self.created_plots += 1
 
             plot_id_new: Optional[bytes32] = None
             path_new: Path = Path()
@@ -292,10 +308,11 @@ class BlockTools:
                 assert len(created) == 0
                 plot_id_new, path_new = list(existed.items())[0]
 
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, Path]"; expected type "bytes32"
-            #       [index]
-            self.expected_plots[plot_id_new] = path_new  # type: ignore[index]
+            if not exclude_final_dir:
+                # TODO: address hint error and remove ignore
+                #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, Path]"; expected type "bytes32"
+                #       [index]
+                self.expected_plots[plot_id_new] = path_new  # type: ignore[index]
 
             # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
             self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[
@@ -305,7 +322,7 @@ class BlockTools:
             return plot_id_new
 
         except KeyboardInterrupt:
-            shutil.rmtree(self.plot_dir, ignore_errors=True)
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
             sys.exit(1)
 
     async def refresh_plots(self):
@@ -704,6 +721,7 @@ class BlockTools:
                 )
                 pending_ses = True
 
+            ses_hash: Optional[bytes32]
             if sub_epoch_summary is not None:
                 ses_hash = sub_epoch_summary.get_hash()
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
@@ -711,10 +729,7 @@ class BlockTools:
 
                 log.info(f"Sub epoch summary: {sub_epoch_summary}")
             else:
-                # TODO: address hint error and remove ignore
-                #       error: Incompatible types in assignment (expression has type "None", variable has type
-                #       "bytes32")  [assignment]
-                ses_hash = None  # type: ignore[assignment]
+                ses_hash = None
                 new_sub_slot_iters = None
                 new_difficulty = None
 

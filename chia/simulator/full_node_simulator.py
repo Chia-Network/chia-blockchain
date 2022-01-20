@@ -267,7 +267,7 @@ class FullNodeSimulator(FullNodeAPI):
         ids_to_check: Set[bytes32] = set()
         for record in records:
             if record.spend_bundle is None:
-                raise ValueError(f"Transaction record has no spend bundle: {record!r}")
+                continue
 
             ids_to_check.add(record.spend_bundle.name())
 
@@ -346,7 +346,7 @@ class FullNodeSimulator(FullNodeAPI):
         outputs: List[AmountWithPuzzlehash] = []
         for amount in amounts:
             puzzle_hash = await wallet.get_new_puzzlehash()
-            outputs.append({"puzzlehash": puzzle_hash, "amount": uint64(amount)})
+            outputs.append({"puzzlehash": puzzle_hash, "amount": uint64(amount), "memos": []})
 
         transaction_records: List[TransactionRecord] = []
         outputs_iterator = iter(outputs)

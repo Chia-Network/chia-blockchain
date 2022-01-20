@@ -132,6 +132,11 @@ class ChiaRoot:
         # TODO: --root-path doesn't seem to work here...
         kwargs.setdefault("env", {})
         kwargs["env"]["CHIA_ROOT"] = os.fspath(self.path)
+        kwargs["env"]["CHIA_KEYS_ROOT"] = os.fspath(self.path)
+
+        # This is for windows
+        if "SYSTEMROOT" in os.environ:
+            kwargs["env"]["SYSTEMROOT"] = os.environ["SYSTEMROOT"]
 
         modified_args: List[Union[str, os_PathLike_str]] = [
             self.scripts_path.joinpath("chia"),

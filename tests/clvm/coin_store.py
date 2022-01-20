@@ -79,7 +79,6 @@ class CoinStore:
                     uint32(now.height),
                     uint32(0),
                     False,
-                    False,
                     uint64(now.seconds),
                 )
 
@@ -117,7 +116,7 @@ class CoinStore:
         for spent_coin in removals:
             coin_name = spent_coin.name()
             coin_record = self._db[coin_name]
-            self._db[coin_name] = replace(coin_record, spent_block_index=now.height, spent=True)
+            self._db[coin_name] = replace(coin_record, spent_block_index=now.height)
         return additions, spend_bundle.coin_spends
 
     def coins_for_puzzle_hash(self, puzzle_hash: bytes32) -> Iterator[Coin]:
@@ -142,7 +141,6 @@ class CoinStore:
             coin,
             uint32(birthday.height),
             uint32(0),
-            False,
             False,
             uint64(birthday.seconds),
         )
