@@ -33,8 +33,8 @@ nodes = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]
 
 async def init_data_layer(root_path):
     test_rpc_port = uint16(21529)
-    kwargs = service_kwargs_for_data_layer(root_path,test_rpc_port)
-    service = Service(**kwargs,parse_cli_args=False)
+    kwargs = service_kwargs_for_data_layer(root_path, test_rpc_port)
+    service = Service(**kwargs, parse_cli_args=False)
     await service.start()
     yield service._api
     service.stop()
@@ -59,24 +59,23 @@ async def one_wallet_node_and_rpc():
         daemon_port = config["daemon_port"]
         test_rpc_port = uint16(21529)
 
-        # rpc_cleanup = await start_rpc_server(
-        #     api_user,
-        #     hostname,
-        #     daemon_port,
-        #     test_rpc_port,
-        #     lambda x: None,
-        #     bt.root_path,
-        #     config,
-        #     connect_to_daemon=False,
-        # )
-
-        client = WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+        rpc_cleanup = await start_rpc_server(
+            api_user,
+            hostname,
+            daemon_port,
+            test_rpc_port,
+            lambda x: None,
+            bt.root_path,
+            config,
+            connect_to_daemon=False,
+        )
+        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
 
         yield client, wallet_node_0, full_node_api
 
-        # client.close()
-        # await client.await_closed()
-        # await rpc_cleanup()
+        client.close()
+        await client.await_closed()
+        await rpc_cleanup()
 
 
 @pytest.mark.asyncio
@@ -99,7 +98,6 @@ async def test_create_insert_get(chia_root: ChiaRoot, one_wallet_node_and_rpc) -
     wallet_rpc_api = WalletRpcApi(wallet_node)
     async for data_layer in init_data_layer(root_path):
         data_rpc_api = DataLayerRpcApi(data_layer.data_layer)
-        res = await client.get_wallets()
         key = b"a"
         value = b"\x00\x01"
         changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]

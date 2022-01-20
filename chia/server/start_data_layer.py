@@ -21,9 +21,7 @@ log = logging.getLogger(__name__)
 
 
 # TODO: Review need for config and if retained then hint it properly.
-def service_kwargs_for_data_layer(
-    root_path: pathlib.Path,wallet_rpc_port = None
-) -> Dict[str, Any]:
+def service_kwargs_for_data_layer(root_path: pathlib.Path, wallet_rpc_port=None) -> Dict[str, Any]:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     dl_config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "data_layer")
     self_hostname = config["self_hostname"]

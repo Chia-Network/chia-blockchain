@@ -160,10 +160,7 @@ async def setup_data_layer(local_bt):
     #     kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
 
     kwargs = service_kwargs_for_data_layer(local_bt.root_path)
-    kwargs.update(
-        parse_cli_args=False,
-        connect_to_daemon=False
-    )
+    kwargs.update(parse_cli_args=False, connect_to_daemon=False)
 
     service = Service(**kwargs)
 
@@ -524,7 +521,6 @@ async def setup_simulators_and_wallets(
         yield simulators, wallets
 
         await _teardown_nodes(node_iters)
-
 
 
 async def setup_farmer_harvester(consensus_constants: ConsensusConstants, start_services: bool = True):
