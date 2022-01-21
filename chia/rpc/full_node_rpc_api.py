@@ -104,6 +104,8 @@ class FullNodeRpcApi:
                     "sub_slot_iters": 0,
                     "space": 0,
                     "mempool_size": 0,
+                    "compact_blocks": 0,
+                    "uncompact_blocks": 0,
                 },
             }
             return res
@@ -156,6 +158,9 @@ class FullNodeRpcApi:
             is_connected = False
         synced = await self.service.synced() and is_connected
 
+        compact_blocks = await self.service.block_store.count_compactified_blocks()
+        uncompact_blocks = await self.service.block_store.count_uncompactified_blocks()
+
         assert space is not None
         response: Dict = {
             "blockchain_state": {
@@ -171,6 +176,8 @@ class FullNodeRpcApi:
                 "sub_slot_iters": sub_slot_iters,
                 "space": space["space"],
                 "mempool_size": mempool_size,
+                "compact_blocks": compact_blocks,
+                "uncompact_blocks": uncompact_blocks,
             },
         }
         self.cached_blockchain_state = dict(response["blockchain_state"])
