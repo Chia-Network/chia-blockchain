@@ -85,11 +85,6 @@ jobs:
       with:
         access_token: ${{ github.token }}
 
-    - name: Checkout Code
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-
     - name: Prepare Arch
       if: ${{ matrix.docker.type == 'arch' }}
       run: |
@@ -110,6 +105,12 @@ jobs:
       run: |
         apt-get --yes update
         apt-get install --yes git lsb-release sudo
+
+    # after installing git so we use that copy
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
 
     - name: Run install script
       env:
