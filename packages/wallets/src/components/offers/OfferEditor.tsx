@@ -10,6 +10,7 @@ import {
   Form,
   useOpenDialog,
   useShowError,
+  useShowSaveDialog,
 } from '@chia/core';
 import { useCreateOfferForIdsMutation } from '@chia/api-react';
 import {
@@ -40,6 +41,7 @@ type FormData = {
 };
 
 function OfferEditor() {
+  const showSaveDialog = useShowSaveDialog();
   const navigate = useNavigate();
   const defaultValues: FormData = {
     selectedTab: 0,
@@ -126,7 +128,7 @@ function OfferEditor() {
       else {
         const dialogOptions = { defaultPath: suggestedFilenameForOffer(response.tradeRecord.summary, lookupByAssetId) };
         const remote: Remote = (window as any).remote;
-        const result = await remote.dialog.showSaveDialog(dialogOptions);
+        const result = await showSaveDialog(dialogOptions);
         const { filePath, canceled } = result;
 
         if (!canceled && filePath) {

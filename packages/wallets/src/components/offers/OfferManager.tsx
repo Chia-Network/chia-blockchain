@@ -20,6 +20,7 @@ import {
   useOpenDialog,
   chiaToMojo, 
   mojoToCATLocaleString,
+  useShowSaveDialog,
 } from '@chia/core';
 import { OfferTradeRecord } from '@chia/api';
 import fs from 'fs';
@@ -139,6 +140,7 @@ type OfferListProps = {
 
 function OfferList(props: OfferListProps) {
   const { title, offers, loading } = props;
+  const showSaveDialog = useShowSaveDialog();
   const [getOfferData] = useGetOfferDataMutation();
   const [cancelOffer] = useCancelOfferMutation();
   const { data: wallets, isLoading: isLoadingWallets } = useGetWalletsQuery();
@@ -167,7 +169,7 @@ function OfferList(props: OfferListProps) {
         defaultPath: suggestedFilenameForOffer(tradeRecord.summary, lookupByAssetId),
       }
       const remote: Remote = (window as any).remote;
-      const result = await remote.dialog.showSaveDialog(dialogOptions);
+      const result = await showSaveDialog(dialogOptions);
       const { filePath, canceled } = result;
 
       if (!canceled && filePath) {
