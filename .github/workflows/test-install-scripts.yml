@@ -48,3 +48,44 @@ jobs:
       run: |
         . ./activate
         sh install-gui.sh
+
+  test_scripts_in_docker:
+    name: Test Install Scripts
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.docker }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        os: [ubuntu-latest]
+        docker:
+        # https://packages.debian.org/buster/python/python3 (3.7)
+        - "docker://debian:buster"
+        # https://packages.debian.org/bullseye/python/python3 (3.9)
+        - "docker://debian:bullseye"
+        # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
+        - "docker://ubuntu:focal"
+        # https://packages.ubuntu.com/hirsute/python3 (21.04, 3.9)
+        - "docker://ubuntu:hirsute"
+        # https://packages.ubuntu.com/impish/python3 (21.10, 3.9)
+        - "docker://ubuntu:impish"
+        # TODO: what CentOS version provides Python3.7-3.9?
+        - "docker://arch:latest"
+
+    steps:
+    - name: Cancel previous runs on the same branch
+      if: ${{ github.ref != 'refs/heads/main' }}
+      uses: styfle/cancel-workflow-action@0.9.1
+      with:
+        access_token: ${{ github.token }}
+
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Run install script
+      env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+        BUILD_VDF_CLIENT: "N"
+      run: sh install.sh
