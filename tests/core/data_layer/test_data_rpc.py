@@ -254,10 +254,10 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes) -> None:
         assert dic["0x" + key3.hex()] == "0x" + value3.hex()
         assert dic["0x" + key4.hex()] == "0x" + value4.hex()
         assert dic["0x" + key5.hex()] == "0x" + value5.hex()
-        val = await data_rpc_api.get_ancestors({"id": store_id.hex(), "hash": val["keys_values"][4]["hash"]})
+        # val = await data_rpc_api.get_ancestors({"id": store_id.hex(), "hash": val["keys_values"][4]["hash"]})
         # todo better assertions for get_ancestors result
-        assert val is not None
-        print(val)
+        # assert val is not None
+        # print(val)
 
 
 @pytest.mark.asyncio
