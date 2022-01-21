@@ -152,7 +152,6 @@ class DataLayerClient:
                 existing_generation = root.generation + 1
                 t1 = time.time()
                 while existing_generation <= generation:
-                    print(f"Have generation: {root.generation}")
                     request = {
                         "type": "request_operations",
                         "tree_id": tree_id,
