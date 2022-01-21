@@ -159,7 +159,7 @@ async def setup_data_layer(local_bt):
     # else:
     #     kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
 
-    kwargs = service_kwargs_for_data_layer(local_bt.root_path)
+    kwargs = service_kwargs_for_data_layer(local_bt.root_path, config)
     kwargs.update(parse_cli_args=False, connect_to_daemon=False)
 
     service = Service(**kwargs)

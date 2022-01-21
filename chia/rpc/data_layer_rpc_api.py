@@ -134,7 +134,7 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         changelist = [{"action": "delete", "key": key.hex()}]
         txs = await self.service.batch_update(store_id, changelist)
-        return {"tx_id": "id"}
+        return {"tx_ids": txs}
 
     async def get_root(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -158,4 +158,4 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         res = await self.service.get_roots(store_ids)
-        return {"hash": res}
+        return {"hashes": res}
