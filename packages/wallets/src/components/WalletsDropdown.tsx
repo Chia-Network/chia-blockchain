@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { ListItemIcon, ListItemText, Typography } from '@material-ui/core';
 import { Dropdown, Flex, Loading, useTrans } from '@chia/core';
 import { useGetWalletsQuery } from '@chia/api-react';
+import { WalletType } from '@chia/api';
 import { useNavigate } from 'react-router';
 import WalletName from '../constants/WalletName';
 import WalletIcon from './WalletIcon';
@@ -22,7 +23,9 @@ export default function WalletsDropdown(props: Props) {
       return [];
     }
 
-    return wallets.map((wallet) => {
+    return wallets
+      .filter(wallet => ![WalletType.POOLING_WALLET].includes(wallet.type))
+      .map((wallet) => {
       const primaryTitle = wallet.name;
       const secondaryTitle = trans(WalletName[wallet.type]);
       const hasSameTitle = primaryTitle.toLowerCase() === secondaryTitle.toLowerCase();
