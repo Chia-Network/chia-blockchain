@@ -117,6 +117,6 @@ jobs:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
         BUILD_VDF_CLIENT: "N"
       run: |
-        pwd
-        ls -l
-        sh install.sh
+      pwd
+      ls -l
+      sh install.sh
