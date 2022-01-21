@@ -104,6 +104,7 @@ class FullNodeRpcApi:
                     "sub_slot_iters": 0,
                     "space": 0,
                     "mempool_size": 0,
+                    "mempool_cost": 0,
                     "compact_blocks": 0,
                     "uncompact_blocks": 0,
                 },
@@ -150,8 +151,10 @@ class FullNodeRpcApi:
 
         if self.service.mempool_manager is not None:
             mempool_size = len(self.service.mempool_manager.mempool.spends)
+            mempool_cost = self.service.mempool_manager.mempool.total_mempool_cost
         else:
             mempool_size = 0
+            mempool_cost = 0
         if self.service.server is not None:
             is_connected = len(self.service.server.get_full_node_connections()) > 0
         else:
@@ -176,6 +179,7 @@ class FullNodeRpcApi:
                 "sub_slot_iters": sub_slot_iters,
                 "space": space["space"],
                 "mempool_size": mempool_size,
+                "mempool_cost": mempool_cost,
                 "compact_blocks": compact_blocks,
                 "uncompact_blocks": uncompact_blocks,
             },
