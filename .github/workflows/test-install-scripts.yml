@@ -118,5 +118,5 @@ jobs:
         BUILD_VDF_CLIENT: "N"
       run: |
         pwd
-        ls -la
+        ls -l
         sh install.sh
