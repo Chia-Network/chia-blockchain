@@ -87,10 +87,7 @@ class DataStore:
     async def _insert_root(self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status) -> None:
         existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
 
-        if existing_generation is None:
-            generation = 0
-        else:
-            generation = existing_generation + 1
+        generation = existing_generation + 1
 
         await self.db.execute(
             """
