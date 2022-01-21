@@ -751,11 +751,7 @@ class WalletStateManager:
                     assert children is not None
                     additions = [state.coin for state in children]
                     if len(children) > 0:
-                        cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
-                            peer, coin_state.spent_height, coin_state.coin
-                        )
-
-                        fee = cs.reserved_fee()
+                        fee = 0
 
                         to_puzzle_hash = None
                         # Find coin that doesn't belong to us
@@ -1239,59 +1235,6 @@ class WalletStateManager:
         nodes = self.server.get_full_node_connections()
         for node in nodes:
             await self.subscribe_to_coin_ids_update([coin_id], node)
-
-    async def get_filter_additions_removals(
-        self, new_block: HeaderBlock, transactions_filter: bytes, fork_point_with_peak: Optional[uint32]
-    ) -> Tuple[List[bytes32], List[bytes32]]:
-        """Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter."""
-        # assert new_block.prev_header_hash in self.blockchain.blocks
-
-        tx_filter = PyBIP158([b for b in transactions_filter])
-
-        # Get all unspent coins
-        my_coin_records: Set[WalletCoinRecord] = await self.coin_store.get_unspent_coins_at_height(None)
-
-        # Get additions on unconfirmed transactions
-        unconfirmed_additions: Set[Coin] = set()
-        for tx_record in await self.tx_store.get_all_unconfirmed():
-            unconfirmed_additions.update(set(tx_record.additions))
-
-        # Filter coins up to and including fork point
-        unspent_coin_names: Set[bytes32] = set()
-        for coin in my_coin_records:
-            unspent_coin_names.add(coin.name())
-
-        my_puzzle_hashes = self.puzzle_store.all_puzzle_hashes
-
-        removals_of_interest: List[bytes32] = []
-        additions_of_interest: List[bytes32] = []
-
-        trade_removals = await self.trade_manager.get_coins_of_interest()
-        for name, trade_coin in trade_removals.items():
-            if tx_filter.Match(bytearray(trade_coin.name())):
-                removals_of_interest.append(trade_coin.name())
-
-        for addition in unconfirmed_additions:
-            if tx_filter.Match(bytearray(addition.name())):
-                additions_of_interest.append(addition.name())
-
-        for coin_name in unspent_coin_names:
-            if tx_filter.Match(bytearray(coin_name)):
-                removals_of_interest.append(coin_name)
-
-        for puzzle_hash in my_puzzle_hashes:
-            if tx_filter.Match(bytearray(puzzle_hash)):
-                additions_of_interest.append(puzzle_hash)
-
-        for coin_id in await self.interested_store.get_interested_coin_ids():
-            if tx_filter.Match(bytearray(coin_id)):
-                removals_of_interest.append(coin_id)
-
-        for puzzle_hash, _ in await self.interested_store.get_interested_puzzle_hashes():
-            if tx_filter.Match(bytearray(puzzle_hash)):
-                additions_of_interest.append(puzzle_hash)
-
-        return additions_of_interest, removals_of_interest
 
     async def delete_trade_transactions(self, trade_id: bytes32):
         txs: List[TransactionRecord] = await self.tx_store.get_transactions_by_trade_id(trade_id)

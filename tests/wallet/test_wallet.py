@@ -54,7 +54,7 @@ class TestWalletSimulator:
 
     @pytest.mark.parametrize(
         "trusted",
-        [True, False],
+        [False,],
     )
     @pytest.mark.asyncio
     async def test_wallet_coinbase(self, wallet_node, trusted):
@@ -67,7 +67,7 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id: server_1.node_id}
+            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
 
