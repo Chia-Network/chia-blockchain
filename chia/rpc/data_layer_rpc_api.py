@@ -102,8 +102,10 @@ class DataLayerRpcApi:
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        await self.service.batch_update(store_id, changelist)
-        return {"tx_id": "id"}
+        transaction_record = await self.service.batch_update(store_id, changelist)
+        if transaction_record is None:
+            raise Exception(f"Batch update failed for: {store_id}")
+        return {"tx_id": transaction_record.name}
 
     async def insert(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """

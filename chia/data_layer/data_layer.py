@@ -110,7 +110,7 @@ class DataLayer:
         assert res
         # todo register callback to change status in data store
         # await self.data_store.change_root_status(root, Status.COMMITTED)
-        return None
+        return res
 
     async def get_value(self, store_id: bytes32, key: bytes) -> Optional[bytes]:
         res = await self.data_store.get_node_by_key(tree_id=store_id, key=key)
