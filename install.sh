@@ -16,7 +16,7 @@ usage() {
 PACMAN_AUTOMATED=
 EXTRAS=
 
-while getopts dh flag
+while getopts adh flag
 do
   case "${flag}" in
     # automated
