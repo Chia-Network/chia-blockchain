@@ -68,6 +68,9 @@ jobs:
         - type: debian
           # https://packages.debian.org/bullseye/python/python3 (3.9)
           url: "docker://debian:bullseye"
+        - type: debian
+          # https://packages.debian.org/bookworm/python/python3 (3.9)
+          url: "docker://debian:bookworm"
         - type: ubuntu
           # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
           url: "docker://ubuntu:focal"
