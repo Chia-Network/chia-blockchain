@@ -55,7 +55,12 @@ jobs:
         env:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: main
-          LINTER_RULES_PATH: .github/linters
+          LINTER_RULES_PATH: .
+          MARKDOWN_CONFIG_FILE: .markdown-lint.yml
+          PYTHON_BLACK_CONFIG_FILE: pyproject.toml
+          PYTHON_FLAKE8_CONFIG_FILE: .flake8
+          PYTHON_ISORT_CONFIG_FILE: .isort.cfg
+          PYTHON_PYLINT_CONFIG_FILE: pylintrc
           VALIDATE_BASH: true
           VALIDATE_CSS: true
           VALIDATE_DOCKER: true
@@ -65,7 +70,6 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_MD: true
           VALIDATE_POWERSHELL: true
-          VALIDATE_PYTHON: true
           VALIDATE_PYTHON_PYLINT: true
           VALIDATE_PYTHON_FLAKE8: true
           VALIDATE_PYTHON_BLACK: true

@@ -584,10 +584,12 @@ class Farmer:
             if launcher_id == pool_state_dict["pool_config"].launcher_id:
                 config = load_config(self._root_path, "config.yaml")
                 new_list = []
-                for list_element in config["pool"]["pool_list"]:
-                    if hexstr_to_bytes(list_element["launcher_id"]) == bytes(launcher_id):
-                        list_element["payout_instructions"] = payout_instructions
-                    new_list.append(list_element)
+                pool_list = config["pool"].get("pool_list", [])
+                if pool_list is not None:
+                    for list_element in pool_list:
+                        if hexstr_to_bytes(list_element["launcher_id"]) == bytes(launcher_id):
+                            list_element["payout_instructions"] = payout_instructions
+                        new_list.append(list_element)
 
                 config["pool"]["pool_list"] = new_list
                 save_config(self._root_path, "config.yaml", config)

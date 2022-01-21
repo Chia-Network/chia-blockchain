@@ -1,5 +1,6 @@
 from collections import Counter
 from decimal import Decimal
+from dataclasses import replace
 
 import aiohttp
 import asyncio
@@ -12,6 +13,7 @@ from typing import List, Dict, Optional, Callable
 
 from chinilla.cmds.units import units
 from chinilla.cmds.wallet_funcs import print_balance, wallet_coin_unit
+from chinilla.pools.pool_config import load_pool_config, PoolWalletConfig, update_pool_config
 from chinilla.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
 from chinilla.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chinilla.rpc.farmer_rpc_client import FarmerRpcClient
@@ -19,7 +21,7 @@ from chinilla.rpc.wallet_rpc_client import WalletRpcClient
 from chinilla.types.blockchain_format.sized_bytes import bytes32
 from chinilla.server.server import ssl_context_for_root
 from chinilla.ssl.create_ssl import get_mozilla_ca_crt
-from chinilla.util.bech32m import encode_puzzle_hash
+from chinilla.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
 from chinilla.util.byte_types import hexstr_to_bytes
 from chinilla.util.config import load_config
 from chinilla.util.default_root import DEFAULT_ROOT_PATH
@@ -55,7 +57,22 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
     state = args["state"]
     prompt = not args.get("yes", False)
     fee = Decimal(args.get("fee", 0))
-    fee_chins = uint64(int(fee * units["chinilla"]))
+    fee_mojos = uint64(int(fee * units["chinilla"]))
+    override_limit = args.get("override_limit", False)
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    self_hostname = config["self_hostname"]
+    farmer_rpc_port = config["farmer"]["rpc_port"]
+    # get total amount of plotnft's
+    farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
+    total_plot_nfts = len((await farmer_client.get_pool_state())["pool_state"])
+    farmer_client.close()
+    await farmer_client.await_closed()
+
+    if total_plot_nfts >= 18 and not override_limit:
+        raise Exception(
+            "18 or more PlotNFT's already exist. "
+            "If you need to override this limit (most users should not) use '--override_limit'."
+        )
 
     target_puzzle_hash: Optional[bytes32]
     # Could use initial_pool_state_from_dict to simplify
@@ -373,3 +390,24 @@ async def claim_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int
         fee_chins,
     )
     await submit_tx_with_confirmation(msg, False, func, wallet_client, fingerprint, wallet_id)
+
+
+async def change_payout_instructions(launcher_id: str, address: str) -> None:
+    new_pool_configs: List[PoolWalletConfig] = []
+    id_found = False
+    if decode_puzzle_hash(address):
+        old_configs: List[PoolWalletConfig] = load_pool_config(DEFAULT_ROOT_PATH)
+        for pool_config in old_configs:
+            if pool_config.launcher_id == hexstr_to_bytes(launcher_id):
+                id_found = True
+                pool_config = replace(pool_config, payout_instructions=decode_puzzle_hash(address).hex())
+            new_pool_configs.append(pool_config)
+        if id_found:
+            print(f"Launcher Id: {launcher_id} Found, Updating Config.")
+            await update_pool_config(DEFAULT_ROOT_PATH, new_pool_configs)
+            print(f"Payout Instructions for launcher id: {launcher_id} successfully updated to: {address}.")
+            print(f"You will need to change the payout instructions on every device you use to: {address}.")
+        else:
+            print(f"Launcher Id: {launcher_id} Not found.")
+    else:
+        print(f"Invalid Address: {address}")
