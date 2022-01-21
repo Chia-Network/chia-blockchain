@@ -18,6 +18,7 @@ import {
   TableControlled,
   TooltipIcon,
   useOpenDialog,
+  useOpenExternal,
   useShowError
 } from '@chia/core';
 import {
@@ -42,7 +43,6 @@ import {
   formatAmountForWalletType
 } from './utils';
 import useAssetIdName from '../../../hooks/useAssetIdName';
-import useOpenExternal from '../../../hooks/useOpenExternal';
 import WalletType from '../../../constants/WalletType';
 import { chia_to_mojo, mojo_to_chia_string, mojo_to_colouredcoin_string } from '../../../util/chia';
 import OfferCoinOfInterest from 'types/OfferCoinOfInterest';

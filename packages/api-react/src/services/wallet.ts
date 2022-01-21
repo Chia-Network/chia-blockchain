@@ -776,6 +776,7 @@ export const walletApi = apiWithTag.injectEndpoints({
     getAllOffers: build.query<OfferTradeRecord[], undefined>({
       query: () => ({
         command: 'getAllOffers',
+        service: Wallet,
       }),
       transformResponse: (response: any) => {
         if (!response?.offers) {
@@ -793,12 +794,15 @@ export const walletApi = apiWithTag.injectEndpoints({
       },
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onCoinAdded',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getAllOffers,
       }, {
         command: 'onCoinRemoved',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getAllOffers,
       }, {
         command: 'onPendingTransaction',
+        service: Wallet,
         endpoint: () => walletApi.endpoints.getAllOffers,
       }]),
     }),
@@ -812,6 +816,7 @@ export const walletApi = apiWithTag.injectEndpoints({
         validateOnly,
       }) => ({
         command: 'createOfferForIds',
+        service: Wallet,
         args: [walletIdsAndAmounts, validateOnly],
       }),
       invalidatesTags: [{ type: 'OfferTradeRecord', id: 'LIST' }],
@@ -828,6 +833,7 @@ export const walletApi = apiWithTag.injectEndpoints({
         fee,
       }) => ({
         command: 'cancelOffer',
+        service: Wallet,
         args: [tradeId, secure, fee],
       }),
       invalidatesTags: (result, error, { tradeId }) => [{ type: 'OfferTradeRecord', id: tradeId }],
@@ -836,6 +842,7 @@ export const walletApi = apiWithTag.injectEndpoints({
     checkOfferValidity: build.mutation<any, string>({
       query: (offerData: string) => ({
         command: 'checkOfferValidity',
+        service: Wallet,
         args: [offerData],
       }),
     }),
@@ -849,6 +856,7 @@ export const walletApi = apiWithTag.injectEndpoints({
         fee,
       }) => ({
         command: 'takeOffer',
+        service: Wallet,
         args: [offer, fee],
       }),
       invalidatesTags: [{ type: 'OfferTradeRecord', id: 'LIST' }],
@@ -857,6 +865,7 @@ export const walletApi = apiWithTag.injectEndpoints({
     getOfferSummary: build.mutation<any, string>({
       query: (offerData: string) => ({
         command: 'getOfferSummary',
+        service: Wallet,
         args: [offerData],
       }),
     }),
@@ -864,6 +873,7 @@ export const walletApi = apiWithTag.injectEndpoints({
     getOfferData: build.mutation<any, string>({
       query: (offerId: string) => ({
         command: 'getOfferData',
+        service: Wallet,
         args: [offerId],
       }),
     }),
@@ -871,6 +881,7 @@ export const walletApi = apiWithTag.injectEndpoints({
     getOfferRecord: build.mutation<any, OfferTradeRecord>({
       query: (offerId: string) => ({
         command: 'getOfferRecord',
+        service: Wallet,
         args: [offerId],
       }),
     }),
