@@ -240,22 +240,19 @@ class PlotManager:
                 self._refresh_callback(PlotRefreshEvents.started, PlotRefreshResult(remaining=total_size))
 
                 # First drop all plots we have in plot_filename_paths but not longer in the filesystem or set in config
-                def plot_removed(test_path: Path):
-                    return not test_path.exists() or test_path.parent not in plot_directories
-
                 for path in list(self.failed_to_open_filenames.keys()):
-                    if plot_removed(path):
+                    if path not in plot_paths:
                         del self.failed_to_open_filenames[path]
 
                 for path in self.no_key_filenames.copy():
-                    if plot_removed(path):
+                    if path not in plot_paths:
                         self.no_key_filenames.remove(path)
 
                 filenames_to_remove: List[str] = []
                 for plot_filename, paths_entry in self.plot_filename_paths.items():
                     loaded_path, duplicated_paths = paths_entry
                     loaded_plot = Path(loaded_path) / Path(plot_filename)
-                    if plot_removed(loaded_plot):
+                    if loaded_plot not in plot_paths:
                         filenames_to_remove.append(plot_filename)
                         if loaded_plot in self.plots:
                             del self.plots[loaded_plot]
@@ -266,7 +263,7 @@ class PlotManager:
                     paths_to_remove: List[str] = []
                     for path in duplicated_paths:
                         loaded_plot = Path(path) / Path(plot_filename)
-                        if plot_removed(loaded_plot):
+                        if loaded_plot not in plot_paths:
                             paths_to_remove.append(path)
                             total_result.removed.append(loaded_plot)
                     for path in paths_to_remove:

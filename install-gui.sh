@@ -102,7 +102,7 @@ if [ ! "$CI" ]; then
 		echo ""
 	fi
 
-	npm install
+	npm ci
 	npm audit fix || true
 	npm run build
 	python ../installhelper.py

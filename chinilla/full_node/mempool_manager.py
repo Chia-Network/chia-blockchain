@@ -5,7 +5,7 @@ import logging
 import time
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Set, Tuple
-from blspy import G1Element, GTElement
+from blspy import GTElement
 from chiabip158 import PyBIP158
 
 from chinilla.util import cached_bls
@@ -19,7 +19,7 @@ from chinilla.full_node.mempool_check_conditions import mempool_check_conditions
 from chinilla.full_node.pending_tx_cache import PendingTxCache
 from chinilla.types.blockchain_format.coin import Coin
 from chinilla.types.blockchain_format.program import SerializedProgram
-from chinilla.types.blockchain_format.sized_bytes import bytes32
+from chinilla.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chinilla.types.coin_record import CoinRecord
 from chinilla.types.condition_opcodes import ConditionOpcode
 from chinilla.types.condition_with_args import ConditionWithArgs
@@ -57,8 +57,8 @@ def validate_clvm_and_signature(
         if result.error is not None:
             return Err(result.error), b"", {}
 
-        pks: List[G1Element] = []
-        msgs: List[bytes] = []
+        pks: List[bytes48]
+        msgs: List[bytes]
         pks, msgs = pkm_pairs(result.npc_list, additional_data)
 
         # Verify aggregated signature
