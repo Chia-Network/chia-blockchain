@@ -41,10 +41,10 @@ async def create_data_store_cmd(rpc_port: Optional[int], table_string: str) -> O
     return response
 
 
-async def get_value_cmd(rpc_port: Optional[int], tree_id: str, key: str) -> Optional[Dict[str, Any]]:
+async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
 
-    store_id_bytes = bytes32(hexstr_to_bytes(tree_id))
+    store_id_bytes = bytes32(hexstr_to_bytes(store_id))
     key_bytes = hexstr_to_bytes(key)
     try:
         client, rpc_port = await get_client(rpc_port)
@@ -63,11 +63,11 @@ async def get_value_cmd(rpc_port: Optional[int], tree_id: str, key: str) -> Opti
 
 async def update_data_store_cmd(
     rpc_port: Optional[int],
-    tree_id: str,
+    store_id: str,
     changelist: Dict[str, str],
 ) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
-    store_id_bytes = bytes32(hexstr_to_bytes(tree_id))
+    store_id_bytes = bytes32(hexstr_to_bytes(store_id))
     try:
         client, rpc_port = await get_client(rpc_port)
         response = await client.update_data_store(store_id=store_id_bytes, changelist=changelist)
@@ -83,12 +83,34 @@ async def update_data_store_cmd(
     return response
 
 
-async def get_root_cmd(
+async def get_keys_values_cmd(
     rpc_port: Optional[int],
-    tree_id: str,
+    store_id: str,
 ) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
-    store_id_bytes = bytes32(hexstr_to_bytes(tree_id))
+
+    store_id_bytes = bytes32(hexstr_to_bytes(store_id))
+    try:
+        client, rpc_port = await get_client(rpc_port)
+        response = await client.get_keys_values(store_id=store_id_bytes)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+        return None
+    except Exception as e:
+        print(f"Exception from 'data': {e}")
+        return None
+
+    client.close()
+    await client.await_closed()
+    return response
+
+
+async def get_root_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+) -> Optional[Dict[str, Any]]:
+    # TODO: nice cli error handling
+    store_id_bytes = bytes32(hexstr_to_bytes(store_id))
     try:
         client, rpc_port = await get_client(rpc_port)
         response = await client.get_root(store_id=store_id_bytes)
