@@ -109,11 +109,9 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                 "block_record blob)"
             )
             await out_db.execute(
-                "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
-                "ses_block_hash blob PRIMARY KEY,"
-                "challenge_segments blob)"
+                "CREATE TABLE sub_epoch_segments_v3(" "ses_block_hash blob PRIMARY KEY," "challenge_segments blob)"
             )
-            await out_db.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
+            await out_db.execute("CREATE TABLE current_peak(key int PRIMARY KEY, hash blob)")
 
             peak_hash, peak_height = await store_v1.get_peak()
             print(f"peak: {peak_hash.hex()} height: {peak_height}")
@@ -237,7 +235,7 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             commit_in = HINT_COMMIT_RATE
             hint_start_time = time()
             hint_values = []
-            await out_db.execute("CREATE TABLE IF NOT EXISTS hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))")
+            await out_db.execute("CREATE TABLE hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))")
             await out_db.commit()
             async with in_db.execute("SELECT coin_id, hint FROM hints") as cursor:
                 count = 0
