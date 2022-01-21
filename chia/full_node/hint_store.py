@@ -47,3 +47,13 @@ class HintStore:
                 [(None,) + record for record in coin_hint_list],
             )
         await cursor.close()
+
+    async def count_hints(self) -> int:
+        async with self.coin_record_db.execute("select count(*) from hints") as cursor:
+            row = await cursor.fetchone()
+
+        if row is None:
+            raise Exception("row was None when querying number of hints")
+
+        [count] = row
+        return int(count)

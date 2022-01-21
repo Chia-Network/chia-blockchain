@@ -107,6 +107,7 @@ class FullNodeRpcApi:
                     "mempool_cost": 0,
                     "compact_blocks": 0,
                     "uncompact_blocks": 0,
+                    "hint_count": 0,
                 },
             }
             return res
@@ -164,6 +165,11 @@ class FullNodeRpcApi:
         compact_blocks = await self.service.block_store.count_compactified_blocks()
         uncompact_blocks = await self.service.block_store.count_uncompactified_blocks()
 
+        if self.service.hint_store is not None:
+            hint_count = await self.service.hint_store.count_hints()
+        else:
+            hint_count = 0
+
         assert space is not None
         response: Dict = {
             "blockchain_state": {
@@ -182,6 +188,7 @@ class FullNodeRpcApi:
                 "mempool_cost": mempool_cost,
                 "compact_blocks": compact_blocks,
                 "uncompact_blocks": uncompact_blocks,
+                "hint_count": hint_count,
             },
         }
         self.cached_blockchain_state = dict(response["blockchain_state"])
