@@ -59,7 +59,8 @@ export default function Amount(props: AmountProps) {
   });
 
   const currencyCode = symbol === undefined ? defaultCurrencyCode : symbol;
-  const mojo = currencyCode === 'XCH' ? chiaToMojo(value) : catToMojo(value);
+  const isChiaCurrency = ['XCH', 'TXCH'].includes(currencyCode);
+  const mojo = isChiaCurrency ? chiaToMojo(value) : catToMojo(value);
 
   return (
     <FormControl variant={variant} fullWidth={fullWidth}>
@@ -71,7 +72,7 @@ export default function Amount(props: AmountProps) {
           spellCheck: false,
           inputComponent: NumberFormatCustom as any,
           inputProps: {
-            decimalScale: currencyCode === 'XCH' ? 12 : 3,
+            decimalScale: isChiaCurrency ? 12 : 3,
           },
           endAdornment: (
             <InputAdornment position="end">{currencyCode}</InputAdornment>

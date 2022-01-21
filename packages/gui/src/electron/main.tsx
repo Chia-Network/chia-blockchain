@@ -221,17 +221,15 @@ if (!handleSquirrelEvent()) {
           });
         }
       });
-      mainWindow.on('showMessageBox' , async (e, a) => {
-        e.reply(await dialog.showMessageBox(mainWindow,a))
-      })
 
-      mainWindow.on('showSaveDialog' , async (e, a) => {
-        e.reply(await dialog.showSaveDialog(a))
-      })
+      mainWindow.on('showMessageBox', async (event, options) => {
+        event.reply(await dialog.showMessageBox(mainWindow, options));
+      });
 
+      mainWindow.on('showSaveDialog', async (event, options) => {
+        event.reply(await dialog.showSaveDialog(options));
+      });
     };
-
-
 
     const createMenu = () => Menu.buildFromTemplate(getMenuTemplate());
 
