@@ -21,7 +21,7 @@ def event_loop():
     yield loop
 
 
-class TestDIDWallet:
+class TestNFTWallet:
     @pytest.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
@@ -49,7 +49,7 @@ class TestDIDWallet:
 
     @pytest.mark.parametrize(
         "trusted",
-        [True],
+        [False],
     )
     @pytest.mark.asyncio
     async def test_nft_wallet_creation(self, three_wallet_nodes, trusted):
@@ -131,4 +131,4 @@ class TestDIDWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         coins = nft_wallet.nft_wallet_info.my_nft_coins
-        breakpoint()
+        assert len(coins) == 1
