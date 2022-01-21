@@ -124,7 +124,6 @@ class NFTWallet:
     async def coin_added(self, coin: Coin, height: uint32):
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f" NFT wallet has been notified that {coin} was added")
-
         data: Dict[str, Any] = {
             "data": {
                 "action_data": {
@@ -215,7 +214,6 @@ class NFTWallet:
         """
         This must be called under the wallet state manager lock
         """
-
         coins = await self.standard_wallet.select_coins(amount)
         if coins is None:
             return None
@@ -296,12 +294,87 @@ class NFTWallet:
         )
         return nft_record
 
-    async def transfer_nft(self):
+    async def make_announce_spend(self, nft_coin_info: NFTCoinInfo):
+        did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
+        # 1 is a coin announcement
+        messages = [(1, 'a')]
+        message_sb = await did_wallet.create_message_spend(messages)
+        if message_sb is None:
+            raise ValueError("Unable to created DID message spend.")
+        my_did_amount = message_sb.coin_solutions[0].coin.amount
+        my_did_parent = message_sb.coin_solutions[0].coin.parent_coin_info
 
-        return
+        innersol = Program.to([
+            did_wallet.did_info.current_inner.get_tree_hash(),
+            my_did_amount,
+            my_did_parent,
+            0
+        ])
+        fullsol = Program.to(
+            [
+                nft_coin_info.lineage_proof.as_list(),
+                nft_coin_info.coin.amount,
+                innersol,
+            ]
+        )
+        list_of_coinspends = [CoinSpend(nft_coin_info.coin, nft_coin_info.full_puzzle, fullsol)]
+        spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
+        full_spend = SpendBundle.aggregate([spend_bundle, message_sb])
+        return full_spend
+
+    async def transfer_nft(
+        self,
+        nft_coin_info: NFTCoinInfo,
+        new_did,
+        new_did_parent,
+        new_did_inner_hash,
+        new_did_amount,
+        trade_price,
+    ):
+        did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
+        # 1 is a coin announcement
+        messages = [(1, bytes(trade_price) + bytes(new_did))]  # TODO: check this bytes concatenation is correct
+        message_sb = await did_wallet.create_message_spend(messages)
+        if message_sb is None:
+            raise ValueError("Unable to created DID message spend.")
+        my_did_amount = message_sb.coin_solutions[0].coin.amount
+        my_did_parent = message_sb.coin_solutions[0].coin.parent_coin_info
+        # my_did_inner_hash
+        # my_did_amount
+        # my_did_parent
+        # new_did
+        # new_did_parent
+        # new_did_inner_hash
+        # new_did_amount
+        # trade_price
+        # transfer_program_reveal
+        # transfer_program_solution
+        innersol = Program.to([
+            did_wallet.did_info.current_inner.get_tree_hash(),
+            my_did_amount,
+            my_did_parent,
+            new_did,
+            new_did_parent,
+            new_did_inner_hash,
+            new_did_amount,
+            trade_price,
+            nft_coin_info.transfer_program,
+            0,  # this should be expanded for other possible transfer_programs
+        ])
+        fullsol = Program.to(
+            [
+                nft_coin_info.lineage_proof.as_list(),
+                nft_coin_info.coin.amount,
+                innersol,
+            ]
+        )
+        list_of_coinspends = [CoinSpend(nft_coin_info.coin, nft_coin_info.full_puzzle, fullsol)]
+        spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
+        full_spend = SpendBundle.aggregate([spend_bundle, message_sb])
+        # this full spend should be aggregated with the DID announcement spend of the recipient DID
+        return full_spend
 
     async def get_current_nfts(self):
-
         return self.nft_wallet_info.my_nft_coins
 
     async def save_info(self, nft_info: NFTWalletInfo, in_transaction):
