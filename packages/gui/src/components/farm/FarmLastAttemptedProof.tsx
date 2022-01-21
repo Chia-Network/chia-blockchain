@@ -26,7 +26,7 @@ const cols = [
   },
   {
     field(row: Row) {
-      return moment(row.timestamp * 1000).format('MMM D, h:mm:ss A');
+      return moment(row.timestamp * 1000).format('LLL');
     },
     title: <Trans>Date</Trans>,
   },
