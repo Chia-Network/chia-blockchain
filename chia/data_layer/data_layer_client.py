@@ -148,13 +148,15 @@ class DataLayerClient:
                 msg = await ws.receive()
                 root_json = json.loads(msg.data)
                 generation = root_json["generation"]
-                added_generation = 1
+                root = await self.data_store.get_tree_root(tree_id=bytes32(b"\0" * 32))
+                existing_generation = root.generation + 1
                 t1 = time.time()
-                while added_generation < generation:
+                while existing_generation <= generation:
+                    print(f"Have generation: {root.generation}")
                     request = {
                         "type": "request_operations",
                         "tree_id": tree_id,
-                        "generation": str(added_generation),
+                        "generation": str(existing_generation),
                     }
                     await ws.send_str(json.dumps(request))
                     msg = await ws.receive()
@@ -184,7 +186,7 @@ class DataLayerClient:
                             assert row["hash"] == "None"
                         else:
                             assert current_root.node_hash.hex() == row["hash"]
-                        added_generation += 1
+                        existing_generation += 1
 
                 await ws.send_str(json.dumps({"type": "close"}))
 
@@ -199,4 +201,4 @@ if __name__ == "__main__":
     db_path = path_from_root(DEFAULT_ROOT_PATH, db_path_replaced)
 
     data_layer_client = DataLayerClient(config, db_path)
-    asyncio.run(data_layer_client.download_data_layer())
+    asyncio.run(data_layer_client.download_data_layer_history())
