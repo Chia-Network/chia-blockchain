@@ -68,6 +68,14 @@ class FullNodeRpcApi:
                     "wallet_ui",
                 )
             )
+            payloads.append(
+                create_payload_dict(
+                    "get_blockchain_state",
+                    data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
             return payloads
         return []
 
