@@ -20,7 +20,7 @@ while getopts dh flag
 do
   case "${flag}" in
     # automated
-    a) PACMAN_AUTOMATED=--noconfirm
+    a) PACMAN_AUTOMATED=--noconfirm;;
     # development
     d) EXTRAS=${EXTRAS}dev,;;
     h) usage; exit 0;;
