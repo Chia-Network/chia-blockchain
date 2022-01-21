@@ -31,6 +31,7 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.compute_memos import compute_memos
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
 
@@ -293,7 +294,7 @@ class TestWalletRpc:
                         addition.parent_coin_info, cr.confirmed_block_index
                     )
                     sb: SpendBundle = SpendBundle([spend], G2Element())
-                    assert sb.get_memos() == {addition.name(): [b"hhh"]}
+                    assert compute_memos(sb) == {addition.name(): [b"hhh"]}
                     found = True
             assert found
 
@@ -364,12 +365,16 @@ class TestWalletRpc:
             # Checks that the memo can be retrieved
             tx_confirmed = await client.get_transaction("1", send_tx_res.name)
             assert tx_confirmed.confirmed
-            assert len(tx_confirmed.get_memos()) == 2
-            print(tx_confirmed.get_memos())
-            assert [b"FiMemo"] in tx_confirmed.get_memos().values()
-            assert [b"SeMemo"] in tx_confirmed.get_memos().values()
-            assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
-            assert list(tx_confirmed.get_memos().keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
+            if isinstance(tx_confirmed, SpendBundle):
+                memos = compute_memos(tx_confirmed)
+            else:
+                memos = tx_confirmed.get_memos()
+            assert len(memos) == 2
+            print(memos)
+            assert [b"FiMemo"] in memos.values()
+            assert [b"SeMemo"] in memos.values()
+            assert list(memos.keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
+            assert list(memos.keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
 
             ##############
             # CATS       #

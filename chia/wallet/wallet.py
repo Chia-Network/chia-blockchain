@@ -40,6 +40,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.util.compute_memos import compute_memos
 
 
 class Wallet:
@@ -485,7 +486,7 @@ class Wallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
