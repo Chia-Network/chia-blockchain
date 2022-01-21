@@ -93,7 +93,7 @@ jobs:
     - name: Prepare Arch
       if: ${{ matrix.docker.type == 'arch' }}
       run: |
-        pacman --no-confirm --refresh base --sync sudo
+        pacman --no-confirm --refresh base --sync git sudo
 
     - name: Prepare Debian
       if: ${{ matrix.docker.type == 'debian' }}
@@ -101,7 +101,7 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
       run: |
         apt-get --yes update
-        apt-get install --yes lsb-release sudo
+        apt-get install --yes git lsb-release sudo
 
     - name: Prepare Ubuntu
       if: ${{ matrix.docker.type == 'ubuntu' }}
@@ -109,7 +109,7 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
       run: |
         apt-get --yes update
-        apt-get install --yes lsb-release sudo
+        apt-get install --yes git lsb-release sudo
 
     - name: Run install script
       env:
