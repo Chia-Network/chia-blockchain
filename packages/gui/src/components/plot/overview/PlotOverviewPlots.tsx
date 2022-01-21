@@ -38,7 +38,7 @@ const StyledWarningIcon = styled(WarningIcon)`
 
 const cols = [
   {
-    field({ file_size, size, duplicates }: Plot) {
+    field({ fileSize, size, duplicates }: Plot) {
       const hasDuplicates = false;
       const [firstDuplicate] = duplicates || [];
 
@@ -50,7 +50,7 @@ const cols = [
         <Flex alignItems="center" gap={1}>
           <Box>
             {`K-${size}, `}
-            <FormatBytes value={file_size} />
+            <FormatBytes value={fileSize} />
           </Box>
           {hasDuplicates && (
             <Tooltip title={<Box>{duplicateTitle}</Box>} interactive arrow>
