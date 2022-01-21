@@ -11,7 +11,7 @@ import {
 import { Trans, t } from '@lingui/macro';
 import { PassphrasePromptReason } from '@chia/api';
 import { useUnlockKeyringMutation, useGetKeyringStatusQuery } from '@chia/api-react';
-import { Flex, TooltipIcon, useShowError, Suspender } from '@chia/core';
+import { Flex, TooltipIcon, useShowError, Suspender, ButtonLoading } from '@chia/core';
 
 type Props = {
   reason: PassphrasePromptReason;
@@ -137,15 +137,16 @@ export default function AppPassPrompt(props: Props) {
             </Flex>
           </DialogContent>
           <DialogActions>
-            <Button
+            <ButtonLoading
               onClick={handleSubmit}
               color="primary"
               disabled={isLoadingUnlockKeyring}
+              loading={isLoadingUnlockKeyring}
               variant="contained"
               style={{ marginBottom: '8px', marginRight: '8px' }}
             >
               {submitButtonTitle}
-            </Button>
+            </ButtonLoading>
             {cancellable && (
               <Button>
                 <Trans>

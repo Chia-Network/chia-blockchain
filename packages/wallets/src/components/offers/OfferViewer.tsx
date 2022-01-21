@@ -440,95 +440,93 @@ function OfferDetails(props: OfferDetailsProps) {
   }
 
   return (
-    <StyledViewerBox>
-      <Flex flexDirection="column" gap={3}>
-        <OfferHeader
-          isMyOffer={tradeRecord?.isMyOffer}
-          isInvalid={!isValidating && !isValid}
-          isComplete={tradeRecord?.status === OfferState.CONFIRMED}
-        />
-        {summary && (
-          <Card title={<Trans>Summary</Trans>}>
-            <OfferSummary
-              isMyOffer={tradeRecord?.isMyOffer}
-              summary={summary}
-              makerTitle={<Typography variant="h6"><Trans>In exchange for</Trans></Typography>}
-              takerTitle={<Typography variant="h6"><Trans>You will receive</Trans></Typography>}
-              setIsMissingRequestedAsset={(isMissing: boolean) => setIsMissingRequestedAsset(isMissing)}
-            />
-            {imported && (
-              <Form methods={methods} onSubmit={handleAcceptOffer}>
-                <Flex flexDirection="column" gap={3}>
-                  <Divider />
-                  {isValid && (
-                    <Grid direction="column" xs={4} container>
-                      <Fee
-                        id="filled-secondary"
-                        variant="filled"
-                        name="fee"
-                        color="secondary"
-                        label={<Trans>Fee</Trans>}
-                        disabled={isAccepting}
-                      />
-                    </Grid>
-                  )}
-                  <Flex flexDirection="row" gap={3}>
-                    <Button
-                      variant="contained"
+    <Flex flexDirection="column" gap={3}>
+      <OfferHeader
+        isMyOffer={tradeRecord?.isMyOffer}
+        isInvalid={!isValidating && !isValid}
+        isComplete={tradeRecord?.status === OfferState.CONFIRMED}
+      />
+      {summary && (
+        <Card title={<Trans>Summary</Trans>}>
+          <OfferSummary
+            isMyOffer={tradeRecord?.isMyOffer}
+            summary={summary}
+            makerTitle={<Typography variant="h6"><Trans>In exchange for</Trans></Typography>}
+            takerTitle={<Typography variant="h6"><Trans>You will receive</Trans></Typography>}
+            setIsMissingRequestedAsset={(isMissing: boolean) => setIsMissingRequestedAsset(isMissing)}
+          />
+          {imported && (
+            <Form methods={methods} onSubmit={handleAcceptOffer}>
+              <Flex flexDirection="column" gap={3}>
+                <Divider />
+                {isValid && (
+                  <Grid direction="column" xs={4} container>
+                    <Fee
+                      id="filled-secondary"
+                      variant="filled"
+                      name="fee"
                       color="secondary"
-                      onClick={() => navigate(-1)}
+                      label={<Trans>Fee</Trans>}
                       disabled={isAccepting}
-                    >
-                      <Trans>Back</Trans>
-                    </Button>
-                    <ButtonLoading
-                      variant="contained"
-                      color="primary"
-                      type="submit"
-                      disabled={!isValid || isMissingRequestedAsset}
-                      loading={isAccepting}
-                    >
-                      <Trans>Accept Offer</Trans>
-                    </ButtonLoading>
-                  </Flex>
+                    />
+                  </Grid>
+                )}
+                <Flex flexDirection="row" gap={3}>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={() => navigate(-1)}
+                    disabled={isAccepting}
+                  >
+                    <Trans>Back</Trans>
+                  </Button>
+                  <ButtonLoading
+                    variant="contained"
+                    color="primary"
+                    type="submit"
+                    disabled={!isValid || isMissingRequestedAsset}
+                    loading={isAccepting}
+                  >
+                    <Trans>Accept Offer</Trans>
+                  </ButtonLoading>
                 </Flex>
-              </Form>
-            )}
-          </Card>
-        )}
-        {tradeRecord && (
-          <Card title={<Trans>Details</Trans>}>
-            <TableContainer component={Paper}>
-              <Table>
-                <TableBody>
-                  {detailRows.map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell component="th" scope="row">
-                        {row.name}{' '}
-                        {row.tooltip && <TooltipIcon>{row.tooltip}</TooltipIcon>}
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" color={row.color}>
-                          {row.value}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Card>
-        )}
-        {tradeRecord && tradeRecord.coinsOfInterest?.length > 0 && (
-          <Card title={<Trans>Coins</Trans>}>
-            <TableControlled
-              rows={tradeRecord.coinsOfInterest}
-              cols={coinCols}
-            />
-          </Card>
-        )}
-      </Flex>
-    </StyledViewerBox>
+              </Flex>
+            </Form>
+          )}
+        </Card>
+      )}
+      {tradeRecord && (
+        <Card title={<Trans>Details</Trans>}>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableBody>
+                {detailRows.map((row, index) => (
+                  <TableRow key={index}>
+                    <TableCell component="th" scope="row">
+                      {row.name}{' '}
+                      {row.tooltip && <TooltipIcon>{row.tooltip}</TooltipIcon>}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2" color={row.color}>
+                        {row.value}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
+      )}
+      {tradeRecord && tradeRecord.coinsOfInterest?.length > 0 && (
+        <Card title={<Trans>Coins</Trans>}>
+          <TableControlled
+            rows={tradeRecord.coinsOfInterest}
+            cols={coinCols}
+          />
+        </Card>
+      )}
+    </Flex>
   );
 }
 
@@ -544,29 +542,24 @@ export function OfferViewer(props: OfferViewerProps) {
   const { offerData, offerFilePath, offerSummary, tradeRecord, imported, ...rest } = props;
 
   return (
-    <Grid container>
-      <Flex flexDirection="column" flexGrow={1} gap={3}>
-        <Flex>
-          <Back variant="h5">
-            {offerFilePath ? (
-              <Trans>Viewing offer: {offerFilePath}</Trans>
-            ) : (
-              tradeRecord ? (
-                <Trans>Viewing offer created at {moment(tradeRecord.createdAtTime * 1000).format('LLL')}</Trans>
-              ) : (
-                <Trans>Viewing offer</Trans>
-              )
-            )}
-          </Back>
-        </Flex>
-        <OfferDetails
-          tradeRecord={tradeRecord}
-          offerData={offerData}
-          offerSummary={offerSummary}
-          imported={imported}
-          {...rest}
-        />
-      </Flex>
-    </Grid>
+    <Flex flexDirection="column" gap={3}>
+      <Back variant="h5">
+        {offerFilePath ? (
+          <Trans>Viewing offer: {offerFilePath}</Trans>
+        ) : tradeRecord ? (
+          <Trans>Viewing offer created at {moment(tradeRecord.createdAtTime * 1000).format('LLL')}</Trans>
+        ) : (
+          <Trans>Viewing offer</Trans>
+        )}
+      </Back>
+
+      <OfferDetails
+        tradeRecord={tradeRecord}
+        offerData={offerData}
+        offerSummary={offerSummary}
+        imported={imported}
+        {...rest}
+      />
+    </Flex>
   );
 }

@@ -127,8 +127,9 @@ function OfferEditor() {
       }
       else {
         const dialogOptions = { defaultPath: suggestedFilenameForOffer(response.tradeRecord.summary, lookupByAssetId) };
-        const remote: Remote = (window as any).remote;
+
         const result = await showSaveDialog(dialogOptions);
+        console.log('result', result, dialogOptions);
         const { filePath, canceled } = result;
 
         if (!canceled && filePath) {

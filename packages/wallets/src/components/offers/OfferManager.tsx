@@ -21,6 +21,7 @@ import {
   chiaToMojo, 
   mojoToCATLocaleString,
   useShowSaveDialog,
+  Tooltip,
 } from '@chia/core';
 import { OfferTradeRecord } from '@chia/api';
 import fs from 'fs';
@@ -313,13 +314,15 @@ function OfferList(props: OfferListProps) {
             <Flex flexDirection="row" justifyContent="center" gap={0}>
               <Flex style={{width: '32px'}}>
                 {canShare && (
-                  <IconButton
-                    size="small"
-                    disabled={!canShare}
-                    onClick={() => handleShare(undefined, row)}
-                  >
-                    <Share style={{transform: 'scaleX(-1)'}} />
-                  </IconButton>
+                  <Tooltip title={<Trans>Share</Trans>}>
+                    <IconButton
+                      size="small"
+                      disabled={!canShare}
+                      onClick={() => handleShare(undefined, row)}
+                    >
+                      <Share style={{transform: 'scaleX(-1)'}} />
+                    </IconButton>
+                  </Tooltip>
                 )}
               </Flex>
               <Flex style={{width: '32px'}}>
@@ -483,7 +486,6 @@ export function OfferManager() {
           </CardHero>
         </Grid>
       </Grid>
-      <Divider />
       <OfferList title={<Trans>Offers you created</Trans>} offers={myOffers} loading={isLoading} />
       <OfferList title={<Trans>Offers you accepted</Trans>} offers={acceptedOffers} loading={isLoading} />
     </Flex>

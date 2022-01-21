@@ -144,6 +144,14 @@ if (!handleSquirrelEvent()) {
 
       ipcMain.handle('getVersion', () => app.getVersion());
 
+      ipcMain.handle('showMessageBox', async (_event, options) => {
+        return await dialog.showMessageBox(mainWindow, options);
+      });
+
+      ipcMain.handle('showSaveDialog', async (_event, options) => {
+        return await dialog.showSaveDialog(options);
+      });
+
       decidedToClose = false;
       mainWindow = new BrowserWindow({
         width: 1200,
@@ -224,13 +232,7 @@ if (!handleSquirrelEvent()) {
         }
       });
 
-      mainWindow.on('showMessageBox', async (event, options) => {
-        event.reply(await dialog.showMessageBox(mainWindow, options));
-      });
 
-      mainWindow.on('showSaveDialog', async (event, options) => {
-        event.reply(await dialog.showSaveDialog(options));
-      });
 
       const startUrl =
       process.env.NODE_ENV === 'development'

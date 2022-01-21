@@ -1,7 +1,7 @@
 import isElectron from 'is-electron';
 
-export default function useShowSaveDialog(): () => Promise<any> {
-  async function handleSaveDialog(): Promise<any> {
+export default function useShowSaveDialog(): () => Promise<string[] | undefined> {
+  async function handleShowSaveDialog(options: any = {}): Promise<string[] | undefined> {
     if (!isElectron()) {
       throw new Error('useSaveDialog is only available in electron');
     }
@@ -10,8 +10,9 @@ export default function useShowSaveDialog(): () => Promise<any> {
       throw new Error('ipcRenderer is not available');
     }
 
-    return await window.ipcRenderer?.send('showSaveDialog',{});
+    console.log('options', options);
+    return await window.ipcRenderer?.invoke('showSaveDialog', options);
   }
 
-  return handleSaveDialog;
+  return handleShowSaveDialog;
 }
