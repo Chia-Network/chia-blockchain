@@ -93,7 +93,7 @@ jobs:
     - name: Prepare Arch
       if: ${{ matrix.docker.type == 'arch' }}
       run: |
-        pacman --sync --refresh base git sudo
+        pacman --no-confirm --refresh base --sync git sudo
 
     - name: Prepare Debian
       if: ${{ matrix.docker.type == 'debian' }}
