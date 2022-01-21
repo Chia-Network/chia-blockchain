@@ -329,9 +329,9 @@ class FullNode:
             self.log.error(f"Exception in peer discovery: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    def _state_changed(self, change: str):
+    def _state_changed(self, change: str, change_data: Dict[str, Any] = None):
         if self.state_changed_callback is not None:
-            self.state_changed_callback(change)
+            self.state_changed_callback(change, change_data)
 
     async def short_sync_batch(self, peer: ws.WSChiaConnection, start_height: uint32, target_height: uint32) -> bool:
         """
@@ -1763,7 +1763,15 @@ class FullNode:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
         else:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
-        self._state_changed("unfinished_block")
+
+        state_changed_data = {
+            "max_cost": self.constants.MAX_BLOCK_COST_CLVM,
+        }
+        if block.transactions_info is not None:
+            state_changed_data["block_cost"] = block.transactions_info.cost
+            state_changed_data["block_fees"] = block.transactions_info.fees
+
+        self._state_changed("unfinished_block", state_changed_data)
 
     async def new_infusion_point_vdf(
         self, request: timelord_protocol.NewInfusionPointVDF, timelord_peer: Optional[ws.WSChiaConnection] = None

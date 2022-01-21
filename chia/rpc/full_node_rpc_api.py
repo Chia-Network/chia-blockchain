@@ -55,7 +55,10 @@ class FullNodeRpcApi:
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
         }
 
-    async def _state_changed(self, change: str) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Dict[str, Any] = None) -> List[WsRpcMessage]:
+        if change_data is None:
+            change_data = {}
+
         payloads = []
         if change == "new_peak" or change == "sync_mode":
             data = await self.get_blockchain_state({})
@@ -77,6 +80,18 @@ class FullNodeRpcApi:
                 )
             )
             return payloads
+
+        if change == "unfinished_block":
+            payloads.append(
+                create_payload_dict(
+                    "unfinished_block",
+                    change_data,
+                    self.service_name,
+                    "metrics"
+                )
+            )
+            return payloads
+
         return []
 
     # this function is just here for backwards-compatibility. It will probably
