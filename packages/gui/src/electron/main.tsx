@@ -17,6 +17,8 @@ import { i18n } from '../config/locales';
 import About from '../components/about/About';
 import packageJson from '../../package.json';
 
+let isSimulator = process.env.LOCAL_TEST === 'true';
+
 function renderAbout(): string {
   const sheet = new ServerStyleSheet();
   const about = ReactDOMServer.renderToStaticMarkup(
@@ -104,6 +106,20 @@ if (!handleSquirrelEvent()) {
 
   let mainWindow = null;
 
+  const createMenu = () => Menu.buildFromTemplate(getMenuTemplate());
+
+  function toggleSimulatorMode() {
+    isSimulator = !isSimulator;
+
+    if (mainWindow) {
+      mainWindow.webContents.send('simulator-mode', isSimulator);
+    }
+
+    if (app) {
+      app.applicationMenu = createMenu();
+    }
+  }
+
   // if any of these checks return false, don't do any other initialization since the app is quitting
   if (ensureSingleInstance() && ensureCorrectEnvironment()) {
     // this needs to happen early in startup so all processes share the same global config
@@ -127,8 +143,6 @@ if (!handleSquirrelEvent()) {
       ipcMain.handle('getConfig', () => chiaConfig.loadConfig('mainnet'));
 
       ipcMain.handle('getVersion', () => app.getVersion());
-
-      
 
       decidedToClose = false;
       mainWindow = new BrowserWindow({
@@ -157,18 +171,6 @@ if (!handleSquirrelEvent()) {
         await app.whenReady();
         await session.defaultSession.loadExtension(reactDevToolsPath)
       }
-
-      const startUrl =
-        process.env.NODE_ENV === 'development'
-          ? 'http://localhost:3000'
-          : url.format({
-            pathname: path.join(__dirname, '/../renderer/index.html'),
-            protocol: 'file:',
-            slashes: true,
-          });
-
-      mainWindow.loadURL(startUrl);
-      require("@electron/remote/main").enable(mainWindow.webContents)
 
       mainWindow.once('ready-to-show', () => {
         mainWindow.show();
@@ -229,9 +231,20 @@ if (!handleSquirrelEvent()) {
       mainWindow.on('showSaveDialog', async (event, options) => {
         event.reply(await dialog.showSaveDialog(options));
       });
-    };
 
-    const createMenu = () => Menu.buildFromTemplate(getMenuTemplate());
+      const startUrl =
+      process.env.NODE_ENV === 'development'
+        ? 'http://localhost:3000'
+        : url.format({
+          pathname: path.join(__dirname, '/../renderer/index.html'),
+          protocol: 'file:',
+          slashes: true,
+        });
+
+      mainWindow.loadURL(startUrl);
+      require("@electron/remote/main").enable(mainWindow.webContents)
+
+    };
 
     const appReady = async () => {
       createWindow();
@@ -257,6 +270,11 @@ if (!handleSquirrelEvent()) {
     ipcMain.handle('setLocale', (_event, locale: string) => {
       i18n.activate(locale);
       app.applicationMenu = createMenu();
+    });
+
+    ipcMain.on('isSimulator', (event) => {
+      console.log('isSimulator', isSimulator);
+      event.returnValue = isSimulator;
     });
   }
 
@@ -321,6 +339,12 @@ if (!handleSquirrelEvent()) {
                     ? 'Alt+Command+I'
                     : 'Ctrl+Shift+I',
                 click: () => mainWindow.toggleDevTools(),
+              },
+              {
+                label: isSimulator 
+                  ? i18n._(/* i18n */ { id: 'Disable Simulator' })
+                  : i18n._(/* i18n */ { id: 'Enable Simulator' }),
+                click: () => toggleSimulatorMode(),
               },
             ],
           },

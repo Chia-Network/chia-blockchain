@@ -43,8 +43,6 @@ export default function useService(service: ServiceName, options: Options): {
     },
   });
 
-  console.log('useService', service, isRunning, isLoading, error);
-
   const isProcessing = isStarting || isStopping;
 
   let state: ServiceState = 'stopped';
