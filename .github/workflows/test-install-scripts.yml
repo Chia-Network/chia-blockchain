@@ -59,6 +59,9 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         distribution:
+        - name: amazonlinux:2
+          type: amazon
+          url: "docker://amazonlinux:2"
         - name: arch:latest
           type: arch
           url: "docker://archlinux:latest"
@@ -110,6 +113,11 @@ jobs:
       uses: styfle/cancel-workflow-action@0.9.1
       with:
         access_token: ${{ github.token }}
+
+    - name: Prepare Amazon Linux
+      if: ${{ matrix.distribution.type == 'amazon' }}
+      run: |
+        yum install --assumeyes git
 
     - name: Prepare Arch
       if: ${{ matrix.distribution.type == 'arch' }}
