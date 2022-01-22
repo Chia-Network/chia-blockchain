@@ -117,7 +117,7 @@ jobs:
     - name: Prepare Amazon Linux
       if: ${{ matrix.distribution.type == 'amazon' }}
       run: |
-        yum install --assumeyes git
+        yum install --assumeyes git sudo
 
     - name: Prepare Arch
       if: ${{ matrix.distribution.type == 'arch' }}
