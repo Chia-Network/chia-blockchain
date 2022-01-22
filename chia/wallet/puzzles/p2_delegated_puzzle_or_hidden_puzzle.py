@@ -42,10 +42,10 @@ following mechanism:
   simply quoting a list of conditions, and the following argument is the arguments
   to this program, which here are unused.  Secondly, the actual arguments to the
   p2_delegated_puzzle_or_hidden_puzzle are given.  The first argument determines
-  wehther a hidden or revealed puzzle is used.  If the puzzle is hidden, then what
-  is required is a signature given a specific syntheic key since the key cannot be
-  derived inline without the puzzle.  In that case, the first arguemnt is this key.
-  In most cases, the puzzle will be revealed and this argument will be the nil object,
+  whether a hidden or revealed puzzle is used.  If the puzzle is hidden, then what
+  is required is a signature given a specific synthetic key since the key cannot be
+  derived inline without the puzzle.  In that case, the first argument is this key.
+  In most cases, the puzzle will be revealed, and this argument will be the nil object,
   () (represented here by an empty python list).
 
   The second and third arguments are a chialisp program and its corresponding
