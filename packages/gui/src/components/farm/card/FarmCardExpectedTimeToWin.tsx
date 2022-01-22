@@ -25,7 +25,7 @@ export default function FarmCardExpectedTimeToWin() {
       return 0;
     }
 
-    return plots.map((p: Plot) => p.file_size).reduce((a, b) => a + b, 0);
+    return plots.map((p: Plot) => p.fileSize).reduce((a, b) => a + b, 0);
   }, [plots]);
 
   const proportion = totalNetworkSpace ? farmerSpace / totalNetworkSpace : 0;
