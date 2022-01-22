@@ -25,7 +25,7 @@ following mechanism:
 - A 'standard coin' coin exists in the blockchain with some puzzle hash.
 
 - The user's wallet contains a primary sk/pk pair which are used to derive to one
-  level a set of auxiliary sk/pk pairs which are used for specific coins.  these
+  level a set of auxiliary sk/pk pairs which are used for specific coins. These
   can be used for signing in AGG_SIG_ME but the standard coin uses key further
   derived from one of these via calculate_synthetic_secret_key as described in
   https://chialisp.com/docs/standard_transaction .  Therefore when a wallet needs
