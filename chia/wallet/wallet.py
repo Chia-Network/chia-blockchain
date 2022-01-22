@@ -276,6 +276,21 @@ class Wallet:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
+        # check for exact match.
+        for coinrecord in unspent:
+            if coinrecord.coin.name() in unconfirmed_removals:
+                continue
+            if coinrecord.coin in exclude:
+                continue
+            if coinrecord.coin.amount == amount:
+                sum_value += coinrecord.coin.amount
+                used_coins.add(coinrecord.coin)
+                self.log.debug(
+                    f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!"
+                )
+                break
+
+        # check for 2 or more coins that give an exact match.
         for coinrecord in unspent:
             if sum_value >= amount and len(used_coins) > 0:
                 break
@@ -283,9 +298,26 @@ class Wallet:
                 continue
             if coinrecord.coin in exclude:
                 continue
-            sum_value += coinrecord.coin.amount
-            used_coins.add(coinrecord.coin)
+            if (amount - sum_value) >= coinrecord.coin.amount:
+                sum_value += coinrecord.coin.amount
+                used_coins.add(coinrecord.coin)
             self.log.debug(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
+
+        if sum_value != amount:
+            sum_value = 0
+            # check for all other combinations of coins.
+            for coinrecord in unspent:
+                if sum_value >= amount and len(used_coins) > 0:
+                    break
+                if coinrecord.coin.name() in unconfirmed_removals:
+                    continue
+                if coinrecord.coin in exclude:
+                    continue
+                sum_value += coinrecord.coin.amount
+                used_coins.add(coinrecord.coin)
+                self.log.debug(
+                    f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!"
+                )
 
         # This happens when we couldn't use one of the coins because it's already used
         # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
