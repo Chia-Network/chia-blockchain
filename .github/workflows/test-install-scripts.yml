@@ -121,7 +121,7 @@ jobs:
         apt-get install --yes git lsb-release sudo
 
     - name: Prepare Fedora
-      if: ${{ matrix.distribution.type == 'fedor' }}
+      if: ${{ matrix.distribution.type == 'fedora' }}
       run: |
         yum install --assumeyes git
 
