@@ -148,3 +148,8 @@ jobs:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
         BUILD_VDF_CLIENT: "N"
       run: sh install.sh -a
+
+    - name: Run chia --help
+      run: |
+        source ./activate
+        chia --help
