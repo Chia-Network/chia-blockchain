@@ -50,43 +50,53 @@ jobs:
         sh install-gui.sh
 
   test_scripts_in_docker:
-    name: Test Install Scripts
+    name: Test Install Scripts ${{ matrix.distribution.name }}
     runs-on: ${{ matrix.os }}
-    container: ${{ matrix.docker.url }}
+    container: ${{ matrix.distribution.url }}
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
         os: [ubuntu-latest]
-        docker:
-        - type: arch
+        distribution:
+        - name: arch:latest
+          type: arch
           url: "docker://archlinux:latest"
         # TODO: what CentOS version provides Python3.7-3.9?
-        - type: debian
+        - name: debian:buster
+          type: debian
           # https://packages.debian.org/buster/python/python3 (3.7)
           url: "docker://debian:buster"
-        - type: debian
+        - name: debian:bullseye
+          type: debian
           # https://packages.debian.org/bullseye/python/python3 (3.9)
           url: "docker://debian:bullseye"
-        - type: debian
+        - name: debian:bookworm
+          type: debian
           # https://packages.debian.org/bookworm/python/python3 (3.9)
           url: "docker://debian:bookworm"
-        - type: ubuntu
-          # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
-          url: "docker://ubuntu:focal"
-        - type: fedora
+        - name: fedora:33
+          type: fedora
           # (33, 3.9)
           url: "docker://fedora:33"
-        - type: fedora
+        - name: fedora:34
+          type: fedora
           # (34, 3.9) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+34&start=0
           url: "docker://fedora:34"
-#        - type: fedora
+#        - name: fedora:35
+#          type: fedora
 #          # (35, 3.10) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+35&start=0
 #          url: "docker://fedora:35"
-        - type: ubuntu
+        - name: ubuntu:focal
+          type: ubuntu
+          # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
+          url: "docker://ubuntu:focal"
+        - name: ubuntu:hirsute (21.04)
+          type: ubuntu
           # https://packages.ubuntu.com/hirsute/python3 (21.04, 3.9)
           url: "docker://ubuntu:hirsute"
-        - type: ubuntu
+        - name: ubuntu:impish (21.10)
+          type: ubuntu
           # https://packages.ubuntu.com/impish/python3 (21.10, 3.9)
           url: "docker://ubuntu:impish"
 
@@ -98,12 +108,12 @@ jobs:
         access_token: ${{ github.token }}
 
     - name: Prepare Arch
-      if: ${{ matrix.docker.type == 'arch' }}
+      if: ${{ matrix.distribution.type == 'arch' }}
       run: |
         pacman --noconfirm --refresh base --sync git sudo
 
     - name: Prepare Debian
-      if: ${{ matrix.docker.type == 'debian' }}
+      if: ${{ matrix.distribution.type == 'debian' }}
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
@@ -111,12 +121,12 @@ jobs:
         apt-get install --yes git lsb-release sudo
 
     - name: Prepare Fedora
-      if: ${{ matrix.docker.type == 'fedor' }}
+      if: ${{ matrix.distribution.type == 'fedor' }}
       run: |
         yum install --assumeyes git
 
     - name: Prepare Ubuntu
-      if: ${{ matrix.docker.type == 'ubuntu' }}
+      if: ${{ matrix.distribution.type == 'ubuntu' }}
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
