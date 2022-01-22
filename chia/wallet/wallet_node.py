@@ -352,7 +352,7 @@ class WalletNode:
                     default_peers_file_path="wallet/db/wallet_peers.dat",
                 ),
                 self.config["introducer_peer"],
-                self.config["dns_servers"],
+                self.config.get("dns_servers", ["dns-introducer.chia.net"]),
                 self.config["peer_connect_interval"],
                 network_name,
                 None,
