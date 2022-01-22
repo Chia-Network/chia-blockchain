@@ -87,7 +87,11 @@ jobs:
 #          type: fedora
 #          # (35, 3.10) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+35&start=0
 #          url: "docker://fedora:35"
-        - name: ubuntu:focal
+        - name: ubuntu:bionic (18.04)
+          type: ubuntu
+          # https://packages.ubuntu.com/bionic/python3.7 (18.04, 3.7)
+          url: "docker://ubuntu:bionic"
+        - name: ubuntu:focal (20.04)
           type: ubuntu
           # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
           url: "docker://ubuntu:focal"
