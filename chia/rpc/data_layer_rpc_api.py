@@ -51,7 +51,7 @@ class DataLayerRpcApi:
             "/get_keys_values": self.get_keys_values,
             "/get_ancestors": self.get_ancestors,
             "/get_root": self.get_root,
-            "/get_roots": self.get_root,
+            "/get_roots": self.get_roots,
             "/delete_key": self.delete_key,
             "/insert": self.insert,
         }
