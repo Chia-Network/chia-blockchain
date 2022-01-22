@@ -109,7 +109,8 @@ function SelectOfferFile() {
 
   async function handleSelectOfferFile() {
     const dialogOptions = { filters: [{ name: 'Offer Files', extensions: ['offer'] }] } as Electron.OpenDialogOptions;
-    const { canceled, filePaths } = await window.remote.dialog.showOpenDialog(dialogOptions);
+    const ipcRenderer = (window as any).ipcRenderer;
+    const { canceled, filePaths } = await ipcRenderer?.invoke('showOpenDialog', dialogOptions);
     if (!canceled && filePaths?.length) {
       handleOpen(filePaths[0]);
     }

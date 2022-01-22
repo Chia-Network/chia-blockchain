@@ -48,8 +48,8 @@ type OfferShareHashgreenDialogProps = CommonOfferProps & CommonDialogProps;
 type OfferShareKeybaseDialogProps = CommonOfferProps & CommonDialogProps;
 
 async function writeTempOfferFile(offerData: string, filename: string): Promise<string> {
-  const remote: Remote = (window as any).remote;
-  const tempRoot = remote.app.getPath('temp');
+  const ipcRenderer = (window as any).ipcRenderer;
+  const tempRoot = await ipcRenderer?.invoke('getTempDir');
   const tempPath = fs.mkdtempSync(path.join(tempRoot, 'offer'));
   const filePath = path.join(tempPath, filename);
 
@@ -60,62 +60,29 @@ async function writeTempOfferFile(offerData: string, filename: string): Promise<
 
 // Posts the offer data to OfferBin and returns a URL to the offer.
 async function postToOfferBin(offerData: string, sharePrivately: boolean): Promise<string> {
-  return new Promise((resolve, reject) => {
-    try {
-      const remote: Remote = (window as any).remote;
-      const request = remote.net.request({
-        method: 'POST',
-        protocol: 'https:',
-        hostname: 'api.offerbin.io',
-        port: 443,
-        path: '/upload' + (sharePrivately ? '?private=true' : ''),
-      });
+  const ipcRenderer = (window as any).ipcRenderer;
+  const requestOptions = {
+    method: 'POST',
+    protocol: 'https:',
+    hostname: 'api.offerbin.io',
+    port: 443,
+    path: '/upload' + (sharePrivately ? '?private=true' : ''),
+  };
+  const requestHeaders = {
+    'Content-Type': 'application/text',
+  }
+  const requestData = offerData;
+  const { err, statusCode, statusMessage, responseBody } = await ipcRenderer?.invoke('fetchTextResponse', requestOptions, requestHeaders, requestData);
 
-      request.setHeader('Content-Type', 'application/text');
+  if (err || statusCode !== 200) {
+    const error = new Error(`OfferBin upload failed: ${err}, statusCode=${statusCode}, statusMessage=${statusMessage}, response=${responseBody}`);
+    throw error;
+  }
 
-      request.on('response', (response: IncomingMessage) => {
-        if (response.statusCode === 200) {
-          console.log('OfferBin upload completed');
+  console.log('OfferBin upload completed');
+  const { hash } = JSON.parse(responseBody);
 
-          response.on('error', (e: string) => {
-            const error = new Error(`Failed to receive response from OfferBin: ${e}`);
-            console.error(error);
-            reject(error.message);
-          });
-
-          response.on('data', (chunk: Buffer) => {
-            try {
-              const body = chunk.toString('utf8');
-              const { hash } = JSON.parse(body);
-
-              resolve(`https://offerbin.io/offer/${hash}`);
-            }
-            catch (e) {
-              reject(e);
-            }
-          });
-        }
-        else {
-          const error = new Error(`OfferBin upload failed, statusCode=${response.statusCode}, statusMessage=${response.statusMessage}`);
-          console.error(error);
-          reject(error.message);
-        }
-      });
-
-      request.on('error', (error: any) => {
-        console.error(error);
-        reject(error);
-      });
-
-      // Upload and finalize the request
-      request.write(offerData);
-      request.end();
-    }
-    catch (error) {
-      console.error(error);
-      reject(error);
-    }
-  });
+  return `https://offerbin.io/offer/${hash}`;
 }
 
 enum HashgreenErrorCodes {
@@ -126,100 +93,61 @@ enum HashgreenErrorCodes {
 };
 
 async function postToHashgreen(offerData: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    try {
-      const remote: Remote = (window as any).remote;
-      const request = remote.net.request({
-        method: 'POST',
-        protocol: 'https:',
-        hostname: 'hash.green',
-        port: 443,
-        path: '/api/v1/orders',
-      });
+  const ipcRenderer = (window as any).ipcRenderer;
+  const requestOptions = {
+    method: 'POST',
+    protocol: 'https:',
+    hostname: 'hash.green',
+    port: 443,
+    path: '/api/v1/orders',
+  };
+  const requestHeaders = {
+    'accept': 'application/json',
+    'Content-Type': 'application/x-www-form-urlencoded',
+  }
+  const requestData = `offer=${offerData}`;
+  const { err, statusCode, statusMessage, responseBody } = await ipcRenderer?.invoke('fetchTextResponse', requestOptions, requestHeaders, requestData);
 
-      request.setHeader('accept', 'application/json');
-      request.setHeader('Content-Type', 'application/x-www-form-urlencoded');
+  if (err) {
+    const error = new Error(`Failed to post offer to hash.green: ${err}, statusCode=${statusCode}, statusMessage=${statusMessage}`);
+    throw error;
+  }
 
-      request.on('response', (response: IncomingMessage) => {
-        if (response.statusCode === 200) {
-          console.log('Hashgreen upload completed');
+  if (statusCode === 200) {
+    console.log('Hashgreen upload completed');
+    const jsonObj = JSON.parse(responseBody);
+    const { data } = jsonObj;
+    const id = data?.id;
 
-          response.on('error', (e: string) => {
-            const error = new Error(`Failed to receive response from Hashgreen: ${e}`);
-            console.error(error);
-            reject(error.message);
-          });
-
-          response.on('data', (chunk: Buffer) => {
-            try {
-              const body = chunk.toString('utf8');
-              const response = JSON.parse(body);
-              const { data } = response;
-              const id = data?.id;
-
-              if (id) {
-                resolve(`https://hash.green/dex?order=${id}`);
-              }
-              else {
-                reject(new Error(`Hashgreen response missing data.id: ${JSON.stringify(response)}`));
-              }
-            }
-            catch (e) {
-              reject(e);
-            }
-          });
-        }
-        else {
-          response.on('data', (chunk: Buffer) => {
-            try {
-              const body = chunk.toString('utf8');
-              const response = JSON.parse(body);
-              const { code, msg, data } = response;
-
-              if (code === HashgreenErrorCodes.OFFER_FILE_EXISTS && data) {
-                resolve(`https://hash.green/dex?order=${data}`);
-              }
-              else {
-                console.log(`Upload failure response: ${body}`);
-                switch (code) {
-                  case HashgreenErrorCodes.MARKET_NOT_FOUND:
-                    reject(new Error(`Hashgreen upload rejected. Pairing is not supported: ${msg}`));
-                    break;
-                  case HashgreenErrorCodes.COINS_ALREADY_COMMITTED:
-                    reject(new Error(`Hashgreen upload rejected. Offer contains coins that are in use by another offer: ${msg}`));
-                    break;
-                  case HashgreenErrorCodes.OFFERED_AMOUNT_TOO_SMALL:
-                    reject(new Error(`Hashgreen upload rejected. Offer amount is too small: ${msg}`));
-                    break;
-                  default:
-                    reject(new Error(`Hashgreen upload rejected: code=${code} msg=${msg} data=${data}`));
-                }
-              }
-            }
-            catch (e) {
-              reject(new Error(`Hashgreen upload failed, failed to read response: ${e}`));
-            }
-          });
-          response.on('end', () => {
-            reject(new Error(`Hashgreen upload failed, statusCode=${response.statusCode}, statusMessage=${response.statusMessage}`));
-          });
-        }
-      });
-
-      request.on('error', (error: any) => {
-        console.error(error);
-        reject(error);
-      });
-
-      // Upload and finalize the request
-      request.write(`offer=${offerData}`);
-      request.end();
+    if (id) {
+      return `https://hash.green/dex?order=${id}`;
     }
-    catch (error) {
-      console.error(error);
-      reject(error);
+    else {
+      const error = new Error(`Hashgreen response missing data.id: ${responseBody}`);
+      throw error;
     }
-  });
+  }
+  else {
+    const jsonObj = JSON.parse(responseBody);
+    const { code, msg, data } = jsonObj;
+
+    if (code === HashgreenErrorCodes.OFFER_FILE_EXISTS && data) {
+      return `https://hash.green/dex?order=${data}`;
+    }
+    else {
+      console.log(`Upload failure response: ${responseBody}`);
+      switch (code) {
+        case HashgreenErrorCodes.MARKET_NOT_FOUND:
+          throw new Error(`Hashgreen upload rejected. Pairing is not supported: ${msg}`);
+        case HashgreenErrorCodes.COINS_ALREADY_COMMITTED:
+          throw new Error(`Hashgreen upload rejected. Offer contains coins that are in use by another offer: ${msg}`);
+        case HashgreenErrorCodes.OFFERED_AMOUNT_TOO_SMALL:
+          throw new Error(`Hashgreen upload rejected. Offer amount is too small: ${msg}`);
+        default:
+          throw new Error(`Hashgreen upload rejected: code=${code} msg=${msg} data=${data}`);
+      }
+    }
+  }
 }
 
 enum KeybaseCLIActions {

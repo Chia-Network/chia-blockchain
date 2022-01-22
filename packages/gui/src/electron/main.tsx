@@ -1,4 +1,4 @@
-import { app, dialog, shell, ipcMain, BrowserWindow, Menu, session } from 'electron';
+import { app, dialog, net, shell, ipcMain, BrowserWindow, IncomingMessage, Menu, session } from 'electron';
 require('@electron/remote/main').initialize()
 import path from 'path';
 import React from 'react';
@@ -142,10 +142,61 @@ if (!handleSquirrelEvent()) {
 
       ipcMain.handle('getConfig', () => chiaConfig.loadConfig('mainnet'));
 
+      ipcMain.handle('getTempDir', () => app.getPath('temp'));
+
       ipcMain.handle('getVersion', () => app.getVersion());
+
+      ipcMain.handle('fetchTextResponse', async (_event, requestOptions, requestHeaders, requestData) => {
+        const request = net.request(requestOptions as any);
+
+        Object.entries(requestHeaders || {}).forEach(([header, value]) => {
+          request.setHeader(header, value as any);
+        });
+
+        let err: any | undefined = undefined;
+        let statusCode: number | undefined = undefined;
+        let statusMessage: string | undefined = undefined;
+        let responseBody: string | undefined = undefined;
+
+        try {
+          responseBody = await new Promise((resolve, reject) => {
+            request.on('response', (response: IncomingMessage) => {
+              statusCode = response.statusCode;
+              statusMessage = response.statusMessage;
+
+              response.on('data', (chunk) => {
+                const body = chunk.toString('utf8');
+
+                resolve(body);
+              });
+
+              response.on('error', (e: string) => {
+                reject(new Error(e));
+              });
+            });
+
+            request.on('error', (error: any) => {
+              reject(error);
+            })
+
+            request.write(requestData);
+            request.end();
+          });
+        }
+        catch (e) {
+          console.error(e);
+          err = e;
+        }
+
+        return { err, statusCode, statusMessage, responseBody };
+      });
 
       ipcMain.handle('showMessageBox', async (_event, options) => {
         return await dialog.showMessageBox(mainWindow, options);
+      });
+
+      ipcMain.handle('showOpenDialog', async (_event, options) => {
+        return await dialog.showOpenDialog(options);
       });
 
       ipcMain.handle('showSaveDialog', async (_event, options) => {
