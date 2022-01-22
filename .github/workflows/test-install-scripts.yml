@@ -142,6 +142,8 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
+        # for bionic
+        sudo add-apt-repository --yes ppa:git-core/ppa
         apt-get --yes update
         apt-get install --yes git lsb-release sudo
 
