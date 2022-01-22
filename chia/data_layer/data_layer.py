@@ -84,7 +84,7 @@ class DataLayer:
         self,
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
-    ) -> Optional[TransactionRecord]:
+    ) -> TransactionRecord:
         for change in changelist:
             if change["action"] == "insert":
                 key = change["key"]
@@ -106,11 +106,11 @@ class DataLayer:
             node_hash = root.node_hash
         else:
             node_hash = bytes32([0] * 32)  # todo change
-        res = await self.wallet_rpc.dl_update_root(tree_id, node_hash)
-        assert res
+        transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash)
+        assert transaction_record
         # todo register callback to change status in data store
         # await self.data_store.change_root_status(root, Status.COMMITTED)
-        return res
+        return transaction_record
 
     async def get_value(self, store_id: bytes32, key: bytes) -> Optional[bytes]:
         res = await self.data_store.get_node_by_key(tree_id=store_id, key=key)
