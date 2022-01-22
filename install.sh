@@ -170,16 +170,8 @@ fi
 # shellcheck disable=SC1091
 . ./activate
 # pip 20.x+ supports Linux binary wheels
-
-if [ "$UBUNTU_2100" = "1" ]; then
-	# https://github.com/pypa/setuptools/issues/2956
-	SETUPTOOLS_FOR_PIP='setuptools<60'
-else
-	SETUPTOOLS_FOR_PIP='setuptools'
-fi
-
-python -m pip install --upgrade pip wheel "${SETUPTOOLS_FOR_PIP}"
-
+python -m pip install --upgrade pip
+python -m pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
 python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
