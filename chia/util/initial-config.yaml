@@ -510,6 +510,10 @@ data_layer:
 
   # TODO: shouldn't we not need this since we have no actual public interface (yet)?
   port: 8561
+  wallet_peer:
+    host: localhost
+    port: 9256
+
   database_path: "data_layer/db/data_layer_CHALLENGE.sqlite"
   selected_network: *selected_network
   # If True, starts an RPC server at the following port

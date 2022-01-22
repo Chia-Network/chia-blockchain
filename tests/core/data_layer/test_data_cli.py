@@ -24,21 +24,33 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
     """Create a table, insert a row, get the row by its hash."""
 
     with chia_root.print_log_after():
-        row_data = "ffff8353594d8083616263"
-        row_hash = "1a6f915513173902a7216e7d9e4a16bfd088e20683f45de3b432ce72e9cc7aa8"
-
-        changelist: List[Dict[str, str]] = [{"action": "insert", "row_data": row_data}]
-
-        create = chia_root.run(args=["data", "create_table", "--table", "test table"])
-        print(f"create {create}")
-        # TODO get store id from cli response
-        store_id = "0102030405060708091011121314151617181920212223242526272829303132"
+        create = chia_root.run(args=["data", "create_data_store"])
+        print(f"create_data_store: {create}")
+        dic = json.loads(create.stdout)
+        assert dic["success"]
+        tree_id = dic["id"]
+        key = "1a6f915513173902a7216e7d9e4a16bfd088e20683f45de3b432ce72e9cc7aa8"
+        value = "ffff8353594d8083616263"
+        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key, "value": value}]
+        print(json.dumps(changelist))
         update = chia_root.run(
-            args=["data", "update_table", "--table", store_id, "--changelist", json.dumps(changelist)]
+            args=["data", "update_data_store", "--id", tree_id, "--changelist", json.dumps(changelist)]
         )
-        print(f"update {update}")
-        completed_process = chia_root.run(args=["data", "get_row", "--table", store_id, "--row_hash", row_hash])
+        dic = json.loads(create.stdout)
+        assert dic["success"]
+        print(f"update_data_store: {update}")
+        completed_process = chia_root.run(args=["data", "get_value", "--id", tree_id, "--key", key])
         parsed = json.loads(completed_process.stdout)
-        expected = {"row_data": row_data, "row_hash": row_hash, "success": True}
-
+        expected = {"value": value, "success": True}
+        assert parsed == expected
+        get_keys_values = chia_root.run(args=["data", "get_keys_values", "--id", tree_id])
+        print(f"get_keys_values: {get_keys_values}")
+        changelist = [{"action": "delete", "key": key}]
+        update = chia_root.run(
+            args=["data", "update_data_store", "--id", tree_id, "--changelist", json.dumps(changelist)]
+        )
+        print(f"update_data_store: {update}")
+        completed_process = chia_root.run(args=["data", "get_value", "--id", tree_id, "--key", key])
+        parsed = json.loads(completed_process.stdout)
+        expected = {"data": None, "success": True}
         assert parsed == expected

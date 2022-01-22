@@ -54,24 +54,24 @@ def create_key_option() -> IdentityFunction:
     return click.option(
         "-h",
         "--key",
-        "value key string",
-        help="The hexadecimal value id.",
+        "key_string",
+        help="str representing the key",
         type=str,
         required=True,
     )
 
 
-def create_kv_store_id_option() -> IdentityFunction:
+def create_data_store_id_option() -> "IdentityFunction":
     return click.option(
         "-store",
-        "-id",
+        "--id",
         help="The hexadecimal store id.",
         type=str,
         required=True,
     )
 
 
-def create_kv_store_name_option() -> IdentityFunction:
+def create_data_store_name_option() -> "IdentityFunction":
     return click.option(
         "-n",
         "--table_name",
@@ -82,54 +82,85 @@ def create_kv_store_name_option() -> IdentityFunction:
     )
 
 
-def create_rpc_port_option() -> IdentityFunction:
+def create_rpc_port_option() -> "IdentityFunction":
     return click.option(
         "-dp",
         "--data-rpc-port",
-        help="Set the port where the Farmer is hosting the RPC interface. See the rpc_port under farmer in config.yaml",
+        help="Set the port where the data layer is hosting the RPC interface. See rpc_port under wallet in config.yaml",
         type=int,
         default=None,
         show_default=True,
     )
 
 
-@data_cmd.command("create_kv_store", short_help="Get a data row by its hash")
-@create_kv_store_id_option()
+@data_cmd.command("create_data_store", short_help="Get a data row by its hash")
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
-def create_kv_store(
-    table_string: str,
+def create_data_store(
+    # table_string: str,
+    fingerprint: int,
     data_rpc_port: int,
 ) -> None:
-    from chia.cmds.data_funcs import create_kv_store_cmd
+    from chia.cmds.data_funcs import create_data_store_cmd
 
-    run(create_kv_store_cmd(rpc_port=data_rpc_port, table_string=table_string))
+    run(create_data_store_cmd(data_rpc_port, ""))
 
 
 @data_cmd.command("get_value", short_help="Get a data row by its hash")
+@create_data_store_id_option()
 @create_key_option()
-@create_kv_store_id_option()
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
 def get_value(
-    tree_id: str,
-    key: str,
+    id: str,
+    key_string: str,
+    fingerprint: int,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_value_cmd
 
-    run(get_value_cmd(rpc_port=data_rpc_port, tree_id=tree_id, key=key))
+    run(get_value_cmd(data_rpc_port, id, key_string))
 
 
-@data_cmd.command("update_kv_store", short_help="Update a table.")
-@create_kv_store_id_option()
-@create_rpc_port_option()
+@data_cmd.command("update_data_store", short_help="Update a table.")
+@create_data_store_id_option()
 @create_changelist_option()
-def update_kv_store(
-    tree_id: str,
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@create_rpc_port_option()
+def update_data_store(
+    id: str,
     changelist_string: str,
+    fingerprint: int,
     data_rpc_port: int,
 ) -> None:
-    from chia.cmds.data_funcs import update_kv_store_cmd
+    from chia.cmds.data_funcs import update_data_store_cmd
 
-    changelist = json.loads(changelist_string)
+    run(update_data_store_cmd(data_rpc_port, id, json.loads(changelist_string)))
 
-    run(update_kv_store_cmd(rpc_port=data_rpc_port, tree_id=tree_id, changelist=changelist))
+
+@data_cmd.command("get_keys_values", short_help="")
+@create_data_store_id_option()
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@create_rpc_port_option()
+def get_keys_values(
+    id: str,
+    fingerprint: int,
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import get_keys_values_cmd
+
+    run(get_keys_values_cmd(data_rpc_port, id))
+
+
+@data_cmd.command("get_root", short_help="")
+@create_data_store_id_option()
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@create_rpc_port_option()
+def get_root(
+    id: str,
+    fingerprint: int,
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import get_root_cmd
+
+    run(get_root_cmd(rpc_port=data_rpc_port, store_id=id))
