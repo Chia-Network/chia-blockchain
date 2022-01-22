@@ -159,5 +159,5 @@ jobs:
 
     - name: Run chia --help
       run: |
-        source ./activate
+        . ./activate
         chia --help
