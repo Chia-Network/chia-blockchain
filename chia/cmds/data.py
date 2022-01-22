@@ -86,7 +86,7 @@ def create_rpc_port_option() -> "IdentityFunction":
     return click.option(
         "-dp",
         "--data-rpc-port",
-        help="Set the port where the data layer is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+        help="Set the port where the data layer is hosting the RPC interface. See rpc_port under wallet in config.yaml",
         type=int,
         default=None,
         show_default=True,

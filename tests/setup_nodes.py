@@ -143,7 +143,7 @@ async def setup_data_layer(local_bt):
     # db_path = local_bt.root_path / f"{db_name}"
     # if db_path.exists():
     #     db_path.unlink()
-    # config = local_bt.config["data_layer"]
+    config = local_bt.config["data_layer"]
     # config["database_path"] = db_name
     # if introducer_port is not None:
     #     config["introducer_peer"]["host"] = self_hostname
