@@ -290,18 +290,38 @@ class Wallet:
                 )
                 break
 
-        # check for 2 or more coins that give an exact match.
-        for coinrecord in unspent:
-            if sum_value >= amount and len(used_coins) > 0:
-                break
-            if coinrecord.coin.name() in unconfirmed_removals:
-                continue
-            if coinrecord.coin in exclude:
-                continue
-            if (amount - sum_value) >= coinrecord.coin.amount:
-                sum_value += coinrecord.coin.amount
-                used_coins.add(coinrecord.coin)
-            self.log.debug(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
+        # check for exact match with all coins smaller than the amount. If the total of all the smaller coins are less than the amount we choose; the smallest coin available.
+        # If we have more, smaller coins than the amount we run the next algorithm.
+        if sum_value != amount:
+            smaller_coins: Set = set()
+            for coinrecord in unspent:
+                if coinrecord.coin.name() in unconfirmed_removals:
+                    continue
+                if coinrecord.coin in exclude:
+                    continue
+                if coinrecord.coin.amount < amount:
+                    sum_value += coinrecord.coin.amount
+                    smaller_coins.add(coinrecord.coin)
+            if sum_value < amount:
+                smallest_value = float("inf")  # smallest coins value
+                # for edge case where the coins are excluded or not confirmed yet.
+                smallest_coin: Optional[WalletCoinRecord] = None
+                for coinrecord in unspent:
+                    if coinrecord.coin.name() in unconfirmed_removals:
+                        continue
+                    if coinrecord.coin in exclude:
+                        continue
+                    if amount < coinrecord.coin.amount < smallest_value:
+                        # try to find a coin that is as close as possible to the amount.
+                        smallest_value = coinrecord.coin.amount
+                        smallest_coin = coinrecord
+                if smallest_coin:
+                    used_coins.add(smallest_coin.coin)
+                    self.log.debug(
+                        f"Selected coin: {smallest_coin.coin.name()} at height {smallest_coin.confirmed_block_height}!"
+                    )
+            elif sum_value == amount:
+                used_coins = smaller_coins
 
         if sum_value != amount:
             sum_value = 0
