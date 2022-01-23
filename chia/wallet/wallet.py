@@ -293,7 +293,7 @@ class Wallet:
         # Check for exact match with all coins smaller than the amount.
         # If the total of all the smaller coins are less than the amount we choose; the smallest coin available.
         # If we have more, smaller coins than the amount we run the next algorithm.
-        if sum_value != amount:
+        if len(used_coins) == 0:
             smaller_coins: Set = set()
             for coinrecord in unspent:
                 if coinrecord.coin.name() in unconfirmed_removals:
@@ -318,13 +318,14 @@ class Wallet:
                         smallest_coin = coinrecord
                 if smallest_coin:
                     used_coins.add(smallest_coin.coin)
+                    sum_value = smallest_coin.coin.amount
                     self.log.debug(
                         f"Selected coin: {smallest_coin.coin.name()} at height {smallest_coin.confirmed_block_height}!"
                     )
             elif sum_value == amount:
                 used_coins = smaller_coins
 
-        if sum_value != amount:
+        if len(used_coins) == 0:
             sum_value = 0
             # check for all other combinations of coins.
             for coinrecord in unspent:
