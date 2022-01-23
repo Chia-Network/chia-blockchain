@@ -18,6 +18,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from tests.block_tools import get_signage_point
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint8
+from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
@@ -283,7 +284,7 @@ class TestRpc:
             second_blockchain = empty_blockchain
 
             for block in blocks:
-                await second_blockchain.receive_block(block)
+                await _validate_and_add_block(second_blockchain, block)
 
             # Creates a signage point based on the last block
             peak_2 = second_blockchain.get_peak()

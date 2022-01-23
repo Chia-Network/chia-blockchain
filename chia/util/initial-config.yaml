@@ -452,6 +452,8 @@ wallet:
   # see description for full_node.db_sync
   db_sync: auto
 
+  connect_to_unknown_peers: True
+
   # The minimum height that we care about for our transactions. Set to zero
   # If we are restoring from private key and don't know the height.
   starting_height: 0
@@ -459,6 +461,9 @@ wallet:
   num_sync_batches: 50
   initial_num_public_keys: 100
   initial_num_public_keys_new_wallet: 5
+
+  dns_servers:
+    - "dns-introducer.chia.net"
 
   full_node_peer:
     host: *self_hostname

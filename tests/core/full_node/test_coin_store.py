@@ -17,6 +17,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.ints import uint64, uint32
+from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.wallet_tools import WalletTool
 from tests.setup_nodes import bt, test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -287,7 +288,7 @@ class TestCoinStoreWithBlocks:
                 records: List[Optional[CoinRecord]] = []
 
                 for block in blocks:
-                    await b.receive_block(block)
+                    await _validate_and_add_block(b, block)
                 peak = b.get_peak()
                 assert peak is not None
                 assert peak.height == initial_block_count - 1
@@ -307,14 +308,16 @@ class TestCoinStoreWithBlocks:
                 )
 
                 for reorg_block in blocks_reorg_chain:
-                    result, error_code, _, _ = await b.receive_block(reorg_block)
-                    print(f"Height {reorg_block.height} {initial_block_count - 10} result {result}")
                     if reorg_block.height < initial_block_count - 10:
-                        assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
-                    elif reorg_block.height < initial_block_count - 1:
-                        assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
+                        await _validate_and_add_block(
+                            b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK
+                        )
+                    elif reorg_block.height < initial_block_count:
+                        await _validate_and_add_block(
+                            b, reorg_block, expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN
+                        )
                     elif reorg_block.height >= initial_block_count:
-                        assert result == ReceiveBlockResult.NEW_PEAK
+                        await _validate_and_add_block(b, reorg_block, expected_result=ReceiveBlockResult.NEW_PEAK)
                         if reorg_block.is_transaction_block():
                             coins = reorg_block.get_included_reward_coins()
                             records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
@@ -323,7 +326,6 @@ class TestCoinStoreWithBlocks:
                                 assert not record.spent
                                 assert record.confirmed_block_index == reorg_block.height
                                 assert record.spent_block_index == 0
-                    assert error_code is None
                 peak = b.get_peak()
                 assert peak is not None
                 assert peak.height == initial_block_count - 10 + reorg_length - 1
@@ -353,9 +355,7 @@ class TestCoinStoreWithBlocks:
             hint_store = await HintStore.create(db_wrapper)
             b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir, 2)
             for block in blocks:
-                res, err, _, _ = await b.receive_block(block)
-                assert err is None
-                assert res == ReceiveBlockResult.NEW_PEAK
+                await _validate_and_add_block(b, block)
             peak = b.get_peak()
             assert peak is not None
             assert peak.height == num_blocks - 1
