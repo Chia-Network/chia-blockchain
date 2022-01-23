@@ -15,6 +15,7 @@ from chia.cmds.stop import stop_cmd
 from chia.cmds.wallet import wallet_cmd
 from chia.cmds.plotnft import plotnft_cmd
 from chia.cmds.plotters import plotters_cmd
+from chia.cmds.db import db_cmd
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
 from chia.util.keychain import (
     Keychain,
@@ -136,6 +137,7 @@ cli.add_command(stop_cmd)
 cli.add_command(netspace_cmd)
 cli.add_command(farm_cmd)
 cli.add_command(plotters_cmd)
+cli.add_command(db_cmd)
 
 if supports_keyring_passphrase():
     cli.add_command(passphrase_cmd)

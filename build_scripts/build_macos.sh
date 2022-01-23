@@ -15,14 +15,10 @@ fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
-npm install electron-installer-dmg -g
-# Pinning electron-packager and electron-osx-sign to known working versions
-# Current packager uses an old version of osx-sign, so if we install the newer sign package
-# things break
-npm install electron-packager@15.4.0 -g
-npm install electron-osx-sign@v0.5.0 -g
-npm install notarize-cli -g
-npm install lerna -g
+cd npm_macos || exit
+npm ci
+PATH=$(npm bin):$PATH
+cd .. || exit
 
 echo "Create dist/"
 sudo rm -rf dist
@@ -43,7 +39,7 @@ cd chia-blockchain-gui || exit
 
 echo "npm build"
 lerna clean -y
-npm install
+npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
 # npm audit fix
 npm run build
