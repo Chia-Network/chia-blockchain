@@ -370,7 +370,7 @@ class DataStore:
 
         return ancestors
 
-    async def get_pairs(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
+    async def get_keys_values(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
 
