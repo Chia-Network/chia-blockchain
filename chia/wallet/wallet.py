@@ -276,7 +276,7 @@ class Wallet:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
-        # check for exact match.
+        # check for exact 1 to 1 coin match.
         for coinrecord in unspent:
             if coinrecord.coin.name() in unconfirmed_removals:
                 continue
@@ -290,7 +290,8 @@ class Wallet:
                 )
                 break
 
-        # check for exact match with all coins smaller than the amount. If the total of all the smaller coins are less than the amount we choose; the smallest coin available.
+        # Check for exact match with all coins smaller than the amount.
+        # If the total of all the smaller coins are less than the amount we choose; the smallest coin available.
         # If we have more, smaller coins than the amount we run the next algorithm.
         if sum_value != amount:
             smaller_coins: Set = set()
