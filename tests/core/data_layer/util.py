@@ -4,9 +4,10 @@ import functools
 import os
 import pathlib
 import subprocess
+from random import Random
 from typing import Any, Iterator, IO, List, Optional, TYPE_CHECKING, Union
 
-from chia.data_layer.data_layer_types import Side
+from chia.data_layer.data_layer_types import Side, TerminalNode
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.tree_hash import bytes32
@@ -112,6 +113,49 @@ async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Examp
     e_hash = await insert(key=b"\x04", value=b"\x14\x04", reference_node_hash=f_hash, side=Side.LEFT)
 
     return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash, e_hash, f_hash, g_hash, h_hash])
+
+
+async def generate_big_datastore(data_store: DataStore, tree_id: bytes32, random: Random, num_nodes: int = 250) -> None:
+    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
+    insertions = 0
+    deletions = 0
+    for i in range(num_nodes):
+        key = i.to_bytes(4, byteorder="big")
+        value = (2 * i).to_bytes(4, byteorder="big")
+        root = await data_store.get_tree_root(tree_id)
+        reference_node_hash: Optional[bytes32] = None
+        side: Optional[Side] = None
+        if i > 0:
+            height = 0
+            reference_node_hash = root.node_hash
+            while True:
+                height += 1
+                assert reference_node_hash is not None
+                node = await data_store.get_node(reference_node_hash)
+                if isinstance(node, TerminalNode):
+                    break
+                if random.randint(0, 1) == 0:
+                    reference_node_hash = node.left_hash
+                else:
+                    reference_node_hash = node.right_hash
+            side = Side.LEFT if random.randint(0, 1) == 0 else Side.RIGHT
+            assert height <= 60
+
+        if random.randint(0, 4) > 0 or insertions - 1 <= deletions:
+            insertions += 1
+            _ = await insert(
+                key=key,
+                value=value,
+                reference_node_hash=reference_node_hash,
+                side=side,
+            )
+        else:
+            deletions += 1
+            assert reference_node_hash is not None
+            node = await data_store.get_node(reference_node_hash)
+            assert isinstance(node, TerminalNode)
+            await data_store.delete(key=node.key, tree_id=tree_id)
+    print(f"Insertions: {insertions} Deletions: {deletions}")
 
 
 @dataclass

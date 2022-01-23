@@ -11,7 +11,15 @@ from chia.data_layer.data_layer_errors import (
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
 )
-from chia.data_layer.data_layer_types import NodeType, ProofOfInclusion, ProofOfInclusionLayer, Side, Status
+from chia.data_layer.data_layer_types import (
+    NodeType,
+    ProofOfInclusion,
+    ProofOfInclusionLayer,
+    Side,
+    Status,
+    InsertionData,
+    DeletionData,
+)
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
@@ -161,7 +169,9 @@ async def test_insert_internal_node_does_nothing_if_matching(data_store: DataSto
         before = await cursor.fetchall()
 
     async with data_store.db_wrapper.locked_transaction():
-        await data_store._insert_internal_node(left_hash=parent.left_hash, right_hash=parent.right_hash)
+        await data_store._insert_internal_node(
+            left_hash=parent.left_hash, right_hash=parent.right_hash, tree_id=tree_id
+        )
 
     async with data_store.db_wrapper.locked_transaction():
         cursor = await data_store.db.execute("SELECT * FROM node")
@@ -181,7 +191,7 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
         before = await cursor.fetchall()
 
     async with data_store.db_wrapper.locked_transaction():
-        await data_store._insert_terminal_node(key=kv_node.key, value=kv_node.value)
+        await data_store._insert_terminal_node(key=kv_node.key, value=kv_node.value, tree_id=tree_id)
 
     async with data_store.db_wrapper.locked_transaction():
         cursor = await data_store.db.execute("SELECT * FROM node")
@@ -814,3 +824,102 @@ async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> Non
     root = await data_store.get_tree_root(tree_id)
     assert root.status.value == Status.COMMITTED.value
     assert not is_empty
+
+
+@pytest.mark.asyncio
+async def test_left_to_right_ordering(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+    root = await data_store.get_tree_root(tree_id)
+    assert root.node_hash is not None
+    all_nodes = await data_store.get_left_to_right_ordering(root.node_hash, tree_id, num_nodes=1000)
+    expected_nodes = [
+        bytes32.from_hexstr("7a5193a4e31a0a72f6623dfeb2876022ab74a48abb5966088a1c6f5451cc5d81"),
+        bytes32.from_hexstr("c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2"),
+        bytes32.from_hexstr("9831a17b4c16ee6167ce4748ccd98ce1ccd0cf43f4dce8298390fd46c2d2e3b0"),
+        bytes32.from_hexstr("cb9ab4524540e37fd79377891ff46c143dc97c2eb57f4c106c07e9c321100874"),
+        bytes32.from_hexstr("0763561814685fbf92f6ca71fbb1cb11821951450d996375c239979bd63e9535"),
+        bytes32.from_hexstr("3ab212e30b0e746d81a993e39f2cb4ba843412d44b402c1117a500d6451309e3"),
+        bytes32.from_hexstr("924be8ff27e84cba17f5bc918097f8410fab9824713a4668a21c8e060a8cab40"),
+        bytes32.from_hexstr("d068b836d74781f7025dade5b300fcb0474a71d9ac27b8c7dfb7f85750a841a5"),
+        bytes32.from_hexstr("5f67a0ab1976e090b834bf70e5ce2a0f0a9cd474e19a905348c44ae12274d30b"),
+        bytes32.from_hexstr("36cb1fc56017944213055da8cb0178fb0938c32df3ec4472f5edf0dff85ba4a3"),
+        bytes32.from_hexstr("19a28f80fe7bc17a2ef67836d40bee765fb20e58d5001517e0f1070de895c50b"),
+        bytes32.from_hexstr("fb66fe539b3eb2020dfbfadfd601fa318521292b41f04c2057c16fca6b947ca1"),
+        bytes32.from_hexstr("6d3af8d93db948e8b6aa4386958e137c6be8bab726db86789594b3588b35adcd"),
+        bytes32.from_hexstr("1d2534d20e63e9f730fc4b919857fb0f9529eaaab65c8baf3c443aa1c327b510"),
+        bytes32.from_hexstr("50e2f97295de32c7b0eaea32bf1969ceab2e4645b17882e8f1080d143aa262ab"),
+    ]
+    assert [node.hash for node in all_nodes] == expected_nodes
+    nodes_2 = await data_store.get_left_to_right_ordering(
+        bytes32.from_hexstr("cb9ab4524540e37fd79377891ff46c143dc97c2eb57f4c106c07e9c321100874"), tree_id, num_nodes=100
+    )
+    assert [node.hash for node in nodes_2] == expected_nodes[3:]
+    nodes_3 = await data_store.get_left_to_right_ordering(
+        bytes32.from_hexstr("924be8ff27e84cba17f5bc918097f8410fab9824713a4668a21c8e060a8cab40"), tree_id, num_nodes=4
+    )
+    assert [node.hash for node in nodes_3] == expected_nodes[6:10]
+
+
+@pytest.mark.asyncio
+async def test_get_operation_1(data_store: DataStore, tree_id: bytes32) -> None:
+    key = b"\x01\x02"
+    value = b"abc"
+
+    await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+    root = await data_store.get_tree_root(tree_id)
+    status = Status.COMMITTED
+    operation = await data_store.get_single_operation(None, root.node_hash, status)
+    assert isinstance(operation, InsertionData)
+    assert operation.key == b"\x01\x02"
+    assert operation.value == b"abc"
+
+    await data_store.delete(key=key, tree_id=tree_id)
+    root_2 = await data_store.get_tree_root(tree_id)
+    operation_2 = await data_store.get_single_operation(root.node_hash, root_2.node_hash, status)
+    assert isinstance(operation_2, DeletionData)
+    assert operation_2.key == b"\x01\x02"
+
+
+@pytest.mark.asyncio
+async def test_get_operation_2(data_store: DataStore, tree_id: bytes32) -> None:
+    key = b"\x01\x02"
+    value = b"abc"
+
+    example = await add_01234567_example(data_store=data_store, tree_id=tree_id)
+    terminal_hash = example.terminal_nodes[0]
+    root = await data_store.get_tree_root(tree_id)
+    status = Status.COMMITTED
+    await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=terminal_hash, side=Side.LEFT)
+
+    root_2 = await data_store.get_tree_root(tree_id)
+    operation = await data_store.get_single_operation(root.node_hash, root_2.node_hash, status)
+    assert isinstance(operation, InsertionData)
+    assert operation.key == b"\x01\x02"
+    assert operation.value == b"abc"
+
+    await data_store.delete(key=key, tree_id=tree_id)
+    root_3 = await data_store.get_tree_root(tree_id)
+    operation_2 = await data_store.get_single_operation(root_2.node_hash, root_3.node_hash, status)
+    assert isinstance(operation_2, DeletionData)
+    assert operation_2.key == b"\x01\x02"
+
+
+@pytest.mark.asyncio
+async def test_get_operation_3(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_0123_example(data_store, tree_id)
+    root = await data_store.get_tree_root(tree_id)
+    status = Status.COMMITTED
+
+    await data_store.delete(key=b"\x00", tree_id=tree_id)
+    root_2 = await data_store.get_tree_root(tree_id)
+    operation = await data_store.get_single_operation(root.node_hash, root_2.node_hash, status)
+    assert isinstance(operation, DeletionData)
+    assert operation.key == b"\x00"
+
+    # Test the special case where both left and right hashes are different within a diff.
+    # This should happen only if deleted subtree has only 1 node and its connected to the root.
+    await data_store.delete(key=b"\x01", tree_id=tree_id)
+    root_3 = await data_store.get_tree_root(tree_id)
+    operation_2 = await data_store.get_single_operation(root_2.node_hash, root_3.node_hash, status)
+    assert isinstance(operation_2, DeletionData)
+    assert operation_2.key == b"\x01"

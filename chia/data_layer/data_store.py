@@ -1,9 +1,8 @@
 import logging
+import aiosqlite
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
-
-import aiosqlite
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
@@ -22,6 +21,8 @@ from chia.data_layer.data_layer_types import (
     Side,
     TerminalNode,
     Status,
+    InsertionData,
+    DeletionData,
 )
 from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
@@ -84,13 +85,16 @@ class DataStore:
 
         return self
 
-    async def _insert_root(self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status) -> None:
-        existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
+    async def _insert_root(
+        self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status, generation: Optional[int] = None
+    ) -> None:
+        if generation is None:
+            existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
 
-        if existing_generation is None:
-            generation = 0
-        else:
-            generation = existing_generation + 1
+            if existing_generation is None:
+                generation = 0
+            else:
+                generation = existing_generation + 1
 
         await self.db.execute(
             """
@@ -112,6 +116,7 @@ class DataStore:
         right_hash: Optional[str],
         key: Optional[str],
         value: Optional[str],
+        tree_id: str,
     ) -> None:
         # TODO: can we get sqlite to do this check?
         values = {
@@ -139,7 +144,7 @@ class DataStore:
             if result_dict != values:
                 raise Exception(f"Requested insertion of node with matching hash but other values differ: {node_hash}")
 
-    async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
+    async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32, tree_id: bytes32) -> bytes32:
         node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
 
         await self._insert_node(
@@ -149,11 +154,12 @@ class DataStore:
             right_hash=right_hash.hex(),
             key=None,
             value=None,
+            tree_id=tree_id.hex(),
         )
 
         return node_hash  # type: ignore[no-any-return]
 
-    async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
+    async def _insert_terminal_node(self, key: bytes, value: bytes, tree_id: bytes32) -> bytes32:
         node_hash = Program.to((key, value)).get_tree_hash()
 
         await self._insert_node(
@@ -163,6 +169,7 @@ class DataStore:
             right_hash=None,
             key=key.hex(),
             value=value.hex(),
+            tree_id=tree_id.hex(),
         )
 
         return node_hash  # type: ignore[no-any-return]
@@ -313,6 +320,19 @@ class DataStore:
             [root_dict] = [row async for row in cursor]
 
         return Root.from_row(row=root_dict)
+
+    async def get_roots_between(
+        self, tree_id: bytes32, generation_begin: int, generation_end: int, *, lock: bool = True
+    ) -> List[Root]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                "SELECT * FROM root WHERE tree_id == :tree_id "
+                "AND generation >= :generation_begin AND generation < :generation_end ORDER BY generation ASC",
+                {"tree_id": tree_id.hex(), "generation_begin": generation_begin, "generation_end": generation_end},
+            )
+            roots = [Root.from_row(row=row) async for row in cursor]
+
+        return roots
 
     async def get_ancestors(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> List[InternalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -469,7 +489,7 @@ class DataStore:
                     raise Exception("can not insert a new key/value on an internal node")
 
             # create new terminal node
-            new_terminal_node_hash = await self._insert_terminal_node(key=key, value=value)
+            new_terminal_node_hash = await self._insert_terminal_node(key=key, value=value, tree_id=tree_id)
 
             if was_empty:
                 if side is not None:
@@ -484,7 +504,9 @@ class DataStore:
                 if root.node_hash is None:
                     raise Exception("Internal error.")
 
-                ancestors = await self.get_ancestors(node_hash=reference_node_hash, tree_id=tree_id, lock=False)
+                ancestors: List[InternalNode] = await self.get_ancestors(
+                    node_hash=reference_node_hash, tree_id=tree_id, lock=False
+                )
 
                 if side == Side.LEFT:
                     left = new_terminal_node_hash
@@ -494,7 +516,7 @@ class DataStore:
                     right = new_terminal_node_hash
 
                 # create first new internal node
-                new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
+                new_hash = await self._insert_internal_node(left_hash=left, right_hash=right, tree_id=tree_id)
 
                 traversal_node_hash = reference_node_hash
 
@@ -512,13 +534,20 @@ class DataStore:
 
                     traversal_node_hash = ancestor.hash
 
-                    new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
+                    new_hash = await self._insert_internal_node(left_hash=left, right_hash=right, tree_id=tree_id)
 
                 await self._insert_root(tree_id=tree_id, node_hash=new_hash, status=status)
 
         return new_terminal_node_hash
 
-    async def delete(self, key: bytes, tree_id: bytes32, *, lock: bool = True, status: Status = Status.PENDING) -> None:
+    async def delete(
+        self,
+        key: bytes,
+        tree_id: bytes32,
+        *,
+        lock: bool = True,
+        status: Status = Status.PENDING,
+    ) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             ancestors = await self.get_ancestors(node_hash=node.hash, tree_id=tree_id, lock=False)
@@ -551,7 +580,9 @@ class DataStore:
                 else:
                     raise Exception("Internal error.")
 
-                new_child_hash = await self._insert_internal_node(left_hash=left_hash, right_hash=right_hash)
+                new_child_hash = await self._insert_internal_node(
+                    left_hash=left_hash, right_hash=right_hash, tree_id=tree_id
+                )
 
                 old_child_hash = ancestor.hash
 
@@ -655,3 +686,131 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             return await self.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id, lock=False)
+
+    async def get_left_to_right_ordering(
+        self,
+        node_hash: bytes32,
+        tree_id: bytes32,
+        *,
+        lock: bool = True,
+        num_nodes: int = 2500,
+    ) -> List[Node]:
+        ancestors = await self.get_ancestors(node_hash, tree_id, lock=True)
+        path_hashes = {node_hash, *(ancestor.hash for ancestor in ancestors)}
+        # The hashes that need to be traversed, initialized here as the hashes to the right of the ancestors
+        # ordered from shallowest (root) to deepest (leaves) so .pop() from the end gives the deepest first.
+        stack = [ancestor.right_hash for ancestor in reversed(ancestors) if ancestor.right_hash not in path_hashes]
+        nodes: List[Node] = []
+        while len(nodes) < num_nodes:
+            try:
+                node = await self.get_node(node_hash)
+            except Exception:
+                return []
+            if isinstance(node, TerminalNode):
+                nodes.append(node)
+                if len(stack) > 0:
+                    node_hash = stack.pop()
+                else:
+                    break
+            elif isinstance(node, InternalNode):
+                nodes.append(node)
+                stack.append(node.right_hash)
+                node_hash = node.left_hash
+        return nodes
+
+    # Returns the operation that got us from `root_hash_1` to `root_hash_2`.
+    async def get_single_operation(
+        self,
+        root_hash_begin: Optional[bytes32],
+        root_hash_end: Optional[bytes32],
+        root_status: Status,
+        *,
+        lock: bool = False,
+    ) -> Union[InsertionData, DeletionData]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            if root_hash_begin is None:
+                assert root_hash_end is not None
+                node = await self.get_node(root_hash_end, lock=False)
+                assert isinstance(node, TerminalNode)
+                return InsertionData(node.hash, node.key, node.value, None, None, root_status)
+            if root_hash_end is None:
+                assert root_hash_begin is not None
+                node = await self.get_node(root_hash_begin, lock=False)
+                assert isinstance(node, TerminalNode)
+                return DeletionData(None, node.key, root_status)
+            copy_root_hash_end = root_hash_end
+            while True:
+                node_1 = await self.get_node(root_hash_begin, lock=False)
+                node_2 = await self.get_node(root_hash_end, lock=False)
+                if isinstance(node_1, TerminalNode):
+                    assert isinstance(node_2, InternalNode)
+                    if node_2.left_hash == node_1.hash:
+                        new_terminal_node = await self.get_node(node_2.right_hash, lock=False)
+                        side = Side.RIGHT
+                    else:
+                        assert node_2.right_hash == node_1.hash
+                        new_terminal_node = await self.get_node(node_2.left_hash, lock=False)
+                        side = Side.LEFT
+                    reference_node_hash = node_1.hash
+                    assert isinstance(new_terminal_node, TerminalNode)
+                    return InsertionData(
+                        copy_root_hash_end,
+                        new_terminal_node.key,
+                        new_terminal_node.value,
+                        reference_node_hash,
+                        side,
+                        root_status,
+                    )
+                elif isinstance(node_2, TerminalNode):
+                    assert isinstance(node_1, InternalNode)
+                    if node_1.left_hash == node_2.hash:
+                        new_terminal_node = await self.get_node(node_1.right_hash, lock=False)
+                    else:
+                        assert node_1.right_hash == node_2.hash
+                        new_terminal_node = await self.get_node(node_1.left_hash, lock=False)
+                    assert isinstance(new_terminal_node, TerminalNode)
+                    return DeletionData(copy_root_hash_end, new_terminal_node.key, root_status)
+                else:
+                    if node_1.left_hash == node_2.left_hash:
+                        root_hash_begin = node_1.right_hash
+                        root_hash_end = node_2.right_hash
+                    elif node_1.right_hash == node_2.right_hash:
+                        root_hash_begin = node_1.left_hash
+                        root_hash_end = node_2.left_hash
+                    else:
+                        assert node_1.left_hash == node_2.hash or node_1.right_hash == node_2.hash
+                        if node_1.left_hash == node_2.hash:
+                            new_terminal_node = await self.get_node(node_1.right_hash, lock=False)
+                        else:
+                            new_terminal_node = await self.get_node(node_1.left_hash, lock=False)
+                        assert isinstance(new_terminal_node, TerminalNode)
+                        return DeletionData(copy_root_hash_end, new_terminal_node.key, root_status)
+
+    async def get_operations(
+        self,
+        tree_id: bytes32,
+        generation_begin: int,
+        num_generations: int = 10,
+        *,
+        lock: bool = True,
+    ) -> List[Union[InsertionData, DeletionData]]:
+        result: List[Union[InsertionData, DeletionData]] = []
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            query_generation_begin = max(generation_begin - 1, 0)
+            query_generation_end = min(
+                generation_begin + num_generations, await self.get_tree_generation(tree_id=tree_id, lock=False) + 1
+            )
+            roots = await self.get_roots_between(tree_id, query_generation_begin, query_generation_end, lock=False)
+            previous_root = None
+            for current_root in roots:
+                if previous_root is None:
+                    previous_root = current_root
+                    continue
+                else:
+                    operation = await self.get_single_operation(
+                        previous_root.node_hash, current_root.node_hash, current_root.status, lock=False
+                    )
+                    result.append(operation)
+                previous_root = current_root
+
+        return result
