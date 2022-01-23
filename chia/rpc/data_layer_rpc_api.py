@@ -118,7 +118,7 @@ class DataLayerRpcApi:
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        changelist = [{"action": "insert", "key": key, "value": value}]
         transaction_record = await self.service.batch_update(store_id, changelist)
         return {"tx_id": transaction_record.name}
 
@@ -132,7 +132,7 @@ class DataLayerRpcApi:
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        changelist = [{"action": "delete", "key": key.hex()}]
+        changelist = [{"action": "delete", "key": key}]
         transaction_record = await self.service.batch_update(store_id, changelist)
         return {"tx_id": transaction_record.name}
 
