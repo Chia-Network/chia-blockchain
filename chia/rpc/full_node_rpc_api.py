@@ -54,6 +54,7 @@ class FullNodeRpcApi:
             "/get_network_info": self.get_network_info,
             "/get_recent_signage_point_or_eos": self.get_recent_signage_point_or_eos,
             # Coins
+            "/get_coin_id": self.get_coin_id,
             "/get_coin_records_in_range": self.get_coin_records_in_range,
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
             "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,
@@ -450,6 +451,16 @@ class FullNodeRpcApi:
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
 
         return {"coin_records": coin_records}
+
+    async def get_coin_id(self, request: Dict) -> Optional[Dict]:
+        coin = Coin(
+            parent_coin_info=bytes.fromhex(request["parent_coin_info"].lstrip("0x")),
+            puzzle_hash=bytes.fromhex(request["puzzle_hash"].lstrip("0x")),
+            amount=int(request["amount"]),
+        )
+        return {
+            "coin_id": coin.name()
+        }
 
     async def get_coin_records_in_range(self, request: Dict) -> Optional[Dict]:
         """
