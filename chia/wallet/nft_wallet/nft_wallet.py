@@ -70,7 +70,6 @@ class NFTWallet:
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
-        std_wallet_id = self.standard_wallet.wallet_id
         self.wallet_state_manager = wallet_state_manager
         did_wallet = self.wallet_state_manager.wallets[did_wallet_id]
         my_did = did_wallet.did_info.origin_coin.name()
@@ -292,6 +291,7 @@ class NFTWallet:
             name=token_bytes(),
             memos=[],
         )
+        await self.standard_wallet.push_transaction(nft_record)
         return nft_record
 
     async def make_announce_spend(self, nft_coin_info: NFTCoinInfo):
@@ -320,6 +320,7 @@ class NFTWallet:
         list_of_coinspends = [CoinSpend(nft_coin_info.coin, nft_coin_info.full_puzzle, fullsol)]
         spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         full_spend = SpendBundle.aggregate([spend_bundle, message_sb])
+        await self.standard_wallet.push_transaction(nft_record)
         return full_spend
 
     async def transfer_nft(
@@ -373,6 +374,14 @@ class NFTWallet:
         full_spend = SpendBundle.aggregate([spend_bundle, message_sb])
         # this full spend should be aggregated with the DID announcement spend of the recipient DID
         return full_spend
+
+    async def receive_nft(self, trade_price: uint64, nft_id: bytes32) -> SpendBundle:
+        did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
+        messages = [(1, bytes(trade_price) + bytes(nft_id))]  # TODO: check this bytes concatenation is correct
+        message_sb = await did_wallet.create_message_spend(messages)
+        if message_sb is None:
+            raise ValueError("Unable to created DID message spend.")
+        return message_sb
 
     async def get_current_nfts(self):
         return self.nft_wallet_info.my_nft_coins

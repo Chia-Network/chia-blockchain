@@ -27,6 +27,7 @@ from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk, master_sk_t
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -109,6 +110,11 @@ class WalletRpcApi:
             "/did_create_attest": self.did_create_attest,
             "/did_get_information_needed_for_recovery": self.did_get_information_needed_for_recovery,
             "/did_create_backup_file": self.did_create_backup_file,
+            # NFT Wallet
+            "/nft_mint_nft": self.nft_mint_nft,
+            "/nft_get_current_nfts": self.nft_get_current_nfts,
+            "/nft_transfer_nft": self.nft_transfer_nft,
+            "/nft_create_trade_price_announcement": self.nft_create_trade_price_announcement
             # RL wallet
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
@@ -529,7 +535,19 @@ class WalletRpcApi:
                 }
             else:  # undefined did_type
                 pass
-
+        elif request["wallet_type"] == "nft_wallet":
+            async with self.service.wallet_state_manager.lock:
+                nft_wallet: NFTWallet = await NFTWallet.create_new_nft_wallet(
+                    wallet_state_manager,
+                    main_wallet,
+                    request["did_wallet_id"],
+                )
+            assert nft_wallet.nft_wallet_info is not None
+            return {
+                "success": True,
+                "type": nft_wallet.type(),
+                "wallet_id": nft_wallet.id(),
+            }
         elif request["wallet_type"] == "pool_wallet":
             if request["mode"] == "new":
                 owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(True)
@@ -1113,13 +1131,61 @@ class WalletRpcApi:
         }
 
     async def did_create_backup_file(self, request):
-        try:
-            wallet_id = int(request["wallet_id"])
-            did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-            did_wallet.create_backup(request["filename"])
-            return {"wallet_id": wallet_id, "success": True}
-        except Exception:
-            return {"wallet_id": wallet_id, "success": False}
+        wallet_id = int(request["wallet_id"])
+        did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        did_wallet.create_backup(request["filename"])
+        return {"wallet_id": wallet_id, "success": True}
+
+    ##########################################################################################
+    # NFT Wallet
+    ##########################################################################################
+
+    async def nft_mint_nft(self, request):
+        wallet_id = int(request["wallet_id"])
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        # uri: str,
+        # percentage: uint64,
+        # backpayment_address: bytes32,
+        # amount: int = 1
+        if "amount" in request:
+            await nft_wallet.generate_new_nft(
+                request["uri"],
+                request["artist_percentage"],
+                request["artist_address"],
+                request["amount"]
+            )
+        else:
+            await nft_wallet.generate_new_nft(request["uri"], request["artist_percentage"], request["artist_address"])
+        return {"wallet_id": wallet_id, "success": True}
+
+    async def nft_get_current_nfts(self, request):
+        wallet_id = int(request["wallet_id"])
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        nfts = nft_wallet.get_current_nfts()
+        return {"wallet_id": wallet_id, "success": True, "nfts": nfts}
+
+    async def nft_transfer_nft(self, request):
+        wallet_id = int(request["wallet_id"])
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        # nft_coin_info: NFTCoinInfo,
+        # new_did,
+        # new_did_parent,
+        # new_did_inner_hash,
+        # new_did_amount,
+        # trade_price,
+        sb = await nft_wallet.transfer_nft(
+            request["nft_coin_info"],
+            request["new_did"],
+            request["new_did_parent"],
+            request["new_did_amount"],
+            request["trade_price"],
+        )
+        return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
+
+    async def nft_create_trade_price_announcement(self, request):
+        wallet_id = int(request["wallet_id"])
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        return
 
     ##########################################################################################
     # Rate Limited Wallet
