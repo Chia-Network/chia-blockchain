@@ -50,5 +50,5 @@ def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: int) -> Tuple[Opti
                             best_set_sum = selected_coins_sum
                             selected_coins_sum -= coin.amount
                             selected_coins.remove(coin)
-                    n_pass += 1
+                n_pass += 1
     return (best_set_of_coins, uint64(int(best_set_sum)))
