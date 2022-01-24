@@ -46,34 +46,31 @@ class PreValidationResult(Streamable):
 
 def batch_pre_validate_blocks(
     constants_dict: Dict,
-    blocks_pickled: Dict[bytes, bytes],
-    full_blocks_pickled: Optional[List[bytes]],
-    header_blocks_pickled: Optional[List[bytes]],
-    prev_transaction_generators: List[Optional[bytes]],
-    npc_results: Dict[uint32, bytes],
+    blocks: Dict[bytes32, BlockRecord],
+    full_blocks: Optional[List[FullBlock]],
+    header_blocks: Optional[List[HeaderBlock]],
+    prev_transaction_generators: List[Optional[BlockGenerator]],
+    npc_results: Dict[uint32, NPCResult],
     check_filter: bool,
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
     validate_signatures: bool,
-) -> List[bytes]:
-    blocks: Dict[bytes32, BlockRecord] = {}
-    for k, v in blocks_pickled.items():
-        blocks[bytes32(k)] = BlockRecord.from_bytes(v)
+) -> List[PreValidationResult]:
     results: List[PreValidationResult] = []
     constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
-    if full_blocks_pickled is not None and header_blocks_pickled is not None:
+    if full_blocks is not None and header_blocks is not None:
         assert ValueError("Only one should be passed here")
 
     # In this case, we are validating full blocks, not headers
-    if full_blocks_pickled is not None:
-        for i in range(len(full_blocks_pickled)):
+    if full_blocks is not None:
+        for i in range(len(full_blocks)):
             try:
-                block: FullBlock = FullBlock.from_bytes(full_blocks_pickled[i])
+                block: FullBlock = full_blocks[i]
                 tx_additions: List[Coin] = []
                 removals: List[bytes32] = []
                 npc_result: Optional[NPCResult] = None
                 if block.height in npc_results:
-                    npc_result = NPCResult.from_bytes(npc_results[block.height])
+                    npc_result = npc_results[block.height]
                     assert npc_result is not None
                     if npc_result.conds is not None:
                         removals, tx_additions = tx_removals_and_additions(npc_result.conds)
@@ -81,10 +78,9 @@ def batch_pre_validate_blocks(
                         removals, tx_additions = [], []
 
                 if block.transactions_generator is not None and npc_result is None:
-                    prev_generator_bytes = prev_transaction_generators[i]
-                    assert prev_generator_bytes is not None
+                    block_generator: Optional[BlockGenerator] = prev_transaction_generators[i]
+                    assert block_generator is not None
                     assert block.transactions_info is not None
-                    block_generator: BlockGenerator = BlockGenerator.from_bytes(prev_generator_bytes)
                     assert block_generator.program == block.transactions_generator
                     npc_result = get_name_puzzle_conditions(
                         block_generator,
@@ -138,14 +134,13 @@ def batch_pre_validate_blocks(
                 log.error(f"Exception: {error_stack}")
                 results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False))
     # In this case, we are validating header blocks
-    elif header_blocks_pickled is not None:
-        for i in range(len(header_blocks_pickled)):
+    elif header_blocks is not None:
+        for i in range(len(header_blocks)):
             try:
-                header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
                 required_iters, error = validate_finished_header_block(
                     constants,
                     BlockCache(blocks),
-                    header_block,
+                    header_blocks[i],
                     check_filter,
                     expected_difficulty[i],
                     expected_sub_slot_iters[i],
@@ -158,7 +153,7 @@ def batch_pre_validate_blocks(
                 error_stack = traceback.format_exc()
                 log.error(f"Exception: {error_stack}")
                 results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False))
-    return [bytes(r) for r in results]
+    return results
 
 
 async def pre_validate_blocks_multiprocessing(
@@ -290,22 +285,18 @@ async def pre_validate_blocks_multiprocessing(
         if not block_record_was_present[i]:
             block_records.remove_block_record(block.header_hash)
 
-    recent_sb_compressed_pickled = {bytes(k): bytes(v) for k, v in recent_blocks_compressed.items()}
-    npc_results_pickled = {}
-    for k, v in npc_results.items():
-        npc_results_pickled[k] = bytes(v)
     futures = []
     # Pool of workers to validate blocks concurrently
     for i in range(0, len(blocks), batch_size):
         end_i = min(i + batch_size, len(blocks))
         blocks_to_validate = blocks[i:end_i]
         if any([len(block.finished_sub_slots) > 0 for block in blocks_to_validate]):
-            final_pickled = {bytes(k): bytes(v) for k, v in recent_blocks.items()}
+            final_pickled = recent_blocks
         else:
-            final_pickled = recent_sb_compressed_pickled
-        b_pickled: Optional[List[bytes]] = None
-        hb_pickled: Optional[List[bytes]] = None
-        previous_generators: List[Optional[bytes]] = []
+            final_pickled = recent_blocks_compressed
+        full_blocks: List[FullBlock] = []
+        header_blocks: List[HeaderBlock] = []
+        previous_generators: List[Optional[BlockGenerator]] = []
         for block in blocks_to_validate:
             # We ONLY add blocks which are in the past, based on header hashes (which are validated later) to the
             # prev blocks dict. This is important since these blocks are assumed to be valid and are used as previous
@@ -319,9 +310,7 @@ async def pre_validate_blocks_multiprocessing(
 
             if isinstance(block, FullBlock):
                 assert get_block_generator is not None
-                if b_pickled is None:
-                    b_pickled = []
-                b_pickled.append(bytes(block))
+                full_blocks.append(block)
                 try:
                     block_generator: Optional[BlockGenerator] = await get_block_generator(block, prev_blocks_dict)
                 except ValueError:
@@ -331,13 +320,11 @@ async def pre_validate_blocks_multiprocessing(
                         )
                     ]
                 if block_generator is not None:
-                    previous_generators.append(bytes(block_generator))
+                    previous_generators.append(block_generator)
                 else:
                     previous_generators.append(None)
             else:
-                if hb_pickled is None:
-                    hb_pickled = []
-                hb_pickled.append(bytes(block))
+                header_blocks.append(block)
 
         futures.append(
             asyncio.get_running_loop().run_in_executor(
@@ -345,10 +332,10 @@ async def pre_validate_blocks_multiprocessing(
                 batch_pre_validate_blocks,
                 constants_json,
                 final_pickled,
-                b_pickled,
-                hb_pickled,
+                full_blocks,
+                header_blocks,
                 previous_generators,
-                npc_results_pickled,
+                npc_results,
                 check_filter,
                 [diff_ssis[j][0] for j in range(i, end_i)],
                 [diff_ssis[j][1] for j in range(i, end_i)],
@@ -356,28 +343,21 @@ async def pre_validate_blocks_multiprocessing(
             )
         )
     # Collect all results into one flat list
-    return [
-        PreValidationResult.from_bytes(result)
-        for batch_result in (await asyncio.gather(*futures))
-        for result in batch_result
-    ]
+    return [result for batch_result in (await asyncio.gather(*futures)) for result in batch_result]
 
 
 def _run_generator(
-    constants_dict: bytes,
-    unfinished_block_bytes: bytes,
-    block_generator_bytes: bytes,
+    constants: ConsensusConstants,
+    unfinished_block: UnfinishedBlock,
+    block_generator: BlockGenerator,
     height: uint32,
-) -> Optional[bytes]:
+) -> NPCResult:
     """
     Runs the CLVM generator from bytes inputs. This is meant to be called under a ThreadPoolExecutor, in order to
     validate the heavy parts of a block (clvm program) in a different process.
     """
     try:
-        constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
-        unfinished_block: UnfinishedBlock = UnfinishedBlock.from_bytes(unfinished_block_bytes)
         assert unfinished_block.transactions_info is not None
-        block_generator: BlockGenerator = BlockGenerator.from_bytes(block_generator_bytes)
         assert block_generator.program == unfinished_block.transactions_generator
         npc_result: NPCResult = get_name_puzzle_conditions(
             block_generator,
@@ -386,8 +366,8 @@ def _run_generator(
             mempool_mode=False,
             height=height,
         )
-        return bytes(npc_result)
+        return npc_result
     except ValidationError as e:
-        return bytes(NPCResult(uint16(e.code.value), None, uint64(0)))
+        return NPCResult(uint16(e.code.value), None, uint64(0))
     except Exception:
-        return bytes(NPCResult(uint16(Err.UNKNOWN.value), None, uint64(0)))
+        return NPCResult(uint16(Err.UNKNOWN.value), None, uint64(0))

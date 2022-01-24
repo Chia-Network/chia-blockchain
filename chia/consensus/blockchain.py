@@ -637,22 +637,23 @@ class Blockchain(BlockchainInterface):
             validate_signatures=validate_signatures,
         )
 
-    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator, height: uint32) -> NPCResult:
+    async def run_generator(
+        self, unfinished_block: UnfinishedBlock, generator: BlockGenerator, height: uint32
+    ) -> NPCResult:
         task = asyncio.get_running_loop().run_in_executor(
             self.pool,
             _run_generator,
             self.constants_json,
             unfinished_block,
-            bytes(generator),
+            generator,
             height,
         )
-        npc_result_bytes = await task
-        if npc_result_bytes is None:
+        npc_result = await task
+        if npc_result is None:
             raise ConsensusError(Err.UNKNOWN)
-        ret = NPCResult.from_bytes(npc_result_bytes)
-        if ret.error is not None:
-            raise ConsensusError(ret.error)
-        return ret
+        if npc_result.error is not None:
+            raise ConsensusError(Err(npc_result.error))
+        return npc_result
 
     def contains_block(self, header_hash: bytes32) -> bool:
         """
