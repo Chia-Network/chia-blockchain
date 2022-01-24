@@ -158,9 +158,9 @@ class FullNode:
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
 
-        await self.connection.execute(
-            "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path))
-        )
+        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
+        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
+        await self.connection.execute("pragma synchronous={}".format(db_sync))
 
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
@@ -176,17 +176,16 @@ class FullNode:
 
         db_version: int = await lookup_db_version(self.connection)
 
-        self.db_wrapper = DBWrapper(
-            self.connection, self.config.get("allow_database_upgrades", False), db_version=db_version
-        )
+        self.db_wrapper = DBWrapper(self.connection, db_version=db_version)
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
         self.hint_store = await HintStore.create(self.db_wrapper)
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
+        reserved_cores = self.config.get("reserved_cores", 0)
         self.blockchain = await Blockchain.create(
-            self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent
+            self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent, reserved_cores
         )
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
 
@@ -213,6 +212,13 @@ class FullNode:
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
             self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
+            num_unspent = await self.coin_store.num_unspent()
+            if num_unspent > 0:
+                self.log.error(
+                    f"Inconsistent blockchain DB file! Could not find peak block but found {num_unspent} coins! "
+                    "This is a fatal error. The blockchain database may be corrupt"
+                )
+                raise RuntimeError("corrupt blockchain DB")
         else:
             self.log.info(
                 f"Blockchain initialized to peak {self.blockchain.get_peak().header_hash} height"
@@ -1039,17 +1045,17 @@ class FullNode:
         if len(blocks_to_validate) == 0:
             return True, False, fork_height, ([], {})
 
+        # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
+        # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.time()
-        pre_validation_results: Optional[
-            List[PreValidationResult]
-        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {}, wp_summaries=wp_summaries)
+        pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
+            blocks_to_validate, {}, wp_summaries=wp_summaries, validate_signatures=True
+        )
         pre_validate_end = time.time()
         if pre_validate_end - pre_validate_start > 10:
             self.log.warning(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
         else:
             self.log.debug(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
-        if pre_validation_results is None:
-            return False, False, None, ([], {})
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
@@ -1405,6 +1411,8 @@ class FullNode:
                 and unf_block.transactions_generator is not None
                 and unf_block.foliage_transaction_block == block.foliage_transaction_block
             ):
+                # We checked that the transaction block is the same, therefore all transactions and the signature
+                # must be identical in the unfinished and finished blocks. We can therefore use the cache.
                 pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
                 assert pre_validation_result is not None
                 block = dataclasses.replace(
@@ -1449,11 +1457,16 @@ class FullNode:
             npc_results = {}
             if pre_validation_result is not None and pre_validation_result.npc_result is not None:
                 npc_results[block.height] = pre_validation_result.npc_result
-            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
+
+            # Don't validate signatures because we want to validate them in the main thread later, since we have a
+            # cache available
+            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(
+                [block], npc_results, validate_signatures=False
+            )
             added: Optional[ReceiveBlockResult] = None
             pre_validation_time = time.time() - validation_start
             try:
-                if pre_validation_results is None:
+                if len(pre_validation_results) < 1:
                     raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
                 if pre_validation_results[0].error is not None:
                     if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
@@ -1658,6 +1671,9 @@ class FullNode:
                     return
                 raise ConsensusError(Err(validate_result.error))
             validation_time = time.time() - validation_start
+
+        # respond_block will later use the cache (validated_signature=True)
+        validate_result = dataclasses.replace(validate_result, validated_signature=True)
 
         assert validate_result.required_iters is not None
 

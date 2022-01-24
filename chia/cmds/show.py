@@ -133,6 +133,10 @@ async def show_async(
                     connection_peak_hash = con["peak_hash"]
                     if connection_peak_hash is None:
                         connection_peak_hash = "No Info"
+                    else:
+                        if connection_peak_hash.startswith(("0x", "0X")):
+                            connection_peak_hash = connection_peak_hash[2:]
+                        connection_peak_hash = f"{connection_peak_hash[:8]}..."
                     if peak_height is None:
                         peak_height = 0
                     con_str = (
@@ -142,7 +146,7 @@ async def show_async(
                         f"{last_connect}  "
                         f"{mb_up:7.1f}|{mb_down:<7.1f}"
                         f"\n                                                 "
-                        f"-SB Height: {peak_height:8.0f}    -Hash: {connection_peak_hash[2:10]}..."
+                        f"-SB Height: {peak_height:8.0f}    -Hash: {connection_peak_hash}"
                     )
                 else:
                     con_str = (

@@ -10,7 +10,7 @@ from pathlib import Path
 from clvm.casts import int_from_bytes
 
 from chia.consensus.block_body_validation import validate_block_body
-from chia.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
+from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
@@ -100,6 +100,7 @@ class Blockchain(BlockchainInterface):
         consensus_constants: ConsensusConstants,
         hint_store: HintStore,
         blockchain_dir: Path,
+        reserved_cores: int,
     ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -112,7 +113,7 @@ class Blockchain(BlockchainInterface):
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
-        num_workers = max(cpu_count - 2, 1)
+        num_workers = max(cpu_count - reserved_cores, 1)
         self.pool = ProcessPoolExecutor(max_workers=num_workers)
         log.info(f"Started {num_workers} processes for block validation")
 
@@ -176,7 +177,7 @@ class Blockchain(BlockchainInterface):
     async def receive_block(
         self,
         block: FullBlock,
-        pre_validation_result: Optional[PreValidationResult] = None,
+        pre_validation_result: PreValidationResult,
         fork_point_with_peak: Optional[uint32] = None,
     ) -> Tuple[
         ReceiveBlockResult,
@@ -190,7 +191,20 @@ class Blockchain(BlockchainInterface):
         blockchain, regardless of whether it is the child of a head, or another block.
         Returns a header if block is added to head. Returns an error if the block is
         invalid. Also returns the fork height, in the case of a new peak.
+
+        Args:
+            block: The FullBlock to be validated.
+            pre_validation_result: A result of successful pre validation
+            fork_point_with_peak: The fork point, for efficiency reasons, if None, it will be recomputed
+
+        Returns:
+            The result of adding the block to the blockchain (NEW_PEAK, ADDED_AS_ORPHAN, INVALID_BLOCK,
+                DISCONNECTED_BLOCK, ALREDY_HAVE_BLOCK)
+            An optional error if the result is not NEW_PEAK or ADDED_AS_ORPHAN
+            A fork point if the result is NEW_PEAK
+            A list of changes to the coin store, and changes to hints, if the result is NEW_PEAK
         """
+
         genesis: bool = block.height == 0
         if self.contains_block(block.header_hash):
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None, ([], {})
@@ -201,53 +215,12 @@ class Blockchain(BlockchainInterface):
         if not genesis and (self.block_record(block.prev_header_hash).height + 1) != block.height:
             return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None, ([], {})
 
-        npc_result: Optional[NPCResult] = None
-        if pre_validation_result is None:
-            if block.height == 0:
-                prev_b: Optional[BlockRecord] = None
-            else:
-                prev_b = self.block_record(block.prev_header_hash)
-            sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-                self.constants, len(block.finished_sub_slots) > 0, prev_b, self
-            )
-
-            if block.is_transaction_block():
-                if block.transactions_generator is not None:
-                    try:
-                        block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
-                    except ValueError:
-                        return ReceiveBlockResult.INVALID_BLOCK, Err.GENERATOR_REF_HAS_NO_GENERATOR, None, ([], {})
-                    assert block_generator is not None and block.transactions_info is not None
-                    npc_result = get_name_puzzle_conditions(
-                        block_generator,
-                        min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
-                        cost_per_byte=self.constants.COST_PER_BYTE,
-                        mempool_mode=False,
-                    )
-                    removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
-                else:
-                    removals, tx_additions = [], []
-                header_block = get_block_header(block, tx_additions, removals)
-            else:
-                npc_result = None
-                header_block = get_block_header(block, [], [])
-
-            required_iters, error = validate_finished_header_block(
-                self.constants,
-                self,
-                header_block,
-                False,
-                difficulty,
-                sub_slot_iters,
-            )
-
-            if error is not None:
-                return ReceiveBlockResult.INVALID_BLOCK, error.code, None, ([], {})
-        else:
-            npc_result = pre_validation_result.npc_result
-            required_iters = pre_validation_result.required_iters
-            assert pre_validation_result.error is None
+        npc_result: Optional[NPCResult] = pre_validation_result.npc_result
+        required_iters = pre_validation_result.required_iters
+        if pre_validation_result.error is not None:
+            return ReceiveBlockResult.INVALID_BLOCK, Err(pre_validation_result.error), None, ([], {})
         assert required_iters is not None
+
         error_code, _ = await validate_block_body(
             self.constants,
             self,
@@ -259,6 +232,8 @@ class Blockchain(BlockchainInterface):
             npc_result,
             fork_point_with_peak,
             self.get_block_generator,
+            # If we did not already validate the signature, validate it now
+            validate_signature=not pre_validation_result.validated_signature,
         )
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code, None, ([], {})
@@ -579,7 +554,7 @@ class Blockchain(BlockchainInterface):
             not self.contains_block(block.prev_header_hash)
             and not block.prev_header_hash == self.constants.GENESIS_CHALLENGE
         ):
-            return PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None)
+            return PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False)
 
         unfinished_header_block = UnfinishedHeaderBlock(
             block.finished_sub_slots,
@@ -605,8 +580,7 @@ class Blockchain(BlockchainInterface):
         )
 
         if error is not None:
-            return PreValidationResult(uint16(error.code.value), None, None)
-
+            return PreValidationResult(uint16(error.code.value), None, None, False)
         prev_height = (
             -1
             if block.prev_header_hash == self.constants.GENESIS_CHALLENGE
@@ -624,21 +598,23 @@ class Blockchain(BlockchainInterface):
             npc_result,
             None,
             self.get_block_generator,
-            False,
+            validate_signature=False,  # Signature was already validated before calling this method, no need to validate
         )
 
         if error_code is not None:
-            return PreValidationResult(uint16(error_code.value), None, None)
+            return PreValidationResult(uint16(error_code.value), None, None, False)
 
-        return PreValidationResult(None, required_iters, cost_result)
+        return PreValidationResult(None, required_iters, cost_result, False)
 
     async def pre_validate_blocks_multiprocessing(
         self,
         blocks: List[FullBlock],
-        npc_results: Dict[uint32, NPCResult],
+        npc_results: Dict[uint32, NPCResult],  # A cache of the result of running CLVM, optional (you can use {})
         batch_size: int = 4,
         wp_summaries: Optional[List[SubEpochSummary]] = None,
-    ) -> Optional[List[PreValidationResult]]:
+        *,
+        validate_signatures: bool,
+    ) -> List[PreValidationResult]:
         return await pre_validate_blocks_multiprocessing(
             self.constants,
             self.constants_json,
@@ -650,6 +626,7 @@ class Blockchain(BlockchainInterface):
             self.get_block_generator,
             batch_size,
             wp_summaries,
+            validate_signatures=validate_signatures,
         )
 
     async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator) -> NPCResult:
@@ -660,12 +637,13 @@ class Blockchain(BlockchainInterface):
             unfinished_block,
             bytes(generator),
         )
-        error, npc_result_bytes = await task
-        if error is not None:
-            raise ConsensusError(error)
+        npc_result_bytes = await task
         if npc_result_bytes is None:
             raise ConsensusError(Err.UNKNOWN)
-        return NPCResult.from_bytes(npc_result_bytes)
+        ret = NPCResult.from_bytes(npc_result_bytes)
+        if ret.error is not None:
+            raise ConsensusError(ret.error)
+        return ret
 
     def contains_block(self, header_hash: bytes32) -> bool:
         """
@@ -847,22 +825,12 @@ class Blockchain(BlockchainInterface):
             self.__heights_in_cache[block_record.height] = set()
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
 
-    # TODO: address hint error and remove ignore
-    #       error: Argument 1 of "persist_sub_epoch_challenge_segments" is incompatible with supertype
-    #       "BlockchainInterface"; supertype defines the argument type as "uint32"  [override]
-    #       note: This violates the Liskov substitution principle
-    #       note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
-    async def persist_sub_epoch_challenge_segments(  # type: ignore[override]
+    async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ):
         return await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
-    # TODO: address hint error and remove ignore
-    #       error: Argument 1 of "get_sub_epoch_challenge_segments" is incompatible with supertype
-    #       "BlockchainInterface"; supertype defines the argument type as "uint32"  [override]
-    #       note: This violates the Liskov substitution principle
-    #       note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
-    async def get_sub_epoch_challenge_segments(  # type: ignore[override]
+    async def get_sub_epoch_challenge_segments(
         self,
         ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:

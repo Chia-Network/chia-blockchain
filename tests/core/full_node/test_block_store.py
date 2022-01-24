@@ -9,6 +9,7 @@ from chia.consensus.blockchain import Blockchain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
+from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.db_connection import DBConnection
 from tests.setup_nodes import bt, test_constants
 
@@ -23,7 +24,6 @@ def event_loop():
 
 class TestBlockStore:
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_block_store(self, tmp_dir, db_version):
         assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(10)
@@ -34,14 +34,14 @@ class TestBlockStore:
             coin_store_2 = await CoinStore.create(db_wrapper_2)
             store_2 = await BlockStore.create(db_wrapper_2)
             hint_store = await HintStore.create(db_wrapper_2)
-            bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir)
+            bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir, 2)
 
             store = await BlockStore.create(db_wrapper)
             await BlockStore.create(db_wrapper_2)
 
             # Save/get block
             for block in blocks:
-                await bc.receive_block(block)
+                await _validate_and_add_block(bc, block)
                 block_record = bc.block_record(block.header_hash)
                 block_record_hh = block_record.header_hash
                 await store.add_full_block(block.header_hash, block, block_record)
@@ -62,7 +62,6 @@ class TestBlockStore:
             assert len(block_record_records) == len(blocks)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_deadlock(self, tmp_dir, db_version):
         """
         This test was added because the store was deadlocking in certain situations, when fetching and
@@ -76,10 +75,10 @@ class TestBlockStore:
             coin_store_2 = await CoinStore.create(wrapper_2)
             store_2 = await BlockStore.create(wrapper_2)
             hint_store = await HintStore.create(wrapper_2)
-            bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir)
+            bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir, 2)
             block_records = []
             for block in blocks:
-                await bc.receive_block(block)
+                await _validate_and_add_block(bc, block)
                 block_records.append(bc.block_record(block.header_hash))
             tasks = []
 
@@ -105,12 +104,12 @@ class TestBlockStore:
             coin_store = await CoinStore.create(db_wrapper)
             block_store = await BlockStore.create(db_wrapper)
             hint_store = await HintStore.create(db_wrapper)
-            bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, tmp_dir)
+            bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, tmp_dir, 2)
 
             # insert all blocks
             count = 0
             for block in blocks:
-                await bc.receive_block(block)
+                await _validate_and_add_block(bc, block)
                 count += 1
                 ret = await block_store.get_random_not_compactified(count)
                 assert len(ret) == count

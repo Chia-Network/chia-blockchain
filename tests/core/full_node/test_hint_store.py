@@ -9,6 +9,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
+from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from tests.util.db_connection import DBConnection
 from tests.wallet_tools import WalletTool
 from tests.setup_nodes import bt
@@ -25,7 +26,6 @@ log = logging.getLogger(__name__)
 
 class TestHintStore:
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("db_version", [1, 2])
     async def test_basic_store(self, db_version):
         async with DBConnection(db_version) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
@@ -63,7 +63,7 @@ class TestHintStore:
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         for block in blocks:
-            await blockchain.receive_block(block)
+            await _validate_and_add_block(blockchain, block)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
         puzzle_hash = 32 * b"\0"
@@ -85,7 +85,7 @@ class TestHintStore:
         )
 
         for block in blocks:
-            await blockchain.receive_block(block)
+            await _validate_and_add_block_no_error(blockchain, block)
 
         get_hint = await blockchain.hint_store.get_coin_ids(hint)
 

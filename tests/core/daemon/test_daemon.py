@@ -1,6 +1,6 @@
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
-from tests.block_tools import BlockTools, create_block_tools, create_block_tools_async
+from tests.block_tools import BlockTools, create_block_tools_async
 from chia.util.ints import uint16
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload
@@ -11,38 +11,26 @@ from tests.time_out_assert import time_out_assert, time_out_assert_custom_interv
 from tests.util.keyring import TempKeyring
 
 import asyncio
-import atexit
 import json
 
 import aiohttp
 import pytest
 
 
-def cleanup_keyring(keyring: TempKeyring):
-    keyring.cleanup()
-
-
-temp_keyring1 = TempKeyring()
-temp_keyring2 = TempKeyring()
-atexit.register(cleanup_keyring, temp_keyring1)
-atexit.register(cleanup_keyring, temp_keyring2)
-b_tools = create_block_tools(constants=test_constants_modified, keychain=temp_keyring1.get_keychain())
-b_tools_1 = create_block_tools(constants=test_constants_modified, keychain=temp_keyring2.get_keychain())
-new_config = b_tools._config
-new_config["daemon_port"] = 55401
-b_tools.change_config(new_config)
-
-
 class TestDaemon:
     @pytest.fixture(scope="function")
-    async def get_daemon(self):
-        async for _ in setup_daemon(btools=b_tools):
+    async def get_daemon(self, get_b_tools):
+        async for _ in setup_daemon(btools=get_b_tools):
             yield _
 
+    # TODO: Ideally, the db_version should be the (parameterized) db_version
+    # fixture, to test all versions of the database schema. This doesn't work
+    # because of a hack in shutting down the full node, which means you cannot run
+    # more than one simulations per process.
     @pytest.fixture(scope="function")
-    async def simulation(self):
+    async def simulation(self, get_b_tools, get_b_tools_1):
         async for _ in setup_full_system(
-            b_tools_1.constants, b_tools=b_tools, b_tools_1=b_tools_1, connect_to_daemon=True
+            test_constants_modified, b_tools=get_b_tools, b_tools_1=get_b_tools_1, connect_to_daemon=True, db_version=1
         ):
             yield _
 
@@ -50,6 +38,10 @@ class TestDaemon:
     async def get_temp_keyring(self):
         with TempKeyring() as keychain:
             yield keychain
+
+    @pytest.fixture(scope="function")
+    async def get_b_tools_1(self, get_temp_keyring):
+        return await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
 
     @pytest.fixture(scope="function")
     async def get_b_tools(self, get_temp_keyring):
@@ -65,7 +57,7 @@ class TestDaemon:
             yield get_b_tools
 
     @pytest.mark.asyncio
-    async def test_daemon_simulation(self, simulation, get_daemon):
+    async def test_daemon_simulation(self, simulation, get_daemon, get_b_tools):
         node1, node2, _, _, _, _, _, _, _, server1 = simulation
         await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
 
@@ -77,7 +69,7 @@ class TestDaemon:
 
         await time_out_assert(1500, node_height_at_least, True, node2, 1)
         session = aiohttp.ClientSession()
-        ssl_context = b_tools.get_daemon_ssl_context()
+        ssl_context = get_b_tools.get_daemon_ssl_context()
 
         ws = await session.ws_connect(
             "wss://127.0.0.1:55401",

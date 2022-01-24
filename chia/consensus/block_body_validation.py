@@ -50,6 +50,7 @@ async def validate_block_body(
     npc_result: Optional[NPCResult],
     fork_point_with_peak: Optional[uint32],
     get_block_generator: Callable,
+    *,
     validate_signature=True,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
     """
