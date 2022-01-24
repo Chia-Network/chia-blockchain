@@ -1,7 +1,9 @@
 import logging
+import traceback
 
 from dataclasses import dataclass, field
 from enum import Enum
+from os import stat_result
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -130,6 +132,18 @@ def get_filenames(directory: Path) -> List[Path]:
     except Exception as e:
         log.warning(f"Error reading directory {directory} {e}")
     return all_files
+
+
+def load_file(file_path: Path) -> Optional[Tuple[stat_result, DiskProver]]:
+    try:
+        stat_info = file_path.stat()
+        prover = DiskProver(str(file_path))
+    except Exception as e:
+        tb = traceback.format_exc()
+        log.error(f"Failed to open file {file_path}. {e} {tb}")
+        return None
+
+    return stat_info, prover
 
 
 def parse_plot_info(memo: bytes) -> Tuple[Union[G1Element, bytes32], G1Element, PrivateKey]:
