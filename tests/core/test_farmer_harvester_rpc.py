@@ -237,7 +237,7 @@ class TestRpc:
 
             assert len((await client.get_pool_state())["pool_state"]) == 0
             all_sks = farmer_api.farmer.local_keychain.get_all_private_keys()
-            auth_sk = master_sk_to_pooling_authentication_sk(all_sks[0][0], 2, 1)
+            auth_sk = master_sk_to_pooling_authentication_sk(all_sks[0][0], 0, 1)
             pool_list = [
                 {
                     "launcher_id": "ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa",

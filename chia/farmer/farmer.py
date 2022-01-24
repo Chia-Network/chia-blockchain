@@ -177,8 +177,8 @@ class Farmer:
         # From p2_singleton_puzzle_hash to pool state dict
         self.pool_state: Dict[bytes32, Dict] = {}
 
-        # From public key bytes to PrivateKey
-        self.authentication_keys: Dict[bytes, PrivateKey] = {}
+        # From p2_singleton PrivateKey
+        self.authentication_keys: Dict[bytes32, PrivateKey] = {}
 
         # Last time we updated pool_state based on the config file
         self.last_config_access_time: uint64 = uint64(0)
@@ -289,7 +289,6 @@ class Farmer:
     async def _pool_get_farmer(
         self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, authentication_sk: PrivateKey
     ) -> Optional[Dict]:
-        assert authentication_sk.get_g1() == pool_config.authentication_public_key
         authentication_token = get_current_authentication_token(authentication_token_timeout)
         message: bytes32 = std_hash(
             AuthenticationPayload(
@@ -410,13 +409,13 @@ class Farmer:
 
             try:
                 authentication_sk: Optional[PrivateKey] = await find_authentication_sk(
-                    self.all_root_sks, pool_config.authentication_public_key
+                    self.all_root_sks, pool_config.owner_public_key
                 )
                 if authentication_sk is None:
-                    self.log.error(f"Could not find authentication sk for pk: {pool_config.authentication_public_key}")
+                    self.log.error(f"Could not find authentication sk for {p2_singleton_puzzle_hash}")
                     continue
                 if p2_singleton_puzzle_hash not in self.pool_state:
-                    self.authentication_keys[bytes(pool_config.authentication_public_key)] = authentication_sk
+                    self.authentication_keys[p2_singleton_puzzle_hash] = authentication_sk
                     self.pool_state[p2_singleton_puzzle_hash] = {
                         "points_found_since_start": 0,
                         "points_found_24h": [],
@@ -483,9 +482,12 @@ class Farmer:
                         farmer_info, farmer_is_known = await update_pool_farmer_info()
                         if farmer_info is None and farmer_is_known is not None and not farmer_is_known:
                             # Make the farmer known on the pool with a POST /farmer
-                            owner_sk = await find_owner_sk(self.all_root_sks, pool_config.owner_public_key)
+                            owner_sk_and_index: Optional[PrivateKey, uint32] = await find_owner_sk(
+                                self.all_root_sks, pool_config.owner_public_key
+                            )
+                            assert owner_sk_and_index is not None
                             post_response = await self._pool_post_farmer(
-                                pool_config, authentication_token_timeout, owner_sk
+                                pool_config, authentication_token_timeout, owner_sk_and_index[0]
                             )
                             if post_response is not None and "error_code" not in post_response:
                                 self.log.info(
@@ -502,9 +504,12 @@ class Farmer:
                             farmer_info is not None
                             and pool_config.payout_instructions.lower() != farmer_info.payout_instructions.lower()
                         ):
-                            owner_sk = await find_owner_sk(self.all_root_sks, pool_config.owner_public_key)
+                            owner_sk_and_index: Optional[PrivateKey, uint32] = await find_owner_sk(
+                                self.all_root_sks, pool_config.owner_public_key
+                            )
+                            assert owner_sk_and_index is not None
                             put_farmer_response_dict = await self._pool_put_farmer(
-                                pool_config, authentication_token_timeout, owner_sk
+                                pool_config, authentication_token_timeout, owner_sk_and_index[0]
                             )
                             try:
                                 # put_farmer_response: PutFarmerResponse = PutFarmerResponse.from_json_dict(
@@ -604,12 +609,11 @@ class Farmer:
             pool_config: PoolWalletConfig = pool_state["pool_config"]
             if pool_config.launcher_id == launcher_id:
                 authentication_sk: Optional[PrivateKey] = await find_authentication_sk(
-                    self.all_root_sks, pool_config.authentication_public_key
+                    self.all_root_sks, pool_config.owner_public_key
                 )
                 if authentication_sk is None:
                     self.log.error(f"Could not find authentication sk for pk: {pool_config.authentication_public_key}")
                     continue
-                assert authentication_sk.get_g1() == pool_config.authentication_public_key
                 authentication_token_timeout = pool_state["authentication_token_timeout"]
                 authentication_token = get_current_authentication_token(authentication_token_timeout)
                 message: bytes32 = std_hash(

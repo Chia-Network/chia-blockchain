@@ -526,14 +526,17 @@ class WalletRpcApi:
                 from chia.pools.pool_wallet_info import initial_pool_state_from_dict
 
                 async with self.service.wallet_state_manager.lock:
-                    last_wallet: Optional[
-                        WalletInfo
-                    ] = await self.service.wallet_state_manager.user_store.get_last_wallet()
-                    assert last_wallet is not None
-
-                    next_id = last_wallet.id + 1
+                    # We assign a unique id to each pool wallet, so that each one gets it's own deterministic owner
+                    # and auth keys. The public keys will go on the blockchain, and the private keys can be found
+                    # using the root SK and trying each index from zero.
+                    max_pwi = 1
+                    for _, wallet in self.service.wallet_state_manager.wallets.items():
+                        if wallet.type() == WalletType.POOLING_WALLET:
+                            pool_wallet_index = await wallet.get_pool_wallet_index()
+                            if pool_wallet_index > max_pwi:
+                                max_pwi = pool_wallet_index
                     owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
-                        self.service.wallet_state_manager.private_key, uint32(next_id)
+                        self.service.wallet_state_manager.private_key, uint32(max_pwi + 1)
                     )
                     owner_pk: G1Element = owner_sk.get_g1()
 
