@@ -66,7 +66,7 @@ class DataLayerRpcApi:
             txs, value = await self.service.create_store()
         except ValueError as e:
             log.error(f"failed creating wallet for store {e}")
-            return e.args[0]
+            return {"error": e.args[0]}
         return {"txs": txs, "id": value.hex()}
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
