@@ -43,7 +43,7 @@ class FullNodeSimulator(FullNodeAPI):
         self.bt = block_tools
         self.full_node = full_node
         self.config = full_node.config
-        self.time_per_block = None
+        self.time_per_block: Optional[float] = None
         if "simulation" in self.config and self.config["simulation"] is True:
             self.use_current_time = True
         else:
@@ -267,7 +267,7 @@ class FullNodeSimulator(FullNodeAPI):
         ids_to_check: Set[bytes32] = set()
         for record in records:
             if record.spend_bundle is None:
-                raise ValueError(f"Transaction record has no spend bundle: {record!r}")
+                continue
 
             ids_to_check.add(record.spend_bundle.name())
 
@@ -346,7 +346,7 @@ class FullNodeSimulator(FullNodeAPI):
         outputs: List[AmountWithPuzzlehash] = []
         for amount in amounts:
             puzzle_hash = await wallet.get_new_puzzlehash()
-            outputs.append({"puzzlehash": puzzle_hash, "amount": uint64(amount)})
+            outputs.append({"puzzlehash": puzzle_hash, "amount": uint64(amount), "memos": []})
 
         transaction_records: List[TransactionRecord] = []
         outputs_iterator = iter(outputs)

@@ -41,7 +41,7 @@ def read_file(filename: Path) -> str:
 
 # Input file
 def workflow_yaml_template_text(os):
-    return read_file(Path(root_path / f"runner-templates/build-test-{os}"))
+    return read_file(Path(root_path / f"runner_templates/build-test-{os}"))
 
 
 # Output files
@@ -64,9 +64,9 @@ def transform_template(template_text, replacements):
 # Replace with update_config
 def generate_replacements(conf, dir):
     replacements = {
-        "INSTALL_TIMELORD": read_file(Path(root_path / "runner-templates/install-timelord.include.yml")).rstrip(),
+        "INSTALL_TIMELORD": read_file(Path(root_path / "runner_templates/install-timelord.include.yml")).rstrip(),
         "CHECKOUT_TEST_BLOCKS_AND_PLOTS": read_file(
-            Path(root_path / "runner-templates/checkout-test-plots.include.yml")
+            Path(root_path / "runner_templates/checkout-test-plots.include.yml")
         ).rstrip(),
         "TEST_DIR": "",
         "TEST_NAME": "",

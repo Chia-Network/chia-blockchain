@@ -100,6 +100,7 @@ class Blockchain(BlockchainInterface):
         consensus_constants: ConsensusConstants,
         hint_store: HintStore,
         blockchain_dir: Path,
+        reserved_cores: int,
     ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -112,7 +113,7 @@ class Blockchain(BlockchainInterface):
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
-        num_workers = max(cpu_count - 2, 1)
+        num_workers = max(cpu_count - reserved_cores, 1)
         self.pool = ProcessPoolExecutor(max_workers=num_workers)
         log.info(f"Started {num_workers} processes for block validation")
 
@@ -363,6 +364,7 @@ class Blockchain(BlockchainInterface):
                     )
                 else:
                     added, _ = [], []
+                await self.block_store.set_in_chain([(block_record.header_hash,)])
                 await self.block_store.set_peak(block_record.header_hash)
                 return uint32(0), uint32(0), [block_record], (added, {})
             return None, None, [], ([], {})
@@ -385,6 +387,7 @@ class Blockchain(BlockchainInterface):
 
             # Rollback sub_epoch_summaries
             self.__height_map.rollback(fork_height)
+            await self.block_store.rollback(fork_height)
 
             # Collect all blocks from fork point to new peak
             blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
@@ -445,6 +448,8 @@ class Blockchain(BlockchainInterface):
                             if key not in hint_coin_state:
                                 hint_coin_state[key] = {}
                             hint_coin_state[key][coin_id] = lastest_coin_state[coin_id]
+
+            await self.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
@@ -656,12 +661,13 @@ class Blockchain(BlockchainInterface):
             unfinished_block,
             bytes(generator),
         )
-        error, npc_result_bytes = await task
-        if error is not None:
-            raise ConsensusError(error)
+        npc_result_bytes = await task
         if npc_result_bytes is None:
             raise ConsensusError(Err.UNKNOWN)
-        return NPCResult.from_bytes(npc_result_bytes)
+        ret = NPCResult.from_bytes(npc_result_bytes)
+        if ret.error is not None:
+            raise ConsensusError(ret.error)
+        return ret
 
     def contains_block(self, header_hash: bytes32) -> bool:
         """
@@ -843,22 +849,12 @@ class Blockchain(BlockchainInterface):
             self.__heights_in_cache[block_record.height] = set()
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
 
-    # TODO: address hint error and remove ignore
-    #       error: Argument 1 of "persist_sub_epoch_challenge_segments" is incompatible with supertype
-    #       "BlockchainInterface"; supertype defines the argument type as "uint32"  [override]
-    #       note: This violates the Liskov substitution principle
-    #       note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
-    async def persist_sub_epoch_challenge_segments(  # type: ignore[override]
+    async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ):
         return await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
-    # TODO: address hint error and remove ignore
-    #       error: Argument 1 of "get_sub_epoch_challenge_segments" is incompatible with supertype
-    #       "BlockchainInterface"; supertype defines the argument type as "uint32"  [override]
-    #       note: This violates the Liskov substitution principle
-    #       note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
-    async def get_sub_epoch_challenge_segments(  # type: ignore[override]
+    async def get_sub_epoch_challenge_segments(
         self,
         ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:

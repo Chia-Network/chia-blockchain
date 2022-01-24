@@ -232,6 +232,7 @@ async def run_add_block_benchmark(version: int):
                 full_block,
                 record,
             )
+            await block_store.set_in_chain([(header_hash,)])
             header_hashes.append(header_hash)
             await block_store.set_peak(header_hash)
             await db_wrapper.db.commit()

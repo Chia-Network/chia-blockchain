@@ -86,7 +86,6 @@ class SpendSim:
             coin,
             uint32(self.block_height + 1),
             uint32(0),
-            False,
             coinbase,
             self.timestamp,
         )
