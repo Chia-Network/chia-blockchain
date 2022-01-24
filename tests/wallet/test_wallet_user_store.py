@@ -50,7 +50,7 @@ class TestWalletUserStore:
 
             assert (await store.get_wallet_by_id(7)) is None
             assert (await store.get_wallet_by_id(6)) == wallet
-            assert store.get_last_wallet() == wallet
+            assert await store.get_last_wallet() == wallet
 
         finally:
             await db_connection.close()
