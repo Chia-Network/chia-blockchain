@@ -183,7 +183,7 @@ class FullNode:
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
-        reserved_cores = self.config.get("reserved_cores", 2)
+        reserved_cores = self.config.get("reserved_cores", 0)
         self.blockchain = await Blockchain.create(
             self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent, reserved_cores
         )
