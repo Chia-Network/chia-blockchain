@@ -21,6 +21,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
+from chia.wallet.derive_keys import find_authentication_sk, find_owner_sk
 from tests.block_tools import get_plot_dir
 from chia.util.config import load_config
 from chia.util.ints import uint16, uint32
@@ -372,6 +373,60 @@ class TestPoolWalletRpc:
             await client.pw_status(2)
         with pytest.raises(ValueError):
             await client.pw_status(3)
+
+        # Create some CAT wallets to increase wallet IDs
+        for i in range(5):
+            res = await client.create_new_cat_and_wallet(20)
+            await asyncio.sleep(2)
+            summaries_response = await client.get_wallets()
+            assert res["success"]
+            cat_0_id = res["wallet_id"]
+            asset_id = bytes.fromhex(res["asset_id"])
+            assert len(asset_id) > 0
+            await self.farm_blocks(full_node_api, our_ph_2, 6)
+            await asyncio.sleep(2)
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            assert bal_0["confirmed_wallet_balance"] == 20
+
+        # Test creation of many pool wallets
+        if fee == 0 and not trusted:
+            for i in range(25):
+                creation_tx_3: TransactionRecord = await client.create_new_pool_wallet(
+                    our_ph_1, "localhost", 5, "localhost:5000", "new", "FARMING_TO_POOL", fee
+                )
+                await time_out_assert(
+                    10,
+                    full_node_api.full_node.mempool_manager.get_spendbundle,
+                    creation_tx_3.spend_bundle,
+                    creation_tx_3.name,
+                )
+                await self.farm_blocks(full_node_api, our_ph_2, 2)
+                await asyncio.sleep(2)
+
+                full_config: Dict = load_config(wallet_0.wallet_state_manager.root_path, "config.yaml")
+                pool_list: List[Dict] = full_config["pool"]["pool_list"]
+                assert len(pool_list) == i + 3
+                if i == 0:
+                    # Ensures that the CAT creation does not cause pool wallet IDs to increment
+                    summaries_response = await client.get_wallets()
+                    print(summaries_response)
+                    for wallet in wallet_node_0.wallet_state_manager.wallets.values():
+                        if wallet.type() == WalletType.POOLING_WALLET:
+                            status: PoolWalletInfo = (await client.pw_status(wallet.id()))[0]
+                            print(await wallet.get_pool_wallet_index())
+                            assert (await wallet.get_pool_wallet_index()) < 5
+                            auth_sk = find_authentication_sk(
+                                [wallet_0.wallet_state_manager.private_key], status.current.owner_pubkey
+                            )
+                            assert auth_sk is not None
+                            owner_sk = find_owner_sk(
+                                [wallet_0.wallet_state_manager.private_key], status.current.owner_pubkey
+                            )
+                            assert owner_sk is not None
+                            assert owner_sk != auth_sk
+
+                            summaries_response = await client.get_wallets()
+            print(summaries_response)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True])
