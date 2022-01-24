@@ -120,6 +120,7 @@ class WalletRpcApi:
             "/create_new_dl": self.create_new_dl,
             "/dl_track_new": self.dl_track_new,
             "/dl_latest_singleton": self.dl_latest_singleton,
+            "/dl_singletons_by_root": self.dl_singletons_by_root,
             "/dl_update_root": self.dl_update_root,
             "/dl_history": self.dl_history,
         }
@@ -1377,6 +1378,19 @@ class WalletRpcApi:
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
                 record = await wallet.get_latest_singleton(bytes32.from_hexstr(request["launcher_id"]))
                 return {"singleton": None if record is None else record.to_json_dict()}
+
+        raise ValueError("No DataLayer wallet has been initialized")
+
+    async def dl_singletons_by_root(self, request) -> Dict:
+        """Get the singleton records that contain the specified root"""
+        if self.service.wallet_state_manager is None:
+            return {"success": False, "error": "not_initialized"}
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                records = await wallet.get_singletons_by_root(bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["root"]))
+                records_json = [rec.to_json_dict() for rec in records]
+                return {"singletons": records_json}
 
         raise ValueError("No DataLayer wallet has been initialized")
 

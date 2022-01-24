@@ -170,6 +170,20 @@ class DataLayerStore:
             return self._row_to_singleton_record(row)
         return None
 
+    async def get_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> List[SingletonRecord]:
+        cursor = await self.db_connection.execute(
+            "SELECT * from singleton_records WHERE launcher_id=? AND root=? ORDER BY generation DESC",
+            (launcher_id, root),
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            records.append(self._row_to_singleton_record(row))
+
+        return records
+
     async def set_confirmed(self, coin_id: bytes32, height: uint32) -> None:
         """
         Updates singleton record to be confirmed.
