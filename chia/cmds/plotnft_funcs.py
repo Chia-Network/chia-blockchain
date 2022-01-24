@@ -66,17 +66,25 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
     farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
     try:
         total_plot_nfts = len((await farmer_client.get_pool_state())["pool_state"])
-    except Exception:
-        prompt_continue = not input(
-            "Could not get total number of plot nfts, do you want to continue? "
-            "You can stop this from happening if you start your farmer."
-        )
-        if prompt_continue:
-            print("Aborting")
-            return
+    except Exception as e:
+        if isinstance(e, aiohttp.ClientConnectorError):
+            prompt_continue = not bool(
+                input(
+                    "Could not get total number of plot nfts, do you want to continue? "
+                    "You can stop this from happening if you start your farmer. ( True or False)"
+                )
+            )
+            if prompt_continue:
+                print("Aborting")
+                return
+            else:
+                total_plot_nfts = 0
+                print("Continuing")
         else:
-            total_plot_nfts = 0
-            print("Continuing")
+            print(f"Exception from 'wallet' {e}")
+            farmer_client.close()
+            await farmer_client.await_closed()
+            return
     farmer_client.close()
     await farmer_client.await_closed()
 
