@@ -114,7 +114,7 @@ class WalletRpcApi:
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_current_nfts": self.nft_get_current_nfts,
             "/nft_transfer_nft": self.nft_transfer_nft,
-            "/nft_create_trade_price_announcement": self.nft_create_trade_price_announcement
+            "/nft_create_trade_price_announcement": self.nft_create_trade_price_announcement,
             # RL wallet
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
