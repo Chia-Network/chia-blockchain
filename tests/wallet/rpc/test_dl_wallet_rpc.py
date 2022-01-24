@@ -140,7 +140,7 @@ class TestWalletRpc:
             assert new_singleton_record.root == new_root
             assert new_singleton_record.confirmed
 
-            assert await client.dl_history(launcher_id) == [singleton_record, new_singleton_record]
+            assert await client.dl_history(launcher_id) == [new_singleton_record, singleton_record]
 
             await client_2.dl_track_new(launcher_id)
 
@@ -152,7 +152,12 @@ class TestWalletRpc:
                     return False
 
             await time_out_assert(15, is_singleton_generation, True, client_2, launcher_id, 1)
-            assert await client_2.dl_history(launcher_id) == [singleton_record, new_singleton_record]
+            assert await client_2.dl_history(launcher_id) == [new_singleton_record, singleton_record]
+
+            assert await client.dl_history(launcher_id, min_generation=uint32(1)) == [new_singleton_record]
+            assert await client.dl_history(launcher_id, max_generation=uint32(0)) == [singleton_record]
+            assert await client.dl_history(launcher_id, num_results=uint32(1)) == [new_singleton_record]
+            assert await client.dl_history(launcher_id, num_results=uint32(2)) == [new_singleton_record, singleton_record]
         finally:
             # Checks that the RPC manages to stop the node
             client.close()

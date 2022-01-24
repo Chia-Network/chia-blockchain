@@ -1402,8 +1402,17 @@ class WalletRpcApi:
 
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                history = await wallet.get_history(bytes32.from_hexstr(request["launcher_id"]))
+                additional_kwargs = {}
+
+                if "min_generation" in request:
+                    additional_kwargs["min_generation"] = uint32(request["min_generation"])
+                if "max_generation" in request:
+                    additional_kwargs["max_generation"] = uint32(request["max_generation"])
+                if "num_results" in request:
+                    additional_kwargs["num_results"] = uint32(request["num_results"])
+
+                history = await wallet.get_history(bytes32.from_hexstr(request["launcher_id"]), **additional_kwargs)
                 history_json = [rec.to_json_dict() for rec in history]
-                return {"history": history_json}
+                return {"history": history_json, "count": len(history_json)}
 
         raise ValueError("No DataLayer wallet has been initialized")

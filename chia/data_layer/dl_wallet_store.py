@@ -108,11 +108,29 @@ class DataLayerStore:
             if not in_transaction:
                 self.db_wrapper.lock.release()
 
-    async def get_all_singletons_for_launcher(self, launcher_id: bytes32) -> List[SingletonRecord]:
+    async def get_all_singletons_for_launcher(
+        self,
+        launcher_id: bytes32,
+        min_generation: Optional[uint32] = None,
+        max_generation: Optional[uint32] = None,
+        num_results: Optional[uint32] = None,
+    ) -> List[SingletonRecord]:
         """
         Returns all stored singletons.
         """
-        cursor = await self.db_connection.execute("SELECT * from singleton_records WHERE launcher_id=?", (launcher_id,))
+        query_params: Tuple = (launcher_id,)
+        for optional_param in (min_generation, max_generation, num_results):
+            if optional_param is not None:
+                query_params = (*query_params, optional_param)
+
+        cursor = await self.db_connection.execute(
+            "SELECT * from singleton_records WHERE launcher_id=? "
+            f"{'AND generation >=? ' if min_generation is not None else ''}"
+            f"{'AND generation <=? ' if max_generation is not None else ''}"
+            "ORDER BY generation DESC"
+            f"{' LIMIT ?' if num_results is not None else ''}",
+            query_params,
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []

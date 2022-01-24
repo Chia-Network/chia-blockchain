@@ -494,7 +494,23 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("dl_update_root", request)
         return TransactionRecord.from_json_dict_convenience(response["tx_record"])
 
-    async def dl_history(self, launcher_id: bytes32) -> List[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex()}
+    async def dl_history(
+        self,
+        launcher_id: bytes32,
+        min_generation: Optional[uint32] = None,
+        max_generation: Optional[uint32] = None,
+        num_results: Optional[uint32] = None,
+    ) -> List[SingletonRecord]:
+        request = {
+            "launcher_id": launcher_id.hex()
+        }
+
+        if min_generation is not None:
+            request["min_generation"] = min_generation
+        if max_generation is not None:
+            request["max_generation"] = max_generation
+        if num_results is not None:
+            request["num_results"] = num_results
+
         response = await self.fetch("dl_history", request)
         return [SingletonRecord.from_json_dict(single) for single in response["history"]]
