@@ -1,12 +1,16 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 class DataLayerRpcClient(RpcClient):
-    async def create_data_store(self) -> Dict[str, Any]:
-        response = await self.fetch("create_data_store", {})
+    async def create_data_store(self) -> Optional[Dict[str, Any]]:
+        try:
+            response = await self.fetch("create_data_store", {})
+        except ValueError as e:
+            print(e.args[0])
+            return None
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 

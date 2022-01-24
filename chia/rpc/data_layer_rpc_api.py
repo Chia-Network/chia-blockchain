@@ -1,4 +1,5 @@
 import dataclasses
+import logging
 from typing import Any, Callable, Dict, Optional
 
 
@@ -10,6 +11,8 @@ from chia.util.byte_types import hexstr_to_bytes
 
 # todo input assertions for all rpc's
 from chia.util.streamable import recurse_jsonify
+
+log = logging.getLogger(__name__)
 
 
 def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
@@ -59,7 +62,11 @@ class DataLayerRpcApi:
     async def create_data_store(self, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         if self.service is None:
             raise Exception("Data layer not created")
-        txs, value = await self.service.create_store()
+        try:
+            txs, value = await self.service.create_store()
+        except ValueError as e:
+            log.error(f"failed creating wallet for store {e}")
+            return e.args[0]
         return {"txs": txs, "id": value.hex()}
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
