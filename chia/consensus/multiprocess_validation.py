@@ -370,7 +370,7 @@ def _run_generator(
     height: uint32,
 ) -> Optional[bytes]:
     """
-    Runs the CLVM generator from bytes inputs. This is meant to be called under a ProcessPoolExecutor, in order to
+    Runs the CLVM generator from bytes inputs. This is meant to be called under a ThreadPoolExecutor, in order to
     validate the heavy parts of a block (clvm program) in a different process.
     """
     try:

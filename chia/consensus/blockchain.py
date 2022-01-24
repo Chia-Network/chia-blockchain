@@ -3,8 +3,7 @@ import dataclasses
 import logging
 import multiprocessing
 import traceback
-from concurrent.futures import Executor
-from concurrent.futures.process import ProcessPoolExecutor
+from concurrent.futures import Executor, ThreadPoolExecutor
 from enum import Enum
 from multiprocessing.context import BaseContext
 from pathlib import Path
@@ -47,7 +46,6 @@ from chia.util.errors import ConsensusError, Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint16, uint32, uint64, uint128
-from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.streamable import recurse_jsonify
 
 log = logging.getLogger(__name__)
@@ -124,11 +122,8 @@ class Blockchain(BlockchainInterface):
             if cpu_count > 61:
                 cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
             num_workers = max(cpu_count - reserved_cores, 1)
-            self.pool = ProcessPoolExecutor(
+            self.pool = ThreadPoolExecutor(
                 max_workers=num_workers,
-                mp_context=multiprocessing_context,
-                initializer=setproctitle,
-                initargs=(f"{getproctitle()}_worker",),
             )
             log.info(f"Started {num_workers} processes for block validation")
 

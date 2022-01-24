@@ -3,8 +3,7 @@ import logging
 import pathlib
 import random
 import tempfile
-from concurrent.futures.process import ProcessPoolExecutor
-from multiprocessing.context import BaseContext
+from concurrent.futures import ThreadPoolExecutor
 from typing import IO, List, Tuple, Optional
 
 from chia.consensus.block_record import BlockRecord
@@ -25,7 +24,6 @@ from chia.types.weight_proof import (
 )
 
 from chia.util.ints import uint32
-from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
 
@@ -43,16 +41,12 @@ class WalletWeightProofHandler:
     def __init__(
         self,
         constants: ConsensusConstants,
-        multiprocessing_context: BaseContext,
     ):
         self._constants = constants
         self._num_processes = 4
         self._executor_shutdown_tempfile: IO = _create_shutdown_file()
-        self._executor: ProcessPoolExecutor = ProcessPoolExecutor(
+        self._executor: ThreadPoolExecutor = ThreadPoolExecutor(
             self._num_processes,
-            mp_context=multiprocessing_context,
-            initializer=setproctitle,
-            initargs=(f"{getproctitle()}_worker",),
         )
         self._weight_proof_tasks: List[asyncio.Task] = []
 

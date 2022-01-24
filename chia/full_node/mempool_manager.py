@@ -1,10 +1,8 @@
 import asyncio
 import collections
 import logging
-from concurrent.futures import Executor
-from multiprocessing.context import BaseContext
+from concurrent.futures import Executor, ThreadPoolExecutor
 import time
-from concurrent.futures.process import ProcessPoolExecutor
 from chia.util.inline_executor import InlineExecutor
 from typing import Dict, List, Optional, Set, Tuple
 from blspy import GTElement
@@ -32,7 +30,6 @@ from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
-from chia.util.setproctitle import getproctitle, setproctitle
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 
 log = logging.getLogger(__name__)
@@ -42,7 +39,7 @@ def validate_clvm_and_signature(
     spend_bundle_bytes: bytes, max_cost: int, cost_per_byte: int, additional_data: bytes
 ) -> Tuple[Optional[Err], bytes, Dict[bytes, bytes]]:
     """
-    Validates CLVM and aggregate signature for a spendbundle. This is meant to be called under a ProcessPoolExecutor
+    Validates CLVM and aggregate signature for a spendbundle. This is meant to be called under a ThreadPoolExecutor
     in order to validate the heavy parts of a transction in a different thread. Returns an optional error,
     the NPCResult and a cache of the new pairings validated (if not error)
     """
@@ -84,7 +81,6 @@ class MempoolManager:
         self,
         coin_store: CoinStore,
         consensus_constants: ConsensusConstants,
-        multiprocessing_context: Optional[BaseContext] = None,
         *,
         single_threaded: bool = False,
     ):
@@ -110,11 +106,8 @@ class MempoolManager:
         if single_threaded:
             self.pool = InlineExecutor()
         else:
-            self.pool = ProcessPoolExecutor(
+            self.pool = ThreadPoolExecutor(
                 max_workers=2,
-                mp_context=multiprocessing_context,
-                initializer=setproctitle,
-                initargs=(f"{getproctitle()}_worker",),
             )
 
         # The mempool will correspond to a certain peak

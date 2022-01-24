@@ -2,10 +2,9 @@ import asyncio
 import dataclasses
 import logging
 import math
-from multiprocessing.context import BaseContext
 import pathlib
 import random
-from concurrent.futures.process import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 import tempfile
 from typing import Dict, IO, List, Optional, Tuple
 
@@ -41,7 +40,6 @@ from chia.types.weight_proof import (
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.streamable import dataclass_from_dict, recurse_jsonify
 
 log = logging.getLogger(__name__)
@@ -61,7 +59,6 @@ class WeightProofHandler:
         self,
         constants: ConsensusConstants,
         blockchain: BlockchainInterface,
-        multiprocessing_context: Optional[BaseContext] = None,
     ):
         self.tip: Optional[bytes32] = None
         self.proof: Optional[WeightProof] = None
@@ -69,7 +66,6 @@ class WeightProofHandler:
         self.blockchain = blockchain
         self.lock = asyncio.Lock()
         self._num_processes = 4
-        self.multiprocessing_context = multiprocessing_context
 
     async def get_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
 
@@ -625,11 +621,8 @@ class WeightProofHandler:
 
         # timing reference: 1 second
         # TODO: Consider implementing an async polling closer for the executor.
-        with ProcessPoolExecutor(
+        with ThreadPoolExecutor(
             max_workers=self._num_processes,
-            mp_context=self.multiprocessing_context,
-            initializer=setproctitle,
-            initargs=(f"{getproctitle()}_worker",),
         ) as executor:
             # The shutdown file manager must be inside of the executor manager so that
             # we request the workers close prior to waiting for them to close.
