@@ -5,6 +5,9 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.util.ints import uint64
 
+# These algorithms were based off of the algorithms in:
+# https://murch.one/wp-content/uploads/2016/11/erhardt2016coinselection.pdf
+
 
 # we use this to check if one of the coins exactly matches the target.
 def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coin]:
@@ -26,8 +29,10 @@ def find_smallest_coin(greater_coin_list: List[Coin], target: uint64) -> Optiona
     return smallest_coin
 
 
-# we use this to find the smallest set of coins.
+# we use this to find the set of coins which have total value closest to the target, but at least the target.
+# coins should be sorted in descending order.
 def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: uint64) -> Tuple[Optional[Set[Coin]], uint64]:
+    smaller_coins_sorted = sorted(smaller_coins, reverse=True, key=lambda r: r.amount)
     best_set_sum = DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
     best_set_of_coins: Optional[Set[Coin]] = None
     for i in range(1000):
@@ -37,7 +42,7 @@ def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: uint64) -> Tuple[O
         n_pass = 0
         target_reached = False
         while n_pass < 2 and not target_reached:
-            for coin in smaller_coins:
+            for coin in smaller_coins_sorted:
                 if (n_pass == 0 and bool(random.getrandbits(1))) or (coin not in selected_coins):
                     selected_coins_sum += coin.amount
                     selected_coins.add(coin)
