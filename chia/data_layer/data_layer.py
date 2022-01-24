@@ -119,8 +119,8 @@ class DataLayer:
             return None
         return res.value
 
-    async def get_keys_values(self, store_id: bytes32) -> List[TerminalNode]:
-        res = await self.data_store.get_keys_values(store_id)
+    async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
+        res = await self.data_store.get_keys_values(store_id, root_hash)
         if res is None:
             self.log.error("Failed to fetch keys values")
         return res
