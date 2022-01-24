@@ -211,7 +211,13 @@ class FarmerAPI:
                         )
                         assert AugSchemeMPL.verify(agg_pk, m_to_sign, plot_signature)
 
-                authentication_sk: PrivateKey = self.farmer.authentication_keys[p2_singleton_puzzle_hash]
+                authentication_sk: Optional[PrivateKey] = await self.farmer.get_authentication_sk(
+                    pool_state_dict["pool_config"]
+                )
+                if authentication_sk is None:
+                    self.farmer.log.error(f"No authentication sk for {p2_singleton_puzzle_hash}")
+                    return
+
                 authentication_signature = AugSchemeMPL.sign(authentication_sk, m_to_sign)
 
                 assert plot_signature is not None
