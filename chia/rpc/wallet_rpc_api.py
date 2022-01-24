@@ -23,7 +23,7 @@ from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk, master_sk_to_wallet_sk_unhardened, MAX_POOL_WALLETS
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -537,6 +537,10 @@ class WalletRpcApi:
                             pool_wallet_index = await wallet.get_pool_wallet_index()
                             if pool_wallet_index > max_pwi:
                                 max_pwi = pool_wallet_index
+
+                    if max_pwi + 1 >= (MAX_POOL_WALLETS - 1):
+                        raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
+
                     owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
                         self.service.wallet_state_manager.private_key, uint32(max_pwi + 1)
                     )

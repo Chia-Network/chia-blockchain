@@ -375,8 +375,6 @@ class TestPoolWalletRpc:
             await client.pw_status(3)
 
         def wallet_is_synced():
-            print(wallet_node_0.wallet_state_manager.blockchain.get_peak_height())
-            print(full_node_api.full_node.blockchain.get_peak_height())
             return (
                 wallet_node_0.wallet_state_manager.blockchain.get_peak_height()
                 == full_node_api.full_node.blockchain.get_peak_height()
@@ -396,8 +394,9 @@ class TestPoolWalletRpc:
             bal_0 = await client.get_wallet_balance(cat_0_id)
             assert bal_0["confirmed_wallet_balance"] == 20
 
-        # Test creation of many pool wallets
-        if not trusted:
+        # Test creation of many pool wallets. Use untrusted since that is the more complicated protocol, but don't
+        # run this code more than once, since it's slow.
+        if fee == 0 and not trusted:
             for i in range(22):
                 creation_tx_3: TransactionRecord = await client.create_new_pool_wallet(
                     our_ph_1, "localhost", 5, "localhost:5000", "new", "FARMING_TO_POOL", fee
