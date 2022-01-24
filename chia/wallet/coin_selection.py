@@ -30,15 +30,14 @@ def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: int) -> Tuple[Opti
     best_set_sum = float("inf")
     best_set_of_coins: Optional[Set[Coin]] = None
     for i in range(1000):
-        n_pass = 0
+        # reset these variables every loop.
         selected_coins: Set = set()
-        target_reached = False
         selected_coins_sum = 0
+        n_pass = 0
+        target_reached = False
         while n_pass < 2 and not target_reached:
             for coin in smaller_coins:
-                if (n_pass == 0 and bool(random.getrandbits(1)) is True) or (
-                    n_pass == 1 and coin not in selected_coins
-                ):
+                if (n_pass == 0 and bool(random.getrandbits(1))) or (coin not in selected_coins):
                     selected_coins_sum += coin.amount
                     selected_coins.add(coin)
                     if selected_coins_sum == target:
@@ -50,5 +49,5 @@ def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: int) -> Tuple[Opti
                             best_set_sum = selected_coins_sum
                             selected_coins_sum -= coin.amount
                             selected_coins.remove(coin)
-                n_pass += 1
+            n_pass += 1
     return (best_set_of_coins, uint64(int(best_set_sum)))
