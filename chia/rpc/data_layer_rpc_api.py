@@ -62,11 +62,7 @@ class DataLayerRpcApi:
     async def create_data_store(self, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         if self.service is None:
             raise Exception("Data layer not created")
-        try:
-            txs, value = await self.service.create_store()
-        except ValueError as e:
-            log.error(f"failed creating wallet for store {e}")
-            return {"error": e.args[0]}
+        txs, value = await self.service.create_store()
         return {"txs": txs, "id": value.hex()}
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
