@@ -146,7 +146,7 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         res = await self.service.get_root(store_id)
-        return {"hash": res}
+        return {"root_hash": res}
 
     async def get_roots(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -158,4 +158,4 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         res = await self.service.get_roots(store_ids)
-        return {"hashes": res}
+        return {"root_hashes": res}

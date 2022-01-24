@@ -137,12 +137,14 @@ class DataLayer:
             self.log.error(f"Failed to get root for {store_id.hex()}")
         return res.node_hash
 
-    async def get_roots(self, store_ids: List[str]) -> List[Optional[bytes32]]:
+    async def get_roots(self, store_ids: List[str]) -> List[Dict[str, Any]]:
         roots = []
         for id in store_ids:
-            res = await self.data_store.get_tree_root(tree_id=bytes32(hexstr_to_bytes(id)))
+            id_bytes = bytes32(hexstr_to_bytes(id))
+            res = await self.data_store.get_tree_root(tree_id=id_bytes)
             if res is None:
-                self.log.error(f"Failed to get root for {id}")
+                self.log.warning(f"Failed to get root for {id}")
+                roots.append({"id": id_bytes, "root": None})
                 continue
-            roots.append(res.node_hash)
+            roots.append({"id": id_bytes, "root": res.node_hash})
         return roots
