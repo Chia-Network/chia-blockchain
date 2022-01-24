@@ -16,6 +16,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.hash import std_hash
+from chia.wallet.coin_selection import check_for_exact_match, find_smallest_coin, knapsack_coin_algorithm
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -265,81 +266,58 @@ class Wallet:
         unspent: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
         )
-        sum_value = 0
-        used_coins: Set = set()
-
-        # Use older coins first
-        unspent.sort(reverse=True, key=lambda r: r.coin.amount)
-
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
-        # check for exact 1 to 1 coin match.
-        for coinrecord in unspent:
+
+        sum_value = 0
+        used_coins: Set = set()
+        valid_unspent: List = []
+
+        for coinrecord in unspent:  # remove all the useless coins.
             if coinrecord.coin.name() in unconfirmed_removals:
                 continue
             if coinrecord.coin in exclude:
                 continue
-            if coinrecord.coin.amount == amount:
-                sum_value += coinrecord.coin.amount
-                used_coins.add(coinrecord.coin)
-                self.log.debug(
-                    f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!"
-                )
-                break
+            valid_unspent.append(coinrecord)
 
-        # Check for exact match with all coins smaller than the amount.
-        # If the total of all the smaller coins are less than the amount we choose; the smallest coin available.
+        # Use older coins first
+        valid_unspent.sort(reverse=True, key=lambda r: r.coin.amount)
+
+        # check for exact 1 to 1 coin match.
+        exact_match_coinrecord: Optional[WalletCoinRecord] = check_for_exact_match(valid_unspent, amount)
+        if exact_match_coinrecord:
+            sum_value = exact_match_coinrecord.coin.amount
+            used_coins.add(exact_match_coinrecord.coin)
+            self.log.debug(
+                f"Selected coin: {exact_match_coinrecord.coin.name()} at height {exact_match_coinrecord.confirmed_block_height}!"
+            )
+
+        # Check for an exact match with all of the coins smaller than the amount.
         # If we have more, smaller coins than the amount we run the next algorithm.
         if len(used_coins) == 0:
-            smaller_coins: Set = set()
-            for coinrecord in unspent:
-                if coinrecord.coin.name() in unconfirmed_removals:
-                    continue
-                if coinrecord.coin in exclude:
-                    continue
+            smaller_coins: Set[Coin] = set()
+            for coinrecord in valid_unspent:
                 if coinrecord.coin.amount < amount:
                     sum_value += coinrecord.coin.amount
                     smaller_coins.add(coinrecord.coin)
-            if sum_value < amount:
-                smallest_value = float("inf")  # smallest coins value
-                # for edge case where the coins are excluded or not confirmed yet.
-                smallest_coin: Optional[WalletCoinRecord] = None
-                for coinrecord in unspent:
-                    if coinrecord.coin.name() in unconfirmed_removals:
-                        continue
-                    if coinrecord.coin in exclude:
-                        continue
-                    if amount < coinrecord.coin.amount < smallest_value:
-                        # try to find a coin that is as close as possible to the amount.
-                        smallest_value = coinrecord.coin.amount
-                        smallest_coin = coinrecord
+            if sum_value == amount:
+                used_coins = smaller_coins
+            elif sum_value < amount:
+                smallest_coin: Optional[WalletCoinRecord] = find_smallest_coin(valid_unspent, amount)
                 if smallest_coin:
-                    used_coins.add(smallest_coin.coin)
                     sum_value = smallest_coin.coin.amount
+                    used_coins.add(smallest_coin.coin)
                     self.log.debug(
                         f"Selected coin: {smallest_coin.coin.name()} at height {smallest_coin.confirmed_block_height}!"
                     )
-            elif sum_value == amount:
-                used_coins = smaller_coins
-
-        if len(used_coins) == 0:
-            sum_value = 0
-            # check for all other combinations of coins.
-            for coinrecord in unspent:
-                if sum_value >= amount and len(used_coins) > 0:
-                    break
-                if coinrecord.coin.name() in unconfirmed_removals:
-                    continue
-                if coinrecord.coin in exclude:
-                    continue
-                sum_value += coinrecord.coin.amount
-                used_coins.add(coinrecord.coin)
-                self.log.debug(
-                    f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!"
-                )
+            elif sum_value > amount:
+                best_coin_set, sum_best_coin_set = knapsack_coin_algorithm(smaller_coins, amount)
+                if best_coin_set:
+                    sum_value = sum_best_coin_set
+                    used_coins = best_coin_set
 
         # This happens when we couldn't use one of the coins because it's already used
         # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
