@@ -17,6 +17,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.ints import uint64, uint32
+from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.wallet_tools import WalletTool
 from tests.setup_nodes import bt, test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -57,7 +58,7 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0])
-    async def test_basic_coin_store(self, cache_size: uint32):
+    async def test_basic_coin_store(self, cache_size: uint32, db_version):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
@@ -80,7 +81,7 @@ class TestCoinStoreWithBlocks:
             uint64(1000), wallet_a.get_new_puzzlehash(), coins_to_spend[0]
         )
 
-        async with DBConnection() as db_wrapper:
+        async with DBConnection(db_version) as db_wrapper:
             coin_store = await CoinStore.create(db_wrapper, cache_size=cache_size)
 
             blocks = bt.get_consecutive_blocks(
@@ -105,7 +106,7 @@ class TestCoinStoreWithBlocks:
                             block_gen,
                             bt.constants.MAX_BLOCK_COST_CLVM,
                             cost_per_byte=bt.constants.COST_PER_BYTE,
-                            safe_mode=False,
+                            mempool_mode=False,
                         )
                         tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                     else:
@@ -154,10 +155,10 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_set_spent(self, cache_size: uint32):
+    async def test_set_spent(self, cache_size: uint32, db_version):
         blocks = bt.get_consecutive_blocks(9, [])
 
-        async with DBConnection() as db_wrapper:
+        async with DBConnection(db_version) as db_wrapper:
             coin_store = await CoinStore.create(db_wrapper, cache_size=cache_size)
 
             # Save/get block
@@ -187,11 +188,43 @@ class TestCoinStoreWithBlocks:
                         assert record.spent_block_index == block.height
 
     @pytest.mark.asyncio
+    async def test_num_unspent(self, db_version):
+        blocks = bt.get_consecutive_blocks(37, [])
+
+        expect_unspent = 0
+        test_excercised = False
+
+        async with DBConnection(db_version) as db_wrapper:
+            coin_store = await CoinStore.create(db_wrapper)
+
+            for block in blocks:
+                if not block.is_transaction_block():
+                    continue
+
+                if block.is_transaction_block():
+                    assert block.foliage_transaction_block is not None
+                    removals: List[bytes32] = []
+                    additions: List[Coin] = []
+                    await coin_store.new_block(
+                        block.height,
+                        block.foliage_transaction_block.timestamp,
+                        block.get_included_reward_coins(),
+                        additions,
+                        removals,
+                    )
+
+                    expect_unspent += len(block.get_included_reward_coins())
+                    assert await coin_store.num_unspent() == expect_unspent
+                    test_excercised = expect_unspent > 0
+
+        assert test_excercised
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_rollback(self, cache_size: uint32):
+    async def test_rollback(self, cache_size: uint32, db_version):
         blocks = bt.get_consecutive_blocks(20)
 
-        async with DBConnection() as db_wrapper:
+        async with DBConnection(db_version) as db_wrapper:
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
 
             records: List[CoinRecord] = []
@@ -240,22 +273,22 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_basic_reorg(self, cache_size: uint32):
+    async def test_basic_reorg(self, cache_size: uint32, tmp_dir, db_version):
 
-        async with DBConnection() as db_wrapper:
+        async with DBConnection(db_version) as db_wrapper:
             initial_block_count = 30
             reorg_length = 15
             blocks = bt.get_consecutive_blocks(initial_block_count)
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
             hint_store = await HintStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store)
+            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir, 2)
             try:
 
                 records: List[Optional[CoinRecord]] = []
 
                 for block in blocks:
-                    await b.receive_block(block)
+                    await _validate_and_add_block(b, block)
                 peak = b.get_peak()
                 assert peak is not None
                 assert peak.height == initial_block_count - 1
@@ -275,14 +308,16 @@ class TestCoinStoreWithBlocks:
                 )
 
                 for reorg_block in blocks_reorg_chain:
-                    result, error_code, _, _ = await b.receive_block(reorg_block)
-                    print(f"Height {reorg_block.height} {initial_block_count - 10} result {result}")
                     if reorg_block.height < initial_block_count - 10:
-                        assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
-                    elif reorg_block.height < initial_block_count - 1:
-                        assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
+                        await _validate_and_add_block(
+                            b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK
+                        )
+                    elif reorg_block.height < initial_block_count:
+                        await _validate_and_add_block(
+                            b, reorg_block, expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN
+                        )
                     elif reorg_block.height >= initial_block_count:
-                        assert result == ReceiveBlockResult.NEW_PEAK
+                        await _validate_and_add_block(b, reorg_block, expected_result=ReceiveBlockResult.NEW_PEAK)
                         if reorg_block.is_transaction_block():
                             coins = reorg_block.get_included_reward_coins()
                             records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
@@ -291,7 +326,6 @@ class TestCoinStoreWithBlocks:
                                 assert not record.spent
                                 assert record.confirmed_block_index == reorg_block.height
                                 assert record.spent_block_index == 0
-                    assert error_code is None
                 peak = b.get_peak()
                 assert peak is not None
                 assert peak.height == initial_block_count - 10 + reorg_length - 1
@@ -300,25 +334,28 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_get_puzzle_hash(self, cache_size: uint32):
-        async with DBConnection() as db_wrapper:
+    async def test_get_puzzle_hash(self, cache_size: uint32, tmp_dir, db_version):
+        async with DBConnection(db_version) as db_wrapper:
             num_blocks = 20
             farmer_ph = 32 * b"0"
             pool_ph = 32 * b"1"
+            # TODO: address hint error and remove ignore
+            #       error: Argument "farmer_reward_puzzle_hash" to "get_consecutive_blocks" of "BlockTools" has
+            #       incompatible type "bytes"; expected "Optional[bytes32]"  [arg-type]
+            #       error: Argument "pool_reward_puzzle_hash" to "get_consecutive_blocks" of "BlockTools" has
+            #       incompatible type "bytes"; expected "Optional[bytes32]"  [arg-type]
             blocks = bt.get_consecutive_blocks(
                 num_blocks,
-                farmer_reward_puzzle_hash=farmer_ph,
-                pool_reward_puzzle_hash=pool_ph,
+                farmer_reward_puzzle_hash=farmer_ph,  # type: ignore[arg-type]
+                pool_reward_puzzle_hash=pool_ph,  # type: ignore[arg-type]
                 guarantee_transaction_block=True,
             )
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
             hint_store = await HintStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store)
+            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir, 2)
             for block in blocks:
-                res, err, _, _ = await b.receive_block(block)
-                assert err is None
-                assert res == ReceiveBlockResult.NEW_PEAK
+                await _validate_and_add_block(b, block)
             peak = b.get_peak()
             assert peak is not None
             assert peak.height == num_blocks - 1

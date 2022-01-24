@@ -41,15 +41,16 @@ class PoolWalletConfig(Streamable):
 def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
     config = load_config(root_path, "config.yaml")
     ret_list: List[PoolWalletConfig] = []
-    if "pool_list" in config["pool"]:
-        for pool_config_dict in config["pool"]["pool_list"]:
+    pool_list = config["pool"].get("pool_list", [])
+    if pool_list is not None:
+        for pool_config_dict in pool_list:
             try:
                 pool_config = PoolWalletConfig(
-                    hexstr_to_bytes(pool_config_dict["launcher_id"]),
+                    bytes32.from_hexstr(pool_config_dict["launcher_id"]),
                     pool_config_dict["pool_url"],
                     pool_config_dict["payout_instructions"],
-                    hexstr_to_bytes(pool_config_dict["target_puzzle_hash"]),
-                    hexstr_to_bytes(pool_config_dict["p2_singleton_puzzle_hash"]),
+                    bytes32.from_hexstr(pool_config_dict["target_puzzle_hash"]),
+                    bytes32.from_hexstr(pool_config_dict["p2_singleton_puzzle_hash"]),
                     G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
                     G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["authentication_public_key"])),
                 )

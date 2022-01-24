@@ -82,6 +82,20 @@ class WalletCoinStore:
                     self.unspent_coin_wallet_cache[coin_record.wallet_id] = {}
                 self.unspent_coin_wallet_cache[coin_record.wallet_id][name] = coin_record
 
+    async def get_multiple_coin_records(self, coin_names: List[bytes32]) -> List[WalletCoinRecord]:
+        """Return WalletCoinRecord(s) that have a coin name in the specified list"""
+        if set(coin_names).issubset(set(self.coin_record_cache.keys())):
+            return list(filter(lambda cr: cr.coin.name() in coin_names, self.coin_record_cache.values()))
+        else:
+            as_hexes = [cn.hex() for cn in coin_names]
+            cursor = await self.db_connection.execute(
+                f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(as_hexes) - 1)}?)', tuple(as_hexes)
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
+
+            return [self.coin_record_from_row(row) for row in rows]
+
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: WalletCoinRecord) -> None:
         # update wallet cache
@@ -113,6 +127,18 @@ class WalletCoinStore:
             ),
         )
         await cursor.close()
+
+    # Sometimes we realize that a coin is actually not interesting to us so we need to delete it
+    async def delete_coin_record(self, coin_name: bytes32) -> None:
+        if coin_name in self.coin_record_cache:
+            coin_record = self.coin_record_cache.pop(coin_name)
+            if coin_record.wallet_id in self.unspent_coin_wallet_cache:
+                coin_cache = self.unspent_coin_wallet_cache[coin_record.wallet_id]
+                if coin_name in coin_cache:
+                    coin_cache.pop(coin_record.coin.name())
+
+        c = await self.db_connection.execute("DELETE FROM coin_record WHERE coin_name=?", (coin_name.hex(),))
+        await c.close()
 
     # Update coin_record to be spent in DB
     async def set_spent(self, coin_name: bytes32, height: uint32) -> WalletCoinRecord:
@@ -200,10 +226,35 @@ class WalletCoinStore:
 
         return set(self.coin_record_from_row(row) for row in rows)
 
+    async def get_coins_to_check(self, check_height) -> Set[WalletCoinRecord]:
+        """Returns set of all CoinRecords."""
+        cursor = await self.db_connection.execute(
+            "SELECT * from coin_record where spent_height=0 or spent_height>? or confirmed_height>?",
+            (
+                check_height,
+                check_height,
+            ),
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+
+        return set(self.coin_record_from_row(row) for row in rows)
+
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[WalletCoinRecord]:
         """Returns a list of all coin records with the given puzzle hash"""
         cursor = await self.db_connection.execute("SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),))
+        rows = await cursor.fetchall()
+        await cursor.close()
+
+        return [self.coin_record_from_row(row) for row in rows]
+
+    # Checks DB and DiffStores for CoinRecords with parent_coin_info and returns them
+    async def get_coin_records_by_parent_id(self, parent_coin_info: bytes32) -> List[WalletCoinRecord]:
+        """Returns a list of all coin records with the given parent id"""
+        cursor = await self.db_connection.execute(
+            "SELECT * from coin_record WHERE coin_parent=?", (parent_coin_info.hex(),)
+        )
         rows = await cursor.fetchall()
         await cursor.close()
 
@@ -229,7 +280,8 @@ class WalletCoinStore:
                     coin_record.wallet_id,
                 )
                 self.coin_record_cache[coin_record.coin.name()] = new_record
-                self.unspent_coin_wallet_cache[coin_record.wallet_id][coin_record.coin.name()] = new_record
+                if coin_record.wallet_id in self.unspent_coin_wallet_cache:
+                    self.unspent_coin_wallet_cache[coin_record.wallet_id][coin_record.coin.name()] = new_record
             if coin_record.confirmed_block_height > height:
                 delete_queue.append(coin_record)
 

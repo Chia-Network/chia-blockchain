@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 
 def plot_refresh_callback(event: PlotRefreshEvents, refresh_result: PlotRefreshResult):
-    log.info(f"event: {event.name}, loaded {refresh_result.loaded} plots, {refresh_result.remaining} remaining")
+    log.info(f"event: {event.name}, loaded {len(refresh_result.loaded)} plots, {refresh_result.remaining} remaining")
 
 
 def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo):

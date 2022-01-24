@@ -1,59 +1,22 @@
 import asyncio
 import random
-import secrets
 from time import time
-from datetime import datetime
 from pathlib import Path
 from chia.full_node.coin_store import CoinStore
 from typing import List, Tuple
 import os
 import sys
 
-import aiosqlite
 from chia.util.db_wrapper import DBWrapper
-from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
 from chia.util.ints import uint64, uint32
-
+from utils import rewards, rand_hash, setup_db
 
 NUM_ITERS = 200
 
-# farmer puzzle hash
-ph = bytes32(b"a" * 32)
-
 # we need seeded random, to have reproducible benchmark runs
 random.seed(123456789)
-
-
-async def setup_db(sql_logging: bool) -> DBWrapper:
-    db_filename = Path("coin-store-benchmark.db")
-    try:
-        os.unlink(db_filename)
-    except FileNotFoundError:
-        pass
-    connection = await aiosqlite.connect(db_filename)
-
-    def sql_trace_callback(req: str):
-        sql_log_path = "sql.log"
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")
-        log = open(sql_log_path, "a")
-        log.write(timestamp + " " + req + "\n")
-        log.close()
-
-    if sql_logging:
-        await connection.set_trace_callback(sql_trace_callback)
-
-    await connection.execute("pragma journal_mode=wal")
-    await connection.execute("pragma synchronous=full")
-    await connection.execute("pragma temp_store=memory")
-
-    return DBWrapper(connection)
-
-
-def rand_hash() -> bytes32:
-    return secrets.token_bytes(32)
 
 
 def make_coin() -> Coin:
@@ -71,20 +34,13 @@ def make_coins(num: int) -> Tuple[List[Coin], List[bytes32]]:
     return additions, hashes
 
 
-def rewards(height: uint32) -> Tuple[Coin, Coin]:
-    farmer_coin = create_farmer_coin(height, ph, uint64(250000000), DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
-    pool_coin = create_pool_coin(height, ph, uint64(1750000000), DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
-    return farmer_coin, pool_coin
-
-
-async def run_new_block_benchmark():
+async def run_new_block_benchmark(version: int):
 
     verbose: bool = "--verbose" in sys.argv
-    sql_logging: bool = "--sql-logging" in sys.argv
-    db_wrapper: DBWrapper = await setup_db(sql_logging)
+    db_wrapper: DBWrapper = await setup_db("coin-store-benchmark.db", version)
 
     # keep track of benchmark total time
-    all_test_time = 0
+    all_test_time = 0.0
 
     try:
         coin_store = await CoinStore.create(db_wrapper)
@@ -102,7 +58,7 @@ async def run_new_block_benchmark():
             additions, hashes = make_coins(2000)
 
             # farm rewards
-            farmer_coin, pool_coin = rewards(height)
+            farmer_coin, pool_coin = rewards(uint32(height))
             all_coins += hashes
             all_unspent += hashes
             all_unspent += [pool_coin.name(), farmer_coin.name()]
@@ -129,9 +85,9 @@ async def run_new_block_benchmark():
                 sys.stdout.flush()
         block_height += NUM_ITERS
 
-        total_time = 0
-        total_add = 0
-        total_remove = 0
+        total_time = 0.0
+        total_add = 0.0
+        total_remove = 0.0
         print("")
         if verbose:
             print("Profiling mostly additions ", end="")
@@ -141,7 +97,7 @@ async def run_new_block_benchmark():
             additions, hashes = make_coins(2000)
             total_add += 2000
 
-            farmer_coin, pool_coin = rewards(height)
+            farmer_coin, pool_coin = rewards(uint32(height))
             all_coins += hashes
             all_unspent += hashes
             all_unspent += [pool_coin.name(), farmer_coin.name()]
@@ -192,7 +148,7 @@ async def run_new_block_benchmark():
             additions.append(c)
             total_add += 1
 
-            farmer_coin, pool_coin = rewards(height)
+            farmer_coin, pool_coin = rewards(uint32(height))
             all_coins += [c.get_hash()]
             all_unspent += [c.get_hash()]
             all_unspent += [pool_coin.name(), farmer_coin.name()]
@@ -242,7 +198,7 @@ async def run_new_block_benchmark():
             additions, hashes = make_coins(2000)
             total_add += 2000
 
-            farmer_coin, pool_coin = rewards(height)
+            farmer_coin, pool_coin = rewards(uint32(height))
             all_coins += hashes
             all_unspent += hashes
             all_unspent += [pool_coin.name(), farmer_coin.name()]
@@ -351,6 +307,12 @@ async def run_new_block_benchmark():
     finally:
         await db_wrapper.db.close()
 
+    db_size = os.path.getsize(Path("coin-store-benchmark.db"))
+    print(f"database size: {db_size/1000000:.3f} MB")
+
 
 if __name__ == "__main__":
-    asyncio.run(run_new_block_benchmark())
+    print("version 1")
+    asyncio.run(run_new_block_benchmark(1))
+    print("version 2")
+    asyncio.run(run_new_block_benchmark(2))

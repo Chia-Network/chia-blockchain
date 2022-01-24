@@ -29,23 +29,23 @@ log = logging.getLogger(__name__)
 
 class TestFullSync:
     @pytest.fixture(scope="function")
-    async def two_nodes(self):
-        async for _ in setup_two_nodes(test_constants):
+    async def two_nodes(self, db_version):
+        async for _ in setup_two_nodes(test_constants, db_version=db_version):
             yield _
 
     @pytest.fixture(scope="function")
-    async def three_nodes(self):
-        async for _ in setup_n_nodes(test_constants, 3):
+    async def three_nodes(self, db_version):
+        async for _ in setup_n_nodes(test_constants, 3, db_version=db_version):
             yield _
 
     @pytest.fixture(scope="function")
-    async def four_nodes(self):
-        async for _ in setup_n_nodes(test_constants, 4):
+    async def four_nodes(self, db_version):
+        async for _ in setup_n_nodes(test_constants, 4, db_version=db_version):
             yield _
 
     @pytest.fixture(scope="function")
-    async def five_nodes(self):
-        async for _ in setup_n_nodes(test_constants, 5):
+    async def five_nodes(self, db_version):
+        async for _ in setup_n_nodes(test_constants, 5, db_version=db_version):
             yield _
 
     @pytest.mark.asyncio

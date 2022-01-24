@@ -4,11 +4,12 @@ import ssl
 import time
 import traceback
 from collections import Counter
-from ipaddress import IPv6Address, ip_address, ip_network, IPv4Network, IPv6Network
+from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable, Dict, List, Optional, Union, Set, Tuple
+from typing import Any, Callable
 from typing import Counter as typing_Counter
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, client_exceptions, web
 from aiohttp.web_app import Application
@@ -19,7 +20,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
-from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS, API_EXCEPTION_BAN_SECONDS
+from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INVALID_PROTOCOL_BAN_SECONDS
 from chia.protocols.shared_protocol import protocol_version
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
@@ -29,7 +30,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
-from chia.util.network import is_localhost, is_in_network
+from chia.util.network import is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 
@@ -47,6 +48,21 @@ def ssl_context_for_server(
 
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
+    ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+    ssl_context.set_ciphers(
+        (
+            "ECDHE-ECDSA-AES256-GCM-SHA384:"
+            "ECDHE-RSA-AES256-GCM-SHA384:"
+            "ECDHE-ECDSA-CHACHA20-POLY1305:"
+            "ECDHE-RSA-CHACHA20-POLY1305:"
+            "ECDHE-ECDSA-AES128-GCM-SHA256:"
+            "ECDHE-RSA-AES128-GCM-SHA256:"
+            "ECDHE-ECDSA-AES256-SHA384:"
+            "ECDHE-RSA-AES256-SHA384:"
+            "ECDHE-ECDSA-AES128-SHA256:"
+            "ECDHE-RSA-AES128-SHA256"
+        )
+    )
     ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED
     return ssl_context
@@ -148,8 +164,8 @@ class ChiaServer:
         self.chia_ca_crt_path, self.chia_ca_key_path = chia_ca_crt_key
         self.node_id = self.my_id()
 
-        self.incoming_task = asyncio.create_task(self.incoming_api_task())
-        self.gc_task: asyncio.Task = asyncio.create_task(self.garbage_collect_connections_task())
+        self.incoming_task: Optional[asyncio.Task] = None
+        self.gc_task: Optional[asyncio.Task] = None
         self.app: Optional[Application] = None
         self.runner: Optional[web.AppRunner] = None
         self.site: Optional[TCPSite] = None
@@ -187,13 +203,18 @@ class ChiaServer:
         Periodically checks for connections with no activity (have not sent us any data), and removes them,
         to allow room for other peers.
         """
+        is_crawler = getattr(self.node, "crawl", None)
         while True:
-            await asyncio.sleep(600)
+            await asyncio.sleep(600 if is_crawler is None else 2)
             to_remove: List[WSChiaConnection] = []
             for connection in self.all_connections.values():
                 if self._local_type == NodeType.FULL_NODE and connection.connection_type == NodeType.FULL_NODE:
-                    if time.time() - connection.last_message_time > 1800:
-                        to_remove.append(connection)
+                    if is_crawler is not None:
+                        if time.time() - connection.creation_time > 5:
+                            to_remove.append(connection)
+                    else:
+                        if time.time() - connection.last_message_time > 1800:
+                            to_remove.append(connection)
             for connection in to_remove:
                 self.log.debug(f"Garbage collecting connection {connection.peer_host} due to inactivity")
                 await connection.close()
@@ -207,6 +228,11 @@ class ChiaServer:
                 del self.banned_peers[peer_ip]
 
     async def start_server(self, on_connect: Callable = None):
+        if self.incoming_task is None:
+            self.incoming_task = asyncio.create_task(self.incoming_api_task())
+        if self.gc_task is None:
+            self.gc_task = asyncio.create_task(self.garbage_collect_connections_task())
+
         if self._local_type in [NodeType.WALLET, NodeType.HARVESTER, NodeType.TIMELORD]:
             return None
 
@@ -243,6 +269,9 @@ class ChiaServer:
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
+        if getattr(self.node, "crawl", None) is not None:
+            return
+
         if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:
             self.log.warning(f"Peer {request.remote} is banned, refusing connection")
             return None
@@ -605,10 +634,14 @@ class ChiaServer:
 
             task_id = token_bytes()
             api_task = asyncio.create_task(api_call(payload_inc, connection_inc, task_id))
-            self.api_tasks[task_id] = api_task
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "bytes" for "Dict[bytes32, Task[Any]]"; expected type "bytes32"  [index]
+            self.api_tasks[task_id] = api_task  # type: ignore[index]
             if connection_inc.peer_node_id not in self.tasks_from_peer:
                 self.tasks_from_peer[connection_inc.peer_node_id] = set()
-            self.tasks_from_peer[connection_inc.peer_node_id].add(task_id)
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "add" of "set" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+            self.tasks_from_peer[connection_inc.peer_node_id].add(task_id)  # type: ignore[arg-type]
 
     async def send_to_others(
         self,
@@ -703,8 +736,12 @@ class ChiaServer:
             task.cancel()
 
         self.shut_down_event.set()
-        self.incoming_task.cancel()
-        self.gc_task.cancel()
+        if self.incoming_task is not None:
+            self.incoming_task.cancel()
+            self.incoming_task = None
+        if self.gc_task is not None:
+            self.gc_task.cancel()
+            self.gc_task = None
 
     async def await_closed(self) -> None:
         self.log.debug("Await Closed")
@@ -766,13 +803,9 @@ class ChiaServer:
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict) -> bool:
         if trusted_peers is None:
             return False
-        for trusted_peer in trusted_peers:
-            cert = self.root_path / trusted_peers[trusted_peer]
-            pem_cert = x509.load_pem_x509_certificate(cert.read_bytes())
-            cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
-            der_cert = x509.load_der_x509_certificate(cert_bytes)
-            peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
-            if peer_id == peer.peer_node_id:
-                self.log.debug(f"trusted node {peer.peer_node_id} {peer.peer_host}")
-                return True
-        return False
+        if not self.config["testing"] and peer.peer_host == "127.0.0.1":
+            return True
+        if peer.peer_node_id.hex() not in trusted_peers:
+            return False
+
+        return True

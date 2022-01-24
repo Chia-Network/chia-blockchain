@@ -3,6 +3,7 @@ import logging
 import pathlib
 import signal
 import time
+import os
 from typing import Dict, List, Optional
 
 import pkg_resources
@@ -82,11 +83,17 @@ async def spawn_all_processes(config: Dict, net_config: Dict):
     hostname = net_config["self_hostname"] if "host" not in config else config["host"]
     port = config["port"]
     process_count = config["process_count"]
+    if process_count == 0:
+        log.info("Process_count set to 0, stopping TLauncher.")
+        return
     awaitables = [spawn_process(hostname, port, i, net_config.get("prefer_ipv6")) for i in range(process_count)]
     await asyncio.gather(*awaitables)
 
 
 def main():
+    if os.name == "nt":
+        log.info("Timelord launcher not supported on Windows.")
+        return
     root_path = DEFAULT_ROOT_PATH
     setproctitle("chia_timelord_launcher")
     net_config = load_config(root_path, "config.yaml")

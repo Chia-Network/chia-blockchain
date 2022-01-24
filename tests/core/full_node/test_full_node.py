@@ -6,9 +6,11 @@ import random
 import time
 from secrets import token_bytes
 from typing import Dict, Optional, List
+from blspy import G2Element
 
 import pytest
 
+from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.full_node_api import FullNodeAPI
@@ -21,8 +23,9 @@ from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
+from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
@@ -37,8 +40,12 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
+from tests.blockchain.blockchain_test_utils import (
+    _validate_and_add_block,
+    _validate_and_add_block_no_error,
+)
 from tests.wallet_tools import WalletTool
-from chia.wallet.cc_wallet.cc_wallet import CCWallet
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.transaction_record import TransactionRecord
 
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
@@ -115,26 +122,26 @@ async def wallet_nodes():
 
 
 @pytest.fixture(scope="function")
-async def setup_four_nodes():
-    async for _ in setup_simulators_and_wallets(5, 0, {}, starting_port=51000):
+async def setup_four_nodes(db_version):
+    async for _ in setup_simulators_and_wallets(5, 0, {}, starting_port=51000, db_version=db_version):
         yield _
 
 
 @pytest.fixture(scope="function")
-async def setup_two_nodes():
-    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=51100):
+async def setup_two_nodes(db_version):
+    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=51100, db_version=db_version):
         yield _
 
 
 @pytest.fixture(scope="function")
 async def setup_two_nodes_and_wallet():
-    async for _ in setup_simulators_and_wallets(2, 1, {}, starting_port=51200):
+    async for _ in setup_simulators_and_wallets(2, 1, {}, starting_port=51200, db_version=2):
         yield _
 
 
 @pytest.fixture(scope="function")
-async def wallet_nodes_mainnet():
-    async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK_TYPE": 0}, starting_port=40000)
+async def wallet_nodes_mainnet(db_version):
+    async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK_TYPE": 0}, starting_port=40000, db_version=db_version)
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -150,7 +157,8 @@ async def wallet_nodes_mainnet():
 
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
-    async def do_test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
+    @pytest.mark.parametrize("tx_size", [10000, 3000000000000])
+    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size):
         nodes, wallets = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -159,6 +167,14 @@ class TestFullNodeBlockCompression:
         full_node_2 = nodes[1]
         wallet_node_1 = wallets[0][0]
         wallet = wallet_node_1.wallet_state_manager.main_wallet
+
+        # Avoid retesting the slow reorg portion, not necessary more than once
+        test_reorgs = (
+            tx_size == 10000
+            and empty_blockchain.block_store.db_wrapper.db_version >= 2
+            and full_node_1.full_node.block_store.db_wrapper.db_version >= 2
+            and full_node_2.full_node.block_store.db_wrapper.db_version >= 2
+        )
         _ = await connect_and_get_peer(server_1, server_2)
         _ = await connect_and_get_peer(server_1, server_3)
 
@@ -190,6 +206,13 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_2, 5)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 5)
 
+        async def check_transaction_confirmed(transaction) -> bool:
+            tx = await wallet_node_1.wallet_state_manager.get_transaction(transaction.name)
+            return tx.confirmed
+
+        await time_out_assert(10, check_transaction_confirmed, True, tr)
+        await asyncio.sleep(0.5)
+
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
@@ -214,6 +237,9 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_1, 6)
         await time_out_assert(10, node_height_at_least, True, full_node_2, 6)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 6)
+
+        await time_out_assert(10, check_transaction_confirmed, True, tr)
+        await asyncio.sleep(0.5)
 
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
@@ -282,33 +308,43 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_2, 9)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 9)
 
+        await time_out_assert(10, check_transaction_confirmed, True, tr)
+        await asyncio.sleep(0.5)
+
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
         assert detect_potential_template_generator(uint32(9), program) is None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
 
-        # Creates a cc wallet
-        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_1.wallet_state_manager, wallet, uint64(100))
-        tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
-        tr = tx_queue[0]
-        await time_out_assert(
-            10,
-            full_node_1.full_node.mempool_manager.get_spendbundle,
-            tr.spend_bundle,
-            tr.spend_bundle.name(),
-        )
-
+        # Creates a standard_transaction and an anyone-can-spend tx
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
-            ph,
+            Program.to(1).get_tree_hash(),
         )
-        await wallet.push_transaction(tx=tr)
+        extra_spend = SpendBundle(
+            [
+                CoinSpend(
+                    next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
+                    Program.to(1),
+                    Program.to([[51, ph, 30000]]),
+                )
+            ],
+            G2Element(),
+        )
+        new_spend_bundle = SpendBundle.aggregate([tr.spend_bundle, extra_spend])
+        new_tr = dataclasses.replace(
+            tr,
+            spend_bundle=new_spend_bundle,
+            additions=new_spend_bundle.additions(),
+            removals=new_spend_bundle.removals(),
+        )
+        await wallet.push_transaction(tx=new_tr)
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
-            tr.spend_bundle,
-            tr.name,
+            new_tr.spend_bundle,
+            new_tr.spend_bundle.name(),
         )
 
         # Farm a block
@@ -317,32 +353,43 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_2, 10)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 10)
 
-        # Confirm generator is compressed
-        program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
-        assert program is not None
-        assert detect_potential_template_generator(uint32(10), program) is None
-        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+        await time_out_assert(10, check_transaction_confirmed, True, new_tr)
+        await asyncio.sleep(0.5)
 
-        # Make a cc transaction
-        tr: TransactionRecord = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
-        await wallet.wallet_state_manager.add_pending_transaction(tr)
-        await time_out_assert(
-            10,
-            full_node_2.full_node.mempool_manager.get_spendbundle,
-            tr.spend_bundle,
-            tr.name,
-        )
-        # Make a standard transaction
+        # Confirm generator is not compressed, #CAT creation has a cat spend
+        all_blocks = await full_node_1.get_all_full_blocks()
+        program: Optional[SerializedProgram] = all_blocks[-1].transactions_generator
+        assert program is not None
+        assert len(all_blocks[-1].transactions_generator_ref_list) == 0
+
+        # Make a standard transaction and an anyone-can-spend transaction
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
-            ph,
+            Program.to(1).get_tree_hash(),
         )
-        await wallet.push_transaction(tx=tr)
+        extra_spend = SpendBundle(
+            [
+                CoinSpend(
+                    next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
+                    Program.to(1),
+                    Program.to([[51, ph, 30000]]),
+                )
+            ],
+            G2Element(),
+        )
+        new_spend_bundle = SpendBundle.aggregate([tr.spend_bundle, extra_spend])
+        new_tr = dataclasses.replace(
+            tr,
+            spend_bundle=new_spend_bundle,
+            additions=new_spend_bundle.additions(),
+            removals=new_spend_bundle.removals(),
+        )
+        await wallet.push_transaction(tx=new_tr)
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
-            tr.spend_bundle,
-            tr.name,
+            new_tr.spend_bundle,
+            new_tr.spend_bundle.name(),
         )
 
         # Farm a block
@@ -368,20 +415,24 @@ class TestFullNodeBlockCompression:
             reog_blocks = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
                 for reorg_block in reog_blocks[:r]:
-                    assert (await blockchain.receive_block(reorg_block))[1] is None
+                    await _validate_and_add_block_no_error(blockchain, reorg_block)
                 for i in range(1, height):
                     for batch_size in range(1, height):
-                        results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
+                        results = await blockchain.pre_validate_blocks_multiprocessing(
+                            all_blocks[:i], {}, batch_size, validate_signatures=False
+                        )
                         assert results is not None
                         for result in results:
                             assert result.error is None
 
             for r in range(0, len(all_blocks), 3):
                 for block in all_blocks[:r]:
-                    assert (await blockchain.receive_block(block))[1] is None
+                    await _validate_and_add_block_no_error(blockchain, block)
                 for i in range(1, height):
                     for batch_size in range(1, height):
-                        results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
+                        results = await blockchain.pre_validate_blocks_multiprocessing(
+                            all_blocks[:i], {}, batch_size, validate_signatures=False
+                        )
                         assert results is not None
                         for result in results:
                             assert result.error is None
@@ -390,14 +441,6 @@ class TestFullNodeBlockCompression:
             for block in reog_blocks:
                 await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
             assert full_node_1.full_node.full_node_store.previous_generator is None
-
-    @pytest.mark.asyncio
-    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
-        await self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000, True)
-
-    @pytest.mark.asyncio
-    async def test_block_compression_2(self, setup_two_nodes_and_wallet, empty_blockchain):
-        await self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000, False)
 
 
 class TestFullNodeProtocol:
@@ -1350,7 +1393,7 @@ class TestFullNodeProtocol:
 
         second_blockchain = empty_blockchain
         for block in blocks:
-            await second_blockchain.receive_block(block)
+            await _validate_and_add_block(second_blockchain, block)
 
         # Creates a signage point based on the last block
         peak_2 = second_blockchain.get_peak()
@@ -1456,9 +1499,9 @@ class TestFullNodeProtocol:
         invalid_program = SerializedProgram.from_bytes(large_puzzle_reveal)
         invalid_block = dataclasses.replace(invalid_block, transactions_generator=invalid_program)
 
-        result, error, fork_h, _ = await full_node_1.full_node.blockchain.receive_block(invalid_block)
-        assert error is not None
-        assert error == Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE
+        await _validate_and_add_block(
+            full_node_1.full_node.blockchain, invalid_block, expected_error=Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE
+        )
 
         blocks_new = bt.get_consecutive_blocks(
             1,
@@ -1469,9 +1512,7 @@ class TestFullNodeProtocol:
         valid_block = blocks_new[-1]
         valid_program = SerializedProgram.from_bytes(under_sized)
         valid_block = dataclasses.replace(valid_block, transactions_generator=valid_program)
-        result, error, fork_h = await full_node_1.full_node.blockchain.receive_block(valid_block)
-
-        assert error is None
+        await _validate_and_add_block(full_node_1.full_node.blockchain, valid_block)
 
     @pytest.mark.asyncio
     async def test_compact_protocol(self, setup_two_nodes):

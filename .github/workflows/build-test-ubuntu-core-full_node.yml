@@ -17,7 +17,7 @@ jobs:
   build:
     name: Ubuntu core-full_node Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 80
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -68,7 +68,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: '0.27.0'
+        ref: '0.28.0'
         fetch-depth: 1
 
     - name: Link home directory

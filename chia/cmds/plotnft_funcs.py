@@ -1,5 +1,6 @@
 from collections import Counter
 from decimal import Decimal
+from dataclasses import replace
 
 import aiohttp
 import asyncio
@@ -12,6 +13,7 @@ from typing import List, Dict, Optional, Callable
 
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
+from chia.pools.pool_config import load_pool_config, PoolWalletConfig, update_pool_config
 from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
@@ -19,7 +21,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
+from chia.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -56,7 +58,23 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
     prompt = not args.get("yes", False)
     fee = Decimal(args.get("fee", 0))
     fee_mojos = uint64(int(fee * units["chia"]))
+    override_limit = args.get("override_limit", False)
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    self_hostname = config["self_hostname"]
+    farmer_rpc_port = config["farmer"]["rpc_port"]
+    # get total amount of plotnft's
+    farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
+    total_plot_nfts = len((await farmer_client.get_pool_state())["pool_state"])
+    farmer_client.close()
+    await farmer_client.await_closed()
 
+    if total_plot_nfts >= 18 and not override_limit:
+        raise Exception(
+            "18 or more PlotNFT's already exist. "
+            "If you need to override this limit (most users should not) use '--override_limit'."
+        )
+
+    target_puzzle_hash: Optional[bytes32]
     # Could use initial_pool_state_from_dict to simplify
     if state == "SELF_POOLING":
         pool_url: Optional[str] = None
@@ -71,7 +89,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
             return
         json_dict = await create_pool_args(pool_url)
         relative_lock_height = json_dict["relative_lock_height"]
-        target_puzzle_hash = hexstr_to_bytes(json_dict["target_puzzle_hash"])
+        target_puzzle_hash = bytes32.from_hexstr(json_dict["target_puzzle_hash"])
     else:
         raise ValueError("Plot NFT must be created in SELF_POOLING or FARMING_TO_POOL state.")
 
@@ -201,7 +219,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         await farmer_client.await_closed()
         return
     pool_state_dict: Dict[bytes32, Dict] = {
-        hexstr_to_bytes(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
+        bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
         for pool_state_item in pool_state_list
     }
     if wallet_id_passed_in is not None:
@@ -242,7 +260,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 
 
 async def get_login_link(launcher_id_str: str) -> None:
-    launcher_id: bytes32 = hexstr_to_bytes(launcher_id_str)
+    launcher_id: bytes32 = bytes32.from_hexstr(launcher_id_str)
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     self_hostname = config["self_hostname"]
     farmer_rpc_port = config["farmer"]["rpc_port"]
@@ -395,3 +413,24 @@ async def claim_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int
         fee_mojos,
     )
     await submit_tx_with_confirmation(msg, False, func, wallet_client, fingerprint, wallet_id)
+
+
+async def change_payout_instructions(launcher_id: str, address: str) -> None:
+    new_pool_configs: List[PoolWalletConfig] = []
+    id_found = False
+    if decode_puzzle_hash(address):
+        old_configs: List[PoolWalletConfig] = load_pool_config(DEFAULT_ROOT_PATH)
+        for pool_config in old_configs:
+            if pool_config.launcher_id == hexstr_to_bytes(launcher_id):
+                id_found = True
+                pool_config = replace(pool_config, payout_instructions=decode_puzzle_hash(address).hex())
+            new_pool_configs.append(pool_config)
+        if id_found:
+            print(f"Launcher Id: {launcher_id} Found, Updating Config.")
+            await update_pool_config(DEFAULT_ROOT_PATH, new_pool_configs)
+            print(f"Payout Instructions for launcher id: {launcher_id} successfully updated to: {address}.")
+            print(f"You will need to change the payout instructions on every device you use to: {address}.")
+        else:
+            print(f"Launcher Id: {launcher_id} Not found.")
+    else:
+        print(f"Invalid Address: {address}")

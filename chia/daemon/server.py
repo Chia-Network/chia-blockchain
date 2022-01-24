@@ -3,12 +3,12 @@ import json
 import logging
 import os
 import signal
+import ssl
 import subprocess
 import sys
 import time
 import traceback
 import uuid
-
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
@@ -100,6 +100,9 @@ if getattr(sys, "frozen", False):
         "chia_timelord": "start_timelord",
         "chia_timelord_launcher": "timelord_launcher",
         "chia_full_node_simulator": "start_simulator",
+        "chia_seeder": "chia_seeder",
+        "chia_seeder_crawler": "chia_seeder_crawler",
+        "chia_seeder_dns": "chia_seeder_dns",
     }
 
     def executable_for_service(service_name: str) -> str:
@@ -154,6 +157,19 @@ class WebSocketServer:
 
     async def start(self):
         self.log.info("Starting Daemon Server")
+
+        if ssl.OPENSSL_VERSION_NUMBER < 0x10101000:
+            self.log.warning(
+                (
+                    "Deprecation Warning: Your version of openssl (%s) does not support TLS1.3. "
+                    "A future version of Chia will require TLS1.3."
+                ),
+                ssl.OPENSSL_VERSION,
+            )
+        else:
+            if self.ssl_context is not None:
+                # Daemon is internal connections, so override to TLS1.3 only
+                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
 
         def master_close_cb():
             asyncio.create_task(self.stop())

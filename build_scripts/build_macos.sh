@@ -15,13 +15,10 @@ fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
-npm install electron-installer-dmg -g
-# Pinning electron-packager and electron-osx-sign to known working versions
-# Current packager uses an old version of osx-sign, so if we install the newer sign package
-# things break
-npm install electron-packager@15.4.0 -g
-npm install electron-osx-sign@v0.5.0 -g
-npm install notarize-cli -g
+cd npm_macos || exit
+npm ci
+PATH=$(npm bin):$PATH
+cd .. || exit
 
 echo "Create dist/"
 sudo rm -rf dist
@@ -36,19 +33,24 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "pyinstaller failed!"
 	exit $LAST_EXIT_CODE
 fi
-cp -r dist/daemon ../chia-blockchain-gui
+cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 cd .. || exit
 cd chia-blockchain-gui || exit
 
 echo "npm build"
-npm install
-npm audit fix
+lerna clean -y
+npm ci
+# Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
+# npm audit fix
 npm run build
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "npm run build failed!"
 	exit $LAST_EXIT_CODE
 fi
+
+# Change to the gui package
+cd packages/gui || exit
 
 # sets the version for chia-blockchain in package.json
 brew install jq
@@ -80,8 +82,8 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-mv Chia-darwin-x64 ../build_scripts/dist/
-cd ../build_scripts || exit
+mv Chia-darwin-x64 ../../../build_scripts/dist/
+cd ../../../build_scripts || exit
 
 DMG_NAME="Chia-$CHIA_INSTALLER_VERSION.dmg"
 echo "Create $DMG_NAME"

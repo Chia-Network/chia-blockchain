@@ -71,6 +71,7 @@ from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
 from datetime import datetime
 from chia.util.db_synchronous import db_synchronous_on
+from chia.util.db_version import lookup_db_version
 
 
 class FullNode:
@@ -157,9 +158,9 @@ class FullNode:
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
 
-        await self.connection.execute(
-            "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path))
-        )
+        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
+        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
+        await self.connection.execute("pragma synchronous={}".format(db_sync))
 
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
@@ -172,14 +173,20 @@ class FullNode:
                 log.close()
 
             await self.connection.set_trace_callback(sql_trace_callback)
-        self.db_wrapper = DBWrapper(self.connection, self.config.get("allow_database_upgrades", False))
+
+        db_version: int = await lookup_db_version(self.connection)
+
+        self.db_wrapper = DBWrapper(self.connection, db_version=db_version)
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
         self.hint_store = await HintStore.create(self.db_wrapper)
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
-        self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants, self.hint_store)
+        reserved_cores = self.config.get("reserved_cores", 0)
+        self.blockchain = await Blockchain.create(
+            self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent, reserved_cores
+        )
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
 
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
@@ -205,6 +212,13 @@ class FullNode:
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
             self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
+            num_unspent = await self.coin_store.num_unspent()
+            if num_unspent > 0:
+                self.log.error(
+                    f"Inconsistent blockchain DB file! Could not find peak block but found {num_unspent} coins! "
+                    "This is a fatal error. The blockchain database may be corrupt"
+                )
+                raise RuntimeError("corrupt blockchain DB")
         else:
             self.log.info(
                 f"Blockchain initialized to peak {self.blockchain.get_peak().header_hash} height"
@@ -713,7 +727,8 @@ class FullNode:
             self.uncompact_task.cancel()
         if self._transaction_queue_task is not None:
             self._transaction_queue_task.cancel()
-        self._blockchain_lock_queue.close()
+        if hasattr(self, "_blockchain_lock_queue"):
+            self._blockchain_lock_queue.close()
 
     async def _await_closed(self):
         cancel_task_safe(self._sync_task, self.log)
@@ -722,7 +737,8 @@ class FullNode:
         await self.connection.close()
         if self._init_weight_proof is not None:
             await asyncio.wait([self._init_weight_proof])
-        await self._blockchain_lock_queue.await_closed()
+        if hasattr(self, "_blockchain_lock_queue"):
+            await self._blockchain_lock_queue.await_closed()
 
     async def _sync(self):
         """
@@ -883,7 +899,7 @@ class FullNode:
                         if peer.closed:
                             peers_with_peak.remove(peer)
                             continue
-                        response = await peer.request_blocks(request, timeout=10)
+                        response = await peer.request_blocks(request, timeout=30)
                         if response is None:
                             await peer.close()
                             peers_with_peak.remove(peer)
@@ -987,9 +1003,16 @@ class FullNode:
                         changes_for_peer[peer] = set()
                     changes_for_peer[peer].add(coin_record.coin_state)
 
+        # This is just a verification that the assumptions justifying the ignore below
+        # are valid.
+        hint: bytes
         for hint, records in hint_state.items():
-            if hint in self.ph_subscriptions:
-                subscribed_peers = self.ph_subscriptions[hint]
+            # While `hint` is typed as a `bytes`, and this is locally verified
+            # immediately above, if it has length 32 then it might match an entry in
+            # `self.ph_subscriptions`.  It is unclear if there is a more proper means
+            # of handling this situation.
+            subscribed_peers = self.ph_subscriptions.get(hint)  # type: ignore[call-overload]
+            if subscribed_peers is not None:
                 for peer in subscribed_peers:
                     if peer not in changes_for_peer:
                         changes_for_peer[peer] = set()
@@ -1010,7 +1033,7 @@ class FullNode:
         peer: ws.WSChiaConnection,
         fork_point: Optional[uint32],
         wp_summaries: Optional[List[SubEpochSummary]] = None,
-    ) -> Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes, CoinRecord]]]]:
+    ) -> Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]]:
         advanced_peak = False
         fork_height: Optional[uint32] = uint32(0)
 
@@ -1022,17 +1045,17 @@ class FullNode:
         if len(blocks_to_validate) == 0:
             return True, False, fork_height, ([], {})
 
+        # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
+        # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.time()
-        pre_validation_results: Optional[
-            List[PreValidationResult]
-        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {}, wp_summaries=wp_summaries)
+        pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
+            blocks_to_validate, {}, wp_summaries=wp_summaries, validate_signatures=True
+        )
         pre_validate_end = time.time()
         if pre_validate_end - pre_validate_start > 10:
             self.log.warning(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
         else:
             self.log.debug(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
-        if pre_validation_results is None:
-            return False, False, None, ([], {})
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
@@ -1219,7 +1242,10 @@ class FullNode:
         fork_block: Optional[BlockRecord] = None
         if fork_height != block.height - 1 and block.height != 0:
             # This is a reorg
-            fork_block = self.blockchain.block_record(self.blockchain.height_to_hash(fork_height))
+            # TODO: address hint error and remove ignore
+            #       error: Argument 1 to "block_record" of "Blockchain" has incompatible type "Optional[bytes32]";
+            #       expected "bytes32"  [arg-type]
+            fork_block = self.blockchain.block_record(self.blockchain.height_to_hash(fork_height))  # type: ignore[arg-type]  # noqa: E501
 
         fns_peak_result: FullNodeStorePeakResult = self.full_node_store.new_peak(
             record,
@@ -1296,7 +1322,7 @@ class FullNode:
             new_tx = full_node_protocol.NewTransaction(
                 spend_name,
                 mempool_item.cost,
-                uint64(bundle.fees()),
+                fees,
             )
             msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
@@ -1385,6 +1411,8 @@ class FullNode:
                 and unf_block.transactions_generator is not None
                 and unf_block.foliage_transaction_block == block.foliage_transaction_block
             ):
+                # We checked that the transaction block is the same, therefore all transactions and the signature
+                # must be identical in the unfinished and finished blocks. We can therefore use the cache.
                 pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
                 assert pre_validation_result is not None
                 block = dataclasses.replace(
@@ -1429,11 +1457,16 @@ class FullNode:
             npc_results = {}
             if pre_validation_result is not None and pre_validation_result.npc_result is not None:
                 npc_results[block.height] = pre_validation_result.npc_result
-            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
+
+            # Don't validate signatures because we want to validate them in the main thread later, since we have a
+            # cache available
+            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(
+                [block], npc_results, validate_signatures=False
+            )
             added: Optional[ReceiveBlockResult] = None
             pre_validation_time = time.time() - validation_start
             try:
-                if pre_validation_results is None:
+                if len(pre_validation_results) < 1:
                     raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
                 if pre_validation_results[0].error is not None:
                     if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
@@ -1638,6 +1671,9 @@ class FullNode:
                     return
                 raise ConsensusError(Err(validate_result.error))
             validation_time = time.time() - validation_start
+
+        # respond_block will later use the cache (validated_signature=True)
+        validate_result = dataclasses.replace(validate_result, validated_signature=True)
 
         assert validate_result.required_iters is not None
 
@@ -1857,7 +1893,7 @@ class FullNode:
                 full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
                     request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
                     uint8(0),
-                    bytes([0] * 32),
+                    bytes32([0] * 32),
                 )
                 return (
                     make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request),
@@ -2227,7 +2263,7 @@ class FullNode:
     ):
         try:
             while not self._shut_down:
-                while self.sync_store.get_sync_mode():
+                while self.sync_store.get_sync_mode() or self.sync_store.get_long_sync():
                     if self._shut_down:
                         return None
                     await asyncio.sleep(30)
@@ -2311,7 +2347,7 @@ class FullNode:
 
                 if len(broadcast_list) > target_uncompact_proofs:
                     broadcast_list = broadcast_list[:target_uncompact_proofs]
-                if self.sync_store.get_sync_mode():
+                if self.sync_store.get_sync_mode() or self.sync_store.get_long_sync():
                     continue
                 if self.server is not None:
                     self.log.info(f"Broadcasting {len(broadcast_list)} items to the bluebox")
