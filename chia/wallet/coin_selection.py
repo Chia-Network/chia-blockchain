@@ -15,7 +15,7 @@ def check_for_exact_match(coin_records: List[WalletCoinRecord], target: int) -> 
 
 # we use this to find the individual coin that is closest to the target amount.
 def find_smallest_coin(coin_records: List[WalletCoinRecord], target: int) -> Optional[WalletCoinRecord]:
-    smallest_value = int("inf")  # smallest coins value
+    smallest_value = float("inf")  # smallest coins value
     smallest_coin: Optional[WalletCoinRecord] = None
     for coinrecord in coin_records:
         if target < coinrecord.coin.amount < smallest_value:
@@ -27,7 +27,7 @@ def find_smallest_coin(coin_records: List[WalletCoinRecord], target: int) -> Opt
 
 # we use this to find the smallest set of coins.
 def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: int) -> Tuple[Optional[Set[Coin]], uint64]:
-    best_set_sum = int("inf")
+    best_set_sum = float("inf")
     best_set_of_coins: Optional[Set[Coin]] = None
     for i in range(1000):
         n_pass = 0
@@ -51,4 +51,4 @@ def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: int) -> Tuple[Opti
                             selected_coins_sum -= coin.amount
                             selected_coins.remove(coin)
                     n_pass += 1
-    return (best_set_of_coins, uint64(best_set_sum))
+    return (best_set_of_coins, uint64(int(best_set_sum)))
