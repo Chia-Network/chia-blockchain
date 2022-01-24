@@ -17,12 +17,8 @@ from chia.plotting.util import (
     PlotsRefreshParameter,
     PlotRefreshEvents,
     get_plot_filenames,
-    parse_plot_info,
 )
 from chia.util.generator_tools import list_to_batches
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.derive_keys import master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
 
@@ -295,34 +291,7 @@ class PlotManager:
                         )
                         return None
 
-                    (
-                        pool_public_key_or_puzzle_hash,
-                        farmer_public_key,
-                        local_master_sk,
-                    ) = parse_plot_info(prover.get_memo())
-
-                    pool_public_key: Optional[G1Element] = None
-                    pool_contract_puzzle_hash: Optional[bytes32] = None
-                    if isinstance(pool_public_key_or_puzzle_hash, G1Element):
-                        pool_public_key = pool_public_key_or_puzzle_hash
-                    else:
-                        assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
-                        pool_contract_puzzle_hash = pool_public_key_or_puzzle_hash
-
-                    local_sk = master_sk_to_local_sk(local_master_sk)
-
-                    plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
-                        local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
-                    )
-
-                    cache_entry = CacheEntry(
-                        prover,
-                        farmer_public_key,
-                        pool_public_key,
-                        pool_contract_puzzle_hash,
-                        plot_public_key,
-                        time.time(),
-                    )
+                    cache_entry = CacheEntry.from_disk_prover(prover)
                     self.cache.update(file_path, cache_entry)
 
                 assert cache_entry is not None
