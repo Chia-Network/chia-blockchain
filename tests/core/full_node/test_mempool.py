@@ -43,6 +43,7 @@ from tests.setup_nodes import bt, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.consensus.cost_calculator import NPCResult
+from chia.consensus.condition_costs import ConditionCost
 from chia.types.blockchain_format.program import SerializedProgram
 from clvm_tools import binutils
 from chia.types.generator_types import BlockGenerator
@@ -1890,15 +1891,15 @@ class TestGeneratorConditions:
 
         # this max cost is exactly enough for the create coin condition
         npc_result = generator_condition_tester(
-            f'(51 "{puzzle_hash}" 10) ', max_cost=20470 + 95 * COST_PER_BYTE + 1800000
+            f'(51 "{puzzle_hash}" 10) ', max_cost=20470 + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value
         )
         assert npc_result.error is None
-        assert npc_result.clvm_cost == 20470
+        assert npc_result.cost == 20470 + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value
         assert len(npc_result.npc_list) == 1
 
         # if we subtract one from max cost, this should fail
         npc_result = generator_condition_tester(
-            f'(51 "{puzzle_hash}" 10) ', max_cost=20470 + 95 * COST_PER_BYTE + 1800000 - 1
+            f'(51 "{puzzle_hash}" 10) ', max_cost=20470 + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value - 1
         )
         assert npc_result.error in [Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value]
 
@@ -1908,15 +1909,15 @@ class TestGeneratorConditions:
 
         # this max cost is exactly enough for the AGG_SIG condition
         npc_result = generator_condition_tester(
-            f'(49 "{pubkey}" "foobar") ', max_cost=20512 + 117 * COST_PER_BYTE + 1200000
+            f'(49 "{pubkey}" "foobar") ', max_cost=20512 + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value
         )
         assert npc_result.error is None
-        assert npc_result.clvm_cost == 20512
+        assert npc_result.cost == 20512 + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value
         assert len(npc_result.npc_list) == 1
 
         # if we subtract one from max cost, this should fail
         npc_result = generator_condition_tester(
-            f'(49 "{pubkey}" "foobar") ', max_cost=20512 + 117 * COST_PER_BYTE + 1200000 - 1
+            f'(49 "{pubkey}" "foobar") ', max_cost=20512 + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value - 1
         )
         assert npc_result.error in [Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value]
 
