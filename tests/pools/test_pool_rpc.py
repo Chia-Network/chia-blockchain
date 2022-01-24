@@ -206,9 +206,10 @@ class TestPoolWalletRpc:
         assert len(pool_list) == 1
         pool_config = pool_list[0]
         assert (
-            pool_config["authentication_public_key"]
-            == "0xb3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
+            pool_config["owner_public_key"]
+            == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
         )
+
         # It can be one of multiple launcher IDs, due to selecting a different coin
         launcher_id = None
         for addition in creation_tx.additions:
@@ -282,8 +283,8 @@ class TestPoolWalletRpc:
         assert len(pool_list) == 1
         pool_config = pool_list[0]
         assert (
-            pool_config["authentication_public_key"]
-            == "0xb3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
+            pool_config["owner_public_key"]
+            == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
         )
         # It can be one of multiple launcher IDs, due to selecting a different coin
         launcher_id = None

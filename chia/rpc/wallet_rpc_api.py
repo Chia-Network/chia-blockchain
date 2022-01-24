@@ -526,9 +526,11 @@ class WalletRpcApi:
                 from chia.pools.pool_wallet_info import initial_pool_state_from_dict
 
                 async with self.service.wallet_state_manager.lock:
-                    # We assign a unique id to each pool wallet, so that each one gets it's own deterministic owner
-                    # and auth keys. The public keys will go on the blockchain, and the private keys can be found
-                    # using the root SK and trying each index from zero.
+                    # We assign a pseudo unique id to each pool wallet, so that each one gets its own deterministic
+                    # owner and auth keys. The public keys will go on the blockchain, and the private keys can be found
+                    # using the root SK and trying each index from zero. The indexes are not fully unique though,
+                    # because the PoolWallet is not created until the tx gets confirmed on chain. Therefore if we
+                    # make multiple pool wallets at the same time, they will have the same ID.
                     max_pwi = 1
                     for _, wallet in self.service.wallet_state_manager.wallets.items():
                         if wallet.type() == WalletType.POOLING_WALLET:

@@ -44,7 +44,6 @@ from chia.pools.pool_puzzles import (
 
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import (
-    master_sk_to_pooling_authentication_sk,
     find_owner_sk,
 )
 from chia.wallet.sign_coin_spends import sign_coin_spends
@@ -235,13 +234,8 @@ class PoolWallet:
         existing_config: Optional[PoolWalletConfig] = pool_config_dict.get(current_state.launcher_id, None)
 
         if make_new_authentication_key or existing_config is None:
-            new_auth_sk: PrivateKey = master_sk_to_pooling_authentication_sk(
-                self.wallet_state_manager.private_key, await self.get_pool_wallet_index(), uint32(0)
-            )
-            auth_pk: G1Element = new_auth_sk.get_g1()
             payout_instructions: str = (await self.standard_wallet.get_new_puzzlehash(in_transaction=True)).hex()
         else:
-            auth_pk = existing_config.authentication_public_key
             payout_instructions = existing_config.payout_instructions
 
         new_config: PoolWalletConfig = PoolWalletConfig(
@@ -251,7 +245,6 @@ class PoolWallet:
             current_state.current.target_puzzle_hash,
             current_state.p2_singleton_puzzle_hash,
             current_state.current.owner_pubkey,
-            auth_pk,
         )
         pool_config_dict[new_config.launcher_id] = new_config
         await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))
