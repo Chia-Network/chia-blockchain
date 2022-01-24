@@ -185,7 +185,7 @@ class PlotManager:
                         paths_to_remove: List[str] = []
                         for path in duplicated_paths:
                             loaded_plot = Path(path) / Path(plot_filename)
-                            if plot_removed(loaded_plot):
+                            if loaded_plot not in plot_paths:
                                 paths_to_remove.append(path)
                                 total_result.removed.append(loaded_plot)
                         for path in paths_to_remove:
