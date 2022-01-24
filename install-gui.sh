@@ -2,6 +2,7 @@
 set -e
 export NODE_OPTIONS="--max-old-space-size=3000"
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 if [ -z "$VIRTUAL_ENV" ]; then
   echo "This requires the chia python virtual environment."
@@ -34,6 +35,9 @@ if [ "$(uname)" = "Linux" ]; then
 			}
 		else
 			sudo apt-get install -y npm nodejs libxss1
+      sudo npm install -g n
+      export N_PREFIX=${SCRIPT_DIR}/.n
+      n stable
 		fi
 	elif type yum &&  [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ]; then
 		# AMZN 2
@@ -61,24 +65,7 @@ elif [ "$(uname)" = "FreeBSD" ]; then
 	pkg install node
 fi
 
-# Ubuntu before 20.04LTS has an ancient node.js
 echo ""
-UBUNTU_PRE_2004=false
-if $UBUNTU; then
-	UBUNTU_PRE_2004=$(python -c 'import subprocess; process = subprocess.run(["lsb_release", "-rs"], stdout=subprocess.PIPE); print(float(process.stdout) < float(20.04))')
-fi
-
-if [ "$UBUNTU_PRE_2004" = "True" ]; then
-	echo "Installing on Ubuntu older than 20.04 LTS: Ugrading node.js to stable."
-	UBUNTU_PRE_2004=true # Unfortunately Python returns True when shell expects true
-	sudo npm install -g n
-	sudo n stable
-	export PATH="$PATH"
-fi
-
-if [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "False" ]; then
-	echo "Installing on Ubuntu 20.04 LTS or newer: Using installed node.js version."
-fi
 
 # For Mac and Windows, we will set up node.js on GitHub Actions and Azure
 # Pipelines directly, so skip unless you are completing a source/developer install.
@@ -113,4 +100,4 @@ fi
 echo ""
 echo "Chia blockchain install-gui.sh completed."
 echo ""
-echo "Type 'cd chia-blockchain-gui' and then 'npm run electron &' to start the GUI."
+echo "Type 'bash start-gui.sh &' to start the GUI."
