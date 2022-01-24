@@ -64,7 +64,19 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
     farmer_rpc_port = config["farmer"]["rpc_port"]
     # get total amount of plotnft's
     farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
-    total_plot_nfts = len((await farmer_client.get_pool_state())["pool_state"])
+    try:
+        total_plot_nfts = len((await farmer_client.get_pool_state())["pool_state"])
+    except Exception:
+        prompt_continue = not input(
+            "Could not get total number of plot nfts, do you want to continue? "
+            "You can stop this from happening if you start your farmer."
+        )
+        if prompt_continue:
+            print("Aborting")
+            return
+        else:
+            total_plot_nfts = 0
+            print("Continuing")
     farmer_client.close()
     await farmer_client.await_closed()
 
