@@ -1,5 +1,5 @@
 from aiosqlite import Row
-from typing import List, Optional, Type, TypeVar
+from typing import List, Optional, Type, TypeVar, Union
 
 import aiosqlite
 import dataclasses
@@ -116,12 +116,12 @@ class DataLayerStore:
         num_results: Optional[uint32] = None,
     ) -> List[SingletonRecord]:
         """
-        Returns all stored singletons.
+        Returns all stored singletons with a specific launcher ID.
         """
-        query_params: Tuple = (launcher_id,)
+        query_params: List[Union[bytes32, uint32]] = [launcher_id]
         for optional_param in (min_generation, max_generation, num_results):
             if optional_param is not None:
-                query_params = (*query_params, optional_param)
+                query_params.append(optional_param)
 
         cursor = await self.db_connection.execute(
             "SELECT * from singleton_records WHERE launcher_id=? "
@@ -129,7 +129,7 @@ class DataLayerStore:
             f"{'AND generation <=? ' if max_generation is not None else ''}"
             "ORDER BY generation DESC"
             f"{' LIMIT ?' if num_results is not None else ''}",
-            query_params,
+            tuple(query_params),
         )
         rows = await cursor.fetchall()
         await cursor.close()

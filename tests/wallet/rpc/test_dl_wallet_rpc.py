@@ -157,7 +157,10 @@ class TestWalletRpc:
             assert await client.dl_history(launcher_id, min_generation=uint32(1)) == [new_singleton_record]
             assert await client.dl_history(launcher_id, max_generation=uint32(0)) == [singleton_record]
             assert await client.dl_history(launcher_id, num_results=uint32(1)) == [new_singleton_record]
-            assert await client.dl_history(launcher_id, num_results=uint32(2)) == [new_singleton_record, singleton_record]
+            assert await client.dl_history(launcher_id, num_results=uint32(2)) == [
+                new_singleton_record,
+                singleton_record,
+            ]
 
             assert await client.dl_singletons_by_root(launcher_id, new_root) == [new_singleton_record]
         finally:

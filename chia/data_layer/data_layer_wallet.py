@@ -731,7 +731,9 @@ class DataLayerWallet:
         return singleton
 
     async def get_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> List[SingletonRecord]:
-        singletons = await self.wallet_state_manager.dl_store.get_singletons_by_root(launcher_id, root)
+        singletons: List[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singletons_by_root(
+            launcher_id, root
+        )
         return singletons
 
     ##########

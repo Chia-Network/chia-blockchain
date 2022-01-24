@@ -1388,7 +1388,9 @@ class WalletRpcApi:
 
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                records = await wallet.get_singletons_by_root(bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["root"]))
+                records = await wallet.get_singletons_by_root(
+                    bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["root"])
+                )
                 records_json = [rec.to_json_dict() for rec in records]
                 return {"singletons": records_json}
 
