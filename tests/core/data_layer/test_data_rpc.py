@@ -258,6 +258,29 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes) -> None:
         # todo better assertions for get_ancestors result
         # assert val is not None
         # print(val)
+        res_before = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
+        key6 = b"tasdfsd"
+        value6 = b"\x08\x02"
+        changelist = [{"action": "insert", "key": key6.hex(), "value": value6.hex()}]
+        key7 = b"basdff"
+        value7 = b"\x09\x02"
+        changelist.append({"action": "insert", "key": key7.hex(), "value": value7.hex()})
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec0 = res["tx_id"]
+        await asyncio.sleep(1)
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
+        await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec0)
+        res_after = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
+        pairs_before = await data_rpc_api.get_keys_values(
+            {"id": store_id.hex(), "root_hash": res_before["hashes"][0].hex()}
+        )
+        pairs_after = await data_rpc_api.get_keys_values(
+            {"id": store_id.hex(), "root_hash": res_after["hashes"][0].hex()}
+        )
+        assert len(pairs_before["keys_values"]) == 5
+        assert len(pairs_after["keys_values"]) == 7
 
 
 @pytest.mark.asyncio
