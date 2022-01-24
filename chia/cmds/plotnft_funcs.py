@@ -26,6 +26,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.derive_keys import MAX_POOL_WALLETS
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -68,9 +69,9 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
     farmer_client.close()
     await farmer_client.await_closed()
 
-    if total_plot_nfts >= 18 and not override_limit:
+    if total_plot_nfts >= (MAX_POOL_WALLETS - 2) and not override_limit:
         raise Exception(
-            "18 or more PlotNFT's already exist. "
+            f"{total_plot_nfts} or more PlotNFT's already exist. "
             "If you need to override this limit (most users should not) use '--override_limit'."
         )
 
