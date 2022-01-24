@@ -272,59 +272,54 @@ class Wallet:
             self.id()
         )
 
-        sum_value = 0
-        used_coins: Set = set()
-        valid_unspent: List = []
+        sum_spendable_coins = 0
+        used_coins: Set[Coin] = set()
+        valid_unspent: List[Coin] = []
 
-        for coinrecord in unspent:  # remove all the useless coins.
-            if coinrecord.coin.name() in unconfirmed_removals:
+        for coin_record in unspent:  # remove all the useless coins.
+            if coin_record.coin.name() in unconfirmed_removals:
                 continue
-            if coinrecord.coin in exclude:
+            if coin_record.coin in exclude:
                 continue
-            valid_unspent.append(coinrecord)
-            sum_value += coinrecord.coin.amount
+            valid_unspent.append(coin_record.coin)
+            sum_spendable_coins += coin_record.coin.amount
 
         # This happens when we couldn't use one of the coins because it's already used
         # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-        if sum_value < amount:
+        if sum_spendable_coins < amount:
             raise ValueError(
                 "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
             )
 
         # Use older coins first
-        valid_unspent.sort(reverse=True, key=lambda r: r.coin.amount)
+        valid_unspent.sort(reverse=True, key=lambda r: r.amount)
 
         # check for exact 1 to 1 coin match.
-        exact_match_coinrecord: Optional[WalletCoinRecord] = check_for_exact_match(valid_unspent, amount)
-        if exact_match_coinrecord:
-            used_coins.add(exact_match_coinrecord.coin)
-            self.log.debug(
-                f"Selected coin: {exact_match_coinrecord.coin.name()} "
-                f"at height {exact_match_coinrecord.confirmed_block_height}!"
-            )
+        exact_match_coin_record: Optional[Coin] = check_for_exact_match(valid_unspent, amount)
+        if exact_match_coin_record:
+            used_coins.add(exact_match_coin_record)
+            self.log.debug(f"Successfully selected coins: {used_coins}")
+            return used_coins
 
         # Check for an exact match with all of the coins smaller than the amount.
         # If we have more, smaller coins than the amount we run the next algorithm.
-        if not exact_match_coinrecord:
-            smaller_coin_sum = 0  # coins smaller then target.
-            smaller_coins: Set[Coin] = set()
-            for coinrecord in valid_unspent:
-                if coinrecord.coin.amount < amount:
-                    smaller_coin_sum += coinrecord.coin.amount
-                    smaller_coins.add(coinrecord.coin)
-            if smaller_coin_sum == amount:
-                used_coins = smaller_coins
-            elif smaller_coin_sum < amount:
-                smallest_coin: Optional[WalletCoinRecord] = find_smallest_coin(valid_unspent, amount)
-                if smallest_coin:
-                    used_coins.add(smallest_coin.coin)
-                    self.log.debug(
-                        f"Selected coin: {smallest_coin.coin.name()} at height {smallest_coin.confirmed_block_height}!"
-                    )
-            elif smaller_coin_sum > amount:
-                best_coin_set, sum_best_coin_set = knapsack_coin_algorithm(smaller_coins, amount)
-                if best_coin_set:
-                    used_coins = best_coin_set
+        smaller_coin_sum = 0  # coins smaller then target.
+        smaller_coins: Set[Coin] = set()
+        for coin in valid_unspent:
+            if coin.amount < amount:
+                smaller_coin_sum += coin.amount
+                smaller_coins.add(coin)
+        if smaller_coin_sum == amount:
+            used_coins = smaller_coins
+        elif smaller_coin_sum < amount:
+            smallest_coin: Optional[Coin] = find_smallest_coin(valid_unspent, amount)
+            if smallest_coin:
+                used_coins.add(smallest_coin)
+                self.log.debug(f"Selected coin: {smallest_coin.name()}")
+        elif smaller_coin_sum > amount:
+            best_coin_set, sum_best_coin_set = knapsack_coin_algorithm(smaller_coins, amount)
+            if best_coin_set:
+                used_coins = best_coin_set
 
         self.log.debug(f"Successfully selected coins: {used_coins}")
         return used_coins

@@ -1,33 +1,34 @@
 import random
 from typing import Set, Optional, Tuple, List
+
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.util.ints import uint64
-from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 
 # we use this to check if one of the coins exactly matches the target.
-def check_for_exact_match(coin_records: List[WalletCoinRecord], target: int) -> Optional[WalletCoinRecord]:
-    for coinrecord in coin_records:
-        if coinrecord.coin.amount == target:
-            return coinrecord
+def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coin]:
+    for coin in coin_list:
+        if coin.amount == target:
+            return coin
     return None
 
 
-# we use this to find the individual coin that is closest to the target amount.
-def find_smallest_coin(coin_records: List[WalletCoinRecord], target: int) -> Optional[WalletCoinRecord]:
-    smallest_value = float("inf")  # smallest coins value
-    smallest_coin: Optional[WalletCoinRecord] = None
-    for coinrecord in coin_records:
-        if target < coinrecord.coin.amount < smallest_value:
+# we use this to find an individual coin greater than the target but as close as possible to the target.
+def find_smallest_coin(greater_coin_list: List[Coin], target: uint64) -> Optional[Coin]:
+    smallest_value = DEFAULT_CONSTANTS.MAX_COIN_AMOUNT  # smallest coins value
+    smallest_coin: Optional[Coin] = None
+    for coin in greater_coin_list:
+        if target < coin.amount < smallest_value:
             # try to find a coin that is as close as possible to the amount.
-            smallest_value = coinrecord.coin.amount
-            smallest_coin = coinrecord
+            smallest_value = coin.amount
+            smallest_coin = coin
     return smallest_coin
 
 
 # we use this to find the smallest set of coins.
-def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: int) -> Tuple[Optional[Set[Coin]], uint64]:
-    best_set_sum = float("inf")
+def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: uint64) -> Tuple[Optional[Set[Coin]], uint64]:
+    best_set_sum = DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
     best_set_of_coins: Optional[Set[Coin]] = None
     for i in range(1000):
         # reset these variables every loop.
