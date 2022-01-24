@@ -32,7 +32,7 @@ def plot_refresh_callback(event: PlotRefreshEvents, refresh_result: PlotRefreshR
 def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo):
     config = load_config(root_path, "config.yaml")
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-    plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_sleep_milliseconds=0)
+    plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter()
     plot_manager: PlotManager = PlotManager(
         root_path,
         match_str=grep_string,

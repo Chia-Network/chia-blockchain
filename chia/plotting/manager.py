@@ -208,9 +208,6 @@ class PlotManager:
                     self._refresh_callback(PlotRefreshEvents.batch_processed, batch_result)
                     if remaining == 0:
                         break
-                    batch_sleep = self.refresh_parameter.batch_sleep_milliseconds
-                    self.log.debug(f"refresh_plots: Sleep {batch_sleep} milliseconds")
-                    time.sleep(float(batch_sleep) / 1000.0)
 
                 if self._refreshing_enabled:
                     self._refresh_callback(PlotRefreshEvents.done, total_result)
