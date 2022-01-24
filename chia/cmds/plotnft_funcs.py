@@ -26,7 +26,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.derive_keys import MAX_POOL_WALLETS
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -59,10 +58,6 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
     prompt = not args.get("yes", False)
     fee = Decimal(args.get("fee", 0))
     fee_mojos = uint64(int(fee * units["chia"]))
-    override_limit = args.get("override_limit", False)
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    self_hostname = config["self_hostname"]
-    farmer_rpc_port = config["farmer"]["rpc_port"]
     target_puzzle_hash: Optional[bytes32]
     # Could use initial_pool_state_from_dict to simplify
     if state == "SELF_POOLING":
