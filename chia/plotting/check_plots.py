@@ -36,7 +36,6 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     plot_manager: PlotManager = PlotManager(
         root_path,
         match_str=grep_string,
-        show_memo=debug_show_memo,
         open_no_key_filenames=True,
         refresh_parameter=plot_refresh_parameter,
         refresh_callback=plot_refresh_callback,
@@ -197,3 +196,10 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
             f"is not on this machine. The farmer private key must be in the keychain in order to "
             f"farm them, use 'chia keys' to transfer keys. The pool public keys must be in the config.yaml"
         )
+
+    if debug_show_memo:
+        plot_memo_str: str = "Plot Memos:\n"
+        with plot_manager:
+            for path, plot in plot_manager.plots.items():
+                plot_memo_str += f"{path}: {plot.prover.get_memo().hex()}\n"
+        log.info(plot_memo_str)
