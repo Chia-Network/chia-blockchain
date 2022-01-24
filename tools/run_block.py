@@ -40,6 +40,7 @@ from dataclasses import dataclass
 from typing import List, TextIO, Tuple
 
 import click
+
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
@@ -52,7 +53,7 @@ from chia.types.name_puzzle_condition import NPC
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import ConsensusError, Err
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
 
 
@@ -86,10 +87,10 @@ def npc_to_dict(npc: NPC):
     }
 
 
-def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants) -> List[CAT]:
+def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int) -> List[CAT]:
     npc_result = get_name_puzzle_conditions(
         block_generator,
-        constants.MAX_BLOCK_COST_CLVM,  # min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
+        max_cost,
         cost_per_byte=constants.COST_PER_BYTE,
         mempool_mode=False,
     )
@@ -99,7 +100,7 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
     cat_list: List[CAT] = []
     for npc in npc_result.npc_list:
         _, puzzle, solution = get_puzzle_and_solution_for_coin(
-            block_generator, coin_name=npc.coin_name, max_cost=constants.MAX_BLOCK_COST_CLVM
+            block_generator, coin_name=npc.coin_name, max_cost=max_cost
         )
         matched, curried_args = match_cat_puzzle(puzzle)
 
@@ -119,7 +120,10 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
                     # special retirement address
                     if condition[3][0].hex() == "0000000000000000000000000000000000000000000000000000000000000000":
                         if len(condition[3]) >= 2:
-                            memo = condition[3][1].decode("utf-8")
+                            try:
+                                memo = condition[3][1].decode("utf-8", errors="strict")
+                            except UnicodeError:
+                                pass  # ignore this error which should leave memo as empty string
 
                         # technically there could be more such create_coin ops in the list but our wallet does not
                         # so leaving it for the future
@@ -142,20 +146,20 @@ def ref_list_to_args(ref_list: List[uint32]):
 
 def run_full_block(block: FullBlock, constants: ConsensusConstants) -> List[CAT]:
     generator_args = ref_list_to_args(block.transactions_generator_ref_list)
-    if block.transactions_generator is None:
+    if block.transactions_generator is None or block.transactions_info is None:
         raise RuntimeError("transactions_generator of FullBlock is null")
     block_generator = BlockGenerator(block.transactions_generator, generator_args)
-    return run_generator(block_generator, constants)
+    return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost))
 
 
 def run_generator_with_args(
-    generator_program_hex: str, generator_args: List[GeneratorArg], constants: ConsensusConstants
+    generator_program_hex: str, generator_args: List[GeneratorArg], constants: ConsensusConstants, cost: uint64
 ) -> List[CAT]:
     if not generator_program_hex:
         return []
     generator_program = SerializedProgram.fromhex(generator_program_hex)
     block_generator = BlockGenerator(generator_program, generator_args)
-    return run_generator(block_generator, constants)
+    return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, cost))
 
 
 @click.command()
@@ -165,12 +169,26 @@ def cmd_run_json_block_file(file):
     return run_json_block_file(file)
 
 
-def run_json_block_file(file: TextIO):
-    _, constants = get_config_and_constants()
-    full_block = json.load(file)
+def run_json_block(full_block, constants: ConsensusConstants) -> List[CAT]:
     ref_list = full_block["block"]["transactions_generator_ref_list"]
-    args = ref_list_to_args(ref_list)
-    cat_list: List[CAT] = run_generator_with_args(full_block["block"]["transactions_generator"], args, constants)
+    tx_info: dict = full_block["block"]["transactions_info"]
+    generator_program_hex: str = full_block["block"]["transactions_generator"]
+    cat_list: List[CAT] = []
+    if tx_info and generator_program_hex:
+        cost = tx_info["cost"]
+        args = ref_list_to_args(ref_list)
+        cat_list = run_generator_with_args(generator_program_hex, args, constants, cost)
+
+    return cat_list
+
+
+def run_json_block_file(file: TextIO):
+    full_block = json.load(file)
+    # pull in current constants from config.yaml
+    _, constants = get_config_and_constants()
+
+    cat_list = run_json_block(full_block, constants)
+
     cat_list_json = json.dumps([cat.cat_to_dict() for cat in cat_list])
     print(cat_list_json)
 

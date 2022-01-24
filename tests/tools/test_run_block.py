@@ -5,7 +5,7 @@ from typing import List, Tuple
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from tools.run_block import CAT, ref_list_to_args, run_generator_with_args
+from tools.run_block import run_json_block
 
 testnet10 = {
     "AGG_SIG_ME_ADDITIONAL_DATA": bytes.fromhex("ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2"),
@@ -47,9 +47,9 @@ def test_block_no_generator():
     dirname = Path(__file__).parent
     with open(dirname / "300000.json") as f:
         full_block = json.load(f)
-    ref_list = full_block["block"]["transactions_generator_ref_list"]
-    args = ref_list_to_args(ref_list)
-    cat_list: List[CAT] = run_generator_with_args(full_block["block"]["transactions_generator"], args, constants)
+
+    cat_list = run_json_block(full_block, constants)
+
     assert not cat_list
 
 
@@ -57,9 +57,9 @@ def test_block_retired_cat_with_memo():
     dirname = Path(__file__).parent
     with open(dirname / "396963.json") as f:
         full_block = json.load(f)
-    ref_list = full_block["block"]["transactions_generator_ref_list"]
-    args = ref_list_to_args(ref_list)
-    cat_list: List[CAT] = run_generator_with_args(full_block["block"]["transactions_generator"], args, constants)
+
+    cat_list = run_json_block(full_block, constants)
+
     assert cat_list
     assert cat_list[0].tail_hash == "86bf9abe0600edf96b2e0fa928d19435b5aa756a9c9151c4b53c2c3da258502f"
     assert cat_list[0].memo == "Hello, please find me, I'm a memo!"
@@ -72,9 +72,9 @@ def test_block_retired_cat_no_memo():
     dirname = Path(__file__).parent
     with open(dirname / "392111.json") as f:
         full_block = json.load(f)
-    ref_list = full_block["block"]["transactions_generator_ref_list"]
-    args = ref_list_to_args(ref_list)
-    cat_list: List[CAT] = run_generator_with_args(full_block["block"]["transactions_generator"], args, constants)
+
+    cat_list = run_json_block(full_block, constants)
+
     assert cat_list
     assert cat_list[0].tail_hash == "86bf9abe0600edf96b2e0fa928d19435b5aa756a9c9151c4b53c2c3da258502f"
     assert not cat_list[0].memo
@@ -87,9 +87,9 @@ def test_block_cat():
     dirname = Path(__file__).parent
     with open(dirname / "149988.json") as f:
         full_block = json.load(f)
-    ref_list = full_block["block"]["transactions_generator_ref_list"]
-    args = ref_list_to_args(ref_list)
-    cat_list: List[CAT] = run_generator_with_args(full_block["block"]["transactions_generator"], args, constants)
+
+    cat_list = run_json_block(full_block, constants)
+
     assert cat_list
     assert cat_list[0].tail_hash == "8829a36776a15477a7f41f8fb6397752922374b60be7d3b2d7881c54b86b32a1"
     assert not cat_list[0].memo
