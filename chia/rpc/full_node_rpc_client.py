@@ -86,7 +86,11 @@ class FullNodeRpcClient(RpcClient):
             response = await self.fetch("get_coin_record_by_name", {"name": coin_id.hex()})
         except Exception:
             return None
-        return CoinRecord.from_json_dict(response["coin_record"])
+
+        # The following lines are for backwards compatibility after `spent` was removed as a field on CoinRecord
+        coin_record_no_spent = response["coin_record"]
+        del coin_record_no_spent["spent"]
+        return CoinRecord.from_json_dict(coin_record_no_spent)
 
     async def get_coin_records_by_names(
         self,
@@ -101,10 +105,14 @@ class FullNodeRpcClient(RpcClient):
             d["start_height"] = start_height
         if end_height is not None:
             d["end_height"] = end_height
-        return [
-            CoinRecord.from_json_dict(coin)
-            for coin in (await self.fetch("get_coin_records_by_names", d))["coin_records"]
-        ]
+
+        # The following lines are for backwards compatibility after `spent` was removed as a field on CoinRecord
+        coin_records_no_spent = []
+        for coin in (await self.fetch("get_coin_records_by_names", d))["coin_records"]:
+            del coin["spent"]
+            coin_records_no_spent.append(coin)
+
+        return [CoinRecord.from_json_dict(coin) for coin in coin_records_no_spent]
 
     async def get_coin_records_by_puzzle_hash(
         self,
@@ -118,10 +126,14 @@ class FullNodeRpcClient(RpcClient):
             d["start_height"] = start_height
         if end_height is not None:
             d["end_height"] = end_height
-        return [
-            CoinRecord.from_json_dict(coin)
-            for coin in (await self.fetch("get_coin_records_by_puzzle_hash", d))["coin_records"]
-        ]
+
+        # The following lines are for backwards compatibility after `spent` was removed as a field on CoinRecord
+        coin_records_no_spent = []
+        for coin in (await self.fetch("get_coin_records_by_puzzle_hash", d))["coin_records"]:
+            del coin["spent"]
+            coin_records_no_spent.append(coin)
+
+        return [CoinRecord.from_json_dict(coin) for coin in coin_records_no_spent]
 
     async def get_coin_records_by_puzzle_hashes(
         self,
@@ -136,10 +148,14 @@ class FullNodeRpcClient(RpcClient):
             d["start_height"] = start_height
         if end_height is not None:
             d["end_height"] = end_height
-        return [
-            CoinRecord.from_json_dict(coin)
-            for coin in (await self.fetch("get_coin_records_by_puzzle_hashes", d))["coin_records"]
-        ]
+
+        # The following lines are for backwards compatibility after `spent` was removed as a field on CoinRecord
+        coin_records_no_spent = []
+        for coin in (await self.fetch("get_coin_records_by_puzzle_hashes", d))["coin_records"]:
+            del coin["spent"]
+            coin_records_no_spent.append(coin)
+
+        return [CoinRecord.from_json_dict(coin) for coin in coin_records_no_spent]
 
     async def get_coin_records_by_parent_ids(
         self,
@@ -154,10 +170,14 @@ class FullNodeRpcClient(RpcClient):
             d["start_height"] = start_height
         if end_height is not None:
             d["end_height"] = end_height
-        return [
-            CoinRecord.from_json_dict(coin)
-            for coin in (await self.fetch("get_coin_records_by_parent_ids", d))["coin_records"]
-        ]
+
+        # The following lines are for backwards compatibility after `spent` was removed as a field on CoinRecord
+        coin_records_no_spent = []
+        for coin in (await self.fetch("get_coin_records_by_parent_ids", d))["coin_records"]:
+            del coin["spent"]
+            coin_records_no_spent.append(coin)
+
+        return [CoinRecord.from_json_dict(coin) for coin in coin_records_no_spent]
 
     async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[CoinRecord], List[CoinRecord]]:
         try:
