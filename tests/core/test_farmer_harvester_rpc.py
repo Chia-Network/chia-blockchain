@@ -3,7 +3,7 @@ from secrets import token_bytes
 import time
 
 import pytest
-from blspy import AugSchemeMPL, G1Element
+from blspy import AugSchemeMPL
 from chiapos import DiskPlotter
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
@@ -21,7 +21,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
-from chia.wallet.derive_keys import master_sk_to_wallet_sk, find_owner_sk, master_sk_to_singleton_owner_sk
+from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.rpc import validate_get_routes
