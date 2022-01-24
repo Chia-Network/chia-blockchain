@@ -448,7 +448,7 @@ class PoolWallet:
         if self._pool_wallet_index_cache is not None:
             return self._pool_wallet_index_cache
 
-        owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = await find_owner_sk(
+        owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
             [self.wallet_state_manager.private_key], (await self.get_current_state()).current.owner_pubkey
         )
         assert owner_sk_and_index is not None
@@ -457,7 +457,7 @@ class PoolWallet:
 
     async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
         async def pk_to_sk(pk: G1Element) -> PrivateKey:
-            owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = await find_owner_sk(
+            owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
                 [self.wallet_state_manager.private_key], pk
             )
             assert owner_sk_and_index is not None

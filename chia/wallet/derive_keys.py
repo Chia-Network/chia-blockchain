@@ -76,22 +76,22 @@ def master_sk_to_pooling_authentication_sk(master: PrivateKey, pool_wallet_index
     return _derive_path(master, [12381, 8444, 6, pool_wallet_index * 10000 + index])
 
 
-async def find_owner_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Optional[Tuple[G1Element, uint32]]:
+def find_owner_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Optional[Tuple[G1Element, uint32]]:
     for pool_wallet_index in range(MAX_POOL_WALLETS):
         for sk in all_sks:
-            auth_sk = master_sk_to_singleton_owner_sk(sk, uint32(pool_wallet_index))
-            if auth_sk.get_g1() == owner_pk:
-                return auth_sk, uint32(pool_wallet_index)
+            try_owner_sk = master_sk_to_singleton_owner_sk(sk, uint32(pool_wallet_index))
+            if try_owner_sk.get_g1() == owner_pk:
+                return try_owner_sk, uint32(pool_wallet_index)
     return None
 
 
-async def find_authentication_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Optional[PrivateKey]:
+def find_authentication_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Optional[PrivateKey]:
     # NOTE: might need to increase this if using a large number of wallets, or have switched authentication keys
     # many times.
     for pool_wallet_index in range(MAX_POOL_WALLETS):
         for sk in all_sks:
-            auth_sk = master_sk_to_singleton_owner_sk(sk, uint32(pool_wallet_index))
-            if auth_sk.get_g1() == owner_pk:
+            try_owner_sk = master_sk_to_singleton_owner_sk(sk, uint32(pool_wallet_index))
+            if try_owner_sk.get_g1() == owner_pk:
                 # NOTE: ONLY use 0 for authentication key index to ensure compatibility
-                return await master_sk_to_pooling_authentication_sk(sk, uint32(pool_wallet_index), uint32(0))
+                return master_sk_to_pooling_authentication_sk(sk, uint32(pool_wallet_index), uint32(0))
     return None

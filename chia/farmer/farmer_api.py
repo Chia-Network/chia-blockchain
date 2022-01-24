@@ -211,7 +211,7 @@ class FarmerAPI:
                         )
                         assert AugSchemeMPL.verify(agg_pk, m_to_sign, plot_signature)
 
-                authentication_sk: Optional[PrivateKey] = await self.farmer.get_authentication_sk(
+                authentication_sk: Optional[PrivateKey] = self.farmer.get_authentication_sk(
                     pool_state_dict["pool_config"]
                 )
                 if authentication_sk is None:

@@ -328,7 +328,7 @@ class Farmer:
     async def _pool_post_farmer(
         self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, owner_sk: PrivateKey
     ) -> Optional[Dict]:
-        auth_sk: Optional[PrivateKey] = await self.get_authentication_sk(pool_config)
+        auth_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
         assert auth_sk is not None
         post_farmer_payload: PostFarmerPayload = PostFarmerPayload(
             pool_config.launcher_id,
@@ -368,7 +368,7 @@ class Farmer:
     async def _pool_put_farmer(
         self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, owner_sk: PrivateKey
     ) -> Optional[Dict]:
-        auth_sk: Optional[PrivateKey] = await self.get_authentication_sk(pool_config)
+        auth_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
         assert auth_sk is not None
         put_farmer_payload: PutFarmerPayload = PutFarmerPayload(
             pool_config.launcher_id,
@@ -405,10 +405,11 @@ class Farmer:
             )
         return None
 
-    async def get_authentication_sk(self, pool_config: PoolWalletConfig) -> Optional[PrivateKey]:
+    def get_authentication_sk(self, pool_config: PoolWalletConfig) -> Optional[PrivateKey]:
         if pool_config.p2_singleton_puzzle_hash in self.authentication_keys:
             return self.authentication_keys[pool_config.p2_singleton_puzzle_hash]
-        auth_sk: Optional[PrivateKey] = await find_authentication_sk(self.all_root_sks, pool_config.owner_public_key)
+        self.log.error(f"FINDING AUTH SKS: {self.all_root_sks}. {[pool_config]}")
+        auth_sk: Optional[PrivateKey] = find_authentication_sk(self.all_root_sks, pool_config.owner_public_key)
         if auth_sk is not None:
             self.authentication_keys[pool_config.p2_singleton_puzzle_hash] = auth_sk
         return auth_sk
@@ -420,7 +421,7 @@ class Farmer:
             p2_singleton_puzzle_hash = pool_config.p2_singleton_puzzle_hash
 
             try:
-                authentication_sk: Optional[PrivateKey] = await self.get_authentication_sk(pool_config)
+                authentication_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
 
                 if authentication_sk is None:
                     self.log.error(f"Could not find authentication sk for {p2_singleton_puzzle_hash}")
@@ -492,7 +493,7 @@ class Farmer:
                         farmer_info, farmer_is_known = await update_pool_farmer_info()
                         if farmer_info is None and farmer_is_known is not None and not farmer_is_known:
                             # Make the farmer known on the pool with a POST /farmer
-                            owner_sk_and_index: Optional[PrivateKey, uint32] = await find_owner_sk(
+                            owner_sk_and_index: Optional[PrivateKey, uint32] = find_owner_sk(
                                 self.all_root_sks, pool_config.owner_public_key
                             )
                             assert owner_sk_and_index is not None
@@ -514,7 +515,7 @@ class Farmer:
                             farmer_info is not None
                             and pool_config.payout_instructions.lower() != farmer_info.payout_instructions.lower()
                         ):
-                            owner_sk_and_index: Optional[PrivateKey, uint32] = await find_owner_sk(
+                            owner_sk_and_index: Optional[PrivateKey, uint32] = find_owner_sk(
                                 self.all_root_sks, pool_config.owner_public_key
                             )
                             assert owner_sk_and_index is not None
@@ -619,7 +620,7 @@ class Farmer:
             pool_config: PoolWalletConfig = pool_state["pool_config"]
             if pool_config.launcher_id == launcher_id:
 
-                authentication_sk: Optional[PrivateKey] = await self.get_authentication_sk(pool_config)
+                authentication_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
                 if authentication_sk is None:
                     self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")
                     continue
