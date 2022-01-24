@@ -292,7 +292,8 @@ class Wallet:
             sum_value = exact_match_coinrecord.coin.amount
             used_coins.add(exact_match_coinrecord.coin)
             self.log.debug(
-                f"Selected coin: {exact_match_coinrecord.coin.name()} at height {exact_match_coinrecord.confirmed_block_height}!"
+                f"Selected coin: {exact_match_coinrecord.coin.name()} "
+                f"at height {exact_match_coinrecord.confirmed_block_height}!"
             )
 
         # Check for an exact match with all of the coins smaller than the amount.
