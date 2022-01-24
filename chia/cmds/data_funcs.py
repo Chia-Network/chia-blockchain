@@ -25,25 +25,25 @@ async def get_client(rpc_port: Optional[int]) -> Tuple[DataLayerRpcClient, int]:
 
 async def create_data_store_cmd(rpc_port: Optional[int], table_string: str) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
-
+    client = None
+    response = None
     try:
         client, rpc_port = await get_client(rpc_port)
         response = await client.create_data_store()
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
-        return None
     except Exception as e:
         print(f"Exception from 'data': {e}")
-        return None
-
-    client.close()
-    await client.await_closed()
+    if client is not None:
+        client.close()
+        await client.await_closed()
     return response
 
 
 async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
-
+    client = None
+    response = None
     store_id_bytes = bytes32(hexstr_to_bytes(store_id))
     key_bytes = hexstr_to_bytes(key)
     try:
@@ -51,13 +51,11 @@ async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str) -> Opt
         response = await client.get_value(store_id=store_id_bytes, key=key_bytes)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
-        return None
     except Exception as e:
         print(f"Exception from 'data': {e}")
-        return None
-
-    client.close()
-    await client.await_closed()
+    if client is not None:
+        client.close()
+        await client.await_closed()
     return response
 
 
@@ -67,19 +65,20 @@ async def update_data_store_cmd(
     changelist: Dict[str, str],
 ) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
+    client = None
+    response = None
     store_id_bytes = bytes32(hexstr_to_bytes(store_id))
     try:
         client, rpc_port = await get_client(rpc_port)
         response = await client.update_data_store(store_id=store_id_bytes, changelist=changelist)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
-        return None
     except Exception as e:
         print(f"Exception from 'data': {e}")
-        return None
 
-    client.close()
-    await client.await_closed()
+    if client is not None:
+        client.close()
+        await client.await_closed()
     return response
 
 
@@ -88,20 +87,19 @@ async def get_keys_values_cmd(
     store_id: str,
 ) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
-
+    client = None
+    response = None
     store_id_bytes = bytes32(hexstr_to_bytes(store_id))
     try:
         client, rpc_port = await get_client(rpc_port)
         response = await client.get_keys_values(store_id=store_id_bytes)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
-        return None
     except Exception as e:
         print(f"Exception from 'data': {e}")
-        return None
-
-    client.close()
-    await client.await_closed()
+    if client is not None:
+        client.close()
+        await client.await_closed()
     return response
 
 
@@ -110,17 +108,17 @@ async def get_root_cmd(
     store_id: str,
 ) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
+    client = None
+    response = None
     store_id_bytes = bytes32(hexstr_to_bytes(store_id))
     try:
         client, rpc_port = await get_client(rpc_port)
         response = await client.get_root(store_id=store_id_bytes)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
-        return None
     except Exception as e:
         print(f"Exception from 'data': {e}")
-        return None
-
-    client.close()
-    await client.await_closed()
+    if client is not None:
+        client.close()
+        await client.await_closed()
     return response
