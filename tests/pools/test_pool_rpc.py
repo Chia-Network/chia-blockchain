@@ -374,6 +374,14 @@ class TestPoolWalletRpc:
         with pytest.raises(ValueError):
             await client.pw_status(3)
 
+        def wallet_is_synced():
+            print(wallet_node_0.wallet_state_manager.blockchain.get_peak_height())
+            print(full_node_api.full_node.blockchain.get_peak_height())
+            return (
+                wallet_node_0.wallet_state_manager.blockchain.get_peak_height()
+                == full_node_api.full_node.blockchain.get_peak_height()
+            )
+
         # Create some CAT wallets to increase wallet IDs
         for i in range(5):
             res = await client.create_new_cat_and_wallet(20)
@@ -384,13 +392,13 @@ class TestPoolWalletRpc:
             asset_id = bytes.fromhex(res["asset_id"])
             assert len(asset_id) > 0
             await self.farm_blocks(full_node_api, our_ph_2, 6)
-            await asyncio.sleep(2)
+            await time_out_assert(20, wallet_is_synced)
             bal_0 = await client.get_wallet_balance(cat_0_id)
             assert bal_0["confirmed_wallet_balance"] == 20
 
         # Test creation of many pool wallets
-        if fee == 0 and not trusted:
-            for i in range(25):
+        if not trusted:
+            for i in range(22):
                 creation_tx_3: TransactionRecord = await client.create_new_pool_wallet(
                     our_ph_1, "localhost", 5, "localhost:5000", "new", "FARMING_TO_POOL", fee
                 )
@@ -401,7 +409,7 @@ class TestPoolWalletRpc:
                     creation_tx_3.name,
                 )
                 await self.farm_blocks(full_node_api, our_ph_2, 2)
-                await asyncio.sleep(2)
+                await time_out_assert(20, wallet_is_synced)
 
                 full_config: Dict = load_config(wallet_0.wallet_state_manager.root_path, "config.yaml")
                 pool_list: List[Dict] = full_config["pool"]["pool_list"]
