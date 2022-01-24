@@ -282,6 +282,14 @@ class Wallet:
             if coinrecord.coin in exclude:
                 continue
             valid_unspent.append(coinrecord)
+            sum_value += coinrecord.coin.amount
+
+        # This happens when we couldn't use one of the coins because it's already used
+        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
+        if sum_value < amount:
+            raise ValueError(
+                "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
+            )
 
         # Use older coins first
         valid_unspent.sort(reverse=True, key=lambda r: r.coin.amount)
@@ -289,7 +297,6 @@ class Wallet:
         # check for exact 1 to 1 coin match.
         exact_match_coinrecord: Optional[WalletCoinRecord] = check_for_exact_match(valid_unspent, amount)
         if exact_match_coinrecord:
-            sum_value = exact_match_coinrecord.coin.amount
             used_coins.add(exact_match_coinrecord.coin)
             self.log.debug(
                 f"Selected coin: {exact_match_coinrecord.coin.name()} "
@@ -298,34 +305,26 @@ class Wallet:
 
         # Check for an exact match with all of the coins smaller than the amount.
         # If we have more, smaller coins than the amount we run the next algorithm.
-        if len(used_coins) == 0:
+        if not exact_match_coinrecord:
+            smaller_coin_sum = 0  # coins smaller then target.
             smaller_coins: Set[Coin] = set()
             for coinrecord in valid_unspent:
                 if coinrecord.coin.amount < amount:
-                    sum_value += coinrecord.coin.amount
+                    smaller_coin_sum += coinrecord.coin.amount
                     smaller_coins.add(coinrecord.coin)
-            if sum_value == amount:
+            if smaller_coin_sum == amount:
                 used_coins = smaller_coins
-            elif sum_value < amount:
+            elif smaller_coin_sum < amount:
                 smallest_coin: Optional[WalletCoinRecord] = find_smallest_coin(valid_unspent, amount)
                 if smallest_coin:
-                    sum_value = smallest_coin.coin.amount
                     used_coins.add(smallest_coin.coin)
                     self.log.debug(
                         f"Selected coin: {smallest_coin.coin.name()} at height {smallest_coin.confirmed_block_height}!"
                     )
-            elif sum_value > amount:
+            elif smaller_coin_sum > amount:
                 best_coin_set, sum_best_coin_set = knapsack_coin_algorithm(smaller_coins, amount)
                 if best_coin_set:
-                    sum_value = sum_best_coin_set
                     used_coins = best_coin_set
-
-        # This happens when we couldn't use one of the coins because it's already used
-        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-        if sum_value < amount:
-            raise ValueError(
-                "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
-            )
 
         self.log.debug(f"Successfully selected coins: {used_coins}")
         return used_coins
