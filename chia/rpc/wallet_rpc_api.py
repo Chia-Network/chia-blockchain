@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, Any
+from typing import Callable, Dict, List, Optional, Set, Tuple, Any
 
 from blspy import PrivateKey, G1Element
 
@@ -9,6 +9,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.rpc.cat_utils import get_cat_puzzle_hash
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
@@ -85,6 +86,7 @@ class WalletRpcApi:
             "/cc_set_name": self.cc_set_name,
             "/cc_get_name": self.cc_get_name,
             "/cc_spend": self.cc_spend,
+            "/cc_spend_from_specific_puzzle_hash": self.cc_spend_from_specific_puzzle_hash,
             "/cc_get_colour": self.cc_get_colour,
             "/cc_get_wallet_id": self.cc_get_wallet_id,
             "/create_offer_for_ids": self.create_offer_for_ids,
@@ -796,6 +798,73 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
                 [amount], [puzzle_hash], fee, memos=[memos]
+            )
+            for tx in txs:
+                await wallet.standard_wallet.push_transaction(tx)
+
+        return {
+            "transaction": txs[0].to_json_dict_convenience(self.service.config),
+            "transaction_id": txs[0].name,
+        }
+
+    async def cc_spend_from_specific_puzzle_hash(self, request):
+        assert self.service.wallet_state_manager is not None
+
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
+
+        wallet_id = int(request["wallet_id"])
+        wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
+
+        asset_id: bytes32 = hexstr_to_bytes(request["asset_id"])
+        sender_xch_puzzle_hash: bytes32 = hexstr_to_bytes(request["sender_xch_puzzle_hash"])
+        receiver_puzzle_hash: bytes32 = decode_puzzle_hash(request["receiver_address"])
+
+        memos = [mem.encode("utf-8") for mem in request["memos"]]
+
+        if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
+            raise ValueError("An integer amount or fee is required (too many decimals)")
+        amount: uint64 = uint64(request["amount"])
+
+        fee = uint64(request["fee"])
+
+        sender_cat_puzzle_hash = get_cat_puzzle_hash(
+            asset_id=asset_id.hex(),
+            xch_puzzle_hash=sender_xch_puzzle_hash.hex(),
+        )
+
+        raw_cat_coins_pool = request["cat_coins_pool"]
+        if type(raw_cat_coins_pool) != list:
+            raise Exception(f"Expected raw_cat_coins_pool is a list, got {raw_cat_coins_pool}")
+
+        cat_coins_pool: Set[Coin] = set()
+        for raw_coin in raw_cat_coins_pool:
+            if type(raw_coin) != dict:
+                raise Exception(f"Expected coin is a dict, got {raw_coin}")
+            if not 'puzzle_hash' in raw_coin:
+                raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
+            if not 'puzzle_hash' in raw_coin:
+                raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
+            puzzle_hash = raw_coin['puzzle_hash']
+            if puzzle_hash != sender_cat_puzzle_hash:
+                raise Exception(f"Inconsistent coin in raw_cat_coins_pool: {puzzle_hash} != {sender_cat_puzzle_hash}")
+            cat_coins_pool.add(
+                Coin(
+                    parent_coin_info=bytes.fromhex(raw_coin["parent_coin_info"].lstrip("0x")),
+                    puzzle_hash=bytes.fromhex(raw_coin["puzzle_hash"].lstrip("0x")),
+                    amount=int(raw_coin["amount"]),
+                )
+            )
+
+        async with self.service.wallet_state_manager.lock:
+            txs: List[TransactionRecord] = await wallet.generate_signed_transaction_for_specific_puzzle_hash(
+                amount=amount,
+                sender_xch_puzzle_hash=sender_xch_puzzle_hash,
+                receiver_puzzle_hash=receiver_puzzle_hash,
+                asset_id=asset_id,
+                fee=fee,
+                memos=memos,
+                cat_coins_pool=cat_coins_pool,
             )
             for tx in txs:
                 await wallet.standard_wallet.push_transaction(tx)
