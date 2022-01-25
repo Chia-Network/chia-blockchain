@@ -4,7 +4,7 @@ from chia.types.blockchain_format.program import Program
 from typing import List, Optional, Tuple, Iterator
 from chia.wallet.puzzles.load_clvm import load_clvm
 
-SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer.clvm")
+SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 DID_MOD = load_clvm("did_innerpuz.clvm")
 NFT_MOD = load_clvm("nft_innerpuz.clvm")
