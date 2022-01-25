@@ -5,6 +5,7 @@ from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
 
+
 @dataclasses.dataclass(frozen=True)
 @streamable
 class SingletonRecord(Streamable):

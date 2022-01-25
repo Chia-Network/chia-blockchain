@@ -1393,7 +1393,6 @@ class WalletRpcApi:
         await self.service.wallet_state_manager.add_pending_transaction(record)
         return {"tx_record": record.to_json_dict_convenience(self.service.config)}
 
-
     async def dl_history(self, request) -> Dict:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:

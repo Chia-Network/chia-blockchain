@@ -202,9 +202,7 @@ class DataLayerWallet:
         )
         new_singleton = Coin(launcher_id, full_puzhash, amount)
 
-        singleton_record: Optional[SingletonRecord] = await self.singleton_store.get_latest_singleton(
-            launcher_id
-        )
+        singleton_record: Optional[SingletonRecord] = await self.singleton_store.get_latest_singleton(launcher_id)
         if singleton_record is not None:
             if (  # This is an unconfirmed singleton that we know about
                 singleton_record.coin_id == new_singleton.name() and not singleton_record.confirmed
@@ -597,9 +595,7 @@ class DataLayerWallet:
 
         matched, curried_args = match_dl_singleton(puzzle)
         if matched:
-            singleton_record: Optional[SingletonRecord] = await self.singleton_store.get_singleton_record(
-                parent_name
-            )
+            singleton_record: Optional[SingletonRecord] = await self.singleton_store.get_singleton_record(parent_name)
             if singleton_record is None:
                 self.log.warning(f"DL wallet received coin it does not have parent for. Expected parent {parent_name}.")
                 return
@@ -699,15 +695,11 @@ class DataLayerWallet:
     ###########
 
     async def get_latest_singleton(self, launcher_id: bytes32) -> Optional[SingletonRecord]:
-        singleton: Optional[SingletonRecord] = await self.singleton_store.get_latest_singleton(
-            launcher_id
-        )
+        singleton: Optional[SingletonRecord] = await self.singleton_store.get_latest_singleton(launcher_id)
         return singleton
 
     async def get_history(self, launcher_id: bytes32) -> List[SingletonRecord]:
-        history: List[SingletonRecord] = await self.singleton_store.get_all_singletons_for_launcher(
-            launcher_id
-        )
+        history: List[SingletonRecord] = await self.singleton_store.get_all_singletons_for_launcher(launcher_id)
         return history
 
     async def get_singleton_record(self, coin_id: bytes32) -> Optional[SingletonRecord]:
