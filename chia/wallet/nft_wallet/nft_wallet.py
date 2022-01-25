@@ -256,6 +256,7 @@ class NFTWallet:
         my_did_parent = message_sb.coin_solutions[0].coin.parent_coin_info
 
         innersol = Program.to([
+            eve_coin.amount,
             did_wallet.did_info.current_inner.get_tree_hash(),
             my_did_amount,
             my_did_parent,
@@ -305,6 +306,7 @@ class NFTWallet:
         my_did_parent = message_sb.coin_solutions[0].coin.parent_coin_info
 
         innersol = Program.to([
+            nft_coin_info.coin.amount,
             did_wallet.did_info.current_inner.get_tree_hash(),
             my_did_amount,
             my_did_parent,
@@ -351,6 +353,7 @@ class NFTWallet:
         # transfer_program_reveal
         # transfer_program_solution
         innersol = Program.to([
+            nft_coin_info.coin.amount,
             did_wallet.did_info.current_inner.get_tree_hash(),
             my_did_amount,
             my_did_parent,
