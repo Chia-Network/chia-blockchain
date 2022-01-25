@@ -122,7 +122,7 @@ class FullNodeRpcApi:
                     "mempool_size": 0,
                     "mempool_cost": 0,
                     "mempool_min_fees": {
-                        "5000000": 0,
+                        "cost_5000000": 0,
                     },
                     "compact_blocks": 0,
                     "uncompact_blocks": 0,
