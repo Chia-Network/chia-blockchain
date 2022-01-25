@@ -516,7 +516,7 @@ class WalletNode:
     def is_trusted(self, peer):
         return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
 
-    def add_state_to_race_cache(self, height:uint32, coin_state: CoinState):
+    def add_state_to_race_cache(self, height: uint32, coin_state: CoinState):
         if height not in self.race_cache:
             self.race_cache[height] = set()
         self.race_cache[height].add(coin_state)
@@ -915,9 +915,7 @@ class WalletNode:
                     continue_while = True
                     break
 
-    async def untrusted_sync_to_peer(
-        self, peer: WSChiaConnection, syncing: bool, fork_height: int
-    ):
+    async def untrusted_sync_to_peer(self, peer: WSChiaConnection, syncing: bool, fork_height: int):
         assert self.wallet_state_manager is not None
         # If new weight proof is higher than the old one, rollback to the fork point and than apply new coin_states
         self.log.info(f"Starting untrusted sync to: {peer.get_peer_info()}, syncing: {syncing}, fork at: {fork_height}")
@@ -1063,7 +1061,7 @@ class WalletNode:
             # Check old state
             if current.spent_block_height != spent_height:
                 reorg_mode = True
-            if spent_height in peer_request_cache.blocks and reorg_mode is False :
+            if spent_height in peer_request_cache.blocks and reorg_mode is False:
                 spent_state_block: HeaderBlock = peer_request_cache.blocks[current.spent_block_height]
             else:
                 request = RequestHeaderBlocks(current.spent_block_height, current.spent_block_height)
@@ -1113,9 +1111,7 @@ class WalletNode:
         peer_request_cache.states_validated[coin_state.coin.get_hash()] = coin_state
         return True
 
-    async def validate_block_inclusion(
-        self, block: HeaderBlock, peer, peer_request_cache: PeerRequestCache
-    ) -> bool:
+    async def validate_block_inclusion(self, block: HeaderBlock, peer, peer_request_cache: PeerRequestCache) -> bool:
         assert self.wallet_state_manager is not None
         if self.wallet_state_manager.blockchain.contains_height(block.height):
             stored_hash = self.wallet_state_manager.blockchain.height_to_hash(block.height)
@@ -1261,9 +1257,7 @@ class WalletNode:
             assert weight_proof is not None
             validated = []
             for state in response.coin_states:
-                valid = await self.validate_received_state_from_peer(
-                    state, peer, request_cache
-                )
+                valid = await self.validate_received_state_from_peer(state, peer, request_cache)
                 if valid:
                     validated.append(state)
             return validated
