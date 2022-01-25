@@ -289,13 +289,13 @@ class TestKeysCommands:
             != -1
         )
 
-    def test_sign_hardened(self, keyring_with_one_key):
+    def test_sign_non_observer(self, keyring_with_one_key):
         """
-        Test the `chia keys sign` command with a hardened key.
+        Test the `chia keys sign` command with a non-observer key.
         """
 
         message: str = "hello world"
-        hd_path: str = "m/12381h/8444h/0h/1h"
+        hd_path: str = "m/12381n/8444n/0n/1n"
         runner = CliRunner()
         result: Result = runner.invoke(
             sign_cmd, ["--message", message, "--fingerprint", str(TEST_FINGERPRINT), "--hd_path", hd_path]
@@ -333,8 +333,6 @@ class TestKeysCommands:
             [
                 "--message",
                 message,
-                "--fingerprint",
-                str(TEST_FINGERPRINT),
                 "--hd_path",
                 hd_path,
                 "--mnemonic-seed-filename",
@@ -543,7 +541,7 @@ class TestKeysCommands:
                 "--search-type",
                 "all",
                 "--derive-from-hd-path",
-                "m/12381h/8444h/2/",
+                "m/12381n/8444n/2/",
                 "80dc3a2ea450eb09e24debe22e1b5934911ba530792ef0be361badebb168780bd328ff8d4655e5dd573d5bef4a340344",
             ],
         )
@@ -553,7 +551,7 @@ class TestKeysCommands:
             result.output.find(
                 (
                     "Found public key: 80dc3a2ea450eb09e24debe22e1b5934911ba530792ef0be361bad"
-                    "ebb168780bd328ff8d4655e5dd573d5bef4a340344 (HD path: m/12381h/8444h/2/35)"
+                    "ebb168780bd328ff8d4655e5dd573d5bef4a340344 (HD path: m/12381n/8444n/2/35)"
                 )
             )
             != -1
@@ -587,7 +585,7 @@ class TestKeysCommands:
                 "50",
                 "--count",
                 "2",
-                "--hardened-derivation",
+                "--non-observer-derivation",
                 "--show-hd-path",
             ],
         )
@@ -596,7 +594,7 @@ class TestKeysCommands:
         assert (
             result.output.find(
                 (
-                    "Wallet address 50 (m/12381h/8444h/2h/50h): "
+                    "Wallet address 50 (m/12381n/8444n/2n/50n): "
                     "xch1jp2u7an0mn9hdlw2x05nmje49gwgzmqyvh0qmh6008yksetuvkfs6wrfdq"
                 )
             )
@@ -605,7 +603,7 @@ class TestKeysCommands:
         assert (
             result.output.find(
                 (
-                    "Wallet address 51 (m/12381h/8444h/2h/51h): "
+                    "Wallet address 51 (m/12381n/8444n/2n/51n): "
                     "xch1006n6l3x5e8exar8mlj004znjl5pq0tq73h76kz0yergswnjzn8sumvfmt"
                 )
             )
@@ -637,7 +635,7 @@ class TestKeysCommands:
                 str(TEST_FINGERPRINT),
                 "child-key",
                 "--derive-from-hd-path",
-                "m/12381h/8444h/2/3/4/",
+                "m/12381n/8444n/2/3/4/",
                 "--index",
                 "30",
                 "--count",
@@ -651,7 +649,7 @@ class TestKeysCommands:
         assert (
             result.output.find(
                 (
-                    "Unhardened public key 30 (m/12381h/8444h/2/3/4/30): "
+                    "Observer public key 30 (m/12381n/8444n/2/3/4/30): "
                     "979a1fa0bfc140488d4a9edcfbf244a398fe922618a981cc0fffe5445d811f2237ff8234c0520b28b3096c8269f2731e"
                 )
             )
@@ -660,7 +658,7 @@ class TestKeysCommands:
         assert (
             result.output.find(
                 (
-                    "Unhardened private key 30 (m/12381h/8444h/2/3/4/30): "
+                    "Observer private key 30 (m/12381n/8444n/2/3/4/30): "
                     "5dd22db24fe28805b101104c543f5bec3808328ad67de3d3dcd9efd6faab13aa"
                 )
             )
@@ -669,7 +667,7 @@ class TestKeysCommands:
         assert (
             result.output.find(
                 (
-                    "Unhardened public key 31 (m/12381h/8444h/2/3/4/31): "
+                    "Observer public key 31 (m/12381n/8444n/2/3/4/31): "
                     "ab5885df340a27b5eb3f1c4b8c32889f529ad5ecc4c9718247e36756de2e143c604af9956941a72239124e6fb352782e"
                 )
             )
@@ -678,7 +676,7 @@ class TestKeysCommands:
         assert (
             result.output.find(
                 (
-                    "Unhardened private key 31 (m/12381h/8444h/2/3/4/31): "
+                    "Observer private key 31 (m/12381n/8444n/2/3/4/31): "
                     "113610b39c2151fd68d7f795d5dd596b94889a3cf7825a56da5c6d2c7e5141a1"
                 )
             )

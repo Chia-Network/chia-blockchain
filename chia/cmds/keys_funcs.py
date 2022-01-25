@@ -1,3 +1,4 @@
+import os
 import sys
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -603,12 +604,14 @@ def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
     return AugSchemeMPL.key_gen(seed)
 
 
-def resolve_derivation_master_key(fingerprint_or_filename: Optional[Union[int, str]]) -> PrivateKey:
+def resolve_derivation_master_key(fingerprint_or_filename: Optional[Union[int, str, Path]]) -> PrivateKey:
     """
     Given a key fingerprint of file containing a mnemonic seed, return the private key.
     """
 
-    if fingerprint_or_filename is not None and isinstance(fingerprint_or_filename, str):
-        return private_key_from_mnemonic_seed_file(Path(fingerprint_or_filename))
+    if fingerprint_or_filename is not None and (
+        isinstance(fingerprint_or_filename, str) or isinstance(fingerprint_or_filename, Path)
+    ):
+        return private_key_from_mnemonic_seed_file(Path(os.fspath(fingerprint_or_filename)))
     else:
         return get_private_key_with_fingerprint_or_prompt(fingerprint_or_filename)
