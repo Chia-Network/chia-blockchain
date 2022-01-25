@@ -318,7 +318,7 @@ full_node:
   db_sync: "auto"
 
   # Run multiple nodes with different databases by changing the database_path
-  database_path: db/blockchain_v1_CHALLENGE.sqlite
+  database_path: db/blockchain_v2_CHALLENGE.sqlite
   # peer_db_path is deprecated and has been replaced by peers_file_path
   peer_db_path: db/peer_table_node.sqlite
   peers_file_path: db/peers.dat

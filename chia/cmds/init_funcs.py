@@ -398,8 +398,16 @@ def chia_init(
         fix_ssl(root_path)
     if should_check_keys:
         check_keys(root_path)
-    if not v1_db:
-        config: Dict = load_config(root_path, "config.yaml")["full_node"]
+
+    config: Dict
+    if v1_db:
+        config = load_config(root_path, "config.yaml")
+        db_pattern = config["database_path"]
+        new_db_path = db_pattern.replace("_v2_", "_v1_")
+        config["full_node"]["database_path"] = new_db_path
+        save_config(root_path, "config.yaml", config)
+    else:
+        config = load_config(root_path, "config.yaml")["full_node"]
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         db_path = path_from_root(root_path, db_path_replaced)
         mkdir(db_path.parent)
