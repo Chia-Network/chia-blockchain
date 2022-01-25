@@ -118,8 +118,8 @@ class TestCATWallet:
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
@@ -214,7 +214,7 @@ class TestCATWallet:
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
@@ -268,8 +268,8 @@ class TestCATWallet:
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
@@ -368,9 +368,9 @@ class TestCATWallet:
 
         ph = await wallet_0.get_new_puzzlehash()
         if trusted:
-            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_1.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_1.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
@@ -509,8 +509,8 @@ class TestCATWallet:
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
@@ -637,8 +637,8 @@ class TestCATWallet:
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
@@ -690,7 +690,7 @@ class TestCATWallet:
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 40)
 
         # First we test that no wallet was created
-        asyncio.sleep(10)
+        await asyncio.sleep(10)
         assert len(wallet_node_2.wallet_state_manager.wallets.keys()) == 1
 
         # Then we update the wallet's default CATs
@@ -725,8 +725,8 @@ class TestCATWallet:
         await time_out_assert(10, check_wallets, 2, wallet_node_2)
         cat_wallet_2 = wallet_node_2.wallet_state_manager.wallets[2]
 
-        await time_out_assert(30, cat_wallet_2.get_confirmed_balance, 10)
-        await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 10)
+        await time_out_assert(30, cat_wallet_2.get_confirmed_balance, 70)
+        await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 70)
 
         cat_hash = await cat_wallet.get_new_inner_hash()
         tx_records = await cat_wallet_2.generate_signed_transaction([uint64(5)], [cat_hash])
