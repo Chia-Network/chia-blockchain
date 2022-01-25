@@ -94,7 +94,13 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
         print(e.args[0])
         return
 
-    print_transaction(tx, verbose=(args["verbose"] > 0), name=name, address_prefix=address_prefix, mojo_per_unit=mojo_per_unit)
+    print_transaction(
+        tx,
+        verbose=(args["verbose"] > 0),
+        name=name,
+        address_prefix=address_prefix,
+        mojo_per_unit=mojo_per_unit,
+    )
 
 
 async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -127,7 +133,13 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         for j in range(0, num_per_screen):
             if i + j >= len(txs):
                 break
-            print_transaction(txs[i + j], verbose=(args["verbose"] > 0), name=name, address_prefix=address_prefix, mojo_per_unit=mojo_per_unit)
+            print_transaction(
+                txs[i + j],
+                verbose=(args["verbose"] > 0),
+                name=name,
+                address_prefix=address_prefix,
+                mojo_per_unit=mojo_per_unit,
+            )
         if i + num_per_screen >= len(txs):
             return None
         print("Press q to quit, or c to continue")
