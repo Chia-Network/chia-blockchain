@@ -102,7 +102,7 @@ class DataStore:
             )
             await self.db.execute(
                 """
-                CREATE INDEX IF NOT EXISTS ON root(node_hash)
+                CREATE INDEX IF NOT EXISTS node_hash ON root(node_hash)
                 """
             )
 
