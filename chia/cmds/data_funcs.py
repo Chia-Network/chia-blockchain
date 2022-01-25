@@ -34,9 +34,10 @@ async def create_data_store_cmd(rpc_port: Optional[int], table_string: str) -> O
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
-    if client is not None:
-        client.close()
-        await client.await_closed()
+    finally:
+        if client is not None:
+            client.close()
+            await client.await_closed()
     return response
 
 
@@ -53,9 +54,10 @@ async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str) -> Opt
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
-    if client is not None:
-        client.close()
-        await client.await_closed()
+    finally:
+        if client is not None:
+            client.close()
+            await client.await_closed()
     return response
 
 
@@ -75,10 +77,10 @@ async def update_data_store_cmd(
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
-
-    if client is not None:
-        client.close()
-        await client.await_closed()
+    finally:
+        if client is not None:
+            client.close()
+            await client.await_closed()
     return response
 
 
@@ -97,9 +99,10 @@ async def get_keys_values_cmd(
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
-    if client is not None:
-        client.close()
-        await client.await_closed()
+    finally:
+        if client is not None:
+            client.close()
+            await client.await_closed()
     return response
 
 
@@ -118,7 +121,8 @@ async def get_root_cmd(
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
-    if client is not None:
-        client.close()
-        await client.await_closed()
+    finally:
+        if client is not None:
+            client.close()
+            await client.await_closed()
     return response
