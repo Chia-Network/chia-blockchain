@@ -1764,9 +1764,7 @@ class FullNode:
         else:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
-        state_changed_data = {
-            "max_cost": self.constants.MAX_BLOCK_COST_CLVM,
-        }
+        state_changed_data = {}
         if block.transactions_info is not None:
             state_changed_data["block_cost"] = block.transactions_info.cost
             state_changed_data["block_fees"] = block.transactions_info.fees

@@ -126,6 +126,7 @@ class FullNodeRpcApi:
                     "compact_blocks": 0,
                     "uncompact_blocks": 0,
                     "hint_count": 0,
+                    "block_max_cost": 0,
                 },
             }
             return res
@@ -214,6 +215,7 @@ class FullNodeRpcApi:
                 "compact_blocks": compact_blocks,
                 "uncompact_blocks": uncompact_blocks,
                 "hint_count": hint_count,
+                "block_max_cost": self.service.constants.MAX_BLOCK_COST_CLVM,
             },
         }
         self.cached_blockchain_state = dict(response["blockchain_state"])
