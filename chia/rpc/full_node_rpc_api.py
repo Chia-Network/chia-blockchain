@@ -18,6 +18,11 @@ from chia.util.ints import uint32, uint64, uint128
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
+def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]):
+    coin_record["spent"] = coin_record["spent_block_index"] > 0
+    return coin_record
+
+
 class FullNodeRpcApi:
     def __init__(self, service: FullNode):
         self.service = service
@@ -441,14 +446,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
 
-        # The following lines are for backwards compatibility after `spent` was removed as a field on CoinRecord
-        coin_records_as_json = [cr.to_json_dict() for cr in coin_records]
-        coin_records_with_spent = []
-        for cr in coin_records_as_json:
-            cr["spent"] = cr["spent_block_index"] > 0
-            coin_records_with_spent.append(cr)
-
-        return {"coin_records": coin_records_with_spent}
+        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
     async def get_coin_records_by_puzzle_hashes(self, request: Dict) -> Optional[Dict]:
         """
@@ -470,14 +468,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
-        # The following lines are for backwards compatibility after `spent` was removed as a field on CoinRecord
-        coin_records_as_json = [cr.to_json_dict() for cr in coin_records]
-        coin_records_with_spent = []
-        for cr in coin_records_as_json:
-            cr["spent"] = cr["spent_block_index"] > 0
-            coin_records_with_spent.append(cr)
-
-        return {"coin_records": coin_records_with_spent}
+        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
     async def get_coin_record_by_name(self, request: Dict) -> Optional[Dict]:
         """
@@ -491,11 +482,7 @@ class FullNodeRpcApi:
         if coin_record is None:
             raise ValueError(f"Coin record 0x{name.hex()} not found")
 
-        # The following lines are for backwards compatibility after `spent` was removed as a field on CoinRecord
-        coin_record_json = coin_record.to_json_dict()
-        coin_record_json["spent"] = coin_record_json["spent_block_index"] > 0
-
-        return {"coin_record": coin_record_json}
+        return {"coin_record": coin_record_dict_backwards_compat(coin_record.to_json_dict())}
 
     async def get_coin_records_by_names(self, request: Dict) -> Optional[Dict]:
         """
@@ -517,14 +504,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
 
-        # The following lines are for backwards compatibility after `spent` was removed as a field on CoinRecord
-        coin_records_as_json = [cr.to_json_dict() for cr in coin_records]
-        coin_records_with_spent = []
-        for cr in coin_records_as_json:
-            cr["spent"] = cr["spent_block_index"] > 0
-            coin_records_with_spent.append(cr)
-
-        return {"coin_records": coin_records_with_spent}
+        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
     async def get_coin_records_by_parent_ids(self, request: Dict) -> Optional[Dict]:
         """
@@ -546,14 +526,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_parent_ids(**kwargs)
 
-        # The following lines are for backwards compatibility after `spent` was removed as a field on CoinRecord
-        coin_records_as_json = [cr.to_json_dict() for cr in coin_records]
-        coin_records_with_spent = []
-        for cr in coin_records_as_json:
-            cr["spent"] = cr["spent_block_index"] > 0
-            coin_records_with_spent.append(cr)
-
-        return {"coin_records": coin_records_with_spent}
+        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
     async def push_tx(self, request: Dict) -> Optional[Dict]:
         if "spend_bundle" not in request:
