@@ -1,8 +1,11 @@
 import logging
 import aiosqlite
+import time
+import aiohttp
+import json
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, Any
 
 from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
@@ -23,12 +26,15 @@ from chia.data_layer.data_layer_types import (
     Status,
     InsertionData,
     DeletionData,
+    DownloadMode,
+    Subscription,
 )
 from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
+from chia.util.ints import uint16
 
 log = logging.getLogger(__name__)
 
@@ -80,6 +86,23 @@ class DataStore:
                     PRIMARY KEY(tree_id, generation),
                     FOREIGN KEY(node_hash) REFERENCES node(hash)
                 )
+                """
+            )
+            await self.db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS subscriptions(
+                    tree_id TEXT NOT NULL,
+                    mode TEXT NOT NULL,
+                    ip TEXT NOT NULL,
+                    port INTEGER NOT NULL,
+                    wallet_generation INTEGER NOT NULL,
+                    PRIMARY KEY(tree_id)
+                )
+                """
+            )
+            await self.db.execute(
+                """
+                CREATE INDEX IF NOT EXISTS ON root(node_hash)
                 """
             )
 
@@ -321,6 +344,18 @@ class DataStore:
 
         return Root.from_row(row=root_dict)
 
+    async def tree_id_exists(self, tree_id: bytes32, *, lock: bool = True) -> bool:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                "SELECT 1 FROM root WHERE tree_id == :tree_id",
+                {"tree_id": tree_id.hex()},
+            )
+            row = await cursor.fetchone()
+
+        if row is None:
+            return False
+        return True
+
     async def get_roots_between(
         self, tree_id: bytes32, generation_begin: int, generation_end: int, *, lock: bool = True
     ) -> List[Root]:
@@ -333,6 +368,23 @@ class DataStore:
             roots = [Root.from_row(row=row) async for row in cursor]
 
         return roots
+
+    async def get_last_tree_root_by_hash(
+        self, tree_id: bytes32, hash: bytes32, max_generation: int, *, lock: bool = True
+    ) -> Optional[Root]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                "SELECT * FROM root WHERE tree_id == :tree_id "
+                "AND generation < :max_generation "
+                "AND node_hash == :node_hash "
+                "ORDER BY generation DESC LIMIT 1",
+                {"tree_id": tree_id.hex(), "max_generation": max_generation, "node_hash": hash.hex()},
+            )
+            row = await cursor.fetchone()
+
+        if row is None:
+            return None
+        return Root.from_row(row=row)
 
     async def get_ancestors(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> List[InternalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -814,3 +866,232 @@ class DataStore:
                 previous_root = current_root
 
         return result
+
+    async def download_data(self, subscription: Subscription, *, lock: bool = True) -> bool:
+        tree_id = subscription.tree_id
+        mode = subscription.mode
+        ip = subscription.ip
+        port = int(subscription.port)
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            exists = await self.tree_id_exists(tree_id, lock=False)
+            if not exists:
+                await self.create_tree(tree_id=tree_id, status=Status.COMMITTED, lock=False)
+            URL = f"http://{ip}:{port}/ws"
+            if mode == DownloadMode.LATEST:
+                async with aiohttp.ClientSession() as session:
+                    async with session.ws_connect(URL) as ws:
+                        request = {
+                            "type": "request_root",
+                            "tree_id": tree_id.hex(),
+                        }
+                        await ws.send_str(json.dumps(request))
+                        msg = await ws.receive()
+                        root_json = json.loads(msg.data)
+                        node = root_hash = root_json["node_hash"]
+                        log.info(f"Got root hash: {node}")
+                        t1 = time.time()
+                        internal_nodes = 0
+                        terminal_nodes = 0
+                        stack: List[str] = []
+                        add_to_db_cache: Dict[str, Any] = {}
+
+                        while node is not None:
+                            request = {
+                                "type": "request_nodes",
+                                "tree_id": tree_id.hex(),
+                                "node_hash": node,
+                                "root_hash": root_hash,
+                            }
+                            await ws.send_str(json.dumps(request))
+                            msg = await ws.receive()
+                            msg_json = json.loads(msg.data)
+                            root_changed = msg_json["root_changed"]
+                            if root_changed:
+                                log.info("Data changed since the download started. Aborting.")
+                                await ws.send_str(json.dumps({"type": "close"}))
+                                return False
+                            answer = msg_json["answer"]
+                            for row in answer:
+                                if row["is_terminal"]:
+                                    key = row["key"]
+                                    value = row["value"]
+                                    hash = Program.to((hexstr_to_bytes(key), hexstr_to_bytes(value))).get_tree_hash()
+                                    if hash.hex() == node:
+                                        await self._insert_node(
+                                            node, NodeType.TERMINAL, None, None, key, value, tree_id.hex()
+                                        )
+                                        terminal_nodes += 1
+                                        right_hash = hash.hex()
+                                        while right_hash in add_to_db_cache:
+                                            node, left_hash = add_to_db_cache[right_hash]
+                                            del add_to_db_cache[right_hash]
+                                            await self._insert_node(
+                                                node,
+                                                NodeType.INTERNAL,
+                                                left_hash,
+                                                right_hash,
+                                                None,
+                                                None,
+                                                tree_id.hex(),
+                                            )
+                                            internal_nodes += 1
+                                            right_hash = node
+                                    else:
+                                        raise RuntimeError(
+                                            f"Did not received expected node. Expected: {node} Received: {hash.hex()}"
+                                        )
+                                    if len(stack) > 0:
+                                        node = stack.pop()
+                                    else:
+                                        node = None
+                                else:
+                                    left_hash = row["left"]
+                                    right_hash = row["right"]
+                                    left_hash_bytes = hexstr_to_bytes(left_hash)
+                                    right_hash_bytes = hexstr_to_bytes(right_hash)
+                                    hash = Program.to((left_hash_bytes, right_hash_bytes)).get_tree_hash(
+                                        left_hash_bytes, right_hash_bytes
+                                    )
+                                    if hash.hex() == node:
+                                        add_to_db_cache[right_hash] = (node, left_hash)
+                                        # At most max_height nodes will be pending to be added to DB.
+                                        assert len(add_to_db_cache) <= 100
+                                    else:
+                                        raise RuntimeError(
+                                            f"Did not received expected node. Expected: {node} Received: {hash.hex()}"
+                                        )
+                                    stack.append(right_hash)
+                                    node = left_hash
+
+                        log.info(f"Finished validating batch of {len(answer)}.")
+                        await ws.send_str(json.dumps({"type": "close"}))
+                await self._insert_root(
+                    bytes32.from_hexstr(root_json["tree_id"]),
+                    bytes32.from_hexstr(root_json["node_hash"]),
+                    Status(root_json["status"]),
+                    root_json["generation"],
+                )
+                # Assert we downloaded everything.
+                t2 = time.time()
+                log.info("Finished validating tree.")
+                log.info(f"Time taken: {t2 - t1}. Terminal nodes: {terminal_nodes} Internal nodes: {internal_nodes}.")
+                return True
+            elif mode == DownloadMode.HISTORY:
+                async with aiohttp.ClientSession() as session:
+                    async with session.ws_connect(URL) as ws:
+                        request = {
+                            "type": "request_root",
+                            "tree_id": tree_id.hex(),
+                        }
+                        await ws.send_str(json.dumps(request))
+                        msg = await ws.receive()
+                        root_json = json.loads(msg.data)
+                        generation = root_json["generation"]
+                        root = await self.get_tree_root(tree_id=tree_id)
+                        existing_generation = root.generation + 1
+                        t1 = time.time()
+                        while existing_generation <= generation:
+                            request = {
+                                "type": "request_operations",
+                                "tree_id": tree_id.hex(),
+                                "generation": str(existing_generation),
+                            }
+                            await ws.send_str(json.dumps(request))
+                            msg = await ws.receive()
+                            msg_json = json.loads(msg.data)
+
+                            for row in msg_json:
+                                if row["is_insert"]:
+                                    await self.insert(
+                                        bytes.fromhex(row["key"]),
+                                        bytes.fromhex(row["value"]),
+                                        tree_id,
+                                        None
+                                        if row["reference_node_hash"] == "None"
+                                        else (bytes32.from_hexstr(row["reference_node_hash"])),
+                                        None if row["side"] == "None" else Side(row["side"]),
+                                        status=Status(row["root_status"]),
+                                    )
+                                else:
+                                    await self.delete(
+                                        bytes.fromhex(row["key"]),
+                                        tree_id,
+                                        status=Status(row["root_status"]),
+                                    )
+                                log.info(f"Operation: {row}")
+                                current_root = await self.get_tree_root(tree_id)
+                                if current_root.node_hash is None:
+                                    if row["hash"] != "None":
+                                        return False
+                                else:
+                                    if current_root.node_hash.hex() != row["hash"]:
+                                        return False
+                                existing_generation += 1
+
+                        await ws.send_str(json.dumps({"type": "close"}))
+
+                t2 = time.time()
+                log.info("Finished downloading history.")
+                log.info(f"Time taken: {t2 - t1}")
+                return True
+
+            return False
+
+    async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
+        mode_str = "latest" if subscription.mode == DownloadMode.LATEST else "history"
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self.db.execute(
+                "INSERT IGNORE INTO subscriptions(tree_id, mode, ip, port, wallet_generation) "
+                "VALUES (:tree_id, :mode, :ip, :port, 0)",
+                {
+                    "tree_id": subscription.tree_id.hex(),
+                    "mode": mode_str,
+                    "ip": subscription.ip,
+                    "port": subscription.port,
+                },
+            )
+
+    async def unsubscribe(self, tree_id: bytes32, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self.db.execute(
+                "DELETE FROM subscriptions WHERE tree_id == :tree_id",
+                {"tree_id": tree_id.hex()},
+            )
+            # TODO: delete any data referencing `tree_id` from DataStore.
+
+    async def get_subscriptions(self, *, lock: bool = True) -> List[Subscription]:
+        subscriptions: List[Subscription] = []
+
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                "SELECT * from subscriptions",
+            )
+            async for row in cursor:
+                tree_id = bytes32.fromhex(row["tree_id"])
+                mode = DownloadMode.LATEST if row["mode"] == "latest" else DownloadMode.HISTORY
+                ip = row["ip"]
+                port = uint16(row["port"])
+                subscriptions.append(Subscription(tree_id, mode, ip, port))
+
+        return subscriptions
+
+    async def get_wallet_generation(self, tree_id: bytes32, *, lock: bool = True) -> int:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                "SELECT wallet_generation FROM subscriptions WHERE tree_id == :tree_id",
+                {"tree_id": tree_id.hex()},
+            )
+            row = await cursor.fetchone()
+
+        assert row is not None
+        generation: int = row["wallet_generation"]
+        return generation
+
+    async def set_wallet_generation(self, tree_id: bytes32, generation: int, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self.db.execute(
+                """
+                UPDATE subscriptions SET wallet_generation = :generation WHERE tree_id == :tree_id
+                """,
+                {"tree_id": tree_id.hex(), "generation": generation},
+            )

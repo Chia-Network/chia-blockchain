@@ -2,7 +2,8 @@ import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable
 import aiosqlite
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode
+import asyncio
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode, DownloadMode, Subscription
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -10,9 +11,10 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
+from chia.data_layer.data_layer_wallet import SingletonRecord
 
 
 class DataLayer:
@@ -58,12 +60,14 @@ class DataLayer:
         self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
         self.wallet_rpc = await self.wallet_rpc_init
+        self.periodically_fetch_data_task: asyncio.Task[Any] = asyncio.create_task(self.periodically_fetch_data())
+        self.subscription_lock: asyncio.Lock = asyncio.Lock()
         return True
 
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
-        # self._shut_down = True
-        pass
+        self._shut_down = True
+        self.periodically_fetch_data_task.cancel()
 
     async def _await_closed(self) -> None:
         if self.connection is not None:
@@ -146,3 +150,72 @@ class DataLayer:
                 continue
             roots.append(res.node_hash)
         return roots
+
+    async def fetch_and_validate(self, subscription: Subscription) -> None:
+        tree_id = subscription.tree_id
+        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id)
+        if singleton_record is None:
+            return
+        current_generation = await self.data_store.get_wallet_generation(tree_id)
+        assert int(current_generation) <= singleton_record.generation
+        if current_generation is not None and uint32(current_generation) == singleton_record.generation:
+            return
+
+        old_root = await self.data_store.get_tree_root(tree_id=tree_id)
+        to_check: List[SingletonRecord] = []
+        if subscription.mode == DownloadMode.LATEST:
+            to_check = [singleton_record]
+        if subscription.mode == DownloadMode.HISTORY:
+            to_check = await self.wallet_rpc.dl_history(
+                launcher_id=tree_id, min_generation=current_generation + 1
+            )  # type: ignore
+
+        downloaded = await self.data_store.download_data(subscription)
+        if not downloaded:
+            raise RuntimeError("Could not download the data.")
+
+        root = await self.data_store.get_tree_root(tree_id=tree_id)
+        if root.node_hash is None or root.node_hash != to_check[0].root:
+            raise RuntimeError("Can't find data on chain in our datastore.")
+        to_check.pop(0)
+        min_generation = old_root.generation + 1
+        max_generation = root.generation
+
+        for records in to_check:
+            root_for_record = await self.data_store.get_last_tree_root_by_hash(tree_id, records.root, max_generation)
+            if root_for_record is None or root_for_record.generation < min_generation:
+                raise RuntimeError("Can't find data on chain in our datastore.")
+            max_generation = root.generation
+
+        await self.data_store.set_wallet_generation(tree_id, int(singleton_record.generation))
+
+    async def subscribe(self, subscription: Subscription) -> None:
+        subscriptions = await self.get_subscriptions()
+        if subscription.tree_id in [subscription.tree_id for subscription in subscriptions]:
+            return
+        await self.wallet_rpc.dl_track_new(subscription.tree_id)
+        async with self.subscription_lock:
+            await self.data_store.subscribe(subscription)
+
+    async def unsubscribe(self, tree_id: bytes32) -> None:
+        subscriptions = await self.get_subscriptions()
+        if tree_id not in [subscription.tree_id for subscription in subscriptions]:
+            return
+        async with self.subscription_lock:
+            await self.data_store.unsubscribe(tree_id)
+
+    async def get_subscriptions(self) -> List[Subscription]:
+        async with self.subscription_lock:
+            return await self.data_store.get_subscriptions()
+
+    async def periodically_fetch_data(self) -> None:
+        fetch_data_interval = self.config.get("fetch_data_interval", 60)
+        while not self._shut_down:
+            async with self.subscription_lock:
+                subscriptions = await self.get_subscriptions()
+                for subscription in subscriptions:
+                    await self.fetch_and_validate(subscription)
+            try:
+                await asyncio.sleep(fetch_data_interval)
+            except asyncio.CancelledError:
+                pass
