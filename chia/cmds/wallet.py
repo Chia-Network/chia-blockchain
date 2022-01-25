@@ -88,6 +88,7 @@ def get_transactions_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-a", "--amount", help="How much chia to send, in XCH", type=str, required=True)
+@click.option("-e", "--memo", help="Additional memo for the transaction", type=str, default=None)
 @click.option(
     "-m",
     "--fee",
@@ -102,9 +103,16 @@ def get_transactions_cmd(
     "-o", "--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False
 )
 def send_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, id: int, amount: str, fee: str, address: str, override: bool
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    amount: str,
+    memo: Optional[str],
+    fee: str,
+    address: str,
+    override: bool,
 ) -> None:
-    extra_params = {"id": id, "amount": amount, "fee": fee, "address": address, "override": override}
+    extra_params = {"id": id, "amount": amount, "memo": memo, "fee": fee, "address": address, "override": override}
     import asyncio
     from .wallet_funcs import execute_with_wallet, send
 
