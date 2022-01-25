@@ -122,7 +122,7 @@ def generate_and_print_cmd():
 def sign_cmd(message: str, fingerprint: Optional[int], filename: Optional[str], hd_path: str, as_bytes: bool):
     from .keys_funcs import resolve_derivation_master_key, sign
 
-    private_key = resolve_derivation_master_key(fingerprint, filename)
+    private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
     sign(message, private_key, hd_path, as_bytes)
 
 
@@ -165,9 +165,9 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
     "--limit", "-l", default=100, show_default=True, help="Limit the number of derivations to search against", type=int
 )
 @click.option(
-    "--hardened-derivation",
+    "--non-observer-derivation",
     "-d",
-    help="Search will be performed against keys derived using hardened derivation.",
+    help="Search will be performed against keys derived using non-observer derivation.",
     default=False,
     show_default=True,
     is_flag=True,
@@ -192,8 +192,8 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
 @click.option(
     "--derive-from-hd-path",
     "-p",
-    help="Search for items derived from a specific HD path. Indices ending in an 'h' indicate that "
-    "hardened derivation should used at that index. Example HD path: m/12381h/8444h/2/",
+    help="Search for items derived from a specific HD path. Indices ending in an 'n' indicate that "
+    "non-observer derivation should used at that index. Example HD path: m/12381n/8444n/2/",
     type=str,
 )
 @click.pass_context
@@ -201,7 +201,7 @@ def search_cmd(
     ctx: click.Context,
     search_terms: Tuple[str, ...],
     limit: int,
-    hardened_derivation: bool,
+    non_observer_derivation: bool,
     show_progress: bool,
     search_type: Tuple[str, ...],
     derive_from_hd_path: Optional[str],
@@ -216,13 +216,13 @@ def search_cmd(
 
     # Specifying the master key is optional for the search command. If not specified, we'll search all keys.
     if fingerprint is not None or filename is not None:
-        private_key = resolve_derivation_master_key(ctx.obj["fingerprint"], ctx.obj["filename"])
+        private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
 
     found: bool = search_derive(
         private_key,
         search_terms,
         limit,
-        hardened_derivation,
+        non_observer_derivation,
         show_progress,
         ("all",) if "all" in search_type else search_type,
         derive_from_hd_path,
@@ -238,30 +238,34 @@ def search_cmd(
 @click.option("--count", "-n", help="Number of wallet addresses to derive, starting at index.", default=1)
 @click.option("--prefix", "-x", help="Address prefix (xch for mainnet, txch for testnet)", default=None, type=str)
 @click.option(
-    "--hardened-derivation",
+    "--non-observer-derivation",
     "-d",
-    help="Derive wallet addresses using hardened derivation.",
+    help="Derive wallet addresses using non-observer derivation.",
     default=False,
     show_default=True,
     is_flag=True,
 )
 @click.option(
     "--show-hd-path",
-    help="Show the HD path of the derived wallet addresses. If hardened-derivation is specified, "
-    "path indices will have an 'h' suffix.",
+    help="Show the HD path of the derived wallet addresses. If non-observer-derivation is specified, "
+    "path indices will have an 'n' suffix.",
     default=False,
     show_default=True,
     is_flag=True,
 )
 @click.pass_context
 def wallet_address_cmd(
-    ctx: click.Context, index: int, count: int, prefix: Optional[str], hardened_derivation: bool, show_hd_path: bool
+    ctx: click.Context, index: int, count: int, prefix: Optional[str], non_observer_derivation: bool, show_hd_path: bool
 ):
     from .keys_funcs import derive_wallet_address, resolve_derivation_master_key
 
-    private_key = resolve_derivation_master_key(ctx.obj["fingerprint"], ctx.obj["filename"])
+    fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
+    filename: Optional[str] = ctx.obj.get("filename", None)
+    private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
 
-    derive_wallet_address(ctx.obj["root_path"], private_key, index, count, prefix, hardened_derivation, show_hd_path)
+    derive_wallet_address(
+        ctx.obj["root_path"], private_key, index, count, prefix, non_observer_derivation, show_hd_path
+    )
 
 
 @derive_cmd.command("child-key", short_help="Derive child keys")
@@ -276,8 +280,8 @@ def wallet_address_cmd(
 @click.option(
     "--derive-from-hd-path",
     "-p",
-    help="Derive child keys rooted from a specific HD path. Indices ending in an 'h' indicate that "
-    "hardened derivation should used at that index. Example HD path: m/12381h/8444h/2/",
+    help="Derive child keys rooted from a specific HD path. Indices ending in an 'n' indicate that "
+    "non-observer derivation should used at that index. Example HD path: m/12381n/8444n/2/",
     type=str,
 )
 @click.option(
@@ -285,9 +289,9 @@ def wallet_address_cmd(
 )
 @click.option("--count", "-n", help="Number of child keys to derive, starting at index.", default=1)
 @click.option(
-    "--hardened-derivation",
+    "--non-observer-derivation",
     "-d",
-    help="Derive keys using hardened derivation.",
+    help="Derive keys using non-observer derivation.",
     default=False,
     show_default=True,
     is_flag=True,
@@ -314,7 +318,7 @@ def child_key_cmd(
     derive_from_hd_path: Optional[str],
     index: int,
     count: int,
-    hardened_derivation: bool,
+    non_observer_derivation: bool,
     show_private_keys: bool,
     show_hd_path: bool,
 ):
@@ -323,7 +327,9 @@ def child_key_cmd(
     if key_type is None and derive_from_hd_path is None:
         ctx.fail("--type or --derive-from-hd-path is required")
 
-    private_key = resolve_derivation_master_key(ctx.obj["fingerprint"], ctx.obj["filename"])
+    fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
+    filename: Optional[str] = ctx.obj.get("filename", None)
+    private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
 
     derive_child_key(
         private_key,
@@ -331,7 +337,7 @@ def child_key_cmd(
         derive_from_hd_path.lower() if derive_from_hd_path is not None else None,
         index,
         count,
-        hardened_derivation,
+        non_observer_derivation,
         show_private_keys,
         show_hd_path,
     )

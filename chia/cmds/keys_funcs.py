@@ -3,7 +3,7 @@ import sys
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.util.bech32m import encode_puzzle_hash
@@ -125,8 +125,8 @@ def derive_sk_from_hd_path(master_sk: PrivateKey, hd_path_root: str) -> Tuple[Pr
     from chia.wallet.derive_keys import _derive_path, _derive_path_unhardened
 
     class DerivationType(Enum):
-        HARDENED = 0
-        UNHARDENED = 1
+        NONOBSERVER = 0
+        OBSERVER = 1
 
     path: List[str] = hd_path_root.split("/")
     if len(path) == 0 or path[0] != "m":
@@ -144,20 +144,20 @@ def derive_sk_from_hd_path(master_sk: PrivateKey, hd_path_root: str) -> Tuple[Pr
         if len(current_index_str) == 0:
             raise ValueError("Invalid HD path. Empty index")
 
-        hardened: bool = current_index_str[-1] == "h"
-        current_index: int = int(current_index_str[:-1]) if hardened else int(current_index_str)
+        non_observer: bool = current_index_str[-1] == "n"
+        current_index: int = int(current_index_str[:-1]) if non_observer else int(current_index_str)
 
         index_and_derivation_types.append(
-            (current_index, DerivationType.HARDENED if hardened else DerivationType.UNHARDENED)
+            (current_index, DerivationType.NONOBSERVER if non_observer else DerivationType.OBSERVER)
         )
 
     current_sk: PrivateKey = master_sk
 
     # Derive keys along the path
     for (current_index, derivation_type) in index_and_derivation_types:
-        if derivation_type == DerivationType.HARDENED:
+        if derivation_type == DerivationType.NONOBSERVER:
             current_sk = _derive_path(current_sk, [current_index])
-        elif derivation_type == DerivationType.UNHARDENED:
+        elif derivation_type == DerivationType.OBSERVER:
             current_sk = _derive_path_unhardened(current_sk, [current_index])
         else:
             raise ValueError(f"Unhandled derivation type: {derivation_type}")
@@ -192,7 +192,7 @@ def _search_derived(
     path: str,
     path_indices: Optional[List[int]],
     limit: int,
-    hardened_derivation: bool,
+    non_observer_derivation: bool,
     show_progress: bool,
     search_public_key: bool,
     search_private_key: bool,
@@ -218,16 +218,16 @@ def _search_derived(
     for index in range(limit):
         found_items: List[Tuple[str, str, DerivedSearchResultType]] = []
         printed_match: bool = False
-        current_index_str = str(index) + ("h" if hardened_derivation else "")
+        current_index_str = str(index) + ("n" if non_observer_derivation else "")
         current_path += f"{current_index_str}"
         current_path_indices.append(index)
         if show_progress:
-            # Output just the current index e.g. "25" or "25h"
+            # Output just the current index e.g. "25" or "25n"
             sys.stdout.write(f"{current_index_str}")
             sys.stdout.flush()
 
         # Derive the private key
-        if hardened_derivation:
+        if non_observer_derivation:
             child_sk = _derive_path(current_sk, current_path_indices)
         else:
             child_sk = _derive_path_unhardened(current_sk, current_path_indices)
@@ -299,7 +299,7 @@ def search_derive(
     private_key: Optional[PrivateKey],
     search_terms: Tuple[str, ...],
     limit: int,
-    hardened_derivation: bool,
+    non_observer_derivation: bool,
     show_progress: bool,
     search_types: Tuple[str, ...],
     derive_from_hd_path: Optional[str],
@@ -349,7 +349,7 @@ def search_derive(
                 hd_path_root,
                 None,
                 limit,
-                hardened_derivation,
+                non_observer_derivation,
                 show_progress,
                 search_public_key,
                 search_private_key,
@@ -370,7 +370,7 @@ def search_derive(
             current_path_indices: List[int] = [12381, 8444]
             path_root: str = "m/"
             for i in [12381, 8444]:
-                path_root += f"{i}{'h' if hardened_derivation else ''}/"
+                path_root += f"{i}{'n' if non_observer_derivation else ''}/"
 
             if show_progress:
                 # Print the path root (without last index)
@@ -380,7 +380,7 @@ def search_derive(
             # 7 account levels for derived keys (0-6):
             # 0 = farmer, 1 = pool, 2 = wallet, 3 = local, 4 = backup key, 5 = singleton, 6 = pooling authentication
             for account in range(7):
-                account_str = str(account) + ("h" if hardened_derivation else "")
+                account_str = str(account) + ("n" if non_observer_derivation else "")
                 current_path = path_root + f"{account_str}/"
                 current_path_indices.append(account)
                 if show_progress:
@@ -394,7 +394,7 @@ def search_derive(
                     current_path,
                     list(current_path_indices),  # copy
                     limit,
-                    hardened_derivation,
+                    non_observer_derivation,
                     show_progress,
                     search_public_key,
                     search_private_key,
@@ -442,7 +442,7 @@ def derive_wallet_address(
     index: int,
     count: int,
     prefix: Optional[str],
-    hardened_derivation: bool,
+    non_observer_derivation: bool,
     show_hd_path: bool,
 ):
     """
@@ -456,9 +456,9 @@ def derive_wallet_address(
     path_indices: List[int] = [12381, 8444, 2]
     wallet_hd_path_root: str = "m/"
     for i in path_indices:
-        wallet_hd_path_root += f"{i}{'h' if hardened_derivation else ''}/"
+        wallet_hd_path_root += f"{i}{'n' if non_observer_derivation else ''}/"
     for i in range(index, index + count):
-        if hardened_derivation:
+        if non_observer_derivation:
             sk = master_sk_to_wallet_sk(private_key, uint32(i))
         else:
             sk = master_sk_to_wallet_sk_unhardened(private_key, uint32(i))
@@ -467,7 +467,8 @@ def derive_wallet_address(
         address = encode_puzzle_hash(create_puzzlehash_for_pk(sk.get_g1()), prefix)
         if show_hd_path:
             print(
-                f"Wallet address {i} ({wallet_hd_path_root + str(i) + ('h' if hardened_derivation else '')}): {address}"
+                f"Wallet address {i} "
+                f"({wallet_hd_path_root + str(i) + ('n' if non_observer_derivation else '')}): {address}"
             )
         else:
             print(f"Wallet address {i}: {address}")
@@ -486,7 +487,7 @@ def derive_child_key(
     derive_from_hd_path: Optional[str],
     index: int,
     count: int,
-    hardened_derivation: bool,
+    non_observer_derivation: bool,
     show_private_keys: bool,
     show_hd_path: bool,
 ):
@@ -515,7 +516,7 @@ def derive_child_key(
             }[key_type]
         )
 
-        if hardened_derivation:
+        if non_observer_derivation:
             current_sk = _derive_path(master_sk, path_indices)
         else:
             current_sk = _derive_path_unhardened(master_sk, path_indices)
@@ -523,7 +524,7 @@ def derive_child_key(
         derivation_root_sk = current_sk
         hd_path_root = "m/"
         for i in path_indices:
-            hd_path_root += f"{i}{'h' if hardened_derivation else ''}/"
+            hd_path_root += f"{i}{'n' if non_observer_derivation else ''}/"
     # Arbitrary HD path was specified
     elif derive_from_hd_path is not None:
         derivation_root_sk, hd_path_root = derive_sk_from_hd_path(master_sk, derive_from_hd_path)
@@ -531,19 +532,19 @@ def derive_child_key(
     # Derive child keys from derivation_root_sk
     if derivation_root_sk is not None and hd_path_root is not None:
         for i in range(index, index + count):
-            if hardened_derivation:
+            if non_observer_derivation:
                 sk = _derive_path(derivation_root_sk, [i])
             else:
                 sk = _derive_path_unhardened(derivation_root_sk, [i])
             hd_path: str = (
-                " (" + hd_path_root + str(i) + ("h" if hardened_derivation else "") + ")" if show_hd_path else ""
+                " (" + hd_path_root + str(i) + ("n" if non_observer_derivation else "") + ")" if show_hd_path else ""
             )
             key_type_str: Optional[str]
 
             if key_type is not None:
                 key_type_str = key_type.capitalize()
             else:
-                key_type_str = "Hardened" if hardened_derivation else "Unhardened"
+                key_type_str = "Non-Observer" if non_observer_derivation else "Observer"
 
             print(f"{key_type_str} public key {i}{hd_path}: {sk.get_g1()}")
             if show_private_keys:
@@ -602,12 +603,12 @@ def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
     return AugSchemeMPL.key_gen(seed)
 
 
-def resolve_derivation_master_key(fingerprint: Optional[int], filename: Optional[str]) -> PrivateKey:
+def resolve_derivation_master_key(fingerprint_or_filename: Optional[Union[int, str]]) -> PrivateKey:
     """
     Given a key fingerprint of file containing a mnemonic seed, return the private key.
     """
 
-    if filename:
-        return private_key_from_mnemonic_seed_file(Path(filename))
+    if fingerprint_or_filename is not None and isinstance(fingerprint_or_filename, str):
+        return private_key_from_mnemonic_seed_file(Path(fingerprint_or_filename))
     else:
-        return get_private_key_with_fingerprint_or_prompt(fingerprint)
+        return get_private_key_with_fingerprint_or_prompt(fingerprint_or_filename)
