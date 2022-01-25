@@ -103,13 +103,18 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         paginate = sys.stdout.isatty()
     txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id)
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     if len(txs) == 0:
         print("There are no transactions to this address")
 
     try:
         wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
         mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
+        name = await get_name_for_wallet_id(
+            config=config,
+            wallet_type=wallet_type,
+            wallet_id=wallet_id,
+            wallet_client=wallet_client,
+        )
     except LookupError as e:
         print(e.args[0])
         return
