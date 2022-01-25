@@ -816,7 +816,7 @@ class WalletRpcApi:
             request['asset_id'] : the CAT token asset ID
             request['sender_xch_puzzle_hash'] : the sender XCH (inner) puzzle hash
             request['receiver_address'] : the receiver address (to address)
-            request['memos'] : memos field
+            request['memo'] : memo field
             request['amount'] : amount of CAT token to send
             request['fee'] : amount of mojo for gas fee
             request['cat_coins_pool'] : a list of CAT Coin dicts (each has parent_coin_info, puzzle_hash, amount)
@@ -833,7 +833,7 @@ class WalletRpcApi:
         sender_xch_puzzle_hash: bytes32 = hexstr_to_bytes(request["sender_xch_puzzle_hash"])
         receiver_puzzle_hash: bytes32 = decode_puzzle_hash(request["receiver_address"])
 
-        memos = [mem.encode("utf-8") for mem in request["memos"]]
+        memo = [mem.encode("utf-8") for mem in request["memo"]]
 
         if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
@@ -876,7 +876,7 @@ class WalletRpcApi:
                 receiver_puzzle_hash=receiver_puzzle_hash,
                 asset_id=asset_id,
                 fee=fee,
-                memos=memos,
+                memos=memo,
                 cat_coins_pool=cat_coins_pool,
             )
             for tx in txs:
