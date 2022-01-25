@@ -473,8 +473,8 @@ class WalletRpcClient(RpcClient):
     async def create_new_dl(self, root: bytes32, fee: uint64) -> Tuple[List[TransactionRecord], bytes32]:
         request = {"root": root.hex(), "fee": fee}
         response = await self.fetch("create_new_dl", request)
-        if response["error"] is not None:
-            return response["error"]
+        # if response["error"] is not None:
+        #     return response["error"]
         txs: List[TransactionRecord] = [
             TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]
         ]
