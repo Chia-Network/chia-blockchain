@@ -1386,7 +1386,7 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             return {"success": False, "error": "not_initialized"}
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
+        for wallet in self.service.wallet_state_manager.wallets.values():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
                 records = await wallet.get_singletons_by_root(
                     bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["root"])
