@@ -808,6 +808,19 @@ class WalletRpcApi:
         }
 
     async def cc_spend_from_specific_puzzle_hash(self, request):
+        """Send CAT token from a specific sender puzzle hash (owned by the current logged in wallet) to a receiver address
+        It will only send coins from the given cat_coins_pool
+
+        Args:
+            request['wallet_id'] : the CAT wallet ID to spend
+            request['asset_id'] : the CAT token asset ID
+            request['sender_xch_puzzle_hash'] : the sender XCH (inner) puzzle hash
+            request['receiver_address'] : the receiver address (to address)
+            request['memos'] : memos field
+            request['amount'] : amount of CAT token to send
+            request['fee'] : amount of mojo for gas fee
+            request['cat_coins_pool'] : a list of CAT Coin dicts (each has parent_coin_info, puzzle_hash, amount)
+        """
         assert self.service.wallet_state_manager is not None
 
         if await self.service.wallet_state_manager.synced() is False:
