@@ -15,6 +15,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.log_exceptions import log_exceptions
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
@@ -183,8 +184,11 @@ class FullNodeRpcApi:
             is_connected = False
         synced = await self.service.synced() and is_connected
 
-        compact_blocks = await self.service.block_store.count_compactified_blocks()
-        uncompact_blocks = await self.service.block_store.count_uncompactified_blocks()
+        compact_blocks = 0
+        uncompact_blocks = 0
+        with log_exceptions(self.service.log):
+            compact_blocks = await self.service.block_store.count_compactified_blocks()
+            uncompact_blocks = await self.service.block_store.count_uncompactified_blocks()
 
         if self.service.hint_store is not None:
             hint_count = await self.service.hint_store.count_hints()
