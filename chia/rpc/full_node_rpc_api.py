@@ -120,7 +120,9 @@ class FullNodeRpcApi:
                     "space": 0,
                     "mempool_size": 0,
                     "mempool_cost": 0,
-                    "mempool_min_fee": 0,
+                    "mempool_min_fee": {
+                        "5000000": 0,
+                    },
                     "compact_blocks": 0,
                     "uncompact_blocks": 0,
                     "hint_count": 0,
@@ -169,11 +171,11 @@ class FullNodeRpcApi:
         if self.service.mempool_manager is not None:
             mempool_size = len(self.service.mempool_manager.mempool.spends)
             mempool_cost = self.service.mempool_manager.mempool.total_mempool_cost
-            mempool_min_fee = self.service.mempool_manager.mempool.get_min_fee_rate(100000)
+            mempool_min_fee_5m = self.service.mempool_manager.mempool.get_min_fee_rate(5000000)
         else:
             mempool_size = 0
             mempool_cost = 0
-            mempool_min_fee = 0
+            mempool_min_fee_5m = 0
         if self.service.server is not None:
             is_connected = len(self.service.server.get_full_node_connections()) > 0
         else:
@@ -204,7 +206,11 @@ class FullNodeRpcApi:
                 "space": space["space"],
                 "mempool_size": mempool_size,
                 "mempool_cost": mempool_cost,
-                "mempool_min_fee": mempool_min_fee,
+                "mempool_min_fee":  {
+                    # We may give estimates for varying costs in the future
+                    # This Dict sets us up for that in the future
+                    "5000000": mempool_min_fee_5m,
+                },
                 "compact_blocks": compact_blocks,
                 "uncompact_blocks": uncompact_blocks,
                 "hint_count": hint_count,
