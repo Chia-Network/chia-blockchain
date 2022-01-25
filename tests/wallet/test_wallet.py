@@ -774,3 +774,81 @@ class TestWalletSimulator:
             await time_out_assert(15, wallet.get_confirmed_balance, 12 * 10 ** 12)
         else:
             await time_out_assert(15, wallet.get_confirmed_balance, 8 * 10 ** 12)
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
+    async def test_coin_selection_make_transaction(self, two_wallet_nodes, trusted):
+        num_blocks = 13
+        full_nodes, wallets = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.full_node.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+        ph_2 = await wallet_2.get_new_puzzlehash()
+        if trusted:
+            wallet_node.config["trusted_peers"] = {server_1.node_id: server_1.node_id}
+            wallet_node_2.config["trusted_peers"] = {server_1.node_id: server_1.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        tx = await wallet.generate_signed_transaction(
+            4 * 10 ** 12,
+            ph_2,
+            0,
+        )
+        await wallet.push_transaction(tx)
+        await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        # check that the coin selection only spends the identical coin.
+        tx = await wallet_2.generate_signed_transaction(
+            4 * 10 ** 12,
+            ph,
+            0,
+        )
+
+        await wallet_2.push_transaction(tx)
+        await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
+        assert len(tx.removals) == 1
+        assert sum([coin.amount for coin in tx.removals]) == 4 * 10 ** 12
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        # check that the knapsack algorithm works.
+        tx = await wallet.generate_signed_transaction(
+            2.5 * 10 ** 12,
+            ph_2,
+            0,
+        )
+
+        await wallet.push_transaction(tx)
+        await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
+        assert tx.amount == 2500000000000
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        # check that the find_smallest_coin function works.
+        tx = await wallet_2.generate_signed_transaction(
+            0.1 * 10 ** 12,
+            ph,
+            0,
+        )
+        await wallet_2.push_transaction(tx)
+        await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
+        assert len(tx.removals) == 1
+        assert sum([coin.amount for coin in tx.removals]) == 2500000000000
