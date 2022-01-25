@@ -79,7 +79,7 @@ def check_unusual_transaction(amount: Decimal, fee: Decimal):
 
 
 async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    wallet_id = args["id"]
+    wallet_id: int = args["id"]
     amount = Decimal(args["amount"])
     fee = Decimal(args["fee"])
     address = args["address"]
@@ -101,15 +101,15 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     final_amount: Optional[uint64] = None
     final_fee = uint64(int(fee * units["chia"]))
     for summary in summaries_response:
-        if int(wallet_id) == int(summary["id"]):
-            typ: WalletType = WalletType(int(summary["type"]))
+        if wallet_id == int(summary["id"]):
+            typ: WalletType = WalletType(summary["type"])
             if typ == WalletType.STANDARD_WALLET:
-                final_amount = uint64(int(amount * units["chia"]))
+                final_amount = uint64(amount * units["chia"])
                 print("Submitting transaction...")
                 res = await wallet_client.send_transaction(wallet_id, final_amount, address, final_fee, memos)
                 break
             elif typ == WalletType.CAT:
-                final_amount = uint64(int(amount * units["cat"]))
+                final_amount = uint64(amount * units["cat"])
                 print("Submitting transaction...")
                 res = await wallet_client.cat_spend(wallet_id, final_amount, address, final_fee, memos)
                 break
