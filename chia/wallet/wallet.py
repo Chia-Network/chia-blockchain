@@ -273,7 +273,6 @@ class Wallet:
         )
 
         sum_spendable_coins = 0
-        used_coins: Set[Coin] = set()
         valid_unspent: List[Coin] = []
 
         for coin_record in unspent:  # remove all the useless coins.
@@ -295,11 +294,10 @@ class Wallet:
         valid_unspent.sort(reverse=True, key=lambda r: r.amount)
 
         # check for exact 1 to 1 coin match.
-        exact_match_coin_record: Optional[Coin] = check_for_exact_match(valid_unspent, amount)
-        if exact_match_coin_record:
-            used_coins.add(exact_match_coin_record)
-            self.log.debug(f"Successfully selected coins: {used_coins}")
-            return used_coins
+        exact_match_coin: Optional[Coin] = check_for_exact_match(valid_unspent, amount)
+        if exact_match_coin:
+            self.log.debug(f"selected coin with an exact match: {exact_match_coin}")
+            return {exact_match_coin}
 
         # Check for an exact match with all of the coins smaller than the amount.
         # If we have more, smaller coins than the amount we run the next algorithm.
@@ -310,19 +308,24 @@ class Wallet:
                 smaller_coin_sum += coin.amount
                 smaller_coins.add(coin)
         if smaller_coin_sum == amount:
-            used_coins = smaller_coins
+            self.log.debug(
+                f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}"
+            )
+            return smaller_coins
         elif smaller_coin_sum < amount:
-            smallest_coin: Optional[Coin] = find_smallest_coin(valid_unspent, amount)
-            if smallest_coin:
-                used_coins.add(smallest_coin)
-                self.log.debug(f"Selected coin: {smallest_coin.name()}")
-        elif smaller_coin_sum > amount:
-            best_coin_set, sum_best_coin_set = knapsack_coin_algorithm(smaller_coins, amount)
-            if best_coin_set:
-                used_coins = best_coin_set
-
-        self.log.debug(f"Successfully selected coins: {used_coins}")
-        return used_coins
+            smallest_coin: Optional[Coin] = find_smallest_coin(
+                valid_unspent, amount, self.wallet_state_manager.constants.MAX_COIN_AMOUNT
+            )
+            assert smallest_coin is not None
+            self.log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
+            return {smallest_coin}
+        else:
+            best_coin_set = knapsack_coin_algorithm(
+                smaller_coins, amount, self.wallet_state_manager.constants.MAX_COIN_AMOUNT
+            )
+            assert best_coin_set is not None
+            self.log.debug(f"Selected coins from knapsack algorithm: {best_coin_set}")
+            return best_coin_set
 
     async def _generate_unsigned_transaction(
         self,
