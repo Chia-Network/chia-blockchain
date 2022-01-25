@@ -120,7 +120,7 @@ class FullNodeRpcApi:
                     "space": 0,
                     "mempool_size": 0,
                     "mempool_cost": 0,
-                    "mempool_min_fee": {
+                    "mempool_min_fees": {
                         "5000000": 0,
                     },
                     "compact_blocks": 0,
@@ -206,10 +206,10 @@ class FullNodeRpcApi:
                 "space": space["space"],
                 "mempool_size": mempool_size,
                 "mempool_cost": mempool_cost,
-                "mempool_min_fee":  {
+                "mempool_min_fees": {
                     # We may give estimates for varying costs in the future
                     # This Dict sets us up for that in the future
-                    "5000000": mempool_min_fee_5m,
+                    "cost_5000000": mempool_min_fee_5m,
                 },
                 "compact_blocks": compact_blocks,
                 "uncompact_blocks": uncompact_blocks,
