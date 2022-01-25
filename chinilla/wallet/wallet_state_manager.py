@@ -696,10 +696,15 @@ class WalletStateManager:
                 if record is None:
                     farmer_reward = False
                     pool_reward = False
+                    tx_type: int
                     if self.is_farmer_reward(coin_state.created_height, coin_state.coin.parent_coin_info):
                         farmer_reward = True
+                        tx_type = TransactionType.FEE_REWARD.value
                     elif self.is_pool_reward(coin_state.created_height, coin_state.coin.parent_coin_info):
                         pool_reward = True
+                        tx_type = TransactionType.COINBASE_REWARD.value
+                    else:
+                        tx_type = TransactionType.INCOMING_TX.value
                     record = WalletCoinRecord(
                         coin_state.coin,
                         coin_state.created_height,
@@ -735,7 +740,7 @@ class WalletStateManager:
                             wallet_id=wallet_id,
                             sent_to=[],
                             trade_id=None,
-                            type=uint32(TransactionType.INCOMING_TX.value),
+                            type=uint32(tx_type),
                             name=bytes32(token_bytes()),
                             memos=[],
                         )
