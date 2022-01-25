@@ -876,7 +876,7 @@ class WalletRpcApi:
                 receiver_puzzle_hash=receiver_puzzle_hash,
                 asset_id=asset_id,
                 fee=fee,
-                memos=memo,
+                memo=memo,
                 cat_coins_pool=cat_coins_pool,
             )
             for tx in txs:
