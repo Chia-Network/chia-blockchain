@@ -3,7 +3,7 @@ import pytest
 import time
 from chinilla.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chinilla.protocols.full_node_protocol import RespondBlock
-from chinilla.server.server import ChinillaServer
+from chinilla.server.server import chinillaServer
 from chinilla.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chinilla.types.blockchain_format.program import Program
 from chinilla.types.blockchain_format.sized_bytes import bytes32
@@ -11,6 +11,7 @@ from chinilla.types.peer_info import PeerInfo
 from chinilla.util.ints import uint16, uint32, uint64
 from chinilla.wallet.derive_keys import master_sk_to_wallet_sk
 from chinilla.wallet.util.transaction_type import TransactionType
+from chinilla.wallet.util.compute_memos import compute_memos
 from chinilla.wallet.transaction_record import TransactionRecord
 from chinilla.wallet.wallet_node import WalletNode
 from chinilla.wallet.wallet_state_manager import WalletStateManager
@@ -617,7 +618,7 @@ class TestWalletSimulator:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=name,
-            memos=list(stolen_sb.get_memos().items()),
+            memos=list(compute_memos(stolen_sb).items()),
         )
         await wallet.push_transaction(stolen_tx)
 
