@@ -190,10 +190,10 @@ class FullNodeRpcApi:
             compact_blocks = await self.service.block_store.count_compactified_blocks()
             uncompact_blocks = await self.service.block_store.count_uncompactified_blocks()
 
+        hint_count = 0
         if self.service.hint_store is not None:
-            hint_count = await self.service.hint_store.count_hints()
-        else:
-            hint_count = 0
+            with log_exceptions(self.service.log):
+                hint_count = await self.service.hint_store.count_hints()
 
         assert space is not None
         response: Dict = {
