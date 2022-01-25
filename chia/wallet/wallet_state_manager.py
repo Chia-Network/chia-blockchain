@@ -633,7 +633,6 @@ class WalletStateManager:
         peer,
         fork_height: Optional[uint32] = None,
         current_height: Optional[uint32] = None,
-        weight_proof: Optional[WeightProof] = None,
     ):
         created_h_none = []
         for coin_st in coin_states.copy():
@@ -747,7 +746,7 @@ class WalletStateManager:
                         )
                         await self.tx_store.add_transaction_record(tx_record, False)
 
-                    children = await self.wallet_node.fetch_children(peer, coin_state.coin.name(), weight_proof)
+                    children = await self.wallet_node.fetch_children(peer, coin_state.coin.name())
                     assert children is not None
                     additions = [state.coin for state in children]
                     if len(children) > 0:
@@ -835,7 +834,7 @@ class WalletStateManager:
 
                 # Check if a child is a singleton launcher
                 if children is None:
-                    children = await self.wallet_node.fetch_children(peer, coin_state.coin.name(), weight_proof)
+                    children = await self.wallet_node.fetch_children(peer, coin_state.coin.name())
                 assert children is not None
                 for child in children:
                     if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
@@ -1095,7 +1094,7 @@ class WalletStateManager:
 
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
-
+        await self.coin_store.db_wrapper.commit_transaction()
         for record in reorged:
             if record.type in [
                 TransactionType.OUTGOING_TX,
@@ -1103,6 +1102,7 @@ class WalletStateManager:
                 TransactionType.INCOMING_TRADE,
             ]:
                 await self.tx_store.tx_reorged(record)
+
         self.tx_pending_changed()
 
         # Removes wallets that were created from a blockchain transaction which got reorged.
