@@ -1,13 +1,13 @@
 from dataclasses import dataclass
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.name_puzzle_condition import NPC
-from chia.util.ints import uint64, uint16
-from chia.util.streamable import Streamable, streamable
 from chia.types.condition_with_args import ConditionWithArgs
+from chia.types.name_puzzle_condition import NPC
+from chia.util.ints import uint16, uint64
+from chia.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)
