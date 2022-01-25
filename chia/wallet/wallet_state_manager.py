@@ -56,6 +56,7 @@ from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
 from chia.server.server import ChiaServer
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 
 
@@ -236,6 +237,13 @@ class WalletStateManager:
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.DISTRIBUTED_ID:
                 wallet = await DIDWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
+                self.wallets[wallet_info.id] = wallet
+            elif wallet_info.type == WalletType.NFT:
+                wallet = await NFTWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
