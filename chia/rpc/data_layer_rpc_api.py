@@ -12,8 +12,6 @@ from chia.util.byte_types import hexstr_to_bytes
 # todo input assertions for all rpc's
 from chia.util.streamable import recurse_jsonify
 
-log = logging.getLogger(__name__)
-
 
 def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
     # TODO: A full class would likely be nice for this so downstream doesn't

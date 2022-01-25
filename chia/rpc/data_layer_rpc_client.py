@@ -5,7 +5,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 class DataLayerRpcClient(RpcClient):
-    async def create_data_store(self) -> Optional[Dict[str, Any]]:
+    async def create_data_store(self) -> Dict[str, Any]:
         response = await self.fetch("create_data_store", {})
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]

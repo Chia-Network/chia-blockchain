@@ -318,7 +318,7 @@ class DataStore:
                 {"tree_id": tree_id.hex(), "generation": generation},
             )
             if cursor.rowcount < 1:
-                raise Exception("tree id not in store")
+                raise Exception(f"tree id not in store {tree_id.hex()}")
             [root_dict] = [row async for row in cursor]
 
         return Root.from_row(row=root_dict)
@@ -333,7 +333,7 @@ class DataStore:
                 {"tree_id": tree_id.hex(), "generation_begin": generation_begin, "generation_end": generation_end},
             )
             if cursor.rowcount < 1:
-                raise Exception("tree id not in store")
+                raise Exception(f"tree id not in store {tree_id.hex()}")
             roots = [Root.from_row(row=row) async for row in cursor]
 
         return roots
