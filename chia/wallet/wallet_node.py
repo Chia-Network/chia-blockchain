@@ -56,6 +56,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.weight_proof import WeightProof, SubEpochData
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
+from chia.util.default_root import STANDALONE_ROOT_PATH
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyringIsLocked, Keychain
 from chia.util.network import get_host_addr
@@ -189,6 +190,11 @@ class WalletNode:
             .replace("KEY", db_path_key_suffix)
         )
         path = path_from_root(self.root_path, f"{db_path_replaced}_new")
+        standalone_path = path_from_root(STANDALONE_ROOT_PATH, f"{db_path_replaced}_new")
+        if not path.exists():
+            if standalone_path.exists():
+                path.write_bytes(standalone_path.read_bytes())
+
         mkdir(path.parent)
         self.new_peak_lock = asyncio.Lock()
         assert self.server is not None
