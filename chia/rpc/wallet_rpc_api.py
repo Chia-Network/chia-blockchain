@@ -1388,7 +1388,9 @@ class WalletRpcApi:
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
                 records = await wallet.create_update_state_spend(
-                    bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["new_root"])
+                    bytes32.from_hexstr(request["launcher_id"]),
+                    bytes32.from_hexstr(request["new_root"]),
+                    fee=uint64(request.get("fee", 0)),
                 )
                 for record in records:
                     await self.service.wallet_state_manager.add_pending_transaction(record)
