@@ -69,13 +69,13 @@ class TestDIDWallet:
 
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
             }
             wallet_node_1.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
             }
             wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
             }
         else:
             wallet_node_0.config["trusted_peers"] = {}
@@ -234,11 +234,11 @@ class TestDIDWallet:
 
         if trusted:
             wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
             }
 
             wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
             }
         else:
             wallet_node.config["trusted_peers"] = {}
@@ -388,11 +388,11 @@ class TestDIDWallet:
 
         if trusted:
             wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
             }
 
             wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
             }
         else:
             wallet_node.config["trusted_peers"] = {}
@@ -432,11 +432,16 @@ class TestDIDWallet:
         coin = coins.pop()
         info = Program.to([])
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
-        spend_bundle = await did_wallet.recovery_spend(
-            coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([]))
-        )
-        additions = spend_bundle.additions()
-        assert additions == []
+        try:
+            spend_bundle = await did_wallet.recovery_spend(
+                coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([]))
+            )
+            additions = spend_bundle.additions()
+            assert additions == []
+        except:
+            pass
+        else:
+            assert False
 
     @pytest.mark.parametrize(
         "trusted",
@@ -456,11 +461,11 @@ class TestDIDWallet:
 
         if trusted:
             wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
             }
 
             wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
             }
         else:
             wallet_node.config["trusted_peers"] = {}

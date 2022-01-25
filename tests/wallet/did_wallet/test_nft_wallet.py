@@ -49,7 +49,7 @@ class TestNFTWallet:
 
     @pytest.mark.parametrize(
         "trusted",
-        [False],
+        [True],
     )
     @pytest.mark.asyncio
     async def test_nft_wallet_creation(self, three_wallet_nodes, trusted):
@@ -70,13 +70,13 @@ class TestNFTWallet:
 
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
             }
             wallet_node_1.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
             }
             wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id: full_node_api.full_node.server.node_id
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
             }
         else:
             wallet_node_0.config["trusted_peers"] = {}
@@ -124,8 +124,6 @@ class TestNFTWallet:
 
         nft_wallet = await NFTWallet.create_new_nft_wallet(wallet_node_0.wallet_state_manager, wallet_0, did_wallet_0.id())
         tr = await nft_wallet.generate_new_nft("https://www.chia.net/img/branding/chia-logo.svg", 20, ph)
-
-        await wallet_0.push_transaction(tr)
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
