@@ -930,10 +930,9 @@ class WalletNode:
                                 and inner_puzhash is not None
                                 and (await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(inner_puzhash))
                             ):
-                                for _, wallet in self.wallet_state_manager.wallets.items():
-                                    if wallet.type() == WalletType.DATA_LAYER.value:
-                                        dl_wallet = wallet
-                                        break
+                                potential_dl = self.wallet_state_manager.get_dl_wallet()
+                                if potential_dl is not None:
+                                    dl_wallet = potential_dl
                                 else:  # No DL wallet exists yet
                                     dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                                         self.wallet_state_manager, self.wallet_state_manager.main_wallet

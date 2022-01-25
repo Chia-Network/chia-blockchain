@@ -92,9 +92,9 @@ class DataLayerWallet:
         self.log = logging.getLogger(name if name else __name__)
         self.standard_wallet = wallet
 
-        for _, wallet in self.wallet_state_manager.wallets.items():
-            if wallet.type() == uint8(WalletType.DATA_LAYER):
-                raise ValueError("DataLayer Wallet already exists for this key")
+        potential_dl = self.wallet_state_manager.get_dl_wallet()
+        if potential_dl is not None:
+            raise ValueError("DataLayer Wallet already exists for this key")
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.DATA_LAYER.value, "")
         if self.wallet_info is None:

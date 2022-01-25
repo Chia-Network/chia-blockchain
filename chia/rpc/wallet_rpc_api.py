@@ -1327,10 +1327,9 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             return {"success": False, "error": "not_initialized"}
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                dl_wallet = wallet
-                break
+        potential_dl = self.service.wallet_state_manager.get_dl_wallet()
+        if potential_dl is not None:
+            dl_wallet = potential_dl
         else:
             async with self.service.wallet_state_manager.lock:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(
@@ -1354,10 +1353,9 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             return {"success": False, "error": "not_initialized"}
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                dl_wallet = wallet
-                break
+        potential_dl = self.service.wallet_state_manager.get_dl_wallet()
+        if potential_dl is not None:
+            dl_wallet = potential_dl
         else:
             async with self.service.wallet_state_manager.lock:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(
@@ -1373,37 +1371,38 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             return {"success": False, "error": "not_initialized"}
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                record = await wallet.get_latest_singleton(bytes32.from_hexstr(request["launcher_id"]))
-                return {"singleton": None if record is None else record.to_json_dict()}
+        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        if dl_wallet is None:
+            raise ValueError("No DataLayer wallet has been initialized")
 
-        raise ValueError("No DataLayer wallet has been initialized")
+        record = await dl_wallet.get_latest_singleton(bytes32.from_hexstr(request["launcher_id"]))
+        return {"singleton": None if record is None else record.to_json_dict()}
 
     async def dl_update_root(self, request) -> Dict:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
             return {"success": False, "error": "not_initialized"}
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                record = await wallet.create_update_state_spend(
-                    bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["new_root"])
-                )
-                await self.service.wallet_state_manager.add_pending_transaction(record)
-                return {"tx_record": record.to_json_dict_convenience(self.service.config)}
+        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        if dl_wallet is None:
+            raise ValueError("No DataLayer wallet has been initialized")
 
-        raise ValueError("No DataLayer wallet has been initialized")
+        record = await dl_wallet.create_update_state_spend(
+            bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["new_root"])
+        )
+        await self.service.wallet_state_manager.add_pending_transaction(record)
+        return {"tx_record": record.to_json_dict_convenience(self.service.config)}
+
 
     async def dl_history(self, request) -> Dict:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
             return {"success": False, "error": "not_initialized"}
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                history = await wallet.get_history(bytes32.from_hexstr(request["launcher_id"]))
-                history_json = [rec.to_json_dict() for rec in history]
-                return {"history": history_json}
+        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        if dl_wallet is None:
+            raise ValueError("No DataLayer wallet has been initialized")
 
-        raise ValueError("No DataLayer wallet has been initialized")
+        history = await dl_wallet.get_history(bytes32.from_hexstr(request["launcher_id"]))
+        history_json = [rec.to_json_dict() for rec in history]
+        return {"history": history_json}
