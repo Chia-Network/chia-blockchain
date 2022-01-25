@@ -126,7 +126,7 @@ class DataLayer:
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
-        res = await self.data_store.get_ancestors(node_hash, store_id)
+        res = await self.data_store.get_ancestors(node_hash=node_hash, tree_id=store_id)
         if res is None:
             self.log.error("Failed to get ancestors")
         return res
