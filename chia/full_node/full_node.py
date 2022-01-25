@@ -1567,9 +1567,12 @@ class FullNode:
         if peak.height % 1000 == 0 and not self.sync_store.get_sync_mode():
             await self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
 
-        state_changed_data = {}
+        state_changed_data = {
+            "transaction_block": False,
+        }
 
         if block.transactions_info is not None:
+            state_changed_data["transaction_block"] = True
             state_changed_data["block_cost"] = block.transactions_info.cost
             state_changed_data["block_fees"] = block.transactions_info.fees
 
@@ -1577,8 +1580,8 @@ class FullNode:
             state_changed_data["transaction_generator_size_bytes"] = len(bytes(block.transactions_generator))
 
         state_changed_data["transaction_generator_ref_list"] = block.transactions_generator_ref_list
-        state_changed_data["timestamp"] = block
-        state_changed_data["receive_block_result"] = added
+        if added is not None:
+            state_changed_data["receive_block_result"] = added.value
 
         self._state_changed("block", state_changed_data)
 
