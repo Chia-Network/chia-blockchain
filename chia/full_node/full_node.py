@@ -1566,7 +1566,22 @@ class FullNode:
         self.full_node_store.clear_unfinished_blocks_below(clear_height)
         if peak.height % 1000 == 0 and not self.sync_store.get_sync_mode():
             await self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
-        self._state_changed("block")
+
+        state_changed_data = {}
+
+        if block.transactions_info is not None:
+            state_changed_data["block_cost"] = block.transactions_info.cost
+            state_changed_data["block_fees"] = block.transactions_info.fees
+
+        if block.transactions_generator is not None:
+            state_changed_data["transaction_generator_size_bytes"] = len(bytes(block.transactions_generator))
+
+        state_changed_data["transaction_generator_ref_list"] = block.transactions_generator_ref_list
+        state_changed_data["timestamp"] = block
+        state_changed_data["receive_block_result"] = added
+
+        self._state_changed("block", state_changed_data)
+
         record = self.blockchain.block_record(block.header_hash)
         if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
             if self._segment_task is None or self._segment_task.done():
@@ -1764,12 +1779,7 @@ class FullNode:
         else:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
-        state_changed_data = {}
-        if block.transactions_info is not None:
-            state_changed_data["block_cost"] = block.transactions_info.cost
-            state_changed_data["block_fees"] = block.transactions_info.fees
-
-        self._state_changed("unfinished_block", state_changed_data)
+        self._state_changed("unfinished_block")
 
     async def new_infusion_point_vdf(
         self, request: timelord_protocol.NewInfusionPointVDF, timelord_peer: Optional[ws.WSChiaConnection] = None

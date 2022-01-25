@@ -83,10 +83,10 @@ class FullNodeRpcApi:
             )
             return payloads
 
-        if change == "unfinished_block":
+        if change == "block":
             payloads.append(
                 create_payload_dict(
-                    "unfinished_block",
+                    "block",
                     change_data,
                     self.service_name,
                     "metrics"
@@ -360,9 +360,11 @@ class FullNodeRpcApi:
                 hint_count = await self.service.hint_store.count_hints()
 
         return {
-            "compact_blocks": compact_blocks,
-            "uncompact_blocks": uncompact_blocks,
-            "hint_count": hint_count,
+            "metrics": {
+                "compact_blocks": compact_blocks,
+                "uncompact_blocks": uncompact_blocks,
+                "hint_count": hint_count,
+            }
         }
 
     async def get_block_records(self, request: Dict) -> Optional[Dict]:
