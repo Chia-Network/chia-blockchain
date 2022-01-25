@@ -31,6 +31,7 @@ class FullNodeRpcApi:
             "/get_blockchain_state": self.get_blockchain_state,
             "/get_block": self.get_block,
             "/get_blocks": self.get_blocks,
+            "/get_block_count_metrics": self.get_block_count_metrics,
             "/get_block_record_by_height": self.get_block_record_by_height,
             "/get_block_record": self.get_block_record,
             "/get_block_records": self.get_block_records,
@@ -184,17 +185,6 @@ class FullNodeRpcApi:
             is_connected = False
         synced = await self.service.synced() and is_connected
 
-        compact_blocks = 0
-        uncompact_blocks = 0
-        with log_exceptions(self.service.log):
-            compact_blocks = await self.service.block_store.count_compactified_blocks()
-            uncompact_blocks = await self.service.block_store.count_uncompactified_blocks()
-
-        hint_count = 0
-        if self.service.hint_store is not None:
-            with log_exceptions(self.service.log):
-                hint_count = await self.service.hint_store.count_hints()
-
         assert space is not None
         response: Dict = {
             "blockchain_state": {
@@ -216,9 +206,6 @@ class FullNodeRpcApi:
                     # This Dict sets us up for that in the future
                     "cost_5000000": mempool_min_fee_5m,
                 },
-                "compact_blocks": compact_blocks,
-                "uncompact_blocks": uncompact_blocks,
-                "hint_count": hint_count,
                 "block_max_cost": self.service.constants.MAX_BLOCK_COST_CLVM,
             },
         }
@@ -359,6 +346,24 @@ class FullNodeRpcApi:
                 json["header_hash"] = hh.hex()
             json_blocks.append(json)
         return {"blocks": json_blocks}
+
+    async def get_block_count_metrics(self, request: Dict):
+        compact_blocks = 0
+        uncompact_blocks = 0
+        with log_exceptions(self.service.log):
+            compact_blocks = await self.service.block_store.count_compactified_blocks()
+            uncompact_blocks = await self.service.block_store.count_uncompactified_blocks()
+
+        hint_count = 0
+        if self.service.hint_store is not None:
+            with log_exceptions(self.service.log):
+                hint_count = await self.service.hint_store.count_hints()
+
+        return {
+            "compact_blocks": compact_blocks,
+            "uncompact_blocks": uncompact_blocks,
+            "hint_count": hint_count,
+        }
 
     async def get_block_records(self, request: Dict) -> Optional[Dict]:
         if "start" not in request:
