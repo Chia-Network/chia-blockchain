@@ -1326,7 +1326,7 @@ class WalletRpcApi:
     async def create_new_dl(self, request) -> Dict:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
-            return {"success": False, "error": "not_initialized"}
+            raise ValueError("The wallet service is not currently initialized")
 
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
@@ -1353,7 +1353,7 @@ class WalletRpcApi:
     async def dl_track_new(self, request) -> Dict:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
-            return {"success": False, "error": "not_initialized"}
+            raise ValueError("The wallet service is not currently initialized")
 
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
@@ -1372,7 +1372,7 @@ class WalletRpcApi:
     async def dl_latest_singleton(self, request) -> Dict:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
-            return {"success": False, "error": "not_initialized"}
+            raise ValueError("The wallet service is not currently initialized")
 
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
@@ -1384,7 +1384,7 @@ class WalletRpcApi:
     async def dl_singletons_by_root(self, request) -> Dict:
         """Get the singleton records that contain the specified root"""
         if self.service.wallet_state_manager is None:
-            return {"success": False, "error": "not_initialized"}
+            raise ValueError("The wallet service is not currently initialized")
 
         for wallet in self.service.wallet_state_manager.wallets.values():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
@@ -1399,7 +1399,7 @@ class WalletRpcApi:
     async def dl_update_root(self, request) -> Dict:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
-            return {"success": False, "error": "not_initialized"}
+            raise ValueError("The wallet service is not currently initialized")
 
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
@@ -1414,7 +1414,7 @@ class WalletRpcApi:
     async def dl_history(self, request) -> Dict:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
-            return {"success": False, "error": "not_initialized"}
+            raise ValueError("The wallet service is not currently initialized")
 
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
