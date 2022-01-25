@@ -116,7 +116,7 @@ class DataLayerStore:
         num_results: Optional[uint32] = None,
     ) -> List[SingletonRecord]:
         """
-        Returns all stored singletons with a specific launcher ID.
+        Returns stored singletons with a specific launcher ID.
         """
         query_params: List[Union[bytes32, uint32]] = [launcher_id]
         for optional_param in (min_generation, max_generation, num_results):
