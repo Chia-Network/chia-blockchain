@@ -22,12 +22,12 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
 
-def print_transaction(tx: TransactionRecord, verbose: bool, name, mojo_per_unit: int) -> None:
+def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix: str, mojo_per_unit: int) -> None:
     if verbose:
         print(tx)
     else:
         chia_amount = Decimal(int(tx.amount)) / mojo_per_unit
-        to_address = encode_puzzle_hash(tx.to_puzzle_hash, name)
+        to_address = encode_puzzle_hash(tx.to_puzzle_hash, address_prefix)
         print(f"Transaction {tx.name}")
         print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
         print(f"Amount {'sent' if tx.sent else 'received'}: {chia_amount} {name}")
@@ -66,7 +66,7 @@ async def get_name_for_wallet_id(
     wallet_client: WalletRpcClient,
 ):
     if wallet_type == WalletType.STANDARD_WALLET:
-        name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+        name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type == WalletType.CAT:
         name = await wallet_client.get_cat_name(wallet_id=str(wallet_id))
     else:
@@ -78,6 +78,7 @@ async def get_name_for_wallet_id(
 async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     transaction_id = bytes32.from_hexstr(args["tx_id"])
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     tx: TransactionRecord = await wallet_client.get_transaction("this is unused", transaction_id=transaction_id)
 
     try:
@@ -93,7 +94,7 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
         print(e.args[0])
         return
 
-    print_transaction(tx, verbose=(args["verbose"] > 0), name=name, mojo_per_unit=mojo_per_unit)
+    print_transaction(tx, verbose=(args["verbose"] > 0), name=name, address_prefix=address_prefix, mojo_per_unit=mojo_per_unit)
 
 
 async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -103,6 +104,7 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         paginate = sys.stdout.isatty()
     txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id)
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     if len(txs) == 0:
         print("There are no transactions to this address")
 
@@ -125,7 +127,7 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         for j in range(0, num_per_screen):
             if i + j >= len(txs):
                 break
-            print_transaction(txs[i + j], verbose=(args["verbose"] > 0), name=name, mojo_per_unit=mojo_per_unit)
+            print_transaction(txs[i + j], verbose=(args["verbose"] > 0), name=name, address_prefix=address_prefix, mojo_per_unit=mojo_per_unit)
         if i + num_per_screen >= len(txs):
             return None
         print("Press q to quit, or c to continue")
