@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
