@@ -390,11 +390,23 @@ class DataLayerWallet:
 
         return dl_record, std_record, launcher_coin.name()
 
+    async def create_tandem_xch_tx(self, fee: uint64, announcement_to_assert: Announcement) -> TransactionRecord:
+        chia_tx = await self.standard_wallet.generate_signed_transaction(
+            uint64(0),
+            (await self.standard_wallet.get_new_puzzlehash()),
+            fee=fee,
+            negative_change_allowed=False,
+            coin_announcements_to_consume={announcement_to_assert},
+        )
+        assert chia_tx.spend_bundle is not None
+        return chia_tx
+
     async def create_update_state_spend(
         self,
         launcher_id: bytes32,
         root_hash: bytes32,
-    ) -> TransactionRecord:
+        fee: uint64 = uint64(0),
+    ) -> List[TransactionRecord]:
         singleton_record, parent_lineage = await self.get_spendable_singleton_info(launcher_id)
 
         inner_puzzle_derivation: Optional[
@@ -428,7 +440,10 @@ class DataLayerWallet:
                 "memos": [launcher_id, root_hash, next_inner_puzzle.get_tree_hash()],
             }
         ]
-        inner_sol: Program = self.standard_wallet.make_solution(primaries=primaries)
+        inner_sol: Program = self.standard_wallet.make_solution(
+            primaries=primaries,
+            coin_announcements={b"$"} if fee > 0 else None,
+        )
         db_layer_sol = Program.to([0, inner_sol, current_inner_puzzle])
         full_sol = Program.to(
             [
@@ -451,7 +466,7 @@ class DataLayerWallet:
         )
         spend_bundle = await self.sign(coin_spend)
 
-        dl_record = TransactionRecord(
+        dl_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=next_inner_puzzle.get_tree_hash(),
@@ -469,6 +484,14 @@ class DataLayerWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=singleton_record.coin_id,
         )
+        if fee > 0:
+            chia_tx = await self.create_tandem_xch_tx(fee, Announcement(current_coin.name(), b"$"))
+            aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
+            dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle)
+            chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
+            txs: List[TransactionRecord] = [dl_tx, chia_tx]
+        else:
+            txs = [dl_tx]
         new_singleton_record = SingletonRecord(
             coin_id=Coin(
                 current_coin.name(), next_full_puz.get_tree_hash(), singleton_record.lineage_proof.amount
@@ -486,7 +509,7 @@ class DataLayerWallet:
             generation=uint32(singleton_record.generation + 1),
         )
         await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, False)
-        return dl_record
+        return txs
 
     async def create_report_spend(self, launcher_id: bytes32) -> Tuple[TransactionRecord, Announcement]:
         singleton_record, parent_lineage = await self.get_spendable_singleton_info(launcher_id)

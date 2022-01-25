@@ -1387,11 +1387,12 @@ class WalletRpcApi:
 
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                record = await wallet.create_update_state_spend(
+                records = await wallet.create_update_state_spend(
                     bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["new_root"])
                 )
-                await self.service.wallet_state_manager.add_pending_transaction(record)
-                return {"tx_record": record.to_json_dict_convenience(self.service.config)}
+                for record in records:
+                    await self.service.wallet_state_manager.add_pending_transaction(record)
+                return {"tx_record": records[0].to_json_dict_convenience(self.service.config)}
 
         raise ValueError("No DataLayer wallet has been initialized")
 
