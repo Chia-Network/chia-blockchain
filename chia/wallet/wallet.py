@@ -303,7 +303,7 @@ class Wallet:
 
         # Check for an exact match with all of the coins smaller than the amount.
         # If we have more, smaller coins than the amount we run the next algorithm.
-        smaller_coin_sum = 0  # coins smaller then target.
+        smaller_coin_sum = 0  # coins smaller than target.
         smaller_coins: Set[Coin] = set()
         for coin in valid_unspent:
             if coin.amount < amount:

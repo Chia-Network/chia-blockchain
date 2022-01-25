@@ -43,6 +43,9 @@ def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: uint64) -> Tuple[O
         target_reached = False
         while n_pass < 2 and not target_reached:
             for coin in smaller_coins_sorted:
+                # run 2 passes where the first pass selects coins a coin 50 percent of the time.
+                # the second pass runs only if the coin is not selected in the first pass.
+                # this allows different coins to be selected in the first pass and the second pass.
                 if (n_pass == 0 and bool(random.getrandbits(1))) or (coin not in selected_coins):
                     selected_coins_sum += coin.amount
                     selected_coins.add(coin)
