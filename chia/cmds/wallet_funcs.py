@@ -59,7 +59,12 @@ async def get_wallet_type(wallet_id: int, wallet_client: WalletRpcClient) -> Wal
     raise LookupError(f"Wallet ID not found: {wallet_id}")
 
 
-async def get_name_for_wallet_id(config: Dict[str, Any], wallet_type: WalletType, wallet_id: int, wallet_client: WalletRpcClient):
+async def get_name_for_wallet_id(
+    config: Dict[str, Any],
+    wallet_type: WalletType,
+    wallet_id: int,
+    wallet_client: WalletRpcClient,
+):
     if wallet_type == WalletType.STANDARD_WALLET:
         name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     elif wallet_type == WalletType.CAT:
@@ -78,7 +83,12 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
     try:
         wallet_type = await get_wallet_type(wallet_id=tx.wallet_id, wallet_client=wallet_client)
         mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
-        name = await get_name_for_wallet_id(config=config, wallet_type=wallet_type, wallet_id=tx.wallet_id, wallet_client=wallet_client)
+        name = await get_name_for_wallet_id(
+            config=config,
+            wallet_type=wallet_type,
+            wallet_id=tx.wallet_id,
+            wallet_client=wallet_client,
+        )
     except LookupError as e:
         print(e.args[0])
         return
