@@ -13,6 +13,7 @@ from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
+from chia.rpc.cat_utils import get_cat_puzzle_hash
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -699,6 +700,187 @@ class CCWallet:
                 created_at_time=uint64(int(time.time())),
                 to_puzzle_hash=puzzle_hashes[0],
                 amount=uint64(payment_sum),
+                fee_amount=fee,
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=spend_bundle,
+                additions=spend_bundle.additions(),
+                removals=spend_bundle.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=spend_bundle.name(),
+                memos=list(spend_bundle.get_memos().items()),
+            )
+        ]
+
+        if chia_tx is not None:
+            tx_list.append(
+                TransactionRecord(
+                    confirmed_at_height=chia_tx.confirmed_at_height,
+                    created_at_time=chia_tx.created_at_time,
+                    to_puzzle_hash=chia_tx.to_puzzle_hash,
+                    amount=chia_tx.amount,
+                    fee_amount=chia_tx.fee_amount,
+                    confirmed=chia_tx.confirmed,
+                    sent=chia_tx.sent,
+                    spend_bundle=None,
+                    additions=chia_tx.additions,
+                    removals=chia_tx.removals,
+                    wallet_id=chia_tx.wallet_id,
+                    sent_to=chia_tx.sent_to,
+                    trade_id=chia_tx.trade_id,
+                    type=chia_tx.type,
+                    name=chia_tx.name,
+                    memos=[],
+                )
+            )
+
+        return tx_list
+
+    async def generate_unsigned_spendbundle_for_specific_puzzle_hash(
+        self,
+        sender_xch_puzzle_hash: bytes32,
+        asset_id: bytes32,
+        payment: Payment,
+        fee: uint64,
+        cat_coins_pool: Set[Coin],
+    ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
+        extra_delta = 0
+        limitations_solution = Program.to([])
+        payment_amount: int = payment.amount
+        starting_amount: int = payment_amount - extra_delta
+        sender_cat_puzzle_hash = get_cat_puzzle_hash(
+            asset_id=asset_id.hex(),
+            xch_puzzle_hash=sender_xch_puzzle_hash.hex(),
+        )
+        sender_cat_puzzle_hash = bytes.fromhex(sender_cat_puzzle_hash.lstrip("0x"))
+
+        selected_cat_amount = sum([c.amount for c in cat_coins_pool])
+        assert selected_cat_amount >= starting_amount
+
+        # Figure out if we need to absorb/melt some XCH as part of this
+        regular_chia_to_claim: int = 0
+        if payment_amount > starting_amount:
+            fee = uint64(fee + payment_amount - starting_amount)
+        elif payment_amount < starting_amount:
+            regular_chia_to_claim = payment_amount
+
+        need_chia_transaction = (fee > 0 or regular_chia_to_claim > 0) and (fee - regular_chia_to_claim != 0)
+
+        # Calculate standard puzzle solutions
+        change = selected_cat_amount - starting_amount
+        primaries = [
+            {
+                "puzzlehash": payment.puzzle_hash,
+                "amount": payment.amount,
+                "memos": payment.memos
+            }
+        ]
+        if change > 0:
+            primaries.append({
+                "puzzlehash": sender_xch_puzzle_hash,
+                "amount": change
+            })
+
+        limitations_program_reveal = Program.to([])
+
+        # Loop through the coins we've selected and gather the information we need to spend them
+        spendable_cc_list = []
+        chia_tx = None
+        first = True
+        for coin in cat_coins_pool:
+            if coin.puzzle_hash != sender_cat_puzzle_hash:
+                raise Exception(f"Invalid CAT puzzle hash of ")
+
+            if first:
+                first = False
+                if need_chia_transaction:
+                    if fee > regular_chia_to_claim:
+                        announcement = Announcement(coin.name(), b"$", b"\xca")
+                        chia_tx, _ = await self.create_tandem_xch_tx(
+                            fee=fee,
+                            amount_to_claim=uint64(regular_chia_to_claim),
+                            announcement_to_assert=announcement,
+                        )
+                        innersol = self.standard_wallet.make_solution(
+                            primaries=primaries,
+                            coin_announcements={announcement.message},
+                        )
+                    elif regular_chia_to_claim > fee:
+                        chia_tx, _ = await self.create_tandem_xch_tx(
+                            fee=fee,
+                            amount_to_claim=uint64(regular_chia_to_claim),
+                            announcement_to_assert=None,
+                        )
+                        innersol = self.standard_wallet.make_solution(
+                            primaries=primaries,
+                            coin_announcements_to_assert={announcement.name()},
+                        )
+                else:
+                    innersol = self.standard_wallet.make_solution(primaries=primaries)
+            else:
+                innersol = self.standard_wallet.make_solution()
+
+            lineage_proof = await self.get_lineage_proof_for_coin(coin=coin)
+            assert lineage_proof is not None
+            new_spendable_cc = SpendableCC(
+                coin=coin,
+                limitations_program_hash=self.cc_info.limitations_program_hash,
+                inner_puzzle=sender_xch_puzzle_hash,
+                inner_solution=innersol,
+                limitations_solution=limitations_solution,
+                extra_delta=extra_delta,
+                lineage_proof=lineage_proof,
+                limitations_program_reveal=limitations_program_reveal,
+            )
+            spendable_cc_list.append(new_spendable_cc)
+
+        cat_spend_bundle = unsigned_spend_bundle_for_spendable_ccs(CC_MOD, spendable_cc_list)
+        chia_spend_bundle = SpendBundle([], G2Element())
+        if chia_tx is not None and chia_tx.spend_bundle is not None:
+            chia_spend_bundle = chia_tx.spend_bundle
+
+        return (
+            SpendBundle.aggregate(
+                [
+                    cat_spend_bundle,
+                    chia_spend_bundle,
+                ]
+            ),
+            chia_tx,
+        )
+
+    async def generate_signed_transaction_for_specific_puzzle_hash(
+        self,
+        amount: uint64,
+        sender_xch_puzzle_hash: bytes32,
+        receiver_puzzle_hash: bytes32,
+        asset_id: bytes32,
+        fee: uint64,
+        cat_coins_pool: Set[Coin],
+        memo: List[bytes],
+    ) -> List[TransactionRecord]:
+        memos_with_hint = [receiver_puzzle_hash]
+        memos_with_hint.extend(memo)
+        payment = Payment(receiver_puzzle_hash, amount, memos_with_hint)
+
+        unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle_for_specific_puzzle_hash(
+            sender_xch_puzzle_hash=sender_xch_puzzle_hash,
+            asset_id=asset_id,
+            payment=payment,
+            fee=fee,
+            cat_coins_pool=cat_coins_pool
+        )
+        spend_bundle = await self.sign(unsigned_spend_bundle)
+
+        tx_list = [
+            TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=receiver_puzzle_hash,
+                amount=uint64(payment.amount),
                 fee_amount=fee,
                 confirmed=False,
                 sent=uint32(0),
