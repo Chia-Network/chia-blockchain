@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.data_layer.data_layer_wallet import SingletonRecord
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi

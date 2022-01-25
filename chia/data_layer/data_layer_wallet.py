@@ -8,6 +8,8 @@ from typing import Any, Optional, Tuple, Set, List, Dict, Type, TypeVar
 from blspy import G2Element
 
 from chia.consensus.block_record import BlockRecord
+from chia.data_layer.dl_wallet_store import DLWalletStore
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
 from chia.server.outbound_message import NodeType
 from chia.wallet.db_wallet.db_wallet_puzzles import (
@@ -26,7 +28,6 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.json_util import dict_to_json_str
-from chia.util.streamable import Streamable, streamable
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
@@ -37,20 +38,6 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
 
-
-@dataclasses.dataclass(frozen=True)
-@streamable
-class SingletonRecord(Streamable):
-    coin_id: bytes32
-    launcher_id: bytes32
-    root: bytes32
-    inner_puzzle_hash: bytes32
-    confirmed: bool
-    confirmed_at_height: uint32
-    lineage_proof: LineageProof
-    generation: uint32
-
-
 _T_DataLayerWallet = TypeVar("_T_DataLayerWallet", bound="DataLayerWallet")
 
 
@@ -60,6 +47,7 @@ class DataLayerWallet:
     wallet_info: WalletInfo
     wallet_id: uint8
     standard_wallet: Wallet
+    singleton_store: DLWalletStore
     """
     interface used by datalayer for interacting with the chain
     """
@@ -91,6 +79,7 @@ class DataLayerWallet:
         self.wallet_state_manager = wallet_state_manager
         self.log = logging.getLogger(name if name else __name__)
         self.standard_wallet = wallet
+        self.singleton_store = self.wallet_state_manager.dl_store
 
         potential_dl = self.wallet_state_manager.get_dl_wallet()
         if potential_dl is not None:
@@ -213,18 +202,18 @@ class DataLayerWallet:
         )
         new_singleton = Coin(launcher_id, full_puzhash, amount)
 
-        singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_latest_singleton(
+        singleton_record: Optional[SingletonRecord] = await self.singleton_store.get_latest_singleton(
             launcher_id
         )
         if singleton_record is not None:
             if (  # This is an unconfirmed singleton that we know about
                 singleton_record.coin_id == new_singleton.name() and not singleton_record.confirmed
             ):
-                await self.wallet_state_manager.dl_store.set_confirmed(singleton_record.coin_id, height)
+                await self.singleton_store.set_confirmed(singleton_record.coin_id, height)
             else:
                 self.log.info(f"Spend of launcher {launcher_id} has already been processed")
         else:
-            await self.wallet_state_manager.dl_store.add_singleton_record(
+            await self.singleton_store.add_singleton_record(
                 SingletonRecord(
                     coin_id=new_singleton.name(),
                     launcher_id=launcher_id,
@@ -242,7 +231,7 @@ class DataLayerWallet:
                 in_transaction,
             )
 
-        await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin, in_transaction)
+        await self.singleton_store.add_launcher(launcher_spend.coin, in_transaction)
         await self.wallet_state_manager.add_interested_puzzle_hash(launcher_id, self.id(), in_transaction)
         await self.wallet_state_manager.coin_store.add_coin_record(
             WalletCoinRecord(
@@ -385,7 +374,7 @@ class DataLayerWallet:
             generation=uint32(0),
         )
 
-        await self.wallet_state_manager.dl_store.add_singleton_record(singleton_record, False)
+        await self.singleton_store.add_singleton_record(singleton_record, False)
         await self.wallet_state_manager.add_interested_puzzle_hash(singleton_record.launcher_id, self.id(), False)
 
         return dl_record, std_record, launcher_coin.name()
@@ -485,7 +474,7 @@ class DataLayerWallet:
             ),
             generation=uint32(singleton_record.generation + 1),
         )
-        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, False)
+        await self.singleton_store.add_singleton_record(new_singleton_record, False)
         return dl_record
 
     async def create_report_spend(self, launcher_id: bytes32) -> Tuple[TransactionRecord, Announcement]:
@@ -561,7 +550,7 @@ class DataLayerWallet:
             ),
             generation=uint32(singleton_record.generation + 1),
         )
-        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, False)
+        await self.singleton_store.add_singleton_record(new_singleton_record, False)
         return dl_record, Announcement(current_full_puz.get_tree_hash(), singleton_record.root)
 
     async def get_spendable_singleton_info(self, launcher_id: bytes32) -> Tuple[SingletonRecord, LineageProof]:
@@ -579,7 +568,7 @@ class DataLayerWallet:
             raise ValueError(f"Singleton with launcher ID {launcher_id} has insufficient information to spend")
 
         # Finally, let's get the parent record for its lineage proof
-        parent_singleton: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singleton_record(
+        parent_singleton: Optional[SingletonRecord] = await self.singleton_store.get_singleton_record(
             singleton_record.lineage_proof.parent_name
         )
         parent_lineage: LineageProof
@@ -587,7 +576,7 @@ class DataLayerWallet:
             if singleton_record.lineage_proof.parent_name != launcher_id:
                 raise ValueError(f"Have not found the parent of singleton with launcher ID {launcher_id}")
             else:
-                launcher_coin: Optional[Coin] = await self.wallet_state_manager.dl_store.get_launcher(launcher_id)
+                launcher_coin: Optional[Coin] = await self.singleton_store.get_launcher(launcher_id)
                 if launcher_coin is None:
                     raise ValueError(f"DL Wallet does not have launcher info for id {launcher_id}")
                 else:
@@ -608,7 +597,7 @@ class DataLayerWallet:
 
         matched, curried_args = match_dl_singleton(puzzle)
         if matched:
-            singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singleton_record(
+            singleton_record: Optional[SingletonRecord] = await self.singleton_store.get_singleton_record(
                 parent_name
             )
             if singleton_record is None:
@@ -655,7 +644,7 @@ class DataLayerWallet:
                 return
 
             new_singleton = Coin(parent_name, full_puzzle_hash, amount)
-            await self.wallet_state_manager.dl_store.add_singleton_record(
+            await self.singleton_store.add_singleton_record(
                 SingletonRecord(
                     coin_id=new_singleton.name(),
                     launcher_id=singleton_record.launcher_id,
@@ -710,19 +699,19 @@ class DataLayerWallet:
     ###########
 
     async def get_latest_singleton(self, launcher_id: bytes32) -> Optional[SingletonRecord]:
-        singleton: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_latest_singleton(
+        singleton: Optional[SingletonRecord] = await self.singleton_store.get_latest_singleton(
             launcher_id
         )
         return singleton
 
     async def get_history(self, launcher_id: bytes32) -> List[SingletonRecord]:
-        history: List[SingletonRecord] = await self.wallet_state_manager.dl_store.get_all_singletons_for_launcher(
+        history: List[SingletonRecord] = await self.singleton_store.get_all_singletons_for_launcher(
             launcher_id
         )
         return history
 
     async def get_singleton_record(self, coin_id: bytes32) -> Optional[SingletonRecord]:
-        singleton: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singleton_record(coin_id)
+        singleton: Optional[SingletonRecord] = await self.singleton_store.get_singleton_record(coin_id)
         return singleton
 
     ##########

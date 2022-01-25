@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 
-from chia.data_layer.data_layer_wallet import SingletonRecord
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.types.announcement import Announcement

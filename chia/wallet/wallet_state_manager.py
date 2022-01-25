@@ -14,7 +14,7 @@ from chiabip158 import PyBIP158
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.data_layer.data_layer_wallet import DataLayerWallet
-from chia.data_layer.dl_wallet_store import DataLayerStore
+from chia.data_layer.dl_wallet_store import DLWalletStore
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
@@ -118,7 +118,7 @@ class WalletStateManager:
     root_path: Path
     wallet_node: Any
     pool_store: WalletPoolStore
-    dl_store: DataLayerStore
+    dl_store: DLWalletStore
     default_cats: Dict[str, Any]
 
     @staticmethod
@@ -164,7 +164,7 @@ class WalletStateManager:
         self.trade_manager = await TradeManager.create(self, self.db_wrapper)
         self.user_settings = await UserSettings.create(self.basic_store)
         self.pool_store = await WalletPoolStore.create(self.db_wrapper)
-        self.dl_store = await DataLayerStore.create(self.db_wrapper)
+        self.dl_store = await DLWalletStore.create(self.db_wrapper)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
         self.default_cats = DEFAULT_CATS
 
