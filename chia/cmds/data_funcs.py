@@ -1,4 +1,4 @@
-from typing import Any, Optional, Tuple, Dict, Type
+from typing import Optional, Tuple, Dict, Type
 from types import TracebackType
 
 import aiohttp
