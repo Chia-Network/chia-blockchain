@@ -44,18 +44,26 @@ if [ "$(uname)" = "Linux" ]; then
 		  # If npm/node is not installed, install them
 		    echo "nodejs is not installed. Installing..."
 		    echo "sudo apt-get install -y npm nodejs libxss1"
-			sudo apt-get install -y npm nodejs libxss1
+			  sudo apt-get install -y npm nodejs libxss1
       else
         echo "Found npm $(npm -v)"
       fi
-      if [ "$(npm -v | cut -d'.' -f 1)" -lt "7" ]; then
+
+      NPM_VERSION="$(npm -v | cut -d'.' -f 1)"
+      if [ "$NPM_VERSION" -lt "7" ]; then
         echo "Current npm version($(npm -v)) is less than 7. GUI app requires npm>=7."
         NPM_GLOBAL="${SCRIPT_DIR}/build_scripts/npm_global"
         # install-gui.sh can be executed
         echo "cd ${NPM_GLOBAL}"
         cd "${NPM_GLOBAL}"
-        echo "npm ci"
-        npm ci
+        if [ "$NPM_VERSION" -lt "6" ]; then
+          # Ubuntu image of Amazon ec2 instance surprisingly uses nodejs@3.5.2 as of 27th Jan, 2022
+          echo "npm install"
+          npm install
+        else
+          echo "npm ci"
+          npm ci
+        fi
         export N_PREFIX=${SCRIPT_DIR}/.n
         export PATH="${N_PREFIX}/bin:$(npm bin):${PATH}"
         echo "n 16"
