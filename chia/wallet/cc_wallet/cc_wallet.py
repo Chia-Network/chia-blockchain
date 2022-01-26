@@ -502,14 +502,17 @@ class CCWallet:
         spend_bundle: SpendBundle,
         sender_private_key: PrivateKey,
     ) -> SpendBundle:
+        sender_public_key: G1Element = sender_private_key.get_g1()
+        sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key)
+        sender_xch_puzzle_hash: bytes32 = sender_xch_puzzle.get_tree_hash()
+
         sigs: List[G2Element] = []
         for spend in spend_bundle.coin_spends:
             matched, puzzle_args = match_cat_puzzle(spend.puzzle_reveal.to_program())
             if matched:
                 _, _, inner_puzzle = puzzle_args
-                public_key = sender_private_key.get_g1()
-                if inner_puzzle.get_tree_hash() != str(public_key):
-                    raise Exception(f"Invalid sender public_key: {str(public_key)} != {inner_puzzle.get_tree_hash()}")
+                if inner_puzzle.get_tree_hash() != sender_xch_puzzle_hash:
+                    raise Exception(f"Invalid sender public_key: {str(sender_xch_puzzle_hash)} != {inner_puzzle.get_tree_hash()}")
 
                 synthetic_secret_key = calculate_synthetic_secret_key(sender_private_key, DEFAULT_HIDDEN_PUZZLE_HASH)
                 error, conditions, cost = conditions_dict_for_solution(
