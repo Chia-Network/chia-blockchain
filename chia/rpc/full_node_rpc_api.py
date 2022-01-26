@@ -104,6 +104,7 @@ class FullNodeRpcApi:
         """
         Returns a summary of the node's view of the blockchain.
         """
+        node_id = self.service.server.node_id.hex()
         if self.service.initialized is False:
             res: Dict = {
                 "blockchain_state": {
@@ -124,6 +125,7 @@ class FullNodeRpcApi:
                         "cost_5000000": 0,
                     },
                     "block_max_cost": 0,
+                    "node_id": node_id,
                 },
             }
             return res
@@ -195,6 +197,7 @@ class FullNodeRpcApi:
                 "sub_slot_iters": sub_slot_iters,
                 "space": space["space"],
                 "mempool_size": mempool_size,
+<<<<<<< HEAD
                 "mempool_cost": mempool_cost,
                 "mempool_min_fees": {
                     # We may give estimates for varying costs in the future
@@ -202,6 +205,9 @@ class FullNodeRpcApi:
                     "cost_5000000": mempool_min_fee_5m,
                 },
                 "block_max_cost": self.service.constants.MAX_BLOCK_COST_CLVM,
+=======
+                "node_id": node_id
+>>>>>>> 3260214b0 (add node id chia show)
             },
         }
         self.cached_blockchain_state = dict(response["blockchain_state"])
