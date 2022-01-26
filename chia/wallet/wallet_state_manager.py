@@ -653,7 +653,6 @@ class WalletStateManager:
         for coin_state_idx, coin_state in enumerate(coin_states):
             info = await self.get_wallet_id_for_puzzle_hash(coin_state.coin.puzzle_hash)
             local_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_state.coin.name())
-            self.log.info(f"new_coin_state received ({coin_state_idx + 1} / {len(coin_states)})")
             self.log.debug(f"{coin_state.coin.name()}: {coin_state}")
 
             wallet_id = None
