@@ -408,7 +408,6 @@ class Farmer:
     def get_authentication_sk(self, pool_config: PoolWalletConfig) -> Optional[PrivateKey]:
         if pool_config.p2_singleton_puzzle_hash in self.authentication_keys:
             return self.authentication_keys[pool_config.p2_singleton_puzzle_hash]
-        self.log.error(f"FINDING AUTH SKS: {self.all_root_sks}. {[pool_config]}")
         auth_sk: Optional[PrivateKey] = find_authentication_sk(self.all_root_sks, pool_config.owner_public_key)
         if auth_sk is not None:
             self.authentication_keys[pool_config.p2_singleton_puzzle_hash] = auth_sk

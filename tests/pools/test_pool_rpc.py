@@ -420,7 +420,6 @@ class TestPoolWalletRpc:
                     for wallet in wallet_node_0.wallet_state_manager.wallets.values():
                         if wallet.type() == WalletType.POOLING_WALLET:
                             status: PoolWalletInfo = (await client.pw_status(wallet.id()))[0]
-                            print(await wallet.get_pool_wallet_index())
                             assert (await wallet.get_pool_wallet_index()) < 5
                             auth_sk = find_authentication_sk(
                                 [wallet_0.wallet_state_manager.private_key], status.current.owner_pubkey

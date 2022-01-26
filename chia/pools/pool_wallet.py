@@ -69,7 +69,8 @@ class PoolWallet:
     standard_wallet: Wallet
     wallet_id: int
     singleton_list: List[Coin]
-    _pool_wallet_index_cache: Optional[uint32]
+    _owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]]
+
     """
     From the user's perspective, this is not a wallet at all, but a way to control
     whether their pooling-enabled plots are being self-farmed, or farmed by a pool,
@@ -326,7 +327,7 @@ class PoolWallet:
         this method.
         """
         self = PoolWallet()
-        self._pool_wallet_index_cache = None
+        self._owner_sk_and_index = None
         self.wallet_state_manager = wallet_state_manager
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -363,7 +364,7 @@ class PoolWallet:
         to do anything here.
         """
         self = PoolWallet()
-        self._pool_wallet_index_cache = None
+        self._owner_sk_and_index = None
         self.wallet_state_manager = wallet_state_manager
         self.wallet_id = wallet_info.id
         self.standard_wallet = wallet
@@ -445,23 +446,24 @@ class PoolWallet:
         return standard_wallet_record, p2_singleton_puzzle_hash, launcher_coin_id
 
     async def get_pool_wallet_index(self) -> uint32:
-        if self._pool_wallet_index_cache is not None:
-            return self._pool_wallet_index_cache
-
-        owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
-            [self.wallet_state_manager.private_key], (await self.get_current_state()).current.owner_pubkey
-        )
-        assert owner_sk_and_index is not None
-        self._pool_wallet_index_cache = owner_sk_and_index[1]
-        return self._pool_wallet_index_cache
+        if self._owner_sk_and_index is None:
+            owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
+                [self.wallet_state_manager.private_key], (await self.get_current_state()).current.owner_pubkey
+            )
+            assert owner_sk_and_index is not None
+            self._owner_sk_and_index = owner_sk_and_index
+        return self._owner_sk_and_index[1]
 
     async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
         async def pk_to_sk(pk: G1Element) -> PrivateKey:
-            owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
-                [self.wallet_state_manager.private_key], pk
-            )
-            assert owner_sk_and_index is not None
-            return owner_sk_and_index[0]
+            if self._owner_sk_and_index is None:
+                owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
+                    [self.wallet_state_manager.private_key], (await self.get_current_state()).current.owner_pubkey
+                )
+                assert owner_sk_and_index is not None
+                self._owner_sk_and_index = owner_sk_and_index
+            assert self._owner_sk_and_index[0].get_g1() == pk
+            return self._owner_sk_and_index[0]
 
         return await sign_coin_spends(
             [coin_spend],
