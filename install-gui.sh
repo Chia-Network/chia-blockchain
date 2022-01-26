@@ -51,6 +51,8 @@ install_npm_locally(){
       exit 1
     fi
     cd "${SCRIPT_DIR}"
+  else
+    echo "Found npm $(npm -v)"
   fi
 }
 
@@ -75,8 +77,6 @@ if [ "$(uname)" = "Linux" ]; then
 		    echo "nodejs is not installed. Installing..."
 		    echo "sudo apt-get install -y npm nodejs libxss1"
 			  sudo apt-get install -y npm nodejs libxss1
-      else
-        echo "Found npm $(npm -v)"
       fi
 
       install_npm_locally
@@ -122,8 +122,10 @@ elif [ "$(uname)" = "Darwin" ] && type brew; then
   install_npm_locally
 elif [ "$(uname)" = "OpenBSD" ]; then
 	pkg_add node
+  install_npm_locally
 elif [ "$(uname)" = "FreeBSD" ]; then
 	pkg install node
+  install_npm_locally
 fi
 
 echo ""
