@@ -134,7 +134,13 @@ class WalletRpcApi:
             data["wallet_id"] = args[1]
         if args[2] is not None:
             data["additional_data"] = args[2]
-        return [create_payload_dict("state_changed", data, "chia_wallet", "wallet_ui")]
+
+        payloads = [create_payload_dict("state_changed", data, self.service_name, "wallet_ui")]
+
+        if args[0] == "coin_added":
+            payloads.append(create_payload_dict(args[0], data, self.service_name, "metrics"))
+
+        return payloads
 
     async def _stop_wallet(self):
         """
