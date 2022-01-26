@@ -41,8 +41,8 @@ install_npm_locally(){
       echo "npm ci"
       npm ci
     fi
-    N_PREFIX=${SCRIPT_DIR}/.n
-    PATH="${N_PREFIX}/bin:$(npm bin):${PATH}"
+    export N_PREFIX=${SCRIPT_DIR}/.n
+    export PATH="${N_PREFIX}/bin:$(npm bin):${PATH}"
     echo "n 16"
     n 16
     echo "Current npm version: $(npm -v)"
