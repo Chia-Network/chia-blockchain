@@ -97,7 +97,7 @@ class FullNodeRpcApi:
                     "sub_slot_iters": 0,
                     "space": 0,
                     "mempool_size": 0,
-                    "node_id": node_id
+                    "node_id": node_id,
                 },
             }
             return res
@@ -165,7 +165,7 @@ class FullNodeRpcApi:
                 "sub_slot_iters": sub_slot_iters,
                 "space": space["space"],
                 "mempool_size": mempool_size,
-                "node_id": node_id
+                "node_id": node_id,
             },
         }
         self.cached_blockchain_state = dict(response["blockchain_state"])
