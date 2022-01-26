@@ -373,11 +373,13 @@ class DataStore:
         self, tree_id: bytes32, hash: bytes32, max_generation: Optional[int] = None, *, lock: bool = True
     ) -> Optional[Root]:
         async with self.db_wrapper.locked_transaction(lock=lock):
+            max_generation_str = "AND generation < :max_generation " if max_generation is not None else ""
             cursor = await self.db.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id " "AND generation < :max_generation "
-                if max_generation is not None
-                else "" "AND node_hash == :node_hash " "ORDER BY generation DESC LIMIT 1",
-                {"tree_id": tree_id.hex(), "max_generation": max_generation, "node_hash": hash.hex()},
+                "SELECT * FROM root WHERE tree_id == :tree_id "
+                f"{max_generation_str}"
+                "AND node_hash == :node_hash "
+                "ORDER BY generation DESC LIMIT 1",
+                {"tree_id": tree_id.hex(), "node_hash": hash.hex()},
             )
             row = await cursor.fetchone()
 
