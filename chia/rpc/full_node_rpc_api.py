@@ -81,6 +81,7 @@ class FullNodeRpcApi:
         """
         Returns a summary of the node's view of the blockchain.
         """
+        node_id = self.service.server.node_id.hex()
         if self.service.initialized is False:
             res: Dict = {
                 "blockchain_state": {
@@ -96,6 +97,7 @@ class FullNodeRpcApi:
                     "sub_slot_iters": 0,
                     "space": 0,
                     "mempool_size": 0,
+                    "node_id": node_id
                 },
             }
             return res
@@ -163,6 +165,7 @@ class FullNodeRpcApi:
                 "sub_slot_iters": sub_slot_iters,
                 "space": space["space"],
                 "mempool_size": mempool_size,
+                "node_id": node_id
             },
         }
         self.cached_blockchain_state = dict(response["blockchain_state"])
