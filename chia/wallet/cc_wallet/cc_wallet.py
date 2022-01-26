@@ -40,6 +40,7 @@ from chia.wallet.puzzles.genesis_checkers import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
+    puzzle_for_pk,
 )
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
@@ -741,6 +742,7 @@ class CCWallet:
 
     async def generate_unsigned_spendbundle_for_specific_puzzle_hash(
         self,
+        sender_public_key_bytes: bytes32,
         sender_xch_puzzle_hash: bytes32,
         asset_id: bytes32,
         payment: Payment,
@@ -823,12 +825,13 @@ class CCWallet:
             else:
                 innersol = self.standard_wallet.make_solution()
 
+            sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key_bytes)
             lineage_proof = await self.get_lineage_proof_for_coin(coin=coin)
             assert lineage_proof is not None
             new_spendable_cc = SpendableCC(
                 coin=coin,
                 limitations_program_hash=self.cc_info.limitations_program_hash,
-                inner_puzzle=sender_xch_puzzle_hash,
+                inner_puzzle=sender_xch_puzzle,
                 inner_solution=innersol,
                 limitations_solution=limitations_solution,
                 extra_delta=extra_delta,
@@ -855,6 +858,7 @@ class CCWallet:
     async def generate_signed_transaction_for_specific_puzzle_hash(
         self,
         amount: uint64,
+        sender_public_key_bytes: bytes32,
         sender_xch_puzzle_hash: bytes32,
         receiver_puzzle_hash: bytes32,
         asset_id: bytes32,
@@ -867,6 +871,7 @@ class CCWallet:
         payment = Payment(receiver_puzzle_hash, amount, memos_with_hint)
 
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle_for_specific_puzzle_hash(
+            sender_public_key_bytes=sender_public_key_bytes,
             sender_xch_puzzle_hash=sender_xch_puzzle_hash,
             asset_id=asset_id,
             payment=payment,
