@@ -41,6 +41,7 @@ def master_sk_to_wallet_sk(master: PrivateKey, index: uint32) -> PrivateKey:
 
 
 def master_sk_to_wallet_sk_unhardened_intermediate(master: PrivateKey) -> PrivateKey:
+    # TODO: chia use normal integer path to generate derived key
     return _derive_path_unhardened(master, [12381, 8444, 2])
 
 

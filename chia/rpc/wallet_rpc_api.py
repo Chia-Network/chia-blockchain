@@ -9,7 +9,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.rpc.cat_utils import get_cat_puzzle_hash
+from chia.rpc.cat_utils import convert_to_cat_coins
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
@@ -808,6 +808,19 @@ class WalletRpcApi:
         }
 
     async def cc_spend_from_specific_puzzle_hash(self, request):
+        """Send CAT token from a specific sender puzzle hash (owned by the current logged in wallet) to a receiver address
+        It will only send coins from the given cat_coins_pool
+
+        Args:
+            request['wallet_id'] : the CAT wallet ID to spend
+            request['asset_id'] : the CAT token asset ID
+            request['sender_private_key'] : the target sender's derived private key hex
+            request['receiver_address'] : the receiver address (to address)
+            request['memo'] : memo field (a list of string)
+            request['amount'] : amount of CAT token to send (positive integer)
+            request['fee'] : amount of mojo for gas fee (positive integer)
+            request['cat_coins_pool'] : a list of CAT Coin dicts (each has parent_coin_info, puzzle_hash, amount)
+        """
         assert self.service.wallet_state_manager is not None
 
         if await self.service.wallet_state_manager.synced() is False:
@@ -817,10 +830,11 @@ class WalletRpcApi:
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         asset_id: bytes32 = hexstr_to_bytes(request["asset_id"])
-        sender_xch_puzzle_hash: bytes32 = hexstr_to_bytes(request["sender_xch_puzzle_hash"])
+        sender_private_key_bytes: bytes32 = hexstr_to_bytes(request["sender_private_key"])
+        sender_private_key: PrivateKey = PrivateKey.from_bytes(sender_private_key_bytes)
         receiver_puzzle_hash: bytes32 = decode_puzzle_hash(request["receiver_address"])
 
-        memos = [mem.encode("utf-8") for mem in request["memos"]]
+        memo = [mem.encode("utf-8") for mem in request["memo"]]
 
         if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
@@ -828,42 +842,20 @@ class WalletRpcApi:
 
         fee = uint64(request["fee"])
 
-        sender_cat_puzzle_hash = get_cat_puzzle_hash(
-            asset_id=asset_id.hex(),
-            xch_puzzle_hash=sender_xch_puzzle_hash.hex(),
+        cat_coins_pool: Set[Coin] = convert_to_cat_coins(
+            target_asset_id=asset_id,
+            sender_private_key=sender_private_key,
+            raw_cat_coins_pool=request["cat_coins_pool"],
         )
-
-        raw_cat_coins_pool = request["cat_coins_pool"]
-        if type(raw_cat_coins_pool) != list:
-            raise Exception(f"Expected raw_cat_coins_pool is a list, got {raw_cat_coins_pool}")
-
-        cat_coins_pool: Set[Coin] = set()
-        for raw_coin in raw_cat_coins_pool:
-            if type(raw_coin) != dict:
-                raise Exception(f"Expected coin is a dict, got {raw_coin}")
-            if not 'puzzle_hash' in raw_coin:
-                raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
-            if not 'puzzle_hash' in raw_coin:
-                raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
-            puzzle_hash = raw_coin['puzzle_hash']
-            if puzzle_hash != sender_cat_puzzle_hash:
-                raise Exception(f"Inconsistent coin in raw_cat_coins_pool: {puzzle_hash} != {sender_cat_puzzle_hash}")
-            cat_coins_pool.add(
-                Coin(
-                    parent_coin_info=bytes.fromhex(raw_coin["parent_coin_info"].lstrip("0x")),
-                    puzzle_hash=bytes.fromhex(raw_coin["puzzle_hash"].lstrip("0x")),
-                    amount=int(raw_coin["amount"]),
-                )
-            )
 
         async with self.service.wallet_state_manager.lock:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction_for_specific_puzzle_hash(
                 amount=amount,
-                sender_xch_puzzle_hash=sender_xch_puzzle_hash,
+                sender_private_key=sender_private_key,
                 receiver_puzzle_hash=receiver_puzzle_hash,
                 asset_id=asset_id,
                 fee=fee,
-                memos=memos,
+                memo=memo,
                 cat_coins_pool=cat_coins_pool,
             )
             for tx in txs:
