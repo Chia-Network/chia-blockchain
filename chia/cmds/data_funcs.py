@@ -45,7 +45,7 @@ async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str) -> Opt
     # TODO: nice cli error handling
     client = None
     response = None
-    store_id_bytes = bytes32(hexstr_to_bytes(store_id))
+    store_id_bytes = bytes32.from_hexstr(store_id)
     key_bytes = hexstr_to_bytes(key)
     try:
         client, rpc_port = await get_client(rpc_port)
@@ -69,7 +69,7 @@ async def update_data_store_cmd(
     # TODO: nice cli error handling
     client = None
     response = None
-    store_id_bytes = bytes32(hexstr_to_bytes(store_id))
+    store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         client, rpc_port = await get_client(rpc_port)
         response = await client.update_data_store(store_id=store_id_bytes, changelist=changelist)
@@ -91,7 +91,7 @@ async def get_keys_values_cmd(
     # TODO: nice cli error handling
     client = None
     response = None
-    store_id_bytes = bytes32(hexstr_to_bytes(store_id))
+    store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         client, rpc_port = await get_client(rpc_port)
         response = await client.get_keys_values(store_id=store_id_bytes)
@@ -113,7 +113,7 @@ async def get_root_cmd(
     # TODO: nice cli error handling
     client = None
     response = None
-    store_id_bytes = bytes32(hexstr_to_bytes(store_id))
+    store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         client, rpc_port = await get_client(rpc_port)
         response = await client.get_root(store_id=store_id_bytes)
