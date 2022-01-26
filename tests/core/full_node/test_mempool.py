@@ -77,6 +77,14 @@ def event_loop():
     yield loop
 
 
+# TODO: this fixture should really be at function scope, to make all tests
+# independent. Right now, TestMempool::test_basic_mempool initializes these
+# nodes, and the remaining tests just build on top of them. This means
+# test_basic_mempool must alwasy be run in order to have most of the other tests
+# pass.
+# The reason for this is that our simulators can't be destroyed correctly, which
+# means you can't instantiate more than one per process, so this is a hack until
+# that is fixed. For now, our tests are not independent
 @pytest.fixture(scope="module")
 async def two_nodes():
     async_gen = setup_simulators_and_wallets(2, 1, {})
@@ -246,6 +254,63 @@ class TestMempoolManager:
             spend_bundle,
             spend_bundle.name(),
         )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "opcode,lock_value,expected",
+        [
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, MempoolInclusionStatus.SUCCESS),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, MempoolInclusionStatus.SUCCESS),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, MempoolInclusionStatus.SUCCESS),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, MempoolInclusionStatus.FAILED),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, MempoolInclusionStatus.SUCCESS),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, MempoolInclusionStatus.SUCCESS),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, MempoolInclusionStatus.PENDING),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, MempoolInclusionStatus.PENDING),
+            # the absolute height and seconds tests require fresh full nodes to
+            # run the test on. Right now, we just launch two simulations and all
+            # tests use the same ones. See comment at the two_nodes fixture
+            # (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, MempoolInclusionStatus.SUCCESS),
+            # (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 3, MempoolInclusionStatus.SUCCESS),
+            # (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, MempoolInclusionStatus.PENDING),
+            # (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 5, MempoolInclusionStatus.PENDING),
+            # genesis timestamp is 10000 and each block is 10 seconds
+            # (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, MempoolInclusionStatus.SUCCESS),
+            # (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10030, MempoolInclusionStatus.SUCCESS),
+            # (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10031, MempoolInclusionStatus.FAILED),
+            # (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10032, MempoolInclusionStatus.FAILED),
+        ],
+    )
+    async def test_ephemeral_timelock(self, two_nodes, opcode, lock_value, expected):
+        def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
+
+            conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
+            tx1 = WALLET_A.generate_signed_transaction(
+                uint64(1000000), WALLET_A.get_new_puzzlehash(), coin_2, conditions.copy(), uint64(0)
+            )
+
+            ephemeral_coin: Coin = tx1.additions()[0]
+            tx2 = WALLET_A.generate_signed_transaction(
+                uint64(1000000), WALLET_A.get_new_puzzlehash(), ephemeral_coin, conditions.copy(), uint64(0)
+            )
+
+            bundle = SpendBundle.aggregate([tx1, tx2])
+            return bundle
+
+        full_node_1, _, server_1, _ = two_nodes
+        blocks, bundle, status, err = await self.condition_tester2(two_nodes, test_fun)
+        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
+
+        print(f"status: {status}")
+        print(f"error: {err}")
+
+        assert status == expected
+        if expected == MempoolInclusionStatus.SUCCESS:
+            assert mempool_bundle is bundle
+            assert err is None
+        else:
+            assert mempool_bundle is None
+            assert err is not None
 
     # this test makes sure that one spend successfully asserts the announce from
     # another spend, even though the assert condition is duplicated 100 times
@@ -527,7 +592,7 @@ class TestMempoolManager:
         bundle = test_fun(coin_1, coin_2)
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(bundle)
-        status, err = await respond_transaction(full_node_1, tx1, peer)
+        status, err = await respond_transaction(full_node_1, tx1, peer, test=True)
 
         return blocks, bundle, status, err
 

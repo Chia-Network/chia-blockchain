@@ -156,7 +156,7 @@ def check_unusual_transaction(amount: Decimal, fee: Decimal):
 
 
 async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    wallet_id = args["id"]
+    wallet_id: int = args["id"]
     amount = Decimal(args["amount"])
     fee = Decimal(args["fee"])
     address = args["address"]
@@ -180,16 +180,16 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         print(f"Wallet id: {wallet_id} not found.")
         return
 
-    final_amount: uint64
     final_fee = uint64(int(fee * units["chia"]))
+    final_amount: uint64
     if typ == WalletType.STANDARD_WALLET:
         final_amount = uint64(int(amount * units["chia"]))
         print("Submitting transaction...")
-        res = await wallet_client.send_transaction(wallet_id, final_amount, address, final_fee, memos)
+        res = await wallet_client.send_transaction(str(wallet_id), final_amount, address, final_fee, memos)
     elif typ == WalletType.CAT:
         final_amount = uint64(int(amount * units["cat"]))
         print("Submitting transaction...")
-        res = await wallet_client.cat_spend(wallet_id, final_amount, address, final_fee, memos)
+        res = await wallet_client.cat_spend(str(wallet_id), final_amount, address, final_fee, memos)
     else:
         print("Only standard wallet and CAT wallets are supported")
         return
@@ -198,7 +198,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     start = time.time()
     while time.time() - start < 10:
         await asyncio.sleep(0.1)
-        tx = await wallet_client.get_transaction(wallet_id, tx_id)
+        tx = await wallet_client.get_transaction(str(wallet_id), tx_id)
         if len(tx.sent_to) > 0:
             print(f"Transaction submitted to nodes: {tx.sent_to}")
             print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
