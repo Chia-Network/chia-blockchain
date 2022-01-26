@@ -121,6 +121,7 @@ class WalletRpcApi:
             # DL Wallet
             "/create_new_dl": self.create_new_dl,
             "/dl_track_new": self.dl_track_new,
+            "/dl_stop_tracking": self.dl_stop_tracking,
             "/dl_latest_singleton": self.dl_latest_singleton,
             "/dl_update_root": self.dl_update_root,
             "/dl_update_multiple": self.dl_update_multiple,
@@ -1369,6 +1370,18 @@ class WalletRpcApi:
                 )
 
         await dl_wallet.track_new_launcher_id(bytes32.from_hexstr(request["launcher_id"]))
+        return {}
+
+    async def dl_stop_tracking(self, request) -> Dict:
+        """Initialize the DataLayer Wallet (only one can exist)"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        if dl_wallet is None:
+            raise ValueError("The DataLayer wallet has not been initialized")
+
+        await dl_wallet.stop_tracking_singleton(bytes32.from_hexstr(request["launcher_id"]))
         return {}
 
     async def dl_latest_singleton(self, request) -> Dict:
