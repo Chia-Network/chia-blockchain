@@ -743,7 +743,6 @@ class CCWallet:
     async def generate_unsigned_spendbundle_for_specific_puzzle_hash(
         self,
         sender_public_key_bytes: bytes32,
-        sender_xch_puzzle_hash: bytes32,
         asset_id: bytes32,
         payment: Payment,
         fee: uint64,
@@ -753,11 +752,14 @@ class CCWallet:
         limitations_solution = Program.to([])
         payment_amount: int = payment.amount
         starting_amount: int = payment_amount - extra_delta
-        sender_cat_puzzle_hash = get_cat_puzzle_hash(
+
+        sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key_bytes)
+        sender_xch_puzzle_hash: bytes32 = sender_xch_puzzle.get_tree_hash()
+        sender_cat_puzzle_hash_str = get_cat_puzzle_hash(
             asset_id=asset_id.hex(),
             xch_puzzle_hash=sender_xch_puzzle_hash.hex(),
         )
-        sender_cat_puzzle_hash = bytes.fromhex(sender_cat_puzzle_hash.lstrip("0x"))
+        sender_cat_puzzle_hash = bytes.fromhex(sender_cat_puzzle_hash_str.lstrip("0x"))
 
         selected_cat_amount = sum([c.amount for c in cat_coins_pool])
         assert selected_cat_amount >= starting_amount
@@ -859,7 +861,6 @@ class CCWallet:
         self,
         amount: uint64,
         sender_public_key_bytes: bytes32,
-        sender_xch_puzzle_hash: bytes32,
         receiver_puzzle_hash: bytes32,
         asset_id: bytes32,
         fee: uint64,
@@ -872,7 +873,6 @@ class CCWallet:
 
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle_for_specific_puzzle_hash(
             sender_public_key_bytes=sender_public_key_bytes,
-            sender_xch_puzzle_hash=sender_xch_puzzle_hash,
             asset_id=asset_id,
             payment=payment,
             fee=fee,

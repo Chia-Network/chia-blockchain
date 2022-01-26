@@ -814,7 +814,6 @@ class WalletRpcApi:
         Args:
             request['wallet_id'] : the CAT wallet ID to spend
             request['asset_id'] : the CAT token asset ID
-            request['sender_xch_puzzle_hash'] : the sender XCH (inner) puzzle hash
             request['sender_public_key'] : the target sender's original public key
             request['receiver_address'] : the receiver address (to address)
             request['memo'] : memo field
@@ -832,7 +831,6 @@ class WalletRpcApi:
 
         asset_id: bytes32 = hexstr_to_bytes(request["asset_id"])
         sender_public_key_bytes: bytes32 = hexstr_to_bytes(request["sender_public_key"])
-        sender_xch_puzzle_hash: bytes32 = hexstr_to_bytes(request["sender_xch_puzzle_hash"])
         receiver_puzzle_hash: bytes32 = decode_puzzle_hash(request["receiver_address"])
 
         memo = [mem.encode("utf-8") for mem in request["memo"]]
@@ -853,7 +851,6 @@ class WalletRpcApi:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction_for_specific_puzzle_hash(
                 amount=amount,
                 sender_public_key_bytes=sender_public_key_bytes,
-                sender_xch_puzzle_hash=sender_xch_puzzle_hash,
                 receiver_puzzle_hash=receiver_puzzle_hash,
                 asset_id=asset_id,
                 fee=fee,
