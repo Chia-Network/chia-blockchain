@@ -120,11 +120,14 @@ class FullNodeRpcApi:
                     "sub_slot_iters": 0,
                     "space": 0,
                     "mempool_size": 0,
+<<<<<<< HEAD
                     "mempool_cost": 0,
                     "mempool_min_fees": {
                         "cost_5000000": 0,
                     },
                     "block_max_cost": 0,
+=======
+>>>>>>> 26846780c (lint)
                     "node_id": node_id,
                 },
             }
@@ -197,7 +200,6 @@ class FullNodeRpcApi:
                 "sub_slot_iters": sub_slot_iters,
                 "space": space["space"],
                 "mempool_size": mempool_size,
-<<<<<<< HEAD
                 "mempool_cost": mempool_cost,
                 "mempool_min_fees": {
                     # We may give estimates for varying costs in the future
@@ -205,9 +207,7 @@ class FullNodeRpcApi:
                     "cost_5000000": mempool_min_fee_5m,
                 },
                 "block_max_cost": self.service.constants.MAX_BLOCK_COST_CLVM,
-=======
-                "node_id": node_id
->>>>>>> 3260214b0 (add node id chia show)
+                "node_id": node_id,
             },
         }
         self.cached_blockchain_state = dict(response["blockchain_state"])
