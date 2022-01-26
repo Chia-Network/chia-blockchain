@@ -16,7 +16,6 @@ from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint16
 from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-from chia.consensus.cost_calculator import conditions_cost
 
 GENERATOR_MOD = get_generator()
 
@@ -112,7 +111,8 @@ def get_name_puzzle_conditions(
     generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, mempool_mode: bool
 ) -> NPCResult:
     block_program, block_program_args = setup_generator_args(generator)
-    max_cost -= len(bytes(generator.program)) * cost_per_byte
+    size_cost = len(bytes(generator.program)) * cost_per_byte
+    max_cost -= size_cost
     if max_cost < 0:
         return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), [], uint64(0))
 
@@ -124,7 +124,6 @@ def get_name_puzzle_conditions(
             assert err != 0
             return NPCResult(uint16(err), [], uint64(0))
 
-        condition_cost = 0
         first = True
         npc_list = []
         for r in result.spends:
@@ -153,15 +152,9 @@ def get_name_puzzle_conditions(
                 for sig in result.agg_sig_unsafe:
                     add_cond(conditions, ConditionOpcode.AGG_SIG_UNSAFE, [sig[0], sig[1]])
 
-            condition_cost += conditions_cost(conditions)
             npc_list.append(NPC(r.coin_id, r.puzzle_hash, [(op, cond) for op, cond in conditions.items()]))
 
-        # this is a temporary hack. The NPCResult clvm_cost field is not
-        # supposed to include conditions cost # but the result from run_generator2() does
-        # include that cost. So, until we change which cost we include in NPCResult,
-        # subtract the conditions cost. The pure CLVM cost is what will remain.
-        clvm_cost = result.cost - condition_cost
-        return NPCResult(None, npc_list, uint64(clvm_cost))
+        return NPCResult(None, npc_list, uint64(result.cost + size_cost))
 
     except BaseException as e:
         log.debug(f"get_name_puzzle_condition failed: {e}")

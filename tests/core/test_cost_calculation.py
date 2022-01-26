@@ -93,7 +93,13 @@ class TestCostCalculation:
         )
         assert error is None
 
-        assert npc_result.clvm_cost == 404560
+        assert (
+            npc_result.cost
+            == 404560
+            + ConditionCost.CREATE_COIN.value
+            + ConditionCost.AGG_SIG.value
+            + len(bytes(program.program)) * test_constants.COST_PER_BYTE
+        )
 
         # Create condition + agg_sig_condition + length + cpu_cost
         assert (
@@ -101,7 +107,7 @@ class TestCostCalculation:
             == ConditionCost.CREATE_COIN.value
             + ConditionCost.AGG_SIG.value
             + len(bytes(program.program)) * test_constants.COST_PER_BYTE
-            + 404560  # clvm_cost
+            + 404560  # clvm cost
         )
 
     @pytest.mark.asyncio
@@ -226,14 +232,14 @@ class TestCostCalculation:
         npc_result: NPCResult = get_name_puzzle_conditions(generator, 10000000, cost_per_byte=0, mempool_mode=False)
 
         assert npc_result.error is not None
-        assert npc_result.clvm_cost == 0
+        assert npc_result.cost == 0
 
         # raise the max cost to make sure this passes
         # ensure we pass if the program does not exceeds the cost
         npc_result = get_name_puzzle_conditions(generator, 20000000, cost_per_byte=0, mempool_mode=False)
 
         assert npc_result.error is None
-        assert npc_result.clvm_cost > 10000000
+        assert npc_result.cost > 10000000
 
     @pytest.mark.asyncio
     async def test_standard_tx(self):

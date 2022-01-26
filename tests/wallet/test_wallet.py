@@ -11,6 +11,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -617,7 +618,7 @@ class TestWalletSimulator:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=name,
-            memos=list(stolen_sb.get_memos().items()),
+            memos=list(compute_memos(stolen_sb).items()),
         )
         await wallet.push_transaction(stolen_tx)
 
