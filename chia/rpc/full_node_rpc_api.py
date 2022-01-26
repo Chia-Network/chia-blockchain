@@ -84,14 +84,7 @@ class FullNodeRpcApi:
             return payloads
 
         if change == "block":
-            payloads.append(
-                create_payload_dict(
-                    "block",
-                    change_data,
-                    self.service_name,
-                    "metrics"
-                )
-            )
+            payloads.append(create_payload_dict("block", change_data, self.service_name, "metrics"))
             return payloads
 
         return []

@@ -1567,7 +1567,7 @@ class FullNode:
         if peak.height % 1000 == 0 and not self.sync_store.get_sync_mode():
             await self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
 
-        state_changed_data = {
+        state_changed_data: Dict[str, Any] = {
             "transaction_block": False,
         }
 
