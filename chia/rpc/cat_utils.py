@@ -5,6 +5,7 @@ from chia.wallet.puzzles.cc_loader import CC_MOD
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 from chia.types.blockchain_format.sized_bytes import bytes32
+from blspy import PrivateKey, G1Element
 
 
 def get_cat_puzzle_hash(asset_id: str, xch_puzzle_hash: str) -> str:
@@ -16,20 +17,24 @@ def get_cat_puzzle_hash(asset_id: str, xch_puzzle_hash: str) -> str:
 
 def convert_to_cat_coins(
   target_asset_id: str,
-  sender_public_key_bytes: bytes32,
+  sender_private_key: PrivateKey,
   raw_cat_coins_pool: List[Dict],
 ) -> Set[Coin]:
   """Convert a list of raw coin dicts into a set of Coin objects
 
   Args:
       target_asset_id (str): expected CAT asset ID (used to validate the input coins list)
-      sender_public_key_bytes (bytes32): the target sender's original public keys
+      sender_private_key (PrivateKey): the target sender's derived private key
       raw_cat_coins_pool (List[Dict]): the list of raw coin dicts
 
   Returns:
       Set[Coin]: set of Coin objects
   """
-  sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key_bytes)
+
+  sender_public_key_bytes = bytes(sender_private_key.get_g1())
+  sender_public_key: G1Element = G1Element.from_bytes(sender_public_key_bytes)
+
+  sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key)
   sender_xch_puzzle_hash: bytes32 = sender_xch_puzzle.get_tree_hash()
   sender_cat_puzzle_hash = get_cat_puzzle_hash(
       asset_id=target_asset_id.hex(),

@@ -7,7 +7,7 @@ from dataclasses import replace
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from blspy import AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL, G2Element, PrivateKey, G1Element
 
 from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -498,6 +498,39 @@ class CCWallet:
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
+    async def sign_with_specific_puzzle_hash(self,
+        spend_bundle: SpendBundle,
+        sender_private_key: PrivateKey,
+    ) -> SpendBundle:
+        sigs: List[G2Element] = []
+        for spend in spend_bundle.coin_spends:
+            matched, puzzle_args = match_cat_puzzle(spend.puzzle_reveal.to_program())
+            if matched:
+                _, _, inner_puzzle = puzzle_args
+                public_key = sender_private_key.get_g1()
+                if inner_puzzle.get_tree_hash() != str(public_key):
+                    raise Exception(f"Invalid sender public_key: {str(public_key)} != {inner_puzzle.get_tree_hash()}")
+
+                synthetic_secret_key = calculate_synthetic_secret_key(sender_private_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+                error, conditions, cost = conditions_dict_for_solution(
+                    spend.puzzle_reveal.to_program(),
+                    spend.solution.to_program(),
+                    self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                )
+                if conditions is not None:
+                    synthetic_pk = synthetic_secret_key.get_g1()
+                    for pk, msg in pkm_pairs_for_conditions_dict(
+                        conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                    ):
+                        try:
+                            assert synthetic_pk == pk
+                            sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
+                        except AssertionError:
+                            raise ValueError("This spend bundle cannot be signed by the CAT wallet")
+
+        agg_sig = AugSchemeMPL.aggregate(sigs)
+        return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
+
     async def inner_puzzle_for_cc_puzhash(self, cc_hash: bytes32) -> Program:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
             cc_hash.hex()
@@ -742,7 +775,7 @@ class CCWallet:
 
     async def generate_unsigned_spendbundle_for_specific_puzzle_hash(
         self,
-        sender_public_key_bytes: bytes32,
+        sender_private_key: PrivateKey,
         asset_id: bytes32,
         payment: Payment,
         fee: uint64,
@@ -753,7 +786,10 @@ class CCWallet:
         payment_amount: int = payment.amount
         starting_amount: int = payment_amount - extra_delta
 
-        sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key_bytes)
+        sender_public_key_bytes = bytes(sender_private_key.get_g1())
+        sender_public_key: G1Element = G1Element.from_bytes(sender_public_key_bytes)
+
+        sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key)
         sender_xch_puzzle_hash: bytes32 = sender_xch_puzzle.get_tree_hash()
         sender_cat_puzzle_hash_str = get_cat_puzzle_hash(
             asset_id=asset_id.hex(),
@@ -860,7 +896,7 @@ class CCWallet:
     async def generate_signed_transaction_for_specific_puzzle_hash(
         self,
         amount: uint64,
-        sender_public_key_bytes: bytes32,
+        sender_private_key: PrivateKey,
         receiver_puzzle_hash: bytes32,
         asset_id: bytes32,
         fee: uint64,
@@ -872,13 +908,16 @@ class CCWallet:
         payment = Payment(receiver_puzzle_hash, amount, memos_with_hint)
 
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle_for_specific_puzzle_hash(
-            sender_public_key_bytes=sender_public_key_bytes,
+            sender_private_key=sender_private_key,
             asset_id=asset_id,
             payment=payment,
             fee=fee,
             cat_coins_pool=cat_coins_pool
         )
-        spend_bundle = await self.sign(unsigned_spend_bundle)
+        spend_bundle = await self.sign_with_specific_puzzle_hash(
+            spend_bundle=unsigned_spend_bundle,
+            sender_private_key=sender_private_key
+        )
 
         tx_list = [
             TransactionRecord(

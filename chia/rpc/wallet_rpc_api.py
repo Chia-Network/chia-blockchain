@@ -814,7 +814,7 @@ class WalletRpcApi:
         Args:
             request['wallet_id'] : the CAT wallet ID to spend
             request['asset_id'] : the CAT token asset ID
-            request['sender_public_key'] : the target sender's original public key
+            request['sender_private_key'] : the target sender's derived private key hex
             request['receiver_address'] : the receiver address (to address)
             request['memo'] : memo field (a list of string)
             request['amount'] : amount of CAT token to send (positive integer)
@@ -830,7 +830,8 @@ class WalletRpcApi:
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         asset_id: bytes32 = hexstr_to_bytes(request["asset_id"])
-        sender_public_key_bytes: bytes32 = hexstr_to_bytes(request["sender_public_key"])
+        sender_private_key_bytes: bytes32 = hexstr_to_bytes(request["sender_private_key"])
+        sender_private_key: PrivateKey = PrivateKey.from_bytes(sender_private_key_bytes)
         receiver_puzzle_hash: bytes32 = decode_puzzle_hash(request["receiver_address"])
 
         memo = [mem.encode("utf-8") for mem in request["memo"]]
@@ -843,14 +844,14 @@ class WalletRpcApi:
 
         cat_coins_pool: Set[Coin] = convert_to_cat_coins(
             target_asset_id=asset_id,
-            sender_public_key_bytes=sender_public_key_bytes,
+            sender_private_key=sender_private_key,
             raw_cat_coins_pool=request["cat_coins_pool"],
         )
 
         async with self.service.wallet_state_manager.lock:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction_for_specific_puzzle_hash(
                 amount=amount,
-                sender_public_key_bytes=sender_public_key_bytes,
+                sender_private_key=sender_private_key,
                 receiver_puzzle_hash=receiver_puzzle_hash,
                 asset_id=asset_id,
                 fee=fee,
