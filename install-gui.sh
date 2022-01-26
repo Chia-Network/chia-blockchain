@@ -24,6 +24,36 @@ fi
 # Allows overriding the branch or commit to build in chia-blockchain-gui
 SUBMODULE_BRANCH=$1
 
+install_npm_locally(){
+  NPM_VERSION="$(npm -v | cut -d'.' -f 1)"
+  if [ "$NPM_VERSION" -lt "7" ]; then
+    echo "Current npm version($(npm -v)) is less than 7. GUI app requires npm>=7."
+    NPM_GLOBAL="${SCRIPT_DIR}/build_scripts/npm_global"
+    # install-gui.sh can be executed
+    echo "cd ${NPM_GLOBAL}"
+    cd "${NPM_GLOBAL}"
+    if [ "$NPM_VERSION" -lt "6" ]; then
+      # Ubuntu image of Amazon ec2 instance surprisingly uses nodejs@3.5.2
+      # which doesn't support `npm ci` as of 27th Jan, 2022
+      echo "npm install"
+      npm install
+    else
+      echo "npm ci"
+      npm ci
+    fi
+    N_PREFIX=${SCRIPT_DIR}/.n
+    PATH="${N_PREFIX}/bin:$(npm bin):${PATH}"
+    echo "n 16"
+    n 16
+    echo "Current npm version: $(npm -v)"
+    if [ "$(npm -v | cut -d'.' -f 1)" -lt "7" ]; then
+      echo "Error: Failed to install npm>=7"
+      exit 1
+    fi
+    cd "${SCRIPT_DIR}"
+  fi
+}
+
 UBUNTU=false
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
@@ -41,7 +71,7 @@ if [ "$(uname)" = "Linux" ]; then
 			}
 		else
 		  if ! npm version >/dev/null 2>&1; then
-		  # If npm/node is not installed, install them
+  		  # If npm/node is not installed, install them
 		    echo "nodejs is not installed. Installing..."
 		    echo "sudo apt-get install -y npm nodejs libxss1"
 			  sudo apt-get install -y npm nodejs libxss1
@@ -49,52 +79,47 @@ if [ "$(uname)" = "Linux" ]; then
         echo "Found npm $(npm -v)"
       fi
 
-      NPM_VERSION="$(npm -v | cut -d'.' -f 1)"
-      if [ "$NPM_VERSION" -lt "7" ]; then
-        echo "Current npm version($(npm -v)) is less than 7. GUI app requires npm>=7."
-        NPM_GLOBAL="${SCRIPT_DIR}/build_scripts/npm_global"
-        # install-gui.sh can be executed
-        echo "cd ${NPM_GLOBAL}"
-        cd "${NPM_GLOBAL}"
-        if [ "$NPM_VERSION" -lt "6" ]; then
-          # Ubuntu image of Amazon ec2 instance surprisingly uses nodejs@3.5.2 as of 27th Jan, 2022
-          echo "npm install"
-          npm install
-        else
-          echo "npm ci"
-          npm ci
-        fi
-        export N_PREFIX=${SCRIPT_DIR}/.n
-        export PATH="${N_PREFIX}/bin:$(npm bin):${PATH}"
-        echo "n 16"
-        n 16
-        echo "Current npm version: $(npm -v)"
-        if [ "$(npm -v | cut -d'.' -f 1)" -lt "7" ]; then
-          echo "Error: Failed to install npm>=7"
-          exit 1
-        fi
-        cd "${SCRIPT_DIR}"
-      fi
+      install_npm_locally
 		fi
 	elif type yum &&  [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ]; then
 		# AMZN 2
-		echo "Installing on Amazon Linux 2."
-		curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
-		sudo yum install -y nodejs
+    if ! npm version >/dev/null 2>&1; then
+      # If npm/node is not installed, install them
+      echo "Installing nodejs on Amazon Linux 2."
+      curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
+      sudo yum install -y nodejs
+    fi
+
+    install_npm_locally
 	elif type yum && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ] && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
 		# CentOS or Redhat
-		echo "Installing on CentOS/Redhat."
-		curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
-		sudo yum install -y nodejs
+    if ! npm version >/dev/null 2>&1; then
+      # If npm/node is not installed, install them
+  		echo "Installing nodejs on CentOS/Redhat."
+      curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
+      sudo yum install -y nodejs
+    fi
+
+    install_npm_locally
 	elif type yum && [ -f /etc/rocky-release ] || [ -f /etc/fedora-release ]; then
     # RockyLinux
-    echo "Installing on RockyLinux/Fedora"
-    sudo dnf module enable nodejs:12
-    sudo dnf install -y nodejs
+    if ! npm version >/dev/null 2>&1; then
+      # If npm/node is not installed, install them
+      echo "Installing nodejs on RockyLinux/Fedora"
+      sudo dnf module enable nodejs:12
+      sudo dnf install -y nodejs
+    fi
+
+    install_npm_locally
   fi
-elif [ "$(uname)" = "Darwin" ] && type brew && ! npm version >/dev/null 2>&1; then
-	# Install npm if not installed
-	brew install npm
+elif [ "$(uname)" = "Darwin" ] && type brew; then
+  if ! npm version >/dev/null 2>&1; then
+    # If npm/node is not installed, install them
+    echo "Installing nodejs on MacOS"
+  	brew install npm
+  fi
+
+  install_npm_locally
 elif [ "$(uname)" = "OpenBSD" ]; then
 	pkg_add node
 elif [ "$(uname)" = "FreeBSD" ]; then
