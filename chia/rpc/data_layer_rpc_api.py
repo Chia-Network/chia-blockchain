@@ -160,5 +160,9 @@ class DataLayerRpcApi:
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        res = await self.service.get_roots(store_ids)
-        return {"hashes": res}
+        roots = []
+        for id in store_ids:
+            id_bytes = bytes32.from_hexstr(id)
+            res = await self.service.get_root(store_id=id_bytes)
+            roots.append({"id": id_bytes, "hash": res})
+        return {"root_hashes": roots}
