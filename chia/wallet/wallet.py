@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, List, Optional, Set
+from typing import Any, List, Optional, Set, Dict
 
 from blspy import G1Element
 
@@ -248,9 +248,26 @@ class Wallet:
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
-        Note: This must be called under a wallet state manager lock
+        Note: Must be called under wallet state manager lock
         """
-        coins = await select_coins(self, amount, exclude)
+        spendable_amount = await self.get_spendable_balance()
+        unspent_coins: List[WalletCoinRecord] = list(
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
+        )
+        # Try to use coins from the store, if there isn't enough of "unused"
+        # coins use change coins that are not confirmed yet
+        unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+            self.id()
+        )
+        coins = await select_coins(
+            spendable_amount,
+            self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
+            unspent_coins,
+            unconfirmed_removals,
+            self.log,
+            amount,
+            exclude,
+        )
         assert coins is not None and len(coins) > 0
         return coins
 

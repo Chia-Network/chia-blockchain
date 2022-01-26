@@ -1,3 +1,4 @@
+import logging
 import random
 from typing import Set, Optional, List, Dict
 
@@ -7,31 +8,29 @@ from chia.util.ints import uint64
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 
-async def select_coins(wallet, amount: uint64, exclude: List[Coin] = None) -> Set[Coin]:
+async def select_coins(
+    spendable_amount,
+    max_coin_amount: int,
+    unspent: List[WalletCoinRecord],
+    unconfirmed_removals: Dict[bytes32, Coin],
+    log: logging.Logger,
+    amount: uint64,
+    exclude: List[Coin] = None,
+) -> Set[Coin]:
     """
     Returns a set of coins that can be used for generating a new transaction.
     """
     if exclude is None:
         exclude = []
 
-    spendable_amount = await wallet.get_spendable_balance()
-
     if amount > spendable_amount:
         error_msg = (
             f"Can't select amount higher than our spendable balance.  Amount: {amount}, spendable: {spendable_amount}"
         )
-        wallet.log.warning(error_msg)
+        log.warning(error_msg)
         raise ValueError(error_msg)
 
-    wallet.log.info(f"About to select coins for amount {amount}")
-    unspent: List[WalletCoinRecord] = list(
-        await wallet.wallet_state_manager.get_spendable_coins_for_wallet(wallet.id())
-    )
-    # Try to use coins from the store, if there isn't enough of "unused"
-    # coins use change coins that are not confirmed yet
-    unconfirmed_removals: Dict[bytes32, Coin] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(
-        wallet.id()
-    )
+    log.info(f"About to select coins for amount {amount}")
 
     sum_spendable_coins = 0
     valid_unspent: List[Coin] = []
@@ -57,7 +56,7 @@ async def select_coins(wallet, amount: uint64, exclude: List[Coin] = None) -> Se
     # check for exact 1 to 1 coin match.
     exact_match_coin: Optional[Coin] = check_for_exact_match(valid_unspent, amount)
     if exact_match_coin:
-        wallet.log.debug(f"selected coin with an exact match: {exact_match_coin}")
+        log.debug(f"selected coin with an exact match: {exact_match_coin}")
         return {exact_match_coin}
 
     # Check for an exact match with all of the coins smaller than the amount.
@@ -69,23 +68,17 @@ async def select_coins(wallet, amount: uint64, exclude: List[Coin] = None) -> Se
             smaller_coin_sum += coin.amount
             smaller_coins.add(coin)
     if smaller_coin_sum == amount:
-        wallet.log.debug(
-            f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}"
-        )
+        log.debug(f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}")
         return smaller_coins
     elif smaller_coin_sum < amount:
-        smallest_coin: Optional[Coin] = find_smallest_coin(
-            valid_unspent, amount, wallet.wallet_state_manager.constants.MAX_COIN_AMOUNT
-        )
+        smallest_coin: Optional[Coin] = find_smallest_coin(valid_unspent, amount, max_coin_amount)
         assert smallest_coin is not None
-        wallet.log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
+        log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
         return {smallest_coin}
     else:
-        best_coin_set = knapsack_coin_algorithm(
-            smaller_coins, amount, wallet.wallet_state_manager.constants.MAX_COIN_AMOUNT
-        )
+        best_coin_set = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount)
         assert best_coin_set is not None
-        wallet.log.debug(f"Selected coins from knapsack algorithm: {best_coin_set}")
+        log.debug(f"Selected coins from knapsack algorithm: {best_coin_set}")
         return best_coin_set
 
 
