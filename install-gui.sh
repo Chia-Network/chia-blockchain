@@ -73,6 +73,7 @@ if [ "$(uname)" = "Linux" ]; then
           echo "Error: Failed to install npm>=7"
           exit 1
         fi
+        cd "${SCRIPT_DIR}"
       fi
 		fi
 	elif type yum &&  [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ]; then
