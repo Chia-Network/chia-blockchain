@@ -377,9 +377,8 @@ class DataStore:
             if root_hash is None:
                 root = await self.get_tree_root(tree_id=tree_id, lock=False)
                 if root.node_hash is None:
-                    return []
+                    raise Exception(f"Root hash is unspecified for tree ID: {tree_id.hex()}")
                 root_hash = root.node_hash
-
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
