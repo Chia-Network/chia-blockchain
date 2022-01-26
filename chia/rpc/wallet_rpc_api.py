@@ -601,6 +601,8 @@ class WalletRpcApi:
                     "unspent_coin_count": 0,
                     "pending_coin_removal_count": 0,
                 }
+                if self.service.logged_in_fingerprint is not None:
+                    wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
         else:
             async with self.service.wallet_state_manager.lock:
                 unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
@@ -625,6 +627,8 @@ class WalletRpcApi:
                     "unspent_coin_count": len(unspent_records),
                     "pending_coin_removal_count": len(unconfirmed_removals),
                 }
+                if self.service.logged_in_fingerprint is not None:
+                    wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
                 self.balance_cache[wallet_id] = wallet_balance
 
         return {"wallet_balance": wallet_balance}
