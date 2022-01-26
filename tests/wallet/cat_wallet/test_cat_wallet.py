@@ -743,6 +743,105 @@ class TestCATWallet:
         await time_out_assert(15, cat_wallet.get_confirmed_balance, 35)
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 35)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
+    async def test_cat_coin_selection(self, two_wallet_nodes, trusted):
+        num_blocks = 10
+        full_nodes, wallets = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
+        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        async with wallet_node.wallet_state_manager.lock:
+            cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(400000)
+            )
+        tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
+        tx_record = tx_queue[0]
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        await time_out_assert(15, cat_wallet.get_confirmed_balance, 400000)
+        await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 400000)
+
+        asset_id = cat_wallet.get_asset_id()
+
+        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
+            wallet_node_2.wallet_state_manager, wallet2, asset_id
+        )
+        cat_2_hash = await cat_wallet_2.get_new_inner_hash()
+        tx_records = await cat_wallet.generate_signed_transaction([uint64(40000)], [cat_2_hash])
+        for tx_record in tx_records:
+            await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+            if tx_record.spend_bundle is not None:
+                await time_out_assert(
+                    15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+                )
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        # check that the coin selection only spends the identical coin.
+        cat_hash = await cat_wallet.get_new_inner_hash()
+        tx_records = await cat_wallet_2.generate_signed_transaction([uint64(40000)], [cat_hash])
+        for tx_record in tx_records:
+            await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+            if tx_record.spend_bundle is not None:
+                await time_out_assert(
+                    15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+                )
+            assert len(tx_record.removals) == 1
+            assert sum([coin.amount for coin in tx_record.removals]) == 40000
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        tx_records = await cat_wallet.generate_signed_transaction([uint64(25000)], [cat_2_hash])
+        for tx_record in tx_records:
+            await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+            if tx_record.spend_bundle is not None:
+                await time_out_assert(
+                    15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+                )
+            assert tx_record.amount == 25000
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        # check that the coin selection only spends the identical coin.
+        tx_records = await cat_wallet_2.generate_signed_transaction([uint64(4000)], [cat_hash])
+        for tx_record in tx_records:
+            await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+            if tx_record.spend_bundle is not None:
+                await time_out_assert(
+                    15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+                )
+            assert len(tx_record.removals) == 1
+            assert sum([coin.amount for coin in tx_record.removals]) == 25000
+
         # @pytest.mark.asyncio
 
     # async def test_cat_melt_and_mint(self, two_wallet_nodes):
