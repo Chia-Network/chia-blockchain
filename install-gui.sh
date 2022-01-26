@@ -41,10 +41,10 @@ if [ "$(uname)" = "Linux" ]; then
 			}
 		else
 		  if ! npm version >/dev/null 2>&1; then
-  		  # If npm/node is not installed, install them
+		  # If npm/node is not installed, install them
 		    echo "nodejs is not installed. Installing..."
 		    echo "sudo apt-get install -y npm nodejs libxss1"
-  			sudo apt-get install -y npm nodejs libxss1
+			sudo apt-get install -y npm nodejs libxss1
       else
         echo "Found npm $(npm -v)"
       fi
@@ -78,12 +78,11 @@ if [ "$(uname)" = "Linux" ]; then
 		curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
 		sudo yum install -y nodejs
 	elif type yum && [ -f /etc/rocky-release ] || [ -f /etc/fedora-release ]; then
-                # RockyLinux
-                echo "Installing on RockyLinux/Fedora"
-                sudo dnf module enable nodejs:12
-                sudo dnf install -y nodejs
-        fi
-
+    # RockyLinux
+    echo "Installing on RockyLinux/Fedora"
+    sudo dnf module enable nodejs:12
+    sudo dnf install -y nodejs
+  fi
 elif [ "$(uname)" = "Darwin" ] && type brew && ! npm version >/dev/null 2>&1; then
 	# Install npm if not installed
 	brew install npm
