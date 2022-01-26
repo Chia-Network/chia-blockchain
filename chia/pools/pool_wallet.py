@@ -413,6 +413,7 @@ class PoolWallet:
         spend_bundle, singleton_puzzle_hash, launcher_coin_id = await PoolWallet.generate_launcher_spend(
             standard_wallet,
             uint64(1),
+            fee,
             initial_target_state,
             wallet_state_manager.constants.GENESIS_CHALLENGE,
             p2_singleton_delay_time,
@@ -457,14 +458,24 @@ class PoolWallet:
     async def get_pool_wallet_index(self) -> uint32:
         return (await self._get_owner_key_cache())[1]
 
-    async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
+    async def sign(self, coin_spend: CoinSpend, fee: uint64) -> SpendBundle:
         async def pk_to_sk(pk: G1Element) -> PrivateKey:
-            sk, _ = await self._get_owner_key_cache()
-            assert sk.get_g1() == pk
-            return sk
+            owner_sk: Optional[PrivateKey] = await find_owner_sk([self.wallet_state_manager.private_key], pk)
+            # assert owner_sk is not None
+            if owner_sk is None:
+                return self.standard_wallet.secret_key_store.secret_key_for_public_key(pk)
+            return owner_sk
 
+        spends = [coin_spend]
+        if fee > 0:
+            # TODO: test failure UX when fee is higher than available balance
+            get_max_send_amount = await self.standard_wallet.get_max_send_amount()
+            assert get_max_send_amount > fee
+            my_address = await self.standard_wallet.get_new_puzzlehash()
+            fee_spends = await self.standard_wallet._generate_unsigned_transaction(uint64(0), my_address, fee)
+            spends.extend(fee_spends)
         return await sign_coin_spends(
-            [coin_spend],
+            spends,
             pk_to_sk,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
@@ -542,7 +553,7 @@ class PoolWallet:
         else:
             raise RuntimeError("Invalid state")
 
-        signed_spend_bundle = await self.sign(outgoing_coin_spend)
+        signed_spend_bundle = await self.sign(outgoing_coin_spend, fee)
 
         assert signed_spend_bundle.removals()[0].puzzle_hash == singleton.puzzle_hash
         assert signed_spend_bundle.removals()[0].name() == singleton.name()
@@ -572,6 +583,7 @@ class PoolWallet:
     async def generate_launcher_spend(
         standard_wallet: Wallet,
         amount: uint64,
+        fee: uint64,
         initial_target_state: PoolState,
         genesis_challenge: bytes32,
         delay_time: uint64,
@@ -622,14 +634,14 @@ class PoolWallet:
 
         puzzle_hash: bytes32 = full_pooling_puzzle.get_tree_hash()
         pool_state_bytes = Program.to([("p", bytes(initial_target_state)), ("t", delay_time), ("h", delay_ph)])
-        announcement_set: Set[Announcement] = set()
+        announcement_set = set()
         announcement_message = Program.to([puzzle_hash, amount, pool_state_bytes]).get_tree_hash()
-        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
+        announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
 
         create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
-            uint64(0),
+            fee,
             None,
             coins,
             None,
@@ -757,9 +769,12 @@ class PoolWallet:
 
         all_spends: List[CoinSpend] = []
         total_amount = 0
+
+        the_coin_record_in_question = None
         for coin_record in unspent_coin_records:
             if coin_record.coin not in coin_to_height_farmed:
                 continue
+            the_coin_record_in_question = coin_record
             if len(all_spends) >= 100:
                 # Limit the total number of spends, so it fits into the block
                 break
@@ -778,12 +793,34 @@ class PoolWallet:
             self.log.info(
                 f"Farmer coin: {coin_record.coin} {coin_record.coin.name()} {coin_to_height_farmed[coin_record.coin]}"
             )
-        if len(all_spends) == 0:
+        if len(all_spends) == 0 or the_coin_record_in_question is None:
             raise ValueError("Nothing to claim, no unspent coinbase rewards")
 
-        # No signatures are required to absorb
         spend_bundle: SpendBundle = SpendBundle(all_spends, G2Element())
 
+        # If fee is 0, no signatures are required to absorb
+        full_spend: SpendBundle = spend_bundle
+
+        if fee > 0:
+            get_max_send_amount = await self.standard_wallet.get_max_send_amount()
+            assert get_max_send_amount > fee
+            amount = uint64(0)
+            my_address = await self.standard_wallet.get_new_puzzlehash()
+            fee_spend = await self.standard_wallet.generate_signed_transaction(
+                amount,
+                my_address,
+                fee,
+                None,
+                None,
+                None,
+                False,
+                {Announcement(the_coin_record_in_question.coin.name(), b"$").name()},
+            )
+
+            full_spend = SpendBundle.aggregate([fee_spend.spend_bundle, spend_bundle])
+        assert full_spend.fees() == fee
+
+        # This TxRecord contains spends from multiple wallets
         absorb_transaction: TransactionRecord = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -792,15 +829,15 @@ class PoolWallet:
             fee_amount=fee,
             confirmed=False,
             sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
+            spend_bundle=full_spend,
+            additions=full_spend.additions(),
+            removals=full_spend.removals(),
             wallet_id=uint32(self.wallet_id),
             sent_to=[],
             memos=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=spend_bundle.name(),
+            name=full_spend.name(),
         )
         await self.wallet_state_manager.add_pending_transaction(absorb_transaction)
         return absorb_transaction
