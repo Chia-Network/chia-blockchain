@@ -816,9 +816,9 @@ class WalletRpcApi:
             request['asset_id'] : the CAT token asset ID
             request['sender_public_key'] : the target sender's original public key
             request['receiver_address'] : the receiver address (to address)
-            request['memo'] : memo field
-            request['amount'] : amount of CAT token to send
-            request['fee'] : amount of mojo for gas fee
+            request['memo'] : memo field (a list of string)
+            request['amount'] : amount of CAT token to send (positive integer)
+            request['fee'] : amount of mojo for gas fee (positive integer)
             request['cat_coins_pool'] : a list of CAT Coin dicts (each has parent_coin_info, puzzle_hash, amount)
         """
         assert self.service.wallet_state_manager is not None
