@@ -16,7 +16,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.hash import std_hash
-from chia.wallet.coin_selection import check_for_exact_match, find_smallest_coin, knapsack_coin_algorithm
+from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -250,83 +250,9 @@ class Wallet:
         Returns a set of coins that can be used for generating a new transaction.
         Note: This must be called under a wallet state manager lock
         """
-        if exclude is None:
-            exclude = []
-
-        spendable_amount = await self.get_spendable_balance()
-
-        if amount > spendable_amount:
-            error_msg = (
-                f"Can't select amount higher than our spendable balance.  Amount: {amount}, spendable: "
-                f" {spendable_amount}"
-            )
-            self.log.warning(error_msg)
-            raise ValueError(error_msg)
-
-        self.log.info(f"About to select coins for amount {amount}")
-        unspent: List[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
-        )
-        # Try to use coins from the store, if there isn't enough of "unused"
-        # coins use change coins that are not confirmed yet
-        unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
-            self.id()
-        )
-
-        sum_spendable_coins = 0
-        valid_unspent: List[Coin] = []
-
-        for coin_record in unspent:  # remove all the useless coins.
-            if coin_record.coin.name() in unconfirmed_removals:
-                continue
-            if coin_record.coin in exclude:
-                continue
-            valid_unspent.append(coin_record.coin)
-            sum_spendable_coins += coin_record.coin.amount
-
-        # This happens when we couldn't use one of the coins because it's already used
-        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-        if sum_spendable_coins < amount:
-            raise ValueError(
-                "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
-            )
-
-        # Use older coins first
-        valid_unspent.sort(reverse=True, key=lambda r: r.amount)
-
-        # check for exact 1 to 1 coin match.
-        exact_match_coin: Optional[Coin] = check_for_exact_match(valid_unspent, amount)
-        if exact_match_coin:
-            self.log.debug(f"selected coin with an exact match: {exact_match_coin}")
-            return {exact_match_coin}
-
-        # Check for an exact match with all of the coins smaller than the amount.
-        # If we have more, smaller coins than the amount we run the next algorithm.
-        smaller_coin_sum = 0  # coins smaller than target.
-        smaller_coins: Set[Coin] = set()
-        for coin in valid_unspent:
-            if coin.amount < amount:
-                smaller_coin_sum += coin.amount
-                smaller_coins.add(coin)
-        if smaller_coin_sum == amount:
-            self.log.debug(
-                f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}"
-            )
-            return smaller_coins
-        elif smaller_coin_sum < amount:
-            smallest_coin: Optional[Coin] = find_smallest_coin(
-                valid_unspent, amount, self.wallet_state_manager.constants.MAX_COIN_AMOUNT
-            )
-            assert smallest_coin is not None
-            self.log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
-            return {smallest_coin}
-        else:
-            best_coin_set = knapsack_coin_algorithm(
-                smaller_coins, amount, self.wallet_state_manager.constants.MAX_COIN_AMOUNT
-            )
-            assert best_coin_set is not None
-            self.log.debug(f"Selected coins from knapsack algorithm: {best_coin_set}")
-            return best_coin_set
+        coins = await select_coins(self, amount, exclude)
+        assert coins is not None and len(coins) > 0
+        return coins
 
     async def _generate_unsigned_transaction(
         self,

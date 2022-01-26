@@ -32,6 +32,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     unsigned_spend_bundle_for_spendable_cats,
     match_cat_puzzle,
 )
+from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
@@ -403,46 +404,9 @@ class CATWallet:
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
         """
-
-        spendable_am = await self.get_confirmed_balance()
-
-        if amount > spendable_am:
-            error_msg = f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_am}"
-            self.log.warning(error_msg)
-            raise ValueError(error_msg)
-
-        self.log.info(f"About to select coins for amount {amount}")
-        spendable: List[WalletCoinRecord] = await self.get_cat_spendable_coins()
-
-        sum = 0
-        used_coins: Set = set()
-
-        # Use older coins first
-        spendable.sort(key=lambda r: r.confirmed_block_height)
-
-        # Try to use coins from the store, if there isn't enough of "unused"
-        # coins use change coins that are not confirmed yet
-        unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
-            self.id()
-        )
-        for coinrecord in spendable:
-            if sum >= amount and len(used_coins) > 0:
-                break
-            if coinrecord.coin.name() in unconfirmed_removals:
-                continue
-            sum += coinrecord.coin.amount
-            used_coins.add(coinrecord.coin)
-            self.log.info(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
-
-        # This happens when we couldn't use one of the coins because it's already used
-        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-        if sum < amount:
-            raise ValueError(
-                "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
-            )
-
-        self.log.info(f"Successfully selected coins: {used_coins}")
-        return used_coins
+        coins = await select_coins(self, amount)
+        assert coins is not None and len(coins) > 0
+        return coins
 
     async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
         sigs: List[G2Element] = []

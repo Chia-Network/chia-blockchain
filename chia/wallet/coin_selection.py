@@ -1,12 +1,96 @@
 import random
-from typing import Set, Optional, List
+from typing import Set, Optional, List, Dict
 
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
+from chia.wallet.wallet_coin_record import WalletCoinRecord
+
+
+async def select_coins(wallet, amount: uint64, exclude: List[Coin] = None) -> Set[Coin]:
+    """
+    Returns a set of coins that can be used for generating a new transaction.
+    """
+    if exclude is None:
+        exclude = []
+
+    spendable_amount = await wallet.get_spendable_balance()
+
+    if amount > spendable_amount:
+        error_msg = (
+            f"Can't select amount higher than our spendable balance.  Amount: {amount}, spendable: {spendable_amount}"
+        )
+        wallet.log.warning(error_msg)
+        raise ValueError(error_msg)
+
+    wallet.log.info(f"About to select coins for amount {amount}")
+    unspent: List[WalletCoinRecord] = list(
+        await wallet.wallet_state_manager.get_spendable_coins_for_wallet(wallet.id())
+    )
+    # Try to use coins from the store, if there isn't enough of "unused"
+    # coins use change coins that are not confirmed yet
+    unconfirmed_removals: Dict[bytes32, Coin] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(
+        wallet.id()
+    )
+
+    sum_spendable_coins = 0
+    valid_unspent: List[Coin] = []
+
+    for coin_record in unspent:  # remove all the useless coins.
+        if coin_record.coin.name() in unconfirmed_removals:
+            continue
+        if coin_record.coin in exclude:
+            continue
+        valid_unspent.append(coin_record.coin)
+        sum_spendable_coins += coin_record.coin.amount
+
+    # This happens when we couldn't use one of the coins because it's already used
+    # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
+    if sum_spendable_coins < amount:
+        raise ValueError(
+            "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
+        )
+
+    # Sort the coins by amount
+    valid_unspent.sort(reverse=True, key=lambda r: r.amount)
+
+    # check for exact 1 to 1 coin match.
+    exact_match_coin: Optional[Coin] = check_for_exact_match(valid_unspent, amount)
+    if exact_match_coin:
+        wallet.log.debug(f"selected coin with an exact match: {exact_match_coin}")
+        return {exact_match_coin}
+
+    # Check for an exact match with all of the coins smaller than the amount.
+    # If we have more, smaller coins than the amount we run the next algorithm.
+    smaller_coin_sum = 0  # coins smaller than target.
+    smaller_coins: Set[Coin] = set()
+    for coin in valid_unspent:
+        if coin.amount < amount:
+            smaller_coin_sum += coin.amount
+            smaller_coins.add(coin)
+    if smaller_coin_sum == amount:
+        wallet.log.debug(
+            f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}"
+        )
+        return smaller_coins
+    elif smaller_coin_sum < amount:
+        smallest_coin: Optional[Coin] = find_smallest_coin(
+            valid_unspent, amount, wallet.wallet_state_manager.constants.MAX_COIN_AMOUNT
+        )
+        assert smallest_coin is not None
+        wallet.log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
+        return {smallest_coin}
+    else:
+        best_coin_set = knapsack_coin_algorithm(
+            smaller_coins, amount, wallet.wallet_state_manager.constants.MAX_COIN_AMOUNT
+        )
+        assert best_coin_set is not None
+        wallet.log.debug(f"Selected coins from knapsack algorithm: {best_coin_set}")
+        return best_coin_set
+
 
 # These algorithms were based off of the algorithms in:
 # https://murch.one/wp-content/uploads/2016/11/erhardt2016coinselection.pdf
-
 
 # we use this to check if one of the coins exactly matches the target.
 def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coin]:
