@@ -9,7 +9,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.rpc.cat_utils import get_cat_puzzle_hash
+from chia.rpc.cat_utils import convert_to_cat_coins
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
@@ -843,33 +843,11 @@ class WalletRpcApi:
 
         fee = uint64(request["fee"])
 
-        sender_cat_puzzle_hash = get_cat_puzzle_hash(
-            asset_id=asset_id.hex(),
-            xch_puzzle_hash=sender_xch_puzzle_hash.hex(),
+        cat_coins_pool: Set[Coin] = convert_to_cat_coins(
+            target_asset_id=asset_id,
+            sender_public_key_bytes=sender_public_key_bytes,
+            raw_cat_coins_pool=request["cat_coins_pool"],
         )
-
-        raw_cat_coins_pool = request["cat_coins_pool"]
-        if type(raw_cat_coins_pool) != list:
-            raise Exception(f"Expected raw_cat_coins_pool is a list, got {raw_cat_coins_pool}")
-
-        cat_coins_pool: Set[Coin] = set()
-        for raw_coin in raw_cat_coins_pool:
-            if type(raw_coin) != dict:
-                raise Exception(f"Expected coin is a dict, got {raw_coin}")
-            if not 'puzzle_hash' in raw_coin:
-                raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
-            if not 'puzzle_hash' in raw_coin:
-                raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
-            puzzle_hash = raw_coin['puzzle_hash']
-            if puzzle_hash != sender_cat_puzzle_hash:
-                raise Exception(f"Inconsistent coin in raw_cat_coins_pool: {puzzle_hash} != {sender_cat_puzzle_hash}")
-            cat_coins_pool.add(
-                Coin(
-                    parent_coin_info=bytes.fromhex(raw_coin["parent_coin_info"].lstrip("0x")),
-                    puzzle_hash=bytes.fromhex(raw_coin["puzzle_hash"].lstrip("0x")),
-                    amount=int(raw_coin["amount"]),
-                )
-            )
 
         async with self.service.wallet_state_manager.lock:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction_for_specific_puzzle_hash(
