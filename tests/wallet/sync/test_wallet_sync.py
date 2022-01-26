@@ -60,7 +60,7 @@ class TestWalletSync:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
