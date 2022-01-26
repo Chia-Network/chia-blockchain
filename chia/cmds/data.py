@@ -164,3 +164,31 @@ def get_root(
     from chia.cmds.data_funcs import get_root_cmd
 
     run(get_root_cmd(rpc_port=data_rpc_port, store_id=id))
+
+
+@data_cmd.command("subscribe", short_help="")
+@create_data_store_id_option()
+@click.option("-ip", "--ip", help="", type=str)
+@click.option("-port", "--port", help="", type=int)
+@create_rpc_port_option()
+def subscribe(
+    id: str,
+    ip: str,
+    port: int,
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import subscribe_cmd
+
+    run(subscribe_cmd(rpc_port=data_rpc_port, store_id=id, ip=ip, port=port))
+
+
+@data_cmd.command("unsubscribe", short_help="")
+@create_data_store_id_option()
+@create_rpc_port_option()
+def unsubscribe(
+    id: str,
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import unsubscribe_cmd
+
+    run(unsubscribe_cmd(rpc_port=data_rpc_port, store_id=id))

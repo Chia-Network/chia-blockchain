@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, Optional
 
 
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_types import Side
+from chia.data_layer.data_layer_types import Side, DownloadMode
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -54,6 +54,8 @@ class DataLayerRpcApi:
             "/get_roots": self.get_roots,
             "/delete_key": self.delete_key,
             "/insert": self.insert,
+            "/subscribe": self.subscribe,
+            "/unsubscribe": self.unsubscribe,
         }
 
     async def create_data_store(self, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -159,3 +161,39 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         res = await self.service.get_roots(store_ids)
         return {"hashes": res}
+
+    async def subscribe(self, request: Dict[str, Any]) -> bool:
+        """
+        rows_to_add a list of clvm objects as bytes to add to talbe
+        rows_to_remove a list of row hashes to remove
+        """
+        store_id = request.get("id")
+        if store_id is None:
+            raise Exception("missing store id in request")
+        ip = request.get("ip")
+        if ip is None:
+            raise Exception("missing ip in request")
+        port = request.get("port")
+        if port is None:
+            raise Exception("missing port in request")
+        latest = request.get("latest")
+        mode = DownloadMode.LATEST
+        if latest is False:
+            mode = DownloadMode.HISTORY
+        if self.service is None:
+            raise Exception("Data layer not created")
+        await self.service.subscribe(store_id=store_id, mode=mode, ip=ip, port=port)
+        return True
+
+    async def unsubscribe(self, request: Dict[str, Any]) -> bool:
+        """
+        rows_to_add a list of clvm objects as bytes to add to talbe
+        rows_to_remove a list of row hashes to remove
+        """
+        store_id = request.get("id")
+        if store_id is None:
+            raise Exception("missing store id in request")
+        if self.service is None:
+            raise Exception("Data layer not created")
+        await self.service.unsubscribe(store_id)
+        return True
