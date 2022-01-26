@@ -2,7 +2,13 @@
 set -e
 export NODE_OPTIONS="--max-old-space-size=3000"
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+
+if [ "${SCRIPT_DIR}" != "$(pwd)" ]; then
+  echo "Please change working directory by the command below"
+  echo "  cd ${SCRIPT_DIR}"
+  exit 1
+fi
 
 if [ -z "$VIRTUAL_ENV" ]; then
   echo "This requires the chia python virtual environment."
@@ -34,10 +40,32 @@ if [ "$(uname)" = "Linux" ]; then
 					echo >&2 "Please install NODEJS&NPM manually"
 			}
 		else
-			sudo apt-get install -y npm nodejs libxss1
-      sudo npm install -g n
-      export N_PREFIX=${SCRIPT_DIR}/.n
-      n stable
+		  if ! npm version >/dev/null 2>&1; then
+  		  # If npm/node is not installed, install them
+		    echo "nodejs is not installed. Installing..."
+		    echo "sudo apt-get install -y npm nodejs libxss1"
+  			sudo apt-get install -y npm nodejs libxss1
+      else
+        echo "Found npm $(npm -v)"
+      fi
+      if [ "$(npm -v | cut -d'.' -f 1)" -lt "7" ]; then
+        echo "Current npm version($(npm -v)) is less than 7. GUI app requires npm>=7."
+        NPM_GLOBAL="${SCRIPT_DIR}/build_scripts/npm_global"
+        # install-gui.sh can be executed
+        echo "cd ${NPM_GLOBAL}"
+        cd "${NPM_GLOBAL}"
+        echo "npm ci"
+        npm ci
+        export N_PREFIX=${SCRIPT_DIR}/.n
+        export PATH="${N_PREFIX}/bin:$(npm bin):${PATH}"
+        echo "n 16"
+        n 16
+        echo "Current npm version: $(npm -v)"
+        if [ "$(npm -v | cut -d'.' -f 1)" -lt "7" ]; then
+          echo "Error: Failed to install npm>=7"
+          exit 1
+        fi
+      fi
 		fi
 	elif type yum &&  [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ]; then
 		# AMZN 2
