@@ -1570,6 +1570,8 @@ class FullNode:
         state_changed_data: Dict[str, Any] = {
             "transaction_block": False,
             "k_size": block.reward_chain_block.proof_of_space.size,
+            "header_hash": block.header_hash,
+            "height": block.height,
         }
 
         if block.transactions_info is not None:
