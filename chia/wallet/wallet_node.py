@@ -449,9 +449,8 @@ class WalletNode:
         msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, height)
         all_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
         # State for untrusted sync is processed only in wp sync | or short  sync backwards
-        if all_state is not None and self.is_trusted(peer):
-            assert self.wallet_state_manager is not None
-            await self.wallet_state_manager.new_coin_state(all_state.coin_states, peer)
+        if all_state is not None:
+            await self._state_update_received(all_state.coin_states, peer)
 
     async def subscribe_to_coin_updates(self, coin_names, peer, height=uint32(0)):
         """
@@ -497,41 +496,66 @@ class WalletNode:
         assert self.server is not None
         async with self.new_peak_lock:
             async with self.wallet_state_manager.lock:
-                if self.is_trusted(peer):
-                    await self.wallet_state_manager.new_coin_state(
-                        request.items, peer, request.fork_height, request.height
-                    )
-                    await self.update_ui()
+                await self._state_update_received(request.items, peer, request.fork_height, request.height)
+
+    async def _state_update_received(
+        self,
+        states: List[CoinState],
+        peer: WSChiaConnection,
+        fork_height: Optional[uint32] = None,
+        current_height: Optional[uint32] = None,
+    ):
+        if self.is_trusted(peer):
+            await self.wallet_state_manager.new_coin_state(states, peer, fork_height, current_height)
+            await self.update_ui()
+        else:
+            for coin_state in states:
+                # If we already have a coin_record, we'll sync it when it's removed
+                cr = await self.wallet_state_manager.coin_store.get_coin_record(coin_state.coin.name())
+                if coin_state.created_height is None or cr is not None:
+                    continue
+
+                # Let's search to see if we have a wallet for this coin already
+                info = await self.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash(
+                    coin_state.coin.puzzle_hash
+                )
+                if info is not None:
+                    wallet_id, wallet_type = info
                 else:
-                    # Ignore state_update_received if untrusted, we'll sync from block messages where we check filter
-                    for coin_state in request.items:
-                        info = await self.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash(
-                            coin_state.coin.puzzle_hash
-                        )
-                        if coin_state.created_height is None or info is not None:
-                            continue
+                    # We need to check the hints and see if there is a new CAT sent to us, so we can create
+                    # a new CAT wallet
+                    # TODO: Currently, this only checks for new CATs but other wallets may want to scan hints as well
+                    #       We should generalize this functionality where we fetch the puzzle/solution info and then
+                    #       loop through wallets to see if any of them find it interesting.
+                    wallet_id, wallet_type = await self.wallet_state_manager.fetch_parent_and_check_for_cat(
+                        peer, coin_state
+                    )
 
-                        # We need to check the hints and see if there is a new CAT sent to us, so we can create
-                        # a new CAT wallet
-                        wallet_id, wallet_type = await self.wallet_state_manager.fetch_parent_and_check_for_cat(
-                            peer, coin_state
-                        )
+                if wallet_id is not None:
+                    header_blocks: List[HeaderBlock] = []
+                    heights_to_search: List[uint32] = [coin_state.created_height]
+                    if current_height is not None:
+                        heights_to_search.append(current_height)
+                    if coin_state.spent_height is not None:
+                        heights_to_search.append(coin_state.spent_height)
+                    deduped_heights: List[uint32] = []
+                    for i in range(0, len(heights_to_search)):
+                        if i == len(heights_to_search) or heights_to_search[i] not in heights_to_search[i+1:]:
+                            deduped_heights.append(heights_to_search[i])
+                    for height in deduped_heights:
+                        if self.wallet_state_manager.blockchain.contains_height(height):
+                            blocks: Optional[RespondHeaderBlocks] = await peer.request_header_blocks(
+                                wallet_protocol.RequestHeaderBlocks(
+                                    coin_state.created_height, self.wallet_state_manager.blockchain.get_peak_height()
+                                )
+                            )
+                            assert blocks is not None and isinstance(blocks, wallet_protocol.RespondHeaderBlocks)
+                            header_blocks.extend(blocks.header_blocks)
 
-                        if wallet_id is not None:
-                            # If there is a new wallet, check if we have this height already in the blockchain
-                            if self.wallet_state_manager.blockchain.contains_height(request.height):
-                                # If we do, complete the blocks
-                                header_blocks: Optional[RespondHeaderBlocks] = await peer.request_header_blocks(
-                                    wallet_protocol.RequestHeaderBlocks(
-                                        request.height, self.wallet_state_manager.blockchain.get_peak_height()
-                                    )
-                                )
-                                assert header_blocks is not None and isinstance(
-                                    header_blocks, wallet_protocol.RespondHeaderBlocks
-                                )
-                                # re-check the block filter for any new addition /removals, for all of the blocks
-                                # that have been added to the blockchain since this CAT was created
-                                await self.complete_blocks(header_blocks.header_blocks, peer)
+                    if len(header_blocks) > 0:
+                        # re-check the block filter for any new addition /removals, for all of the blocks
+                        # that have been added to the blockchain since this CAT was created
+                        await self.complete_blocks(header_blocks, peer)
 
     def get_full_node_peer(self):
         nodes = self.server.get_full_node_connections()
