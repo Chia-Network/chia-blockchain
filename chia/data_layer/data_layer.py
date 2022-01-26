@@ -170,7 +170,7 @@ class DataLayer:
                 launcher_id=tree_id, min_generation=current_generation + 1
             )  # type: ignore
 
-        downloaded = await self.data_store.download_data(subscription)
+        downloaded = await self.data_store.download_data(subscription, singleton_record.root)
         if not downloaded:
             raise RuntimeError("Could not download the data.")
 

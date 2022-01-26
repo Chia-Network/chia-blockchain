@@ -22,9 +22,11 @@ from chia.util.path import path_from_root, mkdir
 class DataLayerServer:
     async def handle_tree_root(self, request: Dict[str, str]) -> str:
         tree_id = request["tree_id"]
+        requested_hash = request["node_hash"]
         tree_id_bytes = bytes32.from_hexstr(tree_id)
-        tree_root = await self.data_store.get_tree_root(tree_id_bytes)
-        if tree_root.node_hash is None:
+        requested_hash_bytes = bytes32.from_hexstr(requested_hash)
+        tree_root = await self.data_store.get_last_tree_root_by_hash(tree_id_bytes, requested_hash_bytes)
+        if tree_root is None or tree_root.node_hash is None:
             return json.dumps({})
         result = {
             "tree_id": tree_id,
@@ -37,7 +39,6 @@ class DataLayerServer:
     async def handle_tree_nodes(self, request: Dict[str, str]) -> str:
         node_hash = request["node_hash"]
         tree_id = request["tree_id"]
-        root_hash = request["root_hash"]
         node_hash_bytes = bytes32.from_hexstr(node_hash)
         tree_id_bytes = bytes32.from_hexstr(tree_id)
         nodes = await self.data_store.get_left_to_right_ordering(node_hash_bytes, tree_id_bytes)
@@ -59,11 +60,8 @@ class DataLayerServer:
                         "is_terminal": False,
                     }
                 )
-        current_tree_root = await self.data_store.get_tree_root(tree_id_bytes)
-        root_changed = current_tree_root.node_hash != bytes32.from_hexstr(root_hash)
         return json.dumps(
             {
-                "root_changed": root_changed,
                 "answer": answer,
             }
         )

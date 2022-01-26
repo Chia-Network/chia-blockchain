@@ -370,14 +370,13 @@ class DataStore:
         return roots
 
     async def get_last_tree_root_by_hash(
-        self, tree_id: bytes32, hash: bytes32, max_generation: int, *, lock: bool = True
+        self, tree_id: bytes32, hash: bytes32, max_generation: Optional[int] = None, *, lock: bool = True
     ) -> Optional[Root]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id "
-                "AND generation < :max_generation "
-                "AND node_hash == :node_hash "
-                "ORDER BY generation DESC LIMIT 1",
+                "SELECT * FROM root WHERE tree_id == :tree_id " "AND generation < :max_generation "
+                if max_generation is not None
+                else "" "AND node_hash == :node_hash " "ORDER BY generation DESC LIMIT 1",
                 {"tree_id": tree_id.hex(), "max_generation": max_generation, "node_hash": hash.hex()},
             )
             row = await cursor.fetchone()
@@ -745,7 +744,7 @@ class DataStore:
         tree_id: bytes32,
         *,
         lock: bool = True,
-        num_nodes: int = 2500,
+        num_nodes: int = 1000000000,
     ) -> List[Node]:
         ancestors = await self.get_ancestors(node_hash, tree_id, lock=True)
         path_hashes = {node_hash, *(ancestor.hash for ancestor in ancestors)}
@@ -867,7 +866,7 @@ class DataStore:
 
         return result
 
-    async def download_data(self, subscription: Subscription, *, lock: bool = True) -> bool:
+    async def download_data(self, subscription: Subscription, target_hash: bytes32, *, lock: bool = True) -> bool:
         tree_id = subscription.tree_id
         mode = subscription.mode
         ip = subscription.ip
@@ -883,11 +882,12 @@ class DataStore:
                         request = {
                             "type": "request_root",
                             "tree_id": tree_id.hex(),
+                            "node_hash": target_hash.hex(),
                         }
                         await ws.send_str(json.dumps(request))
                         msg = await ws.receive()
                         root_json = json.loads(msg.data)
-                        node = root_hash = root_json["node_hash"]
+                        node = root_json["node_hash"]
                         log.info(f"Got root hash: {node}")
                         t1 = time.time()
                         internal_nodes = 0
@@ -895,83 +895,79 @@ class DataStore:
                         stack: List[str] = []
                         add_to_db_cache: Dict[str, Any] = {}
 
-                        while node is not None:
-                            request = {
-                                "type": "request_nodes",
-                                "tree_id": tree_id.hex(),
-                                "node_hash": node,
-                                "root_hash": root_hash,
-                            }
-                            await ws.send_str(json.dumps(request))
-                            msg = await ws.receive()
-                            msg_json = json.loads(msg.data)
-                            root_changed = msg_json["root_changed"]
-                            if root_changed:
-                                log.info("Data changed since the download started. Aborting.")
-                                await ws.send_str(json.dumps({"type": "close"}))
-                                return False
-                            answer = msg_json["answer"]
-                            for row in answer:
-                                if row["is_terminal"]:
-                                    key = row["key"]
-                                    value = row["value"]
-                                    hash = Program.to((hexstr_to_bytes(key), hexstr_to_bytes(value))).get_tree_hash()
-                                    if hash.hex() == node:
-                                        await self._insert_node(
-                                            node, NodeType.TERMINAL, None, None, key, value, tree_id.hex()
-                                        )
-                                        terminal_nodes += 1
-                                        right_hash = hash.hex()
-                                        while right_hash in add_to_db_cache:
-                                            node, left_hash = add_to_db_cache[right_hash]
-                                            del add_to_db_cache[right_hash]
-                                            await self._insert_node(
-                                                node,
-                                                NodeType.INTERNAL,
-                                                left_hash,
-                                                right_hash,
-                                                None,
-                                                None,
-                                                tree_id.hex(),
-                                            )
-                                            internal_nodes += 1
-                                            right_hash = node
-                                    else:
-                                        raise RuntimeError(
-                                            f"Did not received expected node. Expected: {node} Received: {hash.hex()}"
-                                        )
-                                    if len(stack) > 0:
-                                        node = stack.pop()
-                                    else:
-                                        node = None
-                                else:
-                                    left_hash = row["left"]
-                                    right_hash = row["right"]
-                                    left_hash_bytes = hexstr_to_bytes(left_hash)
-                                    right_hash_bytes = hexstr_to_bytes(right_hash)
-                                    hash = Program.to((left_hash_bytes, right_hash_bytes)).get_tree_hash(
-                                        left_hash_bytes, right_hash_bytes
+                        # TODO: Add back pagination. This needs historical ancestors.
+                        request = {
+                            "type": "request_nodes",
+                            "tree_id": tree_id.hex(),
+                            "node_hash": node,
+                        }
+                        await ws.send_str(json.dumps(request))
+                        msg = await ws.receive()
+                        msg_json = json.loads(msg.data)
+                        answer = msg_json["answer"]
+                        for row in answer:
+                            if row["is_terminal"]:
+                                key = row["key"]
+                                value = row["value"]
+                                hash = Program.to((hexstr_to_bytes(key), hexstr_to_bytes(value))).get_tree_hash()
+                                if hash.hex() == node:
+                                    await self._insert_node(
+                                        node, NodeType.TERMINAL, None, None, key, value, tree_id.hex()
                                     )
-                                    if hash.hex() == node:
-                                        add_to_db_cache[right_hash] = (node, left_hash)
-                                        # At most max_height nodes will be pending to be added to DB.
-                                        assert len(add_to_db_cache) <= 100
-                                    else:
-                                        raise RuntimeError(
-                                            f"Did not received expected node. Expected: {node} Received: {hash.hex()}"
+                                    terminal_nodes += 1
+                                    right_hash = hash.hex()
+                                    while right_hash in add_to_db_cache:
+                                        node, left_hash = add_to_db_cache[right_hash]
+                                        del add_to_db_cache[right_hash]
+                                        await self._insert_node(
+                                            node,
+                                            NodeType.INTERNAL,
+                                            left_hash,
+                                            right_hash,
+                                            None,
+                                            None,
+                                            tree_id.hex(),
                                         )
-                                    stack.append(right_hash)
-                                    node = left_hash
+                                        internal_nodes += 1
+                                        right_hash = node
+                                else:
+                                    raise RuntimeError(
+                                        f"Did not received expected node. Expected: {node} Received: {hash.hex()}"
+                                    )
+                                if len(stack) > 0:
+                                    node = stack.pop()
+                                else:
+                                    node = None
+                            else:
+                                left_hash = row["left"]
+                                right_hash = row["right"]
+                                left_hash_bytes = hexstr_to_bytes(left_hash)
+                                right_hash_bytes = hexstr_to_bytes(right_hash)
+                                hash = Program.to((left_hash_bytes, right_hash_bytes)).get_tree_hash(
+                                    left_hash_bytes, right_hash_bytes
+                                )
+                                if hash.hex() == node:
+                                    add_to_db_cache[right_hash] = (node, left_hash)
+                                    # At most max_height nodes will be pending to be added to DB.
+                                    assert len(add_to_db_cache) <= 100
+                                else:
+                                    raise RuntimeError(
+                                        f"Did not received expected node. Expected: {node} Received: {hash.hex()}"
+                                    )
+                                stack.append(right_hash)
+                                node = left_hash
 
+                        if node is not None:
+                            raise RuntimeError("Did not download full data.")
                         log.info(f"Finished validating batch of {len(answer)}.")
                         await ws.send_str(json.dumps({"type": "close"}))
+
                 await self._insert_root(
                     bytes32.from_hexstr(root_json["tree_id"]),
                     bytes32.from_hexstr(root_json["node_hash"]),
                     Status(root_json["status"]),
                     root_json["generation"],
                 )
-                # Assert we downloaded everything.
                 t2 = time.time()
                 log.info("Finished validating tree.")
                 log.info(f"Time taken: {t2 - t1}. Terminal nodes: {terminal_nodes} Internal nodes: {internal_nodes}.")
@@ -982,6 +978,7 @@ class DataStore:
                         request = {
                             "type": "request_root",
                             "tree_id": tree_id.hex(),
+                            "node_hash": target_hash.hex(),
                         }
                         await ws.send_str(json.dumps(request))
                         msg = await ws.receive()
