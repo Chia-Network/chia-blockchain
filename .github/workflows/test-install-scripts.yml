@@ -10,6 +10,10 @@ on:
     branches:
       - '**'
 
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}
+  cancel-in-progress: true
+
 jobs:
   test_scripts:
     name: Test Install Scripts
@@ -22,12 +26,6 @@ jobs:
         os: [macOS-latest, ubuntu-latest]
 
     steps:
-    - name: Cancel previous runs on the same branch
-      if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.9.1
-      with:
-        access_token: ${{ github.token }}
-
     - name: Checkout Code
       uses: actions/checkout@v2
       with:
@@ -108,12 +106,6 @@ jobs:
           url: "docker://ubuntu:impish"
 
     steps:
-    - name: Cancel previous runs on the same branch
-      if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.9.1
-      with:
-        access_token: ${{ github.token }}
-
     - name: Prepare Amazon Linux
       if: ${{ matrix.distribution.type == 'amazon' }}
       run: |
