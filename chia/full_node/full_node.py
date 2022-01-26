@@ -1577,6 +1577,9 @@ class FullNode:
             state_changed_data["block_cost"] = block.transactions_info.cost
             state_changed_data["block_fees"] = block.transactions_info.fees
 
+        if block.foliage_transaction_block is not None:
+            state_changed_data["timestamp"] = block.foliage_transaction_block.timestamp
+
         if block.transactions_generator is not None:
             state_changed_data["transaction_generator_size_bytes"] = len(bytes(block.transactions_generator))
 
