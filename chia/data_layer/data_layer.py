@@ -7,7 +7,6 @@ from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
