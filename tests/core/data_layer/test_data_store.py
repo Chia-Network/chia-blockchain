@@ -872,6 +872,7 @@ async def test_left_to_right_ordering(data_store: DataStore, tree_id: bytes32) -
     )
     assert nodes_4 == nodes_2[:1]
 
+
 @pytest.mark.asyncio
 async def test_get_operation_1(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x02"
