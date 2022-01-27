@@ -317,7 +317,7 @@ class DataStore:
                 "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation",
                 {"tree_id": tree_id.hex(), "generation": generation},
             )
-            row = cursor.fetchone()
+            row = await cursor.fetchone()
 
             if row is None:
                 raise Exception(f"unable to find root for id, generation: {tree_id.hex()}, {generation}")
