@@ -101,5 +101,5 @@ def convert_to_parent_coin_spends(
     parent_coin_spends: Dict[CoinSpend] = {}
     for name, raw_coin_spend in raw_parent_coin_spends.items():
         coin_spend: CoinSpend = convert_to_coin_spend(raw_coin_spend=raw_coin_spend)
-        parent_coin_spends[name] = coin_spend
+        parent_coin_spends[name.lstrip("0x")] = coin_spend
     return parent_coin_spends

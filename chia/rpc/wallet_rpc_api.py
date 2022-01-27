@@ -854,9 +854,9 @@ class WalletRpcApi:
         )
 
         for coin in cat_coins_pool:
-            coin_name = coin.name()
+            coin_name = coin.name().hex()
             if not coin_name in parent_coin_spends_dict:
-                raise Exception(f"Not found parent CoinSpend of coin {coin_name}: {coin}")
+                raise Exception(f"Not found parent CoinSpend of coin {coin_name}\ncoin: {coin}\nparent_coin_spends_dict: {parent_coin_spends_dict}")
 
         if len(cat_coins_pool) != len(parent_coin_spends_dict):
             raise Exception(f"Inconsistent cat_coins_pool and parent_coin_spends_dict:\ncat_coins_pool: {cat_coins_pool}\n\nparent_coin_spends_dict: {parent_coin_spends_dict}")

@@ -871,9 +871,9 @@ class CCWallet:
             else:
                 innersol = self.standard_wallet.make_solution()
 
-            coin_name = coin.name()
+            coin_name = coin.name().hex()
             if not coin_name in parent_coin_spends_dict:
-                raise Exception(f"Not found parent CoinSpend of coin {coin_name}: {coin}")
+                raise Exception(f"Not found parent CoinSpend of coin {coin_name}\ncoin: {coin}\nparent_coin_spends_dict: {parent_coin_spends_dict}")
 
             parent_coin_spend: CoinSpend = parent_coin_spends_dict[coin_name]
             parent_coin, lineage_proof = get_parent_cat_coin_spend_lineage_proof(parent_coin_spend=parent_coin_spend)
