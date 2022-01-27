@@ -833,6 +833,8 @@ class CCWallet:
         spendable_cc_list = []
         chia_tx = None
         first = True
+        sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key_bytes)
+
         for coin in cat_coins_pool:
             if coin.puzzle_hash != sender_cat_puzzle_hash:
                 raise Exception(f"Invalid CAT puzzle hash of ")
@@ -866,7 +868,6 @@ class CCWallet:
             else:
                 innersol = self.standard_wallet.make_solution()
 
-            sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key_bytes)
             lineage_proof = LineageProof(coin.parent_coin_info, sender_xch_puzzle.get_tree_hash(), coin.amount)
             await self.add_lineage(coin.name(), lineage_proof, True)
 
