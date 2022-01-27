@@ -64,7 +64,7 @@ def convert_to_cat_coins(
     for raw_coin in raw_cat_coins_pool:
         coin: Coin = convert_to_coin(raw_coin=raw_coin)
         puzzle_hash = coin.puzzle_hash.hex()
-        if puzzle_hash != sender_cat_puzzle_hash:
+        if puzzle_hash != sender_cat_puzzle_hash.lstrip("0x"):
             raise Exception(f"Inconsistent coin in raw_cat_coins_pool: {puzzle_hash} != {sender_cat_puzzle_hash}")
         cat_coins_pool.add(coin)
     return cat_coins_pool
