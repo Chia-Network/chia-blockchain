@@ -76,25 +76,25 @@ do_install_npm_locally(){
 if [ "$(uname)" = "Linux" ]; then
   #LINUX=1
   if type apt-get; then
-  	# Debian/Ubuntu
+    # Debian/Ubuntu
 
-  	# Check if we are running a Raspberry PI 4
-  	if [ "$(uname -m)" = "aarch64" ] \
-  	&& [ "$(uname -n)" = "raspberrypi" ]; then
-  		# Check if NodeJS & NPM is installed
-  		type npm >/dev/null 2>&1 || {
-  				echo >&2 "Please install NODEJS&NPM manually"
-  		}
-  	else
-  	  if ! nodejs_is_installed; then
-  	    echo "nodejs is not installed. Installing..."
-  	    echo "sudo apt-get install -y npm nodejs libxss1"
-  		  sudo apt-get install -y npm nodejs libxss1
+    # Check if we are running a Raspberry PI 4
+    if [ "$(uname -m)" = "aarch64" ] \
+    && [ "$(uname -n)" = "raspberrypi" ]; then
+      # Check if NodeJS & NPM is installed
+      type npm >/dev/null 2>&1 || {
+          echo >&2 "Please install NODEJS&NPM manually"
+      }
+    else
+      if ! nodejs_is_installed; then
+        echo "nodejs is not installed. Installing..."
+        echo "sudo apt-get install -y npm nodejs libxss1"
+        sudo apt-get install -y npm nodejs libxss1
       fi
       do_install_npm_locally
-  	fi
+    fi
   elif type yum &&  [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ]; then
-  	# AMZN 2
+    # AMZN 2
     if ! nodejs_is_installed; then
       echo "Installing nodejs on Amazon Linux 2."
       curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
@@ -102,9 +102,9 @@ if [ "$(uname)" = "Linux" ]; then
     fi
     do_install_npm_locally
   elif type yum && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ] && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
-  	# CentOS or Redhat
+    # CentOS or Redhat
     if ! nodejs_is_installed; then
-  		echo "Installing nodejs on CentOS/Redhat."
+      echo "Installing nodejs on CentOS/Redhat."
       curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
       sudo yum install -y nodejs
     fi
@@ -122,7 +122,7 @@ elif [ "$(uname)" = "Darwin" ] && type brew; then
   # MacOS
   if ! nodejs_is_installed; then
     echo "Installing nodejs on MacOS"
-  	brew install npm
+    brew install npm
   fi
   do_install_npm_locally
 elif [ "$(uname)" = "OpenBSD" ]; then
@@ -156,11 +156,11 @@ if [ ! "$CI" ]; then
   if [ "$SUBMODULE_BRANCH" ];
   then
     git fetch
-  	git checkout "$SUBMODULE_BRANCH"
+    git checkout "$SUBMODULE_BRANCH"
     git pull
-  	echo ""
-  	echo "Building the GUI with branch $SUBMODULE_BRANCH"
-  	echo ""
+    echo ""
+    echo "Building the GUI with branch $SUBMODULE_BRANCH"
+    echo ""
   fi
 
   npm ci
