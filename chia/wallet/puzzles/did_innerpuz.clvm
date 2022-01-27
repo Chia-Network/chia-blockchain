@@ -142,7 +142,7 @@
     ; check that recovery list is not empty
       (if recovery_list_reveal
         (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
-          (c (list CREATE message new_amount) (c (list ASSERT_MY_COIN_ID my_id) (check_messages_from_identities SINGLETON_STRUCT NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id message parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)))
+          (c (list CREATE_COIN message new_amount) (c (list ASSERT_MY_COIN_ID my_id) (check_messages_from_identities SINGLETON_STRUCT NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id message parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)))
           (x)
         )
         (x)

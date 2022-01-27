@@ -428,9 +428,6 @@ class DIDWallet:
             raise e
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
-        innerpuz = did_wallet_puzzles.create_innerpuz(
-            pubkey, self.did_info.backup_ids, self.did_info.num_of_backup_ids_needed, self.did_info.origin_coin.name()
-        )
         if self.did_info.origin_coin is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
                 pubkey, self.did_info.backup_ids, self.did_info.num_of_backup_ids_needed, self.did_info.origin_coin.name()
@@ -876,7 +873,7 @@ class DIDWallet:
         await self.save_info(new_did_info, True)
         return spend_bundle
 
-    async def get_new_innerpuz(self) -> Program:
+    async def get_new_innerpuz(self, origin_id=None) -> Program:
         devrec = await self.wallet_state_manager.get_unused_derivation_record(self.standard_wallet.id())
         pubkey = bytes(devrec.pubkey)
         if self.did_info.origin_coin is not None:
@@ -886,13 +883,15 @@ class DIDWallet:
                 uint64(self.did_info.num_of_backup_ids_needed),
                 self.did_info.origin_coin.name(),
             )
-        else:
+        elif origin_id is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
                 pubkey,
                 self.did_info.backup_ids,
                 uint64(self.did_info.num_of_backup_ids_needed),
-                Program.to(pubkey).get_tree_hash(),
+                origin_id,
             )
+        else:
+            raise ValueError("must have origin coin")
 
         return innerpuz
 
@@ -942,7 +941,7 @@ class DIDWallet:
         genesis_launcher_puz = did_wallet_puzzles.SINGLETON_LAUNCHER
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), amount)
 
-        did_inner: Program = await self.get_new_innerpuz()
+        did_inner: Program = await self.get_new_innerpuz(launcher_coin.name())
         did_inner_hash = did_inner.get_tree_hash()
         did_full_puz = did_wallet_puzzles.create_fullpuz(did_inner, launcher_coin.name())
         did_puzzle_hash = did_full_puz.get_tree_hash()
