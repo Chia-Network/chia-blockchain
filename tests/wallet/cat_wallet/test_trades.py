@@ -38,7 +38,6 @@ async def two_wallet_nodes():
 buffer_blocks = 4
 
 
-
 @pytest.fixture(scope="function")
 async def wallets_prefarm(two_wallet_nodes, trusted):
     """
