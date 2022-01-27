@@ -108,7 +108,7 @@ class WalletNode:
     keychain_proxy: Optional[KeychainProxy]
     wallet_peers: Optional[WalletPeers]
     race_cache: Dict[uint32, Set[CoinState]]
-    validation_semaphore: asyncio.Semaphore
+    validation_semaphore: Optional[asyncio.Semaphore]
     local_node_synced: bool
 
     def __init__(
@@ -317,7 +317,7 @@ class WalletNode:
             for peer in full_nodes:
                 if peer.peer_node_id in sent_peers:
                     continue
-                self.log.error(f"sending: {msg}")
+                self.log.debug(f"sending: {msg}")
                 await peer.send_message(msg)
 
         for msg in await self._action_messages():
@@ -472,18 +472,19 @@ class WalletNode:
             async def receive_and_validate(state: CoinState, peer, height: Optional[uint32], idx):
                 async with self.validation_semaphore:
                     valid = await self.validate_received_state_from_peer(state, peer, self.get_cache_for_peer(peer))
-                    if valid:
-                        self.log.info(f"new coin state received ({idx} / {len(items)})")
-                        await self.wallet_state_manager.new_coin_state([state], peer)
-                    elif height is not None:
-                        self.add_state_to_race_cache(height, state)
-                    else:
-                        self.add_state_to_race_cache(state.created_height, state)
-                        self.add_state_to_race_cache(state.spent_height, state)
+                if valid:
+                    self.log.info(f"new coin state received ({idx} / {len(items)})")
+                    await self.wallet_state_manager.new_coin_state([state], peer)
+                elif height is not None:
+                    self.add_state_to_race_cache(height, state)
+                else:
+                    self.add_state_to_race_cache(state.created_height, state)
+                    self.add_state_to_race_cache(state.spent_height, state)
 
             task = receive_and_validate(state, peer, height, idx)
             all_tasks.append(task)
             while len(self.validation_semaphore._waiters) > 20:
+                self.log.error(f"sleeping 2 sec")
                 await asyncio.sleep(2)
 
         await asyncio.gather(*all_tasks)
@@ -556,29 +557,15 @@ class WalletNode:
         if self.is_trusted(peer):
             async with self.new_peak_lock:
                 async with self.wallet_state_manager.lock:
-                    self.log.error(f"state_update_received is {request}")
+                    self.log.debug(f"state_update_received is {request}")
                     await self.wallet_state_manager.new_coin_state(
                         request.items, peer, request.fork_height, request.height
                     )
             await self.update_ui()
         else:
-            # Ignore state_update_received if untrusted, we'll sync from block messages where we check filter
-            max_wait = 3
-            current_wait = 0
-            found_peak = False
-            while True:
-                if self.wallet_state_manager.blockchain.contains_block(request.peak_hash):
-                    found_peak = True
-                    break
-                current_wait += 1
-                self.log.error(f"sleeping {current_wait} sec")
-                await asyncio.sleep(1)
-                if current_wait == max_wait:
-                    break
-
             async with self.new_peak_lock:
                 async with self.wallet_state_manager.lock:
-                    self.log.error(f"state_update_received is {request}")
+                    self.log.debug(f"state_update_received is {request}")
                     await self.receive_state_from_untrusted_peer(request.items, peer, request.height)
 
     def get_full_node_peer(self):
@@ -815,7 +802,7 @@ class WalletNode:
 
         blocks.reverse()
         # Roll back coins and transactions
-        self.log.error(f"Rolling back to {fork_height}")
+        self.log.info(f"Rolling back to {fork_height}")
         await self.wallet_state_manager.reorg_rollback(fork_height)
         peak = await self.wallet_state_manager.blockchain.get_peak_block()
         if peak is not None:
