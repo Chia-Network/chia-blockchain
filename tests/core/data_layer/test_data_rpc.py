@@ -258,6 +258,7 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes) -> None:
         # todo better assertions for get_ancestors result
         assert len(val["ancestors"]) == 3
         res_before = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
+        print(f" ==== ---- {res_before!r}")
         key6 = b"tasdfsd"
         value6 = b"\x08\x02"
         changelist = [{"action": "insert", "key": key6.hex(), "value": value6.hex()}]
