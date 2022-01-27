@@ -212,4 +212,3 @@ class DataLayer:
                 await asyncio.sleep(fetch_data_interval)
             except asyncio.CancelledError:
                 pass
-
