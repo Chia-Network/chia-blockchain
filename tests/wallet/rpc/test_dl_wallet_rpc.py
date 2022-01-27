@@ -153,6 +153,38 @@ class TestWalletRpc:
 
             await time_out_assert(15, is_singleton_generation, True, client_2, launcher_id, 1)
             assert await client_2.dl_history(launcher_id) == [singleton_record, new_singleton_record]
+
+            txs, launcher_id_2 = await client.create_new_dl(merkle_root, uint64(50))
+            txs, launcher_id_3 = await client.create_new_dl(merkle_root, uint64(50))
+
+            for i in range(0, 5):
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await asyncio.sleep(0.5)
+
+            await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_2)
+            await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_3)
+
+            next_root = bytes32([2] * 32)
+            await client.dl_update_multiple(
+                {
+                    launcher_id: next_root,
+                    launcher_id_2: next_root,
+                    launcher_id_3: next_root,
+                }
+            )
+
+            for i in range(0, 5):
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await asyncio.sleep(0.5)
+
+            await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id)
+            await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_2)
+            await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_3)
+
+            for lid in [launcher_id, launcher_id_2, launcher_id_3]:
+                rec = await client.dl_latest_singleton(lid)
+                assert rec.root == next_root
+
         finally:
             # Checks that the RPC manages to stop the node
             client.close()

@@ -8,7 +8,6 @@ from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
@@ -124,14 +123,14 @@ class DataLayer:
             return None
         return res.value
 
-    async def get_keys_values(self, store_id: bytes32) -> List[TerminalNode]:
-        res = await self.data_store.get_keys_values(store_id)
+    async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
+        res = await self.data_store.get_keys_values(store_id, root_hash)
         if res is None:
             self.log.error("Failed to fetch keys values")
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
-        res = await self.data_store.get_ancestors(store_id, node_hash)
+        res = await self.data_store.get_ancestors(node_hash=node_hash, tree_id=store_id)
         if res is None:
             self.log.error("Failed to get ancestors")
         return res
@@ -140,6 +139,7 @@ class DataLayer:
         res = await self.data_store.get_tree_root(tree_id=store_id)
         if res is None:
             self.log.error(f"Failed to get root for {store_id.hex()}")
+            return None
         return res.node_hash
 
     async def get_roots(self, store_ids: List[str]) -> List[Optional[bytes32]]:
@@ -222,3 +222,4 @@ class DataLayer:
                 await asyncio.sleep(fetch_data_interval)
             except asyncio.CancelledError:
                 pass
+

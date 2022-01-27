@@ -494,6 +494,14 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("dl_update_root", request)
         return TransactionRecord.from_json_dict_convenience(response["tx_record"])
 
+    async def dl_update_multiple(self, update_dictionary: Dict[bytes32, bytes32]) -> List[TransactionRecord]:
+        updates_as_strings: Dict[str, str] = {}
+        for lid, root in update_dictionary.items():
+            updates_as_strings[str(lid)] = str(root)
+        request = {"updates": updates_as_strings}
+        response = await self.fetch("dl_update_multiple", request)
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["tx_records"]]
+
     async def dl_history(self, launcher_id: bytes32) -> List[SingletonRecord]:
         request = {"launcher_id": launcher_id.hex()}
         response = await self.fetch("dl_history", request)
