@@ -1,3 +1,31 @@
+from typing import Generic, Type, TypeVar
+
+T = TypeVar("T")
+
+
+# https://github.com/altendky/qtrio/blob/43c7ff24c0be2f7a3df86eef3c6cc5dae2f7ffd3/qtrio/_util.py#L7
+class ProtocolChecker(Generic[T]):
+    """Instances of this class can be used as decorators that will result in type hint
+    checks to verifying that other classes implement a given protocol.  Generally you
+    would create a single instance where you define each protocol and then use that
+    instance as the decorator.  Note that this usage is, at least in part, due to
+    Python not supporting type parameter specification in the ``@`` decorator
+    expression.
+    .. code-block:: python
+       import typing
+       class MyProtocol(typing.Protocol):
+           def a_method(self): ...
+       check_my_protocol = chia.util.misc.ProtocolChecker[MyProtocol]()
+       @check_my_protocol
+       class AClass:
+           def a_method(self):
+               return 42092
+    """
+
+    def __call__(self, cls: Type[T]) -> Type[T]:
+        return cls
+
+
 def format_bytes(bytes: int) -> str:
 
     if not isinstance(bytes, int) or bytes < 0:

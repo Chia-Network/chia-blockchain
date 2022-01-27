@@ -2,7 +2,7 @@ import logging
 from typing import Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockchainInterface, check_blockchain_interface
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.header_block import HeaderBlock
@@ -10,7 +10,8 @@ from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.ints import uint32
 
 
-class BlockCache(BlockchainInterface):
+@check_blockchain_interface
+class BlockCache:
     def __init__(
         self,
         blocks: Dict[bytes32, BlockRecord],

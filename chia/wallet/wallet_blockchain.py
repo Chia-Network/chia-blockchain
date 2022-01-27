@@ -3,7 +3,7 @@ from typing import Dict, Optional, Tuple, List
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import check_blockchain_interface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
@@ -18,7 +18,8 @@ from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 log = logging.getLogger(__name__)
 
 
-class WalletBlockchain(BlockchainInterface):
+@check_blockchain_interface
+class WalletBlockchain:
     constants: ConsensusConstants
     _basic_store: KeyValStore
     _weight_proof_handler: WalletWeightProofHandler
