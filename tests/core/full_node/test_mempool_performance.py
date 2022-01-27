@@ -10,6 +10,7 @@ from chia.protocols import full_node_protocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.wallet_node import WalletNode
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
@@ -18,6 +19,13 @@ from tests.time_out_assert import time_out_assert
 def wallet_height_at_least(wallet_node, h):
     height = wallet_node.wallet_state_manager.blockchain.get_peak_height()
     if height == h:
+        return True
+    return False
+
+
+async def wallet_balance_at_least(wallet_node: WalletNode, balance):
+    b = await wallet_node.wallet_state_manager.get_confirmed_balance_for_wallet(1)
+    if b >= balance:
         return True
     return False
 
@@ -56,6 +64,7 @@ class TestMempoolPerformance:
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 399)
+        await time_out_assert(60, wallet_balance_at_least, True, wallet_node, 40000000000000)
 
         big_transaction: TransactionRecord = await wallet.generate_signed_transaction(40000000000000, ph, 2213)
 

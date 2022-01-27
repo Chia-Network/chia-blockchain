@@ -188,7 +188,7 @@ class RateLimiter:
                 log.debug(f"Rate limit: {new_message_counts} > {limits.frequency} * {proportion_of_limit}")
                 return False
             if len(message.data) > limits.max_size:
-                log.debug(f"Rate limit: max_size")
+                log.debug(f"Rate limit: {len(message.data)} > {limits.max_size}")
                 return False
             if new_cumulative_size > limits.max_total_size * proportion_of_limit:
                 log.debug(f"Rate limit: {new_cumulative_size} > {limits.max_total_size} * {proportion_of_limit}")

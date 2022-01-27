@@ -4,7 +4,7 @@ import logging
 import time
 import traceback
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, Union, Any
+from typing import Callable, Dict, List, Optional, Set, Tuple, Any
 
 from blspy import PrivateKey, AugSchemeMPL
 from packaging.version import Version
@@ -12,7 +12,6 @@ from packaging.version import Version
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.daemon.keychain_proxy import (
     KeychainProxyConnectionFailure,
     connect_to_keychain_and_validate,
@@ -21,23 +20,16 @@ from chia.daemon.keychain_proxy import (
     KeyringIsEmpty,
 )
 from chia.full_node.weight_proof import chunks
-from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
-from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
-from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight, RequestBlocks, RespondBlocks
+from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     CoinState,
     RespondToPhUpdates,
     RespondBlockHeader,
-    RequestAdditions,
-    RespondAdditions,
-    RejectAdditionsRequest,
     RequestSESInfo,
     RespondSESInfo,
-    RespondRemovals,
-    RejectRemovalsRequest,
     RequestHeaderBlocks,
     RespondHeaderBlocks,
 )
@@ -59,19 +51,14 @@ from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.default_root import STANDALONE_ROOT_PATH
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyringIsLocked, Keychain
-from chia.util.network import get_host_addr
 from chia.util.path import mkdir, path_from_root
-from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.util.wallet_sync_utils import (
-    validate_additions,
-    validate_removals,
     request_and_validate_removals,
     request_and_validate_additions,
 )
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action import WalletAction
 from chia.util.profiler import profile_task
 
@@ -470,6 +457,8 @@ class WalletNode:
         for idx, state in enumerate(items):
 
             async def receive_and_validate(state: CoinState, peer, height: Optional[uint32], idx):
+                assert self.wallet_state_manager is not None
+                assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
                     valid = await self.validate_received_state_from_peer(state, peer, self.get_cache_for_peer(peer))
                 if valid:
@@ -478,13 +467,15 @@ class WalletNode:
                 elif height is not None:
                     self.add_state_to_race_cache(height, state)
                 else:
-                    self.add_state_to_race_cache(state.created_height, state)
-                    self.add_state_to_race_cache(state.spent_height, state)
+                    if state.created_height is not None:
+                        self.add_state_to_race_cache(state.created_height, state)
+                    if state.spent_height is not None:
+                        self.add_state_to_race_cache(state.spent_height, state)
 
             task = receive_and_validate(state, peer, height, idx)
             all_tasks.append(task)
             while len(self.validation_semaphore._waiters) > 20:
-                self.log.error(f"sleeping 2 sec")
+                self.log.debug(f"sleeping 2 sec")
                 await asyncio.sleep(2)
 
         await asyncio.gather(*all_tasks)
@@ -759,7 +750,7 @@ class WalletNode:
                         self.wallet_state_manager.set_sync_mode(False)
 
                 else:
-                    fork_h = await self.wallet_short_sync_backtrack(peak_block, peer)
+                    await self.wallet_short_sync_backtrack(peak_block, peer)
                     if peer.peer_node_id not in self.synced_peers:
                         # Edge case, we still want to subscribe for all phs
                         # (Hints are not in filter)
@@ -893,7 +884,6 @@ class WalletNode:
 
             if save_state:
                 assert peer_request_cache is not None
-                validated_state = []
                 await self.receive_state_from_untrusted_peer(all_state.coin_states, peer, None)
 
             # Check if new puzzle hashed have been created
@@ -1120,6 +1110,7 @@ class WalletNode:
             if weight_proof.recent_chain_data[index].header_hash != block.header_hash:
                 self.log.error("Failed validation 1")
                 return False
+            return True
         else:
             start = block.height + 1
             compare_to_recent = False
@@ -1236,27 +1227,6 @@ class WalletNode:
             solution_response.response.solution.to_serialized_program(),
         )
 
-    async def fetch_children_and_validate(
-        self, peer, coin_name, weight_proof: Optional[WeightProof]
-    ) -> List[CoinState]:
-        response: Optional[wallet_protocol.RespondChildren] = await peer.request_children(
-            wallet_protocol.RequestChildren(coin_name)
-        )
-        if response is None or not isinstance(response, wallet_protocol.RespondChildren):
-            raise ValueError(f"Was not able to obtain children {response}")
-        if not self.is_trusted(peer):
-
-            request_cache = self.get_cache_for_peer(peer)
-            assert weight_proof is not None
-            validated = []
-            for state in response.coin_states:
-                valid = await self.validate_received_state_from_peer(state, peer, request_cache)
-                if valid:
-                    validated.append(state)
-            return validated
-
-        return response.coin_states
-
     async def fetch_children(self, peer, coin_name) -> List[CoinState]:
         response: Optional[wallet_protocol.RespondChildren] = await peer.request_children(
             wallet_protocol.RequestChildren(coin_name)
@@ -1264,6 +1234,14 @@ class WalletNode:
         if response is None or not isinstance(response, wallet_protocol.RespondChildren):
             raise ValueError(f"Was not able to obtain children {response}")
 
+        if not self.is_trusted(peer):
+            request_cache = self.get_cache_for_peer(peer)
+            validated = []
+            for state in response.coin_states:
+                valid = await self.validate_received_state_from_peer(state, peer, request_cache)
+                if valid:
+                    validated.append(state)
+            return validated
         return response.coin_states
 
     # For RPC only.  You should use wallet_state_manager.add_pending_transaction for normal wallet business.
