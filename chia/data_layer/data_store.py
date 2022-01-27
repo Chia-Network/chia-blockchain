@@ -317,12 +317,15 @@ class DataStore:
                 "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation",
                 {"tree_id": tree_id.hex(), "generation": generation},
             )
-            try:
-                [root_dict] = [row async for row in cursor]
-            except ValueError as e:
-                raise Exception(f"tree id not in store: {tree_id.hex()}") from e
+            row = cursor.fetchone()
 
-        return Root.from_row(row=root_dict)
+            if row is None:
+                raise Exception(f"unable to find root for id, generation: {tree_id.hex()}, {generation}")
+
+            if cursor.fetchone() is not None:
+                raise Exception(f"multiple roots found for id, generation: {tree_id.hex()}, {generation}")
+
+        return Root.from_row(row=row)
 
     async def get_roots_between(
         self, tree_id: bytes32, generation_begin: int, generation_end: int, *, lock: bool = True
@@ -334,8 +337,6 @@ class DataStore:
                 {"tree_id": tree_id.hex(), "generation_begin": generation_begin, "generation_end": generation_end},
             )
             roots = [Root.from_row(row=row) async for row in cursor]
-            if len(roots) == 0:
-                raise Exception(f"tree id not in store: {tree_id.hex()}")
 
         return roots
 
