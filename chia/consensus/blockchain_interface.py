@@ -72,9 +72,7 @@ class BlockchainInterface(Protocol):
         pass
 
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        if self.contains_block(header_hash):
-            return self.block_record(header_hash)
-        return None
+        pass
 
     async def persist_sub_epoch_challenge_segments(
         self, sub_epoch_summary_height: bytes32, segments: List[SubEpochChallengeSegment]

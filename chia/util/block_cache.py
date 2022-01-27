@@ -69,6 +69,11 @@ class BlockCache:
             block_records.append(self.height_to_block_record(height))
         return block_records
 
+    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+        if self.contains_block(header_hash):
+            return self.block_record(header_hash)
+        return None
+
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         return self._block_records[header_hash]
 

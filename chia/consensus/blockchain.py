@@ -732,6 +732,11 @@ class Blockchain:
     async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]:
         return await self.block_store.get_block_records_in_range(start, stop)
 
+    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+        if self.contains_block(header_hash):
+            return self.block_record(header_hash)
+        return None
+
     async def get_header_blocks_in_range(
         self, start: int, stop: int, tx_filter: bool = True
     ) -> Dict[bytes32, HeaderBlock]:
