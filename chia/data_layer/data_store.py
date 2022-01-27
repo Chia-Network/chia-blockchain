@@ -749,6 +749,7 @@ class DataStore:
         self,
         node_hash: bytes32,
         tree_id: bytes32,
+        get_subtree_only: bool,
         *,
         lock: bool = True,
         num_nodes: int = 1000000000,
@@ -757,7 +758,10 @@ class DataStore:
         path_hashes = {node_hash, *(ancestor.hash for ancestor in ancestors)}
         # The hashes that need to be traversed, initialized here as the hashes to the right of the ancestors
         # ordered from shallowest (root) to deepest (leaves) so .pop() from the end gives the deepest first.
-        stack = [ancestor.right_hash for ancestor in reversed(ancestors) if ancestor.right_hash not in path_hashes]
+        if not get_subtree_only:
+            stack = [ancestor.right_hash for ancestor in reversed(ancestors) if ancestor.right_hash not in path_hashes]
+        else:
+            stack = []
         nodes: List[Node] = []
         while len(nodes) < num_nodes:
             try:
