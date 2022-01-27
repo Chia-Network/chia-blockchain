@@ -142,16 +142,6 @@ class DataLayer:
             return None
         return res.node_hash
 
-    async def get_roots(self, store_ids: List[str]) -> List[Optional[bytes32]]:
-        roots = []
-        for id in store_ids:
-            res = await self.data_store.get_tree_root(tree_id=bytes32(hexstr_to_bytes(id)))
-            if res is None:
-                self.log.error(f"Failed to get root for {id}")
-                continue
-            roots.append(res.node_hash)
-        return roots
-
     async def fetch_and_validate(self, subscription: Subscription) -> None:
         tree_id = subscription.tree_id
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id)
