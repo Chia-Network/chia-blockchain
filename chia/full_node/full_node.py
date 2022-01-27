@@ -2152,9 +2152,18 @@ class FullNode:
             if new_block is None:
                 continue
             async with self.db_wrapper.lock:
-                await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
-                await self.block_store.db_wrapper.commit_transaction()
-                replaced = True
+                try:
+                    await self.block_store.db_wrapper.begin_transaction()
+                    await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
+                    await self.block_store.db_wrapper.commit_transaction()
+                    replaced = True
+                except BaseException as e:
+                    await self.block_store.db_wrapper.rollback_transaction()
+                    log.error(
+                        f"_replace_proof error while adding block {block.header_hash} height {block.height},"
+                        f" rolling back: {traceback.format_exc()} {e}"
+                    )
+                    raise
         return replaced
 
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
