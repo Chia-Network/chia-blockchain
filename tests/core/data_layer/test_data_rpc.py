@@ -215,6 +215,7 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes) -> None:
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
+    # TODO: with this being a pseudo context manager'ish thing it doesn't actually handle shutdown
     async for data_layer in init_data_layer(root_path):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
@@ -273,10 +274,10 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes) -> None:
         await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec0)
         res_after = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
         pairs_before = await data_rpc_api.get_keys_values(
-            {"id": store_id.hex(), "root_hash": res_before["hashes"][0].hex()}
+            {"id": store_id.hex(), "root_hash": res_before["root_hashes"][0]["hash"].hex()}
         )
         pairs_after = await data_rpc_api.get_keys_values(
-            {"id": store_id.hex(), "root_hash": res_after["hashes"][0].hex()}
+            {"id": store_id.hex(), "root_hash": res_after["root_hashes"][0]["hash"].hex()}
         )
         assert len(pairs_before["keys_values"]) == 5
         assert len(pairs_after["keys_values"]) == 7
