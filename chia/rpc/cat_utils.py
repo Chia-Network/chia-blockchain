@@ -16,7 +16,7 @@ def get_cat_puzzle_hash(asset_id: str, xch_puzzle_hash: str) -> str:
     return "0x" + cat_puzzle_hash.hex()
 
 
-def convert_to_coin(raw_coin: Dict) -> Coin:
+def convert_to_coin(raw_coin: Dict[str, Any]) -> Coin:
     if type(raw_coin) != dict:
         raise Exception(f"Expected coin is a dict, got {raw_coin}")
     if not 'puzzle_hash' in raw_coin:
