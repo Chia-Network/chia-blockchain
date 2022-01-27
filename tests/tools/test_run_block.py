@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.condition_opcodes import ConditionOpcode
@@ -53,7 +53,7 @@ def test_block_no_generator():
     assert not cat_list
 
 
-def test_block_retired_cat_with_memo():
+def test_block_retired_cat_with_memo() -> None:
     dirname = Path(__file__).parent
     with open(dirname / "396963.json") as f:
         full_block = json.load(f)

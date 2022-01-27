@@ -37,7 +37,7 @@ and in this way they control whether a spend is valid or not.
 """
 import json
 from dataclasses import dataclass
-from typing import List, TextIO, Tuple, Dict
+from typing import Any, BinaryIO, List, Optional, TextIO, Tuple, Dict
 
 import click
 
@@ -63,23 +63,23 @@ class CAT:
     memo: str
     npc: NPC
 
-    def cat_to_dict(self):
+    def cat_to_dict(self) -> Dict[str, Any]:
         return {"tail_hash": self.tail_hash, "memo": self.memo, "npc": npc_to_dict(self.npc)}
 
 
-def condition_with_args_to_dict(condition_with_args: ConditionWithArgs):
+def condition_with_args_to_dict(condition_with_args: ConditionWithArgs) -> Dict[str, Any]:
     return {
         "condition_opcode": condition_with_args.opcode.name,
         "arguments": [arg.hex() for arg in condition_with_args.vars],
     }
 
 
-def condition_list_to_dict(condition_list: Tuple[ConditionOpcode, List[ConditionWithArgs]]):
+def condition_list_to_dict(condition_list: Tuple[ConditionOpcode, List[ConditionWithArgs]]) -> List[Dict[str, Any]]:
     assert all([condition_list[0] == cwa.opcode for cwa in condition_list[1]])
     return [condition_with_args_to_dict(cwa) for cwa in condition_list[1]]
 
 
-def npc_to_dict(npc: NPC):
+def npc_to_dict(npc: NPC) -> Dict[str, Any]:
     return {
         "coin_name": npc.coin_name.hex(),
         "conditions": [{"condition_type": c[0].name, "conditions": condition_list_to_dict(c)} for c in npc.conditions],
@@ -156,7 +156,7 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
     return cat_list
 
 
-def ref_list_to_args(ref_list: List[uint32]):
+def ref_list_to_args(ref_list: List[uint32]) -> List[GeneratorArg]:
     args = []
     for height in ref_list:
         with open(f"{height}.json", "r") as f:
@@ -186,14 +186,16 @@ def run_generator_with_args(
 
 @click.command()
 @click.argument("file", type=click.File("rb"))
-def cmd_run_json_block_file(file):
+def cmd_run_json_block_file(file: BinaryIO) -> None:
     """`file` is a file containing a FullBlock in JSON format"""
+    print(type(file))
+    return
     return run_json_block_file(file)
 
 
-def run_json_block(full_block, constants: ConsensusConstants) -> List[CAT]:
+def run_json_block(full_block: Dict[str, Any], constants: ConsensusConstants) -> List[CAT]:
     ref_list = full_block["block"]["transactions_generator_ref_list"]
-    tx_info: dict = full_block["block"]["transactions_info"]
+    tx_info: Optional[Dict[str, Any]] = full_block["block"]["transactions_info"]
     generator_program_hex: str = full_block["block"]["transactions_generator"]
     cat_list: List[CAT] = []
     if tx_info and generator_program_hex:
@@ -204,7 +206,7 @@ def run_json_block(full_block, constants: ConsensusConstants) -> List[CAT]:
     return cat_list
 
 
-def run_json_block_file(file: TextIO):
+def run_json_block_file(file: TextIO) -> None:
     full_block = json.load(file)
     # pull in current constants from config.yaml
     _, constants = get_config_and_constants()
@@ -215,7 +217,7 @@ def run_json_block_file(file: TextIO):
     print(cat_list_json)
 
 
-def get_config_and_constants():
+def get_config_and_constants() -> Tuple[Dict[str, Any], ConsensusConstants]:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     network = config["selected_network"]
     overrides = config["network_overrides"]["constants"][network]

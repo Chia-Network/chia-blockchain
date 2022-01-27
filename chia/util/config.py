@@ -55,7 +55,7 @@ def load_config(
     filename: Union[str, Path],
     sub_config: Optional[str] = None,
     exit_on_error=True,
-) -> Dict:
+) -> Dict[str, Any]:
     path = config_path_for_filename(root_path, filename)
     if not path.is_file():
         if not exit_on_error:
