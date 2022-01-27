@@ -18,6 +18,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.announcement import Announcement
+from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.condition_opcodes import ConditionOpcode
@@ -31,6 +32,7 @@ from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     SpendableCC,
     construct_cc_puzzle,
+    get_parent_cat_coin_spend_lineage_proof,
     unsigned_spend_bundle_for_spendable_ccs,
     match_cat_puzzle,
 )
@@ -782,6 +784,7 @@ class CCWallet:
         asset_id: bytes32,
         payment: Payment,
         fee: uint64,
+        parent_coin_spends_dict: Dict[CoinSpend],
         cat_coins_pool: Set[Coin],
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         extra_delta = 0
@@ -868,10 +871,17 @@ class CCWallet:
             else:
                 innersol = self.standard_wallet.make_solution()
 
-            lineage_proof = LineageProof(coin.parent_coin_info, sender_xch_puzzle.get_tree_hash(), coin.amount)
-            await self.add_lineage(coin.name(), lineage_proof, True)
+            coin_name = coin.name()
+            if not coin_name in parent_coin_spends_dict:
+                raise Exception(f"Not found parent CoinSpend of coin {coin_name}: {coin}")
 
+            parent_coin_spend: CoinSpend = parent_coin_spends_dict[coin_name]
+            parent_coin, lineage_proof = get_parent_cat_coin_spend_lineage_proof(parent_coin_spend=parent_coin_spend)
+            await self.add_lineage(parent_coin.name(), lineage_proof, True)
+
+            lineage_proof = await self.get_lineage_proof_for_coin(coin=coin)
             assert lineage_proof is not None
+
             new_spendable_cc = SpendableCC(
                 coin=coin,
                 limitations_program_hash=self.cc_info.limitations_program_hash,
@@ -906,6 +916,7 @@ class CCWallet:
         receiver_puzzle_hash: bytes32,
         asset_id: bytes32,
         fee: uint64,
+        parent_coin_spends_dict: Dict[CoinSpend],
         cat_coins_pool: Set[Coin],
         memo: List[bytes],
     ) -> List[TransactionRecord]:
@@ -918,6 +929,7 @@ class CCWallet:
             asset_id=asset_id,
             payment=payment,
             fee=fee,
+            parent_coin_spends_dict=parent_coin_spends_dict,
             cat_coins_pool=cat_coins_pool
         )
         spend_bundle = await self.sign_with_specific_puzzle_hash(

@@ -1,8 +1,9 @@
 
-from typing import Dict, List, Set
+from typing import Any, Dict, List, Set
 from chia.types.blockchain_format.coin import Coin
+from chia.types.coin_spend import CoinSpend
 from chia.wallet.puzzles.cc_loader import CC_MOD
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 from chia.types.blockchain_format.sized_bytes import bytes32
 from blspy import PrivateKey, G1Element
@@ -68,3 +69,37 @@ def convert_to_cat_coins(
         cat_coins_pool.add(coin)
     return cat_coins_pool
 
+
+def convert_to_coin_spend(raw_coin_spend: Dict) -> CoinSpend:
+    if type(raw_coin_spend) != dict:
+        raise Exception(f"Expected raw_coin_spend is a dict, got {raw_coin_spend}")
+    if not 'coin' in raw_coin_spend:
+        raise Exception(f"CoinSpend is missing coin field: {raw_coin_spend}")
+    if not 'puzzle_reveal' in raw_coin_spend:
+        raise Exception(f"CoinSpend is missing puzzle_reveal field: {raw_coin_spend}")
+    if not 'solution' in raw_coin_spend:
+        raise Exception(f"CoinSpend is missing solution field: {raw_coin_spend}")
+
+    return CoinSpend(
+        coin=convert_to_coin(raw_coin=raw_coin_spend["coin"]),
+        puzzle_reveal=SerializedProgram.fromhex(raw_coin_spend["puzzle_reveal"]),
+        solution=SerializedProgram.fromhex(raw_coin_spend["solution"]),
+    )
+
+
+def convert_to_parent_coin_spends(
+    raw_parent_coin_spends: Dict[str, Dict[str, Any]],
+) -> Dict[str, CoinSpend]:
+    """Convert a dict of raw coin_name->ParentCoinSpend's dict into coin_name->CoinSpend
+
+    Args:
+        raw_parent_coin_spends (Dict[Dict]): raw dict of dicts
+    """
+    if type(raw_parent_coin_spends) != dict:
+        raise Exception(f"Expected raw_parent_coin_spends is a dict, got {raw_parent_coin_spends}")
+
+    parent_coin_spends: Dict[CoinSpend] = {}
+    for name, raw_coin_spend in raw_parent_coin_spends.items():
+        coin_spend: CoinSpend = convert_to_coin_spend(raw_coin_spend=raw_coin_spend)
+        parent_coin_spends[name] = coin_spend
+    return parent_coin_spends

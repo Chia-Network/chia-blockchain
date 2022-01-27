@@ -9,11 +9,12 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.rpc.cat_utils import convert_to_cat_coins
+from chia.rpc.cat_utils import convert_to_cat_coins, convert_to_parent_coin_spends
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
@@ -819,6 +820,7 @@ class WalletRpcApi:
             request['memo'] : memo field (a list of string)
             request['amount'] : amount of CAT token to send (positive integer)
             request['fee'] : amount of mojo for gas fee (positive integer)
+            request['parent_coin_spends'] : a dict of child_coin_name -> parent CoinSpend dict (each has coin, puzzle_reveal, solution) for each coin in cat_coins_pool
             request['cat_coins_pool'] : a list of CAT Coin dicts (each has parent_coin_info, puzzle_hash, amount)
         """
         assert self.service.wallet_state_manager is not None
@@ -847,6 +849,17 @@ class WalletRpcApi:
             sender_private_key=sender_private_key,
             raw_cat_coins_pool=request["cat_coins_pool"],
         )
+        parent_coin_spends_dict: Dict[CoinSpend] = convert_to_parent_coin_spends(
+            raw_parent_coin_spends=request["parent_coin_spends"],
+        )
+
+        for coin in cat_coins_pool:
+            coin_name = coin.name()
+            if not coin_name in parent_coin_spends_dict:
+                raise Exception(f"Not found parent CoinSpend of coin {coin_name}: {coin}")
+
+        if len(cat_coins_pool) != len(parent_coin_spends_dict):
+            raise Exception(f"Inconsistent cat_coins_pool and parent_coin_spends_dict:\ncat_coins_pool: {cat_coins_pool}\n\nparent_coin_spends_dict: {parent_coin_spends_dict}")
 
         async with self.service.wallet_state_manager.lock:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction_for_specific_puzzle_hash(
@@ -856,6 +869,7 @@ class WalletRpcApi:
                 asset_id=asset_id,
                 fee=fee,
                 memo=memo,
+                parent_coin_spends_dict=parent_coin_spends_dict,
                 cat_coins_pool=cat_coins_pool,
             )
             for tx in txs:
