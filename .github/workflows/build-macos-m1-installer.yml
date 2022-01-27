@@ -10,6 +10,10 @@ on:
     branches:
       - '**'
 
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: MacOS M1 installer on Python 3.9
@@ -21,12 +25,6 @@ jobs:
         python-version: [3.9]
 
     steps:
-      - name: Cancel previous runs on the same branch
-        if: ${{ github.ref != 'refs/heads/main' }}
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
       - uses: Chia-Network/actions/clean-workspace@main
 
       - name: Checkout Code

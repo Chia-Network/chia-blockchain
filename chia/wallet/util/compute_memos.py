@@ -1,7 +1,7 @@
 from typing import List, Dict
 
 from clvm.casts import int_from_bytes
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.spend_bundle import SpendBundle
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
@@ -16,7 +16,7 @@ def compute_memos(bundle: SpendBundle) -> Dict[bytes32, List[bytes]]:
     """
     memos: Dict[bytes32, List[bytes]] = {}
     for coin_spend in bundle.coin_spends:
-        result = Program.from_bytes(bytes(coin_spend.puzzle_reveal)).run(Program.from_bytes(bytes(coin_spend.solution)))
+        _, result = coin_spend.puzzle_reveal.run_with_cost(INFINITE_COST, coin_spend.solution)
         for condition in result.as_python():
             if condition[0] == ConditionOpcode.CREATE_COIN and len(condition) >= 4:
                 # If only 3 elements (opcode + 2 args), there is no memo, this is ph, amount

@@ -41,6 +41,7 @@ from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -602,7 +603,7 @@ class WalletStateManager:
                 f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}"
             )
 
-            hint_list = cs.hints()
+            hint_list = compute_coin_hints(cs)
             derivation_record = None
             for hint in hint_list:
                 derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
