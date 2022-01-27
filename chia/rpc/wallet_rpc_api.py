@@ -161,6 +161,7 @@ class WalletRpcApi:
             return {"fingerprint": fingerprint}
 
         await self._stop_wallet()
+        self.balance_cache = {}
         started = await self.service._start(fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}

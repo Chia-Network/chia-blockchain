@@ -79,11 +79,16 @@ def check_unusual_transaction(amount: Decimal, fee: Decimal):
 
 
 async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    wallet_id = args["id"]
+    wallet_id: int = args["id"]
     amount = Decimal(args["amount"])
     fee = Decimal(args["fee"])
     address = args["address"]
     override = args["override"]
+    memo = args["memo"]
+    if memo is None:
+        memos = None
+    else:
+        memos = [memo]
 
     if not override and check_unusual_transaction(amount, fee):
         print(
@@ -91,15 +96,35 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             f"Pass in --override if you are sure you mean to do this."
         )
         return
-    print("Submitting transaction...")
-    final_amount = uint64(int(amount * units["chia"]))
+
+    summaries_response = await wallet_client.get_wallets()
+    final_amount: Optional[uint64] = None
     final_fee = uint64(int(fee * units["chia"]))
-    res = await wallet_client.send_transaction(wallet_id, final_amount, address, final_fee)
+    for summary in summaries_response:
+        if wallet_id == int(summary["id"]):
+            typ: WalletType = WalletType(summary["type"])
+            if typ == WalletType.STANDARD_WALLET:
+                final_amount = uint64(int(amount * units["chia"]))
+                print("Submitting transaction...")
+                res = await wallet_client.send_transaction(str(wallet_id), final_amount, address, final_fee, memos)
+                break
+            elif typ == WalletType.CAT:
+                final_amount = uint64(int(amount * units["cat"]))
+                print("Submitting transaction...")
+                res = await wallet_client.cat_spend(str(wallet_id), final_amount, address, final_fee, memos)
+                break
+            else:
+                print("Only standard wallet and CAT wallets are supported")
+                return
+    if final_amount is None:
+        print(f"Wallet id: {wallet_id} not found.")
+        return
+
     tx_id = res.name
     start = time.time()
     while time.time() - start < 10:
         await asyncio.sleep(0.1)
-        tx = await wallet_client.get_transaction(wallet_id, tx_id)
+        tx = await wallet_client.get_transaction(str(wallet_id), tx_id)
         if len(tx.sent_to) > 0:
             print(f"Transaction submitted to nodes: {tx.sent_to}")
             print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
@@ -161,7 +186,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                 unit: int = units["chia"]
             else:
                 name = await wallet_client.get_cat_name(wallet_id)
-                unit = units["colouredcoin"]
+                unit = units["cat"]
             multiplier: int = -1 if item in offers else 1
             printable_dict[name] = (amount, unit, multiplier)
             if uint32(int(wallet_id)) in offer_dict:
@@ -212,7 +237,7 @@ async def print_offer_summary(wallet_client: WalletRpcClient, sum_dict: dict):
             result = await wallet_client.cat_asset_id_to_name(bytes32.from_hexstr(asset_id))
             wid = "Unknown"
             name = asset_id
-            unit = units["colouredcoin"]
+            unit = units["cat"]
             if result is not None:
                 wid = str(result[0])
                 name = result[1]
@@ -310,7 +335,7 @@ async def cancel_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: 
 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
     if typ == WalletType.CAT:
-        return "", units["colouredcoin"]
+        return "", units["cat"]
     if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG, WalletType.RATE_LIMITED]:
         return address_prefix, units["chia"]
     return "", units["mojo"]
