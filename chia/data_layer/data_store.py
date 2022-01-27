@@ -1,6 +1,5 @@
 import logging
 import aiosqlite
-import time
 import aiohttp
 import json
 from collections import defaultdict
@@ -92,7 +91,7 @@ class DataStore:
                 """
                 CREATE TABLE IF NOT EXISTS subscriptions(
                     tree_id TEXT NOT NULL,
-                    mode TEXT NOT NULL,
+                    mode INTEGER NOT NULL,
                     ip TEXT NOT NULL,
                     port INTEGER NOT NULL,
                     wallet_generation INTEGER NOT NULL,
@@ -373,7 +372,7 @@ class DataStore:
         self, tree_id: bytes32, hash: bytes32, max_generation: Optional[int] = None, *, lock: bool = True
     ) -> Optional[Root]:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            max_generation_str = "AND generation < :max_generation " if max_generation is not None else ""
+            max_generation_str = f"AND generation < {max_generation} " if max_generation is not None else ""
             cursor = await self.db.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id "
                 f"{max_generation_str}"
@@ -843,6 +842,7 @@ class DataStore:
         self,
         tree_id: bytes32,
         generation_begin: int,
+        max_generation: int,
         num_generations: int = 10,
         *,
         lock: bool = True,
@@ -853,6 +853,7 @@ class DataStore:
             query_generation_end = min(
                 generation_begin + num_generations, await self.get_tree_generation(tree_id=tree_id, lock=False) + 1
             )
+            query_generation_end = min(query_generation_end, max_generation + 1)
             roots = await self.get_roots_between(tree_id, query_generation_begin, query_generation_end, lock=False)
             previous_root = None
             for current_root in roots:
@@ -870,7 +871,6 @@ class DataStore:
 
     async def download_data(self, subscription: Subscription, target_hash: bytes32, *, lock: bool = True) -> bool:
         tree_id = subscription.tree_id
-        mode = subscription.mode
         ip = subscription.ip
         port = int(subscription.port)
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -878,7 +878,7 @@ class DataStore:
             if not exists:
                 await self.create_tree(tree_id=tree_id, status=Status.COMMITTED, lock=False)
             URL = f"http://{ip}:{port}/ws"
-            if mode == DownloadMode.LATEST:
+            if subscription.mode is DownloadMode.LATEST:
                 async with aiohttp.ClientSession() as session:
                     async with session.ws_connect(URL) as ws:
                         request = {
@@ -890,8 +890,6 @@ class DataStore:
                         msg = await ws.receive()
                         root_json = json.loads(msg.data)
                         node = root_json["node_hash"]
-                        log.info(f"Got root hash: {node}")
-                        t1 = time.time()
                         internal_nodes = 0
                         terminal_nodes = 0
                         stack: List[str] = []
@@ -961,7 +959,6 @@ class DataStore:
 
                         if node is not None:
                             raise RuntimeError("Did not download full data.")
-                        log.info(f"Finished validating batch of {len(answer)}.")
                         await ws.send_str(json.dumps({"type": "close"}))
 
                 await self._insert_root(
@@ -970,11 +967,8 @@ class DataStore:
                     Status(root_json["status"]),
                     root_json["generation"],
                 )
-                t2 = time.time()
-                log.info("Finished validating tree.")
-                log.info(f"Time taken: {t2 - t1}. Terminal nodes: {terminal_nodes} Internal nodes: {internal_nodes}.")
                 return True
-            elif mode == DownloadMode.HISTORY:
+            elif subscription.mode is DownloadMode.HISTORY:
                 async with aiohttp.ClientSession() as session:
                     async with session.ws_connect(URL) as ws:
                         request = {
@@ -986,14 +980,14 @@ class DataStore:
                         msg = await ws.receive()
                         root_json = json.loads(msg.data)
                         generation = root_json["generation"]
-                        root = await self.get_tree_root(tree_id=tree_id)
+                        root = await self.get_tree_root(tree_id=tree_id, lock=False)
                         existing_generation = root.generation + 1
-                        t1 = time.time()
                         while existing_generation <= generation:
                             request = {
                                 "type": "request_operations",
                                 "tree_id": tree_id.hex(),
                                 "generation": str(existing_generation),
+                                "max_generation": str(generation),
                             }
                             await ws.send_str(json.dumps(request))
                             msg = await ws.receive()
@@ -1010,15 +1004,16 @@ class DataStore:
                                         else (bytes32.from_hexstr(row["reference_node_hash"])),
                                         None if row["side"] == "None" else Side(row["side"]),
                                         status=Status(row["root_status"]),
+                                        lock=False,
                                     )
                                 else:
                                     await self.delete(
                                         bytes.fromhex(row["key"]),
                                         tree_id,
                                         status=Status(row["root_status"]),
+                                        lock=False,
                                     )
-                                log.info(f"Operation: {row}")
-                                current_root = await self.get_tree_root(tree_id)
+                                current_root = await self.get_tree_root(tree_id, lock=False)
                                 if current_root.node_hash is None:
                                     if row["hash"] != "None":
                                         return False
@@ -1029,22 +1024,18 @@ class DataStore:
 
                         await ws.send_str(json.dumps({"type": "close"}))
 
-                t2 = time.time()
-                log.info("Finished downloading history.")
-                log.info(f"Time taken: {t2 - t1}")
                 return True
 
             return False
 
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
-        mode_str = "latest" if subscription.mode == DownloadMode.LATEST else "history"
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute(
-                "INSERT IGNORE INTO subscriptions(tree_id, mode, ip, port, wallet_generation) "
+                "INSERT INTO subscriptions(tree_id, mode, ip, port, wallet_generation) "
                 "VALUES (:tree_id, :mode, :ip, :port, 0)",
                 {
                     "tree_id": subscription.tree_id.hex(),
-                    "mode": mode_str,
+                    "mode": subscription.mode.value,
                     "ip": subscription.ip,
                     "port": subscription.port,
                 },
@@ -1067,7 +1058,7 @@ class DataStore:
             )
             async for row in cursor:
                 tree_id = bytes32.fromhex(row["tree_id"])
-                mode = DownloadMode.LATEST if row["mode"] == "latest" else DownloadMode.HISTORY
+                mode = DownloadMode(row["mode"])
                 ip = row["ip"]
                 port = uint16(row["port"])
                 subscriptions.append(Subscription(tree_id, mode, ip, port))

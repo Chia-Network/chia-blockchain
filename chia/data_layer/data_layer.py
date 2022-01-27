@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable
 import aiosqlite
 import asyncio
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode, DownloadMode, Subscription
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode, DownloadMode, Subscription, Root
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -45,6 +45,7 @@ class DataLayer:
         self.connection = None
         self.wallet_rpc_init = wallet_rpc_init
         self.log = logging.getLogger(name if name is None else __name__)
+        self._shut_down: bool = False
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
@@ -161,11 +162,13 @@ class DataLayer:
         if current_generation is not None and uint32(current_generation) == singleton_record.generation:
             return
 
-        old_root = await self.data_store.get_tree_root(tree_id=tree_id)
+        old_root: Optional[Root] = None
+        if await self.data_store.tree_id_exists(tree_id=tree_id):
+            old_root = await self.data_store.get_tree_root(tree_id=tree_id)
         to_check: List[SingletonRecord] = []
-        if subscription.mode == DownloadMode.LATEST:
+        if subscription.mode is DownloadMode.LATEST:
             to_check = [singleton_record]
-        if subscription.mode == DownloadMode.HISTORY:
+        if subscription.mode is DownloadMode.HISTORY:
             to_check = await self.wallet_rpc.dl_history(
                 launcher_id=tree_id, min_generation=current_generation + 1
             )  # type: ignore
@@ -178,11 +181,11 @@ class DataLayer:
         if root.node_hash is None or root.node_hash != to_check[0].root:
             raise RuntimeError("Can't find data on chain in our datastore.")
         to_check.pop(0)
-        min_generation = old_root.generation + 1
+        min_generation = (0 if old_root is None else old_root.generation) + 1
         max_generation = root.generation
 
-        for records in to_check:
-            root_for_record = await self.data_store.get_last_tree_root_by_hash(tree_id, records.root, max_generation)
+        for record in to_check:
+            root_for_record = await self.data_store.get_last_tree_root_by_hash(tree_id, record.root, max_generation)
             if root_for_record is None or root_for_record.generation < min_generation:
                 raise RuntimeError("Can't find data on chain in our datastore.")
             max_generation = root.generation
@@ -212,7 +215,7 @@ class DataLayer:
         fetch_data_interval = self.config.get("fetch_data_interval", 60)
         while not self._shut_down:
             async with self.subscription_lock:
-                subscriptions = await self.get_subscriptions()
+                subscriptions = await self.data_store.get_subscriptions()
                 for subscription in subscriptions:
                     await self.fetch_and_validate(subscription)
             try:
