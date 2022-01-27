@@ -15,6 +15,21 @@ def get_cat_puzzle_hash(asset_id: str, xch_puzzle_hash: str) -> str:
     return "0x" + cat_puzzle_hash.hex()
 
 
+def convert_to_coin(raw_coin: Dict) -> Coin:
+    if type(raw_coin) != dict:
+        raise Exception(f"Expected coin is a dict, got {raw_coin}")
+    if not 'puzzle_hash' in raw_coin:
+        raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
+    if not 'puzzle_hash' in raw_coin:
+        raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
+    coin = Coin(
+        parent_coin_info=bytes.fromhex(raw_coin["parent_coin_info"].lstrip("0x")),
+        puzzle_hash=bytes.fromhex(raw_coin["puzzle_hash"].lstrip("0x")),
+        amount=int(raw_coin["amount"]),
+    )
+    return coin
+
+
 def convert_to_cat_coins(
     target_asset_id: str,
     sender_private_key: PrivateKey,
@@ -46,21 +61,10 @@ def convert_to_cat_coins(
 
     cat_coins_pool: Set[Coin] = set()
     for raw_coin in raw_cat_coins_pool:
-        if type(raw_coin) != dict:
-            raise Exception(f"Expected coin is a dict, got {raw_coin}")
-        if not 'puzzle_hash' in raw_coin:
-            raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
-        if not 'puzzle_hash' in raw_coin:
-            raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
-        puzzle_hash = raw_coin['puzzle_hash']
+        coin: Coin = convert_to_coin(raw_coin=raw_coin)
+        puzzle_hash = coin.puzzle_hash.hex()
         if puzzle_hash != sender_cat_puzzle_hash:
             raise Exception(f"Inconsistent coin in raw_cat_coins_pool: {puzzle_hash} != {sender_cat_puzzle_hash}")
-        cat_coins_pool.add(
-            Coin(
-                parent_coin_info=bytes.fromhex(raw_coin["parent_coin_info"].lstrip("0x")),
-                puzzle_hash=bytes.fromhex(raw_coin["puzzle_hash"].lstrip("0x")),
-                amount=int(raw_coin["amount"]),
-            )
-        )
+        cat_coins_pool.add(coin)
     return cat_coins_pool
 
