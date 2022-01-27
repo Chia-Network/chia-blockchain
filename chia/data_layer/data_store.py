@@ -322,7 +322,8 @@ class DataStore:
             if row is None:
                 raise Exception(f"unable to find root for id, generation: {tree_id.hex()}, {generation}")
 
-            if cursor.fetchone() is not None:
+            maybe_extra_result = await cursor.fetchone()
+            if maybe_extra_result is not None:
                 raise Exception(f"multiple roots found for id, generation: {tree_id.hex()}, {generation}")
 
         return Root.from_row(row=row)
