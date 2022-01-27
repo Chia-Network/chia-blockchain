@@ -429,11 +429,15 @@ class DIDWallet:
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         innerpuz = did_wallet_puzzles.create_innerpuz(
-            pubkey, self.did_info.backup_ids, self.did_info.num_of_backup_ids_needed
+            pubkey, self.did_info.backup_ids, self.did_info.num_of_backup_ids_needed, self.did_info.origin_coin.name()
         )
         if self.did_info.origin_coin is not None:
+            innerpuz = did_wallet_puzzles.create_innerpuz(
+                pubkey, self.did_info.backup_ids, self.did_info.num_of_backup_ids_needed, self.did_info.origin_coin.name()
+            )
             return did_wallet_puzzles.create_fullpuz(innerpuz, self.did_info.origin_coin.name())
         else:
+            innerpuz = Program.to((8, 0))
             return did_wallet_puzzles.create_fullpuz(innerpuz, 0x00)
 
     async def get_new_puzzle(self) -> Program:
@@ -455,7 +459,7 @@ class DIDWallet:
         coin = coins.pop()
         new_puzhash = await self.get_new_inner_hash()
         # innerpuz solution is (mode amount messages new_puz)
-        innersol: Program = Program.to([1, coin.amount, [], new_puzhash])
+        innersol: Program = Program.to([0, 1, coin.amount, [], new_puzhash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
@@ -524,7 +528,7 @@ class DIDWallet:
         if new_innerpuzhash is None:
             new_innerpuzhash = innerpuz.get_tree_hash()
         # innerpuz solution is (mode amount messages new_puz)
-        innersol: Program = Program.to([1, coin.amount, messages, new_innerpuzhash])
+        innersol: Program = Program.to([0, 1, coin.amount, messages, new_innerpuzhash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
 
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
@@ -591,7 +595,7 @@ class DIDWallet:
         coin = coins.pop()
         amount = coin.amount - 1
         # innerpuz solution is (mode amount new_puzhash)
-        innersol: Program = Program.to([0, amount, puzhash])
+        innersol: Program = Program.to([0, 0, amount, puzhash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
@@ -664,7 +668,7 @@ class DIDWallet:
         innerpuz: Program = self.did_info.current_inner
         # innerpuz solution is (mode, amount, message, new_inner_puzhash)
         messages = [(0, innermessage)]
-        innersol = Program.to([1, coin.amount, messages, innerpuz.get_tree_hash()])
+        innersol = Program.to([0, 1, coin.amount, messages, innerpuz.get_tree_hash()])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
@@ -792,6 +796,7 @@ class DIDWallet:
         # innersol is mode new_amount message new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal)  # noqa
         innersol: Program = Program.to(
             [
+                coin.name(),
                 2,
                 coin.amount,
                 puzhash,
@@ -874,11 +879,20 @@ class DIDWallet:
     async def get_new_innerpuz(self) -> Program:
         devrec = await self.wallet_state_manager.get_unused_derivation_record(self.standard_wallet.id())
         pubkey = bytes(devrec.pubkey)
-        innerpuz = did_wallet_puzzles.create_innerpuz(
-            pubkey,
-            self.did_info.backup_ids,
-            uint64(self.did_info.num_of_backup_ids_needed),
-        )
+        if self.did_info.origin_coin is not None:
+            innerpuz = did_wallet_puzzles.create_innerpuz(
+                pubkey,
+                self.did_info.backup_ids,
+                uint64(self.did_info.num_of_backup_ids_needed),
+                self.did_info.origin_coin.name(),
+            )
+        else:
+            innerpuz = did_wallet_puzzles.create_innerpuz(
+                pubkey,
+                self.did_info.backup_ids,
+                uint64(self.did_info.num_of_backup_ids_needed),
+                Program.to(pubkey).get_tree_hash(),
+            )
 
         return innerpuz
 
@@ -891,6 +905,7 @@ class DIDWallet:
             pubkey,
             self.did_info.backup_ids,
             uint64(self.did_info.num_of_backup_ids_needed),
+            self.did_info.origin_coin.name(),
         )
         return innerpuz.get_tree_hash()
 
@@ -902,6 +917,7 @@ class DIDWallet:
             bytes(record.pubkey),
             self.did_info.backup_ids,
             self.did_info.num_of_backup_ids_needed,
+            self.did_info.origin_coin.name()
         )
         return inner_puzzle
 
@@ -980,7 +996,7 @@ class DIDWallet:
     async def generate_eve_spend(self, coin: Coin, full_puzzle: Program, innerpuz: Program):
         assert self.did_info.origin_coin is not None
         # innerpuz solution is (mode amount message new_puzhash)
-        innersol = Program.to([1, coin.amount, [], innerpuz.get_tree_hash()])
+        innersol = Program.to([0, 1, coin.amount, [], innerpuz.get_tree_hash()])
         # full solution is (lineage_proof my_amount inner_solution)
         fullsol = Program.to(
             [

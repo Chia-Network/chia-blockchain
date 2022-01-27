@@ -10,16 +10,19 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.types.condition_opcodes import ConditionOpcode
 
 
-SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer.clvm")
+SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clvm")
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
+SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
+LAUNCHER_PUZZLE_HASH = SINGLETON_LAUNCHER.get_tree_hash()
 
 
-def create_innerpuz(pubkey: bytes, identities: List[bytes], num_of_backup_ids_needed: uint64) -> Program:
+def create_innerpuz(pubkey: bytes, identities: List[bytes], num_of_backup_ids_needed: uint64, singleton_id: bytes32) -> Program:
     backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
     # MOD_HASH MY_PUBKEY RECOVERY_DID_LIST_HASH NUM_VERIFICATIONS_REQUIRED
-    return DID_INNERPUZ_MOD.curry(pubkey, backup_ids_hash, num_of_backup_ids_needed)
+    singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
+    return DID_INNERPUZ_MOD.curry(pubkey, backup_ids_hash, num_of_backup_ids_needed, singleton_struct)
 
 
 def create_fullpuz(innerpuz: Program, genesis_id: bytes32) -> Program:
@@ -62,7 +65,7 @@ def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program]]:
     if not is_did_innerpuz(inner_f):
         return None
 
-    pubkey, id_list, num_of_backup_ids_needed = list(args.as_iter())
+    pubkey, id_list, num_of_backup_ids_needed, singleton_struct = list(args.as_iter())
     return pubkey, id_list
 
 
