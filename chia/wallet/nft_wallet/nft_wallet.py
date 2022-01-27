@@ -85,6 +85,7 @@ class NFTWallet:
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         # TODO: check if I need both
         full_nodes: Dict[bytes32, WSChiaConnection] = self.wallet_state_manager.wallet_node.server.connection_by_type.get(NodeType.FULL_NODE, {})
+
         for node_id, node in full_nodes.copy().items():
             await self.wallet_state_manager.wallet_node.subscribe_to_phs([my_did], node)
         await self.wallet_state_manager.add_interested_puzzle_hash(my_did, self.wallet_id)
@@ -178,7 +179,7 @@ class NFTWallet:
                 for record in child_coin_records:
                     if record.wallet_id == self.id():
                         await self.wallet_state_manager.coin_store.delete_coin_record(record.coin.name())
-                        await self.remove_lineage(record.coin.name())
+                        # await self.remove_lineage(record.coin.name())
                         # We also need to make sure there's no record of the transaction
                         await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
 
@@ -273,7 +274,7 @@ class NFTWallet:
         eve_spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         #eve_spend = await self.generate_eve_spend(eve_coin, , did_inner)
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend_bundle, launcher_sb, message_sb])
-        # breakpoint()
+
         nft_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
