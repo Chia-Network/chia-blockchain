@@ -317,9 +317,10 @@ class DataStore:
                 "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation",
                 {"tree_id": tree_id.hex(), "generation": generation},
             )
-            if cursor.rowcount < 1:
-                raise Exception(f"tree id not in store {tree_id.hex()}")
-            [root_dict] = [row async for row in cursor]
+            try:
+                [root_dict] = [row async for row in cursor]
+            except ValueError as e:
+                raise Exception(f"tree id not in store: {tree_id.hex()}") from e
 
         return Root.from_row(row=root_dict)
 
@@ -332,9 +333,9 @@ class DataStore:
                 "AND generation >= :generation_begin AND generation < :generation_end ORDER BY generation ASC",
                 {"tree_id": tree_id.hex(), "generation_begin": generation_begin, "generation_end": generation_end},
             )
-            if cursor.rowcount < 1:
-                raise Exception(f"tree id not in store {tree_id.hex()}")
             roots = [Root.from_row(row=row) async for row in cursor]
+            if len(roots) == 0:
+                raise Exception(f"tree id not in store: {tree_id.hex()}")
 
         return roots
 
@@ -380,8 +381,6 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             if root_hash is None:
                 root = await self.get_tree_root(tree_id=tree_id, lock=False)
-                if root.node_hash is None:
-                    raise Exception(f"Root hash is unspecified for tree ID: {tree_id.hex()}")
                 root_hash = root.node_hash
             cursor = await self.db.execute(
                 """
@@ -404,7 +403,7 @@ class DataStore:
                 WHERE node_type == :node_type
                 ORDER BY depth ASC, rights ASC
                 """,
-                {"root_hash": root_hash.hex(), "node_type": NodeType.TERMINAL},
+                {"root_hash": None if root_hash is None else root_hash.hex(), "node_type": NodeType.TERMINAL},
             )
 
             terminal_nodes: List[TerminalNode] = []
