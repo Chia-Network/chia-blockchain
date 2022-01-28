@@ -196,6 +196,7 @@ class DataLayer:
             return
         async with self.subscription_lock:
             await self.data_store.unsubscribe(tree_id)
+        await self.wallet_rpc.dl_stop_tracking(tree_id)
 
     async def get_subscriptions(self) -> List[Subscription]:
         async with self.subscription_lock:

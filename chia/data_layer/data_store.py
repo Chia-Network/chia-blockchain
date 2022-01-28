@@ -1058,7 +1058,10 @@ class DataStore:
                 "DELETE FROM subscriptions WHERE tree_id == :tree_id",
                 {"tree_id": tree_id.hex()},
             )
-            # TODO: delete any data referencing `tree_id` from DataStore.
+            await self.db.execute(
+                "DELETE FROM root WHERE tree_id == :tree_id",
+                {"tree_id": tree_id.hex()},
+            )
 
     async def get_subscriptions(self, *, lock: bool = True) -> List[Subscription]:
         subscriptions: List[Subscription] = []
