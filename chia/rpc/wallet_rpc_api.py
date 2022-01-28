@@ -121,6 +121,7 @@ class WalletRpcApi:
             # DL Wallet
             "/create_new_dl": self.create_new_dl,
             "/dl_track_new": self.dl_track_new,
+            "/dl_stop_tracking": self.dl_stop_tracking,
             "/dl_latest_singleton": self.dl_latest_singleton,
             "/dl_singletons_by_root": self.dl_singletons_by_root,
             "/dl_update_root": self.dl_update_root,
@@ -1342,13 +1343,18 @@ class WalletRpcApi:
                     self.service.wallet_state_manager.main_wallet,
                 )
 
-        dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(
-            bytes32.from_hexstr(request["root"]), fee=request.get("fee", uint64(0))
-        )
+        try:
+            dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(
+                bytes32.from_hexstr(request["root"]), fee=request.get("fee", uint64(0))
+            )
+        except ValueError as e:
+            log.error(f"Error while generating new reporter {e}")
+            return {"success": False, "error": str(e)}
         await self.service.wallet_state_manager.add_pending_transaction(dl_tx)
         await self.service.wallet_state_manager.add_pending_transaction(std_tx)
 
         return {
+            "success": True,
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in (dl_tx, std_tx)],
             "launcher_id": launcher_id,
         }
@@ -1370,6 +1376,18 @@ class WalletRpcApi:
                 )
 
         await dl_wallet.track_new_launcher_id(bytes32.from_hexstr(request["launcher_id"]))
+        return {}
+
+    async def dl_stop_tracking(self, request) -> Dict:
+        """Initialize the DataLayer Wallet (only one can exist)"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        if dl_wallet is None:
+            raise ValueError("The DataLayer wallet has not been initialized")
+
+        await dl_wallet.stop_tracking_singleton(bytes32.from_hexstr(request["launcher_id"]))
         return {}
 
     async def dl_latest_singleton(self, request) -> Dict:

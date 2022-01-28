@@ -228,6 +228,10 @@ class TestWalletRpc:
             for lid in [launcher_id, launcher_id_2, launcher_id_3]:
                 rec = await client.dl_latest_singleton(lid)
                 assert rec.root == next_root
+
+            await client_2.dl_stop_tracking(launcher_id)
+            assert await client_2.dl_latest_singleton(lid) is None
+
         finally:
             # Checks that the RPC manages to stop the node
             client.close()

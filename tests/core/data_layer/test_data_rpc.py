@@ -215,6 +215,7 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes) -> None:
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
+    # TODO: with this being a pseudo context manager'ish thing it doesn't actually handle shutdown
     async for data_layer in init_data_layer(root_path):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
@@ -254,10 +255,32 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes) -> None:
         assert dic["0x" + key3.hex()] == "0x" + value3.hex()
         assert dic["0x" + key4.hex()] == "0x" + value4.hex()
         assert dic["0x" + key5.hex()] == "0x" + value5.hex()
-        # val = await data_rpc_api.get_ancestors({"id": store_id.hex(), "hash": val["keys_values"][4]["hash"]})
+        val = await data_rpc_api.get_ancestors({"id": store_id.hex(), "hash": val["keys_values"][4]["hash"]})
         # todo better assertions for get_ancestors result
-        # assert val is not None
-        # print(val)
+        assert len(val["ancestors"]) == 3
+        res_before = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
+        key6 = b"tasdfsd"
+        value6 = b"\x08\x02"
+        changelist = [{"action": "insert", "key": key6.hex(), "value": value6.hex()}]
+        key7 = b"basdff"
+        value7 = b"\x09\x02"
+        changelist.append({"action": "insert", "key": key7.hex(), "value": value7.hex()})
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec0 = res["tx_id"]
+        await asyncio.sleep(1)
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
+        await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec0)
+        res_after = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
+        pairs_before = await data_rpc_api.get_keys_values(
+            {"id": store_id.hex(), "root_hash": res_before["root_hashes"][0]["hash"].hex()}
+        )
+        pairs_after = await data_rpc_api.get_keys_values(
+            {"id": store_id.hex(), "root_hash": res_after["root_hashes"][0]["hash"].hex()}
+        )
+        assert len(pairs_before["keys_values"]) == 5
+        assert len(pairs_after["keys_values"]) == 7
 
 
 @pytest.mark.asyncio
@@ -312,7 +335,8 @@ async def test_get_roots(one_wallet_node_and_rpc: nodes) -> None:
             await asyncio.sleep(0.2)
         await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec0)
         roots = await data_rpc_api.get_roots({"ids": [store_id1.hex(), store_id2.hex()]})
-        assert None in roots["hashes"]
+        assert roots["root_hashes"][1]["id"] == store_id2
+        assert roots["root_hashes"][1]["hash"] == None
         key4 = b"d"
         value4 = b"\x06\x03"
         changelist = [{"action": "insert", "key": key4.hex(), "value": value4.hex()}]
@@ -327,5 +351,5 @@ async def test_get_roots(one_wallet_node_and_rpc: nodes) -> None:
             await asyncio.sleep(0.2)
         await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec1)
         roots = await data_rpc_api.get_roots({"ids": [store_id1.hex(), store_id2.hex()]})
-        assert None not in roots["hashes"]
-        assert len(roots["hashes"]) == 2
+        assert roots["root_hashes"][1]["id"] == store_id2
+        assert roots["root_hashes"][1]["hash"] is not None

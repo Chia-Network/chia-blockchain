@@ -317,9 +317,16 @@ class DataStore:
                 "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation",
                 {"tree_id": tree_id.hex(), "generation": generation},
             )
-            [root_dict] = [row async for row in cursor]
+            row = await cursor.fetchone()
 
-        return Root.from_row(row=root_dict)
+            if row is None:
+                raise Exception(f"unable to find root for id, generation: {tree_id.hex()}, {generation}")
+
+            maybe_extra_result = await cursor.fetchone()
+            if maybe_extra_result is not None:
+                raise Exception(f"multiple roots found for id, generation: {tree_id.hex()}, {generation}")
+
+        return Root.from_row(row=row)
 
     async def get_roots_between(
         self, tree_id: bytes32, generation_begin: int, generation_end: int, *, lock: bool = True
@@ -370,13 +377,13 @@ class DataStore:
 
         return ancestors
 
-    async def get_keys_values(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
+    async def get_keys_values(
+        self, tree_id: bytes32, root_hash: Optional[bytes32] = None, *, lock: bool = True
+    ) -> List[TerminalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            root = await self.get_tree_root(tree_id=tree_id, lock=False)
-
-            if root.node_hash is None:
-                return []
-
+            if root_hash is None:
+                root = await self.get_tree_root(tree_id=tree_id, lock=False)
+                root_hash = root.node_hash
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
@@ -398,7 +405,7 @@ class DataStore:
                 WHERE node_type == :node_type
                 ORDER BY depth ASC, rights ASC
                 """,
-                {"root_hash": root.node_hash.hex(), "node_type": NodeType.TERMINAL},
+                {"root_hash": None if root_hash is None else root_hash.hex(), "node_type": NodeType.TERMINAL},
             )
 
             terminal_nodes: List[TerminalNode] = []
