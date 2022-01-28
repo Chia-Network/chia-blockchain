@@ -119,15 +119,11 @@ class FullNodeRpcApi:
                     "difficulty": 0,
                     "sub_slot_iters": 0,
                     "space": 0,
-                    "mempool_size": 0,
-<<<<<<< HEAD
                     "mempool_cost": 0,
                     "mempool_min_fees": {
                         "cost_5000000": 0,
                     },
                     "block_max_cost": 0,
-=======
->>>>>>> 26846780c (lint)
                     "node_id": node_id,
                 },
             }
