@@ -2159,7 +2159,7 @@ class FullNode:
                     replaced = True
                 except BaseException as e:
                     await self.block_store.db_wrapper.rollback_transaction()
-                    log.error(
+                    self.log.error(
                         f"_replace_proof error while adding block {block.header_hash} height {block.height},"
                         f" rolling back: {traceback.format_exc()} {e}"
                     )
