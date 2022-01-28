@@ -97,7 +97,7 @@ class WalletNode:
     race_cache: Dict[uint32, Set[CoinState]]
     validation_semaphore: Optional[asyncio.Semaphore]
     local_node_synced: bool
-    new_state_lock: asyncio.Lock
+    new_state_lock: Optional[asyncio.Lock]
 
     def __init__(
         self,
