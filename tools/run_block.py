@@ -50,7 +50,6 @@ from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.coin import Coin
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator, GeneratorArg
 from chia.types.name_puzzle_condition import NPC
 from chia.util.config import load_config
