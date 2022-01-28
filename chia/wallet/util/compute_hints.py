@@ -8,7 +8,6 @@ from chia.types.coin_spend import CoinSpend
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32
 from chia.full_node.bundle_tools import simple_solution_generator
 
 
@@ -22,7 +21,7 @@ def compute_coin_hints(cs: CoinSpend) -> List[bytes]:
         INFINITE_COST,
         cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE,
         mempool_mode=False,
-        height=uint32(2000000),
+        height=DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT,
     )
     h_list = []
     for npc in npc_result.npc_list:
