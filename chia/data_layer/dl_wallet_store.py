@@ -162,6 +162,14 @@ class DataLayerStore:
 
         await self.add_singleton_record(dataclasses.replace(current, confirmed=True, confirmed_at_height=height), True)
 
+    async def delete_singleton_record(self, coin_id: bytes32) -> None:
+        c = await self.db_connection.execute("DELETE FROM singleton_records WHERE coin_id=?", (coin_id,))
+        await c.close()
+
+    async def delete_singleton_records_by_launcher_id(self, launcher_id: bytes32) -> None:
+        c = await self.db_connection.execute("DELETE FROM singleton_records WHERE launcher_id=?", (launcher_id,))
+        await c.close()
+
     async def add_launcher(self, launcher: Coin, in_transaction: bool) -> None:
         """
         Add a new launcher coin's information to the DB
@@ -209,3 +217,7 @@ class DataLayerStore:
             )
 
         return coins
+
+    async def delete_launcher(self, launcher_id: bytes32) -> None:
+        c = await self.db_connection.execute("DELETE FROM launchers WHERE id=?", (launcher_id,))
+        await c.close()
