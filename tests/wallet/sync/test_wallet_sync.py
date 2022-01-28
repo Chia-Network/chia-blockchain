@@ -184,11 +184,11 @@ class TestWalletSync:
         # same tip at height num_blocks - 1.
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
 
-        await disconnect_all_and_reconnect(wallet_server, full_node_server)
-
         # Tests a long reorg
         for block in default_1000_blocks:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await disconnect_all_and_reconnect(wallet_server, full_node_server)
 
         log.info(f"wallet node height is {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) - 1)
