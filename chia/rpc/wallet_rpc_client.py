@@ -484,6 +484,11 @@ class WalletRpcClient(RpcClient):
         await self.fetch("dl_track_new", request)
         return None
 
+    async def dl_stop_tracking(self, launcher_id: bytes32) -> None:
+        request = {"launcher_id": launcher_id.hex()}
+        await self.fetch("dl_stop_tracking", request)
+        return None
+
     async def dl_latest_singleton(self, launcher_id: bytes32) -> Optional[SingletonRecord]:
         request = {"launcher_id": launcher_id.hex()}
         response = await self.fetch("dl_latest_singleton", request)

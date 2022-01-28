@@ -680,6 +680,10 @@ class DataLayerWallet:
                 )
             )
 
+    async def stop_tracking_singleton(self, launcher_id: bytes32) -> None:
+        await self.wallet_state_manager.dl_store.delete_singleton_records_by_launcher_id(launcher_id)
+        await self.wallet_state_manager.dl_store.delete_launcher(launcher_id)
+
     #############
     # DL OFFERS #
     #############
