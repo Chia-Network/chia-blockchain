@@ -124,6 +124,10 @@ class WalletRpcApi:
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
         """
+        if args[0] is not None and args[0] == "sync_changed":
+            # Metrics is the only current consumer for this event
+            return [create_payload_dict(args[0], {}, self.service_name, "metrics")]
+
         if len(args) < 2:
             return []
 
