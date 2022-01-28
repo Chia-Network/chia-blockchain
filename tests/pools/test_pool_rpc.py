@@ -210,7 +210,6 @@ class TestPoolWalletRpc:
             pool_config["owner_public_key"]
             == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
         )
-
         # It can be one of multiple launcher IDs, due to selecting a different coin
         launcher_id = None
         for addition in creation_tx.additions:
@@ -415,8 +414,6 @@ class TestPoolWalletRpc:
                 assert len(pool_list) == i + 3
                 if i == 0:
                     # Ensures that the CAT creation does not cause pool wallet IDs to increment
-                    summaries_response = await client.get_wallets()
-                    print(summaries_response)
                     for wallet in wallet_node_0.wallet_state_manager.wallets.values():
                         if wallet.type() == WalletType.POOLING_WALLET:
                             status: PoolWalletInfo = (await client.pw_status(wallet.id()))[0]
@@ -430,9 +427,6 @@ class TestPoolWalletRpc:
                             )
                             assert owner_sk is not None
                             assert owner_sk != auth_sk
-
-                            summaries_response = await client.get_wallets()
-            print(summaries_response)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True])

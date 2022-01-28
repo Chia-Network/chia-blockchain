@@ -248,7 +248,6 @@ class TestRpc:
             ]
             config["pool"]["pool_list"] = pool_list
             save_config(root_path, "config.yaml", config)
-
             await farmer_api.farmer.update_pool_state()
 
             pool_state = (await client.get_pool_state())["pool_state"]
