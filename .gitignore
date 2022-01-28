@@ -55,7 +55,7 @@ pip-delete-this-directory.txt
 .python-version
 .eggs
 .venv
-venv*
+venv*/
 activate
 
 # mypy
