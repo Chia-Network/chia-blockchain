@@ -55,7 +55,7 @@ pip-delete-this-directory.txt
 .python-version
 .eggs
 .venv
-venv
+venv*
 activate
 
 # mypy
@@ -101,3 +101,53 @@ win_code_sign_cert.p12
 
 # chia-blockchain wheel build folder
 build/
+
+# pytest-monitor
+# https://pytest-monitor.readthedocs.io/en/latest/operating.html?highlight=.pymon#storage
+.pymon
+
+# Created by https://www.toptal.com/developers/gitignore/api/git
+# Edit at https://www.toptal.com/developers/gitignore?templates=git
+
+### Git ###
+# Created by git for backups. To disable backups in Git:
+# $ git config --global mergetool.keepBackup false
+*.orig
+
+# Created by git when using merge tools for conflicts
+*.BACKUP.*
+*.BASE.*
+*.LOCAL.*
+*.REMOTE.*
+*_BACKUP_*.txt
+*_BASE_*.txt
+*_LOCAL_*.txt
+*_REMOTE_*.txt
+
+# End of https://www.toptal.com/developers/gitignore/api/git
+
+# Created by https://www.toptal.com/developers/gitignore/api/vim
+# Edit at https://www.toptal.com/developers/gitignore?templates=vim
+
+### Vim ###
+# Swap
+[._]*.s[a-v][a-z]
+!*.svg  # comment out if you don't need vector files
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Session
+Session.vim
+Sessionx.vim
+
+# Temporary
+.netrwhist
+*~
+# Auto-generated tag files
+tags
+# Persistent undo
+[._]*.un~
+
+# End of https://www.toptal.com/developers/gitignore/api/vim
