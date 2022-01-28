@@ -1302,6 +1302,6 @@ class WalletStateManager:
         wallet = self.wallets[wallet_id]
         # This should be general to wallets but for right now this is just for CATs so we'll add this if
         if wallet.type() == WalletType.CAT.value:
-            return (await wallet.convert_puzzle_hash(puzzle_hash))
+            return await wallet.convert_puzzle_hash(puzzle_hash)
 
         return puzzle_hash
