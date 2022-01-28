@@ -97,6 +97,7 @@ class WalletNode:
     race_cache: Dict[uint32, Set[CoinState]]
     validation_semaphore: Optional[asyncio.Semaphore]
     local_node_synced: bool
+    new_state_lock: asyncio.Lock
 
     def __init__(
         self,
@@ -119,6 +120,7 @@ class WalletNode:
         self.proof_hashes: List = []
         self.state_changed_callback = None
         self.wallet_state_manager = None
+        self.new_state_lock = None
         self.server = None
         self.wsm_close_task = None
         self.sync_task: Optional[asyncio.Task] = None
@@ -240,7 +242,7 @@ class WalletNode:
         assert self.server is not None
         full_nodes: Dict[bytes32, WSChiaConnection] = self.server.connection_by_type.get(NodeType.FULL_NODE, {})
         for node_id, node in full_nodes.copy().items():
-            await self.subscribe_to_phs(puzzle_hashes, node)
+            asyncio.create_task(self.subscribe_to_phs(puzzle_hashes, node))
 
     def _close(self):
         self.log.info("self._close")
@@ -449,8 +451,12 @@ class WalletNode:
         self.synced_peers.add(full_node.peer_node_id)
 
     async def receive_state_from_untrusted_peer(self, items: List[CoinState], peer, height: Optional[uint32]):
+        # Validate states in parallel, apply serial
         if self.validation_semaphore is None:
             self.validation_semaphore = asyncio.Semaphore(6)
+        if self.new_state_lock is None:
+            self.new_state_lock = asyncio.Lock()
+
         all_tasks = []
 
         for idx, state in enumerate(items):
@@ -463,7 +469,9 @@ class WalletNode:
                     valid = await self.validate_received_state_from_peer(state, peer, self.get_cache_for_peer(peer))
                     if valid:
                         self.log.info(f"new coin state received ({idx} / {len(items)})")
-                        await self.wallet_state_manager.new_coin_state([state], peer)
+                        assert self.new_state_lock is not None
+                        async with self.new_state_lock:
+                            await self.wallet_state_manager.new_coin_state([state], peer)
                     elif height is not None:
                         self.add_state_to_race_cache(height, state)
                     else:
