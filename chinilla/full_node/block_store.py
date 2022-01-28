@@ -488,3 +488,21 @@ class BlockStore:
         heights = [int(row[0]) for row in rows]
 
         return heights
+
+    async def count_compactified_blocks(self) -> int:
+        async with self.db.execute("select count(*) from full_blocks where is_fully_compactified=1") as cursor:
+            row = await cursor.fetchone()
+
+        assert row is not None
+
+        [count] = row
+        return int(count)
+
+    async def count_uncompactified_blocks(self) -> int:
+        async with self.db.execute("select count(*) from full_blocks where is_fully_compactified=0") as cursor:
+            row = await cursor.fetchone()
+
+        assert row is not None
+
+        [count] = row
+        return int(count)

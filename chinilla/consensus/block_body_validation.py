@@ -1,6 +1,6 @@
 import collections
 import logging
-from typing import Dict, List, Optional, Set, Tuple, Union, Callable
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
@@ -8,7 +8,6 @@ from clvm.casts import int_from_bytes
 from chinilla.consensus.block_record import BlockRecord
 from chinilla.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chinilla.consensus.block_root_validation import validate_block_merkle_roots
-from chinilla.full_node.mempool_check_conditions import mempool_check_conditions_dict
 from chinilla.consensus.blockchain_interface import BlockchainInterface
 from chinilla.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chinilla.consensus.constants import ConsensusConstants
@@ -16,7 +15,7 @@ from chinilla.consensus.cost_calculator import NPCResult, calculate_cost_of_prog
 from chinilla.consensus.find_fork_point import find_fork_point_in_chain
 from chinilla.full_node.block_store import BlockStore
 from chinilla.full_node.coin_store import CoinStore
-from chinilla.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chinilla.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_conditions_dict
 from chinilla.types.blockchain_format.coin import Coin
 from chinilla.types.blockchain_format.sized_bytes import bytes32
 from chinilla.types.coin_record import CoinRecord
@@ -29,10 +28,7 @@ from chinilla.types.unfinished_block import UnfinishedBlock
 from chinilla.util import cached_bls
 from chinilla.util.condition_tools import pkm_pairs
 from chinilla.util.errors import Err
-from chinilla.util.generator_tools import (
-    additions_for_npc,
-    tx_removals_and_additions,
-)
+from chinilla.util.generator_tools import additions_for_npc, tx_removals_and_additions
 from chinilla.util.hash import std_hash
 from chinilla.util.ints import uint32, uint64, uint128
 

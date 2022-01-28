@@ -2,10 +2,11 @@ import asyncio
 import dataclasses
 import logging
 import multiprocessing
+import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple, Union
 from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 from clvm.casts import int_from_bytes
 
@@ -20,9 +21,10 @@ from chinilla.consensus.find_fork_point import find_fork_point_in_chain
 from chinilla.consensus.full_block_to_block_record import block_to_block_record
 from chinilla.consensus.multiprocess_validation import (
     PreValidationResult,
-    pre_validate_blocks_multiprocessing,
     _run_generator,
+    pre_validate_blocks_multiprocessing,
 )
+from chinilla.full_node.block_height_map import BlockHeightMap
 from chinilla.full_node.block_store import BlockStore
 from chinilla.full_node.coin_store import CoinStore
 from chinilla.full_node.hint_store import HintStore
@@ -40,11 +42,10 @@ from chinilla.types.header_block import HeaderBlock
 from chinilla.types.unfinished_block import UnfinishedBlock
 from chinilla.types.unfinished_header_block import UnfinishedHeaderBlock
 from chinilla.types.weight_proof import SubEpochChallengeSegment
-from chinilla.util.errors import Err, ConsensusError
+from chinilla.util.errors import ConsensusError, Err
 from chinilla.util.generator_tools import get_block_header, tx_removals_and_additions
 from chinilla.util.ints import uint16, uint32, uint64, uint128
 from chinilla.util.streamable import recurse_jsonify
-from chinilla.full_node.block_height_map import BlockHeightMap
 
 log = logging.getLogger(__name__)
 
@@ -268,9 +269,13 @@ class Blockchain(BlockchainInterface):
                 if peak_height is not None:
                     self._peak_height = peak_height
                     await self.__height_map.maybe_flush()
-            except BaseException:
+            except BaseException as e:
                 self.block_store.rollback_cache_block(header_hash)
                 await self.block_store.db_wrapper.rollback_transaction()
+                log.error(
+                    f"Error while adding block {block.header_hash} height {block.height},"
+                    f" rolling back: {traceback.format_exc()} {e}"
+                )
                 raise
 
         if fork_height is not None:

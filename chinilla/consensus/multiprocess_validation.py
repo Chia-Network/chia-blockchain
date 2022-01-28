@@ -3,7 +3,7 @@ import logging
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element
 
@@ -28,7 +28,7 @@ from chinilla.util.block_cache import BlockCache
 from chinilla.util.condition_tools import pkm_pairs
 from chinilla.util.errors import Err, ValidationError
 from chinilla.util.generator_tools import get_block_header, tx_removals_and_additions
-from chinilla.util.ints import uint16, uint64, uint32
+from chinilla.util.ints import uint16, uint32, uint64
 from chinilla.util.streamable import Streamable, dataclass_from_dict, streamable
 
 log = logging.getLogger(__name__)

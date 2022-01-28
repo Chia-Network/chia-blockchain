@@ -10,8 +10,7 @@ SERVICES_FOR_GROUP = {
     "timelord": "chinilla_timelord_launcher chinilla_timelord chinilla_full_node".split(),
     "timelord-only": "chinilla_timelord".split(),
     "timelord-launcher-only": "chinilla_timelord_launcher".split(),
-    "wallet": "chinilla_wallet chinilla_full_node".split(),
-    "wallet-only": "chinilla_wallet".split(),
+    "wallet": "chinilla_wallet".split(),
     "introducer": "chinilla_introducer".split(),
     "simulator": "chinilla_full_node_simulator".split(),
 }
