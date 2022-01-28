@@ -151,7 +151,7 @@ msgstr ""
 #~ msgid "Alternate tmpdir/tmpdir2"
 #~ msgstr ""
 
-#: src/components/Amount/Amount.tsx:99
+#: src/components/Amount/Amount.tsx:109
 msgid "Amount"
 msgstr "مقدار"
 
@@ -3197,7 +3197,7 @@ msgstr "You have made changes. Do you want to discard them?"
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 msgstr ""
 
-#: src/components/Amount/Amount.tsx:82
+#: src/components/Amount/Amount.tsx:91
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
 

@@ -43,8 +43,8 @@ msgid "+ Add New Plot NFT"
 msgstr "+ إضافة قطعة جديدة NFT"
 
 #: src/components/_wallet_old/Wallets.tsx:132
-msgid "+ Add Wallet"
-msgstr ""
+#~ msgid "+ Add Wallet"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -62,8 +62,8 @@ msgstr "الحصاد هو خدمة تعمل على الحاسوب حيث يتم 
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:435
-#: src/electron/main.tsx:522
+#: src/electron/main.tsx:510
+#: src/electron/main.tsx:597
 msgid "About Chia Blockchain"
 msgstr "معلومات عن Chia Blockchain"
 
@@ -88,14 +88,14 @@ msgstr "إجراء"
 msgid "Actions"
 msgstr "الإجراءات"
 
-#: src/components/trading/CreateOffer.jsx:201
+#: src/components/trading/CreateOffer.jsx:202
 msgid "Add"
 msgstr "إضافة"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:877
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:208
-msgid "Add Backup ID"
-msgstr ""
+#~ msgid "Add Backup ID"
+#~ msgstr ""
 
 #: src/components/plot/PlotHeader.tsx:89
 msgid "Add Plot Directory"
@@ -137,13 +137,13 @@ msgstr ""
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:561
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:657
 #: src/components/_wallet_old/standard/WalletStandard.tsx:589
-msgid "Address"
-msgstr "العنوان"
+#~ msgid "Address"
+#~ msgstr "العنوان"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:701
 #: src/components/_wallet_old/standard/WalletStandard.tsx:496
-msgid "Address / Puzzle hash"
-msgstr "العنوان / العنوان المشفر"
+#~ msgid "Address / Puzzle hash"
+#~ msgstr "العنوان / العنوان المشفر"
 
 #: src/components/app/AppKeyringMigrator.tsx:199
 msgid "After your keys are successfully migrated to the new keyring, you may choose to have your keys removed from the old keyring."
@@ -153,33 +153,28 @@ msgstr ""
 msgid "Alternate tmpdir/tmpdir2"
 msgstr ""
 
-#: src/components/_wallet_old/WalletHistory.tsx:62
-#: src/components/_wallet_old/create/createNewColouredCoin.jsx:119
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:720
-#: src/components/_wallet_old/standard/WalletStandard.tsx:506
-#: src/components/trading/CreateOffer.jsx:196
+#: src/components/trading/CreateOffer.jsx:197
 #: src/components/trading/TradesTable.tsx:19
 msgid "Amount"
 msgstr "المبلغ"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:581
-msgid "Amount ({cc_unit})"
-msgstr "المبلغ ({cc_unit})"
+#~ msgid "Amount ({cc_unit})"
+#~ msgstr "المبلغ ({cc_unit})"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:239
-msgid "Amount For Initial Coin"
-msgstr "مبلغ العملات الأولية"
+#~ msgid "Amount For Initial Coin"
+#~ msgstr "مبلغ العملات الأولية"
 
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:62
-msgid "Amount must be an even amount."
-msgstr ""
+#~ msgid "Amount must be an even amount."
+#~ msgstr ""
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:47
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "هل أنت متأكد أنك تريد حذف الملف؟ لا يمكن إرجاع الملف بعد الحزف."
 
-#: src/components/_wallet_old/standard/WalletStandard.tsx:626
 #: src/components/plotNFT/PlotNFTCard.tsx:126
 msgid "Are you sure you want to delete unconfirmed transactions?"
 msgstr ""
@@ -188,7 +183,7 @@ msgstr ""
 msgid "Are you sure you want to disconnect?"
 msgstr "هل أنت متأكد بأنك تريد قطع الإتصال مع السيرفر؟"
 
-#: src/electron/main.tsx:203
+#: src/electron/main.tsx:264
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "هل أنت متأكد من رغبتك في إغلاق التطبيق؟ ستتوقف عمليات إنشاء المساحات في القرص الصلب والمزرعة."
 
@@ -200,7 +195,7 @@ msgstr "هل أنت متأكد من رغبتك في إغلاق التطبيق؟ 
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "هل أنت متأكد أنك تريد استخدام K={plotSize}؟"
 
-#: src/components/app/AppState.tsx:140
+#: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
 
@@ -210,8 +205,8 @@ msgstr "اسم تم إنشاؤه تلقائياً من عنوان عقد الم�
 
 #: src/components/_selectKey_old/SelectKey.tsx:77
 #: src/components/_selectKey_old/SelectKey.tsx:116
-msgid "Back"
-msgstr "رجوع"
+#~ msgid "Back"
+#~ msgstr "رجوع"
 
 #: src/components/backup/BackupCreate.tsx:45
 msgid "Backup file is used to restore smart wallets."
@@ -220,8 +215,8 @@ msgstr "يستخدم ملف النسخ الاحتياطي لاستعادة ال�
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:377
 #: src/components/_wallet_old/did/WalletDID.tsx:647
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:541
-msgid "Balance"
-msgstr "الرصيد"
+#~ msgid "Balance"
+#~ msgstr "الرصيد"
 
 #: src/components/block/Block.jsx:306
 msgid "Base Farmer Reward Amount"
@@ -294,7 +289,7 @@ msgstr "تصفح"
 msgid "But you are currently farming <0/>"
 msgstr "لكنك حاليا تقوم بالزراعة <0/>"
 
-#: src/components/trading/CreateOffer.jsx:161
+#: src/components/trading/CreateOffer.jsx:162
 #: src/components/trading/TradesTable.tsx:46
 #: src/components/trading/TradingOverview.jsx:287
 msgid "Buy"
@@ -309,11 +304,10 @@ msgstr "شراء"
 #~ msgstr ""
 
 #: src/components/_selectKey_old/SelectKey.tsx:212
-msgid "Can be backed up to mnemonic seed"
-msgstr "يمكن الإسترجاع من النسخة الاحتياطية للكلمات السرية"
+#~ msgid "Can be backed up to mnemonic seed"
+#~ msgstr "يمكن الإسترجاع من النسخة الاحتياطية للكلمات السرية"
 
-#: src/components/_selectKey_old/SelectKey.tsx:138
-#: src/components/app/AppPassPrompt.tsx:151
+#: src/components/app/AppPassPrompt.tsx:152
 #: src/components/backup/BackupCreate.tsx:50
 #: src/components/farm/FarmManageFarmingRewards.tsx:176
 #: src/components/fullNode/FullNodeAddConnection.tsx:86
@@ -323,7 +317,7 @@ msgstr "يمكن الإسترجاع من النسخة الاحتياطية لل�
 #: src/components/settings/ChangePassphrasePrompt.tsx:224
 #: src/components/settings/RemovePassphrasePrompt.tsx:138
 #: src/components/settings/SetPassphrasePrompt.tsx:207
-#: src/components/trading/CreateOffer.jsx:139
+#: src/components/trading/CreateOffer.jsx:140
 #: src/components/trading/TradingOverview.jsx:399
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Cancel"
@@ -361,21 +355,21 @@ msgstr ""
 msgid "Change Pool"
 msgstr "تغيير المجمع"
 
-#: src/electron/main.tsx:414
+#: src/electron/main.tsx:489
 msgid "Chat on KeyBase"
 msgstr "الدردشة على KeyBase"
 
-#: src/electron/main.tsx:432
+#: src/electron/main.tsx:507
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:371
+#: src/electron/main.tsx:446
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:642
-msgid "Chia Wallet"
-msgstr "محفظة Chia"
+#~ msgid "Chia Wallet"
+#~ msgstr "محفظة Chia"
 
 #: src/components/app/AppSelectMode.tsx:137
 msgid "Choose Farming Mode"
@@ -408,44 +402,48 @@ msgid "Close"
 msgstr "إغلاق"
 
 #: src/components/app/AppState.tsx:98
-msgid "Closing down node and server"
-msgstr "إغلاق نقطة إتصال الشبكة والخادم"
+#~ msgid "Closing down node and server"
+#~ msgstr "إغلاق نقطة إتصال الشبكة والخادم"
+
+#: src/components/app/AppState.tsx:98
+msgid "Closing services"
+msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:987
-msgid "Coin Name"
-msgstr ""
+#~ msgid "Coin Name"
+#~ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:365
 msgid "Coins:"
 msgstr "العملات:"
 
-#: src/components/trading/CreateOffer.jsx:172
+#: src/components/trading/CreateOffer.jsx:173
 #: src/components/trading/TradesTable.tsx:23
 msgid "Colour"
 msgstr "اللون"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:223
-msgid "Colour Info"
-msgstr "معلومات اللون"
+#~ msgid "Colour Info"
+#~ msgstr "معلومات اللون"
 
 #: src/components/_wallet_old/create/createExistingColouredCoin.jsx:110
-msgid "Colour String"
-msgstr "إعدادات الألوان"
+#~ msgid "Colour String"
+#~ msgstr "إعدادات الألوان"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:228
-msgid "Colour:"
-msgstr "اللون:"
+#~ msgid "Colour:"
+#~ msgstr "اللون:"
 
 #: src/components/_wallet_old/create/WalletCreateList.tsx:34
-msgid "Coloured Coin"
-msgstr "عملة ملونة"
+#~ msgid "Coloured Coin"
+#~ msgstr "عملة ملونة"
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:122
-msgid "Coloured Coin Options"
-msgstr "خيارات العملة الملونة"
+#~ msgid "Coloured Coin Options"
+#~ msgstr "خيارات العملة الملونة"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:201
+#: src/electron/main.tsx:262
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "تأكيد"
@@ -464,7 +462,6 @@ msgstr ""
 msgid "Confirm Passphrase"
 msgstr ""
 
-#: src/components/_wallet_old/standard/WalletStandard.tsx:622
 #: src/components/plotNFT/PlotNFTCard.tsx:119
 msgid "Confirmation"
 msgstr ""
@@ -474,8 +471,8 @@ msgid "Confirmed at block:"
 msgstr "تم التأكيد علي المربع:"
 
 #: src/components/_wallet_old/WalletHistory.tsx:51
-msgid "Confirmed at height {0}"
-msgstr "تم التأكيد في الارتفاع {0}"
+#~ msgid "Confirmed at height {0}"
+#~ msgstr "تم التأكيد في الارتفاع {0}"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:89
 msgid "Connect"
@@ -494,8 +491,8 @@ msgstr "الاتصال بالمجمع"
 msgid "Connected"
 msgstr "متصل"
 
-#: src/components/app/AppState.tsx:133
-#: src/components/app/AppState.tsx:137
+#: src/components/app/AppState.tsx:144
+#: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
 msgstr ""
 
@@ -520,7 +517,7 @@ msgstr "نوع الاتصال"
 msgid "Connections"
 msgstr "الإتصالات"
 
-#: src/electron/main.tsx:395
+#: src/electron/main.tsx:470
 msgid "Contribute on GitHub"
 msgstr "المساهمة في GitHub"
 
@@ -532,18 +529,13 @@ msgstr "المساهمة في GitHub"
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:306
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:428
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:485
-msgid "Copy"
-msgstr "إنسخ"
+#~ msgid "Copy"
+#~ msgstr "إنسخ"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:33
 #~ msgid "Copy to Clipboard"
 #~ msgstr "نسخ إلى الحافظة"
 
-#: src/components/_wallet_old/create/createExistingColouredCoin.jsx:133
-#: src/components/_wallet_old/create/createNewColouredCoin.jsx:142
-#: src/components/_wallet_old/create/createRLAdmin.jsx:307
-#: src/components/_wallet_old/create/createRLUser.jsx:99
-#: src/components/_wallet_old/did/WalletDIDCreate.tsx:221
 #: src/components/backup/BackupCreate.tsx:58
 #: src/components/plot/add/PlotAddForm.tsx:197
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
@@ -555,20 +547,20 @@ msgid "Create & Manage plots"
 msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:970
-msgid "Create An Attestation Packet"
-msgstr ""
+#~ msgid "Create An Attestation Packet"
+#~ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:290
 #~ msgid "Create DID wallet"
 #~ msgstr "Create DID wallet"
 
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:110
-msgid "Create Distributed Identity Wallet"
-msgstr ""
+#~ msgid "Create Distributed Identity Wallet"
+#~ msgstr ""
 
 #: src/components/_wallet_old/did/WalletDIDSelect.tsx:32
-msgid "Create New Wallet"
-msgstr ""
+#~ msgid "Create New Wallet"
+#~ msgstr ""
 
 #: src/components/trading/TradeManager.tsx:45
 msgid "Create Offer"
@@ -579,26 +571,26 @@ msgstr "إنشاء عرض"
 #~ msgstr "Create Plot"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:188
-msgid "Create Rate Limited Admin Wallet"
-msgstr "إنشاء محفظة من النوع Rate Limited Admin Wallet"
+#~ msgid "Create Rate Limited Admin Wallet"
+#~ msgstr "إنشاء محفظة من النوع Rate Limited Admin Wallet"
 
 #: src/components/_wallet_old/create/createRLUser.jsx:78
-msgid "Create Rate Limited User Wallet"
-msgstr "إنشاء محفظة من النوع Rate Limited Admin Wallet"
+#~ msgid "Create Rate Limited User Wallet"
+#~ msgstr "إنشاء محفظة من النوع Rate Limited Admin Wallet"
 
 #: src/components/trading/TradeManager.tsx:22
 #~ msgid "Create Trade"
 #~ msgstr ""
 
-#: src/components/trading/CreateOffer.jsx:135
+#: src/components/trading/CreateOffer.jsx:136
 msgid "Create Trade Offer"
 msgstr "إنشاء عرض تجاري"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:543
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:684
 #: src/components/_wallet_old/standard/WalletStandard.tsx:476
-msgid "Create Transaction"
-msgstr "إنشاء معاملة"
+#~ msgid "Create Transaction"
+#~ msgstr "إنشاء معاملة"
 
 #: src/components/backup/BackupCreate.tsx:41
 msgid "Create a Backup"
@@ -609,28 +601,28 @@ msgid "Create a Plot NFT"
 msgstr "إنشاء قطعة NFT"
 
 #: src/components/_selectKey_old/SelectKey.tsx:254
-msgid "Create a new private key"
-msgstr "إنشاء مفتاح خاص جديد"
+#~ msgid "Create a new private key"
+#~ msgstr "إنشاء مفتاح خاص جديد"
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:186
-msgid "Create admin wallet"
-msgstr "إنشاء محفظة رئيسية جديدة"
+#~ msgid "Create admin wallet"
+#~ msgstr "إنشاء محفظة رئيسية جديدة"
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:132
-msgid "Create new coloured coin"
-msgstr "إنشاء عملة ملونة جديدة"
+#~ msgid "Create new coloured coin"
+#~ msgstr "إنشاء عملة ملونة جديدة"
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:192
-msgid "Create user wallet"
-msgstr "إنشاء محفظة مستخدم جديدة"
+#~ msgid "Create user wallet"
+#~ msgstr "إنشاء محفظة مستخدم جديدة"
 
 #: src/components/_wallet_old/create/createExistingColouredCoin.jsx:93
-msgid "Create wallet for colour"
-msgstr "إنشاء محفظة للعملات الملونة"
+#~ msgid "Create wallet for colour"
+#~ msgstr "إنشاء محفظة للعملات الملونة"
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:139
-msgid "Create wallet for existing colour"
-msgstr "إنشاء محفظة للعملات الملونة الحالية"
+#~ msgid "Create wallet for existing colour"
+#~ msgstr "إنشاء محفظة للعملات الملونة الحالية"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -675,8 +667,8 @@ msgid "Current trade status"
 msgstr "الوضع التجاري الحالي"
 
 #: src/components/_selectKey_old/SelectKey.tsx:227
-msgid "DANGER: permanently delete private key"
-msgstr "تحذير: حذف المفتاح الخاص بشكل دائم"
+#~ msgid "DANGER: permanently delete private key"
+#~ msgstr "تحذير: حذف المفتاح الخاص بشكل دائم"
 
 #: src/components/wallet/Wallets.tsx:53
 #~ msgid "DID Wallet"
@@ -686,7 +678,6 @@ msgstr "تحذير: حذف المفتاح الخاص بشكل دائم"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/_wallet_old/WalletHistory.tsx:46
 #: src/components/farm/FarmLastAttemptedProof.tsx:31
 #: src/components/trading/TradingOverview.jsx:136
 msgid "Date"
@@ -696,13 +687,6 @@ msgstr "التاريخ"
 msgid "Delay"
 msgstr "تأخير"
 
-#: src/components/_selectKey_old/SelectKey.tsx:76
-#: src/components/_selectKey_old/SelectKey.tsx:115
-#: src/components/_wallet_old/did/WalletDID.tsx:449
-#: src/components/_wallet_old/did/WalletDID.tsx:865
-#: src/components/_wallet_old/did/WalletDIDCreate.tsx:197
-#: src/components/_wallet_old/did/WalletDIDRecovery.tsx:101
-#: src/components/_wallet_old/standard/WalletStandard.tsx:623
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/PlotAction.tsx:51
 #: src/components/plot/queue/PlotQueueActions.tsx:41
@@ -720,23 +704,22 @@ msgstr ""
 msgid "Delete Plot"
 msgstr "حذف قطعة"
 
-#: src/components/_wallet_old/standard/WalletStandard.tsx:667
 #: src/components/plotNFT/PlotNFTCard.tsx:312
 msgid "Delete Unconfirmed Transactions"
 msgstr ""
 
 #: src/components/_selectKey_old/SelectKey.tsx:114
 #: src/components/_selectKey_old/SelectKey.tsx:273
-msgid "Delete all keys"
-msgstr "حذف جميع المفاتيح"
+#~ msgid "Delete all keys"
+#~ msgstr "حذف جميع المفاتيح"
 
 #: src/components/selectKey/SelectKey.tsx:58
 #~ msgid "Delete key"
 #~ msgstr "Delete key"
 
 #: src/components/_selectKey_old/SelectKey.tsx:75
-msgid "Delete key {fingerprint}"
-msgstr ""
+#~ msgid "Delete key {fingerprint}"
+#~ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:126
 #~ msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -754,11 +737,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:317
+#: src/electron/main.tsx:386
 msgid "Developer"
 msgstr "المطور"
 
-#: src/electron/main.tsx:320
+#: src/electron/main.tsx:389
 msgid "Developer Tools"
 msgstr "أدوات المطورين"
 
@@ -779,6 +762,10 @@ msgstr ""
 #~ msgid "Disable Passphrase Protection"
 #~ msgstr ""
 
+#: src/electron/main.tsx:398
+msgid "Disable Simulator"
+msgstr ""
+
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
 #~ msgstr ""
@@ -797,8 +784,8 @@ msgstr "قطع الاتصال"
 
 #: src/components/_wallet_old/create/WalletCreateList.tsx:28
 #: src/components/_wallet_old/did/WalletDIDSelect.tsx:25
-msgid "Distributed Identity"
-msgstr ""
+#~ msgid "Distributed Identity"
+#~ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:280
 #~ msgid "Distributed Identity Options"
@@ -814,8 +801,8 @@ msgid "Does your machine support parallel plotting?"
 msgstr "هل يدعم جهازك إنشاء اكثر من قطعة في نفس الوقت ؟"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:428
-msgid "Drag and drop attestation packet(s)"
-msgstr ""
+#~ msgid "Drag and drop attestation packet(s)"
+#~ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:39
 msgid "Drag and drop offer file"
@@ -826,10 +813,10 @@ msgid "Drag and drop your backup file"
 msgstr "قم بسحب ملف النسخة الاحتياطية من جهاز الحاسوب الي هنا"
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:109
-msgid "Drag and drop your recovery backup file"
-msgstr ""
+#~ msgid "Drag and drop your recovery backup file"
+#~ msgstr ""
 
-#: src/electron/main.tsx:276
+#: src/electron/main.tsx:345
 msgid "Edit"
 msgstr "تعديل"
 
@@ -837,6 +824,10 @@ msgstr "تعديل"
 #: src/components/plotNFT/PlotNFTCard.tsx:298
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:81
 msgid "Edit Payout Instructions"
+msgstr ""
+
+#: src/electron/main.tsx:399
+msgid "Enable Simulator"
 msgstr ""
 
 #: src/components/wallet/EnterPassphrasePrompt.tsx:111
@@ -852,8 +843,8 @@ msgid "Enter a strong passphrase to secure your keys:"
 msgstr ""
 
 #: src/components/_wallet_old/WalletImport.tsx:146
-msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr "أدخل الـ 24 كلمة التي قمت بحفظها من أجل استعادة محفظة Chia الخاصة بك."
+#~ msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
+#~ msgstr "أدخل الـ 24 كلمة التي قمت بحفظها من أجل استعادة محفظة Chia الخاصة بك."
 
 #: src/components/settings/RemovePassphrasePrompt.tsx:104
 msgid "Enter your passphrase:"
@@ -870,8 +861,8 @@ msgid "Error"
 msgstr "خطأ"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:450
-msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
-msgstr "خطأ: لا يمكن إرسال chia إلى عنوان العملات الملونة. الرجاء إدخال عنوان chia."
+#~ msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
+#~ msgstr "خطأ: لا يمكن إرسال chia إلى عنوان العملات الملونة. الرجاء إدخال عنوان chia."
 
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:14
 msgid "Estimated Network Space"
@@ -923,8 +914,6 @@ msgstr ""
 #~ msgid "Failed to update passphrase: {error}"
 #~ msgstr ""
 
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:610
-#: src/components/_wallet_old/standard/WalletStandard.tsx:525
 #: src/components/dashboard/DashboardSideBar.tsx:70
 msgid "Farm"
 msgstr "المزرعة"
@@ -990,13 +979,6 @@ msgstr ""
 msgid "Farming Status"
 msgstr "حالة المزرعة"
 
-#: src/components/_wallet_old/WalletHistory.tsx:66
-#: src/components/_wallet_old/create/createExistingColouredCoin.jsx:123
-#: src/components/_wallet_old/create/createNewColouredCoin.jsx:132
-#: src/components/_wallet_old/create/createRLAdmin.jsx:244
-#: src/components/_wallet_old/create/createRLAdmin.jsx:272
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:733
-#: src/components/_wallet_old/standard/WalletStandard.tsx:517
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:160
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:146
 #: src/components/pool/PoolInfo.tsx:17
@@ -1012,8 +994,8 @@ msgstr "الرسوم"
 #~ msgstr "Fee ({0})"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:595
-msgid "Fee ({currencyCode})"
-msgstr "الرسوم ({currencyCode})"
+#~ msgid "Fee ({currencyCode})"
+#~ msgstr "الرسوم ({currencyCode})"
 
 #: src/components/plotNFT/PlotNFTChangePool.tsx:126
 msgid "Fee is used TWICE: once to leave pool, once to join."
@@ -1027,12 +1009,11 @@ msgstr "قيمة الرسوم"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:268
-#: src/electron/main.tsx:469
+#: src/electron/main.tsx:337
+#: src/electron/main.tsx:544
 msgid "File"
 msgstr "الملف"
 
-#: src/components/_wallet_old/did/WalletDID.tsx:978
 #: src/components/plot/PlotsFailed.tsx:13
 #: src/components/plot/PlotsNotFound.tsx:13
 #: src/components/plot/overview/PlotOverviewPlots.tsx:106
@@ -1048,11 +1029,11 @@ msgstr "موقع الملف النهائي"
 msgid "Finished"
 msgstr "انتهت"
 
-#: src/electron/main.tsx:420
+#: src/electron/main.tsx:495
 msgid "Follow on Twitter"
 msgstr "تابع على تويتر"
 
-#: src/electron/main.tsx:379
+#: src/electron/main.tsx:454
 msgid "Frequently Asked Questions"
 msgstr "الأسئلة المتكررة"
 
@@ -1069,13 +1050,13 @@ msgstr ""
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:345
+#: src/electron/main.tsx:420
 msgid "Full Screen"
 msgstr "ملء الشاشة"
 
 #: src/components/_wallet_old/create/createNewColouredCoin.jsx:102
-msgid "Generate New Colour"
-msgstr "إنشاء لون جديدة"
+#~ msgid "Generate New Colour"
+#~ msgstr "إنشاء لون جديدة"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:251
 #~ msgid "Get Pool Login Link"
@@ -1086,8 +1067,8 @@ msgid "Grid view"
 msgstr ""
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:576
-msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-msgstr "مفاتيح الترميز عالية الدقة أو الهرمية هي نوع من المفاتيح العمومية/المفاتيح الخصوصية حيث يمكن أن يحتوي المفتاح الخصوصي الواحد على عدد لا نهائي تقريبا من المفاتيح العمومية المختلفة (ومن ثم تستقبل المحفظة عناوين) التي ستعود جميعها في نهاية المطاف إلى مفتاح خصوصي واحد ويمكن إنفاقها عليه."
+#~ msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
+#~ msgstr "مفاتيح الترميز عالية الدقة أو الهرمية هي نوع من المفاتيح العمومية/المفاتيح الخصوصية حيث يمكن أن يحتوي المفتاح الخصوصي الواحد على عدد لا نهائي تقريبا من المفاتيح العمومية المختلفة (ومن ثم تستقبل المحفظة عناوين) التي ستعود جميعها في نهاية المطاف إلى مفتاح خصوصي واحد ويمكن إنفاقها عليه."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Harvester ID"
@@ -1111,7 +1092,7 @@ msgstr "تجزئة رأس الصفحة"
 msgid "Height"
 msgstr "ارتفاع"
 
-#: src/electron/main.tsx:367
+#: src/electron/main.tsx:442
 msgid "Help"
 msgstr "المساعدة"
 
@@ -1129,8 +1110,8 @@ msgid "Hint"
 msgstr ""
 
 #: src/components/_wallet_old/WalletHistory.tsx:91
-msgid "History"
-msgstr "السّجل"
+#~ msgid "History"
+#~ msgstr "السّجل"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:37
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:36
@@ -1150,20 +1131,20 @@ msgid "If none selected, then it will default to the temporary directory."
 msgstr "إذا لم يتم اختيار أي منها, فسيكون هو الدليل الافتراضي المؤقت."
 
 #: src/components/_wallet_old/WalletImport.tsx:143
-msgid "Import Wallet from Mnemonics"
-msgstr "إستيراد المحفظة من Mnemonics"
+#~ msgid "Import Wallet from Mnemonics"
+#~ msgstr "إستيراد المحفظة من Mnemonics"
 
 #: src/components/_selectKey_old/SelectKey.tsx:264
-msgid "Import from Mnemonics (24 words)"
-msgstr "إستيراد من Mnemonics (24 كلمة)"
+#~ msgid "Import from Mnemonics (24 words)"
+#~ msgstr "إستيراد من Mnemonics (24 كلمة)"
 
 #: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "قيد التقدم"
 
 #: src/components/_wallet_old/WalletHistory.tsx:23
-msgid "Incoming"
-msgstr "الوارد"
+#~ msgid "Incoming"
+#~ msgstr "الوارد"
 
 #: src/components/core/components/Fee/Fee.tsx:36
 #~ msgid "Incorrect value"
@@ -1183,20 +1164,20 @@ msgstr "أشار إلى الوقت الذي قُبل فيه هذا العرض"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:333
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:472
-msgid "Info Packet"
-msgstr "حزمة المعلومات"
+#~ msgid "Info Packet"
+#~ msgstr "حزمة المعلومات"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:260
-msgid "Initial Amount"
-msgstr "المبلغ الأولي"
+#~ msgid "Initial Amount"
+#~ msgstr "المبلغ الأولي"
 
 #: src/components/_wallet_old/create/createRLUser.jsx:87
-msgid "Initialize a Rate Limited User Wallet:"
-msgstr "\":\"تهيئة محفظة المستخدم ذات السعر المحدود\":\""
+#~ msgid "Initialize a Rate Limited User Wallet:"
+#~ msgstr "\":\"تهيئة محفظة المستخدم ذات السعر المحدود\":\""
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:218
-msgid "Interval"
-msgstr "فترة"
+#~ msgid "Interval"
+#~ msgstr "فترة"
 
 #: src/components/plotNFT/PlotNFTState.tsx:26
 msgid "Invalid state"
@@ -1292,13 +1273,13 @@ msgstr ""
 msgid "Loading configuration"
 msgstr ""
 
-#: src/components/app/AppState.tsx:106
+#: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
 msgstr ""
 
 #: src/components/_wallet_old/Wallets.tsx:117
-msgid "Loading list of wallets"
-msgstr ""
+#~ msgid "Loading list of wallets"
+#~ msgstr ""
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:35
 msgid "Loading..."
@@ -1361,8 +1342,8 @@ msgid "Manage Farming Rewards"
 msgstr "إدارة جوائز الزراعة"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:806
-msgid "Manage Recovery DIDs"
-msgstr ""
+#~ msgid "Manage Recovery DIDs"
+#~ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:99
 msgid "Manage Your Farming Rewards Target Addresses"
@@ -1373,8 +1354,8 @@ msgid "MiB Up/Down"
 msgstr "ميجابيت تنزيل\\رفع"
 
 #: src/components/_selectKey_old/SelectKey.tsx:137
-msgid "Migrate"
-msgstr ""
+#~ msgid "Migrate"
+#~ msgstr ""
 
 #: src/components/settings/Settings.tsx:182
 #: src/components/settings/SettingsPanel.tsx:187
@@ -1385,7 +1366,6 @@ msgstr ""
 msgid "Migrate Keys"
 msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:136
 #: src/components/app/AppKeyringMigrator.tsx:125
 msgid "Migration required"
 msgstr ""
@@ -1408,12 +1388,12 @@ msgid "More memory slightly increases speed"
 msgstr "المزيد من الذاكرة يزيد من السرعة قليلاً"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:537
-msgid "My DID Wallet"
-msgstr ""
+#~ msgid "My DID Wallet"
+#~ msgstr ""
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:415
-msgid "My Pubkey"
-msgstr "المفتاح العام الخاص بى"
+#~ msgid "My Pubkey"
+#~ msgstr "المفتاح العام الخاص بى"
 
 #: src/components/fullNode/card/FullNodeCardNetworkName.tsx:14
 msgid "Network Name"
@@ -1429,33 +1409,31 @@ msgstr "إسم الشبكة"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:685
 #: src/components/_wallet_old/standard/WalletStandard.tsx:572
-msgid "New Address"
-msgstr "عنوان جديد"
+#~ msgid "New Address"
+#~ msgstr "عنوان جديد"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:172
 msgid "New Passphrase"
 msgstr ""
 
 #: src/components/_wallet_old/WalletAdd.tsx:63
-msgid "New Wallet"
-msgstr "محفظة جديدة"
+#~ msgid "New Wallet"
+#~ msgstr "محفظة جديدة"
 
 #: src/components/app/AppPassPrompt.tsx:60
 #~ msgid "New passphrase is the same as your current passphrase"
 #~ msgstr ""
 
-#: src/components/_wallet_old/WalletAdd.tsx:95
-#: src/components/_wallet_old/WalletImport.tsx:162
 #: src/components/block/Block.jsx:340
 msgid "Next"
 msgstr "التالي"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:249
-msgid "Nickname"
-msgstr "الإسم المستعار"
+#~ msgid "Nickname"
+#~ msgstr "الإسم المستعار"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:198
+#: src/electron/main.tsx:259
 msgid "No"
 msgstr "لايوجد"
 
@@ -1468,8 +1446,8 @@ msgid "No blocks farmed yet"
 msgstr "لا توجد بلوكات مزروعة بعد"
 
 #: src/components/_wallet_old/WalletHistory.tsx:102
-msgid "No previous transactions"
-msgstr "لا توجد معاملات سابقة"
+#~ msgid "No previous transactions"
+#~ msgstr "لا توجد معاملات سابقة"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:136
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
@@ -1501,7 +1479,6 @@ msgstr "لم تمر أي من قطعة خاصة بك بمرشح القطع حت�
 msgid "Not Available"
 msgstr "غير متاح"
 
-#: src/components/_wallet_old/WalletStatus.tsx:28
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:35
 msgid "Not Synced"
 msgstr "لم تتم المزامنة"
@@ -1556,20 +1533,20 @@ msgid "Offers Created"
 msgstr "عروض تم إنشاؤها"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:478
-msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr "في المتوسط هناك دقيقة واحدة بين كل كتلة معاملة. ما لم يكن هناك اكتظاظ يمكنك أن تتوقع إدراج معاملتك في أقل من دقيقة."
+#~ msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
+#~ msgstr "في المتوسط هناك دقيقة واحدة بين كل كتلة معاملة. ما لم يكن هناك اكتظاظ يمكنك أن تتوقع إدراج معاملتك في أقل من دقيقة."
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:34
-msgid "Only one backup file is allowed."
-msgstr ""
+#~ msgid "Only one backup file is allowed."
+#~ msgstr ""
 
 #: src/components/wallet/create/recoverDIDWallet.js:156
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 #~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 
 #: src/components/_wallet_old/WalletHistory.tsx:23
-msgid "Outgoing"
-msgstr "الصادرة"
+#~ msgid "Outgoing"
+#~ msgstr "الصادرة"
 
 #: src/components/app/AppKeyringMigrator.tsx:139
 #: src/components/app/AppKeyringMigrator.tsx:140
@@ -1637,47 +1614,46 @@ msgstr "أعلى ارتفاع"
 msgid "Peak Time"
 msgstr "وقت الذروة"
 
-#: src/components/_wallet_old/WalletHistory.tsx:53
 #: src/components/plotNFT/PlotNFTState.tsx:43
 msgid "Pending"
 msgstr "في إنتظار المُراجعة"
 
 #: src/components/_wallet_old/card/WalletCardPendingBalance.tsx:24
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:573
-msgid "Pending Balance"
-msgstr "الرصيد المعلّق"
+#~ msgid "Pending Balance"
+#~ msgstr "الرصيد المعلّق"
 
 #: src/components/_wallet_old/card/WalletCardPendingChange.tsx:24
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:578
-msgid "Pending Change"
-msgstr "في إنتظار التأكيد"
+#~ msgid "Pending Change"
+#~ msgstr "في إنتظار التأكيد"
 
 #: src/components/_wallet_old/card/WalletCardPendingTotalBalance.tsx:27
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:568
-msgid "Pending Total Balance"
-msgstr "الرصيد الإجمالي المعلق"
+#~ msgid "Pending Total Balance"
+#~ msgstr "الرصيد الإجمالي المعلق"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
 #: src/hooks/useAbsorbRewards.tsx:43
 msgid "Please Confirm"
 msgstr ""
 
-#: src/components/trading/CreateOffer.jsx:100
+#: src/components/trading/CreateOffer.jsx:101
 msgid "Please add a trade pair"
 msgstr "الرجاء إضافة الاقتران التجاري"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:668
-msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-msgstr "الرجاء إدخال 0 رسوم. الرسوم غير مدعومة حتى الآن لـ RL."
+#~ msgid "Please enter 0 fee. Positive fees not supported yet for RL."
+#~ msgstr "الرجاء إدخال 0 رسوم. الرسوم غير مدعومة حتى الآن لـ RL."
 
 #: src/components/_wallet_old/did/WalletDID.tsx:927
-msgid "Please enter a coin"
-msgstr ""
+#~ msgid "Please enter a coin"
+#~ msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:526
 #: src/components/_wallet_old/did/WalletDID.tsx:917
-msgid "Please enter a filename"
-msgstr ""
+#~ msgid "Please enter a filename"
+#~ msgstr ""
 
 #: src/components/app/AppPassPrompt.tsx:53
 #: src/components/settings/SetPassphrasePrompt.tsx:53
@@ -1685,51 +1661,51 @@ msgid "Please enter a passphrase"
 msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:937
-msgid "Please enter a pubkey"
-msgstr ""
+#~ msgid "Please enter a pubkey"
+#~ msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:947
-msgid "Please enter a puzzlehash"
-msgstr ""
+#~ msgid "Please enter a puzzlehash"
+#~ msgstr ""
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:140
-msgid "Please enter a valid initial coin amount"
-msgstr "الرجاء إدخال مبلغ صحيح"
+#~ msgid "Please enter a valid initial coin amount"
+#~ msgstr "الرجاء إدخال مبلغ صحيح"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:777
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:76
-msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
-msgstr ""
+#~ msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
+#~ msgstr ""
 
 #: src/components/_wallet_old/create/createNewColouredCoin.jsx:69
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:639
 #: src/components/_wallet_old/standard/WalletStandard.tsx:430
-msgid "Please enter a valid numeric amount"
-msgstr "الرجاء إدخال مبلغ صحيح"
+#~ msgid "Please enter a valid numeric amount"
+#~ msgstr "الرجاء إدخال مبلغ صحيح"
 
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:50
-msgid "Please enter a valid numeric amount."
-msgstr ""
+#~ msgid "Please enter a valid numeric amount."
+#~ msgstr ""
 
 #: src/components/_wallet_old/create/createExistingColouredCoin.jsx:70
 #: src/components/_wallet_old/create/createNewColouredCoin.jsx:79
 #: src/components/_wallet_old/create/createRLAdmin.jsx:150
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:649
 #: src/components/_wallet_old/standard/WalletStandard.tsx:440
-msgid "Please enter a valid numeric fee"
-msgstr "الرجاء إدخال مبلغ رسوم صحيح"
+#~ msgid "Please enter a valid numeric fee"
+#~ msgstr "الرجاء إدخال مبلغ رسوم صحيح"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:100
-msgid "Please enter a valid numeric interval length"
-msgstr "يُـرجى ادخال فترة زمنيّة صحيحة"
+#~ msgid "Please enter a valid numeric interval length"
+#~ msgstr "يُـرجى ادخال فترة زمنيّة صحيحة"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:115
-msgid "Please enter a valid numeric spendable amount"
-msgstr "الرجاء إدخال مبلغ رقمي صحيح قابل للإنفاق"
+#~ msgid "Please enter a valid numeric spendable amount"
+#~ msgstr "الرجاء إدخال مبلغ رقمي صحيح قابل للإنفاق"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:125
-msgid "Please enter a valid pubkey"
-msgstr "الرجاء إدخال المفتاح العام الصحيح"
+#~ msgid "Please enter a valid pubkey"
+#~ msgstr "الرجاء إدخال المفتاح العام الصحيح"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:75
 msgid "Please enter your current passphrase, and a new passphrase"
@@ -1747,22 +1723,22 @@ msgstr ""
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:623
 #: src/components/_wallet_old/standard/WalletStandard.tsx:420
-msgid "Please finish syncing before making a transaction"
-msgstr "الرجاء إنهاء المزامنة قبل إجراء معاملة"
+#~ msgid "Please finish syncing before making a transaction"
+#~ msgstr "الرجاء إنهاء المزامنة قبل إجراء معاملة"
 
-#: src/components/trading/CreateOffer.jsx:66
+#: src/components/trading/CreateOffer.jsx:67
 msgid "Please select amount"
 msgstr "الرجاء تحديد المبلغ"
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:55
-msgid "Please select backup file first"
-msgstr ""
+#~ msgid "Please select backup file first"
+#~ msgstr ""
 
-#: src/components/trading/CreateOffer.jsx:76
+#: src/components/trading/CreateOffer.jsx:77
 msgid "Please select buy or sell"
 msgstr "الرجاء تحديد الشراء أو البيع"
 
-#: src/components/trading/CreateOffer.jsx:56
+#: src/components/trading/CreateOffer.jsx:57
 msgid "Please select coin colour"
 msgstr "الرجاء اختيار لون العملة"
 
@@ -1784,7 +1760,6 @@ msgstr "الرجاء إختيار الملف المؤقت"
 msgid "Please wait for synchronization"
 msgstr ""
 
-#: src/components/_wallet_old/did/WalletDIDRecovery.tsx:64
 #: src/hooks/useJoinPool.tsx:28
 msgid "Please wait for wallet synchronization"
 msgstr ""
@@ -2009,8 +1984,8 @@ msgstr "تجزئة العنوان السابق"
 #~ msgstr "Previous Sub Block Hash"
 
 #: src/components/_selectKey_old/SelectKey.tsx:207
-msgid "Private key with public fingerprint {fingerprint}"
-msgstr "مفتاح خاص ببصمة إصبع عامة {fingerprint}"
+#~ msgid "Private key with public fingerprint {fingerprint}"
+#~ msgstr "مفتاح خاص ببصمة إصبع عامة {fingerprint}"
 
 #: src/_middleware_old/middleware_api.jsx:221
 #~ msgid "Private key {0}"
@@ -2034,16 +2009,16 @@ msgstr ""
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:297
 #: src/components/_wallet_old/did/WalletDID.tsx:996
-msgid "Pubkey"
-msgstr "المفتاح العمومي"
+#~ msgid "Pubkey"
+#~ msgstr "المفتاح العمومي"
 
 #: src/_middleware_old/middleware_api.jsx:239
 #~ msgid "Public key:"
 #~ msgstr "المفتاح العمومي"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:1005
-msgid "Puzzlehash"
-msgstr ""
+#~ msgid "Puzzlehash"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:204
 msgid "Queue Name"
@@ -2074,48 +2049,48 @@ msgstr "الحد الاقصى من استعمال الذاكرة العشوائ�
 #~ msgstr ""
 
 #: src/components/_wallet_old/create/WalletCreateList.tsx:42
-msgid "Rate Limited"
-msgstr "معدل محدود"
+#~ msgid "Rate Limited"
+#~ msgstr "معدل محدود"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:391
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:438
-msgid "Rate Limited Info"
-msgstr "معدل معلومات محدودة"
+#~ msgid "Rate Limited Info"
+#~ msgstr "معدل معلومات محدودة"
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:176
-msgid "Rate Limited Options"
-msgstr "قيم خيارات محدودة"
+#~ msgid "Rate Limited Options"
+#~ msgstr "قيم خيارات محدودة"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:273
-msgid "Rate Limited User Wallet Setup"
-msgstr "معدل إعداد محفظة المستخدم المحدود"
+#~ msgid "Rate Limited User Wallet Setup"
+#~ msgstr "معدل إعداد محفظة المستخدم المحدود"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:650
 #: src/components/_wallet_old/standard/WalletStandard.tsx:569
-msgid "Receive Address"
-msgstr "تلقي العنوان"
+#~ msgid "Receive Address"
+#~ msgstr "تلقي العنوان"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:464
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:124
-msgid "Recover"
-msgstr ""
+#~ msgid "Recover"
+#~ msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:340
 #: src/components/_wallet_old/did/WalletDID.tsx:480
-msgid "Recover DID Wallet"
-msgstr ""
+#~ msgid "Recover DID Wallet"
+#~ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 #~ msgid "Recover DID wallet"
 #~ msgstr "Recover DID wallet"
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:84
-msgid "Recover Distributed Identity Wallet"
-msgstr ""
+#~ msgid "Recover Distributed Identity Wallet"
+#~ msgstr ""
 
 #: src/components/_wallet_old/did/WalletDIDSelect.tsx:39
-msgid "Recover Wallet"
-msgstr ""
+#~ msgid "Recover Wallet"
+#~ msgstr ""
 
 #: src/components/plot/PlotHeader.tsx:76
 #: src/components/plot/overview/PlotOverviewHero.tsx:60
@@ -2126,7 +2101,7 @@ msgstr "تحديث القطع"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:387
+#: src/electron/main.tsx:462
 msgid "Release Notes"
 msgstr "كتابة ملاحظات"
 
@@ -2146,10 +2121,10 @@ msgid "Removing"
 msgstr "ال"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:265
-msgid "Rename"
-msgstr "إعادة التسمية"
+#~ msgid "Rename"
+#~ msgstr "إعادة التسمية"
 
-#: src/electron/main.tsx:406
+#: src/electron/main.tsx:481
 msgid "Report an Issue..."
 msgstr "بلغ عن خطأ..."
 
@@ -2172,7 +2147,7 @@ msgstr "التخطي الآمن"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:179
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:131
-#: src/components/trading/CreateOffer.jsx:142
+#: src/components/trading/CreateOffer.jsx:143
 msgid "Save"
 msgstr "حفظ"
 
@@ -2200,8 +2175,8 @@ msgid "Secure your keychain using a strong passphrase"
 msgstr ""
 
 #: src/components/_selectKey_old/SelectKey.tsx:216
-msgid "See private key"
-msgstr "عرض المفتاح الخاص"
+#~ msgid "See private key"
+#~ msgstr "عرض المفتاح الخاص"
 
 #: src/_middleware_old/middleware_api.jsx:265
 #~ msgid "Seed:"
@@ -2216,8 +2191,8 @@ msgid "Select Final Directory"
 msgstr "حدد المجلد النهائي"
 
 #: src/components/_selectKey_old/SelectKey.tsx:175
-msgid "Select Key"
-msgstr "اختر المفتاح"
+#~ msgid "Select Key"
+#~ msgstr "اختر المفتاح"
 
 #: src/components/trading/ViewOffer.jsx:37
 msgid "Select Offer"
@@ -2228,8 +2203,8 @@ msgid "Select Temporary Directory"
 msgstr "حدد المجلد المؤقت"
 
 #: src/components/_wallet_old/create/WalletCreateList.tsx:21
-msgid "Select Wallet Type"
-msgstr "أختر نوع المحفظة"
+#~ msgid "Select Wallet Type"
+#~ msgstr "أختر نوع المحفظة"
 
 #: src/components/app/AppSelectMode.tsx:55
 msgid "Select Your Client Mode"
@@ -2262,8 +2237,8 @@ msgid "Selected"
 msgstr "حدد"
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:91
-msgid "Selected recovery file:"
-msgstr ""
+#~ msgid "Selected recovery file:"
+#~ msgstr ""
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
@@ -2274,7 +2249,7 @@ msgstr ""
 msgid "Self pool. When you win a block you will earn XCH rewards."
 msgstr ""
 
-#: src/components/trading/CreateOffer.jsx:164
+#: src/components/trading/CreateOffer.jsx:165
 #: src/components/trading/TradesTable.tsx:46
 #: src/components/trading/TradingOverview.jsx:287
 msgid "Sell"
@@ -2283,16 +2258,16 @@ msgstr "بيع"
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:620
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:748
 #: src/components/_wallet_old/standard/WalletStandard.tsx:535
-msgid "Send"
-msgstr "إرسال"
+#~ msgid "Send"
+#~ msgstr "إرسال"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:460
-msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr "أرسل حزمة المعلومات هذه إلى مستخدم المحفظة المحدودة المعدل الذي يجب استخدامه لإكمال إعداد محفظتهم:"
+#~ msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
+#~ msgstr "أرسل حزمة المعلومات هذه إلى مستخدم المحفظة المحدودة المعدل الذي يجب استخدامه لإكمال إعداد محفظتهم:"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:279
-msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr "أرسل المحفظة الخاصة بك إلى مدير المحفظة المحدودة المعدل:"
+#~ msgid "Send your pubkey to your Rate Limited Wallet admin:"
+#~ msgstr "أرسل المحفظة الخاصة بك إلى مدير المحفظة المحدودة المعدل:"
 
 #: src/components/settings/SetPassphrasePrompt.tsx:137
 #: src/components/settings/SetPassphrasePrompt.tsx:216
@@ -2321,14 +2296,14 @@ msgstr ""
 #~ msgid "Show app"
 #~ msgstr "Show app"
 
-#: src/components/trading/CreateOffer.jsx:153
+#: src/components/trading/CreateOffer.jsx:154
 #: src/components/trading/TradesTable.tsx:15
 msgid "Side"
 msgstr "الجهة"
 
 #: src/components/_selectKey_old/SelectKey.tsx:180
-msgid "Sign In"
-msgstr "تسجيل الدخول"
+#~ msgid "Sign In"
+#~ msgstr "تسجيل الدخول"
 
 #: src/components/app/AppKeyringMigrator.tsx:58
 #: src/components/app/AppKeyringMigrator.tsx:219
@@ -2363,39 +2338,39 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:483
+#: src/electron/main.tsx:558
 msgid "Speech"
 msgstr "خطاب"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:230
-msgid "Spendable Amount"
-msgstr "المبلغ القابل للإنفاق"
+#~ msgid "Spendable Amount"
+#~ msgstr "المبلغ القابل للإنفاق"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:202
-msgid "Spendable Amount Per Interval"
-msgstr "المبلغ القابل للإنفاق لكل فاصل زمني"
+#~ msgid "Spendable Amount Per Interval"
+#~ msgstr "المبلغ القابل للإنفاق لكل فاصل زمني"
 
 #: src/components/_wallet_old/card/WalletCardSpendableBalance.tsx:24
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:384
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:548
-msgid "Spendable Balance"
-msgstr "الرصيد المستهلك"
+#~ msgid "Spendable Balance"
+#~ msgstr "الرصيد المستهلك"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:396
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:443
-msgid "Spending Interval (number of blocks): {interval}"
-msgstr "الفاصل الزمني للإنفاق (عدد الكتل) {interval}"
+#~ msgid "Spending Interval (number of blocks): {interval}"
+#~ msgstr "الفاصل الزمني للإنفاق (عدد الكتل) {interval}"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:197
-msgid "Spending Interval Length (number of blocks)"
-msgstr "طول الفاصل الزمني للإنفاق (عدد الكتل)"
+#~ msgid "Spending Interval Length (number of blocks)"
+#~ msgstr "طول الفاصل الزمني للإنفاق (عدد الكتل)"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:401
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:448
-msgid "Spending Limit (chia per interval): {0}"
-msgstr "حد الإنفاق (chia لكل فاصلة): {0}"
+#~ msgid "Spending Limit (chia per interval): {0}"
+#~ msgstr "حد الإنفاق (chia لكل فاصلة): {0}"
 
-#: src/components/app/AppState.tsx:161
+#: src/components/app/AppState.tsx:172
 msgid "Starting services"
 msgstr ""
 
@@ -2403,9 +2378,6 @@ msgstr ""
 msgid "State"
 msgstr "الحالة"
 
-#: src/components/_wallet_old/WalletHistory.tsx:55
-#: src/components/_wallet_old/WalletStatusCard.tsx:22
-#: src/components/_wallet_old/Wallets.tsx:50
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:54
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:62
 #: src/components/plot/overview/PlotOverviewPlots.tsx:110
@@ -2452,8 +2424,6 @@ msgstr ""
 #~ msgid "Sub Block at height {0} in the Chia blockchain"
 #~ msgstr "Sub Block at height {0} in the Chia blockchain"
 
-#: src/components/_wallet_old/did/WalletDID.tsx:889
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:347
 #: src/components/app/AppPassPrompt.tsx:97
 msgid "Submit"
 msgstr "إرسال"
@@ -2462,12 +2432,10 @@ msgstr "إرسال"
 #~ msgid "Submit Passphrase"
 #~ msgstr ""
 
-#: src/components/_wallet_old/WalletStatus.tsx:33
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:41
 msgid "Synced"
 msgstr "تمت المزامنة"
 
-#: src/components/_wallet_old/WalletStatus.tsx:38
 #: src/components/farm/FarmerStatus.tsx:19
 #: src/components/farm/card/FarmCardStatus.tsx:18
 #: src/components/plot/PlotStatus.tsx:18
@@ -2537,8 +2505,8 @@ msgstr "العقدة تقوم بالمزامنة، مما يعني أنها تق
 
 #: src/components/_wallet_old/did/WalletDID.tsx:790
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:89
-msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
-msgstr ""
+#~ msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
+#~ msgstr ""
 
 #: src/hooks/usePoolInfo.ts:59
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
@@ -2601,23 +2569,22 @@ msgstr "هذا يسمح لك بإضافة دليل يحتوي على مخططا�
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
 msgstr ""
 
-#: src/components/trading/CreateOffer.jsx:123
+#: src/components/trading/CreateOffer.jsx:124
 #: src/hooks/useSelectDirectory.tsx:32
-#: src/hooks/useSelectFile.tsx:20
 msgid "This feature is available only from the GUI."
 msgstr "هذه الميزة متاحة فقط من واجهة المستخدم الحاسوبية."
 
 #: src/components/_wallet_old/card/WalletCardSpendableBalance.tsx:26
-msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr "هذه هي كمية تشيا التي يمكنك استخدامها حاليا لإجراء المعاملات. لا تشمل مكافآت الزراعة المعلقة، والمعاملات الواردة بانتظار، وشيا التي أنفقتها للتو ولكنها ليست بعد في سلسلة الكتل."
+#~ msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
+#~ msgstr "هذه هي كمية تشيا التي يمكنك استخدامها حاليا لإجراء المعاملات. لا تشمل مكافآت الزراعة المعلقة، والمعاملات الواردة بانتظار، وشيا التي أنفقتها للتو ولكنها ليست بعد في سلسلة الكتل."
 
 #: src/components/_wallet_old/card/WalletCardPendingChange.tsx:26
-msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr "هذا هو التغيير المعلق، الذي هو تغيير العملات التي أرسلتها لنفسك، ولكن لم يتم تأكيدها بعد."
+#~ msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
+#~ msgstr "هذا هو التغيير المعلق، الذي هو تغيير العملات التي أرسلتها لنفسك، ولكن لم يتم تأكيدها بعد."
 
 #: src/components/_wallet_old/card/WalletCardPendingBalance.tsx:26
-msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr "هذا هو مجموع المعاملات المعلقة الواردة والصادرة (غير مدرجة بعد في سلسلة الكتل). هذا لا يشمل مكافآت الزراعة."
+#~ msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
+#~ msgstr "هذا هو مجموع المعاملات المعلقة الواردة والصادرة (غير مدرجة بعد في سلسلة الكتل). هذا لا يشمل مكافآت الزراعة."
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:19
 msgid "This is the time of the latest peak sub block."
@@ -2628,12 +2595,12 @@ msgid "This is the time the block was created by the farmer, which is before it 
 msgstr "هذا هو الوقت الذي قام فيه المزارع بإنشاء الكتلة، وهو الوقت الذي يسبق وضعها في صيغتها النهائية بإثبات الوقت"
 
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:34
-msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr "هذا هو إجمالي كمية الشيا في سلسلة الكتل في كتلة الذروة الفرعية الحالية التي تتحكم بها المفاتيح الخاصة. وتشمل مكافآت الزراعة المجمدة، ولكنها لا تنتظر المعاملات الواردة والصادرة."
+#~ msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+#~ msgstr "هذا هو إجمالي كمية الشيا في سلسلة الكتل في كتلة الذروة الفرعية الحالية التي تتحكم بها المفاتيح الخاصة. وتشمل مكافآت الزراعة المجمدة، ولكنها لا تنتظر المعاملات الواردة والصادرة."
 
 #: src/components/_wallet_old/card/WalletCardPendingTotalBalance.tsx:29
-msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr "هذا هو الرصيد الإجمالي + الرصيد المعلق: هذا هو ما سيكون عليه رصيدك بعد تأكيد جميع المعاملات المعلقة."
+#~ msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
+#~ msgstr "هذا هو الرصيد الإجمالي + الرصيد المعلق: هذا هو ما سيكون عليه رصيدك بعد تأكيد جميع المعاملات المعلقة."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:148
 #: src/components/plotNFT/PlotNFTCard.tsx:188
@@ -2694,14 +2661,14 @@ msgid "Timestamp"
 msgstr "التوقيت الزمني"
 
 #: src/components/_wallet_old/WalletHistory.tsx:42
-msgid "To"
-msgstr "إلى"
+#~ msgid "To"
+#~ msgstr "إلى"
 
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:32
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:379
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:543
-msgid "Total Balance"
-msgstr "الرصيد الإجمالي"
+#~ msgid "Total Balance"
+#~ msgstr "الرصيد الإجمالي"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
@@ -2772,8 +2739,8 @@ msgid "Transactions Filter Hash"
 msgstr "تصفية المعاملات هاش"
 
 #: src/components/_wallet_old/WalletHistory.tsx:25
-msgid "Type"
-msgstr "النّوع"
+#~ msgid "Type"
+#~ msgstr "النّوع"
 
 #: src/components/plot/add/PlotAdd.tsx:132
 #~ msgid "Unable to create plot NFT"
@@ -2806,8 +2773,8 @@ msgstr ""
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:281
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:293
-msgid "User Pubkey"
-msgstr "المفتاح العام للمستخدم"
+#~ msgid "User Pubkey"
+#~ msgstr "المفتاح العام للمستخدم"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
@@ -2833,7 +2800,7 @@ msgstr "تعديلات فتحة VDF الفرعية"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:308
+#: src/electron/main.tsx:377
 msgid "View"
 msgstr "عرض"
 
@@ -2856,12 +2823,12 @@ msgid "View Pool Login Link"
 msgstr ""
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:562
-msgid "View pending balances"
-msgstr "عرض الأرصدة المعلقة"
+#~ msgid "View pending balances"
+#~ msgstr "عرض الأرصدة المعلقة"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:393
-msgid "View pending balances..."
-msgstr "عرض الأرصدة المعلقة..."
+#~ msgid "View pending balances..."
+#~ msgstr "عرض الأرصدة المعلقة..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:26
 #: src/components/plot/PlotStatus.tsx:26
@@ -2887,14 +2854,13 @@ msgstr ""
 msgid "Wallet Mode"
 msgstr ""
 
-#: src/components/_wallet_old/standard/WalletStandard.tsx:649
 #: src/components/pool/PoolOverview.tsx:182
 msgid "Wallet Status:"
 msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:1121
-msgid "Wallet does not exists"
-msgstr ""
+#~ msgid "Wallet does not exists"
+#~ msgstr ""
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:70
 msgid "Wallet is not defined"
@@ -2928,7 +2894,6 @@ msgstr ""
 #~ msgid "WalletStatusCard.syncing"
 #~ msgstr ""
 
-#: src/components/_wallet_old/Wallets.tsx:118
 #: src/components/dashboard/DashboardSideBar.tsx:60
 msgid "Wallets"
 msgstr "المحافظ الإلكترونية"
@@ -2955,16 +2920,16 @@ msgstr ""
 
 #: src/components/_selectKey_old/SelectKey.tsx:88
 #: src/components/_selectKey_old/SelectKey.tsx:119
-msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr ""
+#~ msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
+#~ msgstr ""
 
 #: src/components/_selectKey_old/SelectKey.tsx:81
-msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+#~ msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
+#~ msgstr ""
 
 #: src/components/_selectKey_old/SelectKey.tsx:94
-msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+#~ msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:194
 msgid "Weight"
@@ -2975,18 +2940,18 @@ msgid "Weight is the total added difficulty of all sub blocks up to and includin
 msgstr "الوزن هو الصعوبة المضافة الكلية لجميع الكتل الفرعية حتى و بما في ذلك هذه"
 
 #: src/components/_selectKey_old/SelectKey.tsx:183
-msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-msgstr "مرحبا بكم في تشيا. الرجاء تسجيل الدخول باستخدام مفتاح موجود, أو إنشاء مفتاح جديد."
+#~ msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
+#~ msgstr "مرحبا بكم في تشيا. الرجاء تسجيل الدخول باستخدام مفتاح موجود, أو إنشاء مفتاح جديد."
 
 #: src/components/_wallet_old/WalletAdd.tsx:66
-msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr "مرحبًا! تستخدم الكلمات التالية للنسخ الاحتياطي لمحفظتك. بدونهم، سوف تفقد الوصول إلى محفظتك، ابقائهم آمنين! اكتب كل كلمة مع رقم الطلب بجوارهم. (الطلب مهم)"
+#~ msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
+#~ msgstr "مرحبًا! تستخدم الكلمات التالية للنسخ الاحتياطي لمحفظتك. بدونهم، سوف تفقد الوصول إلى محفظتك، ابقائهم آمنين! اكتب كل كلمة مع رقم الطلب بجوارهم. (الطلب مهم)"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:316
-msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr "عندما تتلقى حزمة معلومات الإعداد من المشرف الخاص بك، قم بإدخالها أدناه لإكمال إعداد المحفظة المحدودة المعدل:"
+#~ msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
+#~ msgstr "عندما تتلقى حزمة معلومات الإعداد من المشرف الخاص بك، قم بإدخالها أدناه لإكمال إعداد المحفظة المحدودة المعدل:"
 
-#: src/electron/main.tsx:353
+#: src/electron/main.tsx:428
 msgid "Window"
 msgstr "نافذة"
 
@@ -2996,7 +2961,7 @@ msgstr "بدون رسوم"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:199
+#: src/electron/main.tsx:260
 msgid "Yes"
 msgstr "نعم"
 
@@ -3070,8 +3035,8 @@ msgid "You will recieve <0/> to {address}"
 msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:328
-msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
-msgstr ""
+#~ msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
+#~ msgstr ""
 
 #: src/components/farm/overview/FarmOverview.tsx:33
 msgid "Your Farm Overview"
@@ -3098,8 +3063,8 @@ msgid "Your keys have not been migrated to a new keyring. You will be unable to 
 msgstr ""
 
 #: src/components/_selectKey_old/SelectKey.tsx:141
-msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
-msgstr ""
+#~ msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
+#~ msgstr ""
 
 #: src/components/app/AppKeyringMigrator.tsx:106
 msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."
@@ -3135,17 +3100,17 @@ msgstr "[خطأ 22] لم يتم العثور على الملف. على الأر�
 
 #: src/components/_wallet_old/WalletStatusCard.tsx:41
 #: src/components/_wallet_old/Wallets.tsx:75
-msgid "connections:"
-msgstr "الإتصالات:"
+#~ msgid "connections:"
+#~ msgstr "الإتصالات:"
 
 #: src/components/_wallet_old/WalletStatusCard.tsx:33
 #: src/components/_wallet_old/Wallets.tsx:67
-msgid "height:"
-msgstr "ارتفاع:"
+#~ msgid "height:"
+#~ msgstr "ارتفاع:"
 
 #: src/components/_wallet_old/Wallets.tsx:61
-msgid "not synced"
-msgstr "لم تتم المزامنة"
+#~ msgid "not synced"
+#~ msgstr "لم تتم المزامنة"
 
 #: src/components/plot/add/PlotAddForm.tsx:124
 msgid "p2SingletonPuzzleHash is not defined"
@@ -3157,18 +3122,18 @@ msgstr ""
 
 #: src/components/_wallet_old/WalletStatusCard.tsx:27
 #: src/components/_wallet_old/Wallets.tsx:55
-msgid "status:"
-msgstr "الحالة"
+#~ msgid "status:"
+#~ msgstr "الحالة"
 
 #: src/components/_wallet_old/WalletStatusCard.tsx:29
 #: src/components/_wallet_old/Wallets.tsx:60
-msgid "synced"
-msgstr "تمت المزامنة"
+#~ msgid "synced"
+#~ msgstr "تمت المزامنة"
 
 #: src/components/_wallet_old/WalletStatusCard.tsx:29
 #: src/components/_wallet_old/Wallets.tsx:59
-msgid "syncing"
-msgstr "جاري المزامنة"
+#~ msgid "syncing"
+#~ msgstr "جاري المزامنة"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:89
 #~ msgid "thirdparty.plotter.disclaimer"

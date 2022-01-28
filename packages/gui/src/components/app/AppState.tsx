@@ -3,15 +3,12 @@ import isElectron from 'is-electron';
 import { Trans } from '@lingui/macro';
 import { ConnectionState, ServiceHumanName, ServiceName, PassphrasePromptReason } from '@chia/api';
 import { useCloseMutation, useGetStateQuery, useGetKeyringStatusQuery, useServices } from '@chia/api-react';
-import { Flex, useSkipMigration, LayoutHero, LayoutLoading, useMode } from '@chia/core';
+import { Flex, useSkipMigration, LayoutHero, LayoutLoading, useMode, useIsSimulator } from '@chia/core';
 import { Typography, Collapse } from '@material-ui/core';
 import AppKeyringMigrator from './AppKeyringMigrator';
 import AppPassPrompt from './AppPassPrompt';
-import config from '../../config/config';
 import AppSelectMode from './AppSelectMode';
 import ModeServices, { SimulatorServices } from '../../constants/ModeServices';
-
-const isSimulator = config.local_test === true;
 
 const ALL_SERVICES = [
   ServiceName.WALLET, 
@@ -33,6 +30,7 @@ export default function AppState(props: Props) {
   const { data: keyringStatus, isLoading: isLoadingKeyringStatus } = useGetKeyringStatusQuery();
   const [isMigrationSkipped] = useSkipMigration();
   const [mode] = useMode();
+  const isSimulator = useIsSimulator();
 
   const runServices = useMemo<ServiceName[] | undefined>(() => {
     if (mode) {
@@ -44,13 +42,13 @@ export default function AppState(props: Props) {
     }
 
     return undefined;
-  }, [mode]);
+  }, [mode, isSimulator]);
 
   const isKeyringReady = !!keyringStatus && !keyringStatus.isKeyringLocked;
 
   const servicesState = useServices(ALL_SERVICES, {
-    keepRunning: runServices,
-    disabled: !isKeyringReady || !runServices || !!closing,
+    keepRunning: !closing ? runServices : [],
+    disabled: !isKeyringReady || !runServices,
   });
 
   const allServicesRunning = useMemo<boolean>(() => {
@@ -95,7 +93,20 @@ export default function AppState(props: Props) {
   if (closing) {
     return (
       <LayoutLoading>
-        <Trans>Closing down node and server</Trans>
+        <Flex flexDirection="column" gap={2}> 
+          <Typography variant="body1" align="center">
+            <Trans>Closing services</Trans>
+          </Typography>
+          <Flex flexDirection="column" gap={0.5}>
+            {!!runServices && runServices.map((service) => (
+              <Collapse key={service} in={servicesState.running.find(state => state.service === service)} timeout={{ enter: 0, exit: 1000 }}>
+                <Typography variant="body1" color="textSecondary"  align="center">
+                  {ServiceHumanName[service]}
+                </Typography>
+              </Collapse>
+            ))}
+          </Flex>
+        </Flex>
       </LayoutLoading>
     );
   }

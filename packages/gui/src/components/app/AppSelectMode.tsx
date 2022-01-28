@@ -10,6 +10,12 @@ import {
 } from '@material-ui/icons';
 import { Box, Typography, Container, Grid } from '@material-ui/core';
 
+const StyledCheckIcon = styled(CheckIcon)`
+  border-radius: 9999px;
+  padding: ${({ theme }) => theme.spacing(0.5)}px;
+  background-color: rgba(97,188,122,0.2);
+`;
+
 const StyledSettingsIcon = styled(SettingsIcon)`
   vertical-align: sub;
 `;
@@ -33,9 +39,18 @@ const StyledGridItem = styled(Grid)`
 
 const StyledEcoIcon = styled(EcoIcon)`
   font-size: 3.4rem;
+  color: ${({ theme }) => theme.palette.type === 'dark'
+    ? 'white'
+    : 'rgba(0, 0, 0, 0.54)'};
 `;
 
-const StyledAccountBalanceWalletIcon = styled(AccountBalanceWalletIcon)`
+const StyledAccountBalanceWalletIconBase = styled(AccountBalanceWalletIcon)`
+  color: ${({ theme }) => theme.palette.type === 'dark'
+    ? 'white'
+    : 'rgba(0, 0, 0, 0.54)'};
+`;
+
+const StyledAccountBalanceWalletIcon = styled(StyledAccountBalanceWalletIconBase)`
   font-size: 3.4rem;
 `;
 
@@ -57,7 +72,11 @@ export default function AppSelectMode() {
 
         <Grid container spacing={5} alignItems="stretch">
           <Grid xs={12} sm={6} item>
-            <Card onSelect={() => handleModeChange(Mode.WALLET)} fullHeight>
+            <Card
+              onSelect={() => handleModeChange(Mode.WALLET)}
+              highlight={false}
+              fullHeight
+            >
               <StyledCardContent>
                 <Flex flexDirection="column" gap={4} flexGrow={1} alignItems="center">
                   <Flex flexDirection="column" gap={1} alignItems="center">
@@ -68,21 +87,21 @@ export default function AppSelectMode() {
                     </Typography>
                   </Flex>
 
-                  <Flex flexDirection="column" gap={0.5} flexGrow={1}>
-                    <Flex gap={1}>
-                      <CheckIcon color="primary" />
+                  <Flex flexDirection="column" gap={1.5} flexGrow={1}>
+                    <Flex gap={1} alignItems="center">
+                      <StyledCheckIcon color="primary" />
                       <Typography variant="body2">
                         <Trans>Store and Send XCH</Trans>
                       </Typography>
                     </Flex>
-                    <Flex gap={1}>
-                      <CheckIcon color="primary" />
+                    <Flex gap={1} alignItems="center">
+                      <StyledCheckIcon color="primary" />
                       <Typography variant="body2">
                         <Trans>Manage CAT tokens</Trans>
                       </Typography>
                     </Flex>
-                    <Flex gap={1}>
-                      <CheckIcon color="primary" />
+                    <Flex gap={1} alignItems="center">
+                      <StyledCheckIcon color="primary" />
                       <Typography variant="body2">
                         <Trans>Trade tokens</Trans>
                       </Typography>
@@ -97,7 +116,11 @@ export default function AppSelectMode() {
             </Card>
           </Grid>
           <Grid xs={12} sm={6} item>
-            <Card onSelect={() => handleModeChange(Mode.FARMING)} fullHeight>
+            <Card 
+              onSelect={() => handleModeChange(Mode.FARMING)}
+              highlight={<Trans>Recommended by Experts</Trans>}
+              fullHeight
+            >
               <StyledCardContent>
                 <Flex flexDirection="column" gap={4} alignItems="center">
                   <Flex flexDirection="column" gap={1} alignItems="center">
@@ -108,32 +131,35 @@ export default function AppSelectMode() {
                     </Typography>
                   </Flex>
 
-                  <Flex flexDirection="column" gap={0.5} flexGrow={1}>
-                    <Flex gap={1}>
-                      <CheckIcon color="primary" />
+                  <Flex flexDirection="column" gap={1.5} flexGrow={1}>
+                    <Flex gap={1} alignItems="center">
+                      <StyledCheckIcon color="primary" />
                       <Typography variant="body2">
                         <Trans>Wallet Mode</Trans>
                       </Typography>
+                      <StyledAccountBalanceWalletIconBase fontSize="small" />
                     </Flex>
-
-                    <Typography variant="body2" align="center">
-                      <Trans>+</Trans>
-                    </Typography>
-                    <Flex gap={1}>
-                      <CheckIcon color="primary" />
+                    <Flex gap={1} alignItems="center">
+                      <StyledCheckIcon color="primary" />
                       <Typography variant="body2">
                         <Trans>Create &amp; Manage plots</Trans>
                       </Typography>
                     </Flex>
-                    <Flex gap={1}>
-                      <CheckIcon color="primary" />
+                    <Flex gap={1} alignItems="center">
+                      <StyledCheckIcon color="primary" />
                       <Typography variant="body2">
                         <Trans>Join farming pools</Trans>
                       </Typography>
                     </Flex>
+                    <Flex gap={1} alignItems="center">
+                      <StyledCheckIcon color="primary" />
+                      <Typography variant="body2">
+                        <Trans>Runs the full node</Trans>
+                      </Typography>
+                    </Flex>
                   </Flex>
 
-                  <Button color="primary" variant="outlined" fullWidth>
+                  <Button variant="outlined" fullWidth>
                     <Trans>Choose Farming Mode</Trans>
                   </Button>
                 </Flex>
