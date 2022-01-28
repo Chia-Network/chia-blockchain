@@ -33,7 +33,8 @@ if [ "$(uname)" = "Linux" ]; then
 					echo >&2 "Please install NODEJS&NPM manually"
 			}
 		else
-			sudo apt-get install -y npm nodejs libxss1
+			curl -sL https://deb.nodesource.com/setup_12.x | sudo bash -
+			sudo apt install -y nodejs
 		fi
 	elif type yum &&  [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ]; then
 		# AMZN 2
