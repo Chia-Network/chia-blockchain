@@ -138,7 +138,7 @@ async def show_async(
                             connection_peak_hash = connection_peak_hash[2:]
                         connection_peak_hash = f"{connection_peak_hash[:8]}..."
                     if peak_height is None:
-                        peak_height = 0
+                        peak_height = "unknown"
                     con_str = (
                         f"{NodeType(con['type']).name:9} {host:38} "
                         f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
@@ -146,7 +146,7 @@ async def show_async(
                         f"{last_connect}  "
                         f"{mb_up:7.1f}|{mb_down:<7.1f}"
                         f"\n                                                 "
-                        f"-SB Height: {peak_height:8.0f}    -Hash: {connection_peak_hash}"
+                        f"-SB Height: {peak_height:<8}    -Hash: {connection_peak_hash}"
                     )
                 else:
                     con_str = (

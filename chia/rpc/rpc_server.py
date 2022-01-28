@@ -109,10 +109,14 @@ class RpcServer:
                 peak_store = self.rpc_api.service.sync_store.peer_to_peak
             else:
                 peak_store = None
+
+            self.log.info(f" ==== {peak_store=}")
+
             for con in connections:
                 if peak_store is not None and con.peer_node_id in peak_store:
                     peak_hash, peak_height, peak_weight = peak_store[con.peer_node_id]
                 else:
+                    self.log.info(f" ==== no peaks available")
                     peak_height = None
                     peak_hash = None
                     peak_weight = None

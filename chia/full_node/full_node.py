@@ -178,7 +178,7 @@ class FullNode:
 
         self.db_wrapper = DBWrapper(self.connection, db_version=db_version)
         self.block_store = await BlockStore.create(self.db_wrapper)
-        self.sync_store = await SyncStore.create()
+        self.sync_store = await SyncStore.create(log=self.log)
         self.hint_store = await HintStore.create(self.db_wrapper)
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
@@ -485,6 +485,8 @@ class FullNode:
 
         """
 
+        self.log.info(f" ==== FullNode.new_peak({request=}, {peer=})")
+
         try:
             seen_header_hash = self.sync_store.seen_header_hash(request.header_hash)
             # Updates heights in the UI. Sleeps 1.5s before, so other peers have time to update their peaks as well.
@@ -497,6 +499,7 @@ class FullNode:
             self.log.warning(f"Exception UI refresh task: {e}")
 
         # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
+        self.log.info(f" ==== FullNode.new_peak() calling self.sync_store.peer_has_block() A")
         self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
 
         if self.blockchain.contains_block(request.header_hash):
@@ -520,6 +523,7 @@ class FullNode:
                         full_node_protocol.RequestBlock(uint32(peak_sync_height), False), timeout=10
                     )
                     if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
+                        self.log.info(f" ==== FullNode.new_peak() calling self.sync_store.peer_has_block({peak_sync_hash=}, {peer.peer_node_id=}, {target_peak_response.block.weight=}, {peak_sync_height=}, {False=}) B")
                         self.sync_store.peer_has_block(
                             peak_sync_hash,
                             peer.peer_node_id,
@@ -527,18 +531,30 @@ class FullNode:
                             peak_sync_height,
                             False,
                         )
+                    else:
+                        self.log.info(f" ==== FullNode.new_peak() else: A")
+                else:
+                    self.log.info(f" ==== FullNode.new_peak() else: B")
+            else:
+                self.log.info(f" ==== FullNode.new_peak() else: C")
         else:
+            self.log.info(f" ==== FullNode.new_peak() else: D")
             if request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]:
                 # This is the normal case of receiving the next block
+                self.log.info(f" ==== FullNode.new_peak() about to self.short_sync_backtrack({peer=}, {curr_peak_height=}, {request.height=}, {request.unfinished_reward_block_hash=})")
                 if await self.short_sync_backtrack(
                     peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
                 ):
+                    self.log.info(f" ==== FullNode.new_peak() just self.short_sync_backtrack()ed (returning)")
                     return None
+                self.log.info(f" ==== FullNode.new_peak() just self.short_sync_backtrack()ed (not returning)")
 
             if request.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                 # This is the case of syncing up more than a few blocks, at the start of the chain
                 self.log.debug("Doing batch sync, no backup")
+                self.log.info(f" ==== FullNode.new_peak() about to self.short_sync_batch({peer=}, {uint32(0)=}, {request.height=})")
                 await self.short_sync_batch(peer, uint32(0), request.height)
+                self.log.info(f" ==== FullNode.new_peak() just self.short_sync_batch()ed")
                 return None
 
             if request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
@@ -793,7 +809,9 @@ class FullNode:
 
             peers = []
             coroutines = []
-            for peer in self.server.all_connections.values():
+            all_connections = self.server.all_connections.values()
+            self.log.info(f" ==== FullNode._sync() {len(all_connections)=}")
+            for peer in all_connections:
                 if peer.connection_type == NodeType.FULL_NODE:
                     peers.append(peer.peer_node_id)
                     coroutines.append(
@@ -803,6 +821,7 @@ class FullNode:
                     )
             for i, target_peak_response in enumerate(await asyncio.gather(*coroutines)):
                 if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
+                    self.log.info(f" ==== FullNode._sync() calling self.sync_store.peer_has_block()")
                     self.sync_store.peer_has_block(
                         heaviest_peak_hash, peers[i], heaviest_peak_weight, heaviest_peak_height, False
                     )

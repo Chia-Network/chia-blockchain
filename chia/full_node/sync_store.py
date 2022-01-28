@@ -19,11 +19,13 @@ class SyncStore:
     peers_changed: asyncio.Event
     batch_syncing: Set[bytes32]  # Set of nodes which we are batch syncing from
     backtrack_syncing: Dict[bytes32, int]  # Set of nodes which we are backtrack syncing from, and how many threads
+    log: logging.Logger
 
     @classmethod
-    async def create(cls):
+    async def create(cls, log):
         self = cls()
 
+        self.log = log
         self.sync_mode = False
         self.long_sync = False
         self.sync_target_header_hash = None
@@ -67,15 +69,24 @@ class SyncStore:
         Adds a record that a certain peer has a block.
         """
 
+        self.log.info(f" ==== SyncStore.peer_has_block({header_hash=}, {peer_id=}, {weight=}, {height=}, {new_peak=})")
+
         if header_hash == self.sync_target_header_hash:
             self.peers_changed.set()
+            self.log.info(f" ==== SyncStore.peer_has_block self.peers_changed.set()")
         if header_hash in self.peak_to_peer:
             self.peak_to_peer[header_hash].add(peer_id)
+            self.log.info(f" ==== SyncStore.peer_has_block self.peak_to_peer[header_hash].add(peer_id)")
         else:
             self.peak_to_peer[header_hash] = {peer_id}
+            self.log.info(f" ==== SyncStore.peer_has_block self.peak_to_peer[header_hash] = {{peer_id}}")
 
         if new_peak:
             self.peer_to_peak[peer_id] = (header_hash, height, weight)
+            self.log.info(f" ==== SyncStore.peer_has_block setting self.peer_to_peak[{peer_id=}] = {(header_hash, height, weight)}")
+        else:
+            self.log.info(f" ==== SyncStore.peer_has_block not a new peak self.peer_to_peak[{peer_id=}] = {(header_hash, height, weight)}")
+
 
     def get_peers_that_have_peak(self, header_hashes: List[bytes32]) -> Set[bytes32]:
         """
@@ -130,6 +141,7 @@ class SyncStore:
 
     def peer_disconnected(self, node_id: bytes32):
         if node_id in self.peer_to_peak:
+            self.log.info(f" ==== removing self.peer_to_peak[{node_id=}] = {self.peer_to_peak[node_id]}")
             del self.peer_to_peak[node_id]
 
         for peak, peers in self.peak_to_peer.items():
