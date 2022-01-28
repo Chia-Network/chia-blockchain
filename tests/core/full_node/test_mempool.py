@@ -1805,7 +1805,7 @@ class TestGeneratorConditions:
     def test_div(self, mempool, height, operand, expected):
 
         # op_div is disallowed on negative numbers in the mempool, and after the
-        # softfork#
+        # softfork
         npc_result = generator_condition_tester(
             f"(c (c (q . 80) (c (/ (q . 50) (q . {operand})) ())) ())", quote=False, mempool_mode=mempool, height=height
         )
