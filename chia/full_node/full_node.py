@@ -530,7 +530,9 @@ class FullNode:
                         full_node_protocol.RequestBlock(uint32(peak_sync_height), False), timeout=10
                     )
                     if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
-                        self.log.info(f" ==== FullNode.new_peak() calling self.sync_store.peer_has_block({peak_sync_hash=}, {peer.peer_node_id=}, {target_peak_response.block.weight=}, {peak_sync_height=}, {False=}) B")
+                        self.log.info(
+                            f" ==== FullNode.new_peak() calling self.sync_store.peer_has_block({peak_sync_hash=}, {peer.peer_node_id=}, {target_peak_response.block.weight=}, {peak_sync_height=}, {False=}) B"
+                        )
                         self.sync_store.peer_has_block(
                             peak_sync_hash,
                             peer.peer_node_id,
@@ -548,7 +550,9 @@ class FullNode:
             self.log.info(f" ==== FullNode.new_peak() else: D")
             if request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]:
                 # This is the normal case of receiving the next block
-                self.log.info(f" ==== FullNode.new_peak() about to self.short_sync_backtrack({peer=}, {curr_peak_height=}, {request.height=}, {request.unfinished_reward_block_hash=})")
+                self.log.info(
+                    f" ==== FullNode.new_peak() about to self.short_sync_backtrack({peer=}, {curr_peak_height=}, {request.height=}, {request.unfinished_reward_block_hash=})"
+                )
                 if await self.short_sync_backtrack(
                     peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
                 ):
@@ -559,7 +563,9 @@ class FullNode:
             if request.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                 # This is the case of syncing up more than a few blocks, at the start of the chain
                 self.log.debug("Doing batch sync, no backup")
-                self.log.info(f" ==== FullNode.new_peak() about to self.short_sync_batch({peer=}, {uint32(0)=}, {request.height=})")
+                self.log.info(
+                    f" ==== FullNode.new_peak() about to self.short_sync_batch({peer=}, {uint32(0)=}, {request.height=})"
+                )
                 await self.short_sync_batch(peer, uint32(0), request.height)
                 self.log.info(f" ==== FullNode.new_peak() just self.short_sync_batch()ed")
                 return None
@@ -894,7 +900,9 @@ class FullNode:
             async with self._blockchain_lock_high_priority:
                 self.log.info(f" ==== FullNode._sync() calling self.sync_store.peer_has_block() about to warmup")
                 await self.blockchain.warmup(fork_point)
-                self.log.info(f" ==== FullNode._sync() calling self.sync_store.peer_has_block() about to sync from fork point")
+                self.log.info(
+                    f" ==== FullNode._sync() calling self.sync_store.peer_has_block() about to sync from fork point"
+                )
                 await self.sync_from_fork_point(fork_point, heaviest_peak_height, heaviest_peak_hash, summaries)
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
@@ -931,33 +939,47 @@ class FullNode:
                 self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() {the_range=}")
                 for start_height in the_range:
                     end_height = min(target_peak_sb_height, start_height + batch_size)
-                    self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() {start_height=} - {end_height=}")
+                    self.log.info(
+                        f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() {start_height=} - {end_height=}"
+                    )
                     request = RequestBlocks(uint32(start_height), uint32(end_height), True)
                     fetched = False
                     for peer in random.sample(peers_with_peak, len(peers_with_peak)):
                         self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() {peer=}")
                         if peer.closed:
-                            self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() peer closed")
+                            self.log.info(
+                                f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() peer closed"
+                            )
                             peers_with_peak.remove(peer)
                             continue
                         response = await peer.request_blocks(request, timeout=30)
                         if response is None:
-                            self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() response is None")
+                            self.log.info(
+                                f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() response is None"
+                            )
                             await peer.close()
                             peers_with_peak.remove(peer)
                         elif isinstance(response, RespondBlocks):
-                            self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() response is a RespondBlocks")
+                            self.log.info(
+                                f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() response is a RespondBlocks"
+                            )
                             await batch_queue.put((peer, response.blocks))
                             fetched = True
                             break
                         else:
-                            self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() response is...  else")
+                            self.log.info(
+                                f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() response is...  else"
+                            )
                     if fetched is False:
                         self.log.error(f"failed fetching {start_height} to {end_height} from peers")
-                        self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() pushing None to batch_queue from fetch failure")
+                        self.log.info(
+                            f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() pushing None to batch_queue from fetch failure"
+                        )
                         await batch_queue.put(None)
                         return
-                    self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() checking if peers changed")
+                    self.log.info(
+                        f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() checking if peers changed"
+                    )
                     if self.sync_store.peers_changed.is_set():
                         peers_with_peak = self.get_peers_with_peak(peak_hash)
                         self.sync_store.peers_changed.clear()
@@ -968,7 +990,9 @@ class FullNode:
                 self.log.error(f"Exception fetching {start_height} to {end_height} from peer {e}")
             finally:
                 # finished signal with None
-                self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() pushing None to batch_queue at the end")
+                self.log.info(
+                    f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() pushing None to batch_queue at the end"
+                )
                 await batch_queue.put(None)
 
         async def validate_block_batches(batch_queue):
@@ -979,7 +1003,9 @@ class FullNode:
                 res = await batch_queue.get()
                 if res is None:
                     self.log.debug("done fetching blocks")
-                    self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() returning via None in queue")
+                    self.log.info(
+                        f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() returning via None in queue"
+                    )
                     return
                 self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() non-None result")
                 peer, blocks = res
@@ -991,9 +1017,13 @@ class FullNode:
                 if success is False:
                     self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() {success=}")
                     if peer in peers_with_peak:
-                        self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() removing {peer=}")
+                        self.log.info(
+                            f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() removing {peer=}"
+                        )
                         peers_with_peak.remove(peer)
-                    self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() waiting up to 600 to close peer")
+                    self.log.info(
+                        f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() waiting up to 600 to close peer"
+                    )
                     await peer.close(600)
                     self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() about to raise")
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
@@ -1005,7 +1035,8 @@ class FullNode:
                 if len(coin_states) > 0 and fork_height is not None:
                     await self.update_wallets(peak.height, fork_height, peak.header_hash, coin_states)
                 self.log.info(
-                    f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() cleaning block record")
+                    f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() cleaning block record"
+                )
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
             self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() returning off the end")
@@ -2332,15 +2363,25 @@ class FullNode:
         self, uncompact_interval_scan: int, target_uncompact_proofs: int, sanitize_weight_proof_only: bool
     ):
         try:
-            self.log.info(f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() entering {self._shut_down}")
+            self.log.info(
+                f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() entering {self._shut_down}"
+            )
             while not self._shut_down:
-                self.log.info(f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() in outer loop {self._shut_down}")
+                self.log.info(
+                    f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() in outer loop {self._shut_down}"
+                )
                 while self.sync_store.get_sync_mode() or self.sync_store.get_long_sync():
-                    self.log.info(f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() in inner loop {self._shut_down}")
+                    self.log.info(
+                        f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() in inner loop {self._shut_down}"
+                    )
                     if self._shut_down:
-                        self.log.info(f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() returning {self._shut_down}")
+                        self.log.info(
+                            f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() returning {self._shut_down}"
+                        )
                         return None
-                    self.log.info(f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() sleeping {self._shut_down}")
+                    self.log.info(
+                        f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() sleeping {self._shut_down}"
+                    )
                     await asyncio.sleep(30)
 
                 broadcast_list: List[timelord_protocol.RequestCompactProofOfTime] = []

@@ -83,10 +83,13 @@ class SyncStore:
 
         if new_peak:
             self.peer_to_peak[peer_id] = (header_hash, height, weight)
-            self.log.info(f" ==== SyncStore.peer_has_block setting self.peer_to_peak[{peer_id=}] = {(header_hash, height, weight)}")
+            self.log.info(
+                f" ==== SyncStore.peer_has_block setting self.peer_to_peak[{peer_id=}] = {(header_hash, height, weight)}"
+            )
         else:
-            self.log.info(f" ==== SyncStore.peer_has_block not a new peak self.peer_to_peak[{peer_id=}] = {(header_hash, height, weight)}")
-
+            self.log.info(
+                f" ==== SyncStore.peer_has_block not a new peak self.peer_to_peak[{peer_id=}] = {(header_hash, height, weight)}"
+            )
 
     def get_peers_that_have_peak(self, header_hashes: List[bytes32]) -> Set[bytes32]:
         """
