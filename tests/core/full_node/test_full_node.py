@@ -771,7 +771,7 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
         result = full_node_1.full_node.full_node_store.get_unfinished_block_result(unf.partial_hash)
         assert result is not None
-        assert result.npc_result is not None and result.npc_result.clvm_cost > 0
+        assert result.npc_result is not None and result.npc_result.cost > 0
 
         assert not full_node_1.full_node.blockchain.contains_block(block.header_hash)
         assert block.transactions_generator is not None
@@ -887,7 +887,7 @@ class TestFullNodeProtocol:
             cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(
                 spend_bundle, None, spend_bundle.name()
             )
-            log.info(f"Cost result: {cost_result.clvm_cost}")
+            log.info(f"Cost result: {cost_result.cost}")
 
             new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
 

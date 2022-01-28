@@ -56,6 +56,7 @@ from chinilla.types.peer_info import PeerInfo
 from chinilla.types.weight_proof import WeightProof, SubEpochData
 from chinilla.util.byte_types import hexstr_to_bytes
 from chinilla.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
+from chinilla.util.default_root import STANDALONE_ROOT_PATH
 from chinilla.util.ints import uint32, uint64
 from chinilla.util.keychain import KeyringIsLocked, Keychain
 from chinilla.util.network import get_host_addr
@@ -189,6 +190,11 @@ class WalletNode:
             .replace("KEY", db_path_key_suffix)
         )
         path = path_from_root(self.root_path, f"{db_path_replaced}_new")
+        standalone_path = path_from_root(STANDALONE_ROOT_PATH, f"{db_path_replaced}_new")
+        if not path.exists():
+            if standalone_path.exists():
+                path.write_bytes(standalone_path.read_bytes())
+
         mkdir(path.parent)
         self.new_peak_lock = asyncio.Lock()
         assert self.server is not None
