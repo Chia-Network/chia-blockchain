@@ -10,4 +10,4 @@ def log_exceptions(log: logging.Logger, *, consume: bool = False):
     except Exception as e:
         log.error(f"Caught Exception: {e}. Traceback: {traceback.format_exc()}")
         if not consume:
-            raise e
+            raise
