@@ -167,8 +167,8 @@ def ref_list_to_args(ref_list: List[uint32], root_path: Path):
     return args
 
 
-def run_full_block(block: FullBlock, constants: ConsensusConstants) -> List[CAT]:
-    generator_args = ref_list_to_args(block.transactions_generator_ref_list)
+def run_full_block(block: FullBlock, root_path: Path, constants: ConsensusConstants) -> List[CAT]:
+    generator_args = ref_list_to_args(block.transactions_generator_ref_list, root_path)
     if block.transactions_generator is None or block.transactions_info is None:
         raise RuntimeError("transactions_generator of FullBlock is null")
     block_generator = BlockGenerator(block.transactions_generator, generator_args)
