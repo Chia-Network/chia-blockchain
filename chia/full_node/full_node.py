@@ -113,6 +113,8 @@ class FullNode:
         self.root_path = root_path
         self.config = config
         self.server = None
+        self.log = logging.getLogger(name if name else __name__)
+        self.log.info(f" ==== FullNode._shut_down initializing to False")
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
         self.pow_creation: Dict[bytes32, asyncio.Event] = {}
@@ -123,7 +125,6 @@ class FullNode:
         self.full_node_store = FullNodeStore(self.constants)
         self.uncompact_task = None
         self.compact_vdf_requests: Set[bytes32] = set()
-        self.log = logging.getLogger(name if name else __name__)
 
         # Used for metrics
         self.dropped_tx: Set[bytes32] = set()
@@ -274,14 +275,20 @@ class FullNode:
 
     async def _handle_transactions(self):
         try:
+            self.log.info(f" ==== FullNode._shut_down in FullNode._handle_transactions() {self._shut_down}")
             while not self._shut_down:
+                self.log.info(f" ==== FullNode._shut_down in FullNode._handle_transactions() in loop {self._shut_down}")
                 # We use a semaphore to make sure we don't send more than 200 concurrent calls of respond_transaction.
                 # However doing them one at a time would be slow, because they get sent to other processes.
                 await self.respond_transaction_semaphore.acquire()
                 item: TransactionQueueEntry = (await self.transaction_queue.get())[1]
                 asyncio.create_task(self._handle_one_transaction(item))
+            self.log.info(f" ==== FullNode._shut_down in FullNode._handle_transactions() after loop {self._shut_down}")
         except asyncio.CancelledError:
+            self.log.info(f" ==== FullNode._shut_down in FullNode._handle_transactions() cancelled {self._shut_down}")
             raise
+
+        self.log.info(f" ==== FullNode._shut_down in FullNode._handle_transactions() returning {self._shut_down}")
 
     async def initialize_weight_proof(self):
         self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
@@ -726,7 +733,9 @@ class FullNode:
         return diff if diff >= 0 else 0
 
     def _close(self):
+        self.log.info(f" ==== FullNode._shut_down in FullNode._close() entered {self._shut_down}")
         self._shut_down = True
+        self.log.info(f" ==== FullNode._shut_down in FullNode._close() set {self._shut_down}")
         if self._init_weight_proof is not None:
             self._init_weight_proof.cancel()
 
@@ -787,8 +796,10 @@ class FullNode:
             for i in range(300):
                 peaks = [tup[0] for tup in self.sync_store.get_peak_of_each_peer().values()]
                 if len(self.sync_store.get_peers_that_have_peak(peaks)) < 3:
+                    self.log.info(f" ==== FullNode._shut_down in FullNode._sync() checking {self._shut_down}")
                     if self._shut_down:
                         return None
+                    self.log.info(f" ==== FullNode._shut_down in FullNode._sync() continuing {self._shut_down}")
                     await asyncio.sleep(0.1)
                     continue
                 break
@@ -881,7 +892,9 @@ class FullNode:
             self._state_changed("sync_mode")
             # Ensures that the fork point does not change
             async with self._blockchain_lock_high_priority:
+                self.log.info(f" ==== FullNode._sync() calling self.sync_store.peer_has_block() about to warmup")
                 await self.blockchain.warmup(fork_point)
+                self.log.info(f" ==== FullNode._sync() calling self.sync_store.peer_has_block() about to sync from fork point")
                 await self.sync_from_fork_point(fork_point, heaviest_peak_height, heaviest_peak_hash, summaries)
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
@@ -889,8 +902,11 @@ class FullNode:
             tb = traceback.format_exc()
             self.log.error(f"Error with syncing: {type(e)}{tb}")
         finally:
+            self.log.info(f" ==== FullNode._shut_down in FullNode._sync() checking in finally {self._shut_down}")
             if self._shut_down:
+                self.log.info(f" ==== FullNode._shut_down in FullNode._sync() returning {self._shut_down}")
                 return None
+            self.log.info(f" ==== FullNode._shut_down in FullNode._sync() about to ._finish_sync() {self._shut_down}")
             await self._finish_sync()
 
     async def sync_from_fork_point(
@@ -909,43 +925,63 @@ class FullNode:
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
 
         async def fetch_block_batches(batch_queue, peers_with_peak: List[ws.WSChiaConnection]):
+            self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() entering")
             try:
-                for start_height in range(fork_point_height, target_peak_sb_height, batch_size):
+                the_range = range(fork_point_height, target_peak_sb_height, batch_size)
+                self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() {the_range=}")
+                for start_height in the_range:
                     end_height = min(target_peak_sb_height, start_height + batch_size)
+                    self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() {start_height=} - {end_height=}")
                     request = RequestBlocks(uint32(start_height), uint32(end_height), True)
                     fetched = False
                     for peer in random.sample(peers_with_peak, len(peers_with_peak)):
+                        self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() {peer=}")
                         if peer.closed:
+                            self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() peer closed")
                             peers_with_peak.remove(peer)
                             continue
                         response = await peer.request_blocks(request, timeout=30)
                         if response is None:
+                            self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() response is None")
                             await peer.close()
                             peers_with_peak.remove(peer)
                         elif isinstance(response, RespondBlocks):
+                            self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() response is a RespondBlocks")
                             await batch_queue.put((peer, response.blocks))
                             fetched = True
                             break
+                        else:
+                            self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() response is...  else")
                     if fetched is False:
                         self.log.error(f"failed fetching {start_height} to {end_height} from peers")
+                        self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() pushing None to batch_queue from fetch failure")
                         await batch_queue.put(None)
                         return
+                    self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() checking if peers changed")
                     if self.sync_store.peers_changed.is_set():
                         peers_with_peak = self.get_peers_with_peak(peak_hash)
                         self.sync_store.peers_changed.clear()
+            except asyncio.CancelledError as e:
+                self.log.error(f"Exception fetching {start_height} to {end_height} from peer {e}")
+                self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() overall cancelled")
             except Exception as e:
                 self.log.error(f"Exception fetching {start_height} to {end_height} from peer {e}")
             finally:
                 # finished signal with None
+                self.log.info(f" ==== in FullNode.sync_from_fork_point() .fetch_block_batches() pushing None to batch_queue at the end")
                 await batch_queue.put(None)
 
         async def validate_block_batches(batch_queue):
+            self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() entering")
             advanced_peak = False
             while True:
+                self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() entering while")
                 res = await batch_queue.get()
                 if res is None:
                     self.log.debug("done fetching blocks")
+                    self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() returning via None in queue")
                     return
+                self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() non-None result")
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
@@ -953,16 +989,26 @@ class FullNode:
                     blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                 )
                 if success is False:
+                    self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() {success=}")
                     if peer in peers_with_peak:
+                        self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() removing {peer=}")
                         peers_with_peak.remove(peer)
+                    self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() waiting up to 600 to close peer")
                     await peer.close(600)
+                    self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() about to raise")
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
+                self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() {success=}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
                 await self.send_peak_to_wallets()
                 peak = self.blockchain.get_peak()
+                self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() {peak=}")
                 if len(coin_states) > 0 and fork_height is not None:
                     await self.update_wallets(peak.height, fork_height, peak.header_hash, coin_states)
+                self.log.info(
+                    f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() cleaning block record")
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
+
+            self.log.info(f" ==== in FullNode.sync_from_fork_point() .validate_block_batches() returning off the end")
 
         loop = asyncio.get_event_loop()
         batch_queue: asyncio.Queue[Tuple[ws.WSChiaConnection, List[FullBlock]]] = asyncio.Queue(
@@ -971,7 +1017,12 @@ class FullNode:
         fetch_task = asyncio.Task(fetch_block_batches(batch_queue, peers_with_peak))
         validate_task = asyncio.Task(validate_block_batches(batch_queue))
         try:
+            self.log.info(f" ==== in FullNode.sync_from_fork_point() about to gather")
             await asyncio.gather(fetch_task, validate_task)
+            self.log.info(f" ==== in FullNode.sync_from_fork_point() gather finished")
+        except asyncio.CancelledError:
+            self.log.info(f" ==== in FullNode.sync_from_fork_point() gather cancelled")
+            raise
         except Exception as e:
             assert validate_task.done()
             fetch_task.cancel()  # no need to cancel validate_task, if we end up here validate_task is already done
@@ -2281,10 +2332,15 @@ class FullNode:
         self, uncompact_interval_scan: int, target_uncompact_proofs: int, sanitize_weight_proof_only: bool
     ):
         try:
+            self.log.info(f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() entering {self._shut_down}")
             while not self._shut_down:
+                self.log.info(f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() in outer loop {self._shut_down}")
                 while self.sync_store.get_sync_mode() or self.sync_store.get_long_sync():
+                    self.log.info(f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() in inner loop {self._shut_down}")
                     if self._shut_down:
+                        self.log.info(f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() returning {self._shut_down}")
                         return None
+                    self.log.info(f" ==== FullNode._shut_down in FullNode.broadcast_uncompact_blocks() sleeping {self._shut_down}")
                     await asyncio.sleep(30)
 
                 broadcast_list: List[timelord_protocol.RequestCompactProofOfTime] = []
