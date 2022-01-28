@@ -152,6 +152,11 @@ class DataLayer:
         if current_generation is not None and uint32(current_generation) == singleton_record.generation:
             return
 
+        self.log.info(
+            f"Downloading and validating {subscription.tree_id}. "
+            f"Current wallet generation: {int(current_generation)}. "
+            f"Target wallet generation: {singleton_record.generation}."
+        )
         old_root: Optional[Root] = None
         if await self.data_store.tree_id_exists(tree_id=tree_id):
             old_root = await self.data_store.get_tree_root(tree_id=tree_id)
@@ -180,6 +185,11 @@ class DataLayer:
                 raise RuntimeError("Can't find data on chain in our datastore.")
             max_generation = root.generation
 
+        self.log.info(
+            f"Finished downloading and validating {subscription.tree_id}. "
+            f"Wallet generation saved: {singleton_record.generation}"
+            f"Root hash saved: {singleton_record.root}."
+        )
         await self.data_store.set_wallet_generation(tree_id, int(singleton_record.generation))
 
     async def subscribe(self, subscription: Subscription) -> None:
@@ -189,6 +199,7 @@ class DataLayer:
         await self.wallet_rpc.dl_track_new(subscription.tree_id)
         async with self.subscription_lock:
             await self.data_store.subscribe(subscription)
+        self.log.info(f"Subscribed to {subscription.tree_id}")
 
     async def unsubscribe(self, tree_id: bytes32) -> None:
         subscriptions = await self.get_subscriptions()
@@ -197,6 +208,7 @@ class DataLayer:
         async with self.subscription_lock:
             await self.data_store.unsubscribe(tree_id)
         await self.wallet_rpc.dl_stop_tracking(tree_id)
+        self.log.info(f"Unsubscribed to {tree_id}")
 
     async def get_subscriptions(self) -> List[Subscription]:
         async with self.subscription_lock:
