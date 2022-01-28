@@ -10,8 +10,8 @@ from blspy import PrivateKey, G1Element
 
 
 def get_cat_puzzle_hash(asset_id: str, xch_puzzle_hash: str) -> str:
-    tail_hash = bytes.fromhex(asset_id.lstrip("0x"))
-    xch_puzzle_hash = bytes.fromhex(xch_puzzle_hash.lstrip("0x"))
+    tail_hash = bytes.fromhex(asset_id.replace("0x", ""))
+    xch_puzzle_hash = bytes.fromhex(xch_puzzle_hash.replace("0x", ""))
     cat_puzzle_hash = CC_MOD.curry(CC_MOD.get_tree_hash(), tail_hash, xch_puzzle_hash).get_tree_hash(xch_puzzle_hash)
     return "0x" + cat_puzzle_hash.hex()
 
@@ -24,8 +24,8 @@ def convert_to_coin(raw_coin: Dict[str, Any]) -> Coin:
     if not 'puzzle_hash' in raw_coin:
         raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
     coin = Coin(
-        parent_coin_info=bytes.fromhex(raw_coin["parent_coin_info"].lstrip("0x")),
-        puzzle_hash=bytes.fromhex(raw_coin["puzzle_hash"].lstrip("0x")),
+        parent_coin_info=bytes.fromhex(raw_coin["parent_coin_info"].replace("0x", "")),
+        puzzle_hash=bytes.fromhex(raw_coin["puzzle_hash"].replace("0x", "")),
         amount=int(raw_coin["amount"]),
     )
     return coin
@@ -64,7 +64,7 @@ def convert_to_cat_coins(
     for raw_coin in raw_cat_coins_pool:
         coin: Coin = convert_to_coin(raw_coin=raw_coin)
         puzzle_hash = coin.puzzle_hash.hex()
-        if puzzle_hash != sender_cat_puzzle_hash.lstrip("0x"):
+        if puzzle_hash != sender_cat_puzzle_hash.replace("0x", ""):
             raise Exception(f"Inconsistent coin in raw_cat_coins_pool: {puzzle_hash} != {sender_cat_puzzle_hash}")
         cat_coins_pool.add(coin)
     return cat_coins_pool
@@ -101,5 +101,5 @@ def convert_to_parent_coin_spends(
     parent_coin_spends: Dict[CoinSpend] = {}
     for name, raw_coin_spend in raw_parent_coin_spends.items():
         coin_spend: CoinSpend = convert_to_coin_spend(raw_coin_spend=raw_coin_spend)
-        parent_coin_spends[name.lstrip("0x")] = coin_spend
+        parent_coin_spends[name.replace("0x", "")] = coin_spend
     return parent_coin_spends

@@ -1,6 +1,6 @@
 
 from typing import Any, Dict
-from chia.rpc.cat_utils import convert_to_parent_coin_spends, convert_to_cat_coins
+from chia.rpc.cat_utils import convert_to_parent_coin_spends, convert_to_cat_coins, get_cat_puzzle_hash
 from chia.types.coin_spend import CoinSpend
 from chia.util.byte_types import hexstr_to_bytes
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -69,5 +69,16 @@ def test_convert_to_parent_coin_spends() -> None:
     assert len(res) == 2
 
 
+def test_get_cat_puzzle_hash() -> None:
+    # Test case where xch_puzzle_hash starts with 0
+    res = get_cat_puzzle_hash(
+        asset_id="3d3615bb3848dada4093476ff1b9dbec633b7e2fd754766b4a1b23a858557590",
+        xch_puzzle_hash="027b976f9fb4805583cb8585011c34fd87ed012a48ddd4ce1bc525fdd219eade",
+    )
+    assert res != None
+    assert res == "0x7f98ca693b1496195955c35e688076a9645fb87f49d81aed98c15ca2df4e1740"
+
+
 test_convert_to_cat_coins()
 test_convert_to_parent_coin_spends()
+test_get_cat_puzzle_hash()

@@ -455,8 +455,8 @@ class FullNodeRpcApi:
 
     async def get_coin_id(self, request: Dict) -> Optional[Dict]:
         coin = Coin(
-            parent_coin_info=bytes.fromhex(request["parent_coin_info"].lstrip("0x")),
-            puzzle_hash=bytes.fromhex(request["puzzle_hash"].lstrip("0x")),
+            parent_coin_info=bytes.fromhex(request["parent_coin_info"].replace("0x", "")),
+            puzzle_hash=bytes.fromhex(request["puzzle_hash"].replace("0x", "")),
             amount=int(request["amount"]),
         )
         return {

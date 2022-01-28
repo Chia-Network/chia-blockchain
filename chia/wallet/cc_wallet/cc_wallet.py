@@ -801,7 +801,7 @@ class CCWallet:
             asset_id=asset_id.hex(),
             xch_puzzle_hash=sender_xch_puzzle_hash.hex(),
         )
-        sender_cat_puzzle_hash = bytes.fromhex(sender_cat_puzzle_hash_str.lstrip("0x"))
+        sender_cat_puzzle_hash = bytes.fromhex(sender_cat_puzzle_hash_str.replace("0x", ""))
 
         selected_cat_amount = sum([c.amount for c in cat_coins_pool])
         assert selected_cat_amount >= starting_amount
