@@ -35,6 +35,11 @@ def db_version(request):
     return request.param
 
 
+@pytest.fixture(scope="function", params=[1000000, 2000000])
+def softfork_height(request):
+    return request.param
+
+
 block_format_version = "rc4"
 
 
