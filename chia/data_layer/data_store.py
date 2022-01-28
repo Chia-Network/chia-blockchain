@@ -1068,7 +1068,7 @@ class DataStore:
             )
             async for row in cursor:
                 tree_id = bytes32.fromhex(row["tree_id"])
-                mode = DownloadMode(row["mode"])
+                mode = DownloadMode(int(row["mode"]))
                 ip = row["ip"]
                 port = uint16(row["port"])
                 subscriptions.append(Subscription(tree_id, mode, ip, port))
