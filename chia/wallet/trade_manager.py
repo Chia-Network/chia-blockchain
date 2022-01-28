@@ -348,7 +348,9 @@ class TradeManager:
         non_ephemeral_removals: List[Coin] = list(
             filter(lambda c: c.parent_coin_info not in all_removal_names, all_removals)
         )
-        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state([c.name() for c in non_ephemeral_removals])
+        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
+            [c.name() for c in non_ephemeral_removals]
+        )
         assert coin_states is not None
         return not any([cs.spent_height is not None for cs in coin_states])
 
