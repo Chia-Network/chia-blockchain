@@ -24,7 +24,7 @@ export default function PlotAction(props: Props) {
         title={<Trans>Delete Plot</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
         confirmColor="danger"
-        onConfirm={() => { console.log(filename); return deletePlot({ filename }).unwrap(); }}
+        onConfirm={() => { return deletePlot({ filename }).unwrap(); }}
       >
         <Trans>
           Are you sure you want to delete the plot? The plot cannot be

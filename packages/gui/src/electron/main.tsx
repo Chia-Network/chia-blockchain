@@ -76,7 +76,6 @@ if (!handleSquirrelEvent()) {
     const gotTheLock = app.requestSingleInstanceLock();
 
     if (!gotTheLock) {
-      console.log('Second instance. Quitting.');
       app.quit();
       return false;
     }
@@ -96,7 +95,6 @@ if (!handleSquirrelEvent()) {
   const ensureCorrectEnvironment = () => {
     // check that the app is either packaged or running in the python venv
     if (!chiaEnvironment.guessPackaged() && !('VIRTUAL_ENV' in process.env)) {
-      console.log('App must be installed or in venv');
       app.quit();
       return false;
     }
@@ -326,7 +324,6 @@ if (!handleSquirrelEvent()) {
     });
 
     ipcMain.on('isSimulator', (event) => {
-      console.log('isSimulator', isSimulator);
       event.returnValue = isSimulator;
     });
   }

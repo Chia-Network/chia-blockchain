@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { AppBar, Toolbar, Box } from '@material-ui/core';
 import styled from 'styled-components';
 import { Outlet, Link } from 'react-router-dom';
@@ -25,16 +25,24 @@ const StyledBody = styled(Box)`
   flex-grow: 1;
 `;
 
-type Props = {
+export type LayoutHeroProps = {
   children?: ReactNode;
   header?: ReactNode;
   back?: boolean;
   outlet?: boolean;
   settings?: ReactNode;
+  hideSettings?: boolean;
 };
 
-export default function LayoutHero(props: Props) {
-  const { children, header, back, outlet, settings } = props;
+export default function LayoutHero(props: LayoutHeroProps) {
+  const { 
+    children, 
+    header, 
+    back = false, 
+    outlet = false, 
+    settings, 
+    hideSettings = false,
+  } = props;
 
   return (
     <StyledWrapper>
@@ -47,9 +55,11 @@ export default function LayoutHero(props: Props) {
             </Link>
           )}
           <Flex flexGrow={1} />
-          <Settings>
-            {settings}
-          </Settings>
+          {!hideSettings && (
+            <Settings>
+              {settings}
+            </Settings>
+          )}
         </Toolbar>
       </AppBar>
       <StyledBody>
@@ -60,10 +70,3 @@ export default function LayoutHero(props: Props) {
     </StyledWrapper>
   );
 }
-
-LayoutHero.defaultProps = {
-  header: undefined,
-  children: undefined,
-  back: false,
-  outlet: false,
-};

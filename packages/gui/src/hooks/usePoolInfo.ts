@@ -47,14 +47,11 @@ export default function usePoolInfo(poolUrl?: string): {
     try {
       const data = await getPoolInfo(normalizedUrl);
 
-      console.log('data', data);
-
       return {
         poolUrl: normalizedUrl,
         ...data,
       };
     } catch (e) {
-      console.log(e);
       throw new Error(
         t`The pool URL "${normalizedUrl}" is not working. Is it pool? Error: ${e.message}`,
       );

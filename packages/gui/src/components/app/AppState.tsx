@@ -48,7 +48,7 @@ export default function AppState(props: Props) {
 
   const servicesState = useServices(ALL_SERVICES, {
     keepRunning: !closing ? runServices : [],
-    disabled: !isKeyringReady || !runServices,
+    disabled: !isKeyringReady,
   });
 
   const allServicesRunning = useMemo<boolean>(() => {
@@ -92,14 +92,14 @@ export default function AppState(props: Props) {
 
   if (closing) {
     return (
-      <LayoutLoading>
+      <LayoutLoading hideSettings>
         <Flex flexDirection="column" gap={2}> 
           <Typography variant="body1" align="center">
-            <Trans>Closing services</Trans>
+            <Trans>Closing down services</Trans>
           </Typography>
           <Flex flexDirection="column" gap={0.5}>
             {!!runServices && runServices.map((service) => (
-              <Collapse key={service} in={servicesState.running.find(state => state.service === service)} timeout={{ enter: 0, exit: 1000 }}>
+              <Collapse key={service} in={!!clienState?.startedServices.includes(service)} timeout={{ enter: 0, exit: 1000 }}>
                 <Typography variant="body1" color="textSecondary"  align="center">
                   {ServiceHumanName[service]}
                 </Typography>

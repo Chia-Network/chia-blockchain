@@ -28,6 +28,8 @@ export default function useService(service: ServiceName, options: Options): {
   const [isStopping, setIsStopping] = useState<boolean>(false);
   const [startService] = useClientStartServiceMutation();
   const [stopService] = useStopServiceMutation();
+
+  // isRunning is not working when stopService is called (backend issue)
   const { data: isRunning, isLoading, refetch, error } = useIsServiceRunningQuery({
     service,
   }, {

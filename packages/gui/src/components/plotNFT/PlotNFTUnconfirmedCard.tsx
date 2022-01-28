@@ -35,9 +35,7 @@ export default function PlotNFTUnconfirmedCard(props: Props) {
     transactionId,
   }, {
     pollingInterval: 5000,
-  }); 
-
-  console.log('transaction', transaction);
+  });
 
   useEffect(() => {
     if (transaction?.confirmed) {

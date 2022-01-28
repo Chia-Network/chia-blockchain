@@ -118,7 +118,7 @@ export default function AppSelectMode() {
           <Grid xs={12} sm={6} item>
             <Card 
               onSelect={() => handleModeChange(Mode.FARMING)}
-              highlight={<Trans>Recommended by Experts</Trans>}
+              highlight={<Trans>Recommended</Trans>}
               fullHeight
             >
               <StyledCardContent>
