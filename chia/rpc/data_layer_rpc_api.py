@@ -96,8 +96,8 @@ class DataLayerRpcApi:
 
     async def batch_update(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
-        rows_to_add a list of clvm objects as bytes to add to talbe
-        rows_to_remove a list of row hashes to remove
+        id  - the id of the store we are operating on
+        changelist - a list of changes to apply on store
         """
         changelist = [process_change(change) for change in request["changelist"]]
         store_id = bytes32(hexstr_to_bytes(request["id"]))
@@ -110,10 +110,6 @@ class DataLayerRpcApi:
         return {"tx_id": transaction_record.name}
 
     async def insert(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        rows_to_add a list of clvm objects as bytes to add to talbe
-        rows_to_remove a list of row hashes to remove
-        """
         key = hexstr_to_bytes(request["key"])
         value = hexstr_to_bytes(request["value"])
         store_id = bytes32(hexstr_to_bytes(request["id"]))
@@ -125,10 +121,6 @@ class DataLayerRpcApi:
         return {"tx_id": transaction_record.name}
 
     async def delete_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        rows_to_add a list of clvm objects as bytes to add to talbe
-        rows_to_remove a list of row hashes to remove
-        """
         key = hexstr_to_bytes(request["key"])
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         # todo input checks
@@ -139,10 +131,7 @@ class DataLayerRpcApi:
         return {"tx_id": transaction_record.name}
 
     async def get_root(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        rows_to_add a list of clvm objects as bytes to add to talbe
-        rows_to_remove a list of row hashes to remove
-        """
+        """ get hash of latest tree root """
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         # todo input checks
         if self.service is None:
@@ -152,8 +141,7 @@ class DataLayerRpcApi:
 
     async def get_roots(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
-        rows_to_add a list of clvm objects as bytes to add to talbe
-        rows_to_remove a list of row hashes to remove
+        get state hashes for a list of roots
         """
         store_ids = request["ids"]
         # todo input checks
@@ -164,8 +152,7 @@ class DataLayerRpcApi:
 
     async def subscribe(self, request: Dict[str, Any]) -> bool:
         """
-        rows_to_add a list of clvm objects as bytes to add to talbe
-        rows_to_remove a list of row hashes to remove
+        subscribe to singleton
         """
         store_id = request.get("id")
         if store_id is None:
@@ -187,8 +174,7 @@ class DataLayerRpcApi:
 
     async def unsubscribe(self, request: Dict[str, Any]) -> bool:
         """
-        rows_to_add a list of clvm objects as bytes to add to talbe
-        rows_to_remove a list of row hashes to remove
+        unsubscribe from singleton
         """
         store_id = request.get("id")
         if store_id is None:
