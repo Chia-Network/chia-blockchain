@@ -2181,9 +2181,12 @@ class FullNode:
                 assert peak is not None
                 if new_block.header_hash == peak.header_hash or peak.height - new_block.height < 5:
                     continue
+                main_chain_hash: Optional[bytes32] = self.blockchain.height_to_hash(new_block.height)
+                assert main_chain_hash is not None
+                in_main_chain: bool = main_chain_hash == new_block.header_hash
                 try:
                     await self.block_store.db_wrapper.begin_transaction()
-                    await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
+                    await self.block_store.add_full_block(new_block.header_hash, new_block, block_record, in_main_chain)
                     await self.block_store.db_wrapper.commit_transaction()
                     replaced = True
                 except BaseException as e:
