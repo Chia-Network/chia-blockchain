@@ -120,7 +120,7 @@ class CATWallet:
         cc_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=cc_coin.puzzle_hash,
+            to_puzzle_hash=(await self.convert_puzzle_hash(cc_coin.puzzle_hash)),
             amount=uint64(cc_coin.amount),
             fee_amount=uint64(0),
             confirmed=False,
