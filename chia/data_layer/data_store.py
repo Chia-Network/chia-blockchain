@@ -339,11 +339,16 @@ class DataStore:
                 "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation",
                 {"tree_id": tree_id.hex(), "generation": generation},
             )
-            if cursor.rowcount < 1:
-                raise Exception(f"tree id not in store {tree_id.hex()}")
-            [root_dict] = [row async for row in cursor]
+            row = await cursor.fetchone()
 
-        return Root.from_row(row=root_dict)
+            if row is None:
+                raise Exception(f"unable to find root for id, generation: {tree_id.hex()}, {generation}")
+
+            maybe_extra_result = await cursor.fetchone()
+            if maybe_extra_result is not None:
+                raise Exception(f"multiple roots found for id, generation: {tree_id.hex()}, {generation}")
+
+        return Root.from_row(row=row)
 
     async def tree_id_exists(self, tree_id: bytes32, *, lock: bool = True) -> bool:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -366,8 +371,6 @@ class DataStore:
                 "AND generation >= :generation_begin AND generation < :generation_end ORDER BY generation ASC",
                 {"tree_id": tree_id.hex(), "generation_begin": generation_begin, "generation_end": generation_end},
             )
-            if cursor.rowcount < 1:
-                raise Exception(f"tree id not in store {tree_id.hex()}")
             roots = [Root.from_row(row=row) async for row in cursor]
 
         return roots
@@ -432,8 +435,6 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             if root_hash is None:
                 root = await self.get_tree_root(tree_id=tree_id, lock=False)
-                if root.node_hash is None:
-                    raise Exception(f"Root hash is unspecified for tree ID: {tree_id.hex()}")
                 root_hash = root.node_hash
             cursor = await self.db.execute(
                 """
@@ -456,7 +457,7 @@ class DataStore:
                 WHERE node_type == :node_type
                 ORDER BY depth ASC, rights ASC
                 """,
-                {"root_hash": root_hash.hex(), "node_type": NodeType.TERMINAL},
+                {"root_hash": None if root_hash is None else root_hash.hex(), "node_type": NodeType.TERMINAL},
             )
 
             terminal_nodes: List[TerminalNode] = []
