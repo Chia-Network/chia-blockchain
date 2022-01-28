@@ -2181,9 +2181,18 @@ class FullNode:
                 assert peak is not None
                 if new_block.header_hash == peak.header_hash or peak.height - new_block.height < 5:
                     continue
-                await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
-                await self.block_store.db_wrapper.commit_transaction()
-                replaced = True
+                try:
+                    await self.block_store.db_wrapper.begin_transaction()
+                    await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
+                    await self.block_store.db_wrapper.commit_transaction()
+                    replaced = True
+                except BaseException as e:
+                    await self.block_store.db_wrapper.rollback_transaction()
+                    self.log.error(
+                        f"_replace_proof error while adding block {block.header_hash} height {block.height},"
+                        f" rolling back: {e} {traceback.format_exc()}"
+                    )
+                    raise
         return replaced
 
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
