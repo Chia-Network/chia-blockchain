@@ -38,7 +38,7 @@ and in this way they control whether a spend is valid or not.
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, TextIO, Tuple, Dict
+from typing import List, Tuple, Dict
 
 import click
 
