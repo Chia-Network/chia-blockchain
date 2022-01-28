@@ -207,17 +207,10 @@ def run_json_block(full_block, parent: Path, constants: ConsensusConstants) -> L
     cat_list: List[CAT] = []
     if tx_info and generator_program_hex:
         cost = tx_info["cost"]
+        args = ref_list_to_args(ref_list, parent)
+        cat_list = run_generator_with_args(generator_program_hex, args, constants, cost, height)
 
-
-<< << << < HEAD
-args = ref_list_to_args(ref_list, parent)
-cat_list = run_generator_with_args(generator_program_hex, args, constants, cost)
-== == == =
-args = ref_list_to_args(ref_list)
-cat_list = run_generator_with_args(generator_program_hex, args, constants, cost, height)
->>>>>> > main
-
-return cat_list
+    return cat_list
 
 
 def run_json_block_file(filename: Path):
