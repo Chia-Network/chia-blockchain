@@ -130,7 +130,7 @@ def create_foliage(
 
         # Calculate the cost of transactions
         if block_generator is not None:
-            generator_block_heights_list = block_generator.block_height_list()
+            generator_block_heights_list = block_generator.block_height_list
             result: NPCResult = get_name_puzzle_conditions(
                 block_generator,
                 constants.MAX_BLOCK_COST_CLVM,
@@ -428,7 +428,7 @@ def create_unfinished_block(
         foliage_transaction_block,
         transactions_info,
         block_generator.program if block_generator else None,
-        block_generator.block_height_list() if block_generator else [],
+        block_generator.block_height_list if block_generator else [],
     )
 
 

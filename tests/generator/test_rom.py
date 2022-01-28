@@ -7,7 +7,7 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.name_puzzle_condition import NPC
-from chia.types.generator_types import BlockGenerator, GeneratorArg
+from chia.types.generator_types import BlockGenerator
 from chia.util.clvm import int_to_bytes
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.ints import uint32
@@ -69,8 +69,9 @@ def to_sp(sexp) -> SerializedProgram:
 
 
 def block_generator() -> BlockGenerator:
-    generator_args = [GeneratorArg(uint32(0), to_sp(FIRST_GENERATOR)), GeneratorArg(uint32(1), to_sp(SECOND_GENERATOR))]
-    return BlockGenerator(to_sp(COMPILED_GENERATOR_CODE), generator_args)
+    generator_list = [to_sp(FIRST_GENERATOR), to_sp(SECOND_GENERATOR)]
+    generator_heights = [uint32(0), uint32(1)]
+    return BlockGenerator(to_sp(COMPILED_GENERATOR_CODE), generator_list, generator_heights)
 
 
 EXPECTED_ABBREVIATED_COST = 108379

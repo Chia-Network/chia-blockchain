@@ -2193,7 +2193,7 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
 
-        block_generator: BlockGenerator = BlockGenerator(blocks[-1].transactions_generator, [])
+        block_generator: BlockGenerator = BlockGenerator(blocks[-1].transactions_generator, [], [])
         npc_result = get_name_puzzle_conditions(
             block_generator,
             b.constants.MAX_BLOCK_COST_CLVM * 1000,
@@ -2254,7 +2254,7 @@ class TestBodyValidation:
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
-        block_generator: BlockGenerator = BlockGenerator(block_2.transactions_generator, [])
+        block_generator: BlockGenerator = BlockGenerator(block_2.transactions_generator, [], [])
         npc_result = get_name_puzzle_conditions(
             block_generator,
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
@@ -2279,7 +2279,7 @@ class TestBodyValidation:
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
-        block_generator: BlockGenerator = BlockGenerator(block_2.transactions_generator, [])
+        block_generator: BlockGenerator = BlockGenerator(block_2.transactions_generator, [], [])
         npc_result = get_name_puzzle_conditions(
             block_generator,
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
@@ -2304,7 +2304,7 @@ class TestBodyValidation:
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
-        block_generator: BlockGenerator = BlockGenerator(block_2.transactions_generator, [])
+        block_generator: BlockGenerator = BlockGenerator(block_2.transactions_generator, [], [])
         npc_result = get_name_puzzle_conditions(
             block_generator,
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
