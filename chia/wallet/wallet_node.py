@@ -65,8 +65,8 @@ from chia.util.profiler import profile_task
 
 class PeerRequestCache:
     blocks: Dict[uint32, HeaderBlock]
-    block_requests: Dict[bytes32, Any]
-    ses_requests: Dict[bytes32, Any]
+    block_requests: Dict[Tuple[int, int], Any]
+    ses_requests: Dict[int, Any]
     states_validated: Dict[bytes32, CoinState]
 
     def __init__(self):
@@ -203,9 +203,6 @@ class WalletNode:
             self.constants,
             self.server,
             self.root_path,
-            self.new_puzzle_hash_created,
-            self.get_coin_state,
-            self.subscribe_to_coin_updates,
             self,
         )
 
@@ -343,7 +340,8 @@ class WalletNode:
         network_name = self.config["selected_network"]
 
         connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", True)
-        if connect_to_unknown_peers:
+        testing = self.config.get("testing", False)
+        if connect_to_unknown_peers and not testing:
             self.wallet_peers = WalletPeers(
                 self.server,
                 self.config["target_peer_count"],
@@ -454,28 +452,30 @@ class WalletNode:
         if self.validation_semaphore is None:
             self.validation_semaphore = asyncio.Semaphore(6)
         all_tasks = []
+
         for idx, state in enumerate(items):
 
             async def receive_and_validate(state: CoinState, peer, height: Optional[uint32], idx):
                 assert self.wallet_state_manager is not None
                 assert self.validation_semaphore is not None
+                # if height is not None:
                 async with self.validation_semaphore:
                     valid = await self.validate_received_state_from_peer(state, peer, self.get_cache_for_peer(peer))
-                if valid:
-                    self.log.info(f"new coin state received ({idx} / {len(items)})")
-                    await self.wallet_state_manager.new_coin_state([state], peer)
-                elif height is not None:
-                    self.add_state_to_race_cache(height, state)
-                else:
-                    if state.created_height is not None:
-                        self.add_state_to_race_cache(state.created_height, state)
-                    if state.spent_height is not None:
-                        self.add_state_to_race_cache(state.spent_height, state)
+                    if valid:
+                        self.log.info(f"new coin state received ({idx} / {len(items)})")
+                        await self.wallet_state_manager.new_coin_state([state], peer)
+                    elif height is not None:
+                        self.add_state_to_race_cache(height, state)
+                    else:
+                        if state.created_height is not None:
+                            self.add_state_to_race_cache(state.created_height, state)
+                        if state.spent_height is not None:
+                            self.add_state_to_race_cache(state.spent_height, state)
 
             task = receive_and_validate(state, peer, height, idx)
             all_tasks.append(task)
             while len(self.validation_semaphore._waiters) > 20:
-                self.log.debug(f"sleeping 2 sec")
+                self.log.debug("sleeping 2 sec")
                 await asyncio.sleep(2)
 
         await asyncio.gather(*all_tasks)
@@ -510,15 +510,24 @@ class WalletNode:
 
     async def get_coin_state(self, coin_names: List[bytes32]) -> List[CoinState]:
         assert self.server is not None
-        # TODO Use trusted peer, otherwise try untrusted
         all_nodes = self.server.connection_by_type[NodeType.FULL_NODE]
         if len(all_nodes.keys()) == 0:
             raise ValueError("Not connected to the full node")
         first_node = list(all_nodes.values())[0]
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
         coin_state: Optional[RespondToCoinUpdates] = await first_node.register_interest_in_coin(msg)
-        # TODO validate state if received from untrusted peer
         assert coin_state is not None
+
+        if not self.is_trusted(first_node):
+            valid_list = []
+            for coin in coin_state.coin_states:
+                valid = await self.validate_received_state_from_peer(
+                    coin, first_node, self.get_cache_for_peer(first_node)
+                )
+                if valid:
+                    valid_list.append(coin)
+            return valid_list
+
         return coin_state.coin_states
 
     async def get_coins_with_puzzle_hash(self, puzzle_hash) -> List[CoinState]:
