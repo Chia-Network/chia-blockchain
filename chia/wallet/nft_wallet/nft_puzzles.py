@@ -39,11 +39,14 @@ def match_nft_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
     """
     Given a puzzle test if it's an NFT and, if it is, return the curried arguments
     """
-    mod, curried_args = puzzle.uncurry()
-    if mod == SINGLETON_TOP_LAYER_MOD:
-        mod, curried_args = curried_args[1].uncurry()
-        if mod == NFT_MOD:
-            return True, curried_args.as_iter()
+    try:
+        mod, curried_args = puzzle.uncurry()
+        if mod == SINGLETON_TOP_LAYER_MOD:
+            mod, curried_args = curried_args.rest().first().uncurry()
+            if mod == NFT_MOD:
+                return True, curried_args.as_iter()
+    except Exception as e:
+        breakpoint()
     return False, iter(())
 
 

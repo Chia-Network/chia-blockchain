@@ -626,19 +626,26 @@ class WalletStateManager:
                     self.state_changed("wallet_created")
 
         else:
-            matched, curried_args = match_nft_puzzle(Program.from_bytes(bytes(cs.puzzle_reveal)))
-            breakpoint()
+            #                                                        hint
+            # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
+            if coin_state.spent_height is not None:
+                return None, None
+
+            nft_spend: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
+                peer, parent_coin_state.spent_height, parent_coin_state.coin
+            )
+            matched, curried_args = match_nft_puzzle(Program.from_bytes(bytes(nft_spend.puzzle_reveal)))
+
             if matched:
                 NFT_MOD_HASH, singleton_struct, current_owner_did, nft_transfer_program_hash = curried_args
-                hint_list = cs.hints()
+                hint_list = nft_spend.hints()
                 breakpoint()
-                for hint in hint_list:
-                    for wallet_info in await self.get_all_wallet_info_entries():
-                        if wallet_info.type == WalletType.NFT:
-                            nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
-                            if nft_wallet_info.my_did == hint:
-                                wallet_id = nft_wallet_info.id
-                                wallet_type = WalletType.NFT
+                for wallet_info in await self.get_all_wallet_info_entries():
+                    if wallet_info.type == WalletType.NFT:
+                        nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
+                        if nft_wallet_info.my_did == current_owner_did:
+                            wallet_id = nft_wallet_info.id
+                            wallet_type = WalletType.NFT
 
         return wallet_id, wallet_type
 
@@ -693,7 +700,6 @@ class WalletStateManager:
                 wallet_type = local_record.wallet_type
             elif coin_state.created_height is not None:
                 wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state)
-                breakpoint()
                 # if wallet_id is None:
                 #     wallet_id, wallet_type = await self.fetch_parent_and_check_for_nft(peer, coin_state)
 

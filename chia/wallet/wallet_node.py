@@ -581,20 +581,46 @@ class WalletNode:
     async def state_update_received(self, request: wallet_protocol.CoinStateUpdate, peer: WSChiaConnection):
         assert self.wallet_state_manager is not None
         assert self.server is not None
+        for coin in request.items:
+            self.log.info(f"request coin: {coin.coin.name()}{coin}")
 
-        if self.is_trusted(peer):
-            async with self.new_peak_lock:
-                async with self.wallet_state_manager.lock:
-                    self.log.debug(f"state_update_received is {request}")
+        async with self.new_peak_lock:
+            async with self.wallet_state_manager.lock:
+                if self.is_trusted(peer):
                     await self.wallet_state_manager.new_coin_state(
                         request.items, peer, request.fork_height, request.height
                     )
-            await self.update_ui()
-        else:
-            async with self.new_peak_lock:
-                async with self.wallet_state_manager.lock:
-                    self.log.debug(f"state_update_received is {request}")
-                    await self.receive_state_from_untrusted_peer(request.items, peer, request.height)
+                    await self.update_ui()
+                else:
+                    # Ignore state_update_received if untrusted, we'll sync from block messages where we check filter
+                    for coin_state in request.items:
+                        info = await self.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash(
+                            coin_state.coin.puzzle_hash
+                        )
+                        if coin_state.created_height is None or info is not None:
+                            continue
+
+                        # We need to check the hints and see if there is a new CAT sent to us, so we can create
+                        # a new CAT wallet
+                        wallet_id, wallet_type = await self.wallet_state_manager.determine_coin_type(
+                            peer, coin_state
+                        )
+
+                        if wallet_id is not None:
+                            # If there is a new wallet, check if we have this height already in the blockchain
+                            if self.wallet_state_manager.blockchain.contains_height(request.height):
+                                # If we do, complete the blocks
+                                header_blocks: Optional[RespondHeaderBlocks] = await peer.request_header_blocks(
+                                    wallet_protocol.RequestHeaderBlocks(
+                                        request.height, self.wallet_state_manager.blockchain.get_peak_height()
+                                    )
+                                )
+                                assert header_blocks is not None and isinstance(
+                                    header_blocks, wallet_protocol.RespondHeaderBlocks
+                                )
+                                # re-check the block filter for any new addition /removals, for all of the blocks
+                                # that have been added to the blockchain since this CAT was created
+                                await self.complete_blocks(header_blocks.header_blocks, peer)
 
     def get_full_node_peer(self):
         nodes = self.server.get_full_node_connections()
