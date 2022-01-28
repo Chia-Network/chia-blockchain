@@ -1,5 +1,5 @@
 from aiosqlite import Row
-from typing import List, Optional, Type, TypeVar
+from typing import List, Optional, Type, TypeVar, Union
 
 import aiosqlite
 import dataclasses
@@ -108,11 +108,29 @@ class DataLayerStore:
             if not in_transaction:
                 self.db_wrapper.lock.release()
 
-    async def get_all_singletons_for_launcher(self, launcher_id: bytes32) -> List[SingletonRecord]:
+    async def get_all_singletons_for_launcher(
+        self,
+        launcher_id: bytes32,
+        min_generation: Optional[uint32] = None,
+        max_generation: Optional[uint32] = None,
+        num_results: Optional[uint32] = None,
+    ) -> List[SingletonRecord]:
         """
-        Returns all stored singletons.
+        Returns stored singletons with a specific launcher ID.
         """
-        cursor = await self.db_connection.execute("SELECT * from singleton_records WHERE launcher_id=?", (launcher_id,))
+        query_params: List[Union[bytes32, uint32]] = [launcher_id]
+        for optional_param in (min_generation, max_generation, num_results):
+            if optional_param is not None:
+                query_params.append(optional_param)
+
+        cursor = await self.db_connection.execute(
+            "SELECT * from singleton_records WHERE launcher_id=? "
+            f"{'AND generation >=? ' if min_generation is not None else ''}"
+            f"{'AND generation <=? ' if max_generation is not None else ''}"
+            "ORDER BY generation DESC"
+            f"{' LIMIT ?' if num_results is not None else ''}",
+            tuple(query_params),
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -151,6 +169,20 @@ class DataLayerStore:
         if row is not None:
             return self._row_to_singleton_record(row)
         return None
+
+    async def get_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> List[SingletonRecord]:
+        cursor = await self.db_connection.execute(
+            "SELECT * from singleton_records WHERE launcher_id=? AND root=? ORDER BY generation DESC",
+            (launcher_id, root),
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            records.append(self._row_to_singleton_record(row))
+
+        return records
 
     async def set_confirmed(self, coin_id: bytes32, height: uint32) -> None:
         """
