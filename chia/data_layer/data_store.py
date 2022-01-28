@@ -23,6 +23,8 @@ from chia.data_layer.data_layer_types import (
     Status,
     InsertionData,
     DeletionData,
+    DiffData,
+    OperationType,
 )
 from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
@@ -821,3 +823,30 @@ class DataStore:
                 previous_root = current_root
 
         return result
+
+    async def get_kv_diff(
+        self,
+        tree_id: bytes32,
+        hash_1: Optional[bytes32],
+        hash_2: Optional[bytes32],
+        *,
+        lock: bool = True,
+    ) -> Set[DiffData]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            old_pairs = set() if hash_1 is None else set(await self.get_keys_values(tree_id, hash_1, lock=False))
+            new_pairs = set() if hash_2 is None else set(await self.get_keys_values(tree_id, hash_2, lock=False))
+            insertions = set(
+                [
+                    DiffData(type=OperationType.INSERT, key=node.key, value=node.value)
+                    for node in new_pairs
+                    if node not in old_pairs
+                ]
+            )
+            deletions = set(
+                [
+                    DiffData(type=OperationType.DELETE, key=node.key, value=node.value)
+                    for node in old_pairs
+                    if node not in new_pairs
+                ]
+            )
+            return set.union(insertions, deletions)
