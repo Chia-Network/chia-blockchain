@@ -8,9 +8,17 @@ import sys
 
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint128, uint64, uint32, uint8
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from utils import rewards, rand_hash, setup_db, rand_g1, rand_g2, rand_bytes
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
+from utils import (
+    rewards,
+    rand_hash,
+    setup_db,
+    rand_g1,
+    rand_g2,
+    rand_bytes,
+    rand_vdf,
+    rand_vdf_proof,
+    rand_class_group_element,
+)
 from chia.types.full_block import FullBlock
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
@@ -26,22 +34,6 @@ NUM_ITERS = 20000
 
 # we need seeded random, to have reproducible benchmark runs
 random.seed(123456789)
-
-
-def rand_class_group_element() -> ClassgroupElement:
-    return ClassgroupElement(rand_bytes(100))
-
-
-def rand_vdf() -> VDFInfo:
-    return VDFInfo(rand_hash(), uint64(random.randint(100000, 1000000000)), rand_class_group_element())
-
-
-def rand_vdf_proof() -> VDFProof:
-    return VDFProof(
-        uint8(1),  # witness_type
-        rand_hash(),  # witness
-        bool(random.randint(0, 1)),  # normalized_to_identity
-    )
 
 
 with open("clvm_generator.bin", "rb") as f:

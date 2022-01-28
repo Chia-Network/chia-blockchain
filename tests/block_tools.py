@@ -2003,7 +2003,7 @@ def create_test_unfinished_block(
         foliage_transaction_block,
         transactions_info,
         block_generator.program if block_generator else None,
-        block_generator.block_height_list if block_generator else [],  # TODO: can block_generator ever be None?
+        block_generator.block_height_list if block_generator else [],
     )
 
 
