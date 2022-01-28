@@ -2177,6 +2177,10 @@ class FullNode:
             if new_block is None:
                 continue
             async with self.db_wrapper.lock:
+                peak: Optional[BlockRecord] = self.blockchain.get_peak()
+                assert peak is not None
+                if new_block.header_hash == peak.header_hash:
+                    continue
                 await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
                 await self.block_store.db_wrapper.commit_transaction()
                 replaced = True
