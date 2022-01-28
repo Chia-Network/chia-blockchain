@@ -1,10 +1,11 @@
 from contextlib import contextmanager
 import logging
 import traceback
+from typing import Iterator
 
 
 @contextmanager
-def log_exceptions(log: logging.Logger):
+def log_exceptions(log: logging.Logger) -> Iterator[None]:
     try:
         yield
     except Exception as e:
