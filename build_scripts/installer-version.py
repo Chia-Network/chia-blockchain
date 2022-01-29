@@ -6,7 +6,15 @@ from setuptools_scm import get_version
 
 # example: 1.0b5.dev225
 def main():
-    windows = len(sys.argv) > 1 and "win" in sys.argv[1]  # Special case windows to 0.1.6225
+    windows = len(sys.argv) > 1 and "win" in sys.argv[1]  
+    
+    # Special case windows to 0.1.6225
+    # Microsoft Windows requires that any executable have three and only three fields
+    # for version number.
+    # Quoting from: https://docs.microsoft.com/en-us/windows/win32/msi/productversion?WT.mc_id=email
+    # The first field is the major version and has a maximum value of 255.
+    # The second field is the minor version and has a maximum value of 255. 
+    # The third field is called the build version or the update version and has a maximum value of 65,535.
 
     scm_full_version = get_version(root="..", relative_to=__file__)
     # scm_full_version = "1.0.5.dev22"
