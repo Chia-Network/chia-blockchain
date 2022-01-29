@@ -75,9 +75,12 @@ class DataLayerRpcApi:
 
     async def get_keys_values(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
+        root_hash = request.get("root_hash")
+        if root_hash is not None:
+            root_hash = bytes32.from_hexstr(root_hash)
         if self.service is None:
             raise Exception("Data layer not created")
-        res = await self.service.get_keys_values(store_id)
+        res = await self.service.get_keys_values(store_id, root_hash)
         json_nodes = []
         for node in res:
             json = recurse_jsonify(dataclasses.asdict(node))  # type: ignore[no-untyped-call]
@@ -157,5 +160,9 @@ class DataLayerRpcApi:
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        res = await self.service.get_roots(store_ids)
-        return {"hashes": res}
+        roots = []
+        for id in store_ids:
+            id_bytes = bytes32.from_hexstr(id)
+            res = await self.service.get_root(store_id=id_bytes)
+            roots.append({"id": id_bytes, "hash": res})
+        return {"root_hashes": roots}

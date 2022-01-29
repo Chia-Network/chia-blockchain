@@ -724,6 +724,10 @@ class DataLayerWallet:
                 )
             )
 
+    async def stop_tracking_singleton(self, launcher_id: bytes32) -> None:
+        await self.wallet_state_manager.dl_store.delete_singleton_records_by_launcher_id(launcher_id)
+        await self.wallet_state_manager.dl_store.delete_launcher(launcher_id)
+
     #############
     # DL OFFERS #
     #############
@@ -755,15 +759,30 @@ class DataLayerWallet:
         )
         return singleton
 
-    async def get_history(self, launcher_id: bytes32) -> List[SingletonRecord]:
+    async def get_history(
+        self,
+        launcher_id: bytes32,
+        min_generation: Optional[uint32] = None,
+        max_generation: Optional[uint32] = None,
+        num_results: Optional[uint32] = None,
+    ) -> List[SingletonRecord]:
         history: List[SingletonRecord] = await self.wallet_state_manager.dl_store.get_all_singletons_for_launcher(
-            launcher_id
+            launcher_id,
+            min_generation,
+            max_generation,
+            num_results,
         )
         return history
 
     async def get_singleton_record(self, coin_id: bytes32) -> Optional[SingletonRecord]:
         singleton: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singleton_record(coin_id)
         return singleton
+
+    async def get_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> List[SingletonRecord]:
+        singletons: List[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singletons_by_root(
+            launcher_id, root
+        )
+        return singletons
 
     ##########
     # WALLET #

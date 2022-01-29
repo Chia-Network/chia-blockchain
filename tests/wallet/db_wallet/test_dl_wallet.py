@@ -184,6 +184,9 @@ class TestDLWallet:
 
         await time_out_assert(15, is_tip_updated, True)
 
+        await dl_wallet_1.stop_tracking_singleton(launcher_id)
+        assert await dl_wallet_1.get_latest_singleton(launcher_id) is None
+
     @pytest.mark.parametrize(
         "trusted",
         [True, False],

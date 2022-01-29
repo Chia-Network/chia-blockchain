@@ -484,17 +484,49 @@ class WalletRpcClient(RpcClient):
         await self.fetch("dl_track_new", request)
         return None
 
+    async def dl_stop_tracking(self, launcher_id: bytes32) -> None:
+        request = {"launcher_id": launcher_id.hex()}
+        await self.fetch("dl_stop_tracking", request)
+        return None
+
     async def dl_latest_singleton(self, launcher_id: bytes32) -> Optional[SingletonRecord]:
         request = {"launcher_id": launcher_id.hex()}
         response = await self.fetch("dl_latest_singleton", request)
         return None if response["singleton"] is None else SingletonRecord.from_json_dict(response["singleton"])
+
+    async def dl_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> List[SingletonRecord]:
+        request = {"launcher_id": launcher_id.hex(), "root": root.hex()}
+        response = await self.fetch("dl_singletons_by_root", request)
+        return [SingletonRecord.from_json_dict(single) for single in response["singletons"]]
 
     async def dl_update_root(self, launcher_id: bytes32, new_root: bytes32, fee=uint64(0)) -> TransactionRecord:
         request = {"launcher_id": launcher_id.hex(), "new_root": new_root.hex(), "fee": fee}
         response = await self.fetch("dl_update_root", request)
         return TransactionRecord.from_json_dict_convenience(response["tx_record"])
 
-    async def dl_history(self, launcher_id: bytes32) -> List[SingletonRecord]:
+    async def dl_update_multiple(self, update_dictionary: Dict[bytes32, bytes32]) -> List[TransactionRecord]:
+        updates_as_strings: Dict[str, str] = {}
+        for lid, root in update_dictionary.items():
+            updates_as_strings[str(lid)] = str(root)
+        request = {"updates": updates_as_strings}
+        response = await self.fetch("dl_update_multiple", request)
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["tx_records"]]
+
+    async def dl_history(
+        self,
+        launcher_id: bytes32,
+        min_generation: Optional[uint32] = None,
+        max_generation: Optional[uint32] = None,
+        num_results: Optional[uint32] = None,
+    ) -> List[SingletonRecord]:
         request = {"launcher_id": launcher_id.hex()}
+
+        if min_generation is not None:
+            request["min_generation"] = str(min_generation)
+        if max_generation is not None:
+            request["max_generation"] = str(max_generation)
+        if num_results is not None:
+            request["num_results"] = str(num_results)
+
         response = await self.fetch("dl_history", request)
         return [SingletonRecord.from_json_dict(single) for single in response["history"]]
