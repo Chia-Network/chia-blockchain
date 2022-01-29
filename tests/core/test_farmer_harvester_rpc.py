@@ -1,13 +1,9 @@
 import logging
-from secrets import token_bytes
 import time
 
 import pytest
-from blspy import AugSchemeMPL
-from chiapos import DiskPlotter
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk
 from chia.protocols import farmer_protocol
 from chia.rpc.farmer_rpc_api import FarmerRpcApi
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
@@ -16,7 +12,6 @@ from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.rpc_server import start_rpc_server
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from tests.block_tools import get_plot_dir
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
@@ -111,65 +106,6 @@ class TestRpc:
             res = await client_2.get_plots()
             num_plots = len(res["plots"])
             assert num_plots > 0
-            plot_dir = get_plot_dir() / "subdir"
-            plot_dir.mkdir(parents=True, exist_ok=True)
-
-            plot_dir_sub = get_plot_dir() / "subdir" / "subsubdir"
-            plot_dir_sub.mkdir(parents=True, exist_ok=True)
-
-            plotter = DiskPlotter()
-            filename = "test_farmer_harvester_rpc_plot.plot"
-            filename_2 = "test_farmer_harvester_rpc_plot2.plot"
-            plotter.create_plot_disk(
-                str(plot_dir),
-                str(plot_dir),
-                str(plot_dir),
-                filename,
-                18,
-                stream_plot_info_pk(bt.pool_pk, bt.farmer_pk, AugSchemeMPL.key_gen(bytes([4] * 32))),
-                token_bytes(32),
-                128,
-                0,
-                2000,
-                0,
-                False,
-            )
-
-            # Making a plot with a puzzle hash encoded into it instead of pk
-            plot_id_2 = token_bytes(32)
-            plotter.create_plot_disk(
-                str(plot_dir),
-                str(plot_dir),
-                str(plot_dir),
-                filename_2,
-                18,
-                stream_plot_info_ph(std_hash(b"random ph"), bt.farmer_pk, AugSchemeMPL.key_gen(bytes([5] * 32))),
-                plot_id_2,
-                128,
-                0,
-                2000,
-                0,
-                False,
-            )
-
-            # Making the same plot, in a different dir. This should not be farmed
-            plotter.create_plot_disk(
-                str(plot_dir_sub),
-                str(plot_dir_sub),
-                str(plot_dir_sub),
-                filename_2,
-                18,
-                stream_plot_info_ph(std_hash(b"random ph"), bt.farmer_pk, AugSchemeMPL.key_gen(bytes([5] * 32))),
-                plot_id_2,
-                128,
-                0,
-                2000,
-                0,
-                False,
-            )
-
-            res_2 = await client_2.get_plots()
-            assert len(res_2["plots"]) == num_plots
 
             # Reset cache and force updates cache every second to make sure the farmer gets the most recent data
             update_interval_before = farmer_api.farmer.update_harvester_cache_interval
