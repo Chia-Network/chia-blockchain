@@ -609,7 +609,10 @@ class WalletNode:
         for cache in self.untrusted_caches.values():
             if height in cache.blocks:
                 block = cache.blocks[height]
-                if block.foliage_transaction_block is not None and block.foliage_transaction_block.timestamp is not None:
+                if (
+                    block.foliage_transaction_block is not None
+                    and block.foliage_transaction_block.timestamp is not None
+                ):
                     self.height_to_time[height] = block.foliage_transaction_block.timestamp
                     return block.foliage_transaction_block.timestamp
 
