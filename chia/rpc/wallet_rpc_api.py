@@ -97,6 +97,7 @@ class WalletRpcApi:
             "/take_offer": self.take_offer,
             "/get_offer": self.get_offer,
             "/get_all_offers": self.get_all_offers,
+            "/get_offers_count": self.get_offers_count,
             "/cancel_offer": self.cancel_offer,
             "/get_cat_list": self.get_cat_list,
             # DID Wallet
@@ -925,12 +926,23 @@ class WalletRpcApi:
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
         start: int = request.get("start", 0)
-        end: int = request.get("end", 50)
+        end: int = request.get("end", 10)
+        exclude_my_offers: bool = request.get("exclude_my_offers", False)
+        exclude_taken_offers: bool = request.get("exclude_taken_offers", False)
+        include_completed: bool = request.get("include_completed", False)
         sort_key: Optional[str] = request.get("sort_key", None)
         reverse: bool = request.get("reverse", False)
         file_contents: bool = request.get("file_contents", False)
 
-        all_trades = await trade_mgr.trade_store.get_trades_between(start, end, sort_key=sort_key, reverse=reverse)
+        all_trades = await trade_mgr.trade_store.get_trades_between(
+            start,
+            end,
+            sort_key=sort_key,
+            reverse=reverse,
+            exclude_my_offers=exclude_my_offers,
+            exclude_taken_offers=exclude_taken_offers,
+            include_completed=include_completed,
+        )
         result = []
         offer_values: Optional[List[str]] = [] if file_contents else None
         for trade in all_trades:
@@ -940,6 +952,15 @@ class WalletRpcApi:
                 offer_values.append(Offer.from_bytes(offer_to_return).to_bech32())
 
         return {"trade_records": result, "offers": offer_values}
+
+    async def get_offers_count(self, request: Dict):
+        assert self.service.wallet_state_manager is not None
+
+        trade_mgr = self.service.wallet_state_manager.trade_manager
+
+        (total, my_offers_count, taken_offers_count) = await trade_mgr.trade_store.get_trades_count()
+
+        return {"total": total, "my_offers_count": my_offers_count, "taken_offers_count": taken_offers_count}
 
     async def cancel_offer(self, request: Dict):
         assert self.service.wallet_state_manager is not None
