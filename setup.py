@@ -26,6 +26,7 @@ dependencies = [
     "setproctitle==1.2.2",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
+    # TODO: when moving to click 8 remove the pinning of black noted below
     "click==7.1.2",  # For the CLI
     "dnspythonchia==2.2.0",  # Query DNS seeds
     "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
@@ -47,7 +48,8 @@ dev_dependencies = [
     "pytest-xdist",
     "flake8",
     "mypy",
-    "black",
+    # TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
+    "black==21.12b0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
     "types-aiofiles",
