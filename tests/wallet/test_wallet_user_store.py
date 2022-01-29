@@ -9,7 +9,7 @@ from chia.wallet.wallet_user_store import WalletUserStore
 
 
 @pytest.mark.asyncio
-async def test_store(self):
+async def test_store():
     db_filename = Path("wallet_user_store_test.db")
 
     if db_filename.exists():
