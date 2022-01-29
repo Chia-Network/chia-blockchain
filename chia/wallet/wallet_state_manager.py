@@ -541,15 +541,21 @@ class WalletStateManager:
         addition_amount: int = 0
 
         for record in unconfirmed_tx:
+            self.log.info(f" ==== {record=}")
             for removal in record.removals:
+                self.log.info(f" ==== {removal=}")
                 if await self.does_coin_belong_to_wallet(removal, wallet_id):
                     removal_amount += removal.amount
+                    self.log.info(f" ==== {removal_amount=} {removal.amount=}")
             for addition in record.additions:
+                self.log.info(f" ==== {addition=}")
                 # This change or a self transaction
                 if await self.does_coin_belong_to_wallet(addition, wallet_id):
                     addition_amount += addition.amount
+                    self.log.info(f" ==== {addition_amount=} {addition.amount=}")
 
         result = (confirmed + addition_amount) - removal_amount
+        self.log.info(f" ==== {result=}")
         return uint128(result)
 
     async def unconfirmed_additions_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
