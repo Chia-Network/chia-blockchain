@@ -1446,10 +1446,10 @@ class WalletRpcApi:
                 #       Otherwise spends are vulnerable to signature subtraction.
                 tx_records: List[TransactionRecord] = []
                 for launcher, root in request["updates"].items():
-                    record = await wallet.create_update_state_spend(
+                    records = await wallet.create_update_state_spend(
                         bytes32.from_hexstr(launcher), bytes32.from_hexstr(root)
                     )
-                    tx_records.append(record)
+                    tx_records.extend(records)
                 # Now that we have all the txs, we need to aggregate them all into just one spend
                 modified_txs: List[TransactionRecord] = []
                 aggregate_spend = SpendBundle([], G2Element())
