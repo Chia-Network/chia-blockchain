@@ -42,8 +42,8 @@ class TestCoinSelection:
         coins_to_append = 1000
         coin_list = set()
         for i in range(coins_to_append):
-            coin_list.add(Coin(a_hash, a_hash, uint64(200000 * i)))
+            coin_list.add(Coin(a_hash, a_hash, uint64(100000000 * i)))
         for i in range(tries):
-            knapsack = knapsack_coin_algorithm(coin_list, uint64(310000000), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT)
+            knapsack = knapsack_coin_algorithm(coin_list, uint64(30000000000000), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT)
             assert knapsack is not None
             assert sum([coin.amount for coin in knapsack]) >= 310000000

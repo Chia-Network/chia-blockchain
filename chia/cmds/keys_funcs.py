@@ -135,7 +135,7 @@ def derive_sk_from_hd_path(master_sk: PrivateKey, hd_path_root: str) -> Tuple[Pr
 
     path = path[1:]  # Skip "m"
 
-    if path[-1] == "":  # remove trailing slash
+    if len(path) > 0 and path[-1] == "":  # remove trailing slash
         path = path[:-1]
 
     index_and_derivation_types: List[Tuple[int, DerivationType]] = []

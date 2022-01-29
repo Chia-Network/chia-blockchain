@@ -251,7 +251,7 @@ class TestBlockHeaderValidation:
         assert empty_blockchain.get_peak().height == len(blocks) - 1
 
     @pytest.mark.asyncio
-    async def test_unfinished_blocks(self, empty_blockchain):
+    async def test_unfinished_blocks(self, empty_blockchain, softfork_height):
         blockchain = empty_blockchain
         blocks = bt.get_consecutive_blocks(3)
         for block in blocks[:-1]:
@@ -272,7 +272,7 @@ class TestBlockHeaderValidation:
         if unf.transactions_generator is not None:
             block_generator: BlockGenerator = await blockchain.get_block_generator(unf)
             block_bytes = bytes(unf)
-            npc_result = await blockchain.run_generator(block_bytes, block_generator)
+            npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
 
         validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
         err = validate_res.error
@@ -296,7 +296,7 @@ class TestBlockHeaderValidation:
         if unf.transactions_generator is not None:
             block_generator: BlockGenerator = await blockchain.get_block_generator(unf)
             block_bytes = bytes(unf)
-            npc_result = await blockchain.run_generator(block_bytes, block_generator)
+            npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
         validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
         assert validate_res.error is None
 
@@ -342,7 +342,7 @@ class TestBlockHeaderValidation:
         assert blockchain.get_peak().height == num_blocks - 1
 
     @pytest.mark.asyncio
-    async def test_unf_block_overflow(self, empty_blockchain):
+    async def test_unf_block_overflow(self, empty_blockchain, softfork_height):
         blockchain = empty_blockchain
 
         blocks = []
@@ -376,7 +376,7 @@ class TestBlockHeaderValidation:
                 if block.transactions_generator is not None:
                     block_generator: BlockGenerator = await blockchain.get_block_generator(unf)
                     block_bytes = bytes(unf)
-                    npc_result = await blockchain.run_generator(block_bytes, block_generator)
+                    npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
                 validate_res = await blockchain.validate_unfinished_block(
                     unf, npc_result, skip_overflow_ss_validation=True
                 )
@@ -2165,7 +2165,7 @@ class TestBodyValidation:
             )
 
     @pytest.mark.asyncio
-    async def test_cost_exceeds_max(self, empty_blockchain):
+    async def test_cost_exceeds_max(self, empty_blockchain, softfork_height):
         # 7
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
@@ -2199,6 +2199,7 @@ class TestBodyValidation:
             b.constants.MAX_BLOCK_COST_CLVM * 1000,
             cost_per_byte=b.constants.COST_PER_BYTE,
             mempool_mode=False,
+            height=softfork_height,
         )
         err = (await b.receive_block(blocks[-1], PreValidationResult(None, uint64(1), npc_result, True)))[1]
         assert err in [Err.BLOCK_COST_EXCEEDS_MAX]
@@ -2215,7 +2216,7 @@ class TestBodyValidation:
         pass
 
     @pytest.mark.asyncio
-    async def test_invalid_cost_in_block(self, empty_blockchain):
+    async def test_invalid_cost_in_block(self, empty_blockchain, softfork_height):
         # 9
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
@@ -2259,6 +2260,7 @@ class TestBodyValidation:
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
             cost_per_byte=b.constants.COST_PER_BYTE,
             mempool_mode=False,
+            height=softfork_height,
         )
         result, err, _, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
         assert err == Err.INVALID_BLOCK_COST
@@ -2283,6 +2285,7 @@ class TestBodyValidation:
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
             cost_per_byte=b.constants.COST_PER_BYTE,
             mempool_mode=False,
+            height=softfork_height,
         )
         result, err, _, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
         assert err == Err.INVALID_BLOCK_COST
@@ -2307,6 +2310,7 @@ class TestBodyValidation:
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
             cost_per_byte=b.constants.COST_PER_BYTE,
             mempool_mode=False,
+            height=softfork_height,
         )
 
         result, err, _, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
