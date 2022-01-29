@@ -400,7 +400,7 @@ class Wallet:
                 )
             )
 
-        self.log.info(f"Spends is {spends}")
+        self.log.debug(f"Spends is {spends}")
         return spends
 
     async def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
