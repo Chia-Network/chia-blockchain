@@ -1,6 +1,5 @@
 from time import perf_counter
 from typing import List, Optional, Tuple
-from operator import attrgetter
 
 import aiosqlite
 import logging
@@ -233,7 +232,6 @@ class TradeStore:
         """
         Returns the number of trades in the database broken down by is_my_offer status
         """
-        # select count(*) as TOTAL, sum(case when is_my_offer=1 then 1 else 0 end) as my_offers, sum(case when is_my_offer=0 then 1 else 0 end) as taken_offers from trade_records;
         query = "SELECT COUNT(*) AS total, "
         query += "SUM(CASE WHEN is_my_offer=1 THEN 1 ELSE 0 END) AS my_offers, "
         query += "SUM(CASE WHEN is_my_offer=0 THEN 1 ELSE 0 END) AS taken_offers "
@@ -241,7 +239,11 @@ class TradeStore:
         cursor = await self.db_connection.execute(query)
         row = await cursor.fetchone()
         await cursor.close()
-        return row[0], row[1], row[2]
+
+        if row is None:
+            return 0, 0, 0
+
+        return int(row[0]), int(row[1]), int(row[2])
 
     async def get_trade_record(self, trade_id: bytes32) -> Optional[TradeRecord]:
         """
@@ -348,7 +350,6 @@ class TradeStore:
 
         offset = start
         limit = end - start
-        rows = []
         where_status_clause: Optional[str] = None
         order_by_clause: Optional[str] = None
 
@@ -381,8 +382,8 @@ class TradeStore:
             if reverse:
                 ordered_statuses.reverse()
             # Create the "WHEN {status} THEN {index}" cases for the "CASE status" statement
-            ordered_status_clause = map(lambda x: f"WHEN {x[0]} THEN {x[1]}", ordered_statuses)
-            ordered_status_clause = "CASE status " + " ".join(ordered_status_clause) + " END,"
+            ordered_status_clause = " ".join(map(lambda x: f"WHEN {x[0]} THEN {x[1]}", ordered_statuses))
+            ordered_status_clause = f"CASE status {ordered_status_clause} END, "
             order_by_clause = (
                 f"ORDER BY "
                 f"{ordered_status_clause} "
