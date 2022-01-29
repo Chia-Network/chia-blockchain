@@ -645,14 +645,15 @@ class WalletStateManager:
             local_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_state.coin.name())
             self.log.debug(f"{coin_state.coin.name()}: {coin_state}")
 
-            local_spent = None
-            if local_record.spent_block_height != 0:
-                local_spent = local_record.spent_block_height
-            if (
-                local_spent == coin_state.spent_height
-                and local_record.confirmed_block_height == coin_state.created_height
-            ):
-                continue
+            if local_record is not None:
+                local_spent = None
+                if local_record.spent_block_height != 0:
+                    local_spent = local_record.spent_block_height
+                if (
+                    local_spent == coin_state.spent_height
+                    and local_record.confirmed_block_height == coin_state.created_height
+                ):
+                    continue
 
             wallet_id = None
             wallet_type = None
