@@ -4,7 +4,13 @@ import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 import normalizePoolState from '../utils/normalizePoolState';
 import api, { baseQuery } from '../api';
 
-const apiWithTag = api.enhanceEndpoints({addTagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions', 'WalletConnections', 'LoggedInFingerprint', 'PoolWalletStatus', 'NFTs', 'OfferTradeRecord']})
+const apiWithTag = api.enhanceEndpoints({addTagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions', 'WalletConnections', 'LoggedInFingerprint', 'PoolWalletStatus', 'NFTs', 'OfferTradeRecord', 'OfferCounts']});
+
+type OfferCounts = {
+  total: number;
+  my_offers: number;
+  taken_offers: number;
+};
 
 export const walletApi = apiWithTag.injectEndpoints({
   endpoints: (build) => ({
@@ -773,10 +779,25 @@ export const walletApi = apiWithTag.injectEndpoints({
     }),
 
     // Offers
-    getAllOffers: build.query<OfferTradeRecord[], undefined>({
-      query: () => ({
+    getAllOffers: build.query<OfferTradeRecord[], {
+      start?: number;
+      end?: number;
+      sortKey?: 'CONFIRMED_AT_HEIGHT' | 'RELEVANCE';
+      reverse?: boolean;
+      includeMyOffers?: boolean;
+      includeTakenOffers?: boolean;
+    }>({
+      query: ({
+        start,
+        end,
+        sortKey,
+        reverse,
+        includeMyOffers,
+        includeTakenOffers,
+      }) => ({
         command: 'getAllOffers',
         service: Wallet,
+        args: [start, end, sortKey, reverse, includeMyOffers, includeTakenOffers],
       }),
       transformResponse: (response: any) => {
         if (!response?.offers) {
@@ -807,6 +828,14 @@ export const walletApi = apiWithTag.injectEndpoints({
       }]),
     }),
 
+    getOffersCount: build.query<OfferCounts, undefined>({
+      query: () => ({
+        command: 'getOffersCount',
+        service: Wallet,
+      }),
+      providesTags: ['OfferCounts'],
+    }),
+
     createOfferForIds: build.mutation<any, {
       walletIdsAndAmounts: { [key: string]: number };
       validateOnly?: boolean;
@@ -819,7 +848,7 @@ export const walletApi = apiWithTag.injectEndpoints({
         service: Wallet,
         args: [walletIdsAndAmounts, validateOnly],
       }),
-      invalidatesTags: [{ type: 'OfferTradeRecord', id: 'LIST' }],
+      invalidatesTags: [{ type: 'OfferTradeRecord', id: 'LIST' }, 'OfferCounts'],
     }),
 
     cancelOffer: build.mutation<any, {
@@ -859,7 +888,7 @@ export const walletApi = apiWithTag.injectEndpoints({
         service: Wallet,
         args: [offer, fee],
       }),
-      invalidatesTags: [{ type: 'OfferTradeRecord', id: 'LIST' }],
+      invalidatesTags: [{ type: 'OfferTradeRecord', id: 'LIST' }, 'OfferCounts'],
     }),
 
     getOfferSummary: build.mutation<any, string>({
@@ -1424,6 +1453,7 @@ export const {
   useCloseWalletConnectionMutation,
   useCreateBackupMutation,
   useGetAllOffersQuery,
+  useGetOffersCountQuery,
   useCreateOfferForIdsMutation,
   useCancelOfferMutation,
   useCheckOfferValidityMutation,

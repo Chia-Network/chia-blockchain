@@ -40,9 +40,10 @@ import {
 } from '@material-ui/core';
 import { Cancel, GetApp as Download, Info, Reply as Share, Visibility } from '@material-ui/icons';
 import { Trade as TradeIcon } from '@chia/icons';
-import { useCancelOfferMutation, useGetAllOffersQuery, useGetOfferDataMutation, useGetWalletsQuery } from '@chia/api-react';
+import { useCancelOfferMutation, useGetOfferDataMutation, useGetWalletsQuery } from '@chia/api-react';
 import { colorForOfferState, displayStringForOfferState, formatAmountForWalletType, suggestedFilenameForOffer } from './utils';
 import useAssetIdName from '../../hooks/useAssetIdName';
+import useWalletOffers from '../../hooks/useWalletOffers';
 import { CreateOfferEditor } from './OfferEditor';
 import { OfferImport } from './OfferImport';
 import { OfferViewer } from './OfferViewer';
@@ -135,12 +136,12 @@ function ConfirmOfferCancellation(props: ConfirmOfferCancellationProps) {
 
 type OfferListProps = {
   title: string | React.ReactElement;
-  offers: OfferTradeRecord[];
-  loading: boolean;
+  includeMyOffers: boolean;
+  includeTakenOffers: boolean;
 };
 
 function OfferList(props: OfferListProps) {
-  const { title, offers, loading } = props;
+  const { title, includeMyOffers, includeTakenOffers } = props;
   const showSaveDialog = useShowSaveDialog();
   const [getOfferData] = useGetOfferDataMutation();
   const [cancelOffer] = useCancelOfferMutation();
@@ -148,13 +149,14 @@ function OfferList(props: OfferListProps) {
   const { lookupByAssetId } = useAssetIdName();
   const openDialog = useOpenDialog();
   const navigate = useNavigate();
-  const [page, setPage] = useState<number>(0);
-  const [rowsPerPage, setRowsPerPage] = useState<number>(5);
-
-  function handlePageChange(rowsPerPage: number, page: number) {
-    setRowsPerPage(rowsPerPage);
-    setPage(page);
-  }
+  const {
+    offers,
+    isLoading: isWalletOffersLoading,
+    page,
+    rowsPerPage,
+    count,
+    pageChange,
+  } = useWalletOffers(5, 0, includeMyOffers, includeTakenOffers, 'RELEVANCE', false);
 
   async function handleShowOfferData(offerData: string) {
     openDialog((
@@ -403,20 +405,21 @@ function OfferList(props: OfferListProps) {
 
   return (
     <Card title={title}>
-      <LoadingOverlay loading={loading || isLoadingWallets}>
-        {offers.length ? (
+      <LoadingOverlay loading={isWalletOffersLoading || isLoadingWallets}>
+        {offers?.length ? (
           <TableControlled
-            rows={offers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)}
+            rows={offers}
             cols={cols}
             rowsPerPageOptions={[5, 25, 100]}
-            count={offers.length}
+            count={count}
             rowsPerPage={rowsPerPage}
             pages={true}
             page={page}
-            onPageChange={handlePageChange}
+            onPageChange={pageChange}
+            isLoading={isWalletOffersLoading}
           />
         ) : (
-          !loading && !isLoadingWallets && (
+          !isWalletOffersLoading && !isLoadingWallets && (
             <Typography variant="body2">
               <Trans>No current offers</Trans>
             </Typography>
@@ -428,30 +431,30 @@ function OfferList(props: OfferListProps) {
 }
 
 export function OfferManager() {
-  const { data, isLoading } = useGetAllOffersQuery();
+  // const { data, isLoading } = useGetAllOffersQuery();
   const navigate = useNavigate();
 
-  const [myOffers, acceptedOffers]: OfferTradeRecord[] = useMemo(() => {
-    if (isLoading || !data) {
-      return [[], []];
-    }
+  // const [myOffers, acceptedOffers]: OfferTradeRecord[] = useMemo(() => {
+  //   if (isLoading || !data) {
+  //     return [[], []];
+  //   }
 
-    // Show newest offers first
-    const sortedOffers = [...data].sort((a: OfferTradeRecord, b: OfferTradeRecord) => b.createdAtTime - a.createdAtTime);
-    const myOffers: OfferTradeRecord[] = [];
-    const acceptedOffers: OfferTradeRecord[] = [];
+  //   // Show newest offers first
+  //   const sortedOffers = [...data].sort((a: OfferTradeRecord, b: OfferTradeRecord) => b.createdAtTime - a.createdAtTime);
+  //   const myOffers: OfferTradeRecord[] = [];
+  //   const acceptedOffers: OfferTradeRecord[] = [];
 
-    sortedOffers.forEach((offer) => {
-      if (offer.isMyOffer) {
-        myOffers.push(offer);
-      }
-      else {
-        acceptedOffers.push(offer);
-      }
-    });
+  //   sortedOffers.forEach((offer) => {
+  //     if (offer.isMyOffer) {
+  //       myOffers.push(offer);
+  //     }
+  //     else {
+  //       acceptedOffers.push(offer);
+  //     }
+  //   });
 
-    return [myOffers, acceptedOffers];
-  }, [data, isLoading]);
+  //   return [myOffers, acceptedOffers];
+  // }, [data, isLoading]);
 
   function handleCreateOffer() {
     navigate('/dashboard/wallets/offers/create');
@@ -486,8 +489,16 @@ export function OfferManager() {
           </CardHero>
         </Grid>
       </Grid>
-      <OfferList title={<Trans>Offers you created</Trans>} offers={myOffers} loading={isLoading} />
-      <OfferList title={<Trans>Offers you accepted</Trans>} offers={acceptedOffers} loading={isLoading} />
+      <OfferList
+        title={<Trans>Offers you created</Trans>}
+        includeMyOffers={true}
+        includeTakenOffers={false}
+      />
+      <OfferList
+        title={<Trans>Offers you accepted</Trans>}
+        includeMyOffers={false}
+        includeTakenOffers={true}
+      />
     </Flex>
   );
 }
@@ -525,9 +536,9 @@ export function CreateOffer() {
         element={
           <CreateOfferEditor
             onOfferCreated={(obj: { offerRecord: any, offerData: any }) => {
-              setOfferCreated(true);
               setOfferRecord(obj.offerRecord);
               setOfferData(obj.offerData);
+              setOfferCreated(true);
             }}
           />
         }

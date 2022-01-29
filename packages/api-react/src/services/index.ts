@@ -109,6 +109,7 @@ export const {
   useCloseWalletConnectionMutation,
   useCreateBackupMutation,
   useGetAllOffersQuery,
+  useGetOffersCountQuery,
   useCreateOfferForIdsMutation,
   useCancelOfferMutation,
   useCheckOfferValidityMutation,

@@ -245,9 +245,27 @@ export default class Wallet extends Service {
     });
   }
 
-  async getAllOffers() {
+  async getAllOffers(
+    start?: number,
+    end?: number,
+    sortKey?: 'CONFIRMED_AT_HEIGHT' | 'RELEVANCE',
+    reverse?: boolean,
+    includeMyOffers?: boolean,
+    includeTakenOffers?: boolean) {
     return this.command('get_all_offers', {
+      include_completed: true,
       file_contents: true,
+      start,
+      end,
+      sortKey,
+      reverse,
+      excludeMyOffers: includeMyOffers ? false : true,
+      excludeTakenOffers: includeTakenOffers ? false : true,
+    });
+  }
+
+  async getOffersCount() {
+    return this.command('get_offers_count', {
     });
   }
 
