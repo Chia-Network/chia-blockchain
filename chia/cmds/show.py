@@ -44,6 +44,7 @@ async def show_async(
                 print("There is no blockchain found yet. Try again shortly")
                 return None
             peak: Optional[BlockRecord] = blockchain_state["peak"]
+            node_id = blockchain_state["node_id"]
             difficulty = blockchain_state["difficulty"]
             sub_slot_iters = blockchain_state["sub_slot_iters"]
             synced = blockchain_state["sync"]["synced"]
@@ -56,6 +57,8 @@ async def show_async(
             full_node_rpc_port = config["full_node"]["rpc_port"]
 
             print(f"Network: {network_name}    Port: {full_node_port}   Rpc Port: {full_node_rpc_port}")
+            print(f"Node ID: {node_id}")
+
             print(f"Genesis Challenge: {genesis_challenge}")
 
             if synced:

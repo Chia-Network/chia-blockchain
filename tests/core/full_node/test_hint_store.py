@@ -152,3 +152,22 @@ class TestHintStore:
         get_hint = await blockchain.hint_store.get_coin_ids(hint)
 
         assert get_hint[0] == Coin(coin_spent.name(), puzzle_hash, 1).name()
+
+    @pytest.mark.asyncio
+    async def test_counts(self, db_version):
+        async with DBConnection(db_version) as db_wrapper:
+            hint_store = await HintStore.create(db_wrapper)
+            count = await hint_store.count_hints()
+            assert count == 0
+
+            # Add some hint data then test again
+            hint_0 = 32 * b"\0"
+            hint_1 = 32 * b"\1"
+            coin_id_0 = 32 * b"\4"
+            coin_id_1 = 32 * b"\5"
+            hints = [(coin_id_0, hint_0), (coin_id_1, hint_1)]
+            await hint_store.add_hints(hints)
+            await db_wrapper.commit_transaction()
+
+            count = await hint_store.count_hints()
+            assert count == 2
