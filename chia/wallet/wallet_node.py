@@ -606,6 +606,13 @@ class WalletNode:
         if height in self.height_to_time:
             return self.height_to_time[height]
 
+        for cache in self.untrusted_caches.values():
+            if height in cache.blocks:
+                block = cache.blocks[height]
+                if block.foliage_transaction_block is not None and block.foliage_transaction_block.timestamp is not None:
+                    self.height_to_time[height] = block.foliage_transaction_block.timestamp
+                    return block.foliage_transaction_block.timestamp
+
         peer = self.get_full_node_peer()
         assert peer is not None
         curr_height: uint32 = height
