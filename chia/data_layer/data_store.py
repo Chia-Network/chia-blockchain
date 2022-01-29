@@ -836,17 +836,13 @@ class DataStore:
             old_pairs = set() if hash_1 is None else set(await self.get_keys_values(tree_id, hash_1, lock=False))
             new_pairs = set() if hash_2 is None else set(await self.get_keys_values(tree_id, hash_2, lock=False))
             insertions = set(
-                [
-                    DiffData(type=OperationType.INSERT, key=node.key, value=node.value)
-                    for node in new_pairs
-                    if node not in old_pairs
-                ]
+                DiffData(type=OperationType.INSERT, key=node.key, value=node.value)
+                for node in new_pairs
+                if node not in old_pairs
             )
             deletions = set(
-                [
-                    DiffData(type=OperationType.DELETE, key=node.key, value=node.value)
-                    for node in old_pairs
-                    if node not in new_pairs
-                ]
+                DiffData(type=OperationType.DELETE, key=node.key, value=node.value)
+                for node in old_pairs
+                if node not in new_pairs
             )
             return set.union(insertions, deletions)

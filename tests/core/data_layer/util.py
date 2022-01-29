@@ -127,10 +127,7 @@ async def get_terminal_node_for_random_seed(
         assert node is not None
         if isinstance(node, TerminalNode):
             break
-        if random.randint(0, 1) == 0:
-            node_hash = node.left_hash
-        else:
-            node_hash = node.right_hash
+        node_hash = random.choice([node.left_hash, node.right_hash])
 
     return node_hash
 
