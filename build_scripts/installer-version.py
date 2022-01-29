@@ -8,7 +8,7 @@ from setuptools_scm import get_version
 def main():
     windows = len(sys.argv) > 1 and "win" in sys.argv[1]  
     
-    # Special case windows to 0.1.6225
+    # Special case windows to, for example, 1.1.6225
     # Microsoft Windows requires that any executable have three and only three fields
     # for version number.
     # Quoting from: https://docs.microsoft.com/en-us/windows/win32/msi/productversion?WT.mc_id=email
