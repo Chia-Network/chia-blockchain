@@ -44,8 +44,8 @@ class TestBlockStore:
                 await _validate_and_add_block(bc, block)
                 block_record = bc.block_record(block.header_hash)
                 block_record_hh = block_record.header_hash
-                await store.add_full_block(block.header_hash, block, block_record)
-                await store.add_full_block(block.header_hash, block, block_record)
+                await store.add_full_block(block.header_hash, block, block_record, False)
+                await store.add_full_block(block.header_hash, block, block_record, False)
                 assert block == await store.get_full_block(block.header_hash)
                 assert block == await store.get_full_block(block.header_hash)
                 assert block_record == (await store.get_block_record(block_record_hh))
@@ -87,7 +87,9 @@ class TestBlockStore:
                 if random.random() < 0.5:
                     tasks.append(
                         asyncio.create_task(
-                            store.add_full_block(blocks[rand_i].header_hash, blocks[rand_i], block_records[rand_i])
+                            store.add_full_block(
+                                blocks[rand_i].header_hash, blocks[rand_i], block_records[rand_i], False
+                            )
                         )
                     )
                 if random.random() < 0.5:
