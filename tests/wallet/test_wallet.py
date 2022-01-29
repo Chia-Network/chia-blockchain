@@ -773,7 +773,6 @@ class TestWalletSimulator:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[113]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[209]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
-        
         await time_out_assert(15, wallet.get_confirmed_balance, 12 * 10 ** 12)
 
     @pytest.mark.parametrize(
@@ -853,4 +852,3 @@ class TestWalletSimulator:
         await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
         assert len(tx.removals) == 1
         assert sum([coin.amount for coin in tx.removals]) == 2500000000000
-
