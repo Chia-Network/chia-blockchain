@@ -3,12 +3,11 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable
 import aiosqlite
 import asyncio
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode, DownloadMode, Subscription
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode, DownloadMode, Subscription, Root
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64, uint16
@@ -45,6 +44,7 @@ class DataLayer:
         self.connection = None
         self.wallet_rpc_init = wallet_rpc_init
         self.log = logging.getLogger(name if name is None else __name__)
+        self._shut_down: bool = False
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
@@ -123,14 +123,14 @@ class DataLayer:
             return None
         return res.value
 
-    async def get_keys_values(self, store_id: bytes32) -> List[TerminalNode]:
-        res = await self.data_store.get_keys_values(store_id)
+    async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
+        res = await self.data_store.get_keys_values(store_id, root_hash)
         if res is None:
             self.log.error("Failed to fetch keys values")
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
-        res = await self.data_store.get_ancestors(store_id, node_hash)
+        res = await self.data_store.get_ancestors(node_hash=node_hash, tree_id=store_id)
         if res is None:
             self.log.error("Failed to get ancestors")
         return res
@@ -139,17 +139,8 @@ class DataLayer:
         res = await self.data_store.get_tree_root(tree_id=store_id)
         if res is None:
             self.log.error(f"Failed to get root for {store_id.hex()}")
+            return None
         return res.node_hash
-
-    async def get_roots(self, store_ids: List[str]) -> List[Optional[bytes32]]:
-        roots = []
-        for id in store_ids:
-            res = await self.data_store.get_tree_root(tree_id=bytes32(hexstr_to_bytes(id)))
-            if res is None:
-                self.log.error(f"Failed to get root for {id}")
-                continue
-            roots.append(res.node_hash)
-        return roots
 
     async def fetch_and_validate(self, subscription: Subscription) -> None:
         tree_id = subscription.tree_id
@@ -161,14 +152,19 @@ class DataLayer:
         if current_generation is not None and uint32(current_generation) == singleton_record.generation:
             return
 
-        old_root = await self.data_store.get_tree_root(tree_id=tree_id)
+        self.log.info(
+            f"Downloading and validating {subscription.tree_id}. "
+            f"Current wallet generation: {int(current_generation)}. "
+            f"Target wallet generation: {singleton_record.generation}."
+        )
+        old_root: Optional[Root] = None
+        if await self.data_store.tree_id_exists(tree_id=tree_id):
+            old_root = await self.data_store.get_tree_root(tree_id=tree_id)
         to_check: List[SingletonRecord] = []
-        if subscription.mode == DownloadMode.LATEST:
+        if subscription.mode is DownloadMode.LATEST:
             to_check = [singleton_record]
-        if subscription.mode == DownloadMode.HISTORY:
-            to_check = await self.wallet_rpc.dl_history(
-                launcher_id=tree_id, min_generation=current_generation + 1
-            )  # type: ignore
+        if subscription.mode is DownloadMode.HISTORY:
+            to_check = await self.wallet_rpc.dl_history(launcher_id=tree_id, min_generation=current_generation + 1)
 
         downloaded = await self.data_store.download_data(subscription, singleton_record.root)
         if not downloaded:
@@ -178,15 +174,20 @@ class DataLayer:
         if root.node_hash is None or root.node_hash != to_check[0].root:
             raise RuntimeError("Can't find data on chain in our datastore.")
         to_check.pop(0)
-        min_generation = old_root.generation + 1
+        min_generation = (0 if old_root is None else old_root.generation) + 1
         max_generation = root.generation
 
-        for records in to_check:
-            root_for_record = await self.data_store.get_last_tree_root_by_hash(tree_id, records.root, max_generation)
+        for record in to_check:
+            root_for_record = await self.data_store.get_last_tree_root_by_hash(tree_id, record.root, max_generation)
             if root_for_record is None or root_for_record.generation < min_generation:
                 raise RuntimeError("Can't find data on chain in our datastore.")
             max_generation = root.generation
 
+        self.log.info(
+            f"Finished downloading and validating {subscription.tree_id}. "
+            f"Wallet generation saved: {singleton_record.generation}"
+            f"Root hash saved: {singleton_record.root}."
+        )
         await self.data_store.set_wallet_generation(tree_id, int(singleton_record.generation))
 
     async def subscribe(self, store_id: bytes32, mode: DownloadMode, ip: str, port: uint16) -> None:
@@ -197,6 +198,7 @@ class DataLayer:
         await self.wallet_rpc.dl_track_new(subscription.tree_id)
         async with self.subscription_lock:
             await self.data_store.subscribe(subscription)
+        self.log.info(f"Subscribed to {subscription.tree_id}")
 
     async def unsubscribe(self, tree_id: bytes32) -> None:
         subscriptions = await self.get_subscriptions()
@@ -204,6 +206,8 @@ class DataLayer:
             return
         async with self.subscription_lock:
             await self.data_store.unsubscribe(tree_id)
+        await self.wallet_rpc.dl_stop_tracking(tree_id)
+        self.log.info(f"Unsubscribed to {tree_id}")
 
     async def get_subscriptions(self) -> List[Subscription]:
         async with self.subscription_lock:
@@ -213,7 +217,7 @@ class DataLayer:
         fetch_data_interval = self.config.get("fetch_data_interval", 60)
         while not self._shut_down:
             async with self.subscription_lock:
-                subscriptions = await self.get_subscriptions()
+                subscriptions = await self.data_store.get_subscriptions()
                 for subscription in subscriptions:
                     await self.fetch_and_validate(subscription)
             try:

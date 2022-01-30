@@ -140,7 +140,7 @@ class TestWalletRpc:
             assert new_singleton_record.root == new_root
             assert new_singleton_record.confirmed
 
-            assert await client.dl_history(launcher_id) == [singleton_record, new_singleton_record]
+            assert await client.dl_history(launcher_id) == [new_singleton_record, singleton_record]
 
             await client_2.dl_track_new(launcher_id)
 
@@ -152,7 +152,86 @@ class TestWalletRpc:
                     return False
 
             await time_out_assert(15, is_singleton_generation, True, client_2, launcher_id, 1)
-            assert await client_2.dl_history(launcher_id) == [singleton_record, new_singleton_record]
+
+            assert await client_2.dl_history(launcher_id) == [new_singleton_record, singleton_record]
+
+            assert await client.dl_history(launcher_id, min_generation=uint32(1)) == [new_singleton_record]
+            assert await client.dl_history(launcher_id, max_generation=uint32(0)) == [singleton_record]
+            assert await client.dl_history(launcher_id, num_results=uint32(1)) == [new_singleton_record]
+            assert await client.dl_history(launcher_id, num_results=uint32(2)) == [
+                new_singleton_record,
+                singleton_record,
+            ]
+            assert (
+                await client.dl_history(
+                    launcher_id,
+                    min_generation=uint32(1),
+                    max_generation=uint32(1),
+                )
+                == [new_singleton_record]
+            )
+            assert (
+                await client.dl_history(
+                    launcher_id,
+                    max_generation=uint32(0),
+                    num_results=uint32(1),
+                )
+                == [singleton_record]
+            )
+            assert (
+                await client.dl_history(
+                    launcher_id,
+                    min_generation=uint32(1),
+                    num_results=uint32(1),
+                )
+                == [new_singleton_record]
+            )
+            assert (
+                await client.dl_history(
+                    launcher_id,
+                    min_generation=uint32(1),
+                    max_generation=uint32(1),
+                    num_results=uint32(1),
+                )
+                == [new_singleton_record]
+            )
+
+            assert await client.dl_singletons_by_root(launcher_id, new_root) == [new_singleton_record]
+
+            txs, launcher_id_2 = await client.create_new_dl(merkle_root, uint64(50))
+            txs, launcher_id_3 = await client.create_new_dl(merkle_root, uint64(50))
+
+            for i in range(0, 5):
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await asyncio.sleep(0.5)
+
+            await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_2)
+            await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_3)
+
+            next_root = bytes32([2] * 32)
+            await client.dl_update_multiple(
+                {
+                    launcher_id: next_root,
+                    launcher_id_2: next_root,
+                    launcher_id_3: next_root,
+                }
+            )
+
+            for i in range(0, 5):
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await asyncio.sleep(0.5)
+
+            await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id)
+            await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_2)
+            await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_3)
+
+            for lid in [launcher_id, launcher_id_2, launcher_id_3]:
+                rec = await client.dl_latest_singleton(lid)
+                assert rec.root == next_root
+
+            await client_2.dl_stop_tracking(launcher_id)
+            assert await client_2.dl_latest_singleton(lid) is None
+
         finally:
             # Checks that the RPC manages to stop the node
             client.close()

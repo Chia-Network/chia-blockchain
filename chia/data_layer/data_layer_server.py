@@ -41,7 +41,7 @@ class DataLayerServer:
         tree_id = request["tree_id"]
         node_hash_bytes = bytes32.from_hexstr(node_hash)
         tree_id_bytes = bytes32.from_hexstr(tree_id)
-        nodes = await self.data_store.get_left_to_right_ordering(node_hash_bytes, tree_id_bytes)
+        nodes = await self.data_store.get_left_to_right_ordering(node_hash_bytes, tree_id_bytes, True)
         answer = []
         for node in nodes:
             if isinstance(node, TerminalNode):
@@ -69,8 +69,9 @@ class DataLayerServer:
     async def handle_operations(self, request: Dict[str, str]) -> str:
         tree_id = request["tree_id"]
         generation = request["generation"]
+        max_generation = request["max_generation"]
         tree_id_bytes = bytes32.from_hexstr(tree_id)
-        operations_data = await self.data_store.get_operations(tree_id_bytes, int(generation))
+        operations_data = await self.data_store.get_operations(tree_id_bytes, int(generation), int(max_generation))
         answer = []
         for operation in operations_data:
             if isinstance(operation, InsertionData):
