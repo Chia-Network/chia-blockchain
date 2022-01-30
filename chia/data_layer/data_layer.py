@@ -10,7 +10,7 @@ from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32, uint64, uint16
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.data_layer.data_layer_wallet import SingletonRecord
@@ -190,7 +190,8 @@ class DataLayer:
         )
         await self.data_store.set_wallet_generation(tree_id, int(singleton_record.generation))
 
-    async def subscribe(self, subscription: Subscription) -> None:
+    async def subscribe(self, store_id: bytes32, mode: DownloadMode, ip: str, port: uint16) -> None:
+        subscription = Subscription(store_id, mode, ip, port)
         subscriptions = await self.get_subscriptions()
         if subscription.tree_id in [subscription.tree_id for subscription in subscriptions]:
             return
