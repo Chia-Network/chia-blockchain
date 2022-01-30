@@ -1,14 +1,16 @@
+from decimal import Decimal
 from typing import Optional, Tuple, Dict, Type
 from types import TracebackType
 
 import aiohttp
 
+from chia.cmds.units import units
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16
+from chia.util.ints import uint16, uint64
 
 
 # TODO: there seems to be a large amount of repetition in these to dedupe
@@ -42,10 +44,15 @@ class get_client:
         await self._client.await_closed()
 
 
-async def create_data_store_cmd(rpc_port: Optional[int], table_string: str) -> None:
+async def create_data_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> None:
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.create_data_store()
+            if fee is not None:
+                final_fee = uint64(int(Decimal(fee) * units["chia"]))
+            else:
+                config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+                final_fee = uint64(config["data_layer"]["fee"])
+            res = await client.create_data_store(fee=final_fee)
             print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
@@ -72,11 +79,17 @@ async def update_data_store_cmd(
     rpc_port: Optional[int],
     store_id: str,
     changelist: Dict[str, str],
+    fee: Optional[str],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
+    if fee is not None:
+        final_fee = uint64(int(Decimal(fee) * units["chia"]))
+    else:
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+        final_fee = uint64(config["data_layer"]["fee"])
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.update_data_store(store_id=store_id_bytes, changelist=changelist)
+            res = await client.update_data_store(store_id=store_id_bytes, changelist=changelist, fee=final_fee)
             print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")

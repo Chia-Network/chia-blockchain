@@ -9,6 +9,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
 # todo input assertions for all rpc's
+from chia.util.ints import uint64
 from chia.util.streamable import recurse_jsonify
 
 
@@ -36,11 +37,17 @@ def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def get_fee(config: Dict[str, Any], request: Dict[str, Any]) -> uint64:
+    fee = request.get("fee")
+    if fee is None:
+        return uint64(config["fee"])
+    return uint64(fee)
+
+
 class DataLayerRpcApi:
     # TODO: other RPC APIs do not accept a wallet and the service start does not expect to provide one
     def __init__(self, data_layer: DataLayer):  # , wallet: DataLayerWallet):
         self.service: DataLayer = data_layer
-        # self.data_layer_wallet = wallet
         self.service_name = "chia_data_layer"
 
     def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
@@ -56,10 +63,11 @@ class DataLayerRpcApi:
             "/insert": self.insert,
         }
 
-    async def create_data_store(self, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def create_data_store(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.service is None:
             raise Exception("Data layer not created")
-        txs, value = await self.service.create_store()
+        fee = get_fee(self.service.config, request)
+        txs, value = await self.service.create_store(uint64(fee))
         return {"txs": txs, "id": value.hex()}
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -100,12 +108,13 @@ class DataLayerRpcApi:
         rows_to_add a list of clvm objects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove
         """
+        fee = get_fee(self.service.config, request)
         changelist = [process_change(change) for change in request["changelist"]]
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        transaction_record = await self.service.batch_update(store_id, changelist)
+        transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
         if transaction_record is None:
             raise Exception(f"Batch update failed for: {store_id}")
         return {"tx_id": transaction_record.name}
@@ -115,6 +124,7 @@ class DataLayerRpcApi:
         rows_to_add a list of clvm objects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove
         """
+        fee = get_fee(self.service.config, request)
         key = hexstr_to_bytes(request["key"])
         value = hexstr_to_bytes(request["value"])
         store_id = bytes32(hexstr_to_bytes(request["id"]))
@@ -122,7 +132,7 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         changelist = [{"action": "insert", "key": key, "value": value}]
-        transaction_record = await self.service.batch_update(store_id, changelist)
+        transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
         return {"tx_id": transaction_record.name}
 
     async def delete_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -130,13 +140,14 @@ class DataLayerRpcApi:
         rows_to_add a list of clvm objects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove
         """
+        fee = get_fee(self.service.config, request)
         key = hexstr_to_bytes(request["key"])
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
         changelist = [{"action": "delete", "key": key}]
-        transaction_record = await self.service.batch_update(store_id, changelist)
+        transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
         return {"tx_id": transaction_record.name}
 
     async def get_root(self, request: Dict[str, Any]) -> Dict[str, Any]:
