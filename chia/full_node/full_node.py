@@ -2148,8 +2148,6 @@ class FullNode:
             new_block = None
             if block.header_hash != expected_header_hash:
                 continue
-            block_record = await self.blockchain.get_block_record_from_db(expected_header_hash)
-            assert block_record is not None
 
             if field_vdf == CompressibleVDFField.CC_EOS_VDF:
                 for index, sub_slot in enumerate(block.finished_sub_slots):
@@ -2182,16 +2180,9 @@ class FullNode:
             if new_block is None:
                 continue
             async with self.db_wrapper.lock:
-                peak: Optional[BlockRecord] = self.blockchain.get_peak()
-                assert peak is not None
-                if new_block.header_hash == peak.header_hash or peak.height - new_block.height < 5:
-                    continue
-                main_chain_hash: Optional[bytes32] = self.blockchain.height_to_hash(new_block.height)
-                assert main_chain_hash is not None
-                in_main_chain: bool = main_chain_hash == new_block.header_hash
                 try:
                     await self.block_store.db_wrapper.begin_transaction()
-                    await self.block_store.add_full_block(new_block.header_hash, new_block, block_record, in_main_chain)
+                    await self.block_store.replace_proof(new_block.header_hash, new_block)
                     await self.block_store.db_wrapper.commit_transaction()
                     replaced = True
                 except BaseException as e:
