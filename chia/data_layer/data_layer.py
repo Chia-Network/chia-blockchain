@@ -164,7 +164,9 @@ class DataLayer:
         if subscription.mode is DownloadMode.LATEST:
             to_check = [singleton_record]
         if subscription.mode is DownloadMode.HISTORY:
-            to_check = await self.wallet_rpc.dl_history(launcher_id=tree_id, min_generation=current_generation + 1)
+            to_check = await self.wallet_rpc.dl_history(
+                launcher_id=tree_id, min_generation=uint32(current_generation + 1)
+            )
 
         downloaded = await self.data_store.download_data(subscription, singleton_record.root)
         if not downloaded:

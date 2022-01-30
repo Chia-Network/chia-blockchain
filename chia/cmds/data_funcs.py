@@ -126,16 +126,12 @@ async def subscribe_cmd(
     client = None
     store_id_bytes = bytes32.from_hexstr(store_id)
     try:
-        client, rpc_port = await get_client(rpc_port)
-        await client.subscribe(store_id=store_id_bytes, ip=ip, port=uint16(port))
+        async with get_client(rpc_port) as (client, rpc_port):
+            await client.subscribe(store_id=store_id_bytes, ip=ip, port=uint16(port))
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
-    finally:
-        if client is not None:
-            client.close()
-            await client.await_closed()
 
 
 async def unsubscribe_cmd(
@@ -145,13 +141,9 @@ async def unsubscribe_cmd(
     client = None
     store_id_bytes = bytes32.from_hexstr(store_id)
     try:
-        client, rpc_port = await get_client(rpc_port)
-        await client.unsubscribe(store_id=store_id_bytes)
+        async with get_client(rpc_port) as (client, rpc_port):
+            await client.unsubscribe(store_id=store_id_bytes)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
-    finally:
-        if client is not None:
-            client.close()
-            await client.await_closed()

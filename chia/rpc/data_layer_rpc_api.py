@@ -134,7 +134,7 @@ class DataLayerRpcApi:
         return {"tx_id": transaction_record.name}
 
     async def get_root(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        """ get hash of latest tree root """
+        """get hash of latest tree root"""
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         # todo input checks
         if self.service is None:
@@ -170,7 +170,7 @@ class DataLayerRpcApi:
         port = request.get("port")
         if port is None:
             raise Exception("missing port in request")
-        mode = DownloadMode.LATEST
+        mode = DownloadMode.HISTORY
         req_mode = request.get("mode")
         if req_mode is not None:
             mode = DownloadMode(req_mode)
