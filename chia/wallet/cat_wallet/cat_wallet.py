@@ -406,7 +406,7 @@ class CATWallet:
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
         """
-        spendable_amount = await self.get_spendable_balance()
+        spendable_amount: uint64 = await self.get_spendable_balance()
         unspent_coins: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
         )
@@ -416,12 +416,12 @@ class CATWallet:
             self.id()
         )
         coins = await select_coins(
-            spendable_amount,
+            uint128(spendable_amount),
             self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
             unspent_coins,
             unconfirmed_removals,
             self.log,
-            amount,
+            uint128(amount),
         )
         assert coins is not None and len(coins) > 0
         return coins

@@ -245,12 +245,12 @@ class Wallet:
         python_program[1].append(condition)
         return Program.to(python_program)
 
-    async def select_coins(self, amount, exclude: List[Coin] = None) -> Set[Coin]:
+    async def select_coins(self, amount: uint64, exclude: List[Coin] = None) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
         """
-        spendable_amount = await self.get_spendable_balance()
+        spendable_amount: uint128 = await self.get_spendable_balance()
         unspent_coins: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
         )
@@ -265,7 +265,7 @@ class Wallet:
             unspent_coins,
             unconfirmed_removals,
             self.log,
-            amount,
+            uint128(amount),
             exclude,
         )
         assert coins is not None and len(coins) > 0
@@ -305,7 +305,7 @@ class Wallet:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
 
         if coins is None:
-            coins = await self.select_coins(total_amount)
+            coins = await self.select_coins(uint64(total_amount))
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
@@ -475,9 +475,9 @@ class Wallet:
         # If we're losing value then get coins with at least that much value
         # If we're gaining value then our amount doesn't matter
         if chia_amount < 0:
-            utxos = await self.select_coins(abs(chia_amount), exclude)
+            utxos = await self.select_coins(uint64(abs(chia_amount)), exclude)
         else:
-            utxos = await self.select_coins(0, exclude)
+            utxos = await self.select_coins(uint64(0), exclude)
 
         assert len(utxos) > 0
 

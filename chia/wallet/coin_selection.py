@@ -4,17 +4,17 @@ from typing import Set, Optional, List, Dict
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
+from chia.util.ints import uint128
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 
 async def select_coins(
-    spendable_amount,
-    max_coin_amount: int,
+    spendable_amount: uint128,
+    max_coin_amount: uint128,
     unspent: List[WalletCoinRecord],
     unconfirmed_removals: Dict[bytes32, Coin],
     log: logging.Logger,
-    amount: uint64,
+    amount: uint128,
     exclude: List[Coin] = None,
 ) -> Set[Coin]:
     """
@@ -86,7 +86,7 @@ async def select_coins(
 # https://murch.one/wp-content/uploads/2016/11/erhardt2016coinselection.pdf
 
 # we use this to check if one of the coins exactly matches the target.
-def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coin]:
+def check_for_exact_match(coin_list: List[Coin], target: uint128) -> Optional[Coin]:
     for coin in coin_list:
         if coin.amount == target:
             return coin
@@ -94,7 +94,7 @@ def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coi
 
 
 # we use this to find an individual coin greater than the target but as close as possible to the target.
-def find_smallest_coin(coin_list: List[Coin], target: uint64, max_coin_amount: int) -> Optional[Coin]:
+def find_smallest_coin(coin_list: List[Coin], target: uint128, max_coin_amount: int) -> Optional[Coin]:
     smallest_value = max_coin_amount  # smallest coins value
     smallest_coin: Optional[Coin] = None
     for coin in coin_list:
@@ -107,7 +107,7 @@ def find_smallest_coin(coin_list: List[Coin], target: uint64, max_coin_amount: i
 
 # we use this to find the set of coins which have total value closest to the target, but at least the target.
 # coins should be sorted in descending order.
-def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: uint64, max_coin_amount: int) -> Optional[Set[Coin]]:
+def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: uint128, max_coin_amount: int) -> Optional[Set[Coin]]:
     smaller_coins_sorted = sorted(smaller_coins, reverse=True, key=lambda r: r.amount)
     best_set_sum = max_coin_amount
     best_set_of_coins: Optional[Set[Coin]] = None
