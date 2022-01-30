@@ -114,8 +114,8 @@ class FullNodeAPI:
         # the same time, since it can be expensive
         waiter_count = len(self.full_node.new_peak_sem._waiters)
 
-        if waiter_count > 0:
-            self.full_node.log.debug(f"new_peak Waiters: {waiter_count}")
+        # if waiter_count > 0:
+        self.full_node.log.debug(f"new_peak Waiters: {waiter_count}")
 
         if waiter_count > 20:
             return None

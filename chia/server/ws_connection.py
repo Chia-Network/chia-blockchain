@@ -288,13 +288,14 @@ class WSChiaConnection:
             timeout = 60
             if "timeout" in kwargs:
                 timeout = kwargs["timeout"]
+            cid = kwargs.get("cid")
             attribute = getattr(class_for_type(self.connection_type), attr_name, None)
             if attribute is None:
                 raise AttributeError(f"Node type {self.connection_type} does not have method {attr_name}")
 
             msg: Message = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, args[0])
             request_start_t = time.time()
-            result = await self.send_request(msg, timeout)
+            result = await self.send_request(msg, timeout, cid=cid)
             self.log.debug(
                 f"Time for request {attr_name}: {self.get_peer_logging()} = {time.time() - request_start_t}, "
                 f"None? {result is None}"
@@ -323,53 +324,88 @@ class WSChiaConnection:
 
         return invoke
 
-    async def send_request(self, message_no_id: Message, timeout: int) -> Optional[Message]:
+    async def send_request(self, message_no_id: Message, timeout: int, cid: Optional[str] = None) -> Optional[Message]:
         """Sends a message and waits for a response."""
-        if self.closed:
-            return None
+        try:
+            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request({message_no_id=}, {timeout=})")
 
-        # We will wait for this event, it will be set either by the response, or the timeout
-        event = asyncio.Event()
+            if self.closed:
+                if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() returning None {self.closed=}")
+                return None
 
-        # The request nonce is an integer between 0 and 2**16 - 1, which is used to match requests to responses
-        # If is_outbound, 0 <= nonce < 2^15, else  2^15 <= nonce < 2^16
-        request_id = self.request_nonce
-        if self.is_outbound:
-            self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2 ** 15 - 1) else uint16(0)
-        else:
-            self.request_nonce = (
-                uint16(self.request_nonce + 1) if self.request_nonce != (2 ** 16 - 1) else uint16(2 ** 15)
-            )
+            # We will wait for this event, it will be set either by the response, or the timeout
+            event = asyncio.Event()
 
-        message = Message(message_no_id.type, request_id, message_no_id.data)
-        assert message.id is not None
-        self.pending_requests[message.id] = event
-        await self.outgoing_queue.put(message)
+            # The request nonce is an integer between 0 and 2**16 - 1, which is used to match requests to responses
+            # If is_outbound, 0 <= nonce < 2^15, else  2^15 <= nonce < 2^16
+            request_id = self.request_nonce
+            if self.is_outbound:
+                self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2 ** 15 - 1) else uint16(0)
+            else:
+                self.request_nonce = (
+                    uint16(self.request_nonce + 1) if self.request_nonce != (2 ** 16 - 1) else uint16(2 ** 15)
+                )
 
-        # If the timeout passes, we set the event
-        async def time_out(req_id, req_timeout):
-            try:
-                await asyncio.sleep(req_timeout)
-                if req_id in self.pending_requests:
-                    self.pending_requests[req_id].set()
-            except asyncio.CancelledError:
-                if req_id in self.pending_requests:
-                    self.pending_requests[req_id].set()
-                raise
+            message = Message(message_no_id.type, request_id, message_no_id.data)
+            assert message.id is not None
+            self.pending_requests[message.id] = event
+            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() putting message {message=}")
+            await self.outgoing_queue.put(message)
 
-        timeout_task = asyncio.create_task(time_out(message.id, timeout))
-        self.pending_timeouts[message.id] = timeout_task
-        await event.wait()
+            # If the timeout passes, we set the event
+            async def time_out(req_id, req_timeout):
+                try:
+                    if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request().time_out({req_id=}, {req_timeout=})")
+                    try:
+                        if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request().time_out() about to sleep {req_timeout=}")
+                        await asyncio.sleep(req_timeout)
+                        if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request().time_out() done sleeping")
+                        if req_id in self.pending_requests:
+                            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request().time_out() setting event")
+                            self.pending_requests[req_id].set()
+                            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request().time_out() just set event")
+                    except asyncio.CancelledError:
+                        if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request().time_out() handling cancelled error")
+                        if req_id in self.pending_requests:
+                            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request().time_out() about to set event after cancellation")
+                            self.pending_requests[req_id].set()
+                            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request().time_out() just set event after cancellation")
+                        if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request().time_out() about to re-raise")
+                        raise
+                except BaseException as e:
+                    if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request().time_out() leaving via {e} {traceback.format_exc()}")
+                    raise
 
-        self.pending_requests.pop(message.id)
-        result: Optional[Message] = None
-        if message.id in self.request_results:
-            result = self.request_results[message.id]
-            assert result is not None
-            self.log.debug(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
-            self.request_results.pop(message.id)
+                if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request().time_out() about to return off the end")
 
-        return result
+            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() about to create timeout task")
+            timeout_task = asyncio.create_task(time_out(message.id, timeout))
+            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() about to add timeout task to pending timeouts")
+            self.pending_timeouts[message.id] = timeout_task
+            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() waiting for event")
+            await event.wait()
+            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() event has been set, done waiting")
+
+            self.pending_requests.pop(message.id)
+            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() popped out event")
+            result: Optional[Message] = None
+            if message.id in self.request_results:
+                if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() message.id present")
+                result = self.request_results[message.id]
+                if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() {result=}")
+                assert result is not None
+                self.log.debug(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
+                if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() popping result")
+                self.request_results.pop(message.id)
+
+            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() returning {result=}")
+
+            return result
+        except BaseException as e:
+            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() leaving via {e} {traceback.format_exc()}")
+            raise
+        finally:
+            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() leaving")
 
     async def send_messages(self, messages: List[Message]):
         if self.closed:

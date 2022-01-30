@@ -540,7 +540,7 @@ class FullNode:
                     if peer.peer_node_id not in peak_peers:
                         self.log.info(f"  ==== {call_id} FullNode.new_peak() {peer.peer_node_id=} {peer.peer_node_id not in peak_peers=}")
                         target_peak_response: Optional[RespondBlock] = await peer.request_block(
-                            full_node_protocol.RequestBlock(uint32(peak_sync_height), False), timeout=10
+                            full_node_protocol.RequestBlock(uint32(peak_sync_height), False), timeout=10, cid=call_id
                         )
                         self.log.info(f"  ==== {call_id} FullNode.new_peak() {target_peak_response=}")
                         if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
@@ -593,6 +593,7 @@ class FullNode:
                 self._sync_task = asyncio.create_task(self._sync())
                 self.log.info(f"  ==== {call_id} FullNode.new_peak() just created sync task")
         finally:
+            # the extra space is actually kinda nice when scrolling through with highlighted matchs
             self.log.info(f"  ==== {call_id} FullNode.new_peak() leaving, in finally")
 
     async def send_peak_to_timelords(
