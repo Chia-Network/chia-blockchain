@@ -11,7 +11,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 async def select_coins(
     spendable_amount: uint128,
     max_coin_amount: uint128,
-    unspent: List[WalletCoinRecord],
+    spendable_coins: List[WalletCoinRecord],
     unconfirmed_removals: Dict[bytes32, Coin],
     log: logging.Logger,
     amount: uint128,
@@ -33,14 +33,14 @@ async def select_coins(
     log.info(f"About to select coins for amount {amount}")
 
     sum_spendable_coins = 0
-    valid_unspent: List[Coin] = []
+    valid_spendable_coins: List[Coin] = []
 
-    for coin_record in unspent:  # remove all the useless coins.
+    for coin_record in spendable_coins:  # remove all the useless coins.
         if coin_record.coin.name() in unconfirmed_removals:
             continue
         if coin_record.coin in exclude:
             continue
-        valid_unspent.append(coin_record.coin)
+        valid_spendable_coins.append(coin_record.coin)
         sum_spendable_coins += coin_record.coin.amount
 
     # This happens when we couldn't use one of the coins because it's already used
@@ -51,34 +51,34 @@ async def select_coins(
         )
 
     # Sort the coins by amount
-    valid_unspent.sort(reverse=True, key=lambda r: r.amount)
+    valid_spendable_coins.sort(reverse=True, key=lambda r: r.amount)
 
     # check for exact 1 to 1 coin match.
-    exact_match_coin: Optional[Coin] = check_for_exact_match(valid_unspent, amount)
+    exact_match_coin: Optional[Coin] = check_for_exact_match(valid_spendable_coins, amount)
     if exact_match_coin:
-        log.debug(f"selected coin with an exact match: {exact_match_coin}")
+        log.info(f"selected coin with an exact match: {exact_match_coin}")
         return {exact_match_coin}
 
     # Check for an exact match with all of the coins smaller than the amount.
     # If we have more, smaller coins than the amount we run the next algorithm.
     smaller_coin_sum = 0  # coins smaller than target.
     smaller_coins: Set[Coin] = set()
-    for coin in valid_unspent:
+    for coin in valid_spendable_coins:
         if coin.amount < amount:
             smaller_coin_sum += coin.amount
             smaller_coins.add(coin)
     if smaller_coin_sum == amount:
-        log.debug(f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}")
+        log.info(f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}")
         return smaller_coins
     elif smaller_coin_sum < amount:
-        smallest_coin: Optional[Coin] = find_smallest_coin(valid_unspent, amount, max_coin_amount)
+        smallest_coin: Optional[Coin] = find_smallest_coin(valid_spendable_coins, amount, max_coin_amount)
         assert smallest_coin is not None
-        log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
+        log.info(f"Selected closest greater coin: {smallest_coin.name()}")
         return {smallest_coin}
     else:
         best_coin_set = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount)
         assert best_coin_set is not None
-        log.debug(f"Selected coins from knapsack algorithm: {best_coin_set}")
+        log.info(f"Selected coins from knapsack algorithm: {best_coin_set}")
         return best_coin_set
 
 

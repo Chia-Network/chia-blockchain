@@ -401,27 +401,27 @@ class CATWallet:
 
         return result
 
-    async def select_coins(self, amount: uint64) -> Set[Coin]:
+    async def select_coins(self, target: uint64) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
         """
         spendable_amount: uint64 = await self.get_spendable_balance()
-        unspent_coins: List[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
-        )
+        spendable_coins: List[WalletCoinRecord] = await self.get_cat_spendable_coins()
+
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
+
         coins = await select_coins(
             uint128(spendable_amount),
             self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
-            unspent_coins,
+            spendable_coins,
             unconfirmed_removals,
             self.log,
-            uint128(amount),
+            uint128(target),
         )
         assert coins is not None and len(coins) > 0
         return coins
