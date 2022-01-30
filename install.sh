@@ -166,7 +166,8 @@ fi
 # shellcheck disable=SC1091
 . ./activate
 # pip 20.x+ supports Linux binary wheels
-python -m pip install --upgrade pip
+# TODO: unpin pip after fixing support for 22.0 with our pypi.chia.net
+python -m pip install --upgrade pip==21.3.1
 python -m pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
