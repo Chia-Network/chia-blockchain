@@ -27,7 +27,8 @@ Write-Output "Create venv - python3.9 is required in PATH"
 Write-Output "   ---"
 python -m venv venv
 . .\venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
+# TODO: unpin pip after fixing support for 22.0 with our pypi.chia.net
+python -m pip install --upgrade pip==21.3.1
 pip install wheel pep517
 pip install pywin32
 pip install pyinstaller==4.5
