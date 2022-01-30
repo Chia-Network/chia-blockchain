@@ -6,7 +6,7 @@ import yaml
 
 from chia.util.config import create_default_chia_config, initial_config_file, load_config, save_config
 from chia.util.path import mkdir
-from multiprocessing import Pool
+from multiprocessing import Pool, TimeoutError
 from pathlib import Path
 from threading import Thread
 from time import sleep
@@ -210,4 +210,7 @@ class TestConfig:
         # read failures are detected, the failing process will assert.
         with Pool(processes=num_workers) as pool:
             res = pool.starmap_async(run_reader_and_writer_tasks, args)
-            res.get(timeout=10)
+            try:
+                res.get(timeout=60)
+            except TimeoutError:
+                pytest.skip("Timed out waiting for reader/writer processes to complete")

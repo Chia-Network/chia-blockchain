@@ -2114,6 +2114,10 @@ class FullNode:
         if is_fully_compactified is None or is_fully_compactified:
             self.log.info(f"Already compactified block: {header_hash}. Ignoring.")
             return False
+        peak = self.blockchain.get_peak()
+        if peak is None or peak.height - height < 5:
+            self.log.debug("Will not compactify recent block")
+            return False
         if vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
             self.log.error(f"Received vdf proof is not compact: {vdf_proof}.")
             return False

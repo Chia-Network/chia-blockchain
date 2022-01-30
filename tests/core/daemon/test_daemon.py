@@ -58,7 +58,7 @@ class TestDaemon:
 
     @pytest.mark.asyncio
     async def test_daemon_simulation(self, simulation, get_daemon, get_b_tools):
-        node1, node2, _, _, _, _, _, _, _, server1 = simulation
+        node1, node2, _, _, _, _, _, _, _, _, server1 = simulation
         await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
 
         async def num_connections():
