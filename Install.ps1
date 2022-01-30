@@ -43,7 +43,8 @@ Write-Output "Python version is:" $pythonVersion
 
 py -m venv venv
 
-venv\scripts\python -m pip install --upgrade pip setuptools wheel
+# TODO: unpin pip after fixing support for 22.0 with our pypi.chia.net
+venv\scripts\python -m pip install --upgrade pip==21.3.1 setuptools wheel
 venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
 venv\scripts\pip install --editable . --extra-index-url https://pypi.chia.net/simple/
 
