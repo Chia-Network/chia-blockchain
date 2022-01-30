@@ -123,7 +123,6 @@ async def subscribe_cmd(
     ip: str,
     port: int,
 ) -> None:
-    client = None
     store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         async with get_client(rpc_port) as (client, rpc_port):
@@ -138,7 +137,6 @@ async def unsubscribe_cmd(
     rpc_port: Optional[int],
     store_id: str,
 ) -> None:
-    client = None
     store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         async with get_client(rpc_port) as (client, rpc_port):
