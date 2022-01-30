@@ -492,92 +492,108 @@ class FullNode:
 
         """
 
-        self.log.info(f" ==== FullNode.new_peak({request=}, {peer=})")
+        call_id = random.getrandbits(8 * 8).to_bytes(8, byteorder="big").hex()
 
         try:
-            seen_header_hash = self.sync_store.seen_header_hash(request.header_hash)
-            # Updates heights in the UI. Sleeps 1.5s before, so other peers have time to update their peaks as well.
-            # Limit to 3 refreshes.
-            if not seen_header_hash and len(self._ui_tasks) < 3:
-                self._ui_tasks.add(asyncio.create_task(self._refresh_ui_connections(1.5)))
-            # Prune completed connect tasks
-            self._ui_tasks = set(filter(lambda t: not t.done(), self._ui_tasks))
-        except Exception as e:
-            self.log.warning(f"Exception UI refresh task: {e}")
 
-        # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
-        self.log.info(f" ==== FullNode.new_peak() calling self.sync_store.peer_has_block() A")
-        self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
+            self.log.info(f" ==== {call_id} FullNode.new_peak({request=}, {peer=})")
 
-        if self.blockchain.contains_block(request.header_hash):
-            return None
+            try:
+                seen_header_hash = self.sync_store.seen_header_hash(request.header_hash)
+                # Updates heights in the UI. Sleeps 1.5s before, so other peers have time to update their peaks as well.
+                # Limit to 3 refreshes.
+                if not seen_header_hash and len(self._ui_tasks) < 3:
+                    self._ui_tasks.add(asyncio.create_task(self._refresh_ui_connections(1.5)))
+                # Prune completed connect tasks
+                self._ui_tasks = set(filter(lambda t: not t.done(), self._ui_tasks))
+            except Exception as e:
+                self.log.warning(f" === {call_id} FullNode.new_peak() Exception UI refresh task: {e}")
 
-        # Not interested in less heavy peaks
-        peak: Optional[BlockRecord] = self.blockchain.get_peak()
-        curr_peak_height = uint32(0) if peak is None else peak.height
-        if peak is not None and peak.weight > request.weight:
-            return None
+            # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
+            self.log.info(f" ==== {call_id} FullNode.new_peak() calling self.sync_store.peer_has_block({request.header_hash=}, {peer.peer_node_id=}, {request.weight=}, {request.height=}, {True=}) A")
+            self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
 
-        if self.sync_store.get_sync_mode():
-            # If peer connects while we are syncing, check if they have the block we are syncing towards
-            peak_sync_hash = self.sync_store.get_sync_target_hash()
-            peak_sync_height = self.sync_store.get_sync_target_height()
-            if peak_sync_hash is not None and request.header_hash != peak_sync_hash and peak_sync_height is not None:
-                peak_peers: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_sync_hash])
-                # Don't ask if we already know this peer has the peak
-                if peer.peer_node_id not in peak_peers:
-                    target_peak_response: Optional[RespondBlock] = await peer.request_block(
-                        full_node_protocol.RequestBlock(uint32(peak_sync_height), False), timeout=10
-                    )
-                    if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
-                        self.log.info(
-                            f" ==== FullNode.new_peak() calling self.sync_store.peer_has_block({peak_sync_hash=}, {peer.peer_node_id=}, {target_peak_response.block.weight=}, {peak_sync_height=}, {False=}) B"
-                        )
-                        self.sync_store.peer_has_block(
-                            peak_sync_hash,
-                            peer.peer_node_id,
-                            target_peak_response.block.weight,
-                            peak_sync_height,
-                            False,
-                        )
-                    else:
-                        self.log.info(f" ==== FullNode.new_peak() else: A")
-                else:
-                    self.log.info(f" ==== FullNode.new_peak() else: B")
-            else:
-                self.log.info(f" ==== FullNode.new_peak() else: C")
-        else:
-            self.log.info(f" ==== FullNode.new_peak() else: D")
-            if request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]:
-                # This is the normal case of receiving the next block
-                self.log.info(
-                    f" ==== FullNode.new_peak() about to self.short_sync_backtrack({peer=}, {curr_peak_height=}, {request.height=}, {request.unfinished_reward_block_hash=})"
-                )
-                if await self.short_sync_backtrack(
-                    peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
-                ):
-                    self.log.info(f" ==== FullNode.new_peak() just self.short_sync_backtrack()ed (returning)")
-                    return None
-                self.log.info(f" ==== FullNode.new_peak() just self.short_sync_backtrack()ed (not returning)")
-
-            if request.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
-                # This is the case of syncing up more than a few blocks, at the start of the chain
-                self.log.debug("Doing batch sync, no backup")
-                self.log.info(
-                    f" ==== FullNode.new_peak() about to self.short_sync_batch({peer=}, {uint32(0)=}, {request.height=})"
-                )
-                await self.short_sync_batch(peer, uint32(0), request.height)
-                self.log.info(f" ==== FullNode.new_peak() just self.short_sync_batch()ed")
+            self.log.info(f" ==== {call_id} FullNode.new_peak() checking if contains block")
+            if self.blockchain.contains_block(request.header_hash):
+                self.log.info(f" ==== {call_id} FullNode.new_peak() contains block so returning")
                 return None
 
-            if request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
-                # This case of being behind but not by so much
-                if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
+            self.log.info(f" ==== {call_id} FullNode.new_peak() does not contain block")
+            # Not interested in less heavy peaks
+            peak: Optional[BlockRecord] = self.blockchain.get_peak()
+            self.log.info(f"  ==== {call_id} FullNode.new_peak() blockchain peak {peak=}")
+            curr_peak_height = uint32(0) if peak is None else peak.height
+            if peak is not None and peak.weight > request.weight:
+                self.log.info(f"  ==== {call_id} FullNode.new_peak() returning here too {peak=} {peak.weight=} {request.weight=}")
+                return None
+
+            if self.sync_store.get_sync_mode():
+                self.log.info(f"  ==== {call_id} FullNode.new_peak() yep, sync mode")
+                # If peer connects while we are syncing, check if they have the block we are syncing towards
+                peak_sync_hash = self.sync_store.get_sync_target_hash()
+                peak_sync_height = self.sync_store.get_sync_target_height()
+                if peak_sync_hash is not None and request.header_hash != peak_sync_hash and peak_sync_height is not None:
+                    self.log.info(f"  ==== {call_id} FullNode.new_peak() {peak_sync_hash=} {request.header_hash=} {peak_sync_hash=} {peak_sync_height=}")
+                    peak_peers: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_sync_hash])
+                    self.log.info(f"  ==== {call_id} FullNode.new_peak() {peak_peers=}")
+                    # Don't ask if we already know this peer has the peak
+                    if peer.peer_node_id not in peak_peers:
+                        self.log.info(f"  ==== {call_id} FullNode.new_peak() {peer.peer_node_id=} {peer.peer_node_id not in peak_peers=}")
+                        target_peak_response: Optional[RespondBlock] = await peer.request_block(
+                            full_node_protocol.RequestBlock(uint32(peak_sync_height), False), timeout=10
+                        )
+                        self.log.info(f"  ==== {call_id} FullNode.new_peak() {target_peak_response=}")
+                        if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
+                            self.log.info(f"  ==== {call_id} FullNode.new_peak() calling self.sync_store.peer_has_block({peak_sync_hash=}, {peer.peer_node_id=}, {target_peak_response.block.weight=}, {peak_sync_height=}, {False=}) B")
+                            self.sync_store.peer_has_block(
+                                peak_sync_hash,
+                                peer.peer_node_id,
+                                target_peak_response.block.weight,
+                                peak_sync_height,
+                                False,
+                            )
+                        else:
+                            self.log.info(f"  ==== {call_id} FullNode.new_peak() else: A")
+                    else:
+                        self.log.info(f"  ==== {call_id} FullNode.new_peak() else: B")
+                else:
+                    self.log.info(f"  ==== {call_id} FullNode.new_peak() else: C")
+            else:
+                self.log.info(f"  ==== {call_id} FullNode.new_peak() else: D")
+                if request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]:
+                    # This is the normal case of receiving the next block
+                    self.log.info(
+                        f"  ==== {call_id} FullNode.new_peak() about to self.short_sync_backtrack({peer=}, {curr_peak_height=}, {request.height=}, {request.unfinished_reward_block_hash=})"
+                    )
+                    if await self.short_sync_backtrack(
+                        peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
+                    ):
+                        self.log.info(f"  ==== {call_id} FullNode.new_peak() just self.short_sync_backtrack()ed (returning)")
+                        return None
+                    self.log.info(f"  ==== {call_id} FullNode.new_peak() just self.short_sync_backtrack()ed (not returning)")
+
+                if request.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+                    # This is the case of syncing up more than a few blocks, at the start of the chain
+                    self.log.debug("Doing batch sync, no backup")
+                    self.log.info(
+                        f"  ==== {call_id} FullNode.new_peak() about to self.short_sync_batch({peer=}, {uint32(0)=}, {request.height=})"
+                    )
+                    await self.short_sync_batch(peer, uint32(0), request.height)
+                    self.log.info(f"  ==== {call_id} FullNode.new_peak() just self.short_sync_batch()ed A")
                     return None
 
-            # This is the either the case where we were not able to sync successfully (for example, due to the fork
-            # point being in the past), or we are very far behind. Performs a long sync.
-            self._sync_task = asyncio.create_task(self._sync())
+                if request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
+                    # This case of being behind but not by so much
+                    if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
+                        self.log.info(f"  ==== {call_id} FullNode.new_peak() just self.short_sync_batch()ed B")
+                        return None
+
+                # This is the either the case where we were not able to sync successfully (for example, due to the fork
+                # point being in the past), or we are very far behind. Performs a long sync.
+                self._sync_task = asyncio.create_task(self._sync())
+                self.log.info(f"  ==== {call_id} FullNode.new_peak() just created sync task")
+        finally:
+            self.log.info(f"  ==== {call_id} FullNode.new_peak() leaving, in finally")
 
     async def send_peak_to_timelords(
         self, peak_block: Optional[FullBlock] = None, peer: Optional[ws.WSChiaConnection] = None
