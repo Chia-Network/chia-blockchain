@@ -163,10 +163,10 @@ class DataLayerRpcApi:
         port = request.get("port")
         if port is None:
             raise Exception("missing port in request")
-        latest = request.get("latest")
         mode = DownloadMode.LATEST
-        if latest is False:
-            mode = DownloadMode.HISTORY
+        req_mode = request.get("mode")
+        if req_mode is not None:
+            mode = DownloadMode(req_mode)
         if self.service is None:
             raise Exception("Data layer not created")
         await self.service.subscribe(store_id=store_id, mode=mode, ip=ip, port=port)
