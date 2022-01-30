@@ -188,7 +188,6 @@ class DeletionData:
     root_status: Status
 
 
-@dataclass(frozen=True)
 class DownloadMode(IntEnum):
     LATEST = 0
     HISTORY = 1
