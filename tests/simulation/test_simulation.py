@@ -50,16 +50,17 @@ class TestSimulation:
 
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation, extra_node):
-        node1, node2, _, _, _, _, _, _, _, server1 = simulation
+        node1, node2, _, _, _, _, _, _, _, sanitizer_server, server1 = simulation
         await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
         # Use node2 to test node communication, since only node1 extends the chain.
         await time_out_assert(1500, node_height_at_least, True, node2, 7)
+        await sanitizer_server.start_client(PeerInfo(self_hostname, uint16(21238)))
 
         async def has_compact(node1, node2):
             peak_height_1 = node1.full_node.blockchain.get_peak_height()
-            headers_1 = await node1.full_node.blockchain.get_header_blocks_in_range(0, peak_height_1)
+            headers_1 = await node1.full_node.blockchain.get_header_blocks_in_range(0, peak_height_1 - 6)
             peak_height_2 = node2.full_node.blockchain.get_peak_height()
-            headers_2 = await node2.full_node.blockchain.get_header_blocks_in_range(0, peak_height_2)
+            headers_2 = await node2.full_node.blockchain.get_header_blocks_in_range(0, peak_height_2 - 6)
             # Commented to speed up.
             # cc_eos = [False, False]
             # icc_eos = [False, False]
