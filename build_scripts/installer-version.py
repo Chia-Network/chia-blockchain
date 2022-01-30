@@ -23,7 +23,8 @@ def main():
         dev_release_number = ""
     elif len(version) == 4:
         smc_patch_version = version[2]
-        dev_release_number = "." + version[3]
+        # for those of you watching, this lstrip is cheesy...  then again this whole thing should all be done with an actual pep440 version parser probably.
+        dev_release_number = "." + version[3].lstrip("dev")
     else:
         smc_patch_version = ""
         dev_release_number = ""
