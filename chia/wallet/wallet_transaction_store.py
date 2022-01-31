@@ -226,7 +226,7 @@ class WalletTransactionStore:
             removals=current.removals,
             wallet_id=current.wallet_id,
             sent_to=sent_to,
-            trade_id=None,
+            trade_id=current.trade_id,
             type=current.type,
             name=current.name,
             memos=current.memos,
@@ -252,12 +252,12 @@ class WalletTransactionStore:
             removals=record.removals,
             wallet_id=record.wallet_id,
             sent_to=[],
-            trade_id=None,
+            trade_id=record.trade_id,
             type=record.type,
             name=record.name,
             memos=record.memos,
         )
-        await self.add_transaction_record(tx, True)
+        await self.add_transaction_record(tx, False)
 
     async def get_transaction_record(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         """
@@ -471,7 +471,7 @@ class WalletTransactionStore:
                 to_delete.append(tx)
         for tx in to_delete:
             self.tx_record_cache.pop(tx.name)
-
+        self.tx_submitted = {}
         c1 = await self.db_connection.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))
         await c1.close()
 

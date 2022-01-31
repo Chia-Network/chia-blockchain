@@ -5,6 +5,7 @@ import random
 from pathlib import Path
 from typing import List, Tuple
 
+from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.setup_nodes import bt, test_constants
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -63,7 +64,7 @@ class TestDbUpgrade:
                 await db_wrapper1.commit_transaction()
 
                 for block in blocks:
-                    await bc.receive_block(block)
+                    await _validate_and_add_block(bc, block)
 
                 # now, convert v1 in_file to v2 out_file
                 await convert_v1_to_v2(in_file, out_file)

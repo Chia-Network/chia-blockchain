@@ -21,7 +21,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
-from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_pooling_authentication_sk
+from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.rpc import validate_get_routes
@@ -236,13 +236,10 @@ class TestRpc:
                 await client.set_reward_targets(None, replaced_char)
 
             assert len((await client.get_pool_state())["pool_state"]) == 0
-            all_sks = farmer_api.farmer.local_keychain.get_all_private_keys()
-            auth_sk = master_sk_to_pooling_authentication_sk(all_sks[0][0], 2, 1)
             pool_list = [
                 {
                     "launcher_id": "ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa",
-                    "authentication_public_key": bytes(auth_sk.get_g1()).hex(),
-                    "owner_public_key": "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5",  # noqa
+                    "owner_public_key": "aa11e92274c0f6a2449fd0c7cfab4a38f943289dbe2214c808b36390c34eacfaa1d4c8f3c6ec582ac502ff32228679a0",  # noqa
                     "payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
                     "pool_url": "localhost",
                     "p2_singleton_puzzle_hash": "16e4bac26558d315cded63d4c5860e98deb447cc59146dd4de06ce7394b14f17",
