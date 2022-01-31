@@ -170,7 +170,7 @@ class BlockStore:
             )
 
             await self.db.execute(
-                "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     header_hash,
                     block.prev_header_hash,
@@ -185,7 +185,7 @@ class BlockStore:
 
         else:
             await self.db.execute(
-                "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
                 (
                     header_hash.hex(),
                     block.height,
@@ -196,7 +196,7 @@ class BlockStore:
             )
 
             await self.db.execute(
-                "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?,?, ?, ?)",
+                "INSERT OR IGNORE INTO block_records VALUES(?, ?, ?, ?,?, ?, ?)",
                 (
                     header_hash.hex(),
                     block.prev_header_hash.hex(),
