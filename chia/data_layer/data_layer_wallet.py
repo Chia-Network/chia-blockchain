@@ -582,6 +582,10 @@ class DataLayerWallet:
         if singleton_record is None:
             raise ValueError(f"Singleton with launcher ID {launcher_id} is not tracked by DL Wallet")
 
+        # Next, the singleton should be confirmed or else we shouldn't be ready to spend it
+        if not singleton_record.confirmed:
+            raise ValueError(f"Singleton with launcher ID {launcher_id} is currently pending")
+
         # Next, let's verify we have all of the relevant coin information
         if singleton_record.lineage_proof.parent_name is None or singleton_record.lineage_proof.amount is None:
             raise ValueError(f"Singleton with launcher ID {launcher_id} has insufficient information to spend")
