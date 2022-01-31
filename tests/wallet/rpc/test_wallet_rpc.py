@@ -492,6 +492,12 @@ class TestWalletRpc:
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
+            async def is_trade_confirmed(client, trade) -> bool:
+                trade_record = await client.get_offer(trade.name())
+                return TradeStatus(trade_record.status) == TradeStatus.CONFIRMED
+
+            time_out_assert(15, is_trade_confirmed, True, client, offer)
+
             # Test trade sorting
             def only_ids(trades):
                 return [t.trade_id for t in trades]
