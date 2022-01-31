@@ -362,6 +362,7 @@ class WSChiaConnection:
         await event.wait()
 
         self.pending_requests.pop(message.id)
+        self.pending_timeouts.pop(message.id)
         result: Optional[Message] = None
         if message.id in self.request_results:
             result = self.request_results[message.id]
