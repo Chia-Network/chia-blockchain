@@ -813,6 +813,7 @@ class TestWalletSimulator:
         await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
 
         for i in range(0, num_blocks):
+            await asyncio.sleep(0.2)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         # check that the coin selection only spends the identical coin.
@@ -828,7 +829,9 @@ class TestWalletSimulator:
         assert sum([coin.amount for coin in tx.removals]) == 4 * 10 ** 12
 
         for i in range(0, num_blocks):
+            await asyncio.sleep(0.2)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
         # check that the knapsack algorithm works.
         tx = await wallet.generate_signed_transaction(
             2.5 * 10 ** 12,
@@ -841,7 +844,9 @@ class TestWalletSimulator:
         assert tx.amount == 2500000000000
 
         for i in range(0, num_blocks):
+            await asyncio.sleep(0.2)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
         # check that the find_smallest_coin function works.
         tx = await wallet_2.generate_signed_transaction(
             0.1 * 10 ** 12,
