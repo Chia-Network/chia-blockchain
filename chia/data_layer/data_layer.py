@@ -142,48 +142,97 @@ class DataLayer:
             return None
         return res.node_hash
 
+    async def _validate_batch(
+        self,
+        tree_id: bytes32,
+        to_check: List[SingletonRecord],
+        min_generation: int,
+        max_generation: int,
+    ) -> bool:
+        last_checked_hash: Optional[bytes32] = None
+        for record in to_check:
+            # Ignore two consecutive identical root hashes, as we've already validated it.
+            if last_checked_hash is not None and record.root == last_checked_hash:
+                continue
+            # Pick the latest root in our data store with the desired hash, before our already validated data.
+            root: Optional[Root] = await self.data_store.get_last_tree_root_by_hash(
+                tree_id, record.root, max_generation
+            )
+            if root is None or root.generation < min_generation:
+                return False
+
+            self.log.info(f"Validated chain hash {record.root} in downloaded datastore.")
+            max_generation = root.generation
+            last_checked_hash = record.root
+
+        return True
+
     async def fetch_and_validate(self, subscription: Subscription) -> None:
         tree_id = subscription.tree_id
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id)
         if singleton_record is None:
             return
-        current_generation = await self.data_store.get_wallet_generation(tree_id)
-        assert int(current_generation) <= singleton_record.generation
-        if current_generation is not None and uint32(current_generation) == singleton_record.generation:
+        if singleton_record.generation == uint32(0):
             return
-
-        self.log.info(
-            f"Downloading and validating {subscription.tree_id}. "
-            f"Current wallet generation: {int(current_generation)}. "
-            f"Target wallet generation: {singleton_record.generation}."
-        )
         old_root: Optional[Root] = None
         if await self.data_store.tree_id_exists(tree_id=tree_id):
             old_root = await self.data_store.get_tree_root(tree_id=tree_id)
+        wallet_current_generation = await self.data_store.get_wallet_generation(tree_id)
+        assert int(wallet_current_generation) <= singleton_record.generation
+        # Wallet generation didn't change, so no new data committed on chain.
+        if wallet_current_generation is not None and uint32(wallet_current_generation) == singleton_record.generation:
+            return
         to_check: List[SingletonRecord] = []
         if subscription.mode is DownloadMode.LATEST:
             to_check = [singleton_record]
         if subscription.mode is DownloadMode.HISTORY:
             to_check = await self.wallet_rpc.dl_history(
-                launcher_id=tree_id, min_generation=uint32(current_generation + 1)
+                launcher_id=tree_id, min_generation=uint32(wallet_current_generation + 1)
             )
+        # No root hash changes in the new wallet records, so ignore.
+        if (
+            old_root is not None
+            and old_root.node_hash is not None
+            and to_check[0].root == old_root.node_hash
+            and len(set(record.root for record in to_check)) == 1
+        ):
+            await self.data_store.set_wallet_generation(tree_id, int(singleton_record.generation))
+            return
+        # Delete all identical root hashes to our old root hash, until we detect a change.
+        if old_root is not None and old_root.node_hash is not None:
+            while to_check[-1].root == old_root.node_hash:
+                to_check.pop()
+
+        self.log.info(
+            f"Downloading and validating {subscription.tree_id}. "
+            f"Current wallet generation: {int(wallet_current_generation)}. "
+            f"Target wallet generation: {singleton_record.generation}."
+        )
 
         downloaded = await self.data_store.download_data(subscription, singleton_record.root)
         if not downloaded:
             raise RuntimeError("Could not download the data.")
 
         root = await self.data_store.get_tree_root(tree_id=tree_id)
+        # Wallet root hash must match to our data store root hash.
         if root.node_hash is None or root.node_hash != to_check[0].root:
             raise RuntimeError("Can't find data on chain in our datastore.")
         to_check.pop(0)
         min_generation = (0 if old_root is None else old_root.generation) + 1
         max_generation = root.generation
 
-        for record in to_check:
-            root_for_record = await self.data_store.get_last_tree_root_by_hash(tree_id, record.root, max_generation)
-            if root_for_record is None or root_for_record.generation < min_generation:
-                raise RuntimeError("Can't find data on chain in our datastore.")
-            max_generation = root.generation
+        # Light validation: check the new set of operations against the new set of wallet records.
+        # If this matches, we know all data will match, as we've previously checked that data matches
+        # for `min_generation` data store root and `wallet_current_generation` wallet record.
+        is_valid: bool = await self._validate_batch(tree_id, to_check, min_generation, max_generation)
+
+        # If for some reason we have mismatched data using the light checks, recheck all history as a fallback.
+        if not is_valid:
+            self.log.warning(f"Light validation failed for {tree_id}. Validating all history.")
+            to_check = await self.wallet_rpc.dl_history(launcher_id=tree_id, min_generation=uint32(1))
+            is_valid = await self._validate_batch(tree_id, to_check, 0, max_generation)
+            if not is_valid:
+                raise RuntimeError("Could not validate on-chain data.")
 
         self.log.info(
             f"Finished downloading and validating {subscription.tree_id}. "
