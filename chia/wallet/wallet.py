@@ -271,6 +271,7 @@ class Wallet:
             exclude,
         )
         assert coins is not None and len(coins) > 0
+        assert sum(c.amount for c in coins) >= target
         return coins
 
     async def _generate_unsigned_transaction(

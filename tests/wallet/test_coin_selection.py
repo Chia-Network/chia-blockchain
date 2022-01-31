@@ -1,4 +1,4 @@
-from typing import Optional, Set
+from typing import Set
 
 import pytest
 from chia.types.blockchain_format.coin import Coin

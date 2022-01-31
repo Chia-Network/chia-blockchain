@@ -424,6 +424,7 @@ class CATWallet:
             uint128(target),
         )
         assert coins is not None and len(coins) > 0
+        assert sum(c.amount for c in coins) >= target
         return coins
 
     async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
