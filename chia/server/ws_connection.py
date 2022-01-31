@@ -354,6 +354,7 @@ class WSChiaConnection:
 
             # If the timeout passes, we set the event
             async def time_out(req_id, req_timeout):
+                self.log.info(f" ==== WSChiaConnection.send_request().time_out() just entered...")
                 try:
                     if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request().time_out({req_id=}, {req_timeout=})")
                     try:
@@ -382,8 +383,14 @@ class WSChiaConnection:
             timeout_task = asyncio.create_task(time_out(message.id, timeout))
             if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() about to add timeout task to pending timeouts")
             self.pending_timeouts[message.id] = timeout_task
+            all_task_count = len(asyncio.Task.all_tasks())  # type: ignore[attr-defined]
+            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() {all_task_count=}")
             if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() waiting for event")
-            await event.wait()
+            await asyncio.wait_for(event.wait(), timeout=2 * timeout)
+            got_set = event.is_set()
+            timeout_task_info = {name: value for name, value in ((name, getattr(timeout_task, name)) for name in dir(timeout_task)) if not callable(value)}
+            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() {got_set=} {timeout_task_info=}")
+            if cid is not None and not got_set: self.log.info(f" ==== {cid} WSChiaConnection.send_request() whoa!  not got_set!")
             if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() event has been set, done waiting")
 
             self.pending_requests.pop(message.id)
