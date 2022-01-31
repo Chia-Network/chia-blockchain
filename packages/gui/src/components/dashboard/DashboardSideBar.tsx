@@ -5,15 +5,11 @@ import { List } from '@material-ui/core';
 import {
   Wallet as WalletIcon,
   Farm as FarmIcon,
-  Keys as KeysIcon,
   Home as HomeIcon,
   Plot as PlotIcon,
   Pool as PoolIcon,
-  Settings as SettingsIcon,
 } from '@chia/icons';
-import { Flex, SideBarItem, Suspender } from '@chia/core';
-import { useGetKeyringStatusQuery, useLogout } from '@chia/api-react';
-import { useNavigate } from 'react-router';
+import { Flex, SideBarItem } from '@chia/core';
 
 const StyledRoot = styled(Flex)`
   height: 100%;
@@ -25,26 +21,6 @@ const StyledList = styled(List)`
 `;
 
 export default function DashboardSideBar() {
-  /*
-  const logout = useLogout();
-  const navigate = useNavigate();
-
-  const { data, isLoading, error } = useGetKeyringStatusQuery();
-
-  if (isLoading) {
-    return (
-      <Suspender />
-    );
-  }
-
-  const { passphraseSupportEnabled } = data;
-
-  function handleLogOut() {
-    logout();
-    navigate('/');
-  }
-  */
-
   return (
     <StyledRoot>
       <StyledList disablePadding>
@@ -74,13 +50,6 @@ export default function DashboardSideBar() {
           icon={<PoolIcon fontSize="large" />}
           title={<Trans>Pool</Trans>}
         />
-        {/* passphraseSupportEnabled && (
-          <SideBarItem
-            to="/dashboard/settings"
-            icon={<SettingsIcon fontSize="large" />}
-            title={<Trans>Settings</Trans>}
-          />
-        ) */}
       </StyledList>
     </StyledRoot>
   );

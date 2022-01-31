@@ -1,7 +1,9 @@
-import React, { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import useDarkMode from 'use-dark-mode';
+import { type Shell } from 'electron';
 import Button from '../Button';
+import Link from '../Link';
 import { ButtonGroup } from '@material-ui/core';
 import { 
   WbSunny as WbSunnyIcon, 
@@ -14,6 +16,7 @@ import SettingsLabel from './SettingsLabel';
 import Flex from '../Flex';
 import Mode from '../../constants/Mode';
 import LocaleToggle from '../LocaleToggle';
+import useShowError from '../../hooks/useShowError';
 
 export type SettingsAppProps = {
   children?: ReactNode;
@@ -23,6 +26,7 @@ export default function SettingsApp(props: SettingsAppProps) {
   const { children } = props;
 
   const [mode, setMode] = useMode();
+  const showError = useShowError();
   const { enable, disable, value: darkMode } = useDarkMode();
 
   function handleSetFarmingMode() {
@@ -31,6 +35,24 @@ export default function SettingsApp(props: SettingsAppProps) {
 
   function handleSetWalletMode() {
     setMode(Mode.WALLET);
+  }
+
+  async function handleOpenFAQURL(): Promise<void> {
+    try {
+      const shell: Shell = (window as any).shell;
+      await shell.openExternal('https://github.com/Chia-Network/chia-blockchain/wiki/FAQ');
+    } catch (error: any) {
+      showError(error);
+    }
+  }
+  
+  async function handleOpenSendFeedbackURL(): Promise<void> {
+    try {
+      const shell: Shell = (window as any).shell;
+      await shell.openExternal('https://feedback.chia.net/lightwallet');
+    } catch (error: any) {
+      showError(error);
+    }
   }
 
   return (
@@ -73,6 +95,20 @@ export default function SettingsApp(props: SettingsAppProps) {
       </Flex>
 
       {children}
+
+      <Flex flexDirection="column" gap={1}>
+        <SettingsLabel>
+          <Trans>Help</Trans>
+        </SettingsLabel>
+        <Flex flexDirection="column">
+          <Link onClick={handleOpenFAQURL}>
+            <Trans>Frequently Asked Questions</Trans>
+          </Link>
+          <Link onClick={handleOpenSendFeedbackURL}>
+            <Trans>Send Feedback</Trans>
+          </Link>
+        </Flex>
+      </Flex>
     </Flex>
   );
 }
