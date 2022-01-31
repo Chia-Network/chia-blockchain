@@ -134,7 +134,7 @@ function OfferAssetSelector(props: OfferAssetSelectorProps) {
             key={option.walletId}
             onClick={() => handleSelection(option.walletId, option.walletType)}
           >
-            <Trans>{option.displayName}</Trans>
+            {option.displayName}
           </MenuItem>
         ))}
       </Select>
