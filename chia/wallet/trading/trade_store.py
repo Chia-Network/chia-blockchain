@@ -118,7 +118,9 @@ class TradeStore:
             await self.db_wrapper.lock.acquire()
         try:
             cursor = await self.db_connection.execute(
-                "INSERT OR REPLACE INTO trade_records VALUES(?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO trade_records "
+                "(trade_record, trade_id, status, confirmed_at_index, created_at_time, sent, is_my_offer) "
+                "VALUES(?, ?, ?, ?, ?, ?, ?)",
                 (
                     bytes(record),
                     record.trade_id.hex(),
