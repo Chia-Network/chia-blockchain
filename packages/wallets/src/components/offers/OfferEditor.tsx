@@ -174,7 +174,7 @@ function OfferEditor(props: OfferEditorProps) {
   }
 
   function handleReset() {
-    methods.reset();
+    methods.reset(defaultValues);
   }
 
   return (
