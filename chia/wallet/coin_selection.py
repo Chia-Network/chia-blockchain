@@ -122,7 +122,7 @@ def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: uint128, max_coin_
                 # run 2 passes where the first pass may select a coin 50% of the time.
                 # the second pass runs to finish the set if the first pass didn't finish the set.
                 # this makes each trial random and increases the chance of getting a perfect set.
-                if (n_pass == 0 and bool(random.getrandbits(1))) or (coin not in selected_coins):
+                if (n_pass == 0 and bool(random.getrandbits(1))) or (n_pass == 1 and coin not in selected_coins):
                     selected_coins_sum += coin.amount
                     selected_coins.add(coin)
                     if selected_coins_sum == target:
@@ -130,7 +130,7 @@ def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: uint128, max_coin_
                     if selected_coins_sum > target:
                         target_reached = True
                         if selected_coins_sum < best_set_sum:
-                            best_set_of_coins = selected_coins
+                            best_set_of_coins = selected_coins.copy()
                             best_set_sum = selected_coins_sum
                             selected_coins_sum -= coin.amount
                             selected_coins.remove(coin)

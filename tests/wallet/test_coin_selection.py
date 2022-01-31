@@ -1,3 +1,5 @@
+from typing import Optional, Set
+
 import pytest
 from chia.types.blockchain_format.coin import Coin
 from chia.util.hash import std_hash
@@ -47,3 +49,13 @@ class TestCoinSelection:
             knapsack = knapsack_coin_algorithm(coin_list, uint128(30000000000000), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT)
             assert knapsack is not None
             assert sum([coin.amount for coin in knapsack]) >= 310000000
+
+    def test_knapsack_coin_selection_2(self, a_hash):
+        coin_amounts = [6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
+        coin_list: Set[Coin] = set([Coin(a_hash, a_hash, uint64(a)) for a in coin_amounts])
+        # coin_list = set([coin for a in coin_amounts])
+        for i in range(100):
+            knapsack = knapsack_coin_algorithm(coin_list, uint128(265), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT)
+            assert knapsack is not None
+            selected_sum = sum(coin.amount for coin in list(knapsack))
+            assert 265 <= selected_sum <= 280  # Selects a set of coins which does exceed by too much
