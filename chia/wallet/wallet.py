@@ -304,8 +304,8 @@ class Wallet:
         coins: Set[Coin] = None,
         primaries_input: Optional[List[AmountWithPuzzlehash]] = None,
         ignore_max_send_amount: bool = False,
-        coin_announcements_to_consume_as_bytes: Optional[Set[bytes32]] = None,
-        puzzle_announcements_to_consume_as_bytes: Optional[Set[bytes32]] = None,
+        coin_announcements_to_consume: Set[Announcement] = None,
+        puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
     ) -> List[CoinSpend]:
@@ -339,6 +339,15 @@ class Wallet:
             change = max(0, change)
 
         assert change >= 0
+
+        if coin_announcements_to_consume is not None:
+            coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
+        else:
+            coin_announcements_bytes = None
+        if puzzle_announcements_to_consume is not None:
+            puzzle_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in puzzle_announcements_to_consume}
+        else:
+            puzzle_announcements_bytes = None
 
         spends: List[CoinSpend] = []
         primary_announcement_hash: Optional[bytes32] = None
@@ -374,8 +383,8 @@ class Wallet:
                     primaries=primaries,
                     fee=fee,
                     coin_announcements={message},
-                    coin_announcements_to_assert=coin_announcements_to_consume_as_bytes,
-                    puzzle_announcements_to_assert=puzzle_announcements_to_consume_as_bytes,
+                    coin_announcements_to_assert=coin_announcements_bytes,
+                    puzzle_announcements_to_assert=puzzle_announcements_bytes,
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
@@ -408,8 +417,8 @@ class Wallet:
         coins: Set[Coin] = None,
         primaries: Optional[List[AmountWithPuzzlehash]] = None,
         ignore_max_send_amount: bool = False,
-        coin_announcements_to_consume: Optional[Set[bytes32]] = None,
-        puzzle_announcements_to_consume: Optional[Set[bytes32]] = None,
+        coin_announcements_to_consume: Set[Announcement] = None,
+        puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
     ) -> TransactionRecord:

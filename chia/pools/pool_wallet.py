@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import time
 from typing import Any, Optional, Set, Tuple, List, Dict
@@ -634,9 +635,9 @@ class PoolWallet:
 
         puzzle_hash: bytes32 = full_pooling_puzzle.get_tree_hash()
         pool_state_bytes = Program.to([("p", bytes(initial_target_state)), ("t", delay_time), ("h", delay_ph)])
-        announcement_set = set()
+        announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([puzzle_hash, amount, pool_state_bytes]).get_tree_hash()
-        announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
+        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
             amount,
@@ -796,17 +797,17 @@ class PoolWallet:
         if len(all_spends) == 0 or the_coin_record_in_question is None:
             raise ValueError("Nothing to claim, no unspent coinbase rewards")
 
-        spend_bundle: SpendBundle = SpendBundle(all_spends, G2Element())
+        claim_spend: SpendBundle = SpendBundle(all_spends, G2Element())
 
         # If fee is 0, no signatures are required to absorb
-        full_spend: SpendBundle = spend_bundle
+        full_spend: SpendBundle = claim_spend
 
         if fee > 0:
             get_max_send_amount = await self.standard_wallet.get_max_send_amount()
             assert get_max_send_amount > fee
             amount = uint64(0)
             my_address = await self.standard_wallet.get_new_puzzlehash()
-            fee_spend = await self.standard_wallet.generate_signed_transaction(
+            fee_tx = await self.standard_wallet.generate_signed_transaction(
                 amount,
                 my_address,
                 fee,
@@ -814,19 +815,22 @@ class PoolWallet:
                 None,
                 None,
                 False,
-                {Announcement(the_coin_record_in_question.coin.name(), b"$").name()},
+                {Announcement(the_coin_record_in_question.coin.name(), b"$")},
             )
 
-            full_spend = SpendBundle.aggregate([fee_spend.spend_bundle, spend_bundle])
+            full_spend = SpendBundle.aggregate([fee_tx.spend_bundle, claim_spend])
+            # The fee spend only, from the main wallet
+            await self.wallet_state_manager.add_pending_transaction(dataclasses.replace(fee_tx, spend_bundle=None))
         assert full_spend.fees() == fee
 
-        # This TxRecord contains spends from multiple wallets
+        current_time = uint64(int(time.time()))
+        # The claim spend, minus the fee amount from the main wallet
         absorb_transaction: TransactionRecord = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
+            created_at_time=current_time,
             to_puzzle_hash=current_state.current.target_puzzle_hash,
             amount=uint64(total_amount),
-            fee_amount=fee,
+            fee_amount=uint64(0),  # Notice that fee is zero here - is is accounted in self.standard_wallet
             confirmed=False,
             sent=uint32(0),
             spend_bundle=full_spend,
