@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict
 
 
 from chia.data_layer.data_layer import DataLayer
