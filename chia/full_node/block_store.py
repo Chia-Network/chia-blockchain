@@ -154,7 +154,7 @@ class BlockStore:
             (
                 block_bytes,
                 int(block.is_fully_compactified()),
-                header_hash,
+                self.maybe_to_hex(header_hash),
             ),
         )
 

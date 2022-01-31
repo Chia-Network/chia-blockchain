@@ -215,3 +215,9 @@ class TestBlockStore:
             for block, proof in zip(blocks, replaced):
                 b = await block_store.get_full_block(block.header_hash)
                 assert b.challenge_chain_ip_proof == proof
+
+                # make sure we get the same result when we hit the database
+                # itself (and not just the block cache)
+                block_store.rollback_cache_block(block.header_hash)
+                b = await block_store.get_full_block(block.header_hash)
+                assert b.challenge_chain_ip_proof == proof
