@@ -71,6 +71,9 @@ vdf_bench
 main.sym
 *.recompiled
 
+# Profiling
+*.prof
+
 # Dev config react
 # chia-blockchain-gui/src/dev_config.js
 # React built app
