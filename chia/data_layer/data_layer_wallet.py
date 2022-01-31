@@ -779,6 +779,9 @@ class DataLayerWallet:
     async def get_pending_change_balance(self) -> uint64:
         return uint64(0)
 
+    async def get_max_send_amount(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        return uint128(0)
+
     async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
         return await sign_coin_spends(
             [coin_spend],
