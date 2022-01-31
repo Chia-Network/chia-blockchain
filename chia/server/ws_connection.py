@@ -212,6 +212,7 @@ class WSChiaConnection:
                 await self.session.close()
             if self.close_event is not None:
                 self.close_event.set()
+            self.log.info(f" ==== WSChiaConnection.close() about to cancel timeouts {self.peer_node_id=}")
             self.cancel_pending_timeouts()
         except Exception:
             error_stack = traceback.format_exc()
@@ -235,7 +236,9 @@ class WSChiaConnection:
         await self.close(ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_PROTOCOL_MESSAGE)
 
     def cancel_pending_timeouts(self):
+        self.log.info(f" ==== WSChiaConnection.cancel_pending_timeouts() entering {self.peer_node_id=}")
         for _, task in self.pending_timeouts.items():
+            self.log.info(f" ==== WSChiaConnection.cancel_pending_timeouts() cancelling {task=} {self.peer_node_id=}")
             task.cancel()
 
     async def outbound_handler(self):
@@ -327,7 +330,7 @@ class WSChiaConnection:
     async def send_request(self, message_no_id: Message, timeout: int, cid: Optional[str] = None) -> Optional[Message]:
         """Sends a message and waits for a response."""
         try:
-            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request({message_no_id=}, {timeout=})")
+            if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request({message_no_id=}, {timeout=}) {self.peer_node_id=}")
 
             if self.closed:
                 if cid is not None: self.log.info(f" ==== {cid} WSChiaConnection.send_request() returning None {self.closed=}")
