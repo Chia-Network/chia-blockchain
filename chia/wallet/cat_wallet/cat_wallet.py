@@ -149,7 +149,7 @@ class CATWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
 
-        limitations_program_hash_hex = bytes32.from_hexstr(limitations_program_hash_hex).hex() # Normalize the format
+        limitations_program_hash_hex = bytes32.from_hexstr(limitations_program_hash_hex).hex()  # Normalize the format
 
         for id, wallet in wallet_state_manager.wallets.items():
             if wallet.type() == CATWallet.type():
