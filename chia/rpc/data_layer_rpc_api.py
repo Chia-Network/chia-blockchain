@@ -40,7 +40,10 @@ def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
 def get_fee(config: Dict[str, Any], request: Dict[str, Any]) -> uint64:
     fee = request.get("fee")
     if fee is None:
-        return uint64(config["fee"])
+        config_fee = config.get("fee")
+        if config_fee is not None:
+            return uint64(config_fee)
+        return uint64(0)
     return uint64(fee)
 
 

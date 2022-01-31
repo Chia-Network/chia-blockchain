@@ -45,13 +45,11 @@ class get_client:
 
 
 async def create_data_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> None:
+    final_fee = None
+    if fee is not None:
+        final_fee = uint64(int(Decimal(fee) * units["chia"]))
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            if fee is not None:
-                final_fee = uint64(int(Decimal(fee) * units["chia"]))
-            else:
-                config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-                final_fee = uint64(config["data_layer"]["fee"])
             res = await client.create_data_store(fee=final_fee)
             print(res)
     except aiohttp.ClientConnectorError:
@@ -82,11 +80,9 @@ async def update_data_store_cmd(
     fee: Optional[str],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
+    final_fee = None
     if fee is not None:
         final_fee = uint64(int(Decimal(fee) * units["chia"]))
-    else:
-        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-        final_fee = uint64(config["data_layer"]["fee"])
     try:
         async with get_client(rpc_port) as (client, rpc_port):
             res = await client.update_data_store(store_id=store_id_bytes, changelist=changelist, fee=final_fee)

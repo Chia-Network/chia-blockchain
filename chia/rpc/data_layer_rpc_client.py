@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -6,7 +6,7 @@ from chia.util.ints import uint64
 
 
 class DataLayerRpcClient(RpcClient):
-    async def create_data_store(self, fee: uint64) -> Dict[str, Any]:
+    async def create_data_store(self, fee: Optional[uint64]) -> Dict[str, Any]:
         response = await self.fetch("create_data_store", {"fee": fee})
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
@@ -16,7 +16,9 @@ class DataLayerRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-    async def update_data_store(self, store_id: bytes32, changelist: Dict[str, str], fee: uint64) -> Dict[str, Any]:
+    async def update_data_store(
+        self, store_id: bytes32, changelist: Dict[str, str], fee: Optional[uint64]
+    ) -> Dict[str, Any]:
         response = await self.fetch("batch_update", {"id": store_id.hex(), "changelist": changelist, "fee": fee})
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
