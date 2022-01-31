@@ -371,13 +371,13 @@ class TradeStore:
             # Custom sort order for statuses to separate out pending/completed offers
             ordered_statuses = [
                 # Pending statuses are grouped together and ordered by creation date/confirmation height
-                (TradeStatus.PENDING_ACCEPT.value, 0),
-                (TradeStatus.PENDING_CONFIRM.value, 0),
-                (TradeStatus.PENDING_CANCEL.value, 0),
+                (TradeStatus.PENDING_ACCEPT.value, 1 if reverse else 0),
+                (TradeStatus.PENDING_CONFIRM.value, 1 if reverse else 0),
+                (TradeStatus.PENDING_CANCEL.value, 1 if reverse else 0),
                 # Cancelled/Confirmed/Failed are grouped together and ordered by creation date/confirmation height
-                (TradeStatus.CANCELLED.value, 1),
-                (TradeStatus.CONFIRMED.value, 1),
-                (TradeStatus.FAILED.value, 1),
+                (TradeStatus.CANCELLED.value, 0 if reverse else 1),
+                (TradeStatus.CONFIRMED.value, 0 if reverse else 1),
+                (TradeStatus.FAILED.value, 0 if reverse else 1),
             ]
             if reverse:
                 ordered_statuses.reverse()
