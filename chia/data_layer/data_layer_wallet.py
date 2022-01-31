@@ -460,6 +460,7 @@ class DataLayerWallet:
             SerializedProgram.from_program(current_full_puz),
             SerializedProgram.from_program(full_sol),
         )
+        await self.standard_wallet.hack_populate_secret_key_for_puzzle_hash(current_inner_puzzle.get_tree_hash())
         spend_bundle = await self.sign(coin_spend)
 
         dl_record = TransactionRecord(
@@ -775,12 +776,10 @@ class DataLayerWallet:
     async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
 
-    async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
-        # async def pk_to_sk(pk: G1Element) -> PrivateKey:
-        #     owner_sk: Optional[PrivateKey] = await find_owner_sk([self.wallet_state_manager.private_key], pk)
-        #     assert owner_sk is not None
-        #     return owner_sk
+    async def get_pending_change_balance(self) -> uint64:
+        return uint64(0)
 
+    async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
         return await sign_coin_spends(
             [coin_spend],
             self.standard_wallet.secret_key_store.secret_key_for_public_key,
