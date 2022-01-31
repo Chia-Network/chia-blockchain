@@ -1,5 +1,4 @@
 import logging
-import os
 import json
 import time
 import dataclasses
@@ -65,16 +64,28 @@ class DataLayerWallet:
     """
 
     @classmethod
+    async def create(
+        cls: Type[_T_DataLayerWallet],
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        wallet_info: WalletInfo,
+        name: Optional[str] = None,
+    ) -> _T_DataLayerWallet:
+        self = cls()
+        self.wallet_state_manager = wallet_state_manager
+        self.log = logging.getLogger(name if name else __name__)
+        self.standard_wallet = wallet
+        self.wallet_info = wallet_info
+        self.wallet_id = uint8(self.wallet_info.id)
+
+        return self
+
+    @classmethod
     def type(cls) -> uint8:
         return uint8(WalletType.DATA_LAYER)
 
     def id(self) -> uint32:
         return self.wallet_info.id
-
-    # todo remove
-    async def create_data_store(self, name: str = "") -> bytes32:
-        tree_id = bytes32.from_bytes(os.urandom(32))
-        return tree_id
 
     @classmethod
     async def create_new_dl_wallet(
