@@ -17,7 +17,7 @@ export default function StandardWallet(props: StandardWalletProps) {
   const showDebugInformation = useShowDebugInformation();
 
   return (
-    <Flex flexDirection="column" gap={1}>
+    <Flex flexDirection="column" gap={2}>
       <WalletHeader
         walletId={walletId}
         title={<Trans>Chia Wallet</Trans>}
