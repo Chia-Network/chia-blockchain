@@ -2133,6 +2133,7 @@ class FullNode:
             self.log.info(f"Duplicate compact proof. Height: {height}. Header hash: {header_hash}.")
         return is_new_proof
 
+    # returns True if we ended up replacing the proof, and False otherwise
     async def _replace_proof(
         self,
         vdf_info: VDFInfo,
@@ -2140,59 +2141,59 @@ class FullNode:
         height: uint32,
         field_vdf: CompressibleVDFField,
     ) -> bool:
-        full_blocks = await self.block_store.get_full_blocks_at([height])
-        assert len(full_blocks) > 0
-        replaced = False
-        expected_header_hash = self.blockchain.height_to_hash(height)
-        for block in full_blocks:
-            new_block = None
-            if block.header_hash != expected_header_hash:
-                continue
+        header_hash = self.blockchain.height_to_hash(height)
+        if not header_hash:
+            return False
 
-            if field_vdf == CompressibleVDFField.CC_EOS_VDF:
-                for index, sub_slot in enumerate(block.finished_sub_slots):
-                    if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf == vdf_info:
-                        new_proofs = dataclasses.replace(sub_slot.proofs, challenge_chain_slot_proof=vdf_proof)
-                        new_subslot = dataclasses.replace(sub_slot, proofs=new_proofs)
-                        new_finished_subslots = block.finished_sub_slots
-                        new_finished_subslots[index] = new_subslot
-                        new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
-                        break
-            if field_vdf == CompressibleVDFField.ICC_EOS_VDF:
-                for index, sub_slot in enumerate(block.finished_sub_slots):
-                    if (
-                        sub_slot.infused_challenge_chain is not None
-                        and sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf == vdf_info
-                    ):
-                        new_proofs = dataclasses.replace(sub_slot.proofs, infused_challenge_chain_slot_proof=vdf_proof)
-                        new_subslot = dataclasses.replace(sub_slot, proofs=new_proofs)
-                        new_finished_subslots = block.finished_sub_slots
-                        new_finished_subslots[index] = new_subslot
-                        new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
-                        break
-            if field_vdf == CompressibleVDFField.CC_SP_VDF:
-                if block.reward_chain_block.challenge_chain_sp_vdf == vdf_info:
-                    assert block.challenge_chain_sp_proof is not None
-                    new_block = dataclasses.replace(block, challenge_chain_sp_proof=vdf_proof)
-            if field_vdf == CompressibleVDFField.CC_IP_VDF:
-                if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
-                    new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
-            if new_block is None:
-                continue
-            async with self.db_wrapper.lock:
-                try:
-                    await self.block_store.db_wrapper.begin_transaction()
-                    await self.block_store.replace_proof(new_block.header_hash, new_block)
-                    await self.block_store.db_wrapper.commit_transaction()
-                    replaced = True
-                except BaseException as e:
-                    await self.block_store.db_wrapper.rollback_transaction()
-                    self.log.error(
-                        f"_replace_proof error while adding block {block.header_hash} height {block.height},"
-                        f" rolling back: {e} {traceback.format_exc()}"
-                    )
-                    raise
-        return replaced
+        block = await self.block_store.get_full_block(header_hash)
+        if block is None:
+            return False
+
+        new_block = None
+
+        if field_vdf == CompressibleVDFField.CC_EOS_VDF:
+            for index, sub_slot in enumerate(block.finished_sub_slots):
+                if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf == vdf_info:
+                    new_proofs = dataclasses.replace(sub_slot.proofs, challenge_chain_slot_proof=vdf_proof)
+                    new_subslot = dataclasses.replace(sub_slot, proofs=new_proofs)
+                    new_finished_subslots = block.finished_sub_slots
+                    new_finished_subslots[index] = new_subslot
+                    new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
+                    break
+        if field_vdf == CompressibleVDFField.ICC_EOS_VDF:
+            for index, sub_slot in enumerate(block.finished_sub_slots):
+                if (
+                    sub_slot.infused_challenge_chain is not None
+                    and sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf == vdf_info
+                ):
+                    new_proofs = dataclasses.replace(sub_slot.proofs, infused_challenge_chain_slot_proof=vdf_proof)
+                    new_subslot = dataclasses.replace(sub_slot, proofs=new_proofs)
+                    new_finished_subslots = block.finished_sub_slots
+                    new_finished_subslots[index] = new_subslot
+                    new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
+                    break
+        if field_vdf == CompressibleVDFField.CC_SP_VDF:
+            if block.reward_chain_block.challenge_chain_sp_vdf == vdf_info:
+                assert block.challenge_chain_sp_proof is not None
+                new_block = dataclasses.replace(block, challenge_chain_sp_proof=vdf_proof)
+        if field_vdf == CompressibleVDFField.CC_IP_VDF:
+            if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
+                new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
+        if new_block is None:
+            return False
+        async with self.db_wrapper.lock:
+            try:
+                await self.block_store.db_wrapper.begin_transaction()
+                await self.block_store.replace_proof(new_block.header_hash, new_block)
+                await self.block_store.db_wrapper.commit_transaction()
+                return True
+            except BaseException as e:
+                await self.block_store.db_wrapper.rollback_transaction()
+                self.log.error(
+                    f"_replace_proof error while adding block {block.header_hash} height {block.height},"
+                    f" rolling back: {e} {traceback.format_exc()}"
+                )
+                raise
 
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
         field_vdf = CompressibleVDFField(int(request.field_vdf))
