@@ -37,7 +37,7 @@ and in this way they control whether a spend is valid or not.
 """
 import json
 from dataclasses import dataclass
-from typing import Any, BinaryIO, List, Optional, TextIO, Tuple, Dict
+from typing import Any, List, Optional, TextIO, Tuple, Dict
 
 import click
 
@@ -201,8 +201,8 @@ def run_generator_with_args(
 
 
 @click.command()
-@click.argument("file", type=click.File("rb"))
-def cmd_run_json_block_file(file: BinaryIO) -> None:
+@click.argument("file", type=click.File("r"))
+def cmd_run_json_block_file(file: TextIO) -> None:
     """`file` is a file containing a FullBlock in JSON format"""
     return run_json_block_file(file)
 

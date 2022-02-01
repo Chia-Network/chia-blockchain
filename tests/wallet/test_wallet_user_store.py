@@ -9,7 +9,7 @@ from chia.wallet.wallet_user_store import WalletUserStore
 
 
 @pytest.mark.asyncio
-async def test_store():
+async def test_store() -> None:
     db_filename = Path("wallet_user_store_test.db")
 
     if db_filename.exists():
@@ -25,6 +25,7 @@ async def test_store():
             assert (await store.get_last_wallet()).id == i
             wallet = await store.create_wallet("CAT_WALLET", WalletType.CAT, "abc")
             assert wallet.id == i + 1
+        assert wallet is not None
         assert wallet.id == 5
 
         for i in range(2, 6):
