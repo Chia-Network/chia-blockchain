@@ -259,18 +259,38 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
     random.seed(100, version=2)
 
     first_insertions = [True, False, True, False, True, True, False, True, False, True, True, False, False, True, False]
-    for i in range(300):
-        node_hash = await get_terminal_node_for_random_seed(data_store, tree_id, random)
+    deleted_all = False
+    node_count = 0
+    for i in range(2500):
         is_insert = False
         if i <= 14:
             is_insert = first_insertions[i]
         if i > 14 and i <= 25:
             is_insert = True
-        if i > 25 and random.randint(0, 4):
+        if i > 25 and i <= 300 and random.randint(0, 4):
             is_insert = True
+        if i > 300:
+            if not deleted_all:
+                while node_count > 0:
+                    node_count -= 1
+                    node_hash = await get_terminal_node_for_random_seed(data_store, tree_id, random)
+                    assert node_hash is not None
+                    node = await data_store.get_node(node_hash)
+                    assert isinstance(node, TerminalNode)
+                    await data_store.delete(key=node.key, tree_id=tree_id, use_optimized=False)
+                deleted_all = True
+                is_insert = True
+            else:
+                assert node_count <= 4
+                if node_count == 0:
+                    is_insert = True
+                elif node_count < 4 and random.randint(0, 2):
+                    is_insert = True
+        node_hash = await get_terminal_node_for_random_seed(data_store, tree_id, random)
         if is_insert:
-            key = (i + 100).to_bytes(4, byteorder="big")
-            value = (i + 200).to_bytes(4, byteorder="big")
+            node_count += 1
+            key = (i % 350).to_bytes(4, byteorder="big")
+            value = (i % 350).to_bytes(4, byteorder="big")
             side = None if node_hash is None else Side.LEFT if random.randint(0, 1) == 0 else Side.RIGHT
 
             node_hash = await data_store.insert(
@@ -286,6 +306,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
                 current_ancestors = await data_store.get_ancestors(node_hash=node_hash, tree_id=tree_id)
                 ancestors.append((generation, node_hash, current_ancestors))
         else:
+            node_count -= 1
             assert node_hash is not None
             node = await data_store.get_node(node_hash)
             assert isinstance(node, TerminalNode)
