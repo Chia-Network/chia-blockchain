@@ -12,7 +12,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
+from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
@@ -137,7 +137,7 @@ def create_foliage(
                 cost_per_byte=constants.COST_PER_BYTE,
                 mempool_mode=True,
             )
-            cost = calculate_cost_of_program(block_generator.program, result, constants.COST_PER_BYTE)
+            cost = result.cost
 
             removal_amount = 0
             addition_amount = 0
