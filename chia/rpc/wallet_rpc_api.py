@@ -741,6 +741,8 @@ class WalletRpcApi:
 
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if not callable(getattr(wallet, "generate_signed_transaction", None)):
+            raise ValueError("The specified wallet does not have the ability to send transactions")
 
         if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
@@ -761,7 +763,7 @@ class WalletRpcApi:
                 fee,
             )
             for tx in txs:
-                await wallet.push_transaction(tx)
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
@@ -781,7 +783,7 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             transaction: Dict = (await self.create_signed_transaction(request, hold_lock=False))["signed_tx"]
             tr: TransactionRecord = TransactionRecord.from_json_dict_convenience(transaction)
-            await wallet.push_transaction(tr)
+            await self.service.wallet_state_manager.add_pending_transaction(tr)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {"transaction": transaction, "transaction_id": tr.name}
@@ -856,6 +858,7 @@ class WalletRpcApi:
         return {
             "transaction": tx.to_json_dict_convenience(self.service.config),
             "transaction_id": tx.name,
+            "WARNING": "This API is has been deprecated and will no longer be updated. Use /send_transaction instead.",
         }
 
     async def cat_get_asset_id(self, request):
@@ -1280,18 +1283,15 @@ class WalletRpcApi:
                 for announcement in request["puzzle_announcements"]
             }
 
+        wallet_id: uint32 = uint32(request.get("wallet_id", 1))
+        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if not callable(getattr(wallet, "generate_signed_transaction", None)):
+            raise ValueError("The specified wallet does not have the ability to create transactions")
+
         if hold_lock:
-            async with self.service.wallet_state_manager.lock:
-                [signed_tx] = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
-                    [Payment(bytes32(puzzle_hash_0), amount_0, memos_0), *additional_outputs],
-                    fee,
-                    coins=coins,
-                    ignore_max_send_amount=True,
-                    coin_announcements_to_consume=coin_announcements,
-                    puzzle_announcements_to_consume=puzzle_announcements,
-                )
-        else:
-            [signed_tx] = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
+            await self.service.wallet_state_manager.lock.acquire()
+        try:
+            [signed_tx] = await wallet.generate_signed_transaction(
                 [Payment(bytes32(puzzle_hash_0), amount_0, memos_0), *additional_outputs],
                 fee,
                 coins=coins,
@@ -1299,6 +1299,10 @@ class WalletRpcApi:
                 coin_announcements_to_consume=coin_announcements,
                 puzzle_announcements_to_consume=puzzle_announcements,
             )
+        finally:
+            if hold_lock:
+                self.service.wallet_state_manager.lock.release()
+
         return {"signed_tx": signed_tx.to_json_dict_convenience(self.service.config)}
 
     ##########################################################################################

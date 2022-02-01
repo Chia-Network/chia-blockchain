@@ -421,6 +421,15 @@ class TestWalletRpc:
             assert bal_0["pending_coin_removal_count"] == 0
             assert bal_0["unspent_coin_count"] == 1
 
+            cat_tx_res: TransactionRecord = await client.create_signed_transaction(
+                [{"amount": 1, "puzzle_hash": ph_2}]
+            )
+
+            assert cat_tx_res.fee_amount == 0
+            assert cat_tx_res.amount == 1
+            assert len(cat_tx_res.additions) == 2  # The output and the change
+            assert any([addition.amount == 1 for addition in cat_tx_res.additions])
+
             # Creates a second wallet with the same CAT
             res = await client_2.create_wallet_for_existing_cat(asset_id)
             assert res["success"]
@@ -440,7 +449,7 @@ class TestWalletRpc:
 
             assert addr_0 != addr_1
 
-            await client.cat_spend(cat_0_id, 4, addr_1, 0, ["the cat memo"])
+            await client.send_transaction(cat_0_id, 4, addr_1, 0, ["the cat memo"])
 
             await asyncio.sleep(1)
             for i in range(0, 5):
