@@ -118,13 +118,15 @@ class Farmer:
         # Interval to request plots from connected harvesters
         self.update_harvester_cache_interval = UPDATE_HARVESTER_CACHE_INTERVAL
 
-        self.cache_clear_task: asyncio.Task
-        self.update_pool_state_task: asyncio.Task
+        self.cache_clear_task: Optional[asyncio.Task] = None
+        self.update_pool_state_task: Optional[asyncio.Task] = None
         self.constants = consensus_constants
         self._shut_down = False
         self.server: Any = None
         self.state_changed_callback: Optional[Callable] = None
         self.log = log
+        self.started = False
+        self.harvester_handshake_task: Optional[asyncio.Task] = None
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
@@ -140,15 +142,16 @@ class Farmer:
         keychain_proxy = await self.ensure_keychain_proxy()
         return await keychain_proxy.get_all_private_keys()
 
-    async def setup_keys(self):
+    async def setup_keys(self) -> bool:
+        no_keys_error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
         self.all_root_sks: List[PrivateKey] = [sk for sk, _ in await self.get_all_private_keys()]
         self._private_keys = [master_sk_to_farmer_sk(sk) for sk in self.all_root_sks] + [
             master_sk_to_pool_sk(sk) for sk in self.all_root_sks
         ]
 
         if len(self.get_public_keys()) == 0:
-            error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
-            raise RuntimeError(error_str)
+            log.warning(no_keys_error_str)
+            return False
 
         # This is the farmer configuration
         self.farmer_target_encoded = self.config["xch_target_address"]
@@ -166,8 +169,8 @@ class Farmer:
         assert len(self.farmer_target) == 32
         assert len(self.pool_target) == 32
         if len(self.pool_sks_map) == 0:
-            error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
-            raise RuntimeError(error_str)
+            log.warning(no_keys_error_str)
+            return False
 
         # The variables below are for use with an actual pool
 
@@ -182,31 +185,66 @@ class Farmer:
 
         self.harvester_cache: Dict[str, Dict[str, HarvesterCacheEntry]] = {}
 
+        return True
+
     async def _start(self):
-        await self.setup_keys()
-        self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
-        self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
+        async def start_task():
+            # `Farmer.setup_keys` returns `False` if there are no keys setup yet. In this case we just try until it
+            # succeeds or until we need to shut down.
+            while not self._shut_down:
+                if await self.setup_keys():
+                    self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
+                    self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
+                    log.debug("start_task: initialized")
+                    self.started = True
+                    return
+                await asyncio.sleep(1)
+
+        asyncio.create_task(start_task())
 
     def _close(self):
         self._shut_down = True
 
     async def _await_closed(self):
-        await self.cache_clear_task
-        await self.update_pool_state_task
+        if self.cache_clear_task is not None:
+            await self.cache_clear_task
+        if self.update_pool_state_task is not None:
+            await self.update_pool_state_task
+        self.started = False
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
 
     async def on_connect(self, peer: WSChiaConnection):
-        # Sends a handshake to the harvester
         self.state_changed("add_connection", {})
-        handshake = harvester_protocol.HarvesterHandshake(
-            self.get_public_keys(),
-            self.pool_public_keys,
-        )
-        if peer.connection_type is NodeType.HARVESTER:
+
+        async def handshake_task():
+            # Wait until the task in `Farmer._start` is done so that we have keys available for the handshake. Bail out
+            # early if we need to shut down or if the harvester is not longer connected.
+            while not self.started and not self._shut_down and peer in self.server.get_connections():
+                await asyncio.sleep(1)
+
+            if self._shut_down:
+                log.debug("handshake_task: shutdown")
+                self.harvester_handshake_task = None
+                return
+
+            if peer not in self.server.get_connections():
+                log.debug("handshake_task: disconnected")
+                self.harvester_handshake_task = None
+                return
+
+            # Sends a handshake to the harvester
+            handshake = harvester_protocol.HarvesterHandshake(
+                self.get_public_keys(),
+                self.pool_public_keys,
+            )
             msg = make_msg(ProtocolMessageTypes.harvester_handshake, handshake)
             await peer.send_message(msg)
+            self.harvester_handshake_task = None
+
+        if peer.connection_type is NodeType.HARVESTER:
+            self.harvester_handshake_task = asyncio.create_task(handshake_task())
 
     def set_server(self, server):
         self.server = server

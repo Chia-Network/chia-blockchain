@@ -8,7 +8,7 @@ dependencies = [
     "chiabip158==1.0",  # bip158-style wallet filters
     "chiapos==1.0.7",  # proof of space
     "clvm==0.9.7",
-    "clvm_rs==0.1.16",
+    "clvm_rs==0.1.17",
     "clvm_tools==0.4.3",
     "aiohttp==3.7.4",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
@@ -26,22 +26,20 @@ dependencies = [
     "setproctitle==1.2.2",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
+    # TODO: when moving to click 8 remove the pinning of black noted below
     "click==7.1.2",  # For the CLI
     "dnspythonchia==2.2.0",  # Query DNS seeds
     "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
-    "dnslib==0.9.14",  # dns lib
+    "dnslib==0.9.17",  # dns lib
     "typing-extensions==4.0.1",  # typing backports like Protocol and TypedDict
     "zstd==1.5.0.4",
+    "packaging==21.0",
 ]
 
 upnp_dependencies = [
     "miniupnpc==2.2.2",  # Allows users to open ports on their router
 ]
 
-# TODO: unpin mypy and types-click after mypy's next release.  types-click >=0.1.13
-#       depends on changes made to typeshed after the version used in the most recent
-#       release of mypy, 0.910.
-#       https://github.com/python/typeshed/commit/7a9a107a63c5f4b938563ed6f8d934dc4b1de2c3
 dev_dependencies = [
     "pre-commit",
     "pytest",
@@ -49,12 +47,13 @@ dev_dependencies = [
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
     "flake8",
-    "mypy==0.910",
-    "black",
+    "mypy",
+    # TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
+    "black==21.12b0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
     "types-aiofiles",
-    "types-click==0.1.12",
+    "types-click~=7.1",
     "types-cryptography",
     "types-pkg_resources",
     "types-pyyaml",
@@ -105,7 +104,7 @@ kwargs = dict(
         "chia.wallet",
         "chia.wallet.puzzles",
         "chia.wallet.rl_wallet",
-        "chia.wallet.cc_wallet",
+        "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
         "chia.wallet.settings",
         "chia.wallet.trading",

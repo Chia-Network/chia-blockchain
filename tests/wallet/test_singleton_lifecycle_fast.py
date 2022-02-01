@@ -270,13 +270,7 @@ def launcher_conditions_and_spend_bundle(
     puzzle_db.add_puzzle(launcher_puzzle)
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     launcher_coin = Coin(parent_coin_id, launcher_puzzle_hash, launcher_amount)
-    # TODO: address hint error and remove ignore
-    #       error: Argument 1 to "singleton_puzzle" has incompatible type "bytes32"; expected "Program"  [arg-type]
-    singleton_full_puzzle = singleton_puzzle(
-        launcher_coin.name(),  # type: ignore[arg-type]
-        launcher_puzzle_hash,
-        initial_singleton_inner_puzzle,
-    )
+    singleton_full_puzzle = singleton_puzzle(launcher_coin.name(), launcher_puzzle_hash, initial_singleton_inner_puzzle)
     puzzle_db.add_puzzle(singleton_full_puzzle)
     singleton_full_puzzle_hash = singleton_full_puzzle.get_tree_hash()
     message_program = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
@@ -304,11 +298,11 @@ def launcher_conditions_and_spend_bundle(
     return launcher_coin.name(), expected_conditions, spend_bundle
 
 
-def singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
+def singleton_puzzle(launcher_id: bytes32, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
     return SINGLETON_MOD.curry((SINGLETON_MOD_HASH, (launcher_id, launcher_puzzle_hash)), inner_puzzle)
 
 
-def singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> bytes32:
+def singleton_puzzle_hash(launcher_id: bytes32, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> bytes32:
     return singleton_puzzle(launcher_id, launcher_puzzle_hash, inner_puzzle).get_tree_hash()
 
 
@@ -433,13 +427,7 @@ def spend_coin_to_singleton(
     assert_coin_spent(coin_store, launcher_coin)
     assert_coin_spent(coin_store, farmed_coin)
 
-    # TODO: address hint error and remove ignore
-    #       error: Argument 1 to "singleton_puzzle" has incompatible type "bytes32"; expected "Program"  [arg-type]
-    singleton_expected_puzzle = singleton_puzzle(
-        launcher_id,  # type: ignore[arg-type]
-        launcher_puzzle_hash,
-        initial_singleton_puzzle,
-    )
+    singleton_expected_puzzle = singleton_puzzle(launcher_id, launcher_puzzle_hash, initial_singleton_puzzle)
     singleton_expected_puzzle_hash = singleton_expected_puzzle.get_tree_hash()
     expected_singleton_coin = Coin(launcher_coin.name(), singleton_expected_puzzle_hash, launcher_amount)
     assert_coin_spent(coin_store, expected_singleton_coin, is_spent=False)

@@ -1,24 +1,41 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 class DataLayerRpcClient(RpcClient):
-    async def create_kv_store(self) -> Dict[str, Any]:
-        response = await self.fetch("create_kv_store", {})
+    async def create_data_store(self) -> Dict[str, Any]:
+        response = await self.fetch("create_data_store", {})
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-    async def get_value(self, tree_id: bytes32, key: bytes) -> Dict[str, Any]:
-        response = await self.fetch("get_value", {"tree_id": tree_id.hex(), "key": key.hex()})
+    async def get_value(self, store_id: bytes32, key: bytes) -> Dict[str, Any]:
+        response = await self.fetch("get_value", {"id": store_id.hex(), "key": key.hex()})
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-    async def update_kv_store(self, tree_id: bytes32, changelist: Dict[str, str]) -> Dict[str, Any]:
-        response = await self.fetch("update_kv_store", {"tree_id": tree_id, "changelist": changelist})
+    async def update_data_store(self, store_id: bytes32, changelist: Dict[str, str]) -> Dict[str, Any]:
+        response = await self.fetch("batch_update", {"id": store_id.hex(), "changelist": changelist})
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-    async def get_tree_state(self, tree_id: bytes32) -> bytes32:
-        pass
+    async def get_keys_values(self, store_id: bytes32) -> Dict[str, Any]:
+        response = await self.fetch("get_keys_values", {"id": store_id.hex()})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+    async def get_ancestors(self, store_id: bytes32, hash: bytes32) -> Dict[str, Any]:
+        response = await self.fetch("get_ancestors", {"id": store_id.hex(), "hash": hash})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+    async def get_root(self, store_id: bytes32) -> Dict[str, Any]:
+        response = await self.fetch("get_root", {"id": store_id.hex()})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+    async def get_roots(self, store_ids: List[bytes32]) -> Dict[str, Any]:
+        response = await self.fetch("get_roots", {"ids": store_ids})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]

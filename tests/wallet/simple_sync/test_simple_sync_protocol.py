@@ -4,7 +4,7 @@ from typing import List, Optional
 
 import pytest
 from clvm.casts import int_to_bytes
-from colorlog import logging
+from colorlog import getLogger
 
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from chia.protocols import wallet_protocol, full_node_protocol
@@ -25,7 +25,7 @@ from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import add_dummy_connection
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
 from tests.time_out_assert import time_out_assert
-from tests.wallet.cc_wallet.test_cc_wallet import tx_in_pool
+from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 from tests.wallet_tools import WalletTool
 
 
@@ -36,7 +36,7 @@ def wallet_height_at_least(wallet_node, h):
     return False
 
 
-log = logging.getLogger(__name__)
+log = getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
@@ -176,10 +176,18 @@ class TestSimpleSyncProtocol:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks + 1)
+            ]
+        )
+        fn_amount = sum(
+            cr.coin.amount
+            for cr in await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, puzzle_hash)
         )
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
+        assert funds == fn_amount
 
         msg_1 = wallet_protocol.RegisterForPhUpdates([puzzle_hash], 0)
         msg_response_1 = await full_node_api.register_interest_in_puzzle_hash(msg_1, fake_wallet_peer)

@@ -1,19 +1,29 @@
 (mod (
   DB_LAYER_MOD_HASH  ; This mod file - used to update our state
   CURRENT_STATE  ; 32 byte merkle root
-  INNER_PUZZLE  ; Our inner inner puzzle
+  INNER_PUZZLE_HASH  ; Our inner inner puzzle
   spend_type
-  inner_solution  ; if spend_type is 1 this is (my_puzhash . my_amount)
+  inner_solution  ; if spend_type is 1 this is my_amount
+  inner_puzzle ; Useless in the report case, should hash to the curried in hash if doing update
 )
+
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defun-inline current_puzzle_hash (DB_LAYER_MOD_HASH CURRENT_STATE INNER_PUZZLE_HASH)
+     (puzzle-hash-of-curried-function DB_LAYER_MOD_HASH
+                                      (sha256 1 INNER_PUZZLE_HASH)
+                                      (sha256 1 CURRENT_STATE)
+                                      (sha256 1 DB_LAYER_MOD_HASH)
+     )
+  )
 
   ; spend_type 1 is REPORT current state
   ; spend_type 0 is UPDATE the current state
-  (include condition_codes.clvm)
-
   (if spend_type
     ; REPORT
-    (list (list CREATE_PUZZLE_ANNOUNCEMENT CURRENT_STATE) (list CREATE_COIN (f inner_solution) (r inner_solution)) (list ASSERT_MY_PUZZLEHASH (f inner_solution)) (list ASSERT_MY_AMOUNT (r inner_solution)))
+    (list (list CREATE_PUZZLE_ANNOUNCEMENT CURRENT_STATE) (list CREATE_COIN (current_puzzle_hash DB_LAYER_MOD_HASH CURRENT_STATE INNER_PUZZLE_HASH) inner_solution) (list ASSERT_MY_AMOUNT inner_solution))
     ; UPDATE
-    (a INNER_PUZZLE inner_solution)
+    (a inner_puzzle inner_solution)
   )
 )

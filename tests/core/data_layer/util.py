@@ -4,8 +4,8 @@ import functools
 import os
 import pathlib
 import subprocess
-from typing import Any, Iterator, IO, List, Optional, TYPE_CHECKING, Union
 from random import Random
+from typing import Any, Iterator, IO, List, Optional, TYPE_CHECKING, Union
 from chia.data_layer.data_layer_types import Side, TerminalNode
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
@@ -114,7 +114,9 @@ async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Examp
     return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash, e_hash, f_hash, g_hash, h_hash])
 
 
-async def get_random_terminal_node(data_store: DataStore, tree_id: bytes32, random: Random) -> Optional[bytes32]:
+async def get_terminal_node_for_random_seed(
+    data_store: DataStore, tree_id: bytes32, random: Random
+) -> Optional[bytes32]:
     root = await data_store.get_tree_root(tree_id)
     if root is None or root.node_hash is None:
         return None
@@ -124,12 +126,36 @@ async def get_random_terminal_node(data_store: DataStore, tree_id: bytes32, rand
         assert node is not None
         if isinstance(node, TerminalNode):
             break
-        if random.randint(0, 1) == 0:
-            node_hash = node.left_hash
-        else:
-            node_hash = node.right_hash
+        node_hash = random.choice([node.left_hash, node.right_hash])
 
     return node_hash
+
+
+async def generate_big_datastore(data_store: DataStore, tree_id: bytes32, random: Random, num_nodes: int = 250) -> None:
+    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
+    insertions = 0
+    deletions = 0
+    for i in range(num_nodes):
+        key = i.to_bytes(4, byteorder="big")
+        value = (2 * i).to_bytes(4, byteorder="big")
+        reference_node_hash: Optional[bytes32] = await get_terminal_node_for_random_seed(data_store, tree_id, random)
+        side = Side.LEFT if random.randint(0, 1) == 0 else Side.RIGHT
+
+        if random.randint(0, 4) > 0 or insertions - 1 <= deletions:
+            insertions += 1
+            _ = await insert(
+                key=key,
+                value=value,
+                reference_node_hash=reference_node_hash,
+                side=side,
+            )
+        else:
+            deletions += 1
+            assert reference_node_hash is not None
+            node = await data_store.get_node(reference_node_hash)
+            assert isinstance(node, TerminalNode)
+            await data_store.delete(key=node.key, tree_id=tree_id)
+    print(f"Insertions: {insertions} Deletions: {deletions}")
 
 
 @dataclass
@@ -150,6 +176,11 @@ class ChiaRoot:
         # TODO: --root-path doesn't seem to work here...
         kwargs.setdefault("env", {})
         kwargs["env"]["CHIA_ROOT"] = os.fspath(self.path)
+        kwargs["env"]["CHIA_KEYS_ROOT"] = os.fspath(self.path)
+
+        # This is for windows
+        if "SYSTEMROOT" in os.environ:
+            kwargs["env"]["SYSTEMROOT"] = os.environ["SYSTEMROOT"]
 
         modified_args: List[Union[str, os_PathLike_str]] = [
             self.scripts_path.joinpath("chia"),

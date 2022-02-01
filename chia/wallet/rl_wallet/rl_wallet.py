@@ -85,6 +85,7 @@ class RLWallet:
                     pubkey,
                     WalletType.RATE_LIMITED,
                     wallet_info.id,
+                    False,
                 )
             ]
         )
@@ -121,11 +122,7 @@ class RLWallet:
             await wallet_state_manager.puzzle_store.add_derivation_paths(
                 [
                     DerivationRecord(
-                        unused,
-                        bytes32(token_bytes(32)),
-                        pubkey,
-                        WalletType.RATE_LIMITED,
-                        wallet_info.id,
+                        unused, bytes32(token_bytes(32)), pubkey, WalletType.RATE_LIMITED, wallet_info.id, False
                     )
                 ]
             )
@@ -193,6 +190,7 @@ class RLWallet:
             G1Element.from_bytes(self.rl_info.admin_pubkey),
             WalletType.RATE_LIMITED,
             self.id(),
+            False,
         )
         await self.wallet_state_manager.puzzle_store.add_derivation_paths([record])
 
@@ -235,8 +233,8 @@ class RLWallet:
 
         assert self.rl_info.user_pubkey is not None
         origin = Coin(
-            bytes32.from_hexstr(origin_parent_id),
-            bytes32.from_hexstr(origin_puzzle_hash),
+            bytes32(hexstr_to_bytes(origin_parent_id)),
+            bytes32(hexstr_to_bytes(origin_puzzle_hash)),
             origin_amount,
         )
         rl_puzzle = rl_puzzle_for_pk(
@@ -274,6 +272,7 @@ class RLWallet:
             user_pubkey,
             WalletType.RATE_LIMITED,
             self.id(),
+            False,
         )
 
         aggregation_puzzlehash = self.rl_get_aggregation_puzzlehash(new_rl_info.rl_puzzle_hash)
@@ -283,6 +282,7 @@ class RLWallet:
             user_pubkey,
             WalletType.RATE_LIMITED,
             self.id(),
+            False,
         )
         await self.wallet_state_manager.puzzle_store.add_derivation_paths([record, record2])
         self.wallet_state_manager.set_coin_with_puzzlehash_created_callback(
@@ -303,13 +303,11 @@ class RLWallet:
 
         rl_coin = await self._get_rl_coin()
         puzzle_hash = rl_coin.puzzle_hash if rl_coin is not None else None
-        # TODO: address hint error and remove ignore
-        #       error: Argument "to_puzzle_hash" to "TransactionRecord" has incompatible type "Optional[bytes32]";
-        #       expected "bytes32"  [arg-type]
+        assert puzzle_hash is not None
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=puzzle_hash,  # type: ignore[arg-type]
+            to_puzzle_hash=puzzle_hash,
             amount=uint64(0),
             fee_amount=uint64(0),
             confirmed=False,
@@ -322,6 +320,7 @@ class RLWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
+            memos=list(spend_bundle.get_memos().items()),
         )
 
         asyncio.create_task(self.push_transaction(tx_record))
@@ -520,7 +519,9 @@ class RLWallet:
         spends.append(CoinSpend(coin, puzzle, solution))
         return spends
 
-    async def generate_signed_transaction(self, amount, to_puzzle_hash, fee: uint64 = uint64(0)) -> TransactionRecord:
+    async def generate_signed_transaction(
+        self, amount, to_puzzle_hash, fee: uint64 = uint64(0), memo: Optional[List[bytes]] = None
+    ) -> TransactionRecord:
         self.rl_coin_record = await self._get_rl_coin_record()
         if not self.rl_coin_record:
             raise ValueError("No unspent coin (zero balance)")
@@ -545,6 +546,7 @@ class RLWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
+            memos=list(spend_bundle.get_memos().items()),
         )
 
     async def rl_sign_transaction(self, spends: List[CoinSpend]) -> SpendBundle:
@@ -621,6 +623,7 @@ class RLWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
+            memos=list(spend_bundle.get_memos().items()),
         )
 
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2
