@@ -201,8 +201,8 @@ def run_generator_with_args(
 
 
 @click.command()
-@click.argument("file", type=click.File("rb"))
-def cmd_run_json_block_file(file):
+@click.argument("file", type=click.File("r"))
+def cmd_run_json_block_file(file: TextIO):
     """`file` is a file containing a FullBlock in JSON format"""
     return run_json_block_file(file)
 
