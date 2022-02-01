@@ -104,6 +104,7 @@ class FullNodeRpcApi:
         """
         Returns a summary of the node's view of the blockchain.
         """
+        node_id = self.service.server.node_id.hex()
         if self.service.initialized is False:
             res: Dict = {
                 "blockchain_state": {
@@ -118,12 +119,12 @@ class FullNodeRpcApi:
                     "difficulty": 0,
                     "sub_slot_iters": 0,
                     "space": 0,
-                    "mempool_size": 0,
                     "mempool_cost": 0,
                     "mempool_min_fees": {
                         "cost_5000000": 0,
                     },
                     "block_max_cost": 0,
+                    "node_id": node_id,
                 },
             }
             return res
@@ -202,6 +203,7 @@ class FullNodeRpcApi:
                     "cost_5000000": mempool_min_fee_5m,
                 },
                 "block_max_cost": self.service.constants.MAX_BLOCK_COST_CLVM,
+                "node_id": node_id,
             },
         }
         self.cached_blockchain_state = dict(response["blockchain_state"])
@@ -345,13 +347,13 @@ class FullNodeRpcApi:
     async def get_block_count_metrics(self, request: Dict):
         compact_blocks = 0
         uncompact_blocks = 0
-        with log_exceptions(self.service.log):
+        with log_exceptions(self.service.log, consume=True):
             compact_blocks = await self.service.block_store.count_compactified_blocks()
             uncompact_blocks = await self.service.block_store.count_uncompactified_blocks()
 
         hint_count = 0
         if self.service.hint_store is not None:
-            with log_exceptions(self.service.log):
+            with log_exceptions(self.service.log, consume=True):
                 hint_count = await self.service.hint_store.count_hints()
 
         return {

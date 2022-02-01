@@ -451,7 +451,15 @@ class WalletRpcClient(RpcClient):
         return TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
     async def get_all_offers(
-        self, start: int = 0, end: int = 50, sort_key: str = None, reverse: bool = False, file_contents: bool = False
+        self,
+        start: int = 0,
+        end: int = 50,
+        sort_key: str = None,
+        reverse: bool = False,
+        file_contents: bool = False,
+        exclude_my_offers: bool = False,
+        exclude_taken_offers: bool = False,
+        include_completed: bool = False,
     ) -> List[TradeRecord]:
         res = await self.fetch(
             "get_all_offers",
@@ -461,6 +469,9 @@ class WalletRpcClient(RpcClient):
                 "sort_key": sort_key,
                 "reverse": reverse,
                 "file_contents": file_contents,
+                "exclude_my_offers": exclude_my_offers,
+                "exclude_taken_offers": exclude_taken_offers,
+                "include_completed": include_completed,
             },
         )
 

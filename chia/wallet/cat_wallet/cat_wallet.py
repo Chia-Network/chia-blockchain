@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G2Element
 
-from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
+from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
@@ -228,10 +228,7 @@ class CATWallet:
                 cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
                 mempool_mode=True,
             )
-            cost_result: uint64 = calculate_cost_of_program(
-                program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
-            )
-            self.cost_of_single_tx = cost_result
+            self.cost_of_single_tx = result.cost
             self.log.info(f"Cost of a single tx for CAT wallet: {self.cost_of_single_tx}")
 
         max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2  # avoid full block TXs
@@ -315,7 +312,9 @@ class CATWallet:
             parent_coin = None
             coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
             if coin_record is None:
-                coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.get_coin_state([coin_name])
+                coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
+                    [coin_name]
+                )
                 if coin_states is not None:
                     parent_coin = coin_states[0].coin
             if coin_record is not None:
