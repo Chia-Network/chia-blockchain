@@ -12,6 +12,7 @@ from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
+from chia.wallet.payment import Payment
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -103,7 +104,7 @@ class TestTransactions:
         await time_out_assert(10, peak_height, num_blocks, full_node_api_1)
         await time_out_assert(10, peak_height, num_blocks, full_node_api_2)
 
-        [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, ph1, 0)
+        [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction([Payment(ph1, 10, [])], 0)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert(
@@ -175,7 +176,7 @@ class TestTransactions:
         )
         await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
-        [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, token_bytes(), 0)
+        [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction([Payment(token_bytes(), 10, [])], 0)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert(

@@ -12,6 +12,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.payment import Payment
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
@@ -70,7 +71,7 @@ class TestMempoolPerformance:
         fee_amount = 2213
         await time_out_assert(60, wallet_balance_at_least, True, wallet_node, send_amount + fee_amount)
 
-        big_transaction: TransactionRecord = (await wallet.generate_signed_transaction(send_amount, ph, fee_amount))[0]
+        big_transaction: TransactionRecord = (await wallet.generate_signed_transaction([Payment(ph, send_amount, [])], fee_amount))[0]
 
         peer = await connect_and_get_peer(server_1, server_2)
         await full_node_api_1.respond_transaction(

@@ -22,6 +22,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.wallet import Wallet
+from chia.wallet.payment import Payment
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.derivation_record import DerivationRecord
@@ -942,7 +943,7 @@ class DIDWallet:
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         tx_record: TransactionRecord = (await self.standard_wallet.generate_signed_transaction(
-            amount, genesis_launcher_puz.get_tree_hash(), uint64(0), origin.name(), coins, None, False, announcement_set
+            [Payment(genesis_launcher_puz.get_tree_hash(), amount, [])], uint64(0), origin.name(), coins, False, announcement_set
         ))[0]
 
         genesis_launcher_solution = Program.to([did_puzzle_hash, amount, bytes(0x80)])

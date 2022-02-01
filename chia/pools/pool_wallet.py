@@ -51,6 +51,7 @@ from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.payment import Payment
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 from chia.wallet.wallet_info import WalletInfo
@@ -657,8 +658,7 @@ class PoolWallet:
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         create_launcher_tx_record: TransactionRecord = (await standard_wallet.generate_signed_transaction(
-            amount,
-            genesis_launcher_puz.get_tree_hash(),
+            [Payment(genesis_launcher_puz.get_tree_hash(), amount, [])],
             fee,
             launcher_parent.name(),
             coins,

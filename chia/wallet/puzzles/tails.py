@@ -6,6 +6,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
@@ -78,14 +79,14 @@ class GenesisById(LimitationsProgram):
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
         tx_record: TransactionRecord = (await wallet.standard_wallet.generate_signed_transaction(
-            amount, minted_cat_puzzle_hash, uint64(0), origin_id, coins
+            [Payment(minted_cat_puzzle_hash, amount, [])], uint64(0), origin_id, coins
         ))[0]
         assert tx_record.spend_bundle is not None
 
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
             Program.to([51, 0, -113, tail, []]),
             wallet.standard_wallet.make_solution(
-                primaries=[{"puzzlehash": cat_inner.get_tree_hash(), "amount": amount}],
+                payments=[Payment(cat_inner.get_tree_hash(), amount, [])],
             ),
         )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(

@@ -28,6 +28,7 @@ from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk, master_sk_t
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.payment import Payment
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -755,13 +756,17 @@ class WalletRpcApi:
         else:
             fee = uint64(0)
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = (await wallet.generate_signed_transaction(amount, puzzle_hash, fee, memos=memos))[0]
-            await wallet.push_transaction(tx)
+            txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
+                [Payment(puzzle_hash, amount, memos)],
+                fee,
+            )
+            for tx in txs:
+                await wallet.push_transaction(tx)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
-            "transaction": tx.to_json_dict_convenience(self.service.config),
-            "transaction_id": tx.name,
+            "transaction": txs[0].to_json_dict_convenience(self.service.config),
+            "transaction_id": txs[0].name,
         }
 
     async def send_transaction_multi(self, request) -> Dict:
@@ -842,7 +847,8 @@ class WalletRpcApi:
             fee = uint64(0)
         async with self.service.wallet_state_manager.lock:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
-                [amount], [puzzle_hash], fee, memos=[memos]
+                [Payment(puzzle_hash, amount, memos)],
+                fee,
             )
             for tx in txs:
                 await wallet.standard_wallet.push_transaction(tx)
@@ -1230,7 +1236,7 @@ class WalletRpcApi:
             if amount > self.service.constants.MAX_COIN_AMOUNT:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
             memos = [] if "memos" not in addition else [mem.encode("utf-8") for mem in addition["memos"]]
-            additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount, "memos": memos})
+            additional_outputs.append(Payment(receiver_ph, amount, memos))
 
         fee = uint64(0)
         if "fee" in request:
@@ -1277,25 +1283,19 @@ class WalletRpcApi:
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
                 [signed_tx] = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
-                    amount_0,
-                    bytes32(puzzle_hash_0),
+                    [Payment(bytes32(puzzle_hash_0), amount_0, memos_0), *additional_outputs],
                     fee,
                     coins=coins,
                     ignore_max_send_amount=True,
-                    primaries=additional_outputs,
-                    memos=memos_0,
                     coin_announcements_to_consume=coin_announcements,
                     puzzle_announcements_to_consume=puzzle_announcements,
                 )
         else:
             [signed_tx] = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
-                amount_0,
-                bytes32(puzzle_hash_0),
+                [Payment(bytes32(puzzle_hash_0), amount_0, memos_0), *additional_outputs],
                 fee,
                 coins=coins,
                 ignore_max_send_amount=True,
-                primaries=additional_outputs,
-                memos=memos_0,
                 coin_announcements_to_consume=coin_announcements,
                 puzzle_announcements_to_consume=puzzle_announcements,
             )

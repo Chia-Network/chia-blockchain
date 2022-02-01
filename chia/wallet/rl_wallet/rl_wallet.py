@@ -17,6 +17,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
+from chia.wallet.payment import Payment
 from chia.wallet.rl_wallet.rl_wallet_puzzles import (
     make_clawback_solution,
     rl_make_aggregation_puzzle,
@@ -194,7 +195,7 @@ class RLWallet:
         )
         await self.wallet_state_manager.puzzle_store.add_derivation_paths([record])
 
-        [spend_bundle] = await self.main_wallet.generate_signed_transaction(amount, rl_puzzle_hash, fee, origin_id, coins)
+        [spend_bundle] = await self.main_wallet.generate_signed_transaction([Payment(rl_puzzle_hash, amount, [])], fee, origin_id, coins)
         if spend_bundle is None:
             return False
 
@@ -685,7 +686,7 @@ class RLWallet:
         return puzzle_hash
 
     async def rl_add_funds(self, amount, puzzle_hash, fee):
-        [spend_bundle] = await self.main_wallet.generate_signed_transaction(amount, puzzle_hash, fee)
+        [spend_bundle] = await self.main_wallet.generate_signed_transaction([Payment(puzzle_hash, amount, [])], fee)
         if spend_bundle is None:
             return False
 

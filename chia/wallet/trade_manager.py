@@ -22,6 +22,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.payment import Payment
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 
@@ -190,7 +191,7 @@ class TradeManager:
             # This should probably not switch on whether or not we're spending a CAT but it has to for now
             if wallet.type() == WalletType.CAT:
                 txs = await wallet.generate_signed_transaction(
-                    [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
+                    [Payment(new_ph, coin.amount, [])], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
                 )
                 all_txs.extend(txs)
             else:
@@ -203,8 +204,7 @@ class TradeManager:
                 else:
                     selected_coins = {coin}
                 [tx] = await wallet.generate_signed_transaction(
-                    uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
-                    new_ph,
+                    [Payment(new_ph, uint64(sum([c.amount for c in selected_coins]) - fee_to_pay), [])],
                     fee=fee_to_pay,
                     coins=selected_coins,
                     ignore_max_send_amount=True,
@@ -300,8 +300,7 @@ class TradeManager:
             for wallet_id, selected_coins in coins_to_offer.items():
                 wallet = self.wallet_state_manager.wallets[wallet_id]
                 txs = await wallet.generate_signed_transaction(
-                    [abs(offer_dict[int(wallet_id)])],
-                    [Offer.ph()],
+                    [Payment(Offer.ph(), abs(offer_dict[int(wallet_id)]), [])],
                     fee=fee_left_to_pay,
                     coins=set(selected_coins),
                     puzzle_announcements_to_consume=announcements_to_assert,
