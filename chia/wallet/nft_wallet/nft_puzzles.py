@@ -64,4 +64,4 @@ def get_transfer_program_from_solution(solution: Program) -> Program:
     # trade_price
     # transfer_program_reveal
     # transfer_program_solution
-    return solution.rest().rest().rest().rest().rest().rest().rest().rest().rest().rest().first()
+    return solution.rest().rest().rest().rest().rest().rest().rest().rest().rest().first()
