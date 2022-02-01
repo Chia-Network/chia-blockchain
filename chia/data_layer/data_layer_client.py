@@ -77,16 +77,14 @@ class DataLayerClient:
                             value = row["value"]
                             hash = Program.to((hexstr_to_bytes(key), hexstr_to_bytes(value))).get_tree_hash()
                             if hash.hex() == node:
-                                await self.data_store._insert_node(
-                                    node, NodeType.TERMINAL, None, None, key, value, tree_id
-                                )
+                                await self.data_store._insert_node(node, NodeType.TERMINAL, None, None, key, value)
                                 terminal_nodes += 1
                                 right_hash = hash.hex()
                                 while right_hash in add_to_db_cache:
                                     node, left_hash = add_to_db_cache[right_hash]
                                     del add_to_db_cache[right_hash]
                                     await self.data_store._insert_node(
-                                        node, NodeType.INTERNAL, left_hash, right_hash, None, None, tree_id
+                                        node, NodeType.INTERNAL, left_hash, right_hash, None, None
                                     )
                                     internal_nodes += 1
                                     right_hash = node

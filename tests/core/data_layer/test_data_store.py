@@ -30,7 +30,12 @@ from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 
-from tests.core.data_layer.util import add_0123_example, add_01234567_example, Example, get_terminal_node_for_random_seed
+from tests.core.data_layer.util import (
+    add_0123_example,
+    add_01234567_example,
+    Example,
+    get_terminal_node_for_random_seed,
+)
 
 
 log = logging.getLogger(__name__)
@@ -253,12 +258,13 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
     random = Random()
     random.seed(100, version=2)
 
+    first_insertions = [True, False, True, False, True, True, False, True, False, True, True, False, False, True, False]
     for i in range(300):
         node_hash = await get_terminal_node_for_random_seed(data_store, tree_id, random)
         is_insert = False
-        if i <= 10 and i % 2 == 0:
-            is_insert = True
-        if i > 10 and i <= 25:
+        if i <= 14:
+            is_insert = first_insertions[i]
+        if i > 14 and i <= 25:
             is_insert = True
         if i > 25 and random.randint(0, 4):
             is_insert = True
@@ -267,12 +273,13 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
             value = (i + 200).to_bytes(4, byteorder="big")
             side = None if node_hash is None else Side.LEFT if random.randint(0, 1) == 0 else Side.RIGHT
 
-            await data_store.insert(
+            node_hash = await data_store.insert(
                 key=key,
                 value=value,
                 tree_id=tree_id,
                 reference_node_hash=node_hash,
                 side=side,
+                use_optimized=False,
             )
             if node_hash is not None:
                 generation = await data_store.get_tree_generation(tree_id=tree_id)
@@ -282,12 +289,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
             assert node_hash is not None
             node = await data_store.get_node(node_hash)
             assert isinstance(node, TerminalNode)
-            await data_store.delete(key=node.key, tree_id=tree_id)
-            generation = await data_store.get_tree_generation(tree_id=tree_id)
-            current_ancestors = await data_store.get_ancestors_optimized(
-                node_hash=node_hash, tree_id=tree_id, generation=generation
-            )
-            assert current_ancestors == []
+            await data_store.delete(key=node.key, tree_id=tree_id, use_optimized=False)
 
     for generation, node_hash, expected_ancestors in ancestors:
         current_ancestors = await data_store.get_ancestors_optimized(

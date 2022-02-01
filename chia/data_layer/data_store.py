@@ -452,9 +452,8 @@ class DataStore:
                         WHERE ancestors.hash == :hash
                         AND ancestors.tree_id == :tree_id
                         AND ancestors.generation <= :generation
-                        AND ancestors.ancestor is NOT NULL
                         GROUP BY hash
-                    ) asc on asc.hash == node.hash
+                    ) asc on asc.hash == node.hash WHERE node.hash IS NOT NULL
                     """,
                     {"hash": node_hash.hex(), "tree_id": tree_id.hex(), "generation": generation},
                 )
@@ -465,10 +464,8 @@ class DataStore:
                 nodes.append(internal_node)
                 node_hash = internal_node.hash
 
-            # Check if the root from `generation` is at the top of ancestors list.
-            # If it misses, this node is an orphan for `generation`.
-            if len(nodes) > 0 and root.node_hash != nodes[-1].hash:
-                return []
+            if len(nodes) > 0:
+                assert root.node_hash == nodes[-1].hash
 
             return nodes
 
@@ -568,6 +565,7 @@ class DataStore:
         tree_id: bytes32,
         reference_node_hash: Optional[bytes32],
         side: Optional[Side],
+        use_optimized: bool = True,
         *,
         lock: bool = True,
         status: Status = Status.PENDING,
@@ -606,9 +604,18 @@ class DataStore:
                 if root.node_hash is None:
                     raise Exception("Internal error.")
 
-                ancestors: List[InternalNode] = await self.get_ancestors(
-                    node_hash=reference_node_hash, tree_id=tree_id, lock=False
-                )
+                if use_optimized:
+                    ancestors: List[InternalNode] = await self.get_ancestors_optimized(
+                        node_hash=reference_node_hash, tree_id=tree_id, lock=False
+                    )
+                else:
+                    ancestors = await self.get_ancestors_optimized(
+                        node_hash=reference_node_hash, tree_id=tree_id, lock=False
+                    )
+                    ancestors_2: List[InternalNode] = await self.get_ancestors(
+                        node_hash=reference_node_hash, tree_id=tree_id, lock=False
+                    )
+                    assert ancestors == ancestors_2
 
                 if side == Side.LEFT:
                     left = new_terminal_node_hash
@@ -652,13 +659,23 @@ class DataStore:
         self,
         key: bytes,
         tree_id: bytes32,
+        use_optimized: bool = True,
         *,
         lock: bool = True,
         status: Status = Status.PENDING,
     ) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
-            ancestors = await self.get_ancestors(node_hash=node.hash, tree_id=tree_id, lock=False)
+            if use_optimized:
+                ancestors: List[InternalNode] = await self.get_ancestors_optimized(
+                    node_hash=node.hash, tree_id=tree_id, lock=False
+                )
+            else:
+                ancestors = await self.get_ancestors_optimized(node_hash=node.hash, tree_id=tree_id, lock=False)
+                ancestors_2: List[InternalNode] = await self.get_ancestors(
+                    node_hash=node.hash, tree_id=tree_id, lock=False
+                )
+                assert ancestors == ancestors_2
 
             if len(ancestors) == 0:
                 # the only node is being deleted
