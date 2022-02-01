@@ -2182,7 +2182,7 @@ class FullNode:
             async with self.db_wrapper.lock:
                 try:
                     await self.block_store.db_wrapper.begin_transaction()
-                    await self.block_store.replace_proof(new_block.header_hash, new_block)
+                    await self.block_store.replace_proof(new_block)
                     await self.block_store.db_wrapper.commit_transaction()
                     replaced = True
                 except BaseException as e:

@@ -210,7 +210,7 @@ class TestBlockStore:
                 proof = rand_vdf_proof()
                 replaced.append(proof)
                 new_block = dataclasses.replace(block, challenge_chain_ip_proof=proof)
-                await block_store.replace_proof(block.header_hash, new_block)
+                await block_store.replace_proof(new_block)
 
             for block, proof in zip(blocks, replaced):
                 b = await block_store.get_full_block(block.header_hash)
