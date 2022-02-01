@@ -235,10 +235,17 @@ class Keychain:
     list of all keys.
     """
 
-    def __init__(self, user: Optional[str] = None, service: Optional[str] = None):
+    def __init__(self, user: Optional[str] = None, service: Optional[str] = None, force_legacy: bool = False):
         self.user = user if user is not None else default_keychain_user()
         self.service = service if service is not None else default_keychain_service()
-        self.keyring_wrapper = KeyringWrapper.get_shared_instance()
+        if force_legacy:
+            legacy_keyring_wrapper = KeyringWrapper.get_legacy_instance()
+            if legacy_keyring_wrapper is not None:
+                self.keyring_wrapper = legacy_keyring_wrapper
+            else:
+                return None
+        else:
+            self.keyring_wrapper = KeyringWrapper.get_shared_instance()
 
     @unlocks_keyring(use_passphrase_cache=True)
     def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
@@ -399,6 +406,27 @@ class Keychain:
             index += 1
             pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
 
+    def delete_keys(self, keys_to_delete: List[Tuple[PrivateKey, bytes]]):
+        """
+        Deletes all keys in the list.
+        """
+        remaining_keys = {str(x[0]) for x in keys_to_delete}
+        index = 0
+        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
+        while index <= MAX_KEYS:
+            if pkent is not None:
+                mnemonic = bytes_to_mnemonic(pkent[1])
+                seed = mnemonic_to_seed(mnemonic, "")
+                sk = AugSchemeMPL.key_gen(seed)
+                sk_str = str(sk)
+                if sk_str in remaining_keys:
+                    self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
+                    remaining_keys.remove(sk_str)
+            index += 1
+            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
+        if len(remaining_keys) > 0:
+            raise ValueError(f"{len(remaining_keys)} keys could not be found for deletion")
+
     def delete_all_keys(self):
         """
         Deletes all keys from the keychain.
@@ -492,6 +520,51 @@ class Keychain:
             )
 
         KeyringWrapper.get_shared_instance().migrate_legacy_keyring(cleanup_legacy_keyring=cleanup_legacy_keyring)
+
+    @staticmethod
+    def get_keys_needing_migration() -> Tuple[List[Tuple[PrivateKey, bytes]], "Keychain"]:
+        legacy_keyring: Optional[Keychain] = Keychain(force_legacy=True)
+        if legacy_keyring is None:
+            return []
+        keychain = Keychain()
+        all_legacy_sks = legacy_keyring.get_all_private_keys()
+        all_sks = keychain.get_all_private_keys()
+        set_legacy_sks = {str(x[0]) for x in all_legacy_sks}
+        set_sks = {str(x[0]) for x in all_sks}
+        missing_legacy_keys = set_legacy_sks - set_sks
+        keys_needing_migration = [x for x in all_legacy_sks if str(x[0]) in missing_legacy_keys]
+
+        return keys_needing_migration, legacy_keyring
+
+    @staticmethod
+    def verify_keys_present(keys_to_verify: List[Tuple[PrivateKey, bytes]]) -> bool:
+        """
+        Verifies that the given keys are present in the keychain.
+        """
+        keychain = Keychain()
+        all_sks = keychain.get_all_private_keys()
+        set_sks = {str(x[0]) for x in all_sks}
+        keys_present = set_sks.issuperset(set(map(lambda x: str(x[0]), keys_to_verify)))
+        return keys_present
+
+    @staticmethod
+    def migrate_legacy_keys_silently():
+        """
+        Migrates keys silently, without prompting the user. Requires that keyring.yaml already exists.
+        Does not attempt to delete migrated keys from their old location.
+        """
+        if Keychain.needs_migration():
+            raise RuntimeError("Full keyring migration is required. Cannot run silently.")
+
+        keys_to_migrate, _ = Keychain.get_keys_needing_migration()
+        if len(keys_to_migrate) > 0:
+            keychain = Keychain()
+            for _, seed_bytes in keys_to_migrate:
+                mnemonic = bytes_to_mnemonic(seed_bytes)
+                keychain.add_private_key(mnemonic, "")
+
+            if not Keychain.verify_keys_present(keys_to_migrate):
+                raise RuntimeError("Failed to migrate keys. Legacy keyring left intact.")
 
     @staticmethod
     def passphrase_is_optional() -> bool:

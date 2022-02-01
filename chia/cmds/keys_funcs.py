@@ -180,6 +180,47 @@ def verify(message: str, public_key: str, signature: str):
     print(AugSchemeMPL.verify(public_key, messageBytes, signature))
 
 
+def migrate_keys():
+    from chia.util.keyring_wrapper import KeyringWrapper
+    from chia.util.misc import prompt_yes_no
+
+    # Check if the keyring needs a full migration (i.e. if it's using the old keyring)
+    if Keychain.needs_migration():
+        KeyringWrapper.get_shared_instance().migrate_legacy_keyring_interactive()
+    else:
+        keys_to_migrate, legacy_keyring = Keychain.get_keys_needing_migration()
+        if len(keys_to_migrate) > 0:
+            print(f"Found {len(keys_to_migrate)} key(s) that need migration:")
+            for key, _ in keys_to_migrate:
+                print(f"Fingerprint: {key.get_g1().get_fingerprint()}")
+
+            print()
+            response = prompt_yes_no("Migrate these keys? (y/n) ")
+            if response:
+                keychain = Keychain()
+                for sk, seed_bytes in keys_to_migrate:
+                    mnemonic = bytes_to_mnemonic(seed_bytes)
+                    keychain.add_private_key(mnemonic, "")
+                    fingerprint = sk.get_g1().get_fingerprint()
+                    print(f"Added private key with public key fingerprint {fingerprint}")
+
+                print(f"Migrated {len(keys_to_migrate)} key(s)")
+
+                print("Verifying migration results...", end="")
+                if Keychain.verify_keys_present(keys_to_migrate):
+                    print(" Verified")
+                    print()
+                    response = prompt_yes_no("Remove key(s) from old keyring? (y/n) ")
+                    if response:
+                        legacy_keyring.delete_keys(keys_to_migrate)
+                        print(f"Removed {len(keys_to_migrate)} key(s) from old keyring")
+                    print("Migration complete")
+                else:
+                    print(" Failed")
+        else:
+            print("No keys need migration")
+
+
 def _clear_line_part(n: int):
     # Move backward, overwrite with spaces, then move backward again
     sys.stdout.write("\b" * n)
