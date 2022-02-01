@@ -271,13 +271,16 @@ class PoolWallet:
         tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
         assert tip_coin is not None
         spent_coin_name: bytes32 = tip_coin.name()
+
         if spent_coin_name != new_state.coin.name():
-            self.log.warning(f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} ")
+            # self.log.warning(
+            #     f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
+            # )
             return
 
         await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
         tip_spend = (await self.get_tip())[1]
-        self.log.info(f"New PoolWallet singleton tip_coin: {tip_spend}")
+        self.log.info(f"New PoolWallet singleton tip_coin: {tip_spend} farmed at height {block_height}")
 
         # If we have reached the target state, resets it to None. Loops back to get current state
         for _, added_spend in reversed(self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)):
@@ -738,7 +741,7 @@ class PoolWallet:
         unspent_coin_records: List[CoinRecord] = list(
             await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
         )
-
+        self.log.warning(f"Unspent coin records absorbing: {len(unspent_coin_records)}")
         if len(unspent_coin_records) == 0:
             raise ValueError("Nothing to claim, no transactions to p2_singleton_puzzle_hash")
         farming_rewards: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_farming_rewards()
@@ -759,6 +762,7 @@ class PoolWallet:
         total_amount = 0
         for coin_record in unspent_coin_records:
             if coin_record.coin not in coin_to_height_farmed:
+                self.log.info(f"Coin to height farmed: {coin_to_height_farmed}")
                 continue
             if len(all_spends) >= 100:
                 # Limit the total number of spends, so it fits into the block

@@ -872,7 +872,7 @@ class WalletStateManager:
                         False,
                         "pool_wallet",
                     )
-                    await pool_wallet.apply_state_transitions(launcher_spend, coin_state.spent_height)
+                    # await pool_wallet.apply_state_transitions(launcher_spend, coin_state.spent_height)
                     coin_added = launcher_spend.additions()[0]
                     await self.coin_added(
                         coin_added, coin_state.spent_height, [], pool_wallet.id(), WalletType(pool_wallet.type())
