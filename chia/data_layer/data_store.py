@@ -453,7 +453,7 @@ class DataStore:
                         AND ancestors.tree_id == :tree_id
                         AND ancestors.generation <= :generation
                         GROUP BY hash
-                    ) asc on asc.hash == node.hash WHERE node.hash IS NOT NULL
+                    ) asc on asc.hash == node.hash
                     """,
                     {"hash": node_hash.hex(), "tree_id": tree_id.hex(), "generation": generation},
                 )
