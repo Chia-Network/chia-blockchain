@@ -1,4 +1,3 @@
-import dataclasses
 import logging
 import time
 from typing import Any, Dict, List, Optional, Set
@@ -38,7 +37,7 @@ from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
+from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.payment import Payment
 from chia.wallet.wallet_info import WalletInfo
@@ -348,7 +347,7 @@ class Wallet:
                 origin_id = coin.name()
                 if change > 0:
                     change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
-                    payments.append(Payment(change_puzzle_hash, change, []))
+                    payments.append(Payment(change_puzzle_hash, uint64(change), []))
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for payment in payments:
                     message_list.append(Coin(coin.name(), payment.puzzle_hash, payment.amount).name())
@@ -443,24 +442,26 @@ class Wallet:
         else:
             assert output_amount == input_amount
 
-        return [TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=now,
-            to_puzzle_hash=payments[0].puzzle_hash,
-            amount=sum(p.amount for p in payments),
-            fee_amount=uint64(fee),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=add_list,
-            removals=rem_list,
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=spend_bundle.name(),
-            memos=list(compute_memos(spend_bundle).items()),
-        )]
+        return [
+            TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=now,
+                to_puzzle_hash=payments[0].puzzle_hash,
+                amount=uint64(sum(p.amount for p in payments)),
+                fee_amount=uint64(fee),
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=spend_bundle,
+                additions=add_list,
+                removals=rem_list,
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=spend_bundle.name(),
+                memos=list(compute_memos(spend_bundle).items()),
+            )
+        ]
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
         """Use this API to send transactions."""

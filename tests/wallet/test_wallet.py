@@ -256,7 +256,9 @@ class TestWalletSimulator:
 
         await time_out_assert(5, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
-        [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction([Payment(32 * b"0", 10, [])], 0)
+        [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
+            [Payment(32 * b"0", 10, [])], 0
+        )
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert_not_none(5, full_node_0.mempool_manager.get_spendbundle, tx.spend_bundle.name())

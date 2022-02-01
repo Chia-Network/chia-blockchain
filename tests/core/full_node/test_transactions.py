@@ -176,7 +176,9 @@ class TestTransactions:
         )
         await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
-        [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction([Payment(token_bytes(), 10, [])], 0)
+        [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
+            [Payment(token_bytes(), 10, [])], 0
+        )
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert(

@@ -421,9 +421,7 @@ class TestWalletRpc:
             assert bal_0["pending_coin_removal_count"] == 0
             assert bal_0["unspent_coin_count"] == 1
 
-            cat_tx_res: TransactionRecord = await client.create_signed_transaction(
-                [{"amount": 1, "puzzle_hash": ph_2}]
-            )
+            cat_tx_res: TransactionRecord = await client.create_signed_transaction([{"amount": 1, "puzzle_hash": ph_2}])
 
             assert cat_tx_res.fee_amount == 0
             assert cat_tx_res.amount == 1

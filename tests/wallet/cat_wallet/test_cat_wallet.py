@@ -359,7 +359,9 @@ class TestCATWallet:
         await time_out_assert(15, cat_wallet_2.get_unconfirmed_balance, 60)
 
         cc2_ph = await cat_wallet_2.get_new_cat_puzzle_hash()
-        [tx_record] = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction([Payment(cc2_ph, uint64(10), [])])
+        [tx_record] = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
+            [Payment(cc2_ph, uint64(10), [])]
+        )
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
         await time_out_assert(
             15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
@@ -450,7 +452,9 @@ class TestCATWallet:
         cat_1_hash = await cat_wallet_1.get_new_inner_hash()
         cat_2_hash = await cat_wallet_2.get_new_inner_hash()
 
-        tx_records = await cat_wallet_0.generate_signed_transaction([Payment(cat_1_hash, uint64(60), []), Payment(cat_2_hash, uint64(20), [])])
+        tx_records = await cat_wallet_0.generate_signed_transaction(
+            [Payment(cat_1_hash, uint64(60), []), Payment(cat_2_hash, uint64(20), [])]
+        )
         for tx_record in tx_records:
             await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
             await time_out_assert(
@@ -499,7 +503,9 @@ class TestCATWallet:
         txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
         print(len(txs))
         # Test with Memo
-        tx_records_3: TransactionRecord = await cat_wallet_1.generate_signed_transaction([Payment(cat_hash, uint64(30), [b"Markus Walburg"])])
+        tx_records_3: TransactionRecord = await cat_wallet_1.generate_signed_transaction(
+            [Payment(cat_hash, uint64(30), [b"Markus Walburg"])]
+        )
 
         for tx_record in tx_records_3:
             await wallet_1.wallet_state_manager.add_pending_transaction(tx_record)

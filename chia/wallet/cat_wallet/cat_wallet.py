@@ -44,7 +44,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
+from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -536,7 +536,13 @@ class CATWallet:
             chia_coins = await self.standard_wallet.select_coins(fee)
             selected_amount = sum([c.amount for c in chia_coins])
             [chia_tx] = await self.standard_wallet.generate_signed_transaction(
-                [Payment((await self.standard_wallet.get_new_puzzlehash()), uint64(selected_amount + amount_to_claim - fee), [])],
+                [
+                    Payment(
+                        (await self.standard_wallet.get_new_puzzlehash()),
+                        uint64(selected_amount + amount_to_claim - fee),
+                        [],
+                    )
+                ],
                 coins=chia_coins,
                 negative_change_allowed=True,
                 coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,

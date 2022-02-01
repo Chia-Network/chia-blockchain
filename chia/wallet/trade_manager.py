@@ -22,7 +22,6 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.payment import Payment
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 
@@ -300,7 +299,7 @@ class TradeManager:
             for wallet_id, selected_coins in coins_to_offer.items():
                 wallet = self.wallet_state_manager.wallets[wallet_id]
                 txs = await wallet.generate_signed_transaction(
-                    [Payment(Offer.ph(), abs(offer_dict[int(wallet_id)]), [])],
+                    [Payment(Offer.ph(), uint64(abs(offer_dict[int(wallet_id)])), [])],
                     fee=fee_left_to_pay,
                     coins=set(selected_coins),
                     puzzle_announcements_to_consume=announcements_to_assert,
