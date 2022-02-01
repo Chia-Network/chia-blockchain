@@ -496,7 +496,7 @@ class TestWalletRpc:
                 trade_record = await client.get_offer(trade.name())
                 return TradeStatus(trade_record.status) == TradeStatus.CONFIRMED
 
-            time_out_assert(15, is_trade_confirmed, True, client, offer)
+            await time_out_assert(15, is_trade_confirmed, True, client, offer)
 
             # Test trade sorting
             def only_ids(trades):
