@@ -194,7 +194,7 @@ class RLWallet:
         )
         await self.wallet_state_manager.puzzle_store.add_derivation_paths([record])
 
-        spend_bundle = await self.main_wallet.generate_signed_transaction(amount, rl_puzzle_hash, fee, origin_id, coins)
+        [spend_bundle] = await self.main_wallet.generate_signed_transaction(amount, rl_puzzle_hash, fee, origin_id, coins)
         if spend_bundle is None:
             return False
 
@@ -685,7 +685,7 @@ class RLWallet:
         return puzzle_hash
 
     async def rl_add_funds(self, amount, puzzle_hash, fee):
-        spend_bundle = await self.main_wallet.generate_signed_transaction(amount, puzzle_hash, fee)
+        [spend_bundle] = await self.main_wallet.generate_signed_transaction(amount, puzzle_hash, fee)
         if spend_bundle is None:
             return False
 

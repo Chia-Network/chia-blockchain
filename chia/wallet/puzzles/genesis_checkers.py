@@ -79,9 +79,9 @@ class GenesisById(LimitationsProgram):
             CAT_MOD, genesis_coin_checker.get_tree_hash(), cc_inner
         ).get_tree_hash()
 
-        tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
+        tx_record: TransactionRecord = (await wallet.standard_wallet.generate_signed_transaction(
             amount, minted_cc_puzzle_hash, uint64(0), origin_id, coins
-        )
+        ))[0]
         assert tx_record.spend_bundle is not None
 
         inner_solution = wallet.standard_wallet.add_condition_to_solution(

@@ -202,7 +202,7 @@ class TradeManager:
                     selected_coins.add(coin)
                 else:
                     selected_coins = {coin}
-                tx = await wallet.generate_signed_transaction(
+                [tx] = await wallet.generate_signed_transaction(
                     uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
                     new_ph,
                     fee=fee_to_pay,
@@ -311,7 +311,7 @@ class TradeManager:
                     )
                     all_transactions.extend(txs)
                 else:
-                    tx = await wallet.generate_signed_transaction(
+                    [tx] = await wallet.generate_signed_transaction(
                         abs(offer_dict[int(wallet_id)]),
                         Offer.ph(),
                         fee=fee_left_to_pay,

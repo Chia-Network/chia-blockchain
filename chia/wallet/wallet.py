@@ -73,7 +73,7 @@ class Wallet:
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
-            tx = await self.generate_signed_transaction(
+            [tx] = await self.generate_signed_transaction(
                 coin.amount, coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
             )
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
@@ -434,7 +434,7 @@ class Wallet:
         puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         """
         Use this to generate transaction.
         Note: this must be called under a wallet state manager lock
@@ -480,7 +480,7 @@ class Wallet:
         else:
             assert output_amount == input_amount
 
-        return TransactionRecord(
+        return [TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=now,
             to_puzzle_hash=puzzle_hash,
@@ -497,7 +497,7 @@ class Wallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
             memos=list(compute_memos(spend_bundle).items()),
-        )
+        )]
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
         """Use this API to send transactions."""

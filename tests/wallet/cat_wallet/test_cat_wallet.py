@@ -358,7 +358,7 @@ class TestCATWallet:
         await time_out_assert(15, cat_wallet_2.get_unconfirmed_balance, 60)
 
         cc2_ph = await cat_wallet_2.get_new_cat_puzzle_hash()
-        tx_record = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(10, cc2_ph, 0)
+        [tx_record] = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(10, cc2_ph, 0)
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
         await time_out_assert(
             15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()

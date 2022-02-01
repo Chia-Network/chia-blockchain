@@ -656,7 +656,7 @@ class PoolWallet:
         announcement_message = Program.to([puzzle_hash, amount, pool_state_bytes]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
-        create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
+        create_launcher_tx_record: TransactionRecord = (await standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
             fee,
@@ -665,7 +665,7 @@ class PoolWallet:
             None,
             False,
             announcement_set,
-        )
+        ))[0]
         assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
 
         genesis_launcher_solution: Program = Program.to([puzzle_hash, amount, pool_state_bytes])

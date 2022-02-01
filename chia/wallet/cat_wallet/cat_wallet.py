@@ -236,7 +236,7 @@ class CATWallet:
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
-            txs = await self.generate_signed_transaction(
+            txs: List[TransactionRecord] = await self.generate_signed_transaction(
                 [coin.amount], [coin.puzzle_hash], coins={coin}, ignore_max_send_amount=True
             )
             program: BlockGenerator = simple_solution_generator(txs[0].spend_bundle)
@@ -512,7 +512,7 @@ class CATWallet:
         if fee > amount_to_claim:
             chia_coins = await self.standard_wallet.select_coins(fee)
             origin_id = list(chia_coins)[0].name()
-            chia_tx = await self.standard_wallet.generate_signed_transaction(
+            [chia_tx] = await self.standard_wallet.generate_signed_transaction(
                 uint64(0),
                 (await self.standard_wallet.get_new_puzzlehash()),
                 fee=uint64(fee - amount_to_claim),
@@ -536,7 +536,7 @@ class CATWallet:
         else:
             chia_coins = await self.standard_wallet.select_coins(fee)
             selected_amount = sum([c.amount for c in chia_coins])
-            chia_tx = await self.standard_wallet.generate_signed_transaction(
+            [chia_tx] = await self.standard_wallet.generate_signed_transaction(
                 uint64(selected_amount + amount_to_claim - fee),
                 (await self.standard_wallet.get_new_puzzlehash()),
                 coins=chia_coins,
