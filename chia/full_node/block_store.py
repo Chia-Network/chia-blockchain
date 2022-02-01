@@ -137,9 +137,7 @@ class BlockStore:
                 "UPDATE OR FAIL full_blocks SET in_main_chain=1 WHERE header_hash=?", header_hashes
             )
 
-    async def replace_proof(self, header_hash: bytes32, block: FullBlock) -> None:
-
-        assert header_hash == block.header_hash
+    async def replace_proof(self, block: FullBlock) -> None:
 
         block_bytes: bytes
         if self.db_wrapper.db_version == 2:
@@ -147,14 +145,14 @@ class BlockStore:
         else:
             block_bytes = bytes(block)
 
-        self.block_cache.put(header_hash, block)
+        self.block_cache.put(block.header_hash, block)
 
         await self.db.execute(
             "UPDATE full_blocks SET block=?,is_fully_compactified=? WHERE header_hash=?",
             (
                 block_bytes,
                 int(block.is_fully_compactified()),
-                self.maybe_to_hex(header_hash),
+                self.maybe_to_hex(block.header_hash),
             ),
         )
 
