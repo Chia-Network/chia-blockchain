@@ -299,26 +299,14 @@ class TradeManager:
             fee_left_to_pay: uint64 = fee
             for wallet_id, selected_coins in coins_to_offer.items():
                 wallet = self.wallet_state_manager.wallets[wallet_id]
-                # This should probably not switch on whether or not we're spending a CAT but it has to for now
-
-                if wallet.type() == WalletType.CAT:
-                    txs = await wallet.generate_signed_transaction(
-                        [abs(offer_dict[int(wallet_id)])],
-                        [Offer.ph()],
-                        fee=fee_left_to_pay,
-                        coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                    )
-                    all_transactions.extend(txs)
-                else:
-                    [tx] = await wallet.generate_signed_transaction(
-                        abs(offer_dict[int(wallet_id)]),
-                        Offer.ph(),
-                        fee=fee_left_to_pay,
-                        coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                    )
-                    all_transactions.append(tx)
+                txs = await wallet.generate_signed_transaction(
+                    [abs(offer_dict[int(wallet_id)])],
+                    [Offer.ph()],
+                    fee=fee_left_to_pay,
+                    coins=set(selected_coins),
+                    puzzle_announcements_to_consume=announcements_to_assert,
+                )
+                all_transactions.extend(txs)
 
                 fee_left_to_pay = uint64(0)
 

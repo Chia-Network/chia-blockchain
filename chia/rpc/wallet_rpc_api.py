@@ -721,11 +721,8 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         selected = self.service.config["selected_network"]
         prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
-        if wallet.type() == WalletType.STANDARD_WALLET:
+        if wallet.type() in [WalletType.STANDARD_WALLET, WalletType.CAT]:
             raw_puzzle_hash = await wallet.get_puzzle_hash(create_new)
-            address = encode_puzzle_hash(raw_puzzle_hash, prefix)
-        elif wallet.type() == WalletType.CAT:
-            raw_puzzle_hash = await wallet.standard_wallet.get_puzzle_hash(create_new)
             address = encode_puzzle_hash(raw_puzzle_hash, prefix)
         else:
             raise ValueError(f"Wallet type {wallet.type()} cannot create puzzle hashes")
@@ -743,9 +740,6 @@ class WalletRpcApi:
 
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-
-        if wallet.type() == WalletType.CAT:
-            raise ValueError("send_transaction does not work for CAT wallets")
 
         if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
