@@ -350,7 +350,7 @@ class WSChiaConnection:
         await self.outgoing_queue.put(message)
 
         # Either the result is available below or not, no need to detect the timeout error
-        with contextlib.suppress(TimeoutError):
+        with contextlib.suppress(asyncio.TimeoutError):
             await asyncio.wait_for(event.wait(), timeout=timeout)
 
         self.pending_requests.pop(message.id)
