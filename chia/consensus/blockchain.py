@@ -30,6 +30,7 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
@@ -37,7 +38,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator, GeneratorArg
+from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
@@ -869,25 +870,28 @@ class Blockchain(BlockchainInterface):
             assert len(ref_list) == 0
             return None
         if len(ref_list) == 0:
-            return BlockGenerator(block.transactions_generator, [])
+            return BlockGenerator(block.transactions_generator, [], [])
 
-        result: List[GeneratorArg] = []
+        result: List[SerializedProgram] = []
         previous_block_hash = block.prev_header_hash
         if (
             self.try_block_record(previous_block_hash)
             and self.height_to_hash(self.block_record(previous_block_hash).height) == previous_block_hash
         ):
-            # We are not in a reorg, no need to look up alternate header hashes (we can get them from height_to_hash)
+            # We are not in a reorg, no need to look up alternate header hashes
+            # (we can get them from height_to_hash)
             for ref_height in block.transactions_generator_ref_list:
                 header_hash = self.height_to_hash(ref_height)
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to "get_full_block" of "Blockchain" has incompatible type "Optional[bytes32]";
-                #       expected "bytes32"  [arg-type]
-                ref_block = await self.get_full_block(header_hash)  # type: ignore[arg-type]
+
+                # if ref_height is invalid, this block should have failed with
+                # FUTURE_GENERATOR_REFS before getting here
+                assert header_hash is not None
+
+                ref_block = await self.block_store.get_full_block(header_hash)
                 assert ref_block is not None
                 if ref_block.transactions_generator is None:
                     raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
+                result.append(ref_block.transactions_generator)
         else:
             # First tries to find the blocks in additional_blocks
             reorg_chain: Dict[uint32, FullBlock] = {}
@@ -924,7 +928,7 @@ class Blockchain(BlockchainInterface):
                     assert ref_block is not None
                     if ref_block.transactions_generator is None:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
+                    result.append(ref_block.transactions_generator)
                 else:
                     if ref_height in additional_height_dict:
                         ref_block = additional_height_dict[ref_height]
@@ -937,6 +941,6 @@ class Blockchain(BlockchainInterface):
                     assert ref_block is not None
                     if ref_block.transactions_generator is None:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
+                    result.append(ref_block.transactions_generator)
         assert len(result) == len(ref_list)
-        return BlockGenerator(block.transactions_generator, result)
+        return BlockGenerator(block.transactions_generator, result, [])
