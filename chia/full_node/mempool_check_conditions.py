@@ -148,6 +148,8 @@ def get_name_puzzle_conditions(
             return NPCResult(uint16(err), [], uint64(0))
 
         # Handling this awkward tuple awkwardly so mypy can tell what is going on.
+        # Since we break the tuple in half first mypy loses track of the fact that only
+        # one of the elements can be `None` and the other not.
         if TYPE_CHECKING:
             assert result is not None
 

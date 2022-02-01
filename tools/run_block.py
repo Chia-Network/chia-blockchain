@@ -205,8 +205,6 @@ def run_generator_with_args(
 @click.argument("file", type=click.File("rb"))
 def cmd_run_json_block_file(file: BinaryIO) -> None:
     """`file` is a file containing a FullBlock in JSON format"""
-    print(type(file))
-    return
     return run_json_block_file(file)
 
 
