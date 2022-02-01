@@ -16,6 +16,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
@@ -267,10 +268,39 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
 
 
 async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    id, filepath, all, summaries = tuple(list(args.values())[0:4])
+    id: Optional[str] = args.get("id", None)
+    filepath: Optional[str] = args.get("filepath", None)
+    exclude_my_offers: bool = args.get("exclude_my_offers", False)
+    exclude_taken_offers: bool = args.get("exclude_taken_offers", False)
+    include_completed: bool = args.get("include_completed", False)
+    summaries: bool = args.get("summaries", False)
+    reverse: bool = args.get("reverse", False)
     file_contents: bool = (filepath is not None) or summaries
+    records: List[TradeRecord] = []
     if id is None:
-        records = await wallet_client.get_all_offers(file_contents=file_contents)
+        batch_size: int = 10
+        start: int = 0
+        end: int = start + batch_size
+
+        # Traverse offers page by page
+        while True:
+            new_records: List[TradeRecord] = await wallet_client.get_all_offers(
+                start,
+                end,
+                reverse=reverse,
+                file_contents=file_contents,
+                exclude_my_offers=exclude_my_offers,
+                exclude_taken_offers=exclude_taken_offers,
+                include_completed=include_completed,
+            )
+            records.extend(new_records)
+
+            # If fewer records were returned than requested, we're done
+            if len(new_records) < batch_size:
+                break
+
+            start = end
+            end += batch_size
     else:
         records = [await wallet_client.get_offer(bytes32.from_hexstr(id), file_contents)]
         if filepath is not None:
@@ -279,8 +309,7 @@ async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                 file.close()
 
     for record in records:
-        if "PENDING" in TradeStatus(record.status).name or all or id is not None:
-            await print_trade_record(record, wallet_client, summaries=summaries)
+        await print_trade_record(record, wallet_client, summaries=summaries)
 
 
 async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
