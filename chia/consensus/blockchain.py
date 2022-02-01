@@ -252,7 +252,7 @@ class Blockchain(BlockchainInterface):
                 header_hash: bytes32 = block.header_hash
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.db_wrapper.begin_transaction()
-                await self.block_store.add_full_block(header_hash, block, block_record)
+                await self.block_store.add_full_block(header_hash, block, block_record, False)
                 fork_height, peak_height, records, (coin_record_change, hint_changes) = await self._reconsider_peak(
                     block_record, genesis, fork_point_with_peak, npc_result
                 )
@@ -455,6 +455,7 @@ class Blockchain(BlockchainInterface):
                         self.constants.MAX_BLOCK_COST_CLVM,
                         cost_per_byte=self.constants.COST_PER_BYTE,
                         mempool_mode=False,
+                        height=block.height,
                     )
                 tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 return tx_removals, tx_additions, npc_result
@@ -634,13 +635,14 @@ class Blockchain(BlockchainInterface):
             validate_signatures=validate_signatures,
         )
 
-    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator) -> NPCResult:
+    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator, height: uint32) -> NPCResult:
         task = asyncio.get_running_loop().run_in_executor(
             self.pool,
             _run_generator,
             self.constants_json,
             unfinished_block,
             bytes(generator),
+            height,
         )
         npc_result_bytes = await task
         if npc_result_bytes is None:

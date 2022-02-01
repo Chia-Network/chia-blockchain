@@ -535,7 +535,7 @@ async def setup_full_system(
                 db_version=db_version,
             ),
             setup_vdf_client(7999),
-            setup_timelord(21239, 21238, True, consensus_constants, b_tools_1),
+            setup_timelord(21239, 1000, True, consensus_constants, b_tools_1),
         ]
 
         introducer, introducer_server = await node_iters[0].__anext__()
@@ -567,6 +567,7 @@ async def setup_full_system(
             vdf_clients,
             vdf_sanitizer,
             sanitizer,
+            sanitizer_server,
             node_api_1.full_node.server,
         )
 

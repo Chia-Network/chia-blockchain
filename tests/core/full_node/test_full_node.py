@@ -1519,9 +1519,10 @@ class TestFullNodeProtocol:
         nodes, _ = setup_two_nodes
         full_node_1 = nodes[0]
         full_node_2 = nodes[1]
-        blocks = bt.get_consecutive_blocks(num_blocks=1, skip_slots=3)
+        blocks = bt.get_consecutive_blocks(num_blocks=10, skip_slots=3)
         block = blocks[0]
-        await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
+        for b in blocks:
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(b))
         timelord_protocol_finished = []
         cc_eos_count = 0
         for sub_slot in block.finished_sub_slots:
@@ -1542,9 +1543,10 @@ class TestFullNodeProtocol:
                     CompressibleVDFField.CC_EOS_VDF,
                 )
             )
-        blocks_2 = bt.get_consecutive_blocks(num_blocks=2, block_list_input=blocks, skip_slots=3)
-        block = blocks_2[1]
-        await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
+        blocks_2 = bt.get_consecutive_blocks(num_blocks=10, block_list_input=blocks, skip_slots=3)
+        block = blocks_2[-10]
+        for b in blocks_2[-11:]:
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(b))
         icc_eos_count = 0
         for sub_slot in block.finished_sub_slots:
             if sub_slot.infused_challenge_chain is not None:

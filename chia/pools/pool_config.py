@@ -15,7 +15,6 @@ Config example
 This is what goes into the user's config file, to communicate between the wallet and the farmer processes.
 pool_list:
     launcher_id: ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa
-    authentication_public_key: 970e181ae45435ae696508a78012dc80548c334cf29676ea6ade7049eb9d2b9579cc30cb44c3fd68d35a250cfbc69e29
     owner_public_key: 84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5
     payout_instructions: c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8
     pool_url: localhost
@@ -35,7 +34,6 @@ class PoolWalletConfig(Streamable):
     target_puzzle_hash: bytes32
     p2_singleton_puzzle_hash: bytes32
     owner_public_key: G1Element
-    authentication_public_key: G1Element
 
 
 def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
@@ -52,7 +50,6 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
                     bytes32.from_hexstr(pool_config_dict["target_puzzle_hash"]),
                     bytes32.from_hexstr(pool_config_dict["p2_singleton_puzzle_hash"]),
                     G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
-                    G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["authentication_public_key"])),
                 )
                 ret_list.append(pool_config)
             except Exception as e:

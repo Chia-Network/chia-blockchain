@@ -1675,7 +1675,8 @@ class FullNode:
             if block_bytes is None:
                 block_bytes = bytes(block)
 
-            npc_result = await self.blockchain.run_generator(block_bytes, block_generator)
+            height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
+            npc_result = await self.blockchain.run_generator(block_bytes, block_generator, height)
             pre_validation_time = time.time() - pre_validation_start
 
             pairs_pks, pairs_msgs = pkm_pairs(npc_result.npc_list, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
@@ -2113,6 +2114,10 @@ class FullNode:
         if is_fully_compactified is None or is_fully_compactified:
             self.log.info(f"Already compactified block: {header_hash}. Ignoring.")
             return False
+        peak = self.blockchain.get_peak()
+        if peak is None or peak.height - height < 5:
+            self.log.debug("Will not compactify recent block")
+            return False
         if vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
             self.log.error(f"Received vdf proof is not compact: {vdf_proof}.")
             return False
@@ -2177,9 +2182,25 @@ class FullNode:
             if new_block is None:
                 continue
             async with self.db_wrapper.lock:
-                await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
-                await self.block_store.db_wrapper.commit_transaction()
-                replaced = True
+                peak: Optional[BlockRecord] = self.blockchain.get_peak()
+                assert peak is not None
+                if new_block.header_hash == peak.header_hash or peak.height - new_block.height < 5:
+                    continue
+                main_chain_hash: Optional[bytes32] = self.blockchain.height_to_hash(new_block.height)
+                assert main_chain_hash is not None
+                in_main_chain: bool = main_chain_hash == new_block.header_hash
+                try:
+                    await self.block_store.db_wrapper.begin_transaction()
+                    await self.block_store.add_full_block(new_block.header_hash, new_block, block_record, in_main_chain)
+                    await self.block_store.db_wrapper.commit_transaction()
+                    replaced = True
+                except BaseException as e:
+                    await self.block_store.db_wrapper.rollback_transaction()
+                    self.log.error(
+                        f"_replace_proof error while adding block {block.header_hash} height {block.height},"
+                        f" rolling back: {e} {traceback.format_exc()}"
+                    )
+                    raise
         return replaced
 
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
