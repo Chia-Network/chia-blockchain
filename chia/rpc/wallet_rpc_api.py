@@ -125,6 +125,10 @@ class WalletRpcApi:
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
         """
+        if args[0] is not None and args[0] == "sync_changed":
+            # Metrics is the only current consumer for this event
+            return [create_payload_dict(args[0], {}, self.service_name, "metrics")]
+
         if len(args) < 2:
             return []
 
@@ -135,7 +139,13 @@ class WalletRpcApi:
             data["wallet_id"] = args[1]
         if args[2] is not None:
             data["additional_data"] = args[2]
-        return [create_payload_dict("state_changed", data, "chia_wallet", "wallet_ui")]
+
+        payloads = [create_payload_dict("state_changed", data, self.service_name, "wallet_ui")]
+
+        if args[0] == "coin_added":
+            payloads.append(create_payload_dict(args[0], data, self.service_name, "metrics"))
+
+        return payloads
 
     async def _stop_wallet(self):
         """
@@ -605,6 +615,8 @@ class WalletRpcApi:
                     "unspent_coin_count": 0,
                     "pending_coin_removal_count": 0,
                 }
+                if self.service.logged_in_fingerprint is not None:
+                    wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
         else:
             async with self.service.wallet_state_manager.lock:
                 unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
@@ -629,6 +641,8 @@ class WalletRpcApi:
                     "unspent_coin_count": len(unspent_records),
                     "pending_coin_removal_count": len(unconfirmed_removals),
                 }
+                if self.service.logged_in_fingerprint is not None:
+                    wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
                 self.balance_cache[wallet_id] = wallet_balance
 
         return {"wallet_balance": wallet_balance}
