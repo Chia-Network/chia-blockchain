@@ -14,6 +14,11 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
 
 
+def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]):
+    del coin_record["spent"]
+    return coin_record
+
+
 class FullNodeRpcClient(RpcClient):
     """
     Client to Chia RPC, connects to a local full node. Uses HTTP/JSON, and converts back from
@@ -86,7 +91,8 @@ class FullNodeRpcClient(RpcClient):
             response = await self.fetch("get_coin_record_by_name", {"name": coin_id.hex()})
         except Exception:
             return None
-        return CoinRecord.from_json_dict(response["coin_record"])
+
+        return CoinRecord.from_json_dict(coin_record_dict_backwards_compat(response["coin_record"]))
 
     async def get_coin_records_by_names(
         self,
@@ -101,10 +107,9 @@ class FullNodeRpcClient(RpcClient):
             d["start_height"] = start_height
         if end_height is not None:
             d["end_height"] = end_height
-        return [
-            CoinRecord.from_json_dict(coin)
-            for coin in (await self.fetch("get_coin_records_by_names", d))["coin_records"]
-        ]
+
+        response = await self.fetch("get_coin_records_by_names", d)
+        return [CoinRecord.from_json_dict(coin_record_dict_backwards_compat(coin)) for coin in response["coin_records"]]
 
     async def get_coin_records_by_puzzle_hash(
         self,
@@ -118,10 +123,9 @@ class FullNodeRpcClient(RpcClient):
             d["start_height"] = start_height
         if end_height is not None:
             d["end_height"] = end_height
-        return [
-            CoinRecord.from_json_dict(coin)
-            for coin in (await self.fetch("get_coin_records_by_puzzle_hash", d))["coin_records"]
-        ]
+
+        response = await self.fetch("get_coin_records_by_puzzle_hash", d)
+        return [CoinRecord.from_json_dict(coin_record_dict_backwards_compat(coin)) for coin in response["coin_records"]]
 
     async def get_coin_records_by_puzzle_hashes(
         self,
@@ -136,10 +140,9 @@ class FullNodeRpcClient(RpcClient):
             d["start_height"] = start_height
         if end_height is not None:
             d["end_height"] = end_height
-        return [
-            CoinRecord.from_json_dict(coin)
-            for coin in (await self.fetch("get_coin_records_by_puzzle_hashes", d))["coin_records"]
-        ]
+
+        response = await self.fetch("get_coin_records_by_puzzle_hashes", d)
+        return [CoinRecord.from_json_dict(coin_record_dict_backwards_compat(coin)) for coin in response["coin_records"]]
 
     async def get_coin_records_by_parent_ids(
         self,
@@ -154,10 +157,9 @@ class FullNodeRpcClient(RpcClient):
             d["start_height"] = start_height
         if end_height is not None:
             d["end_height"] = end_height
-        return [
-            CoinRecord.from_json_dict(coin)
-            for coin in (await self.fetch("get_coin_records_by_parent_ids", d))["coin_records"]
-        ]
+
+        response = await self.fetch("get_coin_records_by_parent_ids", d)
+        return [CoinRecord.from_json_dict(coin_record_dict_backwards_compat(coin)) for coin in response["coin_records"]]
 
     async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[CoinRecord], List[CoinRecord]]:
         try:

@@ -606,7 +606,7 @@ class WeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0), []
 
-        executor = ProcessPoolExecutor(max_workers=4, initializer=setproctitle, initargs=("chia_full_node",))
+        executor = ProcessPoolExecutor(max_workers=self._num_processes, initializer=setproctitle, initargs=("chia_full_node",))
         constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
             self.constants, summaries, weight_proof
         )

@@ -2,10 +2,11 @@ import asyncio
 import dataclasses
 import logging
 import multiprocessing
+import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple, Union
 from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 from clvm.casts import int_from_bytes
 
@@ -20,9 +21,10 @@ from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import (
     PreValidationResult,
-    pre_validate_blocks_multiprocessing,
     _run_generator,
+    pre_validate_blocks_multiprocessing,
 )
+from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
@@ -40,12 +42,11 @@ from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
-from chia.util.errors import Err, ConsensusError
+from chia.util.errors import ConsensusError, Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.setproctitle import setproctitle
 from chia.util.streamable import recurse_jsonify
-from chia.full_node.block_height_map import BlockHeightMap
 
 log = logging.getLogger(__name__)
 
@@ -252,7 +253,7 @@ class Blockchain(BlockchainInterface):
                 header_hash: bytes32 = block.header_hash
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.db_wrapper.begin_transaction()
-                await self.block_store.add_full_block(header_hash, block, block_record)
+                await self.block_store.add_full_block(header_hash, block, block_record, False)
                 fork_height, peak_height, records, (coin_record_change, hint_changes) = await self._reconsider_peak(
                     block_record, genesis, fork_point_with_peak, npc_result
                 )
@@ -269,9 +270,13 @@ class Blockchain(BlockchainInterface):
                 if peak_height is not None:
                     self._peak_height = peak_height
                     await self.__height_map.maybe_flush()
-            except BaseException:
+            except BaseException as e:
                 self.block_store.rollback_cache_block(header_hash)
                 await self.block_store.db_wrapper.rollback_transaction()
+                log.error(
+                    f"Error while adding block {block.header_hash} height {block.height},"
+                    f" rolling back: {traceback.format_exc()} {e}"
+                )
                 raise
 
         if fork_height is not None:
@@ -451,6 +456,7 @@ class Blockchain(BlockchainInterface):
                         self.constants.MAX_BLOCK_COST_CLVM,
                         cost_per_byte=self.constants.COST_PER_BYTE,
                         mempool_mode=False,
+                        height=block.height,
                     )
                 tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 return tx_removals, tx_additions, npc_result
@@ -630,13 +636,14 @@ class Blockchain(BlockchainInterface):
             validate_signatures=validate_signatures,
         )
 
-    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator) -> NPCResult:
+    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator, height: uint32) -> NPCResult:
         task = asyncio.get_running_loop().run_in_executor(
             self.pool,
             _run_generator,
             self.constants_json,
             unfinished_block,
             bytes(generator),
+            height,
         )
         npc_result_bytes = await task
         if npc_result_bytes is None:

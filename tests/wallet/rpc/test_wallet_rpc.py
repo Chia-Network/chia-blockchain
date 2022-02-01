@@ -31,6 +31,7 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.compute_memos import compute_memos
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
 
@@ -164,6 +165,9 @@ class TestWalletRpc:
             async def eventual_balance():
                 return (await client.get_wallet_balance("1"))["confirmed_wallet_balance"]
 
+            async def eventual_balance_det(c, wallet_id: str):
+                return (await c.get_wallet_balance(wallet_id))["confirmed_wallet_balance"]
+
             # Checks that the memo can be retrieved
             tx_confirmed = await client.get_transaction("1", transaction_id)
             assert tx_confirmed.confirmed
@@ -293,7 +297,7 @@ class TestWalletRpc:
                         addition.parent_coin_info, cr.confirmed_block_index
                     )
                     sb: SpendBundle = SpendBundle([spend], G2Element())
-                    assert sb.get_memos() == {addition.name(): [b"hhh"]}
+                    assert compute_memos(sb) == {addition.name(): [b"hhh"]}
                     found = True
             assert found
 
@@ -364,12 +368,16 @@ class TestWalletRpc:
             # Checks that the memo can be retrieved
             tx_confirmed = await client.get_transaction("1", send_tx_res.name)
             assert tx_confirmed.confirmed
-            assert len(tx_confirmed.get_memos()) == 2
-            print(tx_confirmed.get_memos())
-            assert [b"FiMemo"] in tx_confirmed.get_memos().values()
-            assert [b"SeMemo"] in tx_confirmed.get_memos().values()
-            assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
-            assert list(tx_confirmed.get_memos().keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
+            if isinstance(tx_confirmed, SpendBundle):
+                memos = compute_memos(tx_confirmed)
+            else:
+                memos = tx_confirmed.get_memos()
+            assert len(memos) == 2
+            print(memos)
+            assert [b"FiMemo"] in memos.values()
+            assert [b"SeMemo"] in memos.values()
+            assert list(memos.keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
+            assert list(memos.keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
 
             ##############
             # CATS       #
@@ -405,8 +413,8 @@ class TestWalletRpc:
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
+            await time_out_assert(10, eventual_balance_det, 20, client, cat_0_id)
             bal_0 = await client.get_wallet_balance(cat_0_id)
-            assert bal_0["confirmed_wallet_balance"] == 20
             assert bal_0["pending_coin_removal_count"] == 0
             assert bal_0["unspent_coin_count"] == 1
 
@@ -436,11 +444,8 @@ class TestWalletRpc:
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
-            bal_0 = await client.get_wallet_balance(cat_0_id)
-            bal_1 = await client_2.get_wallet_balance(cat_1_id)
-
-            assert bal_0["confirmed_wallet_balance"] == 16
-            assert bal_1["confirmed_wallet_balance"] == 4
+            await time_out_assert(10, eventual_balance_det, 16, client, cat_0_id)
+            await time_out_assert(10, eventual_balance_det, 4, client_2, cat_1_id)
 
             ##########
             # Offers #
@@ -486,6 +491,12 @@ class TestWalletRpc:
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
+
+            async def is_trade_confirmed(client, trade) -> bool:
+                trade_record = await client.get_offer(trade.name())
+                return TradeStatus(trade_record.status) == TradeStatus.CONFIRMED
+
+            time_out_assert(15, is_trade_confirmed, True, client, offer)
 
             # Test trade sorting
             def only_ids(trades):

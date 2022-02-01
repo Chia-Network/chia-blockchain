@@ -20,6 +20,10 @@ on:
   schedule:
     - cron: '34 14 * * 3'
 
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}
+  cancel-in-progress: true
+
 jobs:
   analyze:
     name: Analyze

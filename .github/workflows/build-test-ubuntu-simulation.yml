@@ -13,6 +13,10 @@ on:
     branches:
       - '**'
 
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Ubuntu simulation Test
@@ -28,12 +32,6 @@ jobs:
       JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_simulation
 
     steps:
-    - name: Cancel previous runs on the same branch
-      if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.9.1
-      with:
-        access_token: ${{ github.token }}
-
     - name: Checkout Code
       uses: actions/checkout@v2
       with:

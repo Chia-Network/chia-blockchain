@@ -183,7 +183,7 @@ class FullNode:
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
-        reserved_cores = self.config.get("reserved_cores", 2)
+        reserved_cores = self.config.get("reserved_cores", 0)
         self.blockchain = await Blockchain.create(
             self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent, reserved_cores
         )
@@ -329,9 +329,9 @@ class FullNode:
             self.log.error(f"Exception in peer discovery: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    def _state_changed(self, change: str):
+    def _state_changed(self, change: str, change_data: Dict[str, Any] = None):
         if self.state_changed_callback is not None:
-            self.state_changed_callback(change)
+            self.state_changed_callback(change, change_data)
 
     async def short_sync_batch(self, peer: ws.WSChiaConnection, start_height: uint32, target_height: uint32) -> bool:
         """
@@ -1566,7 +1566,31 @@ class FullNode:
         self.full_node_store.clear_unfinished_blocks_below(clear_height)
         if peak.height % 1000 == 0 and not self.sync_store.get_sync_mode():
             await self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
-        self._state_changed("block")
+
+        state_changed_data: Dict[str, Any] = {
+            "transaction_block": False,
+            "k_size": block.reward_chain_block.proof_of_space.size,
+            "header_hash": block.header_hash,
+            "height": block.height,
+        }
+
+        if block.transactions_info is not None:
+            state_changed_data["transaction_block"] = True
+            state_changed_data["block_cost"] = block.transactions_info.cost
+            state_changed_data["block_fees"] = block.transactions_info.fees
+
+        if block.foliage_transaction_block is not None:
+            state_changed_data["timestamp"] = block.foliage_transaction_block.timestamp
+
+        if block.transactions_generator is not None:
+            state_changed_data["transaction_generator_size_bytes"] = len(bytes(block.transactions_generator))
+
+        state_changed_data["transaction_generator_ref_list"] = block.transactions_generator_ref_list
+        if added is not None:
+            state_changed_data["receive_block_result"] = added.value
+
+        self._state_changed("block", state_changed_data)
+
         record = self.blockchain.block_record(block.header_hash)
         if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
             if self._segment_task is None or self._segment_task.done():
@@ -1651,7 +1675,8 @@ class FullNode:
             if block_bytes is None:
                 block_bytes = bytes(block)
 
-            npc_result = await self.blockchain.run_generator(block_bytes, block_generator)
+            height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
+            npc_result = await self.blockchain.run_generator(block_bytes, block_generator, height)
             pre_validation_time = time.time() - pre_validation_start
 
             pairs_pks, pairs_msgs = pkm_pairs(npc_result.npc_list, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
@@ -1763,6 +1788,7 @@ class FullNode:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
         else:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
+
         self._state_changed("unfinished_block")
 
     async def new_infusion_point_vdf(
@@ -2088,6 +2114,10 @@ class FullNode:
         if is_fully_compactified is None or is_fully_compactified:
             self.log.info(f"Already compactified block: {header_hash}. Ignoring.")
             return False
+        peak = self.blockchain.get_peak()
+        if peak is None or peak.height - height < 5:
+            self.log.debug("Will not compactify recent block")
+            return False
         if vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
             self.log.error(f"Received vdf proof is not compact: {vdf_proof}.")
             return False
@@ -2152,9 +2182,25 @@ class FullNode:
             if new_block is None:
                 continue
             async with self.db_wrapper.lock:
-                await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
-                await self.block_store.db_wrapper.commit_transaction()
-                replaced = True
+                peak: Optional[BlockRecord] = self.blockchain.get_peak()
+                assert peak is not None
+                if new_block.header_hash == peak.header_hash or peak.height - new_block.height < 5:
+                    continue
+                main_chain_hash: Optional[bytes32] = self.blockchain.height_to_hash(new_block.height)
+                assert main_chain_hash is not None
+                in_main_chain: bool = main_chain_hash == new_block.header_hash
+                try:
+                    await self.block_store.db_wrapper.begin_transaction()
+                    await self.block_store.add_full_block(new_block.header_hash, new_block, block_record, in_main_chain)
+                    await self.block_store.db_wrapper.commit_transaction()
+                    replaced = True
+                except BaseException as e:
+                    await self.block_store.db_wrapper.rollback_transaction()
+                    self.log.error(
+                        f"_replace_proof error while adding block {block.header_hash} height {block.height},"
+                        f" rolling back: {e} {traceback.format_exc()}"
+                    )
+                    raise
         return replaced
 
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
