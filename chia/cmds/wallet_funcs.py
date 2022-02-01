@@ -4,7 +4,7 @@ import sys
 import time
 from datetime import datetime
 from decimal import Decimal
-from typing import Callable, List, Optional, Tuple, Dict
+from typing import Any, Callable, List, Optional, Tuple, Dict
 
 import aiohttp
 
@@ -23,12 +23,12 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
 
-def print_transaction(tx: TransactionRecord, verbose: bool, name) -> None:
+def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix: str, mojo_per_unit: int) -> None:
     if verbose:
         print(tx)
     else:
-        chia_amount = Decimal(int(tx.amount)) / units["chia"]
-        to_address = encode_puzzle_hash(tx.to_puzzle_hash, name)
+        chia_amount = Decimal(int(tx.amount)) / mojo_per_unit
+        to_address = encode_puzzle_hash(tx.to_puzzle_hash, address_prefix)
         print(f"Transaction {tx.name}")
         print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
         print(f"Amount {'sent' if tx.sent else 'received'}: {chia_amount} {name}")
@@ -37,13 +37,71 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name) -> None:
         print("")
 
 
+def get_mojo_per_unit(wallet_type: WalletType) -> int:
+    mojo_per_unit: int
+    if wallet_type == WalletType.STANDARD_WALLET:
+        mojo_per_unit = units["chia"]
+    elif wallet_type == WalletType.CAT:
+        mojo_per_unit = units["cat"]
+    else:
+        raise LookupError("Only standard wallet and CAT wallets are supported")
+
+    return mojo_per_unit
+
+
+async def get_wallet_type(wallet_id: int, wallet_client: WalletRpcClient) -> WalletType:
+    summaries_response = await wallet_client.get_wallets()
+    for summary in summaries_response:
+        summary_id: int = summary["id"]
+        summary_type: int = summary["type"]
+        if wallet_id == summary_id:
+            return WalletType(summary_type)
+
+    raise LookupError(f"Wallet ID not found: {wallet_id}")
+
+
+async def get_name_for_wallet_id(
+    config: Dict[str, Any],
+    wallet_type: WalletType,
+    wallet_id: int,
+    wallet_client: WalletRpcClient,
+):
+    if wallet_type == WalletType.STANDARD_WALLET:
+        name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
+    elif wallet_type == WalletType.CAT:
+        name = await wallet_client.get_cat_name(wallet_id=str(wallet_id))
+    else:
+        raise LookupError("Only standard wallet and CAT wallets are supported")
+
+    return name
+
+
 async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    wallet_id = args["id"]
     transaction_id = bytes32.from_hexstr(args["tx_id"])
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-    tx: TransactionRecord = await wallet_client.get_transaction(wallet_id, transaction_id=transaction_id)
-    print_transaction(tx, verbose=(args["verbose"] > 0), name=name)
+    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+    tx: TransactionRecord = await wallet_client.get_transaction("this is unused", transaction_id=transaction_id)
+
+    try:
+        wallet_type = await get_wallet_type(wallet_id=tx.wallet_id, wallet_client=wallet_client)
+        mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
+        name = await get_name_for_wallet_id(
+            config=config,
+            wallet_type=wallet_type,
+            wallet_id=tx.wallet_id,
+            wallet_client=wallet_client,
+        )
+    except LookupError as e:
+        print(e.args[0])
+        return
+
+    print_transaction(
+        tx,
+        verbose=(args["verbose"] > 0),
+        name=name,
+        address_prefix=address_prefix,
+        mojo_per_unit=mojo_per_unit,
+    )
 
 
 async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -53,9 +111,22 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         paginate = sys.stdout.isatty()
     txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id)
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     if len(txs) == 0:
         print("There are no transactions to this address")
+
+    try:
+        wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
+        mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
+        name = await get_name_for_wallet_id(
+            config=config,
+            wallet_type=wallet_type,
+            wallet_id=wallet_id,
+            wallet_client=wallet_client,
+        )
+    except LookupError as e:
+        print(e.args[0])
+        return
 
     offset = args["offset"]
     num_per_screen = 5 if paginate else len(txs)
@@ -63,7 +134,13 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         for j in range(0, num_per_screen):
             if i + j >= len(txs):
                 break
-            print_transaction(txs[i + j], verbose=(args["verbose"] > 0), name=name)
+            print_transaction(
+                txs[i + j],
+                verbose=(args["verbose"] > 0),
+                name=name,
+                address_prefix=address_prefix,
+                mojo_per_unit=mojo_per_unit,
+            )
         if i + num_per_screen >= len(txs):
             return None
         print("Press q to quit, or c to continue")
@@ -98,27 +175,24 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         )
         return
 
-    summaries_response = await wallet_client.get_wallets()
-    final_amount: Optional[uint64] = None
-    final_fee = uint64(int(fee * units["chia"]))
-    for summary in summaries_response:
-        if wallet_id == int(summary["id"]):
-            typ: WalletType = WalletType(summary["type"])
-            if typ == WalletType.STANDARD_WALLET:
-                final_amount = uint64(int(amount * units["chia"]))
-                print("Submitting transaction...")
-                res = await wallet_client.send_transaction(str(wallet_id), final_amount, address, final_fee, memos)
-                break
-            elif typ == WalletType.CAT:
-                final_amount = uint64(int(amount * units["cat"]))
-                print("Submitting transaction...")
-                res = await wallet_client.cat_spend(str(wallet_id), final_amount, address, final_fee, memos)
-                break
-            else:
-                print("Only standard wallet and CAT wallets are supported")
-                return
-    if final_amount is None:
+    try:
+        typ = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
+    except LookupError:
         print(f"Wallet id: {wallet_id} not found.")
+        return
+
+    final_fee = uint64(int(fee * units["chia"]))
+    final_amount: uint64
+    if typ == WalletType.STANDARD_WALLET:
+        final_amount = uint64(int(amount * units["chia"]))
+        print("Submitting transaction...")
+        res = await wallet_client.send_transaction(str(wallet_id), final_amount, address, final_fee, memos)
+    elif typ == WalletType.CAT:
+        final_amount = uint64(int(amount * units["cat"]))
+        print("Submitting transaction...")
+        res = await wallet_client.cat_spend(str(wallet_id), final_amount, address, final_fee, memos)
+    else:
+        print("Only standard wallet and CAT wallets are supported")
         return
 
     tx_id = res.name
