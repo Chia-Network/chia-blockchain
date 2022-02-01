@@ -1767,7 +1767,7 @@ def generator_condition_tester(
     prg = f"(q ((0x0101010101010101010101010101010101010101010101010101010101010101 {'(q ' if quote else ''} {conditions} {')' if quote else ''} 123 (() (q . ())))))"  # noqa
     print(f"program: {prg}")
     program = SerializedProgram.from_bytes(binutils.assemble(prg).as_bin())
-    generator = BlockGenerator(program, [])
+    generator = BlockGenerator(program, [], [])
     print(f"len: {len(bytes(program))}")
     npc_result: NPCResult = get_name_puzzle_conditions(
         generator, max_cost, cost_per_byte=COST_PER_BYTE, mempool_mode=mempool_mode, height=height
@@ -1963,7 +1963,7 @@ class TestGeneratorConditions:
                 f'(q ((0x0101010101010101010101010101010101010101010101010101010101010101 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ())))(0x0101010101010101010101010101010101010101010101010101010101010102 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ()))) ))'  # noqa
             ).as_bin()
         )
-        generator = BlockGenerator(program, [])
+        generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
             generator, MAX_BLOCK_COST_CLVM, cost_per_byte=COST_PER_BYTE, mempool_mode=False, height=softfork_height
         )

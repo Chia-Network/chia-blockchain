@@ -97,6 +97,7 @@ class WalletRpcApi:
             "/take_offer": self.take_offer,
             "/get_offer": self.get_offer,
             "/get_all_offers": self.get_all_offers,
+            "/get_offers_count": self.get_offers_count,
             "/cancel_offer": self.cancel_offer,
             "/get_cat_list": self.get_cat_list,
             # DID Wallet
@@ -124,6 +125,10 @@ class WalletRpcApi:
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
         """
+        if args[0] is not None and args[0] == "sync_changed":
+            # Metrics is the only current consumer for this event
+            return [create_payload_dict(args[0], {}, self.service_name, "metrics")]
+
         if len(args) < 2:
             return []
 
@@ -134,7 +139,13 @@ class WalletRpcApi:
             data["wallet_id"] = args[1]
         if args[2] is not None:
             data["additional_data"] = args[2]
-        return [create_payload_dict("state_changed", data, "chia_wallet", "wallet_ui")]
+
+        payloads = [create_payload_dict("state_changed", data, self.service_name, "wallet_ui")]
+
+        if args[0] == "coin_added":
+            payloads.append(create_payload_dict(args[0], data, self.service_name, "metrics"))
+
+        return payloads
 
     async def _stop_wallet(self):
         """
@@ -604,6 +615,8 @@ class WalletRpcApi:
                     "unspent_coin_count": 0,
                     "pending_coin_removal_count": 0,
                 }
+                if self.service.logged_in_fingerprint is not None:
+                    wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
         else:
             async with self.service.wallet_state_manager.lock:
                 unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
@@ -628,6 +641,8 @@ class WalletRpcApi:
                     "unspent_coin_count": len(unspent_records),
                     "pending_coin_removal_count": len(unconfirmed_removals),
                 }
+                if self.service.logged_in_fingerprint is not None:
+                    wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
                 self.balance_cache[wallet_id] = wallet_balance
 
         return {"wallet_balance": wallet_balance}
@@ -925,12 +940,23 @@ class WalletRpcApi:
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
         start: int = request.get("start", 0)
-        end: int = request.get("end", 50)
+        end: int = request.get("end", 10)
+        exclude_my_offers: bool = request.get("exclude_my_offers", False)
+        exclude_taken_offers: bool = request.get("exclude_taken_offers", False)
+        include_completed: bool = request.get("include_completed", False)
         sort_key: Optional[str] = request.get("sort_key", None)
         reverse: bool = request.get("reverse", False)
         file_contents: bool = request.get("file_contents", False)
 
-        all_trades = await trade_mgr.trade_store.get_trades_between(start, end, sort_key=sort_key, reverse=reverse)
+        all_trades = await trade_mgr.trade_store.get_trades_between(
+            start,
+            end,
+            sort_key=sort_key,
+            reverse=reverse,
+            exclude_my_offers=exclude_my_offers,
+            exclude_taken_offers=exclude_taken_offers,
+            include_completed=include_completed,
+        )
         result = []
         offer_values: Optional[List[str]] = [] if file_contents else None
         for trade in all_trades:
@@ -940,6 +966,15 @@ class WalletRpcApi:
                 offer_values.append(Offer.from_bytes(offer_to_return).to_bech32())
 
         return {"trade_records": result, "offers": offer_values}
+
+    async def get_offers_count(self, request: Dict):
+        assert self.service.wallet_state_manager is not None
+
+        trade_mgr = self.service.wallet_state_manager.trade_manager
+
+        (total, my_offers_count, taken_offers_count) = await trade_mgr.trade_store.get_trades_count()
+
+        return {"total": total, "my_offers_count": my_offers_count, "taken_offers_count": taken_offers_count}
 
     async def cancel_offer(self, request: Dict):
         assert self.service.wallet_state_manager is not None
