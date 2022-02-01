@@ -73,6 +73,7 @@ main.sym
 
 # Profiling
 *.prof
+*.pstats
 
 # Dev config react
 # chia-blockchain-gui/src/dev_config.js
