@@ -2138,12 +2138,9 @@ class FullNode:
         self,
         vdf_info: VDFInfo,
         vdf_proof: VDFProof,
-        height: uint32,
+        header_hash: bytes32,
         field_vdf: CompressibleVDFField,
     ) -> bool:
-        header_hash = self.blockchain.height_to_hash(height)
-        if not header_hash:
-            return False
 
         block = await self.block_store.get_full_block(header_hash)
         if block is None:
@@ -2202,7 +2199,7 @@ class FullNode:
         ):
             return None
         async with self.blockchain.compact_proof_lock:
-            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
+            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.header_hash, field_vdf)
         if not replaced:
             self.log.error(f"Could not replace compact proof: {request.height}")
             return None
@@ -2285,7 +2282,7 @@ class FullNode:
         async with self.blockchain.compact_proof_lock:
             if self.blockchain.seen_compact_proofs(request.vdf_info, request.height):
                 return None
-            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
+            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.header_hash, field_vdf)
         if not replaced:
             self.log.error(f"Could not replace compact proof: {request.height}")
             return None
