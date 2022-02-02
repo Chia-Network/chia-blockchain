@@ -35,8 +35,8 @@ msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> 
 msgstr "* Chcete viac preskúmať Chia bloky? Vyskúšajte aplikáciu <0>Chia Explorer</0> vytvorenú open source vývojárom."
 
 #: src/components/app/AppSelectMode.tsx:120
-msgid "+"
-msgstr ""
+#~ msgid "+"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNFT.tsx:128
 msgid "+ Add New Plot NFT"
@@ -62,8 +62,8 @@ msgstr "Kombajn je služba bežiaca na stroji, kde sú uložené polia. Farmár 
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:510
-#: src/electron/main.tsx:597
+#: src/electron/main.tsx:507
+#: src/electron/main.tsx:594
 msgid "About Chia Blockchain"
 msgstr "O Chia blockchaine"
 
@@ -111,7 +111,7 @@ msgstr "Pridať pole do fronty"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:45
 #: src/components/plot/PlotHeader.tsx:61
-#: src/components/plot/add/PlotAddForm.tsx:177
+#: src/components/plot/add/PlotAddForm.tsx:175
 #: src/components/plot/overview/PlotOverviewHero.tsx:52
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:229
 #: src/components/plotNFT/PlotNFTCard.tsx:269
@@ -183,7 +183,7 @@ msgstr "Naozaj chcete odstrániť nepotvrdené transakcie?"
 msgid "Are you sure you want to disconnect?"
 msgstr "Naozaj sa chcete odpojiť?"
 
-#: src/electron/main.tsx:264
+#: src/electron/main.tsx:262
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Naozaj chcete skončiť? GUI pre vykresľovanie polí a farmárčenie budú ukončené."
 
@@ -355,15 +355,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "Zmeniť združenie"
 
-#: src/electron/main.tsx:489
+#: src/electron/main.tsx:486
 msgid "Chat on KeyBase"
 msgstr "Chatovať na KeyBase"
 
-#: src/electron/main.tsx:507
+#: src/electron/main.tsx:504
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:446
+#: src/electron/main.tsx:443
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -371,7 +371,7 @@ msgstr "Chia Blockchain Wiki"
 #~ msgid "Chia Wallet"
 #~ msgstr "Chia peňaženka"
 
-#: src/components/app/AppSelectMode.tsx:137
+#: src/components/app/AppSelectMode.tsx:163
 msgid "Choose Farming Mode"
 msgstr ""
 
@@ -387,7 +387,7 @@ msgstr "Vyberte veľkosť poľa"
 msgid "Choose Plotter"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:93
+#: src/components/app/AppSelectMode.tsx:112
 msgid "Choose Wallet Mode"
 msgstr ""
 
@@ -406,8 +406,12 @@ msgstr "Zavrieť"
 #~ msgstr "Zatvára sa uzol a server"
 
 #: src/components/app/AppState.tsx:98
-msgid "Closing services"
+msgid "Closing down services"
 msgstr ""
+
+#: src/components/app/AppState.tsx:98
+#~ msgid "Closing services"
+#~ msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:987
 #~ msgid "Coin Name"
@@ -443,7 +447,7 @@ msgstr "Farba"
 #~ msgstr "Možnosti farebných mincí"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:262
+#: src/electron/main.tsx:260
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Potvrdiť"
@@ -517,7 +521,7 @@ msgstr "Typ pripojenia"
 msgid "Connections"
 msgstr "Pripojenia"
 
-#: src/electron/main.tsx:470
+#: src/electron/main.tsx:467
 msgid "Contribute on GitHub"
 msgstr "Prispejte na GitHube"
 
@@ -537,12 +541,12 @@ msgstr "Prispejte na GitHube"
 #~ msgstr "Skopírovať do schránky"
 
 #: src/components/backup/BackupCreate.tsx:58
-#: src/components/plot/add/PlotAddForm.tsx:197
+#: src/components/plot/add/PlotAddForm.tsx:195
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
 msgid "Create"
 msgstr "Vytvoriť"
 
-#: src/components/app/AppSelectMode.tsx:125
+#: src/components/app/AppSelectMode.tsx:145
 msgid "Create & Manage plots"
 msgstr ""
 
@@ -636,11 +640,11 @@ msgstr "Vytvorené o:"
 msgid "Created by us:"
 msgstr "Vytvorené nami:"
 
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:61
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
 msgid "Creating Plot NFT and Joining the Pool"
 msgstr "Vytváranie NFT poľa a pripájanie k združeniu"
 
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Creating Plot NFT for Self Pooling"
 msgstr "Vytváranie NFT poľa osobného združenia"
 
@@ -737,11 +741,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:386
+#: src/electron/main.tsx:383
 msgid "Developer"
 msgstr "Vývojár"
 
-#: src/electron/main.tsx:389
+#: src/electron/main.tsx:386
 msgid "Developer Tools"
 msgstr "Nástroje pre vývojárov"
 
@@ -762,7 +766,7 @@ msgstr ""
 #~ msgid "Disable Passphrase Protection"
 #~ msgstr ""
 
-#: src/electron/main.tsx:398
+#: src/electron/main.tsx:395
 msgid "Disable Simulator"
 msgstr ""
 
@@ -816,7 +820,7 @@ msgstr "Pretiahnite súbor zálohy"
 #~ msgid "Drag and drop your recovery backup file"
 #~ msgstr "Pretiahnite myšou obnovovací záložný súbor"
 
-#: src/electron/main.tsx:345
+#: src/electron/main.tsx:342
 msgid "Edit"
 msgstr "Upraviť"
 
@@ -826,7 +830,7 @@ msgstr "Upraviť"
 msgid "Edit Payout Instructions"
 msgstr "Upraviť platobné pokyny"
 
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:396
 msgid "Enable Simulator"
 msgstr ""
 
@@ -914,7 +918,7 @@ msgstr ""
 #~ msgid "Failed to update passphrase: {error}"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:70
+#: src/components/dashboard/DashboardSideBar.tsx:46
 msgid "Farm"
 msgstr "Farma"
 
@@ -967,7 +971,7 @@ msgstr "Farmári získavajú odmeny za bloky a transakčné poplatky tým, že v
 msgid "Farming"
 msgstr "Ťažba"
 
-#: src/components/app/AppSelectMode.tsx:107
+#: src/components/app/AppSelectMode.tsx:130
 msgid "Farming Mode"
 msgstr ""
 
@@ -1009,8 +1013,8 @@ msgstr "Výška poplatkov"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:337
-#: src/electron/main.tsx:544
+#: src/electron/main.tsx:334
+#: src/electron/main.tsx:541
 msgid "File"
 msgstr "Súbor"
 
@@ -1029,15 +1033,15 @@ msgstr "Cieľový adresár"
 msgid "Finished"
 msgstr "Dokončené"
 
-#: src/electron/main.tsx:495
+#: src/electron/main.tsx:492
 msgid "Follow on Twitter"
 msgstr "Sledovať na Twitteri"
 
-#: src/electron/main.tsx:454
+#: src/electron/main.tsx:451
 msgid "Frequently Asked Questions"
 msgstr "Často kladené otázky (FAQ)"
 
-#: src/components/dashboard/DashboardSideBar.tsx:54
+#: src/components/dashboard/DashboardSideBar.tsx:30
 #: src/components/fullNode/FullNode.jsx:137
 msgid "Full Node"
 msgstr "Celý uzol"
@@ -1050,7 +1054,7 @@ msgstr "Prehľad celého uzla"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:420
+#: src/electron/main.tsx:417
 msgid "Full Screen"
 msgstr "Celá obrazovka"
 
@@ -1092,7 +1096,7 @@ msgstr "Hash hlavičky"
 msgid "Height"
 msgstr "Poradie"
 
-#: src/electron/main.tsx:442
+#: src/electron/main.tsx:439
 msgid "Help"
 msgstr "Pomoc"
 
@@ -1210,7 +1214,7 @@ msgstr "Pripojte sa k združeniu a získajte konzistentné farmárske XCH odmeny
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr "Pripojte sa k združeniu a získajte konzistentnejšie farmárske XCH odmeny. Vytvorte NFT poľa a priraďte svoje nové polia do skupiny."
 
-#: src/components/app/AppSelectMode.tsx:131
+#: src/components/app/AppSelectMode.tsx:151
 msgid "Join farming pools"
 msgstr ""
 
@@ -1333,7 +1337,7 @@ msgstr "Načítava sa..."
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:81
+#: src/components/app/AppSelectMode.tsx:100
 msgid "Manage CAT tokens"
 msgstr ""
 
@@ -1433,7 +1437,7 @@ msgstr "Ďalej"
 #~ msgstr "Prezývka"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:259
+#: src/electron/main.tsx:257
 msgid "No"
 msgstr "Nie"
 
@@ -1822,7 +1826,7 @@ msgstr "Pole je duplikátom {0}"
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
 msgstr "NFT poľa prechádza do (cieľového stavu). Môže to chvíľu trvať. Prosím nezatvárajte aplikáciu, kým nebude prechod dokončený."
 
-#: src/components/dashboard/DashboardSideBar.tsx:65
+#: src/components/dashboard/DashboardSideBar.tsx:41
 #: src/components/plot/Plot.tsx:14
 msgid "Plots"
 msgstr "Polia"
@@ -1870,7 +1874,7 @@ msgstr "Body nájdené za posledných 24 hodín"
 msgid "Points Successful in Last 24 Hours"
 msgstr "Úspešné body za posledných 24 hodín"
 
-#: src/components/dashboard/DashboardSideBar.tsx:75
+#: src/components/dashboard/DashboardSideBar.tsx:51
 #: src/components/pool/Pool.tsx:17
 msgid "Pool"
 msgstr "Združenie"
@@ -1942,7 +1946,7 @@ msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:271
 #: src/components/plotNFT/PlotNFTCard.tsx:324
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:67
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:65
 msgid "Pool:"
 msgstr "Združenie:"
 
@@ -2070,6 +2074,10 @@ msgstr "Maximálna spotreba RAM"
 #~ msgid "Receive Address"
 #~ msgstr "Adresa príjemcu"
 
+#: src/components/app/AppSelectMode.tsx:121
+msgid "Recommended"
+msgstr ""
+
 #: src/components/_wallet_old/did/WalletDID.tsx:464
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:124
 #~ msgid "Recover"
@@ -2101,7 +2109,7 @@ msgstr "Obnoviť polia"
 msgid "Relative Lock Height"
 msgstr "Relatívna výška zámku"
 
-#: src/electron/main.tsx:462
+#: src/electron/main.tsx:459
 msgid "Release Notes"
 msgstr "Poznámky k vydaniu"
 
@@ -2124,7 +2132,7 @@ msgstr "Odstraňujem"
 #~ msgid "Rename"
 #~ msgstr "Premenovať"
 
-#: src/electron/main.tsx:481
+#: src/electron/main.tsx:478
 msgid "Report an Issue..."
 msgstr "Nahlásiť Problém..."
 
@@ -2135,6 +2143,10 @@ msgstr "Obnoviť metadáta pre Farebné Mince a iné Smart peňaženky zo záloh
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
 #~ msgstr ""
+
+#: src/components/app/AppSelectMode.tsx:157
+msgid "Runs the full node"
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -2206,7 +2218,7 @@ msgstr "Vyberte dočasný adresár"
 #~ msgid "Select Wallet Type"
 #~ msgstr "Vyberte typ peňaženky"
 
-#: src/components/app/AppSelectMode.tsx:55
+#: src/components/app/AppSelectMode.tsx:70
 msgid "Select Your Client Mode"
 msgstr ""
 
@@ -2284,7 +2296,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:145
+#: src/components/app/AppSelectMode.tsx:171
 msgid "Settings are located at the upper right corner"
 msgstr ""
 
@@ -2338,7 +2350,7 @@ msgstr "Zjemnite si svoje farmárske XCH odmeny pripojením sa k združeniu."
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:558
+#: src/electron/main.tsx:555
 msgid "Speech"
 msgstr "Reč"
 
@@ -2408,7 +2420,7 @@ msgstr "Stav:"
 #~ msgid "StatusCard.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:75
+#: src/components/app/AppSelectMode.tsx:94
 msgid "Store and Send XCH"
 msgstr ""
 
@@ -2508,7 +2520,7 @@ msgstr "Uzol sa synchronizuje, čo znamená, že sťahuje bloky z iných uzlov, 
 #~ msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
 #~ msgstr "Počet zálohovacích ID potrebných na obnovu nemôže prekročiť počet pridaných zálohovacích ID."
 
-#: src/hooks/usePoolInfo.ts:59
+#: src/hooks/usePoolInfo.ts:56
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
 msgstr "URL adresa združenia „{normalizedUrl}“ nefunguje. Je to združenie? Chyba: {0}"
 
@@ -2718,7 +2730,7 @@ msgstr "Obchodné ID:"
 msgid "Trade Overview"
 msgstr "Prehľad obchodov"
 
-#: src/components/app/AppSelectMode.tsx:87
+#: src/components/app/AppSelectMode.tsx:106
 msgid "Trade tokens"
 msgstr ""
 
@@ -2800,7 +2812,7 @@ msgstr "VDF dielčie iterácie slotu"
 msgid "Verify Pool Details"
 msgstr "Overte detaily združenia"
 
-#: src/electron/main.tsx:377
+#: src/electron/main.tsx:374
 msgid "View"
 msgstr "Zobrazenie"
 
@@ -2845,12 +2857,12 @@ msgstr "Čakanie na synchronizáciu"
 #~ msgid "Waiting for network to launch"
 #~ msgstr "Waiting for network to launch"
 
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:84
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:82
 msgid "Waiting for the transaction to be confirmed"
 msgstr "Čaká sa na potvrdenie transakcie"
 
-#: src/components/app/AppSelectMode.tsx:67
-#: src/components/app/AppSelectMode.tsx:115
+#: src/components/app/AppSelectMode.tsx:86
+#: src/components/app/AppSelectMode.tsx:138
 msgid "Wallet Mode"
 msgstr ""
 
@@ -2894,7 +2906,7 @@ msgstr ""
 #~ msgid "WalletStatusCard.syncing"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:60
+#: src/components/dashboard/DashboardSideBar.tsx:36
 msgid "Wallets"
 msgstr "Peňaženky"
 
@@ -2951,7 +2963,7 @@ msgstr "Váha je celková pridaná obtiažnosť všetkých blokov až po tento b
 #~ msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 #~ msgstr "Keď obdržíte informačný paket od svojho administrátora, vložte ho nižšie na dokončenie nastavenia vašej peňaženky s obmedzenou sadzbou:"
 
-#: src/electron/main.tsx:428
+#: src/electron/main.tsx:425
 msgid "Window"
 msgstr "Okno"
 
@@ -2961,7 +2973,7 @@ msgstr "Bez poplatkov"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:260
+#: src/electron/main.tsx:258
 msgid "Yes"
 msgstr "Áno"
 
@@ -2974,7 +2986,7 @@ msgstr "Ste v stave čakania. Počkajte prosím na potvrdenie"
 msgid "You are not self pooling"
 msgstr "Nemáte osobné združenie"
 
-#: src/components/app/AppSelectMode.tsx:147
+#: src/components/app/AppSelectMode.tsx:173
 msgid "You can always change your mode later in the settings"
 msgstr ""
 

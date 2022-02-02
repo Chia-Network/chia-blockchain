@@ -149,7 +149,7 @@ msgstr ""
 #~ msgid "Alternate tmpdir/tmpdir2"
 #~ msgstr ""
 
-#: src/components/Amount/Amount.tsx:109
+#: src/components/Amount/Amount.tsx:113
 msgid "Amount"
 msgstr "Количество"
 
@@ -165,7 +165,7 @@ msgstr "Количество"
 #~ msgid "Amount must be an even amount."
 #~ msgstr "Сумма должна быть не менее %{count}"
 
-#: src/components/Settings/SettingsApp.tsx:54
+#: src/components/Settings/SettingsApp.tsx:76
 msgid "Appearance"
 msgstr ""
 
@@ -828,7 +828,7 @@ msgstr "ОПАСНО: удалить закрытый ключ навсегда"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/Settings/SettingsApp.tsx:61
+#: src/components/Settings/SettingsApp.tsx:83
 msgid "Dark"
 msgstr ""
 
@@ -1031,7 +1031,6 @@ msgstr "Ошибка"
 #~ msgstr ""
 
 #: src/components/LayoutMain/LayoutFooter.tsx:50
-#: src/components/Settings/SettingsFooter.tsx:47
 msgid "FAQ"
 msgstr ""
 
@@ -1108,7 +1107,7 @@ msgstr "Открытый ключ фермера:"
 #~ msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 #~ msgstr "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 
-#: src/components/Settings/SettingsApp.tsx:44
+#: src/components/Settings/SettingsApp.tsx:66
 msgid "Farming"
 msgstr "Фарминг"
 
@@ -1173,9 +1172,9 @@ msgstr "Комиссия"
 #~ msgid "Follow on Twitter"
 #~ msgstr "Следить в Twitter"
 
-#: src/electron/main.tsx:377
-#~ msgid "Frequently Asked Questions"
-#~ msgstr "Часто задаваемые вопросы"
+#: src/components/Settings/SettingsApp.tsx:105
+msgid "Frequently Asked Questions"
+msgstr "Часто задаваемые вопросы"
 
 #: src/components/dashboard/DashboardSideBar.tsx:51
 #: src/components/fullNode/FullNode.jsx:137
@@ -1232,9 +1231,9 @@ msgstr "Комиссия"
 #~ msgid "Height"
 #~ msgstr "Высота"
 
-#: src/electron/main.tsx:365
-#~ msgid "Help"
-#~ msgstr "Помощь"
+#: src/components/Settings/SettingsApp.tsx:101
+msgid "Help"
+msgstr "Помощь"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:69
 msgid "Help translate"
@@ -1371,7 +1370,7 @@ msgstr "Некорректное значение"
 #~ msgid "KiB Up/Down"
 #~ msgstr "КиБ исх.\\вх."
 
-#: src/components/Settings/SettingsApp.tsx:68
+#: src/components/Settings/SettingsApp.tsx:90
 msgid "Language"
 msgstr ""
 
@@ -1401,7 +1400,7 @@ msgstr ""
 #~ msgid "Leaving Pool"
 #~ msgstr "Выход из пула"
 
-#: src/components/Settings/SettingsApp.tsx:58
+#: src/components/Settings/SettingsApp.tsx:80
 msgid "Light"
 msgstr ""
 
@@ -1536,7 +1535,7 @@ msgstr ""
 #~ msgid "Minutes"
 #~ msgstr "Минут"
 
-#: src/components/Settings/SettingsApp.tsx:40
+#: src/components/Settings/SettingsApp.tsx:62
 msgid "Mode"
 msgstr ""
 
@@ -2429,7 +2428,7 @@ msgstr ""
 #~ msgstr "Отправить"
 
 #: src/components/LayoutMain/LayoutFooter.tsx:53
-#: src/components/Settings/SettingsFooter.tsx:51
+#: src/components/Settings/SettingsApp.tsx:108
 msgid "Send Feedback"
 msgstr ""
 
@@ -3036,7 +3035,7 @@ msgstr "Значение вероятно завышено"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Ожидание подтверждения транзакции"
 
-#: src/components/Settings/SettingsApp.tsx:47
+#: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""
 
@@ -3357,7 +3356,7 @@ msgstr "У вас есть несохраненные изменения. Хот
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 msgstr ""
 
-#: src/components/Amount/Amount.tsx:91
+#: src/components/Amount/Amount.tsx:95
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
 

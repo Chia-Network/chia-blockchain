@@ -35,8 +35,8 @@ msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> 
 msgstr "*Wants t' explore taken booty further? See <0>Chia Explorer</0> by a mighty free pirate."
 
 #: src/components/app/AppSelectMode.tsx:120
-msgid "+"
-msgstr ""
+#~ msgid "+"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNFT.tsx:128
 msgid "+ Add New Plot NFT"
@@ -62,8 +62,8 @@ msgstr "A tender be a vessel where crewdogs are actually at. A plunderer 'n tend
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:510
-#: src/electron/main.tsx:597
+#: src/electron/main.tsx:507
+#: src/electron/main.tsx:594
 msgid "About Chia Blockchain"
 msgstr "About Chia Blockchain"
 
@@ -111,7 +111,7 @@ msgstr "Add Crewdog t' Queue"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:45
 #: src/components/plot/PlotHeader.tsx:61
-#: src/components/plot/add/PlotAddForm.tsx:177
+#: src/components/plot/add/PlotAddForm.tsx:175
 #: src/components/plot/overview/PlotOverviewHero.tsx:52
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:229
 #: src/components/plotNFT/PlotNFTCard.tsx:269
@@ -183,7 +183,7 @@ msgstr ""
 msgid "Are you sure you want to disconnect?"
 msgstr "Be ye sure ye want t' give it up?"
 
-#: src/electron/main.tsx:264
+#: src/electron/main.tsx:262
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Be ye sure ye want t' give up? GUI crew 'n boardin' will stop."
 
@@ -355,15 +355,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "Time to find new fleet"
 
-#: src/electron/main.tsx:489
+#: src/electron/main.tsx:486
 msgid "Chat on KeyBase"
 msgstr "Natter on KeyBase"
 
-#: src/electron/main.tsx:507
+#: src/electron/main.tsx:504
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:446
+#: src/electron/main.tsx:443
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -371,7 +371,7 @@ msgstr "Chia Blockchain Wiki"
 #~ msgid "Chia Wallet"
 #~ msgstr "Chia Treasure Chest"
 
-#: src/components/app/AppSelectMode.tsx:137
+#: src/components/app/AppSelectMode.tsx:163
 msgid "Choose Farming Mode"
 msgstr ""
 
@@ -387,7 +387,7 @@ msgstr "Choose Strength o' Crewdog"
 msgid "Choose Plotter"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:93
+#: src/components/app/AppSelectMode.tsx:112
 msgid "Choose Wallet Mode"
 msgstr ""
 
@@ -406,8 +406,12 @@ msgstr "Close"
 #~ msgstr "Capt'n 'n server gettin' mighty drunk right now"
 
 #: src/components/app/AppState.tsx:98
-msgid "Closing services"
+msgid "Closing down services"
 msgstr ""
+
+#: src/components/app/AppState.tsx:98
+#~ msgid "Closing services"
+#~ msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:987
 #~ msgid "Coin Name"
@@ -443,7 +447,7 @@ msgstr "Jinx"
 #~ msgstr "Jinxed Dubloon Voodoo"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:262
+#: src/electron/main.tsx:260
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Yarr"
@@ -517,7 +521,7 @@ msgstr "Contact type"
 msgid "Connections"
 msgstr "Contacts"
 
-#: src/electron/main.tsx:470
+#: src/electron/main.tsx:467
 msgid "Contribute on GitHub"
 msgstr "Get yerself busy on GitHub"
 
@@ -537,12 +541,12 @@ msgstr "Get yerself busy on GitHub"
 #~ msgstr "Take into yer hand (Clipboard)"
 
 #: src/components/backup/BackupCreate.tsx:58
-#: src/components/plot/add/PlotAddForm.tsx:197
+#: src/components/plot/add/PlotAddForm.tsx:195
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
 msgid "Create"
 msgstr "Make"
 
-#: src/components/app/AppSelectMode.tsx:125
+#: src/components/app/AppSelectMode.tsx:145
 msgid "Create & Manage plots"
 msgstr ""
 
@@ -636,11 +640,11 @@ msgstr "Made At:"
 msgid "Created by us:"
 msgstr "Made by us:"
 
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:61
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
 msgid "Creating Plot NFT and Joining the Pool"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Creating Plot NFT for Self Pooling"
 msgstr ""
 
@@ -737,11 +741,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:386
+#: src/electron/main.tsx:383
 msgid "Developer"
 msgstr "Builder"
 
-#: src/electron/main.tsx:389
+#: src/electron/main.tsx:386
 msgid "Developer Tools"
 msgstr "Builder Tools"
 
@@ -762,7 +766,7 @@ msgstr ""
 #~ msgid "Disable Passphrase Protection"
 #~ msgstr ""
 
-#: src/electron/main.tsx:398
+#: src/electron/main.tsx:395
 msgid "Disable Simulator"
 msgstr ""
 
@@ -816,7 +820,7 @@ msgstr "Drag 'n drop yer scribble (backup) file"
 #~ msgid "Drag and drop your recovery backup file"
 #~ msgstr ""
 
-#: src/electron/main.tsx:345
+#: src/electron/main.tsx:342
 msgid "Edit"
 msgstr "Edit"
 
@@ -826,7 +830,7 @@ msgstr "Edit"
 msgid "Edit Payout Instructions"
 msgstr ""
 
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:396
 msgid "Enable Simulator"
 msgstr ""
 
@@ -914,7 +918,7 @@ msgstr ""
 #~ msgid "Failed to update passphrase: {error}"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:70
+#: src/components/dashboard/DashboardSideBar.tsx:46
 msgid "Farm"
 msgstr "Lootin'"
 
@@ -967,7 +971,7 @@ msgstr "Plunderers get booty 'n transaction fees by givin' space t' the ocean (t
 msgid "Farming"
 msgstr "Under Full Sail"
 
-#: src/components/app/AppSelectMode.tsx:107
+#: src/components/app/AppSelectMode.tsx:130
 msgid "Farming Mode"
 msgstr ""
 
@@ -1009,8 +1013,8 @@ msgstr "Fees Amount"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:337
-#: src/electron/main.tsx:544
+#: src/electron/main.tsx:334
+#: src/electron/main.tsx:541
 msgid "File"
 msgstr "File"
 
@@ -1029,15 +1033,15 @@ msgstr "Final folder"
 msgid "Finished"
 msgstr "Done"
 
-#: src/electron/main.tsx:495
+#: src/electron/main.tsx:492
 msgid "Follow on Twitter"
 msgstr "Follow on Twitter"
 
-#: src/electron/main.tsx:454
+#: src/electron/main.tsx:451
 msgid "Frequently Asked Questions"
 msgstr "Oftentimes Asked Questions"
 
-#: src/components/dashboard/DashboardSideBar.tsx:54
+#: src/components/dashboard/DashboardSideBar.tsx:30
 #: src/components/fullNode/FullNode.jsx:137
 msgid "Full Node"
 msgstr "Capt'n"
@@ -1050,7 +1054,7 @@ msgstr ""
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:420
+#: src/electron/main.tsx:417
 msgid "Full Screen"
 msgstr "Full Screen"
 
@@ -1092,7 +1096,7 @@ msgstr "Header hash"
 msgid "Height"
 msgstr "Booty Number"
 
-#: src/electron/main.tsx:442
+#: src/electron/main.tsx:439
 msgid "Help"
 msgstr "Help"
 
@@ -1210,7 +1214,7 @@ msgstr ""
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:131
+#: src/components/app/AppSelectMode.tsx:151
 msgid "Join farming pools"
 msgstr ""
 
@@ -1333,7 +1337,7 @@ msgstr "Unrolling Treasure Maps..."
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:81
+#: src/components/app/AppSelectMode.tsx:100
 msgid "Manage CAT tokens"
 msgstr ""
 
@@ -1433,7 +1437,7 @@ msgstr "Further"
 #~ msgstr "Nickname"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:259
+#: src/electron/main.tsx:257
 msgid "No"
 msgstr "Nay"
 
@@ -1822,7 +1826,7 @@ msgstr "Crewdog is clone o' {0}"
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
 msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:65
+#: src/components/dashboard/DashboardSideBar.tsx:41
 #: src/components/plot/Plot.tsx:14
 msgid "Plots"
 msgstr "Crew"
@@ -1870,7 +1874,7 @@ msgstr "Booty looted from last 24 bottle o rum"
 msgid "Points Successful in Last 24 Hours"
 msgstr "Booty at yar feet from last 24 bottle o rum"
 
-#: src/components/dashboard/DashboardSideBar.tsx:75
+#: src/components/dashboard/DashboardSideBar.tsx:51
 #: src/components/pool/Pool.tsx:17
 msgid "Pool"
 msgstr "Fleets"
@@ -1942,7 +1946,7 @@ msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:271
 #: src/components/plotNFT/PlotNFTCard.tsx:324
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:67
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:65
 msgid "Pool:"
 msgstr ""
 
@@ -2070,6 +2074,10 @@ msgstr "RAM max usage"
 #~ msgid "Receive Address"
 #~ msgstr "Yer Treasure's Coordinates (give t'is to scallywags who owe you)"
 
+#: src/components/app/AppSelectMode.tsx:121
+msgid "Recommended"
+msgstr ""
+
 #: src/components/_wallet_old/did/WalletDID.tsx:464
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:124
 #~ msgid "Recover"
@@ -2101,7 +2109,7 @@ msgstr "Roll Call o' Crew"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:462
+#: src/electron/main.tsx:459
 msgid "Release Notes"
 msgstr "Builder's Notes"
 
@@ -2124,7 +2132,7 @@ msgstr "Scuttling"
 #~ msgid "Rename"
 #~ msgstr "Change Name"
 
-#: src/electron/main.tsx:481
+#: src/electron/main.tsx:478
 msgid "Report an Issue..."
 msgstr "Speak up fer somethin'..."
 
@@ -2135,6 +2143,10 @@ msgstr "Get Metadata fer Jinxed Dubloons 'n other Smart Wallets from Scribbled N
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
 #~ msgstr ""
+
+#: src/components/app/AppSelectMode.tsx:157
+msgid "Runs the full node"
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -2206,7 +2218,7 @@ msgstr "Give Temporary Folder"
 #~ msgid "Select Wallet Type"
 #~ msgstr "Choose type o' treasure chest"
 
-#: src/components/app/AppSelectMode.tsx:55
+#: src/components/app/AppSelectMode.tsx:70
 msgid "Select Your Client Mode"
 msgstr ""
 
@@ -2284,7 +2296,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:145
+#: src/components/app/AppSelectMode.tsx:171
 msgid "Settings are located at the upper right corner"
 msgstr ""
 
@@ -2338,7 +2350,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:558
+#: src/electron/main.tsx:555
 msgid "Speech"
 msgstr "Parler"
 
@@ -2408,7 +2420,7 @@ msgstr "State o' t'ings:"
 #~ msgid "StatusCard.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:75
+#: src/components/app/AppSelectMode.tsx:94
 msgid "Store and Send XCH"
 msgstr ""
 
@@ -2508,7 +2520,7 @@ msgstr "The capt'n be collectin' reports, which means he's gettin' information o
 #~ msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
 #~ msgstr ""
 
-#: src/hooks/usePoolInfo.ts:59
+#: src/hooks/usePoolInfo.ts:56
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
 msgstr ""
 
@@ -2718,7 +2730,7 @@ msgstr "Trade ID:"
 msgid "Trade Overview"
 msgstr "Trade Overview"
 
-#: src/components/app/AppSelectMode.tsx:87
+#: src/components/app/AppSelectMode.tsx:106
 msgid "Trade tokens"
 msgstr ""
 
@@ -2800,7 +2812,7 @@ msgstr "Shots fired"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:377
+#: src/electron/main.tsx:374
 msgid "View"
 msgstr "View"
 
@@ -2845,12 +2857,12 @@ msgstr "Waitin' fer better times"
 #~ msgid "Waiting for network to launch"
 #~ msgstr "Waiting for network to launch"
 
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:84
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:82
 msgid "Waiting for the transaction to be confirmed"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:67
-#: src/components/app/AppSelectMode.tsx:115
+#: src/components/app/AppSelectMode.tsx:86
+#: src/components/app/AppSelectMode.tsx:138
 msgid "Wallet Mode"
 msgstr ""
 
@@ -2894,7 +2906,7 @@ msgstr ""
 #~ msgid "WalletStatusCard.syncing"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:60
+#: src/components/dashboard/DashboardSideBar.tsx:36
 msgid "Wallets"
 msgstr "Treasure Chests"
 
@@ -2951,7 +2963,7 @@ msgstr "Weight be the sum o' pirate huntin' o' all sub booties up to an' includi
 #~ msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 #~ msgstr "When ye 'ave the setup info packet from yer pirate lord, enter it below t' complete yer Rate Limited Treasure Chest:"
 
-#: src/electron/main.tsx:428
+#: src/electron/main.tsx:425
 msgid "Window"
 msgstr "Porthole"
 
@@ -2961,7 +2973,7 @@ msgstr "Wit' no fees"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:260
+#: src/electron/main.tsx:258
 msgid "Yes"
 msgstr "Aye"
 
@@ -2974,7 +2986,7 @@ msgstr ""
 msgid "You are not self pooling"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:147
+#: src/components/app/AppSelectMode.tsx:173
 msgid "You can always change your mode later in the settings"
 msgstr ""
 

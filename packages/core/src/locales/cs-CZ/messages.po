@@ -149,7 +149,7 @@ msgstr ""
 #~ msgid "Alternate tmpdir/tmpdir2"
 #~ msgstr ""
 
-#: src/components/Amount/Amount.tsx:109
+#: src/components/Amount/Amount.tsx:113
 msgid "Amount"
 msgstr "Částka"
 
@@ -165,7 +165,7 @@ msgstr "Částka"
 #~ msgid "Amount must be an even amount."
 #~ msgstr "Částka musí být sudá částka."
 
-#: src/components/Settings/SettingsApp.tsx:54
+#: src/components/Settings/SettingsApp.tsx:76
 msgid "Appearance"
 msgstr ""
 
@@ -656,7 +656,7 @@ msgstr "POZOR: trvale odstraní privátní klíč"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/Settings/SettingsApp.tsx:61
+#: src/components/Settings/SettingsApp.tsx:83
 msgid "Dark"
 msgstr ""
 
@@ -859,7 +859,6 @@ msgstr "Chyba"
 #~ msgstr ""
 
 #: src/components/LayoutMain/LayoutFooter.tsx:50
-#: src/components/Settings/SettingsFooter.tsx:47
 msgid "FAQ"
 msgstr ""
 
@@ -936,7 +935,7 @@ msgstr "Farmářuv veřejný klíč:"
 #~ msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 #~ msgstr "Farmáři získávají odměny za bloky a transakční poplatky tím, že vloží svůj volný prostor do sítě a zabezpečí tím tak transakce. Farmu, kterou uvidíte zde, vytvoříte přidáním nějakých polí. <0>Více informací</0>"
 
-#: src/components/Settings/SettingsApp.tsx:44
+#: src/components/Settings/SettingsApp.tsx:66
 msgid "Farming"
 msgstr "Farmaření"
 
@@ -1001,9 +1000,9 @@ msgstr "Poplatek"
 #~ msgid "Follow on Twitter"
 #~ msgstr "Sledovat na Twitteru"
 
-#: src/electron/main.tsx:377
-#~ msgid "Frequently Asked Questions"
-#~ msgstr "Často kladené otázky"
+#: src/components/Settings/SettingsApp.tsx:105
+msgid "Frequently Asked Questions"
+msgstr "Často kladené otázky"
 
 #: src/components/dashboard/DashboardSideBar.tsx:51
 #: src/components/fullNode/FullNode.jsx:137
@@ -1060,9 +1059,9 @@ msgstr "Poplatek"
 #~ msgid "Height"
 #~ msgstr "Výška"
 
-#: src/electron/main.tsx:365
-#~ msgid "Help"
-#~ msgstr "Nápověda"
+#: src/components/Settings/SettingsApp.tsx:101
+msgid "Help"
+msgstr "Nápověda"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:69
 msgid "Help translate"
@@ -1199,7 +1198,7 @@ msgstr "Nesprávná hodnota"
 #~ msgid "KiB Up/Down"
 #~ msgstr "MiB odesláno/přijato"
 
-#: src/components/Settings/SettingsApp.tsx:68
+#: src/components/Settings/SettingsApp.tsx:90
 msgid "Language"
 msgstr ""
 
@@ -1229,7 +1228,7 @@ msgstr ""
 #~ msgid "Leaving Pool"
 #~ msgstr "Opustit Pool"
 
-#: src/components/Settings/SettingsApp.tsx:58
+#: src/components/Settings/SettingsApp.tsx:80
 msgid "Light"
 msgstr ""
 
@@ -1364,7 +1363,7 @@ msgstr ""
 #~ msgid "Minutes"
 #~ msgstr "Minuty"
 
-#: src/components/Settings/SettingsApp.tsx:40
+#: src/components/Settings/SettingsApp.tsx:62
 msgid "Mode"
 msgstr ""
 
@@ -2257,7 +2256,7 @@ msgstr ""
 #~ msgstr "Odeslat"
 
 #: src/components/LayoutMain/LayoutFooter.tsx:53
-#: src/components/Settings/SettingsFooter.tsx:51
+#: src/components/Settings/SettingsApp.tsx:108
 msgid "Send Feedback"
 msgstr ""
 
@@ -2864,7 +2863,7 @@ msgstr "Hodnota se zdá vysoká"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Čekání na potvrzení transakce"
 
-#: src/components/Settings/SettingsApp.tsx:47
+#: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""
 
@@ -3185,7 +3184,7 @@ msgstr "Provedli jste změny. Chcete je zahodit?"
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 msgstr ""
 
-#: src/components/Amount/Amount.tsx:91
+#: src/components/Amount/Amount.tsx:95
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
 

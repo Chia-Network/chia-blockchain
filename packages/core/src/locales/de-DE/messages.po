@@ -149,7 +149,7 @@ msgstr ""
 #~ msgid "Alternate tmpdir/tmpdir2"
 #~ msgstr ""
 
-#: src/components/Amount/Amount.tsx:109
+#: src/components/Amount/Amount.tsx:113
 msgid "Amount"
 msgstr "Betrag"
 
@@ -165,7 +165,7 @@ msgstr "Betrag"
 #~ msgid "Amount must be an even amount."
 #~ msgstr ""
 
-#: src/components/Settings/SettingsApp.tsx:54
+#: src/components/Settings/SettingsApp.tsx:76
 msgid "Appearance"
 msgstr ""
 
@@ -656,7 +656,7 @@ msgstr "ACHTUNG: Privaten Schlüssel unwiederbringlich löschen"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/Settings/SettingsApp.tsx:61
+#: src/components/Settings/SettingsApp.tsx:83
 msgid "Dark"
 msgstr ""
 
@@ -865,7 +865,6 @@ msgstr "Fehler"
 #~ msgstr ""
 
 #: src/components/LayoutMain/LayoutFooter.tsx:50
-#: src/components/Settings/SettingsFooter.tsx:47
 msgid "FAQ"
 msgstr ""
 
@@ -942,7 +941,7 @@ msgstr "Öffentlicher Schlüssel des Farmers:"
 #~ msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 #~ msgstr "Farmer erhalten Block Belohnungen und Transaktionsgebühren indem dem Netzwerk ungenutzter Speicherplatz zu Verfügung gestellt wird um Übertragungen abzusichern. Das ist der Platz an dem deine Farm sein wird sobald du einen Plot hinzufügst. <0>Mehr zum Thema</0>"
 
-#: src/components/Settings/SettingsApp.tsx:44
+#: src/components/Settings/SettingsApp.tsx:66
 msgid "Farming"
 msgstr "Farming"
 
@@ -1007,9 +1006,9 @@ msgstr "Gebühr"
 #~ msgid "Follow on Twitter"
 #~ msgstr "Folge auf Twitter"
 
-#: src/electron/main.tsx:377
-#~ msgid "Frequently Asked Questions"
-#~ msgstr "Häufig gestellte Fragen"
+#: src/components/Settings/SettingsApp.tsx:105
+msgid "Frequently Asked Questions"
+msgstr "Häufig gestellte Fragen"
 
 #: src/components/dashboard/DashboardSideBar.tsx:51
 #: src/components/fullNode/FullNode.jsx:137
@@ -1066,9 +1065,9 @@ msgstr "Gebühr"
 #~ msgid "Height"
 #~ msgstr "Höhe"
 
-#: src/electron/main.tsx:365
-#~ msgid "Help"
-#~ msgstr "Hilfe"
+#: src/components/Settings/SettingsApp.tsx:101
+msgid "Help"
+msgstr "Hilfe"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:69
 msgid "Help translate"
@@ -1205,7 +1204,7 @@ msgstr "Ungültiger Wert"
 #~ msgid "KiB Up/Down"
 #~ msgstr "KiB Up/Down"
 
-#: src/components/Settings/SettingsApp.tsx:68
+#: src/components/Settings/SettingsApp.tsx:90
 msgid "Language"
 msgstr ""
 
@@ -1235,7 +1234,7 @@ msgstr ""
 #~ msgid "Leaving Pool"
 #~ msgstr "Pool wird verlassen"
 
-#: src/components/Settings/SettingsApp.tsx:58
+#: src/components/Settings/SettingsApp.tsx:80
 msgid "Light"
 msgstr ""
 
@@ -1370,7 +1369,7 @@ msgstr ""
 #~ msgid "Minutes"
 #~ msgstr "Minuten"
 
-#: src/components/Settings/SettingsApp.tsx:40
+#: src/components/Settings/SettingsApp.tsx:62
 msgid "Mode"
 msgstr ""
 
@@ -2265,7 +2264,7 @@ msgstr ""
 #~ msgstr "Senden"
 
 #: src/components/LayoutMain/LayoutFooter.tsx:53
-#: src/components/Settings/SettingsFooter.tsx:51
+#: src/components/Settings/SettingsApp.tsx:108
 msgid "Send Feedback"
 msgstr ""
 
@@ -2872,7 +2871,7 @@ msgstr "Wert scheint hoch"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Warten auf Transaktionsbestätigung"
 
-#: src/components/Settings/SettingsApp.tsx:47
+#: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""
 
@@ -3193,7 +3192,7 @@ msgstr "Es gibt Änderungen. Möchtest du diese verwerfen?"
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 msgstr ""
 
-#: src/components/Amount/Amount.tsx:91
+#: src/components/Amount/Amount.tsx:95
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
 

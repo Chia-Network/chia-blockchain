@@ -35,8 +35,8 @@ msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> 
 msgstr "*Vuoi esplorare ulteriormente i blocchi della rete Chia? Dai uno sguardo a <0>Chia Explorer</0> creato da uno sviluppatore open source."
 
 #: src/components/app/AppSelectMode.tsx:120
-msgid "+"
-msgstr ""
+#~ msgid "+"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNFT.tsx:128
 msgid "+ Add New Plot NFT"
@@ -62,8 +62,8 @@ msgstr "Un harvester (letteralmente mietitrice) è un servizio eseguito sulla ma
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:510
-#: src/electron/main.tsx:597
+#: src/electron/main.tsx:507
+#: src/electron/main.tsx:594
 msgid "About Chia Blockchain"
 msgstr "Informazioni sulla Blockchain di Chia"
 
@@ -111,7 +111,7 @@ msgstr "Aggiungi uno o più Plot alla Coda"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:45
 #: src/components/plot/PlotHeader.tsx:61
-#: src/components/plot/add/PlotAddForm.tsx:177
+#: src/components/plot/add/PlotAddForm.tsx:175
 #: src/components/plot/overview/PlotOverviewHero.tsx:52
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:229
 #: src/components/plotNFT/PlotNFTCard.tsx:269
@@ -183,7 +183,7 @@ msgstr "Sei sicuro di voler eliminare queste transazioni non confermate?"
 msgid "Are you sure you want to disconnect?"
 msgstr "Sei sicuro di volerti disconnettere?"
 
-#: src/electron/main.tsx:264
+#: src/electron/main.tsx:262
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Sei sicuro di voler chiudere il programma? Plotting e farming effettuati tramite GUI (interfaccia grafica) verranno interrotti."
 
@@ -355,15 +355,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "Cambia Pool"
 
-#: src/electron/main.tsx:489
+#: src/electron/main.tsx:486
 msgid "Chat on KeyBase"
 msgstr "Chatta su KeyBase"
 
-#: src/electron/main.tsx:507
+#: src/electron/main.tsx:504
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:446
+#: src/electron/main.tsx:443
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki della Blockchain Chia"
 
@@ -371,7 +371,7 @@ msgstr "Wiki della Blockchain Chia"
 #~ msgid "Chia Wallet"
 #~ msgstr "Portafoglio Chia"
 
-#: src/components/app/AppSelectMode.tsx:137
+#: src/components/app/AppSelectMode.tsx:163
 msgid "Choose Farming Mode"
 msgstr ""
 
@@ -387,7 +387,7 @@ msgstr "Scegli la Dimensione del Plot"
 msgid "Choose Plotter"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:93
+#: src/components/app/AppSelectMode.tsx:112
 msgid "Choose Wallet Mode"
 msgstr ""
 
@@ -406,8 +406,12 @@ msgstr "Chiudi"
 #~ msgstr "Arresto del nodo e del server in corso"
 
 #: src/components/app/AppState.tsx:98
-msgid "Closing services"
+msgid "Closing down services"
 msgstr ""
+
+#: src/components/app/AppState.tsx:98
+#~ msgid "Closing services"
+#~ msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:987
 #~ msgid "Coin Name"
@@ -443,7 +447,7 @@ msgstr "Colore"
 #~ msgstr "Opzioni delle monete colorate"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:262
+#: src/electron/main.tsx:260
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Conferma"
@@ -517,7 +521,7 @@ msgstr "Tipo di connessione"
 msgid "Connections"
 msgstr "Connessioni"
 
-#: src/electron/main.tsx:470
+#: src/electron/main.tsx:467
 msgid "Contribute on GitHub"
 msgstr "Contribuisci su GitHub"
 
@@ -537,12 +541,12 @@ msgstr "Contribuisci su GitHub"
 #~ msgstr "Copia negli appunti"
 
 #: src/components/backup/BackupCreate.tsx:58
-#: src/components/plot/add/PlotAddForm.tsx:197
+#: src/components/plot/add/PlotAddForm.tsx:195
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
 msgid "Create"
 msgstr "Crea"
 
-#: src/components/app/AppSelectMode.tsx:125
+#: src/components/app/AppSelectMode.tsx:145
 msgid "Create & Manage plots"
 msgstr ""
 
@@ -636,11 +640,11 @@ msgstr "Creato A:"
 msgid "Created by us:"
 msgstr "Creato da noi:"
 
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:61
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
 msgid "Creating Plot NFT and Joining the Pool"
 msgstr "Creazione di Plot NFT e Unirsi alla Pool"
 
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Creating Plot NFT for Self Pooling"
 msgstr "Creazione di Plot NFT per l'auto-pooling"
 
@@ -737,11 +741,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:386
+#: src/electron/main.tsx:383
 msgid "Developer"
 msgstr "Sviluppatore"
 
-#: src/electron/main.tsx:389
+#: src/electron/main.tsx:386
 msgid "Developer Tools"
 msgstr "Strumenti per sviluppatori"
 
@@ -762,7 +766,7 @@ msgstr ""
 #~ msgid "Disable Passphrase Protection"
 #~ msgstr ""
 
-#: src/electron/main.tsx:398
+#: src/electron/main.tsx:395
 msgid "Disable Simulator"
 msgstr ""
 
@@ -816,7 +820,7 @@ msgstr "Trascina e rilascia il tuo file di backup"
 #~ msgid "Drag and drop your recovery backup file"
 #~ msgstr ""
 
-#: src/electron/main.tsx:345
+#: src/electron/main.tsx:342
 msgid "Edit"
 msgstr "Modifica"
 
@@ -826,7 +830,7 @@ msgstr "Modifica"
 msgid "Edit Payout Instructions"
 msgstr "Modifica Istruzioni Di Pagamento"
 
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:396
 msgid "Enable Simulator"
 msgstr ""
 
@@ -914,7 +918,7 @@ msgstr ""
 #~ msgid "Failed to update passphrase: {error}"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:70
+#: src/components/dashboard/DashboardSideBar.tsx:46
 msgid "Farm"
 msgstr "Coltiva"
 
@@ -967,7 +971,7 @@ msgstr "I coltivatori, guadagnano le ricompense del blocco e le tasse di transaz
 msgid "Farming"
 msgstr "Coltivando"
 
-#: src/components/app/AppSelectMode.tsx:107
+#: src/components/app/AppSelectMode.tsx:130
 msgid "Farming Mode"
 msgstr ""
 
@@ -1009,8 +1013,8 @@ msgstr "Ammontare delle tasse"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:337
-#: src/electron/main.tsx:544
+#: src/electron/main.tsx:334
+#: src/electron/main.tsx:541
 msgid "File"
 msgstr "File"
 
@@ -1029,15 +1033,15 @@ msgstr "Seleziona la destinazione finale per la tua cartella plot"
 msgid "Finished"
 msgstr "Finito"
 
-#: src/electron/main.tsx:495
+#: src/electron/main.tsx:492
 msgid "Follow on Twitter"
 msgstr "Seguici su Twitter"
 
-#: src/electron/main.tsx:454
+#: src/electron/main.tsx:451
 msgid "Frequently Asked Questions"
 msgstr "Domande Frequenti"
 
-#: src/components/dashboard/DashboardSideBar.tsx:54
+#: src/components/dashboard/DashboardSideBar.tsx:30
 #: src/components/fullNode/FullNode.jsx:137
 msgid "Full Node"
 msgstr "Full Node"
@@ -1050,7 +1054,7 @@ msgstr "Panoramica del Full Node"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:420
+#: src/electron/main.tsx:417
 msgid "Full Screen"
 msgstr "Schermo Intero"
 
@@ -1092,7 +1096,7 @@ msgstr "Hash Header"
 msgid "Height"
 msgstr "Altezza"
 
-#: src/electron/main.tsx:442
+#: src/electron/main.tsx:439
 msgid "Help"
 msgstr "Aiuto"
 
@@ -1210,7 +1214,7 @@ msgstr "Unisciti a una pool e ottieni ricompense continue per il farming in XCH.
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr "Unisciti a una pool e ottieni ricompense continue per il farming in XCH. Crea un plot NFT e assegna i tuoi nuovi plot ad un gruppo."
 
-#: src/components/app/AppSelectMode.tsx:131
+#: src/components/app/AppSelectMode.tsx:151
 msgid "Join farming pools"
 msgstr ""
 
@@ -1333,7 +1337,7 @@ msgstr "Caricamento in corso..."
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:81
+#: src/components/app/AppSelectMode.tsx:100
 msgid "Manage CAT tokens"
 msgstr ""
 
@@ -1433,7 +1437,7 @@ msgstr "Prossimo"
 #~ msgstr "Nickname"
 
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:259
+#: src/electron/main.tsx:257
 msgid "No"
 msgstr "No"
 
@@ -1822,7 +1826,7 @@ msgstr "Il plot è un duplicato di {0}"
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
 msgstr "Il plot NFT sta transitando in (stato di destinazione). Questo può richiedere un po' di tempo. Si prega di non chiudere l'applicazione fino a quando non sarà finalizzato."
 
-#: src/components/dashboard/DashboardSideBar.tsx:65
+#: src/components/dashboard/DashboardSideBar.tsx:41
 #: src/components/plot/Plot.tsx:14
 msgid "Plots"
 msgstr "Plot"
@@ -1870,7 +1874,7 @@ msgstr "Punti Trovati nelle ultime 24 Ore"
 msgid "Points Successful in Last 24 Hours"
 msgstr "Punti Confermati nelle ultime 24 Ore"
 
-#: src/components/dashboard/DashboardSideBar.tsx:75
+#: src/components/dashboard/DashboardSideBar.tsx:51
 #: src/components/pool/Pool.tsx:17
 msgid "Pool"
 msgstr "Pool"
@@ -1942,7 +1946,7 @@ msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:271
 #: src/components/plotNFT/PlotNFTCard.tsx:324
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:67
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:65
 msgid "Pool:"
 msgstr "Pool:"
 
@@ -2070,6 +2074,10 @@ msgstr "Utilizzo massimo RAM"
 #~ msgid "Receive Address"
 #~ msgstr "Indirizzo per Ricevere"
 
+#: src/components/app/AppSelectMode.tsx:121
+msgid "Recommended"
+msgstr ""
+
 #: src/components/_wallet_old/did/WalletDID.tsx:464
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:124
 #~ msgid "Recover"
@@ -2101,7 +2109,7 @@ msgstr "Aggiorna Plot"
 msgid "Relative Lock Height"
 msgstr "Altezza Di Blocco Relativa"
 
-#: src/electron/main.tsx:462
+#: src/electron/main.tsx:459
 msgid "Release Notes"
 msgstr "Note di Rilascio"
 
@@ -2124,7 +2132,7 @@ msgstr "Rimuovendo"
 #~ msgid "Rename"
 #~ msgstr "Rinomina"
 
-#: src/electron/main.tsx:481
+#: src/electron/main.tsx:478
 msgid "Report an Issue..."
 msgstr "Segnala un Problema..."
 
@@ -2135,6 +2143,10 @@ msgstr "Ripristinare i Metadati per le Monete Colorate e altri Wallet Intelligen
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
 #~ msgstr ""
+
+#: src/components/app/AppSelectMode.tsx:157
+msgid "Runs the full node"
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -2206,7 +2218,7 @@ msgstr "Seleziona Cartella Temporanea"
 #~ msgid "Select Wallet Type"
 #~ msgstr "Seleziona Tipo di Wallet"
 
-#: src/components/app/AppSelectMode.tsx:55
+#: src/components/app/AppSelectMode.tsx:70
 msgid "Select Your Client Mode"
 msgstr ""
 
@@ -2284,7 +2296,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:145
+#: src/components/app/AppSelectMode.tsx:171
 msgid "Settings are located at the upper right corner"
 msgstr ""
 
@@ -2338,7 +2350,7 @@ msgstr "Riduci la fluttuazione nelle tue ricompense in XCH da farming unendoti a
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:558
+#: src/electron/main.tsx:555
 msgid "Speech"
 msgstr "Discorso"
 
@@ -2408,7 +2420,7 @@ msgstr "Stato:"
 #~ msgid "StatusCard.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:75
+#: src/components/app/AppSelectMode.tsx:94
 msgid "Store and Send XCH"
 msgstr ""
 
@@ -2508,7 +2520,7 @@ msgstr "Il nodo si sta sincronizzando, ovvero sta scaricando i blocchi da altri 
 #~ msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
 #~ msgstr ""
 
-#: src/hooks/usePoolInfo.ts:59
+#: src/hooks/usePoolInfo.ts:56
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
 msgstr "L'URL della pool \"{normalizedUrl}\" non funziona. È una pool? Errore: {0}"
 
@@ -2718,7 +2730,7 @@ msgstr "ID commercio:"
 msgid "Trade Overview"
 msgstr "Panoramica Commerci"
 
-#: src/components/app/AppSelectMode.tsx:87
+#: src/components/app/AppSelectMode.tsx:106
 msgid "Trade tokens"
 msgstr ""
 
@@ -2800,7 +2812,7 @@ msgstr "Iterazioni Sottoslot VDF"
 msgid "Verify Pool Details"
 msgstr "Verifica Dettagli Pool"
 
-#: src/electron/main.tsx:377
+#: src/electron/main.tsx:374
 msgid "View"
 msgstr "Visualizza"
 
@@ -2845,12 +2857,12 @@ msgstr "Aspetta per la sincronizzazione"
 #~ msgid "Waiting for network to launch"
 #~ msgstr "Waiting for network to launch"
 
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:84
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:82
 msgid "Waiting for the transaction to be confirmed"
 msgstr "In attesa che la transazione venga confermata"
 
-#: src/components/app/AppSelectMode.tsx:67
-#: src/components/app/AppSelectMode.tsx:115
+#: src/components/app/AppSelectMode.tsx:86
+#: src/components/app/AppSelectMode.tsx:138
 msgid "Wallet Mode"
 msgstr ""
 
@@ -2894,7 +2906,7 @@ msgstr ""
 #~ msgid "WalletStatusCard.syncing"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:60
+#: src/components/dashboard/DashboardSideBar.tsx:36
 msgid "Wallets"
 msgstr "I wallet"
 
@@ -2951,7 +2963,7 @@ msgstr "Il peso è la difficoltà aggiunta in totale a tutti i sottoblocchi fino
 #~ msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 #~ msgstr "Quando ricevi il tuo pacchetto di informazioni di setup dal tuo amministratore, inseriscile sotto per completare il setup del tuo Wallet a Velocità Limitata (RL):"
 
-#: src/electron/main.tsx:428
+#: src/electron/main.tsx:425
 msgid "Window"
 msgstr "Finestra"
 
@@ -2961,7 +2973,7 @@ msgstr "Senza tasse"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:260
+#: src/electron/main.tsx:258
 msgid "Yes"
 msgstr "Sì"
 
@@ -2974,7 +2986,7 @@ msgstr "Sei in uno stato in sospeso. Si prega di attendere la conferma"
 msgid "You are not self pooling"
 msgstr "Non sei in auto-pooling"
 
-#: src/components/app/AppSelectMode.tsx:147
+#: src/components/app/AppSelectMode.tsx:173
 msgid "You can always change your mode later in the settings"
 msgstr ""
 

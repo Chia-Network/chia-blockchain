@@ -149,7 +149,7 @@ msgstr ""
 #~ msgid "Alternate tmpdir/tmpdir2"
 #~ msgstr ""
 
-#: src/components/Amount/Amount.tsx:109
+#: src/components/Amount/Amount.tsx:113
 msgid "Amount"
 msgstr "Quantidade"
 
@@ -165,7 +165,7 @@ msgstr "Quantidade"
 #~ msgid "Amount must be an even amount."
 #~ msgstr "O montante deve ser um valor par."
 
-#: src/components/Settings/SettingsApp.tsx:54
+#: src/components/Settings/SettingsApp.tsx:76
 msgid "Appearance"
 msgstr ""
 
@@ -656,7 +656,7 @@ msgstr "PERIGO: excluir permanentemente a chave privada"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/Settings/SettingsApp.tsx:61
+#: src/components/Settings/SettingsApp.tsx:83
 msgid "Dark"
 msgstr ""
 
@@ -859,7 +859,6 @@ msgstr "Erro"
 #~ msgstr ""
 
 #: src/components/LayoutMain/LayoutFooter.tsx:50
-#: src/components/Settings/SettingsFooter.tsx:47
 msgid "FAQ"
 msgstr ""
 
@@ -936,7 +935,7 @@ msgstr "Chave Pública do Fazendeiro:"
 #~ msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 #~ msgstr "Os fazendeiros ganham recompensas em bloco e taxas de transação, reservando espaço livre para a rede para ajudar a proteger as transações. É aqui que sua fazenda estará quando você adicionar um lote. <0> Saiba mais </0>"
 
-#: src/components/Settings/SettingsApp.tsx:44
+#: src/components/Settings/SettingsApp.tsx:66
 msgid "Farming"
 msgstr "Cultivando"
 
@@ -1001,9 +1000,9 @@ msgstr "Taxa"
 #~ msgid "Follow on Twitter"
 #~ msgstr "Siga no Twitter"
 
-#: src/electron/main.tsx:377
-#~ msgid "Frequently Asked Questions"
-#~ msgstr "Perguntas Frequentes"
+#: src/components/Settings/SettingsApp.tsx:105
+msgid "Frequently Asked Questions"
+msgstr "Perguntas Frequentes"
 
 #: src/components/dashboard/DashboardSideBar.tsx:51
 #: src/components/fullNode/FullNode.jsx:137
@@ -1060,9 +1059,9 @@ msgstr "Taxa"
 #~ msgid "Height"
 #~ msgstr "Altura"
 
-#: src/electron/main.tsx:365
-#~ msgid "Help"
-#~ msgstr "Ajuda"
+#: src/components/Settings/SettingsApp.tsx:101
+msgid "Help"
+msgstr "Ajuda"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:69
 msgid "Help translate"
@@ -1199,7 +1198,7 @@ msgstr "Valor incorreto"
 #~ msgid "KiB Up/Down"
 #~ msgstr "KiB Enviados/Recebidos"
 
-#: src/components/Settings/SettingsApp.tsx:68
+#: src/components/Settings/SettingsApp.tsx:90
 msgid "Language"
 msgstr ""
 
@@ -1229,7 +1228,7 @@ msgstr ""
 #~ msgid "Leaving Pool"
 #~ msgstr "Saindo do bolão"
 
-#: src/components/Settings/SettingsApp.tsx:58
+#: src/components/Settings/SettingsApp.tsx:80
 msgid "Light"
 msgstr ""
 
@@ -1364,7 +1363,7 @@ msgstr ""
 #~ msgid "Minutes"
 #~ msgstr "Minutos"
 
-#: src/components/Settings/SettingsApp.tsx:40
+#: src/components/Settings/SettingsApp.tsx:62
 msgid "Mode"
 msgstr ""
 
@@ -2257,7 +2256,7 @@ msgstr ""
 #~ msgstr "Enviar"
 
 #: src/components/LayoutMain/LayoutFooter.tsx:53
-#: src/components/Settings/SettingsFooter.tsx:51
+#: src/components/Settings/SettingsApp.tsx:108
 msgid "Send Feedback"
 msgstr ""
 
@@ -2864,7 +2863,7 @@ msgstr "O valor parece alto"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Aguardando confirmação da transação"
 
-#: src/components/Settings/SettingsApp.tsx:47
+#: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""
 
@@ -3185,7 +3184,7 @@ msgstr "Você possui alterações não salvas. Deseja salvá-las?"
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 msgstr ""
 
-#: src/components/Amount/Amount.tsx:91
+#: src/components/Amount/Amount.tsx:95
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
 

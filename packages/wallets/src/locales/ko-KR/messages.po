@@ -211,7 +211,7 @@ msgstr "금액"
 msgid "Amount For Initial Coin"
 msgstr "초기 코인의 양"
 
-#: src/components/offers/OfferEditor.tsx:112
+#: src/components/offers/OfferEditor.tsx:113
 msgid "Amount exceeds spendable balance"
 msgstr ""
 
@@ -219,7 +219,7 @@ msgstr ""
 msgid "Amount must be an even amount."
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:88
+#: src/components/offers/OfferManager.tsx:89
 msgid "Are you sure you want to cancel your offer?"
 msgstr ""
 
@@ -393,9 +393,9 @@ msgstr ""
 msgid "Cancel"
 msgstr "취소"
 
-#: src/components/offers/OfferManager.tsx:386
-#: src/components/offers/OfferManager.tsx:194
-#: src/components/offers/OfferManager.tsx:195
+#: src/components/offers/OfferManager.tsx:388
+#: src/components/offers/OfferManager.tsx:196
+#: src/components/offers/OfferManager.tsx:197
 msgid "Cancel Offer"
 msgstr ""
 
@@ -403,7 +403,7 @@ msgstr ""
 #~ msgid "Cancel and Spend"
 #~ msgstr "취소하고 전송"
 
-#: src/components/offers/OfferManager.tsx:107
+#: src/components/offers/OfferManager.tsx:108
 msgid "Cancel on blockchain"
 msgstr ""
 
@@ -477,7 +477,7 @@ msgstr "치아 지갑"
 #~ msgid "Claim Rewards"
 #~ msgstr ""
 
-#: src/components/offers/OfferManager.tsx:197
+#: src/components/offers/OfferManager.tsx:199
 #: src/components/offers/OfferShareDialog.tsx:349
 #: src/components/offers/OfferShareDialog.tsx:492
 #: src/components/offers/OfferShareDialog.tsx:696
@@ -706,12 +706,12 @@ msgstr "거래 생성하기"
 #~ msgid "Create admin wallet"
 #~ msgstr "관리자 지갑 만들기"
 
-#: src/components/offers/OfferEditor.tsx:222
-#: src/components/offers/OfferManager.tsx:481
+#: src/components/offers/OfferEditor.tsx:227
+#: src/components/offers/OfferManager.tsx:484
 msgid "Create an Offer"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:476
+#: src/components/offers/OfferManager.tsx:479
 msgid "Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party."
 msgstr ""
 
@@ -747,7 +747,7 @@ msgstr ""
 #~ msgid "Created by us:"
 #~ msgstr "생성자:"
 
-#: src/components/offers/OfferManager.tsx:109
+#: src/components/offers/OfferManager.tsx:110
 msgid "Creates and submits a transaction on the blockchain that cancels the offer"
 msgstr ""
 
@@ -759,7 +759,7 @@ msgstr ""
 #~ msgid "Creating Plot NFT for Self Pooling"
 #~ msgstr ""
 
-#: src/components/offers/OfferManager.tsx:303
+#: src/components/offers/OfferManager.tsx:305
 #: src/components/offers/OfferViewer.tsx:204
 msgid "Creation Date"
 msgstr ""
@@ -909,7 +909,7 @@ msgstr ""
 #~ msgid "Disconnect"
 #~ msgstr "접속 끊김"
 
-#: src/components/offers/OfferManager.tsx:356
+#: src/components/offers/OfferManager.tsx:358
 msgid "Display Offer Data"
 msgstr ""
 
@@ -1125,7 +1125,7 @@ msgstr "농장"
 #: src/components/cat/WalletCATSend.tsx:218
 #: src/components/create/createRLAdmin.jsx:243
 #: src/components/create/createRLAdmin.jsx:271
-#: src/components/offers/OfferManager.tsx:124
+#: src/components/offers/OfferManager.tsx:125
 #: src/components/offers/OfferViewer.tsx:469
 #: src/components/rateLimited/WalletRateLimited.jsx:732
 msgid "Fee"
@@ -1287,7 +1287,7 @@ msgstr "IP 주소"
 msgid "If selected, your offer will be not be shared publicly."
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:93
+#: src/components/offers/OfferManager.tsx:94
 msgid "If you have already shared your offer file, you may need to submit a transaction to cancel the pending offer. Click \"Cancel on blockchain\" to submit a cancellation transaction."
 msgstr ""
 
@@ -1360,7 +1360,7 @@ msgid ""
 "spendable balance is sufficient to cover the offer amount."
 msgstr ""
 
-#: src/components/offers/OfferEditor.tsx:169
+#: src/components/offers/OfferEditor.tsx:164
 msgid ""
 "Insufficient funds available to create offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
@@ -1541,7 +1541,7 @@ msgstr ""
 #~ msgstr "채굴 보상 관리"
 
 #: src/components/WalletHeader.tsx:85
-#: src/components/offers/OfferManager.tsx:468
+#: src/components/offers/OfferManager.tsx:471
 msgid "Manage Offers"
 msgstr ""
 
@@ -1665,7 +1665,7 @@ msgstr "닉네임"
 #~ msgid "No blocks farmed yet"
 #~ msgstr "아직 수확한 블록이 없습니다"
 
-#: src/components/offers/OfferManager.tsx:421
+#: src/components/offers/OfferManager.tsx:424
 msgid "No current offers"
 msgstr ""
 
@@ -1787,7 +1787,7 @@ msgstr ""
 msgid "OfferBin URL"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:264
+#: src/components/offers/OfferManager.tsx:266
 msgid "Offered"
 msgstr ""
 
@@ -1795,11 +1795,11 @@ msgstr ""
 #~ msgid "Offers Created"
 #~ msgstr "거래 주문이 생성되었습니다."
 
-#: src/components/offers/OfferManager.tsx:490
+#: src/components/offers/OfferManager.tsx:498
 msgid "Offers you accepted"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:489
+#: src/components/offers/OfferManager.tsx:493
 msgid "Offers you created"
 msgstr ""
 
@@ -2002,7 +2002,7 @@ msgstr "유효한 공개 키를 입력하십시오"
 msgid "Please enter a valid token name"
 msgstr ""
 
-#: src/components/offers/OfferEditor.tsx:109
+#: src/components/offers/OfferEditor.tsx:110
 msgid "Please enter an amount for each row"
 msgstr ""
 
@@ -2038,7 +2038,7 @@ msgstr ""
 #~ msgid "Please select amount"
 #~ msgstr "수량을 선택해 주십시오."
 
-#: src/components/offers/OfferEditor.tsx:106
+#: src/components/offers/OfferEditor.tsx:107
 msgid "Please select an asset for each row"
 msgstr ""
 
@@ -2463,11 +2463,11 @@ msgstr ""
 #~ msgid "Report an Issue..."
 #~ msgstr "문제 보고하기..."
 
-#: src/components/offers/OfferManager.tsx:287
+#: src/components/offers/OfferManager.tsx:289
 msgid "Requested"
 msgstr ""
 
-#: src/components/offers/OfferEditor.tsx:199
+#: src/components/offers/OfferEditor.tsx:194
 msgid "Reset"
 msgstr ""
 
@@ -2496,11 +2496,11 @@ msgstr ""
 msgid "Save"
 msgstr "저장"
 
-#: src/components/offers/OfferEditor.tsx:207
+#: src/components/offers/OfferEditor.tsx:202
 msgid "Save Offer"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:371
+#: src/components/offers/OfferManager.tsx:373
 msgid "Save Offer File"
 msgstr ""
 
@@ -2641,7 +2641,7 @@ msgstr "이 정보 패킷을 비율 제한 지갑 사용자에게 보냅니다. 
 #~ msgid "Settings"
 #~ msgstr ""
 
-#: src/components/offers/OfferManager.tsx:317
+#: src/components/offers/OfferManager.tsx:319
 #: src/components/offers/OfferShareDialog.tsx:406
 #: src/components/offers/OfferShareDialog.tsx:535
 #: src/components/offers/OfferShareDialog.tsx:775
@@ -2676,7 +2676,7 @@ msgstr ""
 msgid "Show Asset Id"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:342
+#: src/components/offers/OfferManager.tsx:344
 msgid "Show Details"
 msgstr ""
 
@@ -2770,7 +2770,7 @@ msgstr ""
 #~ msgstr "상태"
 
 #: src/components/WalletStatusCard.tsx:22
-#: src/components/offers/OfferManager.tsx:241
+#: src/components/offers/OfferManager.tsx:243
 #: src/components/offers/OfferViewer.tsx:177
 msgid "Status"
 msgstr "상태"
@@ -3200,8 +3200,8 @@ msgstr ""
 #~ msgid "Unknown"
 #~ msgstr "알 수 없음"
 
-#: src/components/offers/OfferManager.tsx:248
-#: src/components/offers/OfferManager.tsx:271
+#: src/components/offers/OfferManager.tsx:250
+#: src/components/offers/OfferManager.tsx:273
 #: src/components/offers/OfferSummaryRow.tsx:66
 #: src/components/offers/OfferViewer.tsx:412
 msgid "Unknown CAT"
@@ -3267,7 +3267,7 @@ msgstr "사용자 공개 키"
 #~ msgstr ""
 
 #: src/components/offers/OfferImport.tsx:153
-#: src/components/offers/OfferManager.tsx:484
+#: src/components/offers/OfferManager.tsx:487
 msgid "View an Offer"
 msgstr ""
 
@@ -3628,8 +3628,8 @@ msgstr "동기화중"
 #~ msgstr ""
 
 #: src/components/offers/OfferAssetSelector.tsx:137
-msgid "{0}"
-msgstr ""
+#~ msgid "{0}"
+#~ msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
