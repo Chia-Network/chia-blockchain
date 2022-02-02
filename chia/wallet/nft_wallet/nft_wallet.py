@@ -122,6 +122,7 @@ class NFTWallet:
         return
 
     async def coin_added(self, coin: Coin, height: uint32):
+        breakpoint()
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f" NFT wallet has been notified that {coin} was added")
         data: Dict[str, Any] = {
