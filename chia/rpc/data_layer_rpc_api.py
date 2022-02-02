@@ -56,10 +56,10 @@ class DataLayerRpcApi:
             "/insert": self.insert,
         }
 
-    async def create_data_store(self, request: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def create_data_store(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.service is None:
             raise Exception("Data layer not created")
-        txs, value = await self.service.create_store()
+        txs, value = await self.service.create_store(request.get("wallet_id"))
         return {"txs": txs, "id": value.hex()}
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -102,10 +102,11 @@ class DataLayerRpcApi:
         """
         changelist = [process_change(change) for change in request["changelist"]]
         store_id = bytes32(hexstr_to_bytes(request["id"]))
+        wallet_id = request.get("wallet_id")
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        transaction_record = await self.service.batch_update(store_id, changelist)
+        transaction_record = await self.service.batch_update(store_id, changelist, wallet_id)
         if transaction_record is None:
             raise Exception(f"Batch update failed for: {store_id}")
         return {"tx_id": transaction_record.name}
@@ -118,11 +119,12 @@ class DataLayerRpcApi:
         key = hexstr_to_bytes(request["key"])
         value = hexstr_to_bytes(request["value"])
         store_id = bytes32(hexstr_to_bytes(request["id"]))
+        wallet_id = request.get("wallet_id")
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
         changelist = [{"action": "insert", "key": key, "value": value}]
-        transaction_record = await self.service.batch_update(store_id, changelist)
+        transaction_record = await self.service.batch_update(store_id, changelist, wallet_id)
         return {"tx_id": transaction_record.name}
 
     async def delete_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -132,11 +134,12 @@ class DataLayerRpcApi:
         """
         key = hexstr_to_bytes(request["key"])
         store_id = bytes32(hexstr_to_bytes(request["id"]))
+        wallet_id = request.get("wallet_id")
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
         changelist = [{"action": "delete", "key": key}]
-        transaction_record = await self.service.batch_update(store_id, changelist)
+        transaction_record = await self.service.batch_update(store_id, changelist, wallet_id)
         return {"tx_id": transaction_record.name}
 
     async def get_root(self, request: Dict[str, Any]) -> Dict[str, Any]:

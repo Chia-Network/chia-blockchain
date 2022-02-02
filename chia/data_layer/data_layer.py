@@ -68,11 +68,11 @@ class DataLayer:
         if self.connection is not None:
             await self.connection.close()
 
-    async def create_store(self) -> Tuple[List[TransactionRecord], bytes32]:
+    async def create_store(self, wallet_id: Optional[int]) -> Tuple[List[TransactionRecord], bytes32]:
         # TODO: review for anything else we need to do here
         fee = uint64(1)
         root = bytes32([0] * 32)
-        txs, tree_id = await self.wallet_rpc.create_new_dl(root, fee)
+        txs, tree_id = await self.wallet_rpc.create_new_dl(root, fee, wallet_id)
         res = await self.data_store.create_tree(tree_id=tree_id)
         if res is None:
             self.log.fatal("failed creating store")
@@ -83,6 +83,7 @@ class DataLayer:
         self,
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
+        wallet_id: Optional[int],
     ) -> TransactionRecord:
         for change in changelist:
             if change["action"] == "insert":
@@ -105,7 +106,7 @@ class DataLayer:
             node_hash = root.node_hash
         else:
             node_hash = bytes32([0] * 32)  # todo change
-        transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash)
+        transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, wallet_id)
         assert transaction_record
         # todo register callback to change status in data store
         # await self.data_store.change_root_status(root, Status.COMMITTED)

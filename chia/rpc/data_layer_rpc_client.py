@@ -1,12 +1,12 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 class DataLayerRpcClient(RpcClient):
-    async def create_data_store(self) -> Dict[str, Any]:
-        response = await self.fetch("create_data_store", {})
+    async def create_data_store(self, fingerprint: Optional[int]) -> Dict[str, Any]:
+        response = await self.fetch("create_data_store", {"wallet_id": fingerprint})
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
@@ -15,8 +15,12 @@ class DataLayerRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-    async def update_data_store(self, store_id: bytes32, changelist: Dict[str, str]) -> Dict[str, Any]:
-        response = await self.fetch("batch_update", {"id": store_id.hex(), "changelist": changelist})
+    async def update_data_store(
+        self, store_id: bytes32, changelist: Dict[str, str], fingerprint: Optional[int]
+    ) -> Dict[str, Any]:
+        response = await self.fetch(
+            "batch_update", {"id": store_id.hex(), "changelist": changelist, "wallet_id": fingerprint}
+        )
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 

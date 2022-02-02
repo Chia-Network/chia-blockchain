@@ -470,8 +470,10 @@ class WalletRpcClient(RpcClient):
         await self.fetch("cancel_offer", {"trade_id": trade_id.hex(), "secure": secure, "fee": fee})
 
     # DataLayer
-    async def create_new_dl(self, root: bytes32, fee: uint64) -> Tuple[List[TransactionRecord], bytes32]:
-        request = {"root": root.hex(), "fee": fee}
+    async def create_new_dl(
+        self, root: bytes32, fee: uint64, wallet_id: Optional[int] = None
+    ) -> Tuple[List[TransactionRecord], bytes32]:
+        request = {"root": root.hex(), "fee": fee, "wallet_id": wallet_id}
         response = await self.fetch("create_new_dl", request)
         txs: List[TransactionRecord] = [
             TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]
@@ -479,36 +481,44 @@ class WalletRpcClient(RpcClient):
         launcher_id: bytes32 = bytes32.from_hexstr(response["launcher_id"])
         return txs, launcher_id
 
-    async def dl_track_new(self, launcher_id: bytes32) -> None:
-        request = {"launcher_id": launcher_id.hex()}
+    async def dl_track_new(self, launcher_id: bytes32, wallet_id: Optional[int] = None) -> None:
+        request = {"launcher_id": launcher_id.hex(), "wallet_id": wallet_id}
         await self.fetch("dl_track_new", request)
         return None
 
-    async def dl_stop_tracking(self, launcher_id: bytes32) -> None:
-        request = {"launcher_id": launcher_id.hex()}
+    async def dl_stop_tracking(self, launcher_id: bytes32, wallet_id: Optional[int] = None) -> None:
+        request = {"launcher_id": launcher_id.hex(), "wallet_id": wallet_id}
         await self.fetch("dl_stop_tracking", request)
         return None
 
-    async def dl_latest_singleton(self, launcher_id: bytes32) -> Optional[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex()}
+    async def dl_latest_singleton(
+        self, launcher_id: bytes32, wallet_id: Optional[int] = None
+    ) -> Optional[SingletonRecord]:
+        request = {"launcher_id": launcher_id.hex(), "wallet_id": wallet_id}
         response = await self.fetch("dl_latest_singleton", request)
         return None if response["singleton"] is None else SingletonRecord.from_json_dict(response["singleton"])
 
-    async def dl_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> List[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex(), "root": root.hex()}
+    async def dl_singletons_by_root(
+        self, launcher_id: bytes32, root: bytes32, wallet_id: Optional[int] = None
+    ) -> List[SingletonRecord]:
+        request = {"launcher_id": launcher_id.hex(), "root": root.hex(), "wallet_id": wallet_id}
         response = await self.fetch("dl_singletons_by_root", request)
         return [SingletonRecord.from_json_dict(single) for single in response["singletons"]]
 
-    async def dl_update_root(self, launcher_id: bytes32, new_root: bytes32) -> TransactionRecord:
-        request = {"launcher_id": launcher_id.hex(), "new_root": new_root.hex()}
+    async def dl_update_root(
+        self, launcher_id: bytes32, new_root: bytes32, wallet_id: Optional[int]
+    ) -> TransactionRecord:
+        request = {"launcher_id": launcher_id.hex(), "new_root": new_root.hex(), "wallet_id": wallet_id}
         response = await self.fetch("dl_update_root", request)
         return TransactionRecord.from_json_dict_convenience(response["tx_record"])
 
-    async def dl_update_multiple(self, update_dictionary: Dict[bytes32, bytes32]) -> List[TransactionRecord]:
+    async def dl_update_multiple(
+        self, update_dictionary: Dict[bytes32, bytes32], wallet_id: Optional[int] = None
+    ) -> List[TransactionRecord]:
         updates_as_strings: Dict[str, str] = {}
         for lid, root in update_dictionary.items():
             updates_as_strings[str(lid)] = str(root)
-        request = {"updates": updates_as_strings}
+        request = {"updates": updates_as_strings, "wallet_id": wallet_id}
         response = await self.fetch("dl_update_multiple", request)
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["tx_records"]]
 
@@ -518,8 +528,9 @@ class WalletRpcClient(RpcClient):
         min_generation: Optional[uint32] = None,
         max_generation: Optional[uint32] = None,
         num_results: Optional[uint32] = None,
+        wallet_id: Optional[int] = None,
     ) -> List[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex()}
+        request = {"launcher_id": launcher_id.hex(), "wallet_id": wallet_id}
 
         if min_generation is not None:
             request["min_generation"] = str(min_generation)

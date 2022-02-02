@@ -42,10 +42,10 @@ class get_client:
         await self._client.await_closed()
 
 
-async def create_data_store_cmd(rpc_port: Optional[int], table_string: str) -> None:
+async def create_data_store_cmd(rpc_port: Optional[int], fingerprint: Optional[int]) -> None:
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.create_data_store()
+            res = await client.create_data_store(fingerprint=fingerprint)
             print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
@@ -72,11 +72,14 @@ async def update_data_store_cmd(
     rpc_port: Optional[int],
     store_id: str,
     changelist: Dict[str, str],
+    fingerprint: Optional[int],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.update_data_store(store_id=store_id_bytes, changelist=changelist)
+            res = await client.update_data_store(
+                store_id=store_id_bytes, changelist=changelist, fingerprint=fingerprint
+            )
             print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")

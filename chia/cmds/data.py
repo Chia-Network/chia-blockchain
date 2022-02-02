@@ -103,7 +103,7 @@ def create_data_store(
 ) -> None:
     from chia.cmds.data_funcs import create_data_store_cmd
 
-    run(create_data_store_cmd(data_rpc_port, ""))
+    run(create_data_store_cmd(data_rpc_port, fingerprint))
 
 
 @data_cmd.command("get_value", short_help="Get a data row by its hash")
@@ -135,16 +135,14 @@ def update_data_store(
 ) -> None:
     from chia.cmds.data_funcs import update_data_store_cmd
 
-    run(update_data_store_cmd(data_rpc_port, id, json.loads(changelist_string)))
+    run(update_data_store_cmd(data_rpc_port, id, json.loads(changelist_string), fingerprint))
 
 
 @data_cmd.command("get_keys_values", short_help="")
 @create_data_store_id_option()
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
 def get_keys_values(
     id: str,
-    fingerprint: int,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_keys_values_cmd
@@ -154,11 +152,9 @@ def get_keys_values(
 
 @data_cmd.command("get_root", short_help="")
 @create_data_store_id_option()
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
 def get_root(
     id: str,
-    fingerprint: int,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_root_cmd
