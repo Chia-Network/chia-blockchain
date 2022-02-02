@@ -166,5 +166,5 @@ async def download_data(
     if subscription.mode is DownloadMode.LATEST:
         return await download_data_latest(data_store, tree_id, target_hash, URL, lock=lock)
     elif subscription.mode is DownloadMode.HISTORY:
-        return await download_data_history(data_store, tree_id, target_hash, URL, lock=lock)        
+        return await download_data_history(data_store, tree_id, target_hash, URL, lock=lock)
     return False
