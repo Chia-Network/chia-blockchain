@@ -856,7 +856,12 @@ class WalletStateManager:
                     except Exception as e:
                         self.log.debug(f"Not a pool wallet launcher {e}")
                         continue
-                    assert pool_state is not None
+
+                    # solution_to_pool_state may return None but this may not be an error
+                    if pool_state is None:
+                        self.log.debug("solution_to_pool_state returned None, ignore and continue")
+                        continue
+
                     assert child.spent_height is not None
                     pool_wallet = await PoolWallet.create(
                         self,

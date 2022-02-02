@@ -347,13 +347,13 @@ class FullNodeRpcApi:
     async def get_block_count_metrics(self, request: Dict):
         compact_blocks = 0
         uncompact_blocks = 0
-        with log_exceptions(self.service.log):
+        with log_exceptions(self.service.log, consume=True):
             compact_blocks = await self.service.block_store.count_compactified_blocks()
             uncompact_blocks = await self.service.block_store.count_uncompactified_blocks()
 
         hint_count = 0
         if self.service.hint_store is not None:
-            with log_exceptions(self.service.log):
+            with log_exceptions(self.service.log, consume=True):
                 hint_count = await self.service.hint_store.count_hints()
 
         return {

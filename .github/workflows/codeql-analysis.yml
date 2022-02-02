@@ -21,7 +21,8 @@ on:
     - cron: '34 14 * * 3'
 
 concurrency:
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
