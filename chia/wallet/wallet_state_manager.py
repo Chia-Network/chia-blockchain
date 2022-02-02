@@ -571,7 +571,7 @@ class WalletStateManager:
         ):
             return None, None
 
-        response: List[CoinState] = await self.wallet_node.get_coin_state([coin_state.coin.parent_coin_info])
+        response: List[CoinState] = await self.wallet_node.get_coin_state([coin_state.coin.parent_coin_info], peer)
         if len(response) == 0:
             self.log.warning(f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info}")
             return None, None
@@ -866,10 +866,30 @@ class WalletStateManager:
                     pool_state = None
                     try:
                         pool_state = solution_to_pool_state(launcher_spend)
+                        if pool_state is None:
+                            self.log.debug("solution_to_pool_state returned None, ignore and continue")
+                            continue
+                        if child.spent_height is None:
+                            self.log.debug("child.spent_height is None, ignore and continue")
+                            continue
+                        pool_wallet = await PoolWallet.create(
+                            self,
+                            self.main_wallet,
+                            child.coin.name(),
+                            [launcher_spend],
+                            child.spent_height,
+                            False,
+                            "pool_wallet",
+                        )
+                        await pool_wallet.apply_state_transitions(launcher_spend, coin_state.spent_height)
+                        coin_added = launcher_spend.additions()[0]
+                        await self.coin_added(
+                            coin_added, coin_state.spent_height, [], pool_wallet.id(), WalletType(pool_wallet.type())
+                        )
+                        await self.add_interested_coin_id(coin_added.name())
                     except Exception as e:
                         self.log.debug(f"Not a pool wallet launcher {e}")
                         continue
-
                     # solution_to_pool_state may return None but this may not be an error
                     if pool_state is None:
                         self.log.debug("solution_to_pool_state returned None, ignore and continue")
