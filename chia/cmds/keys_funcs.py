@@ -189,7 +189,7 @@ def migrate_keys():
         KeyringWrapper.get_shared_instance().migrate_legacy_keyring_interactive()
     else:
         keys_to_migrate, legacy_keyring = Keychain.get_keys_needing_migration()
-        if len(keys_to_migrate) > 0:
+        if len(keys_to_migrate) > 0 and legacy_keyring is not None:
             print(f"Found {len(keys_to_migrate)} key(s) that need migration:")
             for key, _ in keys_to_migrate:
                 print(f"Fingerprint: {key.get_g1().get_fingerprint()}")

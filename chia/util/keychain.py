@@ -496,7 +496,8 @@ class Keychain:
         Returns a bool indicating whether the current client version has checked the legacy keyring
         for keys needing migration.
         """
-        def compare_versions(version1: str , version2: str) -> int:
+
+        def compare_versions(version1: str, version2: str) -> int:
             # Making the assumption that versions will be of the form: x[x].y[y].z[z]
             # We limit the number of components to 3, with each component being up to 2 digits long
             ver1: List[int] = [int(n[:2]) for n in version1.split(".")[:3]]
@@ -559,10 +560,10 @@ class Keychain:
         KeyringWrapper.get_shared_instance().migrate_legacy_keyring(cleanup_legacy_keyring=cleanup_legacy_keyring)
 
     @staticmethod
-    def get_keys_needing_migration() -> Tuple[List[Tuple[PrivateKey, bytes]], "Keychain"]:
+    def get_keys_needing_migration() -> Tuple[List[Tuple[PrivateKey, bytes]], Optional["Keychain"]]:
         legacy_keyring: Optional[Keychain] = Keychain(force_legacy=True)
         if legacy_keyring is None:
-            return []
+            return [], None
         keychain = Keychain()
         all_legacy_sks = legacy_keyring.get_all_private_keys()
         all_sks = keychain.get_all_private_keys()

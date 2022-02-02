@@ -49,7 +49,7 @@ def get_os_passphrase_store() -> Optional[OSPassphraseStore]:
     return None
 
 
-def check_legacy_keyring_keys_present(keyring: Union[MacKeyring, WinKeyring]) -> bool:
+def check_legacy_keyring_keys_present(keyring: LegacyKeyring) -> bool:
     from keyring.credentials import SimpleCredential
     from chia.util.keychain import default_keychain_user, default_keychain_service, get_private_key_user, MAX_KEYS
 
