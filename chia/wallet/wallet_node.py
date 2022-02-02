@@ -704,134 +704,129 @@ class WalletNode:
                     self.wallet_state_manager.set_sync_mode(False)
         else:
             async with self.new_peak_lock:
-                async with self.wallet_state_manager.lock:
-                    request = wallet_protocol.RequestBlockHeader(peak.height)
-                    response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
-                    if (
-                        response is None
-                        or not isinstance(response, RespondBlockHeader)
-                        or response.header_block is None
-                    ):
-                        self.log.debug(f"bad peak response from peer {response}, perhaps connection was closed")
-                        return
-                    peak_block = response.header_block
-                    current_peak: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
-                    if current_peak is not None and peak_block.weight < current_peak.weight:
-                        if peak_block.height < current_peak.height - 20:
-                            await peer.close(120)
-                        return
+                request = wallet_protocol.RequestBlockHeader(peak.height)
+                response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+                if response is None or not isinstance(response, RespondBlockHeader) or response.header_block is None:
+                    self.log.debug(f"bad peak response from peer {response}, perhaps connection was closed")
+                    return
+                peak_block = response.header_block
+                current_peak: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
+                if current_peak is not None and peak_block.weight < current_peak.weight:
+                    if peak_block.height < current_peak.height - 20:
+                        await peer.close(120)
+                    return
 
-                    # don't sync if full node is not synced it self, since we want to fully sync to a few peers
-                    if (
-                        not response.header_block.is_transaction_block
-                        and current_peak is not None
-                        and peak_block.prev_header_hash == current_peak.header_hash
-                    ):
-                        # This block is after our peak, so we don't need to check if node is synced
-                        pass
+                # don't sync if full node is not synced it self, since we want to fully sync to a few peers
+                if (
+                    not response.header_block.is_transaction_block
+                    and current_peak is not None
+                    and peak_block.prev_header_hash == current_peak.header_hash
+                ):
+                    # This block is after our peak, so we don't need to check if node is synced
+                    pass
+                else:
+                    if not response.header_block.is_transaction_block:
+                        last_tx_block = await self.fetch_last_tx_from_peer(response.header_block.height, peer)
                     else:
-                        if not response.header_block.is_transaction_block:
-                            last_tx_block = await self.fetch_last_tx_from_peer(response.header_block.height, peer)
-                        else:
-                            last_tx_block = response.header_block
+                        last_tx_block = response.header_block
 
-                        if last_tx_block is None:
-                            return
-                        assert last_tx_block is not None
-                        assert last_tx_block.foliage_transaction_block is not None
-                        if (
-                            self.config["testing"] is False
-                            and last_tx_block.foliage_transaction_block.timestamp < request_time - 600
-                        ):
-                            # Full node not synced, don't sync to it
-                            self.log.info("Peer we connected to is not fully synced, dropping connection...")
-                            await peer.close()
-                            return
-
-                    long_sync_threshold = 200
-                    far_behind: bool = (
-                        peak.height - self.wallet_state_manager.blockchain.get_peak_height() > long_sync_threshold
-                    )
-
-                    # check if claimed peak is heavier or same as our current peak
-                    # if we haven't synced fully to this peer sync again
+                    if last_tx_block is None:
+                        return
+                    assert last_tx_block is not None
+                    assert last_tx_block.foliage_transaction_block is not None
                     if (
-                        peer.peer_node_id not in self.synced_peers or far_behind
-                    ) and peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
-                        syncing = False
-                        if far_behind or len(self.synced_peers) == 0:
-                            syncing = True
-                            self.wallet_state_manager.set_sync_mode(True)
-                        try:
-                            (
-                                valid_weight_proof,
-                                weight_proof,
-                                summaries,
-                                block_records,
-                            ) = await self.fetch_and_validate_the_weight_proof(peer, response.header_block)
-                            if valid_weight_proof is False:
-                                if syncing:
-                                    self.wallet_state_manager.set_sync_mode(False)
-                                await peer.close()
-                                return
-                            assert weight_proof is not None
-                            old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
-                            curr_peak = await self.wallet_state_manager.blockchain.get_peak_block()
-                            fork_point = 0
-                            if curr_peak is not None:
-                                fork_point = max(0, curr_peak.height - 32)
+                        self.config["testing"] is False
+                        and last_tx_block.foliage_transaction_block.timestamp < request_time - 600
+                    ):
+                        # Full node not synced, don't sync to it
+                        self.log.info("Peer we connected to is not fully synced, dropping connection...")
+                        await peer.close()
+                        return
 
-                            if old_proof is not None:
-                                wp_fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point(
-                                    old_proof, weight_proof
-                                )
-                                if wp_fork_point != 0:
-                                    fork_point = wp_fork_point
+                long_sync_threshold = 200
+                far_behind: bool = (
+                    peak.height - self.wallet_state_manager.blockchain.get_peak_height() > long_sync_threshold
+                )
 
-                            await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
-                            if syncing:
-                                async with self.wallet_state_manager.lock:
-                                    await self.untrusted_sync_to_peer(peer, syncing, fork_point)
-                            else:
-                                await self.untrusted_sync_to_peer(peer, syncing, fork_point)
-                            if (
-                                self.wallet_state_manager.blockchain.synced_weight_proof is None
-                                or weight_proof.recent_chain_data[-1].weight
-                                > self.wallet_state_manager.blockchain.synced_weight_proof.recent_chain_data[-1].weight
-                            ):
-                                await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
-
-                            self.synced_peers.add(peer.peer_node_id)
-
-                            self.wallet_state_manager.state_changed("new_block")
-                            await self.update_ui()
-                        except Exception:
+                # check if claimed peak is heavier or same as our current peak
+                # if we haven't synced fully to this peer sync again
+                if (
+                    peer.peer_node_id not in self.synced_peers or far_behind
+                ) and peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+                    syncing = False
+                    if far_behind or len(self.synced_peers) == 0:
+                        syncing = True
+                        self.wallet_state_manager.set_sync_mode(True)
+                    try:
+                        (
+                            valid_weight_proof,
+                            weight_proof,
+                            summaries,
+                            block_records,
+                        ) = await self.fetch_and_validate_the_weight_proof(peer, response.header_block)
+                        if valid_weight_proof is False:
                             if syncing:
                                 self.wallet_state_manager.set_sync_mode(False)
-                            tb = traceback.format_exc()
-                            self.log.error(f"Error syncing to {peer.get_peer_info()} {tb}")
                             await peer.close()
                             return
+                        assert weight_proof is not None
+                        old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
+                        curr_peak = await self.wallet_state_manager.blockchain.get_peak_block()
+                        fork_point = 0
+                        if curr_peak is not None:
+                            fork_point = max(0, curr_peak.height - 32)
+
+                        if old_proof is not None:
+                            wp_fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point(
+                                old_proof, weight_proof
+                            )
+                            if wp_fork_point != 0:
+                                fork_point = wp_fork_point
+
+                        await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
+                        if syncing:
+                            async with self.wallet_state_manager.lock:
+                                await self.untrusted_sync_to_peer(peer, syncing, fork_point)
+                        else:
+                            await self.untrusted_sync_to_peer(peer, syncing, fork_point)
+                        if (
+                            self.wallet_state_manager.blockchain.synced_weight_proof is None
+                            or weight_proof.recent_chain_data[-1].weight
+                            > self.wallet_state_manager.blockchain.synced_weight_proof.recent_chain_data[-1].weight
+                        ):
+                            await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
+
+                        self.synced_peers.add(peer.peer_node_id)
+
+                        self.wallet_state_manager.state_changed("new_block")
+                        await self.update_ui()
+                    except Exception:
                         if syncing:
                             self.wallet_state_manager.set_sync_mode(False)
-
-                    else:
-                        await self.wallet_short_sync_backtrack(peak_block, peer)
-                        if peer.peer_node_id not in self.synced_peers:
-                            # Edge case, we still want to subscribe for all phs
-                            # (Hints are not in filter)
-                            await self.untrusted_subscribe_to_puzzle_hashes(peer, True, self.get_cache_for_peer(peer))
-                            self.synced_peers.add(peer.peer_node_id)
-
-                        if peak_block.height in self.race_cache:
-                            for state in self.race_cache[peak_block.height]:
-                                valid = await self.validate_received_state_from_peer(
-                                    state, peer, self.get_cache_for_peer(peer)
-                                )
-                                if valid:
-                                    await self.wallet_state_manager.new_coin_state([state], peer)
+                        tb = traceback.format_exc()
+                        self.log.error(f"Error syncing to {peer.get_peer_info()} {tb}")
+                        await peer.close()
+                        return
+                    if syncing:
                         self.wallet_state_manager.set_sync_mode(False)
-                        self.wallet_state_manager.state_changed("new_block")
+
+                else:
+                    await self.wallet_short_sync_backtrack(peak_block, peer)
+                    if peer.peer_node_id not in self.synced_peers:
+                        # Edge case, we still want to subscribe for all phs
+                        # (Hints are not in filter)
+                        await self.untrusted_subscribe_to_puzzle_hashes(peer, True, self.get_cache_for_peer(peer))
+                        self.synced_peers.add(peer.peer_node_id)
+
+                    if peak_block.height in self.race_cache:
+                        for state in self.race_cache[peak_block.height]:
+                            valid = await self.validate_received_state_from_peer(
+                                state, peer, self.get_cache_for_peer(peer)
+                            )
+                            if valid:
+                                await self.wallet_state_manager.new_coin_state([state], peer)
+                    self.wallet_state_manager.set_sync_mode(False)
+                    self.wallet_state_manager.state_changed("new_block")
 
         await self.wallet_state_manager.new_peak(peak)
         self._pending_tx_handler()
