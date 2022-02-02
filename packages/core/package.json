@@ -59,6 +59,10 @@
     "@lingui/react": "3.13.0",
     "@loadable/babel-plugin": "5.13.2",
     "@loadable/component": "5.15.2",
+    "@material-ui/core": "4.12.3",
+    "@material-ui/icons": "4.11.2",
+    "@material-ui/lab": "4.0.0-alpha.60",
+    "@material-ui/styles": "4.11.4",
     "@rollup/plugin-babel": "5.3.0",
     "@rollup/plugin-commonjs": "21.0.1",
     "@rollup/plugin-json": "4.1.0",
@@ -80,6 +84,7 @@
     "react-router-dom": "6.2.1",
     "rollup": "2.64.0",
     "rollup-plugin-node-externals": "3.1.2",
+    "styled-components": "5.3.3",
     "typescript": "4.5.4"
   },
   "peerDependencies": {
