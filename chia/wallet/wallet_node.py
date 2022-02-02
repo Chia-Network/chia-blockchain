@@ -171,7 +171,7 @@ class WalletNode:
 
     def rollback_request_caches(self, reorg_height: int):
         # Everything after reorg_height should be removed from the cache
-        for _, cache in self.untrusted_caches.items():
+        for cache in self.untrusted_caches.values():
             cache.clear_after_height(reorg_height)
 
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
