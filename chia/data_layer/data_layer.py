@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable
 import aiosqlite
+import traceback
 import asyncio
 from chia.data_layer.data_layer_types import InternalNode, TerminalNode, DownloadMode, Subscription, Root
 from chia.data_layer.data_store import DataStore
@@ -14,6 +15,7 @@ from chia.util.ints import uint32, uint64, uint16
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.data_layer.data_layer_wallet import SingletonRecord
+from chia.data_layer.download_data import download_data
 
 
 class DataLayer:
@@ -171,16 +173,21 @@ class DataLayer:
         tree_id = subscription.tree_id
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id)
         if singleton_record is None:
+            self.log.info(f"Fetch data: No singleton record for {tree_id}.")
             return
         if singleton_record.generation == uint32(0):
+            self.log.info(f"Fetch data: No data on chain for {tree_id}.")
             return
         old_root: Optional[Root] = None
-        if await self.data_store.tree_id_exists(tree_id=tree_id):
+        try:
             old_root = await self.data_store.get_tree_root(tree_id=tree_id)
-        wallet_current_generation = await self.data_store.get_wallet_generation(tree_id)
+        except Exception:
+            pass
+        wallet_current_generation = await self.data_store.get_validated_wallet_generation(tree_id)
         assert int(wallet_current_generation) <= singleton_record.generation
         # Wallet generation didn't change, so no new data committed on chain.
         if wallet_current_generation is not None and uint32(wallet_current_generation) == singleton_record.generation:
+            self.log.info(f"Fetch data: wallet generation matching on-chain generation: {tree_id}.")
             return
         to_check: List[SingletonRecord] = []
         if subscription.mode is DownloadMode.LATEST:
@@ -190,13 +197,18 @@ class DataLayer:
                 launcher_id=tree_id, min_generation=uint32(wallet_current_generation + 1)
             )
         # No root hash changes in the new wallet records, so ignore.
+        # TODO: wallet should handle identical hashes part?
         if (
             old_root is not None
             and old_root.node_hash is not None
             and to_check[0].root == old_root.node_hash
             and len(set(record.root for record in to_check)) == 1
         ):
-            await self.data_store.set_wallet_generation(tree_id, int(singleton_record.generation))
+            await self.data_store.set_validated_wallet_generation(tree_id, int(singleton_record.generation))
+            self.log.info(
+                f"Fetch data: fast-forwarded for {tree_id} as all on-chain hashes are identical to our root hash. "
+                f"Current wallet generation saved: {int(singleton_record.generation)}"
+            )
             return
         # Delete all identical root hashes to our old root hash, until we detect a change.
         if old_root is not None and old_root.node_hash is not None:
@@ -209,9 +221,10 @@ class DataLayer:
             f"Target wallet generation: {singleton_record.generation}."
         )
 
-        downloaded = await self.data_store.download_data(subscription, singleton_record.root)
+        downloaded = await download_data(self.data_store, subscription, singleton_record.root)
         if not downloaded:
             raise RuntimeError("Could not download the data.")
+        self.log.info(f"Successfully downloaded data for {tree_id}.")
 
         root = await self.data_store.get_tree_root(tree_id=tree_id)
         # Wallet root hash must match to our data store root hash.
@@ -236,10 +249,10 @@ class DataLayer:
 
         self.log.info(
             f"Finished downloading and validating {subscription.tree_id}. "
-            f"Wallet generation saved: {singleton_record.generation}"
+            f"Wallet generation saved: {singleton_record.generation}. "
             f"Root hash saved: {singleton_record.root}."
         )
-        await self.data_store.set_wallet_generation(tree_id, int(singleton_record.generation))
+        await self.data_store.set_validated_wallet_generation(tree_id, int(singleton_record.generation))
 
     async def subscribe(self, store_id: bytes32, mode: DownloadMode, ip: str, port: uint16) -> None:
         subscription = Subscription(store_id, mode, ip, port)
@@ -270,7 +283,10 @@ class DataLayer:
             async with self.subscription_lock:
                 subscriptions = await self.data_store.get_subscriptions()
                 for subscription in subscriptions:
-                    await self.fetch_and_validate(subscription)
+                    try:
+                        await self.fetch_and_validate(subscription)
+                    except Exception as e:
+                        self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
             try:
                 await asyncio.sleep(fetch_data_interval)
             except asyncio.CancelledError:
