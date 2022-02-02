@@ -776,10 +776,10 @@ class WalletNode:
                                 return
                             assert weight_proof is not None
                             old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
-                            peak = await self.wallet_state_manager.blockchain.get_peak_block()
+                            curr_peak = await self.wallet_state_manager.blockchain.get_peak_block()
                             fork_point = 0
-                            if peak is not None:
-                                fork_point = max(0, peak.height - 32)
+                            if curr_peak is not None:
+                                fork_point = max(0, curr_peak.height - 32)
 
                             if old_proof is not None:
                                 wp_fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point(
