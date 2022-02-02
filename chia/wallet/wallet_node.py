@@ -77,27 +77,9 @@ class PeerRequestCache:
 
     def clear_after_height(self, height: int):
         # Remove any cached item which relates to an event that happened at a height above height.
-
-        remove_keys_blocks: List[uint32] = []
-        for h in self.blocks.keys():
-            if h > height:
-                remove_keys_blocks.append(h)
-        for k in remove_keys_blocks:
-            self.blocks.pop(k)
-
-        remove_keys_block_req: List[Tuple[int, int]] = []
-        for start, end in self.block_requests.keys():
-            if start > height or end > height:
-                remove_keys_block_req.append((start, end))
-        for k2 in remove_keys_block_req:
-            self.block_requests.pop(k2)
-
-        remove_keys_ses: List[int] = []
-        for h2 in self.ses_requests.keys():
-            if h2 > height:
-                remove_keys_ses.append(h2)
-        for k3 in remove_keys_ses:
-            self.ses_requests.pop(k3)
+        self.blocks = {k: v for k, v in self.blocks.items() if k <= height}
+        self.block_requests = {k: v for k, v in self.block_requests.items() if k[0] <= height and k[1] <= height}
+        self.ses_requests = {k: v for k, v in self.ses_requests.items() if k <= height}
 
         remove_keys_states: List[bytes32] = []
         for k4, coin_state in self.states_validated.items():
