@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { ConfirmDialog, useOpenDialog, LoadingOverlay } from '@chia/core';
 import { Alert } from '@material-ui/lab';
 import {
   Tooltip,
@@ -19,6 +18,9 @@ import {
   useDeleteKeyMutation,
 } from '@chia/api-react';
 import SelectKeyDetailDialog from './SelectKeyDetailDialog';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import LoadingOverlay from '../../components/LoadingOverlay';
+import useOpenDialog from '../../hooks/useOpenDialog';
 
 const StyledFingerprintListItem = styled(ListItem)`
   padding-right: ${({ theme }) => `${theme.spacing(11)}px`};

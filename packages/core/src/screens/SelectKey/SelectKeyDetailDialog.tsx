@@ -1,9 +1,10 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { AlertDialog, Loading } from '@chia/core';
 import { useGetPrivateKeyQuery } from '@chia/api-react';
 import { Grid, Typography } from '@material-ui/core';
 import styled from 'styled-components';
+import AlertDialog from '../../components/AlertDialog';
+import Loading from '../../components/Loading';
 
 const StyledTypographyDD = styled(Typography)`
   word-break: break-all;

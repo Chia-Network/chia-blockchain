@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Button, ConfirmDialog, Flex, Logo, Loading, useOpenDialog, TooltipIcon, useShowError } from '@chia/core';
 import {
   Card,
   Typography,
@@ -16,6 +15,14 @@ import {
   useLogInAndSkipImportMutation,
 } from '@chia/api-react';
 import SelectKeyItem from './SelectKeyItem';
+import Button from '../../components/Button';
+import Flex from '../../components/Flex';
+import Logo from '../../components/Logo';
+import Loading from '../../components/Loading';
+import TooltipIcon from '../../components/TooltipIcon';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import useOpenDialog from '../../hooks/useOpenDialog';
+import useShowError from '../../hooks/useShowError';
 
 const StyledContainer = styled(Container)`
   padding-bottom: 1rem;

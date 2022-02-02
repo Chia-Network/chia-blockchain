@@ -2,7 +2,7 @@ import React, { type ReactNode } from 'react';
 import { AppBar, Toolbar, Box } from '@material-ui/core';
 import styled from 'styled-components';
 import { Outlet, Link } from 'react-router-dom';
-import { Flex } from '@chia/core';
+import Flex from '../Flex';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import Settings from '../Settings';
 

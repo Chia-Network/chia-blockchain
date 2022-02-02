@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flex } from '@chia/core';
+import Flex from '../Flex';
 import { Typography } from '@material-ui/core';
 import styled from 'styled-components';
 import { default as walletPackageJson } from '../../../package.json';

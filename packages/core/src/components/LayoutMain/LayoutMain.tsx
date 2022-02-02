@@ -1,7 +1,7 @@
 import React, { ReactElement, ReactNode } from 'react';
 import { Container } from '@material-ui/core';
 import styled from 'styled-components';
-import { Flex } from '@chia/core';
+import Flex from '../Flex';
 import { Outlet } from 'react-router-dom';
 import DashboardTitle from '../DashboardTitle';
 import LayoutFooter from './LayoutFooter';
