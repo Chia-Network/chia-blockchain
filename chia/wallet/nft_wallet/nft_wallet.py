@@ -122,38 +122,36 @@ class NFTWallet:
         return
 
     async def coin_added(self, coin: Coin, height: uint32):
-        breakpoint()
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f" NFT wallet has been notified that {coin} was added")
-        data: Dict[str, Any] = {
-            "data": {
-                "action_data": {
-                    "api_name": "request_puzzle_solution",
-                    "height": height,
-                    "coin_name": coin.parent_coin_info,
-                    "received_coin": coin.name(),
-                }
-            }
-        }
+        wallet_node = self.wallet_state_manager.wallet_node
+        server = wallet_node.server
+        full_nodes: Dict[bytes32, WSChiaConnection] = server.connection_by_type.get(NodeType.FULL_NODE, {})
+        cs: Optional[CoinSpend] = None
+        coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.get_coin_state([coin.parent_coin_info])
+        assert coin_states is not None
+        parent_coin = coin_states[0].coin
+        for node_id in full_nodes:
+            node = server.all_connections[node_id]
+            cs: CoinSpend = await wallet_node.fetch_puzzle_solution(
+                node, height, parent_coin
+            )
+            if cs is not None:
+                break
+        if cs is None:
+            breakpoint()
+        assert cs is not None
+        await self.puzzle_solution_received(cs)
 
-        data_str = dict_to_json_str(data)
-        await self.wallet_state_manager.create_action(
-            name="request_puzzle_solution",
-            wallet_id=self.id(),
-            wallet_type=self.type(),
-            callback="puzzle_solution_received",
-            done=False,
-            data=data_str,
-            in_transaction=True,
-        )
+    async def puzzle_solution_received(self, coin_spend: CoinSpend):
+        coin_name = coin_spend.coin.name()
+        puzzle: Program = Program.from_bytes(bytes( coin_spend.puzzle_reveal))
+        solution: Program = Program.from_bytes(bytes(coin_spend.solution))
 
-    async def puzzle_solution_received(self, response: PuzzleSolutionResponse, action_id: int):
-        coin_name = response.coin_name
-        puzzle: Program = response.puzzle
         matched, curried_args = nft_puzzles.match_nft_puzzle(puzzle)
         if matched:
             nft_mod_hash, singleton_struct, current_owner, nft_transfer_program_hash = curried_args
-            nft_transfer_program = nft_puzzles.get_transfer_program_from_solution(response.solution)
+            nft_transfer_program = nft_puzzles.get_transfer_program_from_solution(solution)
             self.log.info(f"found the info for coin {coin_name}")
             parent_coin = None
             coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
@@ -165,14 +163,13 @@ class NFTWallet:
                 parent_coin = coin_record.coin
             if parent_coin is None:
                 raise ValueError("Error in finding parent")
-            inner_puzzle = nft_puzzles.create_nft_layer_puzzle(singleton_struct.rest().first(), current_owner, nft_transfer_program)
+            inner_puzzle = nft_puzzles.create_nft_layer_puzzle(singleton_struct.rest().first(), current_owner, nft_transfer_program.get_tree_hash())
             await self.add_coin(
                 coin_name,
                 LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount),
                 nft_transfer_program_hash,
                 puzzle
             )
-            await self.wallet_state_manager.action_store.action_done(action_id)
         else:
             # The parent is not an NFT which means we need to scrub all of its children from our DB
             child_coin_records = await self.wallet_state_manager.coin_store.get_coin_records_by_parent_id(coin_name)
@@ -184,11 +181,11 @@ class NFTWallet:
                         # We also need to make sure there's no record of the transaction
                         await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
 
-    async def add_coin(self, coin, lineage_proof, transfer_program):
+    async def add_coin(self, coin, lineage_proof, transfer_program, puzzle):
         my_nft_coins = self.nft_wallet_info.my_nft_coins
-        my_nft_coins.append(NFTCoinInfo(coin, lineage_proof, transfer_program))
+        my_nft_coins.append(NFTCoinInfo(coin, lineage_proof, transfer_program, puzzle))
         new_nft_wallet_info = NFTWalletInfo(self.nft_wallet_info.my_did, self.nft_wallet_info.did_wallet_id, my_nft_coins)
-        await self.save_info(new_nft_wallet_info)
+        await self.save_info(new_nft_wallet_info, False)
         return
 
     async def remove_coin(self, coin):

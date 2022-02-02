@@ -639,7 +639,6 @@ class WalletStateManager:
             if matched:
                 NFT_MOD_HASH, singleton_struct, current_owner_did, nft_transfer_program_hash = curried_args
                 hint_list = nft_spend.hints()
-                breakpoint()
                 for wallet_info in await self.get_all_wallet_info_entries():
                     if wallet_info.type == WalletType.NFT:
                         nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
@@ -693,16 +692,12 @@ class WalletStateManager:
             wallet_type = None
             if info is not None:
                 wallet_id, wallet_type = info
-                if wallet_type == WalletType.NFT:
-                    breakpoint()
             elif local_record is not None:
                 wallet_id = uint32(local_record.wallet_id)
                 wallet_type = local_record.wallet_type
             elif coin_state.created_height is not None:
                 wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state)
 
-            if wallet_type == WalletType.NFT:
-                breakpoint()
             if wallet_id is None or wallet_type is None:
                 self.log.info(f"No wallet for coin state: {coin_state}")
                 continue
@@ -989,8 +984,6 @@ class WalletStateManager:
         """
         Adding coin to DB, return wallet coin record if it get's added
         """
-        if wallet_type == WalletType.NFT:
-            breakpoint()
         existing: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.name())
         if existing is not None:
             return None
@@ -1081,7 +1074,6 @@ class WalletStateManager:
             await wallet.coin_added(coin, height)
 
         if wallet_type == WalletType.NFT:
-            breakpoint()
             await self.wallets[wallet_id].add_nft_coin(coin, height)
 
         await self.create_more_puzzle_hashes()
