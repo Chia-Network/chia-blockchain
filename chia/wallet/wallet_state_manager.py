@@ -640,6 +640,8 @@ class WalletStateManager:
             # This only applies to trusted mode
             await self.reorg_rollback(fork_height)
 
+        new_interested_coin_ids: List[bytes32] = []
+
         for coin_state_idx, coin_state in enumerate(coin_states):
             info = await self.get_wallet_id_for_puzzle_hash(coin_state.coin.puzzle_hash)
             local_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_state.coin.name())
@@ -832,7 +834,7 @@ class WalletStateManager:
                                 uint32(record.wallet_id),
                                 record.wallet_type,
                             )
-                            await self.add_interested_coin_id(added_pool_coin.name())
+                            new_interested_coin_ids.append(added_pool_coin.name())
 
                 # Check if a child is a singleton launcher
                 if children is None:
@@ -877,11 +879,12 @@ class WalletStateManager:
                     await self.coin_added(
                         coin_added, coin_state.spent_height, [], pool_wallet.id(), WalletType(pool_wallet.type())
                     )
-                    await self.add_interested_coin_id(coin_added.name())
+                    new_interested_coin_ids.append(coin_added.name())
 
             else:
                 raise RuntimeError("All cases already handled")  # Logic error, all cases handled
-
+        for new_coin_id in new_interested_coin_ids:
+            await self.add_interested_coin_id(new_coin_id)
         for coin_state_removed in trade_coin_removed:
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed)
 
