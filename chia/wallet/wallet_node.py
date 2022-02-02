@@ -75,7 +75,7 @@ class PeerRequestCache:
         self.block_requests = {}
         self.states_validated = {}
 
-    def clear_after_height(self, height: uint32):
+    def clear_after_height(self, height: int):
         # Remove any cached item which relates to an event that happened at a height above height.
 
         remove_keys_blocks: List[uint32] = []
@@ -89,24 +89,24 @@ class PeerRequestCache:
         for start, end in self.block_requests.keys():
             if start > height or end > height:
                 remove_keys_block_req.append((start, end))
-        for k in remove_keys_block_req:
-            self.block_requests.pop(k)
+        for k2 in remove_keys_block_req:
+            self.block_requests.pop(k2)
 
         remove_keys_ses: List[int] = []
-        for h in self.ses_requests.keys():
-            if h > height:
-                remove_keys_ses.append(h)
-        for k in remove_keys_ses:
-            self.ses_requests.pop(k)
+        for h2 in self.ses_requests.keys():
+            if h2 > height:
+                remove_keys_ses.append(h2)
+        for k3 in remove_keys_ses:
+            self.ses_requests.pop(k3)
 
         remove_keys_states: List[bytes32] = []
-        for k, coin_state in self.states_validated.items():
+        for k4, coin_state in self.states_validated.items():
             if coin_state.created_height is not None and coin_state.created_height > height:
-                remove_keys_states.append(k)
+                remove_keys_states.append(k4)
             elif coin_state.spent_height is not None and coin_state.spent_height > height:
-                remove_keys_states.append(k)
-        for k in remove_keys_states:
-            self.states_validated.pop(k)
+                remove_keys_states.append(k4)
+        for k5 in remove_keys_states:
+            self.states_validated.pop(k5)
 
 
 class WalletNode:
@@ -187,7 +187,7 @@ class WalletNode:
             self.untrusted_caches[peer.peer_node_id] = PeerRequestCache()
         return self.untrusted_caches[peer.peer_node_id]
 
-    def rollback_request_caches(self, reorg_height: uint32):
+    def rollback_request_caches(self, reorg_height: int):
         # Everything after reorg_height should be removed from the cache
         for _, cache in self.untrusted_caches.items():
             cache.clear_after_height(reorg_height)
@@ -1095,6 +1095,7 @@ class WalletNode:
         )
 
         if validate_additions_result is False:
+            self.log.warning("DISCONNECT 1")
             await peer.close(9999)
             return False
 
@@ -1125,6 +1126,7 @@ class WalletNode:
                 spent_state_block.foliage_transaction_block.removals_root,
             )
             if validate_removals_result is False:
+                self.log.warning("DISCONNECT 2")
                 await peer.close(9999)
                 return False
             validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
@@ -1150,6 +1152,7 @@ class WalletNode:
                 spent_state_block.foliage_transaction_block.removals_root,
             )
             if validate_removals_result is False:
+                self.log.warning("DISCONNECT 1")
                 await peer.close(9999)
                 return False
             validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
