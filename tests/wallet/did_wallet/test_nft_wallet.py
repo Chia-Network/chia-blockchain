@@ -131,7 +131,5 @@ class TestNFTWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await asyncio.sleep(3)
-        coins_with_hint = await full_node_api.full_node.hint_store.get_coin_ids(nft_wallet.nft_wallet_info.my_did)
-        breakpoint()
         coins = nft_wallet.nft_wallet_info.my_nft_coins
         assert len(coins) == 1

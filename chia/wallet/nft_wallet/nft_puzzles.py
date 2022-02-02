@@ -46,7 +46,6 @@ def match_nft_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
             if mod == NFT_MOD:
                 return True, curried_args.as_iter()
     except Exception:
-        breakpoint()
         return False, iter(())
     return False, iter(())
 
@@ -67,8 +66,7 @@ def get_transfer_program_from_solution(solution: Program) -> Program:
     try:
         prog = solution.rest().rest().rest().rest().rest().rest().rest().rest().rest().first()
         return prog
-    except:
-        breakpoint()
+    except Exception:
         return None
 
     return None
