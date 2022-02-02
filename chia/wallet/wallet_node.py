@@ -75,6 +75,39 @@ class PeerRequestCache:
         self.block_requests = {}
         self.states_validated = {}
 
+    def clear_after_height(self, height: uint32):
+        # Remove any cached item which relates to an event that happened at a height above height.
+
+        remove_keys_blocks: List[uint32] = []
+        for h in self.blocks.keys():
+            if h > height:
+                remove_keys_blocks.append(h)
+        for k in remove_keys_blocks:
+            self.blocks.pop(k)
+
+        remove_keys_block_req: List[Tuple[int, int]] = []
+        for start, end in self.block_requests.keys():
+            if start > height or end > height:
+                remove_keys_block_req.append((start, end))
+        for k in remove_keys_block_req:
+            self.block_requests.pop(k)
+
+        remove_keys_ses: List[int] = []
+        for h in self.ses_requests.keys():
+            if h > height:
+                remove_keys_ses.append(h)
+        for k in remove_keys_ses:
+            self.ses_requests.pop(k)
+
+        remove_keys_states: List[bytes32] = []
+        for k, coin_state in self.states_validated.items():
+            if coin_state.created_height is not None and coin_state.created_height > height:
+                remove_keys_states.append(k)
+            elif coin_state.spent_height is not None and coin_state.spent_height > height:
+                remove_keys_states.append(k)
+        for k in remove_keys_states:
+            self.states_validated.pop(k)
+
 
 class WalletNode:
     key_config: Dict
@@ -153,6 +186,11 @@ class WalletNode:
         if peer.peer_node_id not in self.untrusted_caches:
             self.untrusted_caches[peer.peer_node_id] = PeerRequestCache()
         return self.untrusted_caches[peer.peer_node_id]
+
+    def rollback_request_caches(self, reorg_height: uint32):
+        # Everything after reorg_height should be removed from the cache
+        for _, cache in self.untrusted_caches.items():
+            cache.clear_after_height(reorg_height)
 
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
         try:
@@ -823,6 +861,8 @@ class WalletNode:
         self.log.info(f"Rolling back to {fork_height}")
         await self.wallet_state_manager.reorg_rollback(fork_height)
         peak = await self.wallet_state_manager.blockchain.get_peak_block()
+        self.rollback_request_caches(fork_height)
+
         if peak is not None:
             assert header_block.weight >= peak.weight
         for block in blocks:
