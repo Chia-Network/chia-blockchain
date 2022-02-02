@@ -51,9 +51,7 @@ async def download_data_latest(
                             insert_batch.append((NodeType.INTERNAL, left_hash, right_hash))
                             right_hash = node
                     else:
-                        raise RuntimeError(
-                            f"Did not received expected node. Expected: {node} Received: {hash.hex()}"
-                        )
+                        raise RuntimeError(f"Did not received expected node. Expected: {node} Received: {hash.hex()}")
                     if len(stack) > 0:
                         node = stack.pop()
                     else:
@@ -71,9 +69,7 @@ async def download_data_latest(
                         # At most max_height nodes will be pending to be added to DB.
                         assert len(add_to_db_cache) <= 100
                     else:
-                        raise RuntimeError(
-                            f"Did not received expected node. Expected: {node} Received: {hash.hex()}"
-                        )
+                        raise RuntimeError(f"Did not received expected node. Expected: {node} Received: {hash.hex()}")
                     stack.append(right_hash)
                     node = left_hash
 
@@ -149,11 +145,7 @@ async def download_data_history(
 
 
 async def download_data(
-    data_store: DataStore,
-    subscription: Subscription,
-    target_hash: bytes32,
-    *,
-    lock: bool = True
+    data_store: DataStore, subscription: Subscription, target_hash: bytes32, *, lock: bool = True
 ) -> bool:
     tree_id = subscription.tree_id
     ip = subscription.ip
