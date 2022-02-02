@@ -75,6 +75,21 @@ class PeerRequestCache:
         self.block_requests = {}
         self.states_validated = {}
 
+    def clear_after_height(self, height: int):
+        # Remove any cached item which relates to an event that happened at a height above height.
+        self.blocks = {k: v for k, v in self.blocks.items() if k <= height}
+        self.block_requests = {k: v for k, v in self.block_requests.items() if k[0] <= height and k[1] <= height}
+        self.ses_requests = {k: v for k, v in self.ses_requests.items() if k <= height}
+
+        remove_keys_states: List[bytes32] = []
+        for k4, coin_state in self.states_validated.items():
+            if coin_state.created_height is not None and coin_state.created_height > height:
+                remove_keys_states.append(k4)
+            elif coin_state.spent_height is not None and coin_state.spent_height > height:
+                remove_keys_states.append(k4)
+        for k5 in remove_keys_states:
+            self.states_validated.pop(k5)
+
 
 class WalletNode:
     key_config: Dict
@@ -153,6 +168,11 @@ class WalletNode:
         if peer.peer_node_id not in self.untrusted_caches:
             self.untrusted_caches[peer.peer_node_id] = PeerRequestCache()
         return self.untrusted_caches[peer.peer_node_id]
+
+    def rollback_request_caches(self, reorg_height: int):
+        # Everything after reorg_height should be removed from the cache
+        for cache in self.untrusted_caches.values():
+            cache.clear_after_height(reorg_height)
 
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
         try:
@@ -823,6 +843,8 @@ class WalletNode:
         self.log.info(f"Rolling back to {fork_height}")
         await self.wallet_state_manager.reorg_rollback(fork_height)
         peak = await self.wallet_state_manager.blockchain.get_peak_block()
+        self.rollback_request_caches(fork_height)
+
         if peak is not None:
             assert header_block.weight >= peak.weight
         for block in blocks:
