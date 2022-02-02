@@ -1095,7 +1095,6 @@ class WalletNode:
         )
 
         if validate_additions_result is False:
-            self.log.warning("DISCONNECT 1")
             await peer.close(9999)
             return False
 
@@ -1126,7 +1125,6 @@ class WalletNode:
                 spent_state_block.foliage_transaction_block.removals_root,
             )
             if validate_removals_result is False:
-                self.log.warning("DISCONNECT 2")
                 await peer.close(9999)
                 return False
             validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
@@ -1152,7 +1150,6 @@ class WalletNode:
                 spent_state_block.foliage_transaction_block.removals_root,
             )
             if validate_removals_result is False:
-                self.log.warning("DISCONNECT 1")
                 await peer.close(9999)
                 return False
             validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
