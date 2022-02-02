@@ -217,8 +217,11 @@ def migrate_keys():
                     print("Migration complete")
                 else:
                     print(" Failed")
+                    sys.exit(1)
         else:
             print("No keys need migration")
+
+        Keychain.mark_migration_checked_for_current_version()
 
 
 def _clear_line_part(n: int):

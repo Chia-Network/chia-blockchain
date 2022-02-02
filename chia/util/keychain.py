@@ -491,6 +491,43 @@ class Keychain:
         return KeyringWrapper.get_shared_instance().using_legacy_keyring()
 
     @staticmethod
+    def migration_checked_for_current_version() -> bool:
+        """
+        Returns a bool indicating whether the current client version has checked the legacy keyring
+        for keys needing migration.
+        """
+        def compare_versions(version1: str , version2: str) -> int:
+            # Making the assumption that versions will be of the form: x[x].y[y].z[z]
+            # We limit the number of components to 3, with each component being up to 2 digits long
+            ver1: List[int] = [int(n[:2]) for n in version1.split(".")[:3]]
+            ver2: List[int] = [int(n[:2]) for n in version2.split(".")[:3]]
+            if ver1 > ver2:
+                return 1
+            elif ver1 < ver2:
+                return -1
+            else:
+                return 0
+
+        migration_version_file: Path = KeyringWrapper.get_shared_instance().keys_root_path / ".last_legacy_migration"
+        if migration_version_file.exists():
+            current_version_str = pkg_resources.get_distribution("chia-blockchain").version
+            with migration_version_file.open("r") as f:
+                last_migration_version_str = f.read().strip()
+            return compare_versions(current_version_str, last_migration_version_str) <= 0
+
+        return False
+
+    @staticmethod
+    def mark_migration_checked_for_current_version():
+        """
+        Marks the current client version as having checked the legacy keyring for keys needing migration.
+        """
+        migration_version_file: Path = KeyringWrapper.get_shared_instance().keys_root_path / ".last_legacy_migration"
+        current_version_str = pkg_resources.get_distribution("chia-blockchain").version
+        with migration_version_file.open("w") as f:
+            f.write(current_version_str)
+
+    @staticmethod
     def handle_migration_completed():
         """
         When migration completes outside of the current process, we rely on a notification to inform
@@ -565,6 +602,8 @@ class Keychain:
 
             if not Keychain.verify_keys_present(keys_to_migrate):
                 raise RuntimeError("Failed to migrate keys. Legacy keyring left intact.")
+
+        Keychain.mark_migration_checked_for_current_version()
 
     @staticmethod
     def passphrase_is_optional() -> bool:

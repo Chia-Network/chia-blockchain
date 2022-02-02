@@ -433,6 +433,8 @@ class KeyringWrapper:
         for (user, passphrase) in user_passphrase_pairs:
             self.keyring.set_password(service, user, passphrase)
 
+        Keychain.mark_migration_checked_for_current_version()
+
         return KeyringWrapper.MigrationResults(
             original_private_keys, self.legacy_keyring, service, [user for (user, _) in user_passphrase_pairs]
         )
