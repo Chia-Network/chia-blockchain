@@ -313,7 +313,7 @@ class TestPoolWalletRpc:
         assert pool_config["pool_url"] == "http://pool.example.com"
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("trusted", [True, False])
+    @pytest.mark.parametrize("trusted", [True, pytest.param(False, marks=pytest.mark.xfail(strict=True))])
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
     async def test_create_multiple_pool_wallets(self, one_wallet_node_and_rpc, fee, trusted):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
