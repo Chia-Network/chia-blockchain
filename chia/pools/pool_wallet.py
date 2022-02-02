@@ -251,19 +251,16 @@ class PoolWallet:
         await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))
 
     @staticmethod
-    def get_next_interesting_coin_ids(spend: CoinSpend) -> List[bytes32]:
+    def get_next_interesting_coin(spend: CoinSpend) -> Optional[Coin]:
         # CoinSpend of one of the coins that we cared about. This coin was spent in a block, but might be in a reorg
-        # If we return a value, it is a coin ID that we are also interested in (to support two transitions per block)
-        coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(spend)
-        if coin is not None:
-            return [coin.name()]
-        return []
+        # If we return a value, it is a coin that we are also interested in (to support two transitions per block)
+        return get_most_recent_singleton_coin_from_coin_spend(spend)
 
-    async def apply_state_transitions(self, new_state: CoinSpend, block_height: uint32):
+    async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
         """
-        Updates the Pool state (including DB) with new singleton spends. The block spends can contain many spends
-        that we are not interested in, and can contain many ephemeral spends. They must all be in the same block.
-        The DB must be committed after calling this method. All validation should be done here.
+        Updates the Pool state (including DB) with new singleton spends.
+        The DB must be committed after calling this method. All validation should be done here. Returns True iff
+        the spend is a valid transition spend for the singleton, False otherwise.
         """
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
         tip_spend = tip[1]
@@ -273,10 +270,10 @@ class PoolWallet:
         spent_coin_name: bytes32 = tip_coin.name()
 
         if spent_coin_name != new_state.coin.name():
-            # self.log.warning(
-            #     f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
-            # )
-            return
+            self.log.warning(
+                f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
+            )
+            return False
 
         await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
         tip_spend = (await self.get_tip())[1]
@@ -292,6 +289,7 @@ class PoolWallet:
                 break
 
         await self.update_pool_config(False)
+        return True
 
     async def rewind(self, block_height: int) -> bool:
         """

@@ -819,22 +819,33 @@ class WalletStateManager:
                             await self.tx_store.set_confirmed(unconfirmed_record.name, coin_state.spent_height)
 
                 if record.wallet_type == WalletType.POOLING_WALLET:
-                    if coin_state.spent_height is not None:
-                        cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
-                            peer, coin_state.spent_height, coin_state.coin
-                        )
+                    if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
                         wallet = self.wallets[uint32(record.wallet_id)]
-                        await wallet.apply_state_transitions(cs, coin_state.spent_height)
-                        if len(cs.additions()) > 0:
-                            added_pool_coin = cs.additions()[0]
+                        curr_coin_state: CoinState = coin_state
+                        while curr_coin_state.spent_height is not None:
+                            cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
+                                peer, curr_coin_state.spent_height, curr_coin_state.coin
+                            )
+                            success = await wallet.apply_state_transition(cs, curr_coin_state.spent_height)
+                            if not success:
+                                break
+                            new_singleton_coin: Optional[Coin] = wallet.get_next_interesting_coin(cs)
+                            if new_singleton_coin is None:
+                                # No more singleton (maybe destroyed?)
+                                break
                             await self.coin_added(
-                                added_pool_coin,
+                                new_singleton_coin,
                                 coin_state.spent_height,
                                 [],
                                 uint32(record.wallet_id),
                                 record.wallet_type,
                             )
-                            new_interested_coin_ids.append(added_pool_coin.name())
+                            new_interested_coin_ids.append(new_singleton_coin.name())
+                            new_coin_state: List[CoinState] = await self.wallet_node.get_coin_state(
+                                [new_singleton_coin.name()]
+                            )
+                            assert len(new_coin_state) == 1
+                            curr_coin_state = new_coin_state[0]
 
                 # Check if a child is a singleton launcher
                 if children is None:
@@ -874,7 +885,6 @@ class WalletStateManager:
                         False,
                         "pool_wallet",
                     )
-                    # await pool_wallet.apply_state_transitions(launcher_spend, coin_state.spent_height)
                     coin_added = launcher_spend.additions()[0]
                     await self.coin_added(
                         coin_added, coin_state.spent_height, [], pool_wallet.id(), WalletType(pool_wallet.type())
