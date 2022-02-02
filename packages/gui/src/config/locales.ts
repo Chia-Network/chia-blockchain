@@ -34,47 +34,9 @@ import {
   vi,
   zh,
 } from 'make-plural/plurals';
-
-const catalogArSA = require('../locales/ar-SA/messages');
-const catalogBeBY = require('../locales/be-BY/messages');
-const catalogBgBG = require('../locales/bg-BG/messages');
-const catalogCaES = require('../locales/ca-ES/messages');
-const catalogCsCZ = require('../locales/cs-CZ/messages');
-const catalogDa = require('../locales/da-DK/messages');
-const catalogDe = require('../locales/de-DE/messages');
-const catalogElGR = require('../locales/el-GR/messages');
-const catalogEnAu = require('../locales/en-AU/messages');
-const catalogEnNZ = require('../locales/en-NZ/messages');
-const catalogEnPt = require('../locales/en-PT/messages');
-const catalogEn = require('../locales/en-US/messages');
-const catalogEs = require('../locales/es-ES/messages');
-const catalogEsAR = require('../locales/es-AR/messages');
-const catalogEsMX = require('../locales/es-MX/messages');
-const catalogFaIR = require('../locales/fa-IR/messages');
-const catalogFi = require('../locales/fi-FI/messages');
-const catalogFr = require('../locales/fr-FR/messages');
-const catalogHrHR = require('../locales/hr-HR/messages');
-const catalogHuHU = require('../locales/hu-HU/messages');
-const catalogIdID = require('../locales/id-ID/messages');
-const catalogIt = require('../locales/it-IT/messages');
-const catalogJa = require('../locales/ja-JP/messages');
-const catalogKoKR = require('../locales/ko-KR/messages');
-const catalogNl = require('../locales/nl-NL/messages');
-const catalogNoNO = require('../locales/no-NO/messages');
-const catalogPl = require('../locales/pl-PL/messages');
-const catalogPtBr = require('../locales/pt-BR/messages');
-const catalogPt = require('../locales/pt-PT/messages');
-const catalogRo = require('../locales/ro-RO/messages');
-const catalogRu = require('../locales/ru-RU/messages');
-const catalogSk = require('../locales/sk-SK/messages');
-const catalogSqAL = require('../locales/sq-AL/messages');
-const catalogSrSP = require('../locales/sr-SP/messages');
-const catalogSv = require('../locales/sv-SE/messages');
-const catalogTrTR = require('../locales/tr-TR/messages');
-const catalogUkUA = require('../locales/uk-UA/messages');
-// const catalogViVn = require('../locales/vi-VN/messages');
-const catalogZh = require('../locales/zh-TW/messages');
-const catalogZhCN = require('../locales/zh-CN/messages');
+import * as coreLocales from '@chia/core/src/locales';
+import * as walletsLocales from '@chia/wallets/src/locales';
+import * as guiLocales from '../locales';
 
 export const defaultLocale = 'en-US';
 
@@ -283,45 +245,16 @@ i18n.loadLocaleData('vi-VN', { plurals: vi });
 i18n.loadLocaleData('zh-TW', { plurals: zh });
 i18n.loadLocaleData('zh-CN', { plurals: zh });
 
-i18n.load('ar-SA', catalogArSA.messages);
-i18n.load('be-BY', catalogBeBY.messages);
-i18n.load('bg-BG', catalogBgBG.messages);
-i18n.load('ca-ES', catalogCaES.messages);
-i18n.load('cs-CZ', catalogCsCZ.messages);
-i18n.load('da-DK', catalogDa.messages);
-i18n.load('de-DE', catalogDe.messages);
-i18n.load('el-GR', catalogElGR.messages);
-i18n.load('en-NZ', catalogEnNZ.messages);
-i18n.load('en-PT', catalogEnPt.messages);
-i18n.load('en-AU', catalogEnAu.messages);
-i18n.load('en-US', catalogEn.messages);
-i18n.load('es-ES', catalogEs.messages);
-i18n.load('es-AR', catalogEsAR.messages);
-i18n.load('es-MX', catalogEsMX.messages);
-i18n.load('fa-IR', catalogFaIR.messages);
-i18n.load('fi-FI', catalogFi.messages);
-i18n.load('fr-FR', catalogFr.messages);
-i18n.load('hr-HR', catalogHrHR.messages);
-i18n.load('hu-HU', catalogHuHU.messages);
-i18n.load('id-ID', catalogIdID.messages);
-i18n.load('it-IT', catalogIt.messages);
-i18n.load('ja-JP', catalogJa.messages);
-i18n.load('ko-KR', catalogKoKR.messages);
-i18n.load('nl-NL', catalogNl.messages);
-i18n.load('no-NO', catalogNoNO.messages);
-i18n.load('pl-PL', catalogPl.messages);
-i18n.load('pt-BR', catalogPtBr.messages);
-i18n.load('pt-PT', catalogPt.messages);
-i18n.load('ro-RO', catalogRo.messages);
-i18n.load('ru-RU', catalogRu.messages);
-i18n.load('sk-SK', catalogSk.messages);
-i18n.load('sq-AL', catalogSqAL.messages);
-i18n.load('sr-SP', catalogSrSP.messages);
-i18n.load('sv-SE', catalogSv.messages);
-i18n.load('tr-TR', catalogTrTR.messages);
-i18n.load('uk-UA', catalogUkUA.messages);
-// i18n.load('vi-VN', catalogViVn.messages);
-i18n.load('zh-TW', catalogZh.messages);
-i18n.load('zh-CN', catalogZhCN.messages);
+locales.forEach(({ locale }) => {
+  const importName = locale.replace('-', '');
+
+  const messages = {
+    ...coreLocales[importName].messages,
+    ...walletsLocales[importName].messages,
+    ...guiLocales[importName].messages,
+  };
+
+  i18n.load(locale, messages);
+});
 
 export { i18n };
