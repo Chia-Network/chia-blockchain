@@ -113,6 +113,9 @@ if [ "$(uname)" = "Linux" ]; then
   elif type yum && [ -f "/etc/redhat-release" ] || [ -f "/etc/centos-release" ] || [ -f "/etc/fedora-release" ]; then
     # CentOS or Redhat or Fedora
     echo "Installing on CentOS/Redhat/Fedora."
+    if ! command -v python3.9 >/dev/null 2>&1; then
+      sudo yum install -y python39
+    fi
   fi
 elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
   echo "Installation currently requires brew on MacOS - https://brew.sh/"
