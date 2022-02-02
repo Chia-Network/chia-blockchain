@@ -739,7 +739,6 @@ class PoolWallet:
         unspent_coin_records: List[CoinRecord] = list(
             await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
         )
-        self.log.warning(f"Unspent coin records absorbing: {len(unspent_coin_records)}")
         if len(unspent_coin_records) == 0:
             raise ValueError("Nothing to claim, no transactions to p2_singleton_puzzle_hash")
         farming_rewards: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_farming_rewards()
@@ -760,7 +759,6 @@ class PoolWallet:
         total_amount = 0
         for coin_record in unspent_coin_records:
             if coin_record.coin not in coin_to_height_farmed:
-                self.log.info(f"Coin to height farmed: {coin_to_height_farmed}")
                 continue
             if len(all_spends) >= 100:
                 # Limit the total number of spends, so it fits into the block
