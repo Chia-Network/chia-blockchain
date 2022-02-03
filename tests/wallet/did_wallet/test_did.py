@@ -438,7 +438,7 @@ class TestDIDWallet:
             )
             additions = spend_bundle.additions()
             assert additions == []
-        except:
+        except Exception:
             pass
         else:
             assert False

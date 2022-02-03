@@ -6,9 +6,9 @@ from chia.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.types.blockchain_format.program import Program
-from blspy import AugSchemeMPL
-from chia.types.spend_bundle import SpendBundle
+# from chia.types.blockchain_format.program import Program
+# from blspy import AugSchemeMPL
+# from chia.types.spend_bundle import SpendBundle
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
@@ -122,10 +122,14 @@ class TestNFTWallet:
         await time_out_assert(15, did_wallet_0.get_unconfirmed_balance, 101)
         await time_out_assert(15, did_wallet_0.get_pending_change_balance, 0)
 
-        nft_wallet = await NFTWallet.create_new_nft_wallet(wallet_node_0.wallet_state_manager, wallet_0, did_wallet_0.id())
+        nft_wallet = await NFTWallet.create_new_nft_wallet(
+            wallet_node_0.wallet_state_manager, wallet_0, did_wallet_0.id()
+        )
         tr = await nft_wallet.generate_new_nft("https://www.chia.net/img/branding/chia-logo.svg", 20, ph)
 
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, tr.spend_bundle.name())
+        await time_out_assert_not_none(
+            5, full_node_api.full_node.mempool_manager.get_spendbundle, tr.spend_bundle.name()
+        )
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))

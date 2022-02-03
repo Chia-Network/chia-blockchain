@@ -1,4 +1,3 @@
-from clvm_tools import binutils
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
 from chia.util.ints import uint64
@@ -29,7 +28,7 @@ def test_transfer_no_backpayments():
     did_one_parent: bytes32 = Program.to("did_one_parent").get_tree_hash()
     did_one_amount = 201
 
-    did_two_pk: bytes32 = Program.to("did_two_pk").get_tree_hash()
+    #  did_two_pk: bytes32 = Program.to("did_two_pk").get_tree_hash()
     did_two_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_two, LAUNCHER_PUZZLE_HASH)))
     did_two_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_two_innerpuz)
@@ -96,7 +95,7 @@ def test_transfer_with_backpayments():
     did_one_parent: bytes32 = Program.to("did_one_parent").get_tree_hash()
     did_one_amount = 201
 
-    did_two_pk: bytes32 = Program.to("did_two_pk").get_tree_hash()
+    #  did_two_pk: bytes32 = Program.to("did_two_pk").get_tree_hash()
     did_two_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_two, LAUNCHER_PUZZLE_HASH)))
     did_two_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_two_innerpuz)
@@ -168,15 +167,15 @@ def test_announce():
     did_one_parent: bytes32 = Program.to("did_one_parent").get_tree_hash()
     did_one_amount = 201
 
-    did_two_pk: bytes32 = Program.to("did_two_pk").get_tree_hash()
-    did_two_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
+    #  did_two_pk: bytes32 = Program.to("did_two_pk").get_tree_hash()
+    #  did_two_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_two, LAUNCHER_PUZZLE_HASH)))
-    did_two_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_two_innerpuz)
-    did_two_parent: bytes32 = Program.to("did_two_parent").get_tree_hash()
-    did_two_amount = 401
+    #  did_two_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_two_innerpuz)
+    #  did_two_parent: bytes32 = Program.to("did_two_parent").get_tree_hash()
+    #  did_two_amount = 401
 
     did_one_coin = Coin(did_one_parent, did_one_puzzle.get_tree_hash(), did_one_amount)
-    did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
+    #  did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
     # NFT_MOD_HASH
     # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (NFT_SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
     # CURRENT_OWNER_DID
@@ -195,7 +194,6 @@ def test_announce():
 
     nft_creator_address = Program.to("nft_creator_address").get_tree_hash()
     nft_program = NFT_TRANSFER_PROGRAM.curry([nft_creator_address, 20, "http://chia.net"])
-    trade_price = 0
     solution = Program.to(
         [
             NFT_MOD_HASH,  # curried in params
