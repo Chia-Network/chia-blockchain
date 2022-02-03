@@ -150,6 +150,17 @@ def convert_v1_to_v2(in_path: Path, out_path: Path, out_path_string: str) -> Non
     #  9. Convert and migrate hints table to target v2 sqlite file
     # 10. Create indexes on hints table
     # Finally update the database version to 2
+    #
+    # Possible improvements:
+    # -) check if target device for default temp_store is big enough or maybe better, let user choose temp_store_directory
+    #    HOW TO DECIDE: 
+    #      1. better SSD > HDD
+    #      2. if applicable, choose different device than the db device
+    #      3. free space needed: sum of coin_record + sub_epoch_segments_v3:
+    #         select sum(pgsize)/1024/1024 MB from dbstat where name in ('coin_record','sub_epoch_segments_v3');
+    # -) check if db device has enough free space: 
+    #         select sum(pgsize)/1024/1024 MB from dbstat;
+    # -) get available memory and choose batch commit sizes accordingly
 
     print("\n[0/10] initializing v2 database with current_peak")
 
