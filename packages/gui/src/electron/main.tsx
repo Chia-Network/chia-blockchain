@@ -1,5 +1,5 @@
-import { app, dialog, net, shell, ipcMain, BrowserWindow, IncomingMessage, Menu, session } from 'electron';
-require('@electron/remote/main').initialize()
+import { app, dialog, net, shell, ipcMain, BrowserWindow, IncomingMessage, Menu, session, nativeImage } from 'electron';
+import { default as remoteMain, initialize } from '@electron/remote/main';
 import path from 'path';
 import React from 'react';
 import url from 'url';
@@ -16,7 +16,11 @@ import chiaConfig from '../util/config';
 import { i18n } from '../config/locales';
 import About from '../components/about/About';
 import packageJson from '../../package.json';
+import AppIcon from '../assets/img/chia64x64.png';
 
+initialize();
+
+const appIcon = nativeImage.createFromPath(path.join(__dirname, AppIcon));
 let isSimulator = process.env.LOCAL_TEST === 'true';
 
 function renderAbout(): string {
@@ -216,6 +220,10 @@ if (!handleSquirrelEvent()) {
           nativeWindowOpen: true
         },
       });
+
+      if(process.platform === 'linux') {
+        mainWindow.setIcon(appIcon);
+      }
 
       if (dev_config.redux_tool) {
         const reduxDevToolsPath = path.join(os.homedir(), dev_config.react_tool)
