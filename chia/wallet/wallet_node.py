@@ -614,6 +614,7 @@ class WalletNode:
             return None
 
     async def last_local_tx_block(self, header_hash: bytes32) -> Optional[BlockRecord]:
+        assert self.wallet_state_manager is not None
         current_hash = header_hash
         while True:
             if self.wallet_state_manager.blockchain.contains_block(current_hash):
@@ -753,6 +754,7 @@ class WalletNode:
                             tx_timestamp = last_tx_block.foliage_transaction_block.timestamp
                     else:
                         last_tx_block = response.header_block
+                        assert last_tx_block.foliage_transaction_block is not None
                         tx_timestamp = last_tx_block.foliage_transaction_block.timestamp
 
                     if tx_timestamp is None:
