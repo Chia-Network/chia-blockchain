@@ -70,6 +70,7 @@ class Harvester:
         self._is_shutdown = True
         self.executor.shutdown(wait=True)
         self.plot_manager.stop_refreshing()
+        self.plot_manager.reset()
 
     async def _await_closed(self):
         pass
