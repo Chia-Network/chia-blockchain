@@ -3,9 +3,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const lodash = require('lodash');
-const sleepModule = require('./sleep');
 
-const sleep = lodash.default;
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // defaults used in case of error point to the localhost daemon & its certs
 let self_hostname = 'localhost';
