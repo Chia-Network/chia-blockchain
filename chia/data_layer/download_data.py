@@ -14,7 +14,7 @@ async def download_data_latest(
     insert_batch: List[Tuple[NodeType, bytes32, bytes32]] = []
 
     async with aiohttp.ClientSession() as session:
-        async with session.ws_connect(URL) as ws:
+        async with session.ws_connect(URL, timeout=180, heartbeat=60, max_msg_size=0) as ws:
             request = {
                 "type": "request_root",
                 "tree_id": tree_id.hex(),
@@ -87,7 +87,7 @@ async def download_data_history(
     data_store: DataStore, tree_id: bytes32, target_hash: bytes32, URL: str, *, lock: bool = True
 ) -> bool:
     async with aiohttp.ClientSession() as session:
-        async with session.ws_connect(URL) as ws:
+        async with session.ws_connect(URL, timeout=180, heartbeat=60, max_msg_size=0) as ws:
             request = {
                 "type": "request_root",
                 "tree_id": tree_id.hex(),

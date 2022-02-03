@@ -103,7 +103,7 @@ class DataLayerServer:
         return json.dumps(answer)
 
     async def websocket_handler(self, request: web.Request) -> web.WebSocketResponse:
-        ws = aiohttp.web.WebSocketResponse()
+        ws = aiohttp.web.WebSocketResponse(max_msg_size=0)
         await ws.prepare(request)
 
         async for msg in ws:

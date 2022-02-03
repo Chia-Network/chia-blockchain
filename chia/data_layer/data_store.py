@@ -869,7 +869,7 @@ class DataStore:
         tree_id: bytes32,
         generation_begin: int,
         max_generation: int,
-        num_generations: int = 10,
+        num_generations: int = 10000000,
         *,
         lock: bool = True,
     ) -> List[Union[InsertionData, DeletionData]]:
