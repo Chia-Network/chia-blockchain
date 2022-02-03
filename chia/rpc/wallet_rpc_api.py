@@ -114,7 +114,6 @@ class WalletRpcApi:
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_current_nfts": self.nft_get_current_nfts,
             "/nft_transfer_nft": self.nft_transfer_nft,
-            "/nft_create_trade_price_announcement": self.nft_create_trade_price_announcement,
             # RL wallet
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
@@ -1149,10 +1148,7 @@ class WalletRpcApi:
         # amount: int = 1
         if "amount" in request:
             await nft_wallet.generate_new_nft(
-                request["uri"],
-                request["artist_percentage"],
-                request["artist_address"],
-                request["amount"]
+                request["uri"], request["artist_percentage"], request["artist_address"], request["amount"]
             )
         else:
             await nft_wallet.generate_new_nft(request["uri"], request["artist_percentage"], request["artist_address"])
@@ -1181,11 +1177,6 @@ class WalletRpcApi:
             request["trade_price"],
         )
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
-
-    async def nft_create_trade_price_announcement(self, request):
-        wallet_id = int(request["wallet_id"])
-        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        return
 
     ##########################################################################################
     # Rate Limited Wallet

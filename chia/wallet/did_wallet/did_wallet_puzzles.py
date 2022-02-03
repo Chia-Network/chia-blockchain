@@ -18,7 +18,9 @@ SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 LAUNCHER_PUZZLE_HASH = SINGLETON_LAUNCHER.get_tree_hash()
 
 
-def create_innerpuz(pubkey: bytes, identities: List[bytes], num_of_backup_ids_needed: uint64, singleton_id: bytes32) -> Program:
+def create_innerpuz(
+    pubkey: bytes, identities: List[bytes], num_of_backup_ids_needed: uint64, singleton_id: bytes32
+) -> Program:
     backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
     # MOD_HASH MY_PUBKEY RECOVERY_DID_LIST_HASH NUM_VERIFICATIONS_REQUIRED
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))

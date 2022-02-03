@@ -430,7 +430,10 @@ class DIDWallet:
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         if self.did_info.origin_coin is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
-                pubkey, self.did_info.backup_ids, self.did_info.num_of_backup_ids_needed, self.did_info.origin_coin.name()
+                pubkey,
+                self.did_info.backup_ids,
+                self.did_info.num_of_backup_ids_needed,
+                self.did_info.origin_coin.name(),
             )
             return did_wallet_puzzles.create_fullpuz(innerpuz, self.did_info.origin_coin.name())
         else:
@@ -561,25 +564,6 @@ class DIDWallet:
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_coinspends, aggsig)
-
-        did_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=new_innerpuzhash,
-            amount=uint64(coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
-            memos=list(compute_memos(spend_bundle).items()),
-        )
 
         return spend_bundle
 
@@ -917,7 +901,7 @@ class DIDWallet:
             bytes(record.pubkey),
             self.did_info.backup_ids,
             self.did_info.num_of_backup_ids_needed,
-            self.did_info.origin_coin.name()
+            self.did_info.origin_coin.name(),
         )
         return inner_puzzle
 

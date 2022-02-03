@@ -602,9 +602,7 @@ class WalletNode:
 
                         # We need to check the hints and see if there is a new CAT sent to us, so we can create
                         # a new CAT wallet
-                        wallet_id, wallet_type = await self.wallet_state_manager.determine_coin_type(
-                            peer, coin_state
-                        )
+                        wallet_id, wallet_type = await self.wallet_state_manager.determine_coin_type(peer, coin_state)
 
                         if wallet_id is not None:
                             # If there is a new wallet, check if we have this height already in the blockchain

@@ -1,7 +1,7 @@
-from clvm_tools import binutils
+
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
-from typing import List, Optional, Tuple, Iterator
+from typing import Tuple, Iterator
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -15,7 +15,11 @@ NFT_PERCENTAGE_MOD = load_clvm("nft_percentage_program.clvm")
 NFT_TRANSFER_PROGRAM = load_clvm("nft_transfer_program.clvm")
 
 
-def create_nft_layer_puzzle(singleton_id: bytes32, current_owner_did: bytes32, nft_transfer_program_hash: bytes32) -> Program:
+def create_nft_layer_puzzle(
+    singleton_id: bytes32,
+    current_owner_did: bytes32,
+    nft_transfer_program_hash: bytes32
+) -> Program:
     # NFT_MOD_HASH
     # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (NFT_SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
     # CURRENT_OWNER_DID

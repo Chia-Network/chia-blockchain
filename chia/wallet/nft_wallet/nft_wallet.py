@@ -4,9 +4,8 @@ import json
 from dataclasses import dataclass
 from chia.util.streamable import streamable, Streamable
 from typing import Dict, Optional, List, Any, Set, Tuple
-from blspy import AugSchemeMPL, G1Element
+from blspy import AugSchemeMPL
 from secrets import token_bytes
-from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -20,12 +19,8 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.nft_wallet import nft_puzzles
-from chia.util.json_util import dict_to_json_str
-from chia.protocols.wallet_protocol import PuzzleSolutionResponse
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
 
@@ -286,7 +281,6 @@ class NFTWallet:
         )
         list_of_coinspends = [CoinSpend(eve_coin, eve_fullpuz, fullsol)]
         eve_spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
-        #eve_spend = await self.generate_eve_spend(eve_coin, , did_inner)
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend_bundle, launcher_sb, message_sb])
 
         nft_record = TransactionRecord(
@@ -338,6 +332,24 @@ class NFTWallet:
         list_of_coinspends = [CoinSpend(nft_coin_info.coin, nft_coin_info.full_puzzle, fullsol)]
         spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         full_spend = SpendBundle.aggregate([spend_bundle, message_sb])
+        nft_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=nft_coin_info.coin.puzzle_hash,
+            amount=uint64(nft_coin_info.coin.amount),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=full_spend,
+            additions=full_spend.additions(),
+            removals=full_spend.removals(),
+            wallet_id=self.wallet_info.id,
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=token_bytes(),
+            memos=[],
+        )
         await self.standard_wallet.push_transaction(nft_record)
         return full_spend
 
