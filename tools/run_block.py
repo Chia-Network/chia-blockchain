@@ -213,7 +213,7 @@ def run_json_block(full_block, parent: Path, constants: ConsensusConstants) -> L
 
 
 def run_json_block_file(filename: Path):
-    full_block = json.load(filename.open('rb'))
+    full_block = json.load(filename.open("rb"))
     # pull in current constants from config.yaml
     _, constants = get_config_and_constants()
 
