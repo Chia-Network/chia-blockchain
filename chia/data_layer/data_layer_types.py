@@ -185,3 +185,10 @@ class DeletionData:
     hash: Optional[bytes32]
     key: bytes
     root_status: Status
+
+
+@dataclass(frozen=True)
+class DiffData:
+    type: OperationType
+    key: bytes
+    value: bytes
