@@ -16,6 +16,7 @@ from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_st
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution, CoinState
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -625,7 +626,7 @@ class WalletStateManager:
     async def new_coin_state(
         self,
         coin_states: List[CoinState],
-        peer,
+        peer: WSChiaConnection,
         fork_height: Optional[uint32] = None,
         current_height: Optional[uint32] = None,
     ):
@@ -641,6 +642,7 @@ class WalletStateManager:
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
         trade_coin_removed: List[CoinState] = []
 
+        # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
         if fork_height is not None and current_height is not None and fork_height != current_height - 1:
             # This only applies to trusted mode
             await self.reorg_rollback(fork_height)
