@@ -749,9 +749,9 @@ class WalletNode:
                             tx_timestamp = last_block_record.timestamp
                         else:
                             last_tx_block = await self.fetch_last_tx_from_peer(response.header_block.height, peer)
-                            assert last_tx_block is not None
-                            assert last_tx_block.foliage_transaction_block is not None
-                            tx_timestamp = last_tx_block.foliage_transaction_block.timestamp
+                            if last_tx_block is not None:
+                                assert last_tx_block.foliage_transaction_block is not None
+                                tx_timestamp = last_tx_block.foliage_transaction_block.timestamp
                     else:
                         last_tx_block = response.header_block
                         assert last_tx_block.foliage_transaction_block is not None
