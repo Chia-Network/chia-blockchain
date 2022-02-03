@@ -206,13 +206,26 @@ class DataStore:
                 "tree_id": tree_id.hex(),
                 "generation": generation,
             }
-            await self.db.execute(
-                """
-                INSERT INTO ancestors(hash, ancestor, tree_id, generation)
-                VALUES (:hash, :ancestor, :tree_id, :generation)
-                """,
-                values,
+            cursor = await self.db.execute(
+                "SELECT * FROM ancestors WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id",
+                {"hash": hash.hex(), "generation": generation, "tree_id": tree_id.hex()},
             )
+            result = await cursor.fetchone()
+            if result is None:
+                await self.db.execute(
+                    """
+                    INSERT INTO ancestors(hash, ancestor, tree_id, generation)
+                    VALUES (:hash, :ancestor, :tree_id, :generation)
+                    """,
+                    values,
+                )
+            else:
+                result_dict = dict(result)
+                if result_dict != values:
+                    raise Exception(
+                        "Requested insertion of ancestor, where ancestor differ, but other values are identical: "
+                        f"{hash} {generation} {tree_id}"
+                    )
 
     async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
         node_hash = Program.to((key, value)).get_tree_hash()
