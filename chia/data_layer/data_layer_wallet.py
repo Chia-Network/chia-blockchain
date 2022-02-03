@@ -1,5 +1,4 @@
 import logging
-import os
 import json
 import time
 import dataclasses
@@ -65,16 +64,28 @@ class DataLayerWallet:
     """
 
     @classmethod
+    async def create(
+        cls: Type[_T_DataLayerWallet],
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        wallet_info: WalletInfo,
+        name: Optional[str] = None,
+    ) -> _T_DataLayerWallet:
+        self = cls()
+        self.wallet_state_manager = wallet_state_manager
+        self.log = logging.getLogger(name if name else __name__)
+        self.standard_wallet = wallet
+        self.wallet_info = wallet_info
+        self.wallet_id = uint8(self.wallet_info.id)
+
+        return self
+
+    @classmethod
     def type(cls) -> uint8:
         return uint8(WalletType.DATA_LAYER)
 
     def id(self) -> uint32:
         return self.wallet_info.id
-
-    # todo remove
-    async def create_data_store(self, name: str = "") -> bytes32:
-        tree_id = bytes32.from_bytes(os.urandom(32))
-        return tree_id
 
     @classmethod
     async def create_new_dl_wallet(
@@ -470,6 +481,7 @@ class DataLayerWallet:
             SerializedProgram.from_program(current_full_puz),
             SerializedProgram.from_program(full_sol),
         )
+        await self.standard_wallet.hack_populate_secret_key_for_puzzle_hash(current_inner_puzzle.get_tree_hash())
         spend_bundle = await self.sign(coin_spend)
 
         dl_tx = TransactionRecord(
@@ -613,6 +625,10 @@ class DataLayerWallet:
         singleton_record: Optional[SingletonRecord] = await self.get_latest_singleton(launcher_id)
         if singleton_record is None:
             raise ValueError(f"Singleton with launcher ID {launcher_id} is not tracked by DL Wallet")
+
+        # Next, the singleton should be confirmed or else we shouldn't be ready to spend it
+        if not singleton_record.confirmed:
+            raise ValueError(f"Singleton with launcher ID {launcher_id} is currently pending")
 
         # Next, let's verify we have all of the relevant coin information
         if singleton_record.lineage_proof.parent_name is None or singleton_record.lineage_proof.amount is None:
@@ -808,12 +824,13 @@ class DataLayerWallet:
     async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
 
-    async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
-        # async def pk_to_sk(pk: G1Element) -> PrivateKey:
-        #     owner_sk: Optional[PrivateKey] = await find_owner_sk([self.wallet_state_manager.private_key], pk)
-        #     assert owner_sk is not None
-        #     return owner_sk
+    async def get_pending_change_balance(self) -> uint64:
+        return uint64(0)
 
+    async def get_max_send_amount(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        return uint128(0)
+
+    async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
         return await sign_coin_spends(
             [coin_spend],
             self.standard_wallet.secret_key_store.secret_key_for_public_key,

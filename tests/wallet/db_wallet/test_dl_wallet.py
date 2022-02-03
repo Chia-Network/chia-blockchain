@@ -239,7 +239,11 @@ class TestDLWallet:
         previous_record = await dl_wallet.get_latest_singleton(launcher_id)
 
         new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
+
         txs = await dl_wallet.create_update_state_spend(launcher_id, new_root, fee=uint64(1999999999999))
+        with pytest.raises(ValueError, match="is currently pending"):
+            await dl_wallet.create_update_state_spend(launcher_id, new_root)
+
         new_record = await dl_wallet.get_latest_singleton(launcher_id)
         assert new_record is not None
         assert new_record != previous_record
