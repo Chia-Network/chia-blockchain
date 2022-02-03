@@ -522,11 +522,9 @@ class WalletNode:
         assert self.wallet_state_manager is not None
         msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, height)
         all_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
-        # State for untrusted sync is processed only in wp sync | or short  sync backwards
         if all_state is None:
             return
-        if self.is_trusted(peer):
-            await self.receive_state_from_peer(all_state.coin_states, peer, None, None)
+        await self.receive_state_from_peer(all_state.coin_states, peer, None, None)
 
     async def subscribe_to_coin_updates(self, coin_names: List[bytes32], peer: WSChiaConnection, height=uint32(0)):
         """
@@ -535,8 +533,7 @@ class WalletNode:
         """
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, height)
         all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
-        # State for untrusted sync is processed only in wp sync | or short  sync backwards
-        if all_coins_state is not None and self.is_trusted(peer):
+        if all_coins_state is not None:
             await self.receive_state_from_peer(all_coins_state.coin_states, peer, None, None)
 
     async def get_coin_state(self, coin_names: List[bytes32]) -> List[CoinState]:
@@ -588,7 +585,9 @@ class WalletNode:
         async with self.new_peak_lock:
             async with self.wallet_state_manager.lock:
                 self.log.debug(f"state_update_received is {request}")
-                await self.receive_state_from_peer(request.items, peer, None, request.height)
+                await self.receive_state_from_peer(
+                    request.items, peer, request.fork_height if self.is_trusted(peer) else None, request.height
+                )
         await self.update_ui()
 
     def get_full_node_peer(self):
@@ -843,7 +842,7 @@ class WalletNode:
         peak_height = self.wallet_state_manager.blockchain.get_peak_height()
         if fork_height < peak_height:
             self.log.info(f"Rolling back to {fork_height}")
-        await self.wallet_state_manager.reorg_rollback(fork_height)
+            await self.wallet_state_manager.reorg_rollback(fork_height)
         peak = await self.wallet_state_manager.blockchain.get_peak_block()
         self.rollback_request_caches(fork_height)
 
