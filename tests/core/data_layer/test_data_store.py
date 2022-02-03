@@ -21,7 +21,6 @@ from chia.data_layer.data_layer_types import (
     TerminalNode,
     InsertionData,
     DeletionData,
-    TerminalNode,
     OperationType,
     DiffData,
 )
