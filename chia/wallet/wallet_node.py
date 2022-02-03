@@ -482,31 +482,37 @@ class WalletNode:
 
         all_tasks = []
 
-        for idx, state in enumerate(items):
+        for idx, potential_state in enumerate(items):
 
             async def receive_and_validate(inner_state: CoinState, inner_idx: int):
                 assert self.wallet_state_manager is not None
                 assert self.validation_semaphore is not None
                 # if height is not None:
                 async with self.validation_semaphore:
-                    if trusted:
-                        valid = True
-                    else:
-                        valid = await self.validate_received_state_from_peer(state, peer, self.get_cache_for_peer(peer))
-                    if valid:
-                        self.log.info(f"new coin state received ({idx} / {len(items)})")
-                        assert self.new_state_lock is not None
-                        async with self.new_state_lock:
-                            await self.wallet_state_manager.new_coin_state([state], peer, fork_height, height)
-                    elif height is not None:
-                        self.add_state_to_race_cache(height, state)
-                    else:
-                        if state.created_height is not None:
-                            self.add_state_to_race_cache(state.created_height, state)
-                        if state.spent_height is not None:
-                            self.add_state_to_race_cache(state.spent_height, state)
+                    try:
+                        if trusted:
+                            valid = True
+                        else:
+                            valid = await self.validate_received_state_from_peer(
+                                inner_state, peer, self.get_cache_for_peer(peer)
+                            )
+                        if valid:
+                            self.log.info(f"new coin state received ({inner_idx} / {len(items)})")
+                            assert self.new_state_lock is not None
+                            async with self.new_state_lock:
+                                await self.wallet_state_manager.new_coin_state([inner_state], peer, fork_height, height)
+                        elif height is not None:
+                            self.add_state_to_race_cache(height, inner_state)
+                        else:
+                            if inner_state.created_height is not None:
+                                self.add_state_to_race_cache(inner_state.created_height, inner_state)
+                            if inner_state.spent_height is not None:
+                                self.add_state_to_race_cache(inner_state.spent_height, inner_state)
+                    except Exception as e:
+                        tb = traceback.format_exc()
+                        self.log.error(f"Exception while adding state: {e} {tb}")
 
-            task = receive_and_validate(state, idx)
+            task = receive_and_validate(potential_state, idx)
             all_tasks.append(task)
             while len(self.validation_semaphore._waiters) > 20:
                 self.log.debug("sleeping 2 sec")
@@ -533,7 +539,7 @@ class WalletNode:
         """
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, height)
         all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
-        if all_coins_state is not None:
+        if all_coins_state is not None and self.is_trusted(peer):
             await self.receive_state_from_peer(all_coins_state.coin_states, peer, None, None)
 
     async def get_coin_state(self, coin_names: List[bytes32]) -> List[CoinState]:
@@ -807,6 +813,10 @@ class WalletNode:
                             )
                             if valid:
                                 await self.wallet_state_manager.new_coin_state([state], peer)
+                            else:
+                                self.log.warning(f"Invalid state from peer {peer}")
+                                await peer.close(9999)
+                                return
                     self.wallet_state_manager.set_sync_mode(False)
                     self.wallet_state_manager.state_changed("new_block")
 
@@ -1198,16 +1208,22 @@ class WalletNode:
                 request_end = min(uint32(i + 31), end)
                 request_h_response = RequestHeaderBlocks(request_start, request_end)
                 if (request_start, request_end) in peer_request_cache.block_requests:
-                    self.log.info(f"Using cache for {(request_start, request_end)}")
-                    res_h_blocks: RespondHeaderBlocks = peer_request_cache.block_requests[(request_start, request_end)]
+                    self.log.info(f"Using cache for blocks {request_start} - {request_end}")
+                    res_h_blocks: Optional[RespondHeaderBlocks] = peer_request_cache.block_requests[
+                        (request_start, request_end)
+                    ]
                 else:
                     start_time = time.time()
                     res_h_blocks = await peer.request_header_blocks(request_h_response)
+                    if res_h_blocks is None:
+                        self.log.error("Failed validation 2.5")
+                        return False
                     end_time = time.time()
                     peer_request_cache.block_requests[(request_start, request_end)] = res_h_blocks
                     self.log.info(
                         f"Fetched blocks: {request_start} - {request_end} | duration: {end_time - start_time}"
                     )
+                assert res_h_blocks is not None
                 blocks.extend([bl for bl in res_h_blocks.header_blocks if bl.height >= start])
 
             if compare_to_recent and weight_proof.recent_chain_data[0].header_hash != blocks[-1].header_hash:
