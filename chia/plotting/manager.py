@@ -268,7 +268,6 @@ class PlotManager:
                         loaded_plot = Path(path) / Path(plot_filename)
                         if loaded_plot not in plot_paths:
                             paths_to_remove.append(path)
-                            total_result.removed.append(loaded_plot)
                     for path in paths_to_remove:
                         duplicated_paths.remove(path)
 
