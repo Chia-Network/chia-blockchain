@@ -106,3 +106,14 @@ def test_block_cat():
     assert not cat_list[0].memo
     assert cat_list[0].npc.coin_name.hex() == "4314b142cecfd6121474116e5a690d6d9b2e8c374e1ebef15235b0f3de4e2508"
     assert cat_list[0].npc.puzzle_hash.hex() == "ddc37f3cbb49e3566b8638c5aaa93d5e10ee91dfd5d8ce37ad7175432d7209aa"
+
+
+def test_generator_ref():
+    """Run a block containing a back reference without error"""
+    dirname = Path(__file__).parent
+    with open(dirname / "466212.json") as f:
+        full_block = json.load(f)
+
+    cat_list = run_json_block(full_block, dirname, constants)
+
+    assert cat_list == []
