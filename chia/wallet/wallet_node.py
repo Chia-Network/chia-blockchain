@@ -613,6 +613,20 @@ class WalletNode:
         else:
             return None
 
+    async def last_local_tx_block(self, header_hash: bytes32) -> Optional[BlockRecord]:
+        current_hash = header_hash
+        while True:
+            if self.wallet_state_manager.blockchain.contains_block(current_hash):
+                block = self.wallet_state_manager.blockchain.try_block_record(current_hash)
+                if block is None:
+                    return None
+                if block.is_transaction_block:
+                    return block
+                current_hash = block.prev_transaction_block_hash
+            else:
+                break
+        return None
+
     async def fetch_last_tx_from_peer(self, height: uint32, peer: WSChiaConnection) -> Optional[HeaderBlock]:
         request_height = height
         while True:
@@ -725,19 +739,26 @@ class WalletNode:
                     # This block is after our peak, so we don't need to check if node is synced
                     pass
                 else:
+                    tx_timestamp = None
                     if not response.header_block.is_transaction_block:
-                        last_tx_block = await self.fetch_last_tx_from_peer(response.header_block.height, peer)
+                        last_tx_block = None
+                        # Try local first
+                        last_block_record = await self.last_local_tx_block(response.header_block.prev_header_hash)
+                        if last_block_record is not None:
+                            tx_timestamp = last_block_record.timestamp
+                        else:
+                            last_tx_block = await self.fetch_last_tx_from_peer(response.header_block.height, peer)
+                            assert last_tx_block is not None
+                            assert last_tx_block.foliage_transaction_block is not None
+                            tx_timestamp = last_tx_block.foliage_transaction_block.timestamp
                     else:
                         last_tx_block = response.header_block
+                        tx_timestamp = last_tx_block.foliage_transaction_block.timestamp
 
-                    if last_tx_block is None:
-                        return
-                    assert last_tx_block is not None
-                    assert last_tx_block.foliage_transaction_block is not None
-                    if (
-                        self.config["testing"] is False
-                        and last_tx_block.foliage_transaction_block.timestamp < request_time - 600
-                    ):
+                    if tx_timestamp is None:
+                        return None
+
+                    if self.config["testing"] is False and tx_timestamp < request_time - 600:
                         # Full node not synced, don't sync to it
                         self.log.info("Peer we connected to is not fully synced, dropping connection...")
                         await peer.close()
@@ -1163,7 +1184,7 @@ class WalletNode:
                 if stored_record.header_hash == block.header_hash:
                     return True
 
-        weight_proof = self.wallet_state_manager.blockchain.synced_weight_proof
+        weight_proof: WeightProof = self.wallet_state_manager.blockchain.synced_weight_proof
         if weight_proof is None:
             return False
 
@@ -1184,26 +1205,30 @@ class WalletNode:
                 compare_to_recent = True
                 end = first_height_recent
             else:
-                request = RequestSESInfo(block.height, block.height + 32)
-                if block.height in peer_request_cache.ses_requests:
-                    res_ses: RespondSESInfo = peer_request_cache.ses_requests[block.height]
+                if block.height < self.constants.SUB_EPOCH_BLOCKS:
+                    inserted = weight_proof.sub_epochs[1]
+                    end = self.constants.SUB_EPOCH_BLOCKS + inserted.num_blocks_overflow
                 else:
-                    res_ses = await peer.request_ses_hashes(request)
-                    peer_request_cache.ses_requests[block.height] = res_ses
+                    request = RequestSESInfo(block.height, block.height + 32)
+                    if block.height in peer_request_cache.ses_requests:
+                        res_ses: RespondSESInfo = peer_request_cache.ses_requests[block.height]
+                    else:
+                        res_ses = await peer.request_ses_hashes(request)
+                        peer_request_cache.ses_requests[block.height] = res_ses
 
-                ses_0 = res_ses.reward_chain_hash[0]
-                last_height = res_ses.heights[0][-1]  # Last height in sub epoch
-                end = last_height
-                for idx, ses in enumerate(weight_proof.sub_epochs):
-                    if idx > len(weight_proof.sub_epochs) - 3:
-                        break
-                    if ses.reward_chain_hash == ses_0:
-                        current_ses = ses
-                        inserted = weight_proof.sub_epochs[idx + 2]
-                        break
-                if current_ses is None:
-                    self.log.error("Failed validation 2")
-                    return False
+                    ses_0 = res_ses.reward_chain_hash[0]
+                    last_height = res_ses.heights[0][-1]  # Last height in sub epoch
+                    end = last_height
+                    for idx, ses in enumerate(weight_proof.sub_epochs):
+                        if idx > len(weight_proof.sub_epochs) - 3:
+                            break
+                        if ses.reward_chain_hash == ses_0:
+                            current_ses = ses
+                            inserted = weight_proof.sub_epochs[idx + 2]
+                            break
+                    if current_ses is None:
+                        self.log.error("Failed validation 2")
+                        return False
 
             blocks = []
 
