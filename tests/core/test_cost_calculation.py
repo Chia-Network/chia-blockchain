@@ -7,7 +7,7 @@ import pytest
 from clvm_tools import binutils
 
 from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
+from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -83,8 +83,6 @@ class TestCostCalculation:
             height=softfork_height,
         )
 
-        cost = calculate_cost_of_program(program.program, npc_result, test_constants.COST_PER_BYTE)
-
         assert npc_result.error is None
         assert len(bytes(program.program)) == 433
 
@@ -104,7 +102,7 @@ class TestCostCalculation:
 
         # Create condition + agg_sig_condition + length + cpu_cost
         assert (
-            cost
+            npc_result.cost
             == ConditionCost.CREATE_COIN.value
             + ConditionCost.AGG_SIG.value
             + len(bytes(program.program)) * test_constants.COST_PER_BYTE
@@ -145,7 +143,7 @@ class TestCostCalculation:
                 f"  (() (q . ((65 '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
             ).as_bin()
         )
-        generator = BlockGenerator(program, [])
+        generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
             generator,
             test_constants.MAX_BLOCK_COST_CLVM,
@@ -178,7 +176,7 @@ class TestCostCalculation:
         # ("0xfe"). In mempool mode, this should fail, but in non-mempool
         # mode, the unknown operator should be treated as if it returns ().
         program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
-        generator = BlockGenerator(program, [])
+        generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
             generator,
             test_constants.MAX_BLOCK_COST_CLVM,
@@ -202,7 +200,7 @@ class TestCostCalculation:
         program = SerializedProgram.from_bytes(generator_bytes)
 
         start_time = time.time()
-        generator = BlockGenerator(program, [])
+        generator = BlockGenerator(program, [], [])
         npc_result = get_name_puzzle_conditions(
             generator,
             test_constants.MAX_BLOCK_COST_CLVM,
@@ -233,7 +231,7 @@ class TestCostCalculation:
         )
 
         # ensure we fail if the program exceeds the cost
-        generator = BlockGenerator(program, [])
+        generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
             generator,
             10000000,

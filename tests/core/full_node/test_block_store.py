@@ -2,6 +2,7 @@ import asyncio
 import logging
 import random
 import sqlite3
+import dataclasses
 
 import pytest
 
@@ -9,6 +10,8 @@ from chia.consensus.blockchain import Blockchain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
+from chia.util.ints import uint8
+from chia.types.blockchain_format.vdf import VDFProof
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.db_connection import DBConnection
 from tests.setup_nodes import bt, test_constants
@@ -174,3 +177,47 @@ class TestBlockStore:
 
             count = await block_store.count_uncompactified_blocks()
             assert count == 10
+
+    @pytest.mark.asyncio
+    async def test_replace_proof(self, tmp_dir, db_version):
+        blocks = bt.get_consecutive_blocks(10)
+
+        def rand_bytes(num) -> bytes:
+            ret = bytearray(num)
+            for i in range(num):
+                ret[i] = random.getrandbits(8)
+            return bytes(ret)
+
+        def rand_vdf_proof() -> VDFProof:
+            return VDFProof(
+                uint8(1),  # witness_type
+                rand_bytes(32),  # witness
+                bool(random.randint(0, 1)),  # normalized_to_identity
+            )
+
+        async with DBConnection(db_version) as db_wrapper:
+            coin_store = await CoinStore.create(db_wrapper)
+            block_store = await BlockStore.create(db_wrapper)
+            hint_store = await HintStore.create(db_wrapper)
+            bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, tmp_dir, 2)
+            for block in blocks:
+                await _validate_and_add_block(bc, block)
+
+            replaced = []
+
+            for block in blocks:
+                assert block.challenge_chain_ip_proof is not None
+                proof = rand_vdf_proof()
+                replaced.append(proof)
+                new_block = dataclasses.replace(block, challenge_chain_ip_proof=proof)
+                await block_store.replace_proof(block.header_hash, new_block)
+
+            for block, proof in zip(blocks, replaced):
+                b = await block_store.get_full_block(block.header_hash)
+                assert b.challenge_chain_ip_proof == proof
+
+                # make sure we get the same result when we hit the database
+                # itself (and not just the block cache)
+                block_store.rollback_cache_block(block.header_hash)
+                b = await block_store.get_full_block(block.header_hash)
+                assert b.challenge_chain_ip_proof == proof

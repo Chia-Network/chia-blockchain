@@ -137,6 +137,27 @@ class BlockStore:
                 "UPDATE OR FAIL full_blocks SET in_main_chain=1 WHERE header_hash=?", header_hashes
             )
 
+    async def replace_proof(self, header_hash: bytes32, block: FullBlock) -> None:
+
+        assert header_hash == block.header_hash
+
+        block_bytes: bytes
+        if self.db_wrapper.db_version == 2:
+            block_bytes = self.compress(block)
+        else:
+            block_bytes = bytes(block)
+
+        self.block_cache.put(header_hash, block)
+
+        await self.db.execute(
+            "UPDATE full_blocks SET block=?,is_fully_compactified=? WHERE header_hash=?",
+            (
+                block_bytes,
+                int(block.is_fully_compactified()),
+                self.maybe_to_hex(header_hash),
+            ),
+        )
+
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
         self.block_cache.put(header_hash, block)
 
@@ -149,14 +170,14 @@ class BlockStore:
             )
 
             await self.db.execute(
-                "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     header_hash,
                     block.prev_header_hash,
                     block.height,
                     ses,
                     int(block.is_fully_compactified()),
-                    0,  # in_main_chain
+                    False,  # in_main_chain
                     self.compress(block),
                     bytes(block_record),
                 ),
@@ -164,7 +185,7 @@ class BlockStore:
 
         else:
             await self.db.execute(
-                "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
                 (
                     header_hash.hex(),
                     block.height,
@@ -175,7 +196,7 @@ class BlockStore:
             )
 
             await self.db.execute(
-                "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?,?, ?, ?)",
+                "INSERT OR IGNORE INTO block_records VALUES(?, ?, ?, ?,?, ?, ?)",
                 (
                     header_hash.hex(),
                     block.prev_header_hash.hex(),

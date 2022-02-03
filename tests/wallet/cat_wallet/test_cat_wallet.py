@@ -63,18 +63,19 @@ class TestCATWallet:
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
 
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        for i in range(1, num_blocks):
+        for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         funds = sum(
             [
                 calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-                for i in range(1, num_blocks - 1)
+                for i in range(1, num_blocks + 1)
             ]
         )
 
@@ -118,21 +119,22 @@ class TestCATWallet:
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        for i in range(1, num_blocks):
+        for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         funds = sum(
             [
                 calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-                for i in range(1, num_blocks - 1)
+                for i in range(1, num_blocks + 1)
             ]
         )
 
@@ -175,9 +177,9 @@ class TestCATWallet:
         await time_out_assert(15, cat_wallet.get_pending_change_balance, 40)
 
         for i in range(1, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
 
-        await time_out_assert(30, wallet.get_confirmed_balance, funds * 2 - 101)
+        await time_out_assert(30, wallet.get_confirmed_balance, funds - 101)
 
         await time_out_assert(15, cat_wallet.get_confirmed_balance, 40)
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 40)
@@ -214,18 +216,19 @@ class TestCATWallet:
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        for i in range(1, num_blocks):
+        for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         funds = sum(
             [
                 calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-                for i in range(1, num_blocks - 1)
+                for i in range(1, num_blocks + 1)
             ]
         )
 
@@ -268,21 +271,22 @@ class TestCATWallet:
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        for i in range(1, num_blocks):
+        for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         funds = sum(
             [
                 calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-                for i in range(1, num_blocks - 1)
+                for i in range(1, num_blocks + 1)
             ]
         )
 
@@ -313,14 +317,18 @@ class TestCATWallet:
         assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
         cat_2_hash = await cat_wallet_2.get_new_inner_hash()
-        tx_records = await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash])
+        tx_records = await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], fee=uint64(1))
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
-            await time_out_assert(
-                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-            )
+            if tx_record.spend_bundle is not None:
+                await time_out_assert(
+                    15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+                )
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        await time_out_assert(30, wallet.get_confirmed_balance, funds - 101)
+        await time_out_assert(30, wallet.get_unconfirmed_balance, funds - 101)
 
         await time_out_assert(15, cat_wallet.get_confirmed_balance, 40)
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 40)
@@ -368,9 +376,9 @@ class TestCATWallet:
 
         ph = await wallet_0.get_new_puzzlehash()
         if trusted:
-            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_1.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_1.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
@@ -379,14 +387,11 @@ class TestCATWallet:
         await wallet_server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await wallet_server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        for i in range(1, num_blocks):
+        for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [
-                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-                for i in range(1, num_blocks - 1)
-            ]
+            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
 
         await time_out_assert(15, wallet_0.get_confirmed_balance, funds)
@@ -509,21 +514,22 @@ class TestCATWallet:
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        for i in range(1, num_blocks):
+        for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         funds = sum(
             [
                 calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-                for i in range(1, num_blocks - 1)
+                for i in range(1, num_blocks + 1)
             ]
         )
 
@@ -637,21 +643,22 @@ class TestCATWallet:
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        for i in range(1, num_blocks):
+        for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         funds = sum(
             [
                 calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-                for i in range(1, num_blocks - 1)
+                for i in range(1, num_blocks + 1)
             ]
         )
 
@@ -690,8 +697,10 @@ class TestCATWallet:
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 40)
 
         # First we test that no wallet was created
-        asyncio.sleep(10)
-        assert len(wallet_node_2.wallet_state_manager.wallets.keys()) == 1
+        async def check_wallets(node):
+            return len(node.wallet_state_manager.wallets.keys())
+
+        await time_out_assert(10, check_wallets, 1, wallet_node_2)
 
         # Then we update the wallet's default CATs
         wallet_node_2.wallet_state_manager.default_cats = {
@@ -719,14 +728,12 @@ class TestCATWallet:
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 30)
 
         # Now we check that another wallet WAS created
-        async def check_wallets(wallet_node):
-            return len(wallet_node.wallet_state_manager.wallets.keys())
-
         await time_out_assert(10, check_wallets, 2, wallet_node_2)
         cat_wallet_2 = wallet_node_2.wallet_state_manager.wallets[2]
 
-        await time_out_assert(30, cat_wallet_2.get_confirmed_balance, 10)
-        await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 10)
+        # Previous balance + balance that triggered creation
+        await time_out_assert(30, cat_wallet_2.get_confirmed_balance, 70)
+        await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 70)
 
         cat_hash = await cat_wallet.get_new_inner_hash()
         tx_records = await cat_wallet_2.generate_signed_transaction([uint64(5)], [cat_hash])
@@ -742,46 +749,3 @@ class TestCATWallet:
 
         await time_out_assert(15, cat_wallet.get_confirmed_balance, 35)
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 35)
-
-        # @pytest.mark.asyncio
-
-    # async def test_cat_melt_and_mint(self, two_wallet_nodes):
-    #     num_blocks = 3
-    #     full_nodes, wallets = two_wallet_nodes
-    #     full_node_api = full_nodes[0]
-    #     full_node_server = full_node_api.server
-    #     wallet_node, server_2 = wallets[0]
-    #     wallet_node_2, server_3 = wallets[1]
-    #     wallet = wallet_node.wallet_state_manager.main_wallet
-    #
-    #     ph = await wallet.get_new_puzzlehash()
-    #
-    #     await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    #     await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    #
-    #     for i in range(1, num_blocks):
-    #         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    #
-    #     funds = sum(
-    #         [
-    #             calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-    #             for i in range(1, num_blocks - 1)
-    #         ]
-    #     )
-    #
-    #     await time_out_assert(15, wallet.get_confirmed_balance, funds)
-    #
-    #     async with wallet_node.wallet_state_manager.lock:
-    #         cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
-    #             wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100000)
-    #         )
-    #     tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
-    #     tx_record = tx_queue[0]
-    #     await time_out_assert(
-    #         15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-    #     )
-    #     for i in range(1, num_blocks):
-    #         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
-    #
-    #     await time_out_assert(15, cat_wallet.get_confirmed_balance, 100000)
-    #     await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 100000)

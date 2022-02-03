@@ -242,7 +242,9 @@ def make_offer_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, make_offer))
 
 
-@wallet_cmd.command("get_offers", short_help="Get the status of existing offers")
+@wallet_cmd.command(
+    "get_offers", short_help="Get the status of existing offers. Displays only active/pending offers by default."
+)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -253,17 +255,33 @@ def make_offer_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-id", "--id", help="The ID of the offer that you wish to examine")
 @click.option("-p", "--filepath", help="The path to rewrite the offer file to (must be used in conjunction with --id)")
-@click.option("-ia", "--include-all", help="Include offers that have already been confirmed/cancelled", is_flag=True)
+@click.option("-em", "--exclude-my-offers", help="Exclude your own offers from the output", is_flag=True)
+@click.option("-et", "--exclude-taken-offers", help="Exclude offers that you've accepted from the output", is_flag=True)
+@click.option(
+    "-ic", "--include-completed", help="Include offers that have been confirmed/cancelled or failed", is_flag=True
+)
 @click.option("-s", "--summaries", help="Show the assets being offered and requested for each offer", is_flag=True)
+@click.option("-r", "--reverse", help="Reverse the order of the output", is_flag=True)
 def get_offers_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: Optional[str],
     filepath: Optional[str],
-    include_all: bool,
+    exclude_my_offers: bool,
+    exclude_taken_offers: bool,
+    include_completed: bool,
     summaries: bool,
+    reverse: bool,
 ) -> None:
-    extra_params = {"id": id, "filepath": filepath, "include_all": include_all, "summaries": summaries}
+    extra_params = {
+        "id": id,
+        "filepath": filepath,
+        "exclude_my_offers": exclude_my_offers,
+        "exclude_taken_offers": exclude_taken_offers,
+        "include_completed": include_completed,
+        "summaries": summaries,
+        "reverse": reverse,
+    }
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_offers
 
