@@ -79,7 +79,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
     all_targets = []
     stop_searching_for_farmer = "xch_target_address" not in config["farmer"]
     stop_searching_for_pool = "xch_target_address" not in config["pool"]
-    number_of_ph_to_search = 100
+    number_of_ph_to_search = 50
     selected = config["selected_network"]
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
 
@@ -105,9 +105,13 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
             all_targets.append(
                 encode_puzzle_hash(create_puzzlehash_for_pk(_derive_path(intermediate_n, [i]).get_g1()), prefix)
             )
-            if all_targets[-1] == config["farmer"].get("xch_target_address"):
+            if all_targets[-1] == config["farmer"].get("xch_target_address") or all_targets[-2] == config["farmer"].get(
+                "xch_target_address"
+            ):
                 stop_searching_for_farmer = True
-            if all_targets[-1] == config["pool"].get("xch_target_address"):
+            if all_targets[-1] == config["pool"].get("xch_target_address") or all_targets[-2] == config["pool"].get(
+                "xch_target_address"
+            ):
                 stop_searching_for_pool = True
 
     # Set the destinations, if necessary
@@ -133,7 +137,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
         updated_target = True
     elif config["pool"]["xch_target_address"] not in all_targets:
         print(
-            f"WARNING: using a pool address which we don't have the private"
+            f"WARNING: using a pool address which we might not have the private"
             f" keys for. We searched the first {number_of_ph_to_search} addresses. Consider overriding "
             f"{config['pool']['xch_target_address']} with {all_targets[0]}"
         )
