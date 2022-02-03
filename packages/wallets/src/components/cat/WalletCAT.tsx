@@ -70,7 +70,7 @@ export default function WalletCAT(props: Props) {
   const canRename = !token;
 
   return (
-    <Flex flexDirection="column" gap={1}>
+    <Flex flexDirection="column" gap={2}>
       <WalletHeader 
         walletId={walletId}
         actions={({ onClose }) => (
