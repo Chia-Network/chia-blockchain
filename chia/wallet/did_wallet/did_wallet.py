@@ -732,6 +732,7 @@ class DIDWallet:
             f.write(":")
             f.write(str(amount))
             f.close()
+        await self.standard_wallet.push_transaction(did_record)
         return message_spend_bundle
 
     # this is just for testing purposes, API should use create_attestment_now
