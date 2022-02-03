@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import time
 import traceback
@@ -89,7 +90,6 @@ class WSChiaConnection:
         self.close_callback = close_callback
 
         self.pending_requests: Dict[uint16, asyncio.Event] = {}
-        self.pending_timeouts: Dict[uint16, asyncio.Task] = {}
         self.request_results: Dict[uint16, Message] = {}
         self.closed = False
         self.connection_type: Optional[NodeType] = None
@@ -212,7 +212,7 @@ class WSChiaConnection:
                 await self.session.close()
             if self.close_event is not None:
                 self.close_event.set()
-            self.cancel_pending_timeouts()
+            self.cancel_pending_requests()
         except Exception:
             error_stack = traceback.format_exc()
             self.log.warning(f"Exception closing socket: {error_stack}")
@@ -234,9 +234,12 @@ class WSChiaConnection:
         self.log.error(f"Banning peer for {ban_seconds} seconds: {self.peer_host} {log_err_msg}")
         await self.close(ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_PROTOCOL_MESSAGE)
 
-    def cancel_pending_timeouts(self):
-        for _, task in self.pending_timeouts.items():
-            task.cancel()
+    def cancel_pending_requests(self):
+        for message_id, event in self.pending_requests.items():
+            try:
+                event.set()
+            except Exception as e:
+                self.log.error(f"Failed setting event for {message_id}: {e} {traceback.format_exc()}")
 
     async def outbound_handler(self):
         try:
@@ -346,20 +349,9 @@ class WSChiaConnection:
         self.pending_requests[message.id] = event
         await self.outgoing_queue.put(message)
 
-        # If the timeout passes, we set the event
-        async def time_out(req_id, req_timeout):
-            try:
-                await asyncio.sleep(req_timeout)
-                if req_id in self.pending_requests:
-                    self.pending_requests[req_id].set()
-            except asyncio.CancelledError:
-                if req_id in self.pending_requests:
-                    self.pending_requests[req_id].set()
-                raise
-
-        timeout_task = asyncio.create_task(time_out(message.id, timeout))
-        self.pending_timeouts[message.id] = timeout_task
-        await event.wait()
+        # Either the result is available below or not, no need to detect the timeout error
+        with contextlib.suppress(asyncio.TimeoutError):
+            await asyncio.wait_for(event.wait(), timeout=timeout)
 
         self.pending_requests.pop(message.id)
         result: Optional[Message] = None
