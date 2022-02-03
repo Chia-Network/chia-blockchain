@@ -650,6 +650,7 @@ class WalletNode:
             curr_height = uint32(curr_height - 1)
 
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
+        self.log.info(f"New peak wallet.. {peak.height} {peer.get_peer_info()}")
         assert self.wallet_state_manager is not None
         assert self.server is not None
         request_time = int(time.time())
@@ -797,6 +798,7 @@ class WalletNode:
                         self.wallet_state_manager.set_sync_mode(False)
 
                 else:
+                    self.log.info(f"Starting backtrack sync to {peer.get_peer_info()}")
                     await self.wallet_short_sync_backtrack(peak_block, peer)
                     if peer.peer_node_id not in self.synced_peers:
                         # Edge case, we still want to subscribe for all phs
@@ -840,7 +842,9 @@ class WalletNode:
 
         blocks.reverse()
         # Roll back coins and transactions
-        self.log.info(f"Rolling back to {fork_height}")
+        peak_height = self.wallet_state_manager.blockchain.get_peak_height()
+        if fork_height < peak_height:
+            self.log.info(f"Rolling back to {fork_height}")
         await self.wallet_state_manager.reorg_rollback(fork_height)
         peak = await self.wallet_state_manager.blockchain.get_peak_block()
         self.rollback_request_caches(fork_height)
