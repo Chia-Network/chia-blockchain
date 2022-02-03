@@ -467,7 +467,7 @@ if (!handleSquirrelEvent()) {
             label: i18n._(/* i18n */ { id: 'Contribute on GitHub' }),
             click: () => {
               openExternal(
-                'https://github.com/Chia-Network/chia-blockchain/blob/master/CONTRIBUTING.md',
+                'https://github.com/Chia-Network/chia-blockchain/blob/main/CONTRIBUTING.md',
               );
             },
           },
