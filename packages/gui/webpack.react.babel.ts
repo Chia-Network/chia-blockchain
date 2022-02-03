@@ -163,12 +163,11 @@ export default {
       },
     }, {
       test: /\.svg$/,
-      use: ['@svgr/webpack', 'url-loader'],
+      issuer: /\.[jt]sx?$/,
+      use: ['@svgr/webpack'],
     }, {
-      test: /\.(gif|png|jpe?g)$/i,
-      use: [{
-        loader: 'file-loader',
-      }],
+      test: /\.(gif|png|jpe?g|ico|icns)$/i,
+      type: 'asset/resource',
     }],
   },
 };
