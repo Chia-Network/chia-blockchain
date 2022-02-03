@@ -105,6 +105,7 @@ class WalletStateManager:
     blockchain: WalletBlockchain
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
+    finished_sync_up_to: uint32
     interested_store: WalletInterestedStore
     weight_proof_handler: WalletWeightProofHandler
     server: ChiaServer
@@ -155,6 +156,7 @@ class WalletStateManager:
 
         self.wallet_node = wallet_node
         self.sync_mode = False
+        self.finished_sync_up_to = uint32(0)
         self.weight_proof_handler = WalletWeightProofHandler(self.constants)
         self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants, self.weight_proof_handler)
 
@@ -441,6 +443,9 @@ class WalletStateManager:
     async def synced(self):
         latest = await self.blockchain.get_peak_block()
         if latest is None:
+            return False
+
+        if latest.height - self.finished_sync_up_to > 2:
             return False
 
         latest_timestamp = self.blockchain.get_latest_timestamp()
@@ -840,6 +845,7 @@ class WalletStateManager:
                                 uint32(record.wallet_id),
                                 record.wallet_type,
                             )
+                            await self.coin_store.set_spent(curr_coin_state.coin.name(), curr_coin_state.spent_height)
                             new_interested_coin_ids.append(new_singleton_coin.name())
                             new_coin_state: List[CoinState] = await self.wallet_node.get_coin_state(
                                 [new_singleton_coin.name()]
@@ -928,7 +934,7 @@ class WalletStateManager:
                 return True
         return False
 
-    async def get_wallet_id_for_puzzle_hash(self, puzzle_hash) -> Optional[Tuple[uint32, WalletType]]:
+    async def get_wallet_id_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[Tuple[uint32, WalletType]]:
         info = await self.puzzle_store.wallet_info_for_puzzle_hash(puzzle_hash)
         if info is not None:
             wallet_id, wallet_type = info
@@ -937,6 +943,8 @@ class WalletStateManager:
         interested_wallet_id = await self.interested_store.get_interested_puzzle_hash_wallet_id(puzzle_hash=puzzle_hash)
         if interested_wallet_id is not None:
             wallet_id = uint32(interested_wallet_id)
+            if wallet_id not in self.wallets.keys():
+                self.log.warning(f"Do not have wallet {wallet_id} for puzzle_hash {puzzle_hash}")
             wallet_type = WalletType(self.wallets[uint32(wallet_id)].type())
             return wallet_id, wallet_type
         return None

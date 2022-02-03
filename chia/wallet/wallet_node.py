@@ -817,6 +817,9 @@ class WalletNode:
                     self.wallet_state_manager.state_changed("new_block")
 
         await self.wallet_state_manager.new_peak(peak)
+
+        if peak.height > self.wallet_state_manager.finished_sync_up_to:
+            self.wallet_state_manager.finished_sync_up_to = uint32(peak.height)
         self._pending_tx_handler()
 
     async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer) -> int:
@@ -1195,17 +1198,17 @@ class WalletNode:
                     self.log.error("Failed validation 2")
                     return False
 
-            blocks = []
-
+            blocks: List[HeaderBlock] = []
             for i in range(start - (start % 32), end + 1, 32):
                 request_start = min(uint32(i), end)
                 request_end = min(uint32(i + 31), end)
                 request_h_response = RequestHeaderBlocks(request_start, request_end)
                 if (request_start, request_end) in peer_request_cache.block_requests:
+                    self.log.info(f"Using cache for {(request_start, request_end)}")
                     res_h_blocks: RespondHeaderBlocks = peer_request_cache.block_requests[(request_start, request_end)]
                 else:
                     start_time = time.time()
-                    res_h_blocks = await peer.request_header_blocks(request_h_response)
+                    res_h_blocks: Optional[RespondHeaderBlocks] = await peer.request_header_blocks(request_h_response)
                     end_time = time.time()
                     peer_request_cache.block_requests[(request_start, request_end)] = res_h_blocks
                     self.log.info(
