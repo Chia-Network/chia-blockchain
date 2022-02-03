@@ -376,7 +376,7 @@ class DIDWallet:
             parent_info = None
 
             node = self.wallet_state_manager.wallet_node.get_full_node_peer()
-            children = await self.wallet_state_manager.wallet_node.fetch_children(node, origin.name(), None)
+            children = await self.wallet_state_manager.wallet_node.fetch_children(node, origin.name())
             while True:
                 if len(children) == 0:
                     break
@@ -384,7 +384,7 @@ class DIDWallet:
                 children_state: CoinState = children[0]
                 coin = children_state.coin
                 name = coin.name()
-                children = await self.wallet_state_manager.wallet_node.fetch_children(node, name, None)
+                children = await self.wallet_state_manager.wallet_node.fetch_children(node, name)
                 future_parent = LineageProof(
                     coin.parent_coin_info,
                     innerpuz.get_tree_hash(),
