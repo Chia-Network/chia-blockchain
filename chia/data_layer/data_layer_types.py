@@ -199,3 +199,10 @@ class Subscription:
     mode: DownloadMode
     ip: str
     port: uint16
+
+
+@dataclass(frozen=True)
+class DiffData:
+    type: OperationType
+    key: bytes
+    value: bytes

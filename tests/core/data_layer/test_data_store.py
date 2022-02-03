@@ -1,7 +1,7 @@
 import itertools
 import logging
-from typing import Awaitable, Callable, Dict, List, Optional
-
+from typing import Awaitable, Callable, Dict, List, Optional, Set
+from random import Random
 import pytest
 
 from chia.data_layer.data_layer_errors import (
@@ -19,6 +19,9 @@ from chia.data_layer.data_layer_types import (
     Status,
     InsertionData,
     DeletionData,
+    TerminalNode,
+    OperationType,
+    DiffData,
 )
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
@@ -27,7 +30,12 @@ from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 
-from tests.core.data_layer.util import add_0123_example, add_01234567_example, Example
+from tests.core.data_layer.util import (
+    add_0123_example,
+    add_01234567_example,
+    Example,
+    get_terminal_node_for_random_seed,
+)
 
 
 log = logging.getLogger(__name__)
@@ -936,3 +944,44 @@ async def test_get_operation_3(data_store: DataStore, tree_id: bytes32) -> None:
     operation_2 = await data_store.get_single_operation(root_2.node_hash, root_3.node_hash, status)
     assert isinstance(operation_2, DeletionData)
     assert operation_2.key == b"\x01"
+
+
+@pytest.mark.asyncio
+async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
+    random = Random()
+    random.seed(100, version=2)
+    insertions = 0
+    expected_diff: Set[DiffData] = set()
+    for i in range(500):
+        node_hash = await get_terminal_node_for_random_seed(data_store, tree_id, random)
+        if random.randint(0, 4) > 0 or insertions < 10:
+            insertions += 1
+            key = (i + 100).to_bytes(4, byteorder="big")
+            value = (i + 200).to_bytes(4, byteorder="big")
+            side = None if node_hash is None else Side.LEFT if random.randint(0, 1) == 0 else Side.RIGHT
+
+            _ = await data_store.insert(
+                key=key,
+                value=value,
+                tree_id=tree_id,
+                reference_node_hash=node_hash,
+                side=side,
+            )
+            if i > 200:
+                expected_diff.add(DiffData(OperationType.INSERT, key, value))
+        else:
+            assert node_hash is not None
+            node = await data_store.get_node(node_hash)
+            assert isinstance(node, TerminalNode)
+            await data_store.delete(key=node.key, tree_id=tree_id)
+            if i > 200:
+                if DiffData(OperationType.INSERT, node.key, node.value) in expected_diff:
+                    expected_diff.remove(DiffData(OperationType.INSERT, node.key, node.value))
+                else:
+                    expected_diff.add(DiffData(OperationType.DELETE, node.key, node.value))
+        if i == 200:
+            root_start = await data_store.get_tree_root(tree_id)
+
+    root_end = await data_store.get_tree_root(tree_id)
+    diffs = await data_store.get_kv_diff(tree_id, root_start.node_hash, root_end.node_hash)
+    assert diffs == expected_diff
