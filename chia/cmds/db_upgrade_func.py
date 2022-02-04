@@ -1,5 +1,5 @@
 from typing import Dict, Optional
-from pathlib import Path
+from pathlib import Path, PurePath
 import sys
 from os import remove
 from time import time
@@ -46,14 +46,19 @@ def db_upgrade_func(
     if in_db_path is None:
         db_path_replaced = db_pattern.replace("CHALLENGE", selected_network)
         in_db_path = path_from_root(root_path, db_path_replaced)
+        print(f"{in_db_path}")
 
     out_path_string: str
+    out_path_string = None
     if out_db_path is None:
         db_path_replaced = db_pattern.replace("CHALLENGE", selected_network).replace("_v1_", "_v2_")
         out_db_path = path_from_root(root_path, db_path_replaced)
         mkdir(out_db_path.parent)
-        out_path_string = db_path_replaced
-        out_path_string = str(out_db_path)
+#        print(f"{db_path_replaced}")
+#        print(f"{out_db_path}")
+#        print(f"{root_path}")
+#        out_path_string = db_path_replaced
+#        out_path_string = str(out_db_path)
 
     if check_only:
         check_db(in_db_path, temp_store_path, hdd, check_only)
@@ -157,7 +162,7 @@ def check_db(
 
 def connect_to_db(
     open_in_path: Path, 
-    attach_out_path: str, 
+    attach_out_path: Path, 
     mmap_size: int,
     offline: Optional[bool] = True,
     temp_store_path: Optional[Path] = None,
@@ -201,7 +206,7 @@ def connect_to_db(
 #        temp2_out_path = out_path_string.replace("blockchain_v2_mainnet.sqlite", "temp_coin_store.sqlite")
 
 #    print(f"{temp2_out_path}")
-    db.execute("ATTACH DATABASE ? AS v2db", (attach_out_path,))
+    db.execute("ATTACH DATABASE ? AS v2db", (str(attach_out_path),))
     # Set parameter for attached database only
     db.execute("pragma v2db.journal_mode=OFF")
     db.execute("pragma v2db.synchronous=OFF")
@@ -260,7 +265,7 @@ def convert_v1_to_v2(
     # HINT_SHRINK_RATE = HINT_COMMIT_RATE * 1.5
 
     print(f"\n\nopening file for reading: {in_path}")
-    in_db = connect_to_db(in_path, out_path_string, mmap_size, offline, temp_store_path)
+    in_db = connect_to_db(in_path, out_path, mmap_size, offline, temp_store_path)
 
     #  The update is split into the following stages
     #  0. Initialzhe new target v2 database
@@ -571,9 +576,9 @@ def convert_v1_to_v2(
 
     # Reconnect to get new mmap initalization for new table
     if temp_store_path is not None:  
-        temp2_out_path = temp_store_path + '/temp_coin_store.sqlite'
+        temp2_out_path = temp_store_path / 'temp_coin_store.sqlite'
     else:
-        temp2_out_path = out_path_string.replace("blockchain_v2_mainnet.sqlite", "temp_coin_store.sqlite")
+        temp2_out_path = out_path / 'temp_coin_store.sqlite'
     temp2_db = connect_to_db(in_path, temp2_out_path, mmap_size, offline, temp_store_path)
 
     # COIN_RECORD
@@ -696,9 +701,9 @@ def convert_v1_to_v2(
 
     # Again recoonnect to get benefit of mmap
     if temp_store_path is not None:  
-        temp3_out_path = temp_store_path + '/temp_sub_epoch.sqlite'
+        temp3_out_path = temp_store_path / 'temp_sub_epoch.sqlite'
     else:
-        temp3_out_path = out_path_string.replace("blockchain_v2_mainnet.sqlite", "temp_sub_epoch.sqlite")
+        temp3_out_path = out_path / 'temp_sub_epoch.sqlite'
     #temp3_out_path = out_path_string.replace("blockchain_v2_mainnet.sqlite", "temp_sub_epoch.sqlite")
     temp3_db = connect_to_db(in_path, temp3_out_path, mmap_size, offline, temp_store_path)
 
@@ -774,7 +779,7 @@ def convert_v1_to_v2(
     print(f"\nstarting migration to final db file: {out_path}")
 
     print("\n[5/10] migrating temp table coin_record")
-    in_db = connect_to_db(Path(temp2_out_path), out_path_string, mmap_size, True, temp_store_path)
+    in_db = connect_to_db(temp2_out_path, out_path, mmap_size, True, temp_store_path)
 
     # Setting explicitly lower cache_spill to prevent to much memory usage
     # Be aware that these settings should all lead to a max use of 4G memory,
@@ -835,7 +840,7 @@ def convert_v1_to_v2(
     ############
 
     print("\n[7/10] migrating temp table sub_epoch_segments_v3")
-    in_db = connect_to_db(Path(temp3_out_path), out_path_string, mmap_size, True, temp_store_path)
+    in_db = connect_to_db(temp3_out_path, out_path, mmap_size, True, temp_store_path)
 
     in_db.execute("pragma v2db.cache_spill=100000")
     in_db.execute("pragma v2db.cache_size=-102400")
@@ -867,7 +872,7 @@ def convert_v1_to_v2(
     # HINTS
     # Source Table is 40M
     print("\n[9/10] converting hint_store")
-    in_db = connect_to_db(in_path, out_path_string, mmap_size, offline, temp_store_path)
+    in_db = connect_to_db(in_path, out_path, mmap_size, offline, temp_store_path)
 
     in_db.execute("pragma v2db.cache_size=-524288")
 
