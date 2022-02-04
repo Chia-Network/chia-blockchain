@@ -87,7 +87,7 @@ if [ "$(uname)" = "Linux" ]; then
     echo "Installing on Debian."
     sudo apt-get update
     sudo apt-get install -y python3-venv
-  elif type pacman && [ -f "/etc/arch-release" ]; then
+  elif type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
     # Arch Linux
     echo "Installing on Arch Linux."
     echo "Python <= 3.9.9 is required. Installing python-3.9.9-1"
