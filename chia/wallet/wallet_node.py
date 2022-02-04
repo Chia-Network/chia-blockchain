@@ -363,7 +363,7 @@ class WalletNode:
 
         connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", True)
         testing = self.config.get("testing", False)
-        if connect_to_unknown_peers and not testing:
+        if self.wallet_peers is None and connect_to_unknown_peers and not testing:
             self.wallet_peers = WalletPeers(
                 self.server,
                 self.config["target_peer_count"],
@@ -387,6 +387,7 @@ class WalletNode:
     def on_disconnect(self, peer: WSChiaConnection):
         if self.is_trusted(peer):
             self.local_node_synced = False
+            self.initialize_wallet_peers()
 
         if peer.peer_node_id in self.untrusted_caches:
             self.untrusted_caches.pop(peer.peer_node_id)
@@ -645,6 +646,16 @@ class WalletNode:
             request_height = uint32(request_height - 1)
         return None
 
+    async def disconnect_and_stop_wpeers(self):
+        if len(self.server.get_full_node_connections()) > 1:
+            for peer in self.server.get_full_node_connections():
+                if not self.is_trusted(peer):
+                    asyncio.create_task(peer.close())
+
+        if self.wallet_peers is not None:
+            await self.wallet_peers.ensure_is_closed()
+            self.wallet_peers = None
+
     async def get_timestamp_for_height(self, height: uint32) -> uint64:
         """
         Returns the timestamp for transaction block at h=height, if not transaction block, backtracks until it finds
@@ -701,10 +712,7 @@ class WalletNode:
                 return
 
             # Disconnect from all untrusted peers if our local node is trusted and synced
-            if len(self.server.get_full_node_connections()) > 1:
-                for peer in self.server.get_full_node_connections():
-                    if not self.is_trusted(peer):
-                        asyncio.create_task(peer.close())
+            await self.disconnect_and_stop_wpeers()
 
             async with self.new_peak_lock:
                 async with self.wallet_state_manager.lock:
@@ -824,6 +832,7 @@ class WalletNode:
                         self.synced_peers.add(peer.peer_node_id)
 
                         self.wallet_state_manager.state_changed("new_block")
+                        self.wallet_state_manager.set_sync_mode(False)
                         await self.update_ui()
                     except Exception:
                         if syncing:
