@@ -50,7 +50,7 @@ jobs:
 
     - name: Lint source with black
       run: |
-        black .
+        black --check --diff .
 
     - name: Lint source with flake8
       run: |
