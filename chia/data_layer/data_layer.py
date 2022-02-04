@@ -163,7 +163,10 @@ class DataLayer:
             if root is None or root.generation < min_generation:
                 return False
 
-            self.log.info(f"Validated chain hash {record.root} in downloaded datastore.")
+            self.log.info(
+                f"Validated chain hash {record.root} in downloaded datastore. "
+                f"Wallet generation: {record.generation}"
+            )
             max_generation = root.generation
             last_checked_hash = record.root
 
@@ -228,7 +231,12 @@ class DataLayer:
 
         root = await self.data_store.get_tree_root(tree_id=tree_id)
         # Wallet root hash must match to our data store root hash.
-        if root.node_hash is None or root.node_hash != to_check[0].root:
+        if root.node_hash is not None and root.node_hash == to_check[0].root:
+            self.log.info(
+                f"Validated chain hash {root.node_hash} in downloaded datastore. "
+                f"Wallet generation: {to_check[0].generation}"
+            )
+        else:
             raise RuntimeError("Can't find data on chain in our datastore.")
         to_check.pop(0)
         min_generation = (0 if old_root is None else old_root.generation) + 1
@@ -243,6 +251,12 @@ class DataLayer:
         if not is_valid:
             self.log.warning(f"Light validation failed for {tree_id}. Validating all history.")
             to_check = await self.wallet_rpc.dl_history(launcher_id=tree_id, min_generation=uint32(1))
+            # Already checked above.
+            self.log.info(
+                f"Validated chain hash {root.node_hash} in downloaded datastore. "
+                f"Wallet generation: {to_check[0].generation}"
+            )
+            to_check.pop(0)
             is_valid = await self._validate_batch(tree_id, to_check, 0, max_generation)
             if not is_valid:
                 raise RuntimeError("Could not validate on-chain data.")
