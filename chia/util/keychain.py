@@ -413,7 +413,7 @@ class Keychain:
         remaining_keys = {str(x[0]) for x in keys_to_delete}
         index = 0
         pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS:
+        while index <= MAX_KEYS and len(remaining_keys) > 0:
             if pkent is not None:
                 mnemonic = bytes_to_mnemonic(pkent[1])
                 seed = mnemonic_to_seed(mnemonic, "")
