@@ -10,7 +10,7 @@ import AppState from './AppState';
 
 async function waitForConfig() {
   while(true) {
-    const config = window.ipcRenderer.invoke('getConfig');
+    const config = await window.ipcRenderer.invoke('getConfig');
     if (config) {
       return config;
     }
