@@ -256,13 +256,13 @@ class WalletNode:
                 self.wsm_close_task = None
         return True
 
-    async def new_puzzle_hash_created(self, puzzle_hashes: List[bytes32]):
-        if len(puzzle_hashes) == 0:
-            return
-        assert self.server is not None
-        full_nodes: Dict[bytes32, WSChiaConnection] = self.server.connection_by_type.get(NodeType.FULL_NODE, {})
-        for node_id, node in full_nodes.copy().items():
-            asyncio.create_task(self.subscribe_to_phs(puzzle_hashes, node))
+    # async def new_puzzle_hash_created(self, puzzle_hashes: List[bytes32]):
+    #     if len(puzzle_hashes) == 0:
+    #         return
+    #     assert self.server is not None
+    #     full_nodes: Dict[bytes32, WSChiaConnection] = self.server.connection_by_type.get(NodeType.FULL_NODE, {})
+    #     for node_id, node in full_nodes.copy().items():
+    #         asyncio.create_task(self.subscribe_to_phs(puzzle_hashes, node))
 
     def _close(self):
         self.log.info("self._close")
@@ -414,16 +414,28 @@ class WalletNode:
         if self.wallet_peers is not None:
             asyncio.create_task(self.wallet_peers.on_connect(peer))
 
-    async def trusted_sync(self, full_node: WSChiaConnection):
+    async def long_sync(self, full_node: WSChiaConnection, syncing: Optional[uint32], fork_height: Optional[uint32]):
         """
-        Performs a one-time sync with each trusted peer, subscribing to interested puzzle hashes and coin ids.
+        Sync algorithm:
+        - Download and verify weight proof (if
+        - If trusted, the minimum height is peak_block - 1000
+        - If not trusted, the minimum height is always zero
+        - Subscribe to all puzzle_hashes over and over until we have subscribed to all
+        - Subscribe to all coin_ids over and over until we have subscribed to all
+        -
+
+
         """
+        trusted: bool = self.is_trusted(full_node)
         self.log.info("Starting trusted sync")
         assert self.wallet_state_manager is not None
         self.wallet_state_manager.set_sync_mode(True)
         start_time = time.time()
         current_height: uint32 = self.wallet_state_manager.blockchain.get_peak_height()
-        request_height: uint32 = uint32(max(0, current_height - 1000))
+        if trusted:
+            min_height: uint32 = uint32(max(0, current_height - 1000))
+        else:
+            min_height = uint32(0)
 
         already_checked: Set[bytes32] = set()
         continue_while: bool = True
@@ -440,30 +452,29 @@ class WalletNode:
                     if len(to_check) == 1000:
                         break
 
-            await self.subscribe_to_phs(to_check, full_node, request_height)
+            await self.subscribe_to_phs(to_check, full_node, min_height)
 
             # Check if new puzzle hashed have been created
             check_again = await self.get_puzzle_hashes_to_subscribe()
             await self.wallet_state_manager.create_more_puzzle_hashes()
-
             continue_while = False
             for ph in check_again:
                 if ph not in already_checked:
                     continue_while = True
                     break
 
-        all_coins: Set[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_coins_to_check(request_height)
+        all_coins: Set[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_coins_to_check(min_height)
         all_coin_names: List[bytes32] = [coin_record.name() for coin_record in all_coins]
         removed_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
         all_coin_names.extend(removed_dict.keys())
 
         one_k_chunks = chunks(all_coin_names, 1000)
         for chunk in one_k_chunks:
-            await self.subscribe_to_coin_updates(chunk, full_node, request_height)
+            await self.subscribe_to_coin_updates(chunk, full_node, syncing, min_height, fork_height)
         self.wallet_state_manager.set_sync_mode(False)
         end_time = time.time()
         duration = end_time - start_time
-        self.log.info(f"Trusted sync duration was: {duration}")
+        self.log.info(f"Sync (trusted: {trusted}) duration was: {duration}")
         # Refresh wallets
         for wallet_id, wallet in self.wallet_state_manager.wallets.items():
             self.wallet_state_manager.state_changed("coin_removed", wallet_id)
@@ -537,15 +548,41 @@ class WalletNode:
             return
         await self.receive_state_from_peer(all_state.coin_states, peer, None, None)
 
-    async def subscribe_to_coin_updates(self, coin_names: List[bytes32], peer: WSChiaConnection, height=uint32(0)):
+    async def subscribe_to_coin_updates(
+        self,
+        coin_names: List[bytes32],
+        peer: WSChiaConnection,
+        syncing: Optional[bool],
+        height: uint32,
+        fork_height: Optional[uint32],
+    ):
         """
         Tell full nodes that we are interested in coin ids, and for trusted connections, add the new coin state
         for the coin changes.
         """
+        trusted: bool = self.is_trusted(peer)
+
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, height)
+
         all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
-        if all_coins_state is not None and self.is_trusted(peer):
-            await self.receive_state_from_peer(all_coins_state.coin_states, peer, None, None)
+
+        if all_coins_state is not None:
+            if not trusted and syncing is not None and syncing:
+                assert fork_height is not None
+                # We only want to apply changes before the fork point, since we are synced to another peer
+                # We are just validating that there is no missing information
+                final_coin_state: List[CoinState] = []
+                for coin_state_entry in all_coins_state.coin_states:
+                    if coin_state_entry.spent_height is not None:
+                        if coin_state_entry.spent_height <= fork_height:
+                            final_coin_state.append(coin_state_entry)
+                    elif coin_state_entry.created_height is not None:
+                        if coin_state_entry.created_height <= fork_height:
+                            final_coin_state.append(coin_state_entry)
+            else:
+                final_coin_state = all_coins_state.coin_states
+            # TODO: do we need to reorg here?
+            await self.receive_state_from_peer(final_coin_state, peer, None, None)
 
     async def get_coin_state(self, coin_names: List[bytes32]) -> List[CoinState]:
         assert self.server is not None
@@ -922,41 +959,6 @@ class WalletNode:
         ]
         all_puzzle_hashes.extend(interested_puzzle_hashes)
         return all_puzzle_hashes
-
-    async def untrusted_subscribe_to_puzzle_hashes(
-        self,
-        peer: WSChiaConnection,
-        peer_request_cache: Optional[PeerRequestCache],
-    ):
-        assert self.wallet_state_manager is not None
-        already_checked = set()
-        continue_while = True
-        while continue_while:
-            all_puzzle_hashes = await self.get_puzzle_hashes_to_subscribe()
-            to_check = []
-            for ph in all_puzzle_hashes:
-                if ph in already_checked:
-                    continue
-                else:
-                    to_check.append(ph)
-                    already_checked.add(ph)
-                    if len(to_check) == 1000:
-                        break
-            msg = wallet_protocol.RegisterForPhUpdates(to_check, uint32(0))
-            all_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
-            assert all_state is not None
-
-            assert peer_request_cache is not None
-            await self.receive_state_from_peer(all_state.coin_states, peer, None, None)
-
-            # Check if new puzzle hashed have been created
-            check_again = await self.get_puzzle_hashes_to_subscribe()
-
-            continue_while = False
-            for ph in check_again:
-                if ph not in already_checked:
-                    continue_while = True
-                    break
 
     async def untrusted_sync_to_peer(self, peer: WSChiaConnection, syncing: bool, fork_height: int):
         assert self.wallet_state_manager is not None

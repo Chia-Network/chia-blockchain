@@ -326,9 +326,10 @@ class WalletStateManager:
                         False,
                     )
                 )
-            puzzle_hashes = [record.puzzle_hash for record in derivation_paths]
             await self.puzzle_store.add_derivation_paths(derivation_paths, in_transaction)
-            await self.wallet_node.new_puzzle_hash_created(puzzle_hashes)
+            for record in derivation_paths:
+                await self.add_interested_puzzle_hash(record.puzzle_hash, record.wallet_id, in_transaction)
+            # await self.wallet_node.new_puzzle_hash_created(puzzle_hashes)
         if unused > 0:
             await self.puzzle_store.set_used_up_to(uint32(unused - 1), in_transaction)
 
@@ -1053,9 +1054,11 @@ class WalletStateManager:
         all_coins_names.extend([coin.name() for coin in tx_record.additions])
         all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
-        nodes = self.server.get_full_node_connections()
-        for node in nodes:
-            await self.wallet_node.subscribe_to_coin_updates(all_coins_names, node)
+        for coin in tx_record.removals + tx_record.additions:
+            await self.interested_store.add_interested_coin_id(coin.name())
+        # nodes = self.server.get_full_node_connections()
+        # for node in nodes:
+        #     await self.wallet_node.subscribe_to_coin_updates(all_coins_names, node)
         self.tx_pending_changed()
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
@@ -1252,12 +1255,6 @@ class WalletStateManager:
         self, puzzle_hash: bytes32, wallet_id: int, in_transaction: bool = False
     ) -> None:
         await self.interested_store.add_interested_puzzle_hash(puzzle_hash, wallet_id, in_transaction)
-        await self.wallet_node.new_puzzle_hash_created([puzzle_hash])
-
-    async def add_interested_coin_id(self, coin_id: bytes32) -> None:
-        nodes = self.server.get_full_node_connections()
-        for node in nodes:
-            await self.wallet_node.subscribe_to_coin_updates([coin_id], node)
 
     async def delete_trade_transactions(self, trade_id: bytes32):
         txs: List[TransactionRecord] = await self.tx_store.get_transactions_by_trade_id(trade_id)
