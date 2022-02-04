@@ -817,6 +817,7 @@ OfferShareKeybaseDialog.defaultProps = {
 
 function OfferShareOfferpoolDialog(props: OfferShareOfferpoolDialogProps) {
   const { offerRecord, offerData, onClose, open } = props;
+  const openExternal = useOpenExternal();
   const showError = useShowError();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [offerResponse, setOfferResponse] = React.useState<PostToOfferpoolResponse>();
@@ -865,6 +866,13 @@ function OfferShareOfferpoolDialog(props: OfferShareOfferpoolDialogProps) {
           </Flex>
         </DialogContent>
         <DialogActions>
+          <Button
+            color="secondary"
+            variant="contained"
+            onClick={() => openExternal('https://offerpool.io/')}
+          >
+            <Trans>Go to Offerpool</Trans>
+          </Button>
           <Button onClick={handleClose} color="primary" variant="contained">
             <Trans>Close</Trans>
           </Button>
