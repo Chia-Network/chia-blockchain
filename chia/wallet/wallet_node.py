@@ -209,8 +209,8 @@ class WalletNode:
             .replace("CHALLENGE", self.config["selected_network"])
             .replace("KEY", db_path_key_suffix)
         )
-        path = path_from_root(self.root_path, f"{db_path_replaced}_new")
-        standalone_path = path_from_root(STANDALONE_ROOT_PATH, f"{db_path_replaced}_new")
+        path = path_from_root(self.root_path, db_path_replaced.replace("v1", "v2"))
+        standalone_path = path_from_root(STANDALONE_ROOT_PATH, f"{db_path_replaced.replace('v2', 'v1')}_new")
         if not path.exists():
             if standalone_path.exists():
                 path.write_bytes(standalone_path.read_bytes())
