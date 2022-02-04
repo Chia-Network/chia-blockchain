@@ -4,7 +4,7 @@ import sys
 from os import remove
 from time import time
 
-# from psutil import virtual_memory, disk_usage
+from psutil import virtual_memory, disk_usage, PROCFS_PATH
 
 # replaced aiosqlite by sqlite3 due to better performance and no aio is needed
 import sqlite3
@@ -26,6 +26,10 @@ def db_upgrade_func(
     in_db_path: Optional[Path] = None,
     out_db_path: Optional[Path] = None,
     no_update_config: bool = False,
+    offline: bool = False,
+    hdd: bool = False,
+    temp_store_path: Optional[Path] = None,
+    check_only: bool = False
 ):
 
     update_config: bool = in_db_path is None and out_db_path is None and not no_update_config
@@ -51,9 +55,13 @@ def db_upgrade_func(
         out_path_string = db_path_replaced
         out_path_string = str(out_db_path)
 
-    convert_v1_to_v2(in_db_path, out_db_path, out_path_string)
+    if check_only:
+        check_db(in_db_path, temp_store_path, hdd, check_only)
+    else:
+    #    check_db(in_db_path, temp_store_path, hdd, check_only)
+        convert_v1_to_v2(in_db_path, out_db_path, out_path_string, offline, hdd, temp_store_path, check_only)
 
-    if update_config:
+    if update_config and not check_only:
         print("updating config.yaml")
         config = load_config(root_path, "config.yaml")
         new_db_path = db_pattern.replace("_v1_", "_v2_")
@@ -63,22 +71,97 @@ def db_upgrade_func(
 
     print(f"\n\nLEAVING PREVIOUS DB FILE UNTOUCHED {in_db_path}\n")
 
+#BLOCK_COMMIT_RATE = 80000
+###BLOCK_COMMIT_RATE = 18600
+#COIN_COMMIT_RATE = 300000
+###COIN_COMMIT_RATE = 70000
+#SES_COMMIT_RATE = 50
+###SES_COMMIT_RATE = 12
+#HINT_COMMIT_RATE = 300000 #150000
+###HINT_COMMIT_RATE = 70000 #150000
+# Per 1 GiB would be
+##BLOCK_COMMIT_RATE_PER_GIB = 18600
+###COIN_COMMIT_RATE_PER_GIB = 70000
+###SES_COMMIT_RATE_PER_GIB = 12
+###HINT_COMMIT_RATE_PER_GIB = 70000
 
-# Using these row sizes should keep memory usage <= 4G
-# Probably half these settings for systems with 4G memory only
-BLOCK_COMMIT_RATE = 80000
-COIN_COMMIT_RATE = 300000
-SES_COMMIT_RATE = 50
-HINT_COMMIT_RATE = 150000
-# These parameter were used to decouple pragma shring_memory from commit
-# commented out as shrink memory is not needed any more
-# BLOCK_SHRINK_RATE = BLOCK_COMMIT_RATE * 1.5
-# COIN_SHRINK_RATE = COIN_COMMIT_RATE * 1.2
-# SES_SHRINK_RATE = SES_COMMIT_RATE * 1.2
-# HINT_SHRINK_RATE = HINT_COMMIT_RATE * 1.5
+
+def check_db(
+    open_in_path: Path,
+    temp_store_path: Path,
+    hdd: bool,
+    check_only: bool,
+):
+    failed = False 
+    db_path = path_from_root(open_in_path, "")
+    print("checking if available disk space is sufficient")
+    print("querying database ...")
+    db = sqlite3.connect(open_in_path)
+    cursor1 = db.cursor()
+    cursor2 = db.cursor()
+    cursor3 = db.cursor()
+    try:
+        if hdd:
+            cursor1.execute(
+                "select sum(pgsize) FROM dbstat "
+                "where name in ('coin_record','sub_epoch_segments_v3','full_blocks')"
+            )
+        else:
+            cursor1.execute(
+                "select sum(pgsize) FROM dbstat "
+                "where name in ('coin_record','sub_epoch_segments_v3')"
+            )
+        temp_size_byte = cursor1.fetchone()
+        print(f"\tdisk space needed for temp storage: {temp_size_byte[0]} byte/{round(temp_size_byte[0]/1024/1024/1024,2)} GiB")
+        print(f"{temp_store_path}")
+        if temp_store_path is not None:
+            temp_store_free = disk_usage(temp_store_path).free
+            if temp_size_byte[0] < temp_store_free:
+                print(f"\ttemp check passed: sufficient free space {temp_store_free} byte/"
+                      f"{round(temp_store_free/1024/1024/1024,2)} GiB "
+                      f"on path {temp_store_path}"
+                )
+            else:
+                print(f"\ttemp check failed: not sufficient free space on path {temp_store_path} available"
+                      f"\n\tmissing {temp_size_byte[0]-temp_store_free} byte/"
+                      f"{round(temp_size_byte[0]-temp_store_free,2)/1024/1024/1024} GiB"
+                )
+                failed = True
+        page_count = cursor2.execute("PRAGMA PAGE_COUNT").fetchone()
+        page_size = cursor3.execute("PRAGMA PAGE_SIZE").fetchone()
+        db_size_byte = page_count[0] * page_size[0]
+        print(f"\n\tdisk space needed for db v2: {db_size_byte} byte/{round(db_size_byte/1024/1024/1024,2)} GiB")
+        db_store_free = disk_usage(db_path).free
+        if db_size_byte < db_store_free:
+            print(f"\tdb check passed: sufficient free space {db_store_free} byte/"
+                  f"{round(db_store_free/1024/1024/1024,2)} GiB "
+                  f"on path {db_path}"
+            )
+        else:
+            print(f"\tdb check failed: not sufficient free space on path {db_path} available"
+                  f"\n\tmissing {db_size_byte-db_store_free} byte/"
+                  f"{round(db_size_byte-db_store_free,2)/1024/1024/1024} GiB"
+            )
+            failed = True
+        if failed:
+            raise RuntimeError("checks failed.") 
+        else:
+            print("checks passed. proceeding with upgrade")
+    except sqlite3.OperationalError:
+        pass
+    finally:
+        cursor1.close()
+        cursor2.close()
+        db.close()
 
 
-def connect_to_db(open_in_path: Path, attach_out_path: str):
+def connect_to_db(
+    open_in_path: Path, 
+    attach_out_path: str, 
+    mmap_size: int,
+    offline: Optional[bool] = True,
+    temp_store_path: Optional[Path] = None,
+):
     db = sqlite3.connect(open_in_path)
     cursor = db.cursor()
     try:
@@ -92,11 +175,16 @@ def connect_to_db(open_in_path: Path, attach_out_path: str):
     finally:
         cursor.close()
 
-    db.execute("PRAGMA JOURNAL_MODE=off")
+    if offline: 
+        db.execute("PRAGMA JOURNAL_MODE=off")
+    if temp_store_path is not None:
+        db.execute("PRAGMA TEMP_STORE_DIRECTORY='" + (str(temp_store_path)) + "'")
     db.execute("PRAGMA SYNCHRONOUS=off")
-    # Threads is only used for temp table or indexes didn't bring any improvement
+    # Threads is only used for temp table or indexes, didn't bring any improvement
     # db.execute("PRAGMA threads=4")
-    db.execute("PRAGMA mmap_size=2147418112")
+    #db.execute("PRAGMA mmap_size=2147418112")
+    db.execute("PRAGMA mmap_size=" + (str(mmap_size)))
+    #db.execute("PRAGMA mmap_size=0")
     db.execute("PRAGMA cache_spill=false")
 
     # CHANGE PAGE_SIZE
@@ -107,6 +195,12 @@ def connect_to_db(open_in_path: Path, attach_out_path: str):
     #    init_pagesize.execute("VACUUM")
     #    init_pagesize.close()
 
+#    if temp_store_path is not None:
+#        temp2_out_path = str(temp_store_path) + '/temp_coin_store.sqlite'
+#    else:
+#        temp2_out_path = out_path_string.replace("blockchain_v2_mainnet.sqlite", "temp_coin_store.sqlite")
+
+#    print(f"{temp2_out_path}")
     db.execute("ATTACH DATABASE ? AS v2db", (attach_out_path,))
     # Set parameter for attached database only
     db.execute("pragma v2db.journal_mode=OFF")
@@ -116,14 +210,57 @@ def connect_to_db(open_in_path: Path, attach_out_path: str):
     return db
 
 
-def convert_v1_to_v2(in_path: Path, out_path: Path, out_path_string: str) -> None:
+def convert_v1_to_v2(
+    in_path: Path, 
+    out_path: Path, 
+    out_path_string: str, 
+    offline: bool, 
+    hdd: bool, 
+    temp_store_path: Path,
+    check_only: bool
+) -> None:
 
     if out_path.exists():
         print(f"output file already exists. {out_path}")
         raise RuntimeError("already exists")
 
+    # Linux: Expecting swapiness on default 60 on most machines
+    # So to prevent swapping, try to stay below 60% memory utilization
+    # Found no python module to read swapiness configuration over all platforms
+    # On linux, one could verify by executing `sysctl -n vm.swappiness`
+    mem = virtual_memory()
+    mem_swap_threshold = mem.total * 0.6
+    mem_avail_until_swap = mem_swap_threshold - (mem.total - mem.available)
+    if mem_avail_until_swap < 5 * 1024 * 1024:
+        print("Less than 512 MB memory available.")
+
+#    print(f"{mem.total}")
+#    print(f"{mem.available}")
+#    print(f"{mem_swap_threshold}")
+#    print(f"{mem_avail_until_swap}")
+#    print(f"{3.5 * 1024 * 1024 * 1024}")
+    if mem_avail_until_swap < 3.5 * 1024 * 1024 * 1024:
+        BLOCK_COMMIT_RATE = 18600
+        COIN_COMMIT_RATE = 70000
+        SES_COMMIT_RATE = 12
+        HINT_COMMIT_RATE = 70000
+        mmap_size = mem_avail_until_swap
+    else:
+        BLOCK_COMMIT_RATE = 80000
+        COIN_COMMIT_RATE = 300000
+        SES_COMMIT_RATE = 50
+        HINT_COMMIT_RATE = 300000
+        mmap_size = 2147418112
+    
+    # These parameter were used to decouple pragma shring_memory from commit
+    # commented out as shrink memory is not needed any more
+    # BLOCK_SHRINK_RATE = BLOCK_COMMIT_RATE * 1.5
+    # COIN_SHRINK_RATE = COIN_COMMIT_RATE * 1.2
+    # SES_SHRINK_RATE = SES_COMMIT_RATE * 1.2
+    # HINT_SHRINK_RATE = HINT_COMMIT_RATE * 1.5
+
     print(f"\n\nopening file for reading: {in_path}")
-    in_db = connect_to_db(in_path, out_path_string)
+    in_db = connect_to_db(in_path, out_path_string, mmap_size, offline, temp_store_path)
 
     #  The update is split into the following stages
     #  0. Initialzhe new target v2 database
@@ -150,17 +287,6 @@ def convert_v1_to_v2(in_path: Path, out_path: Path, out_path_string: str) -> Non
     #  9. Convert and migrate hints table to target v2 sqlite file
     # 10. Create indexes on hints table
     # Finally update the database version to 2
-    #
-    # Possible improvements:
-    # -) check if target device for default temp_store is big enough or maybe better, let user choose temp_store_directory
-    #    HOW TO DECIDE: 
-    #      1. better SSD > HDD
-    #      2. if applicable, choose different device than the db device
-    #      3. free space needed: sum of coin_record + sub_epoch_segments_v3:
-    #         select sum(pgsize)/1024/1024 MB from dbstat where name in ('coin_record','sub_epoch_segments_v3');
-    # -) check if db device has enough free space: 
-    #         select sum(pgsize)/1024/1024 MB from dbstat;
-    # -) get available memory and choose batch commit sizes accordingly
 
     print("\n[0/10] initializing v2 database with current_peak")
 
@@ -243,7 +369,8 @@ def convert_v1_to_v2(in_path: Path, out_path: Path, out_path_string: str) -> Non
     print("\n[1/10] converting full_blocks")
 
     # Cache Size of 1G to write to attached db
-    in_db.execute("pragma v2db.cache_size=-1048576")
+    #in_db.execute("pragma v2db.cache_size=-1048576")
+    in_db.execute("pragma v2db.cache_size=-524288")
 
     rate = 1.0
     start_time = time()
@@ -275,11 +402,12 @@ def convert_v1_to_v2(in_path: Path, out_path: Path, out_path_string: str) -> Non
     # Maybe check if the DB is on spinning disk, if yes than use temp table for full blocks
     # Or let the user decide during upgrade start?
 
-    # COMMENT IN IF DB is on rotational dev
-    #   in_db.execute(
-    #            "CREATE TABLE IF NOT EXISTS temp.temp_full_blocks(header_hash text, height bigint,"
-    #            "  is_block tinyint, is_fully_compactified tinyint, block blob)"
-    #            )
+    # If db is on rotational device than use temp table also for full_blocks
+    if hdd:
+        in_db.execute(
+            "CREATE TABLE IF NOT EXISTS temp.temp_full_blocks(header_hash text, height bigint,"
+            "  is_block tinyint, is_fully_compactified tinyint, block blob)"
+        )
 
     # No need to use any Primary Keys or such in the temp table, as it is only used as staging area
     in_db.execute(
@@ -288,8 +416,9 @@ def convert_v1_to_v2(in_path: Path, out_path: Path, out_path_string: str) -> Non
         "block blob, sub_epoch_summary blob, is_peak tinyint, is_block tinyint)"
     )
     in_db.execute("BEGIN TRANSACTION")
-    # COMMENT IN IF DB is on rotational device
-    #   in_db.execute("INSERT INTO temp.temp_full_blocks SELECT * from main.full_blocks")
+    # If db is on rotational device than use temp table also for full_blocks
+    if hdd:
+        in_db.execute("INSERT INTO temp.temp_full_blocks SELECT * from main.full_blocks")
     in_db.execute("INSERT INTO temp.temp_block_records SELECT * from main.block_records")
     reorg_end = time()
     print(f"\tcreate temp table: {reorg_end - start_time:.2f} seconds                             ")
@@ -299,30 +428,49 @@ def convert_v1_to_v2(in_path: Path, out_path: Path, out_path_string: str) -> Non
 
     # Recursive query to select from peak backwards ignoring orphaned blocks
     # Using this query, there is no need to fetch block after block and check if it is part of main chain
+    # If db is on rotational device than use temp table also for full_blocks
     cursor = in_db.cursor()
-    cursor.execute(
-        "WITH RECURSIVE "
-        "main_chain(header_hash, height) AS( "
-        "SELECT prev_hash, height-1 FROM temp.temp_block_records WHERE header_hash = ? "
-        "UNION ALL "
-        "SELECT tbr.prev_hash, main_chain.height-1 FROM main_chain, temp.temp_block_records tbr "
-        "WHERE main_chain.header_hash = tbr.header_hash "
-        "ORDER BY main_chain.height-1 DESC) "
-        "SELECT br.header_hash, br.prev_hash, fb.height, br.sub_epoch_summary, "
-        "fb.is_fully_compactified, fb.block, br.block "
-        # Switch FROM to temp if DB is on rotational dev
-        "FROM main.full_blocks fb, temp.temp_block_records br "
-        # "FROM temp.temp_full_blocks fb, temp.temp_block_records br "
-        "WHERE fb.header_hash = br.header_hash and fb.header_hash = ? "
-        "UNION ALL "
-        "SELECT br.header_hash, br.prev_hash, fb.height, br.sub_epoch_summary, "
-        "fb.is_fully_compactified, fb.block, br.block "
-        # Switch FROM to temp if DB is on rotational dev
-        "FROM main.full_blocks fb, main_chain bc, temp.temp_block_records br "
-        # "FROM temp.temp_full_blocks fb, main_chain bc, temp.temp_block_records br "
-        "WHERE bc.header_hash = fb.header_hash AND bc.header_hash = br.header_hash ",
-        (peak_hash.hex(), peak_hash.hex()),
-    )
+    if hdd:
+        cursor.execute(
+            "WITH RECURSIVE "
+            "main_chain(header_hash, height) AS( "
+            "SELECT prev_hash, height-1 FROM temp.temp_block_records WHERE header_hash = ? "
+            "UNION ALL "
+            "SELECT tbr.prev_hash, main_chain.height-1 FROM main_chain, temp.temp_block_records tbr "
+            "WHERE main_chain.header_hash = tbr.header_hash "
+            "ORDER BY main_chain.height-1 DESC) "
+            "SELECT br.header_hash, br.prev_hash, fb.height, br.sub_epoch_summary, "
+            "fb.is_fully_compactified, fb.block, br.block "
+            "FROM temp.temp_full_blocks fb, temp.temp_block_records br "
+            "WHERE fb.header_hash = br.header_hash and fb.header_hash = ? "
+            "UNION ALL "
+            "SELECT br.header_hash, br.prev_hash, fb.height, br.sub_epoch_summary, "
+            "fb.is_fully_compactified, fb.block, br.block "
+            "FROM temp.temp_full_blocks fb, main_chain bc, temp.temp_block_records br "
+            "WHERE bc.header_hash = fb.header_hash AND bc.header_hash = br.header_hash "
+            "ORDER BY 1",
+            (peak_hash.hex(), peak_hash.hex()),
+        )
+    else:
+        cursor.execute(
+            "WITH RECURSIVE "
+            "main_chain(header_hash, height) AS( "
+            "SELECT prev_hash, height-1 FROM temp.temp_block_records WHERE header_hash = ? "
+            "UNION ALL "
+            "SELECT tbr.prev_hash, main_chain.height-1 FROM main_chain, temp.temp_block_records tbr "
+            "WHERE main_chain.header_hash = tbr.header_hash "
+            "ORDER BY main_chain.height-1 DESC) "
+            "SELECT br.header_hash, br.prev_hash, fb.height, br.sub_epoch_summary, "
+            "fb.is_fully_compactified, fb.block, br.block "
+            "FROM main.full_blocks fb, temp.temp_block_records br "
+            "WHERE fb.header_hash = br.header_hash and fb.header_hash = ? "
+            "UNION ALL "
+            "SELECT br.header_hash, br.prev_hash, fb.height, br.sub_epoch_summary, "
+            "fb.is_fully_compactified, fb.block, br.block "
+            "FROM main.full_blocks fb, main_chain bc, temp.temp_block_records br "
+            "WHERE bc.header_hash = fb.header_hash AND bc.header_hash = br.header_hash ",
+            (peak_hash.hex(), peak_hash.hex()),
+        )
 
     # DATA MIGRATION
     count = 0
@@ -422,14 +570,18 @@ def convert_v1_to_v2(in_path: Path, out_path: Path, out_path_string: str) -> Non
     ############
 
     # Reconnect to get new mmap initalization for new table
-    temp2_out_path = out_path_string.replace("blockchain_v2_mainnet.sqlite", "temp_coin_store.sqlite")
-    temp2_db = connect_to_db(in_path, temp2_out_path)
+    if temp_store_path is not None:  
+        temp2_out_path = temp_store_path + '/temp_coin_store.sqlite'
+    else:
+        temp2_out_path = out_path_string.replace("blockchain_v2_mainnet.sqlite", "temp_coin_store.sqlite")
+    temp2_db = connect_to_db(in_path, temp2_out_path, mmap_size, offline, temp_store_path)
 
     # COIN_RECORD
     # Source Table is ~9.5G
     print("\n[3/10] converting coin_store")
 
-    temp2_db.execute("pragma v2db.cache_size=-1048576")
+    #temp2_db.execute("pragma v2db.cache_size=-1048576")
+    temp2_db.execute("pragma v2db.cache_size=-524288")
 
     rate = 1.0
     start_time = time()
@@ -543,8 +695,12 @@ def convert_v1_to_v2(in_path: Path, out_path: Path, out_path_string: str) -> Non
     ###############
 
     # Again recoonnect to get benefit of mmap
-    temp3_out_path = out_path_string.replace("blockchain_v2_mainnet.sqlite", "temp_sub_epoch.sqlite")
-    temp3_db = connect_to_db(in_path, temp3_out_path)
+    if temp_store_path is not None:  
+        temp3_out_path = temp_store_path + '/temp_sub_epoch.sqlite'
+    else:
+        temp3_out_path = out_path_string.replace("blockchain_v2_mainnet.sqlite", "temp_sub_epoch.sqlite")
+    #temp3_out_path = out_path_string.replace("blockchain_v2_mainnet.sqlite", "temp_sub_epoch.sqlite")
+    temp3_db = connect_to_db(in_path, temp3_out_path, mmap_size, offline, temp_store_path)
 
     # SUB_EPOCH_SEGMENTS_V3
     # Source Table is 2.4G
@@ -618,7 +774,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path, out_path_string: str) -> Non
     print(f"\nstarting migration to final db file: {out_path}")
 
     print("\n[5/10] migrating temp table coin_record")
-    in_db = connect_to_db(Path(temp2_out_path), out_path_string)
+    in_db = connect_to_db(Path(temp2_out_path), out_path_string, mmap_size, True, temp_store_path)
 
     # Setting explicitly lower cache_spill to prevent to much memory usage
     # Be aware that these settings should all lead to a max use of 4G memory,
@@ -679,7 +835,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path, out_path_string: str) -> Non
     ############
 
     print("\n[7/10] migrating temp table sub_epoch_segments_v3")
-    in_db = connect_to_db(Path(temp3_out_path), out_path_string)
+    in_db = connect_to_db(Path(temp3_out_path), out_path_string, mmap_size, True, temp_store_path)
 
     in_db.execute("pragma v2db.cache_spill=100000")
     in_db.execute("pragma v2db.cache_size=-102400")
@@ -711,9 +867,9 @@ def convert_v1_to_v2(in_path: Path, out_path: Path, out_path_string: str) -> Non
     # HINTS
     # Source Table is 40M
     print("\n[9/10] converting hint_store")
-    in_db = connect_to_db(in_path, out_path_string)
+    in_db = connect_to_db(in_path, out_path_string, mmap_size, offline, temp_store_path)
 
-    in_db.execute("pragma v2db.cache_size=-1048576")
+    in_db.execute("pragma v2db.cache_size=-524288")
 
     commit_in = HINT_COMMIT_RATE
     #   shrink_in = HINT_SHRINK_RATE
