@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import time
 from secrets import token_bytes
@@ -7,7 +8,7 @@ import pytest
 from blspy import G1Element
 
 from chia.plot_sync.delta import Delta
-from chia.plot_sync.receiver import Receiver
+from chia.plot_sync.receiver import Receiver, Sync
 from chia.plot_sync.util import ErrorCodes, State
 from chia.protocols.harvester_protocol import (
     Plot,
@@ -31,11 +32,8 @@ next_message_id = uint64(0)
 
 
 def assert_default_values(receiver: Receiver) -> None:
-    assert receiver.state() == State.idle
-    assert receiver.expected_sync_id() == 0
-    assert receiver.expected_message_id() == 0
-    assert receiver.last_sync_id() == 0
-    assert receiver.last_sync_time() == 0
+    assert receiver.current_sync() == Sync()
+    assert receiver.last_sync() == Sync()
     assert receiver.plots() == {}
     assert receiver.invalid() == []
     assert receiver.keys_missing() == []
@@ -107,25 +105,25 @@ def post_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]
     if expected_state == State.loaded:
         for plot_info in data:
             assert type(plot_info) == Plot
-            assert plot_info.filename in receiver._delta.valid.additions
+            assert plot_info.filename in receiver._current_sync.delta.valid.additions
     elif expected_state == State.removed:
         for path in data:
-            assert path in receiver._delta.valid.removals
+            assert path in receiver._current_sync.delta.valid.removals
     elif expected_state == State.invalid:
         for path in data:
-            assert path in receiver._delta.invalid.additions
+            assert path in receiver._current_sync.delta.invalid.additions
     elif expected_state == State.keys_missing:
         for path in data:
-            assert path in receiver._delta.keys_missing.additions
+            assert path in receiver._current_sync.delta.keys_missing.additions
     elif expected_state == State.duplicates:
         for path in data:
-            assert path in receiver._delta.duplicates.additions
+            assert path in receiver._current_sync.delta.duplicates.additions
 
 
 @pytest.mark.asyncio
 async def run_sync_step(receiver: Receiver, sync_step: SyncStepData, expected_state: State) -> None:
-    assert receiver.state() == expected_state
-    last_sync_time_before = receiver._last_sync_time
+    assert receiver.current_sync().state == expected_state
+    last_sync_time_before = receiver._last_sync.time_done
     # For the the list types invoke the trigger function in batches
     if sync_step.payload_type == PlotSyncPlotList or sync_step.payload_type == PlotSyncPathList:
         step_data, _ = sync_step.args
@@ -133,21 +131,27 @@ async def run_sync_step(receiver: Receiver, sync_step: SyncStepData, expected_st
         # Invoke batches of: 1, 2, 3, 4 items and validate the data against plot store before and after
         indexes = [0, 1, 3, 6, 10]
         for i in range(0, len(indexes) - 1):
+            plots_processed_before = receiver.current_sync().plots_processed
             invoke_data = step_data[indexes[i] : indexes[i + 1]]
             pre_function_validate(receiver, invoke_data, expected_state)
             await sync_step.function(
                 create_payload(sync_step.payload_type, False, invoke_data, i == (len(indexes) - 2))
             )
             post_function_validate(receiver, invoke_data, expected_state)
+            if expected_state == State.removed:
+                assert receiver.current_sync().plots_processed == plots_processed_before
+            else:
+                assert receiver.current_sync().plots_processed == plots_processed_before + len(invoke_data)
     else:
         # For Start/Done just invoke it..
         await sync_step.function(create_payload(sync_step.payload_type, sync_step.state == State.idle, *sync_step.args))
     # Make sure we moved to the next state
-    assert receiver.state() != expected_state
+    assert receiver.current_sync().state != expected_state
     if sync_step.payload_type == PlotSyncDone:
-        assert receiver._last_sync_time != last_sync_time_before
+        assert receiver._last_sync.time_done != last_sync_time_before
+        assert receiver.last_sync().plots_processed == receiver.last_sync().plots_total
     else:
-        assert receiver._last_sync_time == last_sync_time_before
+        assert receiver._last_sync.time_done == last_sync_time_before
 
 
 def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
@@ -195,25 +199,29 @@ async def test_reset() -> None:
     receiver, sync_steps = plot_sync_setup()
     connection_before = receiver.connection()
     # Assign some dummy values
-    receiver._sync_state = State.done
-    receiver._expected_sync_id = uint64(1)
-    receiver._expected_message_id = uint64(1)
-    receiver._last_sync_id = uint64(1)
-    receiver._last_sync_time = time.time()
+    receiver._current_sync.state = State.done
+    receiver._current_sync.sync_id = uint64(1)
+    receiver._current_sync.next_message_id = uint64(1)
+    receiver._current_sync.plots_processed = uint32(1)
+    receiver._current_sync.plots_total = uint32(1)
+    receiver._current_sync.delta.valid.additions = receiver.plots().copy()
+    receiver._current_sync.delta.valid.removals = ["1"]
+    receiver._current_sync.delta.invalid.additions = ["1"]
+    receiver._current_sync.delta.invalid.removals = ["1"]
+    receiver._current_sync.delta.keys_missing.additions = ["1"]
+    receiver._current_sync.delta.keys_missing.removals = ["1"]
+    receiver._current_sync.delta.duplicates.additions = ["1"]
+    receiver._current_sync.delta.duplicates.removals = ["1"]
+    receiver._current_sync.time_done = time.time()
+    receiver._last_sync = Sync(**dataclasses.asdict(receiver._current_sync))
     receiver._invalid = ["1"]
     receiver._keys_missing = ["1"]
-    receiver._delta.valid.additions = receiver.plots().copy()
-    receiver._delta.valid.removals = ["1"]
-    receiver._delta.invalid.additions = ["1"]
-    receiver._delta.invalid.removals = ["1"]
-    receiver._delta.keys_missing.additions = ["1"]
-    receiver._delta.keys_missing.removals = ["1"]
-    receiver._delta.duplicates.additions = ["1"]
-    receiver._delta.duplicates.removals = ["1"]
+
+    receiver._last_sync.sync_id = uint64(1)
     # Call `reset` and make sure all expected values are set back to their defaults.
     receiver.reset()
     assert_default_values(receiver)
-    assert receiver._delta == Delta()
+    assert receiver._current_sync.delta == Delta()
     # Connection should remain
     assert receiver.connection() == connection_before
 
@@ -293,18 +301,18 @@ async def test_sync_flow() -> None:
         assert path in receiver.duplicates()
 
     # We should be in idle state again
-    assert receiver.state() == State.idle
+    assert receiver.current_sync().state == State.idle
 
 
 @pytest.mark.asyncio
 async def test_invalid_ids() -> None:
     receiver, sync_steps = plot_sync_setup()
     for state in State:
-        assert receiver.state() == state
+        assert receiver.current_sync().state == state
         current_step = sync_steps[state]
-        if receiver.state() == State.idle:
+        if receiver.current_sync().state == State.idle:
             # Set last_sync_id for the tests below
-            receiver._last_sync_id = uint64(1)
+            receiver._last_sync.sync_id = uint64(1)
             # Test "sync_started last doesn't match"
             invalid_last_sync_id_param = PlotSyncStart(
                 plot_sync_identifier(uint64(0), uint64(0)), False, uint64(2), uint32(0)
@@ -318,17 +326,19 @@ async def test_invalid_ids() -> None:
             await current_step.function(invalid_sync_id_match_param)
             assert_error_response(receiver, ErrorCodes.sync_ids_match)
             # Reset the last_sync_id to the default
-            receiver._last_sync_id = uint64(0)
+            receiver._last_sync.sync_id = uint64(0)
         else:
             # Test invalid sync_id
             invalid_sync_id_param = current_step.payload_type(
-                plot_sync_identifier(uint64(10), uint64(receiver.expected_message_id())), *current_step.args
+                plot_sync_identifier(uint64(10), uint64(receiver.current_sync().next_message_id)), *current_step.args
             )
             await current_step.function(invalid_sync_id_param)
             assert_error_response(receiver, ErrorCodes.invalid_identifier)
             # Test invalid message_id
             invalid_message_id_param = current_step.payload_type(
-                plot_sync_identifier(receiver.expected_sync_id(), uint64(receiver.expected_message_id() + 1)),
+                plot_sync_identifier(
+                    receiver.current_sync().sync_id, uint64(receiver.current_sync().next_message_id + 1)
+                ),
                 *current_step.args,
             )
             await current_step.function(invalid_message_id_param)
@@ -349,12 +359,12 @@ async def test_invalid_ids() -> None:
 async def test_plot_errors(state_to_fail: State, expected_error_code: ErrorCodes) -> None:
     receiver, sync_steps = plot_sync_setup()
     for state in State:
-        assert receiver.state() == state
+        assert receiver.current_sync().state == state
         current_step = sync_steps[state]
         if state == state_to_fail:
             plot_infos, _ = current_step.args
             await current_step.function(create_payload(current_step.payload_type, False, plot_infos, False))
-            identifier = plot_sync_identifier(receiver.expected_sync_id(), receiver.expected_message_id())
+            identifier = plot_sync_identifier(receiver.current_sync().sync_id, receiver.current_sync().next_message_id)
             invalid_payload = current_step.payload_type(identifier, plot_infos, True)
             await current_step.function(invalid_payload)
             if state == state_to_fail:
