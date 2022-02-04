@@ -1,7 +1,8 @@
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
 from chia.types.blockchain_format.program import Program
-from typing import Tuple, Iterator
+from typing import Tuple, Iterator, Optional
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -54,23 +55,45 @@ def match_nft_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
     return False, iter(())
 
 
+def get_nft_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
+    """
+    Given a puzzle test if it's an NFT and, if it is, return the curried arguments
+    """
+    try:
+        mod, curried_args = puzzle.uncurry()
+        if mod == SINGLETON_TOP_LAYER_MOD:
+            return curried_args.first().rest().first().as_atom()
+    except Exception:
+        return None
+    return None
+
+
 def get_transfer_program_from_solution(solution: Program) -> Program:
-    # my_puzhash  ; not used for transfer TODO optimise
-    # my_amount
-    # my_did_inner_hash
-    # my_did_amount
-    # my_did_parent
-    # new_did
-    # new_did_parent
-    # new_did_inner_hash
-    # new_did_amount
-    # trade_price
-    # transfer_program_reveal
-    # transfer_program_solution
     try:
         prog = solution.rest().rest().rest().rest().rest().rest().rest().rest().rest().first()
         return prog
     except Exception:
         return None
+    return None
 
+
+def get_backpayment_amount_from_solution(solution: Program) -> uint64:
+    try:
+        transfer_prog = get_transfer_program_from_solution(solution)
+        mod, curried_args = transfer_prog.uncurry()
+        assert mod == NFT_TRANSFER_PROGRAM
+        percentage = curried_args.first().rest().first().as_int()
+        amount = (get_trade_price_from_solution(solution) * percentage) // 100
+        return uint64(amount)
+    except Exception:
+        return None
+    return None
+
+
+def get_trade_price_from_solution(solution: Program) -> uint64:
+    try:
+        prog = solution.rest().rest().rest().rest().rest().rest().rest().first()
+        return prog.as_int()
+    except Exception:
+        return None
     return None

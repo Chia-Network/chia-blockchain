@@ -719,14 +719,13 @@ class DIDWallet:
         await self.standard_wallet.push_transaction(did_record)
         return message_spend_bundle
 
-    # this is just for testing purposes, API should use create_attestment_now
-    async def get_info_for_recovery(self):
+    async def get_info_for_recovery(self) -> Tuple[bytes32, bytes32, uint64]:
         coins = await self.select_coins(1)
         coin = coins.pop()
         parent = coin.parent_coin_info
         innerpuzhash = self.did_info.current_inner.get_tree_hash()
         amount = coin.amount
-        return [parent, innerpuzhash, amount]
+        return (parent, innerpuzhash, amount)
 
     async def load_attest_files_for_recovery_spend(self, filenames):
         spend_bundle_list = []

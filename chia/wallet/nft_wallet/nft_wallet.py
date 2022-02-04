@@ -324,7 +324,7 @@ class NFTWallet:
         ])
         fullsol = Program.to(
             [
-                nft_coin_info.lineage_proof.as_list(),
+                nft_coin_info.lineage_proof.to_program(),
                 nft_coin_info.coin.amount,
                 innersol,
             ]
@@ -395,7 +395,7 @@ class NFTWallet:
         ])
         fullsol = Program.to(
             [
-                nft_coin_info.lineage_proof.as_list(),
+                nft_coin_info.lineage_proof.to_program(),
                 nft_coin_info.coin.amount,
                 innersol,
             ]
@@ -406,13 +406,53 @@ class NFTWallet:
         # this full spend should be aggregated with the DID announcement spend of the recipient DID
         return full_spend
 
-    async def receive_nft(self, trade_price: uint64, nft_id: bytes32) -> SpendBundle:
+    async def receive_nft(
+        self, sending_sb: SpendBundle, fee: uint64 = 0
+    ) -> SpendBundle:
+        trade_price_discovered = None
+        nft_id = None
+        for coin_spend in sending_sb.coin_spends:
+            if nft_puzzles.match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))[0]:
+                breakpoint()
+                trade_price_discovered = nft_puzzles.get_trade_price_from_solution(
+                    Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
+                )
+                backpayment_amount = nft_puzzles.get_backpayment_amount_from_solution(
+                    Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
+                )
+                nft_id = nft_puzzles.get_nft_id_from_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+
+        assert trade_price_discovered is not None
+        assert nft_id is not None
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
-        messages = [(1, bytes(trade_price) + bytes(nft_id))]  # TODO: check this bytes concatenation is correct
+        messages = [(1, bytes(trade_price_discovered) + bytes(nft_id))]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
-        return message_sb
+
+        relative_amount = (fee + backpayment_amount) * -1
+        standard_sb = await self.standard_wallet.create_spend_bundle_relative_chia(relative_amount)
+        full_spend = SpendBundle.aggregate([message_sb, sending_sb, standard_sb])
+        nft_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=did_wallet.did_info.origin_coin.name(),
+            amount=uint64(coin_spend.coin.amount),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=full_spend,
+            additions=full_spend.additions(),
+            removals=full_spend.removals(),
+            wallet_id=self.wallet_info.id,
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=token_bytes(),
+            memos=[],
+        )
+        await self.standard_wallet.push_transaction(nft_record)
+        return full_spend
 
     async def get_current_nfts(self):
         return self.nft_wallet_info.my_nft_coins

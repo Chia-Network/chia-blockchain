@@ -122,18 +122,65 @@ class TestNFTWallet:
         await time_out_assert(15, did_wallet_0.get_unconfirmed_balance, 101)
         await time_out_assert(15, did_wallet_0.get_pending_change_balance, 0)
 
-        nft_wallet = await NFTWallet.create_new_nft_wallet(
+        nft_wallet_0 = await NFTWallet.create_new_nft_wallet(
             wallet_node_0.wallet_state_manager, wallet_0, did_wallet_0.id()
         )
-        tr = await nft_wallet.generate_new_nft("https://www.chia.net/img/branding/chia-logo.svg", 20, ph)
+        tr = await nft_wallet_0.generate_new_nft("https://www.chia.net/img/branding/chia-logo.svg", 20, ph)
 
         await time_out_assert_not_none(
             5, full_node_api.full_node.mempool_manager.get_spendbundle, tr.spend_bundle.name()
         )
 
         for i in range(1, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
         await asyncio.sleep(3)
-        coins = nft_wallet.nft_wallet_info.my_nft_coins
+        coins = nft_wallet_0.nft_wallet_info.my_nft_coins
+        assert len(coins) == 1
+
+        # Wallet2 sets up DIDWallet2 without any backup set
+        async with wallet_node_1.wallet_state_manager.lock:
+            did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node_1.wallet_state_manager, wallet_1, uint64(201)
+            )
+
+        spend_bundle_list = await wallet_node_1.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_1.id())
+
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+        await time_out_assert(15, did_wallet_1.get_confirmed_balance, 201)
+        await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 201)
+
+        nft_wallet_1 = await NFTWallet.create_new_nft_wallet(
+            wallet_node_1.wallet_state_manager, wallet_1, did_wallet_1.id()
+        )
+        # nft_coin_info: NFTCoinInfo,
+        # new_did,
+        # new_did_parent,
+        # new_did_inner_hash,
+        # new_did_amount,
+        # trade_price,
+        did_coin_threeple = await did_wallet_1.get_info_for_recovery()
+        trade_price = 50
+
+        sb = await nft_wallet_0.transfer_nft(
+            coins[0],
+            nft_wallet_1.nft_wallet_info.my_did,
+            did_coin_threeple[0],
+            did_coin_threeple[1],
+            did_coin_threeple[2],
+            trade_price
+        )
+        assert sb is not None
+
+        full_sb = await nft_wallet_1.receive_nft(sb)
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+        coins = nft_wallet_1.nft_wallet_info.my_nft_coins
         assert len(coins) == 1
