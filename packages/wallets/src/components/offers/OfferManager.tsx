@@ -18,7 +18,7 @@ import {
   TableControlled,
   TooltipIcon,
   useOpenDialog,
-  chiaToMojo, 
+  chiaToMojo,
   mojoToCATLocaleString,
   useShowSaveDialog,
   Tooltip,
@@ -210,9 +210,9 @@ function OfferList(props: OfferListProps) {
   }
 
   function handleRowClick(event: any, row: OfferTradeRecord) {
-    navigate('/dashboard/wallets/offers/view', { 
+    navigate('/dashboard/wallets/offers/view', {
       state: {
-        tradeRecord: row 
+        tradeRecord: row
       },
     });
   }
