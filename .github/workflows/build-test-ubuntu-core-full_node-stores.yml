@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: Ubuntu core-full_node Test
+name: Ubuntu core-full_node-stores Test
 
 on:
   push:
@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   build:
-    name: Ubuntu core-full_node Test
+    name: Ubuntu core-full_node-stores Test
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
@@ -96,10 +96,10 @@ jobs:
         sh install-timelord.sh
         ./vdf_bench square_asm 400000
 
-    - name: Test core-full_node code with pytest
+    - name: Test core-full_node-stores code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/full_node/test_*.py -s -v --durations 0
+        ./venv/bin/py.test tests/core/full_node/stores/test_*.py -s -v --durations 0
 
 
     - name: Check resource usage
