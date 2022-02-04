@@ -11,7 +11,7 @@ from chia.util.byte_types import hexstr_to_bytes
 async def download_data_latest(
     data_store: DataStore, tree_id: bytes32, target_hash: bytes32, URL: str, *, lock: bool = True
 ) -> bool:
-    insert_batch: List[Tuple[NodeType, bytes32, bytes32]] = []
+    insert_batch: List[Tuple[NodeType, str, str]] = []
 
     async with aiohttp.ClientSession() as session:
         async with session.ws_connect(URL, timeout=180, heartbeat=60, max_msg_size=0) as ws:

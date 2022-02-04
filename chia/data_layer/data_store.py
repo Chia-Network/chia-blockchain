@@ -851,7 +851,7 @@ class DataStore:
 
     async def insert_batch_for_generation(
         self,
-        batch: List[Tuple[NodeType, bytes32, bytes32]],
+        batch: List[Tuple[NodeType, str, str]],
         tree_id: bytes32,
         root_hash: bytes32,
         generation: int,
@@ -861,9 +861,9 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             for node_type, value1, value2 in batch:
                 if node_type == NodeType.INTERNAL:
-                    await self._insert_internal_node(value1, value2, tree_id)
+                    await self._insert_internal_node(bytes32.from_hexstr(value1), bytes32.from_hexstr(value2), tree_id)
                 if node_type == NodeType.TERMINAL:
-                    await self._insert_terminal_node(value1, value2, tree_id)
+                    await self._insert_terminal_node(bytes.fromhex(value1), bytes.fromhex(value2), tree_id)
             await self._insert_root(tree_id, root_hash, Status.COMMITTED, generation)
 
     async def get_operations(
