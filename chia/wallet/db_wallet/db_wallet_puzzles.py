@@ -27,14 +27,32 @@ def create_host_fullpuz(innerpuz_hash: bytes32, current_root: bytes32, genesis_i
 
 def create_host_layer_puzzle(innerpuz_hash: bytes32, current_root: bytes32) -> Program:
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
-    db_layer = DB_HOST_MOD.curry(DB_HOST_MOD.get_tree_hash(), current_root, innerpuz_hash)
+    db_layer = DB_HOST_MOD.curry(DB_HOST_MOD_HASH, current_root, innerpuz_hash)
     return db_layer
 
 
-def create_singleton_fullpuz(singleton_id: bytes32, db_layer_puz: Program) -> Program:
-    mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
-    singleton_struct = Program.to((mod_hash, (singleton_id, SINGLETON_LAUNCHER.get_tree_hash())))
-    return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, db_layer_puz)
+def solve_data_layer_to_report(amount: uint64) -> Program:
+    # TODO: Fix hint errors and remove ignore
+    #  Returning Any from function declared to return "Program"
+    return Program.to(  # type: ignore
+        [
+            1,
+            amount,
+            [],
+        ]
+    )
+
+
+def solve_data_layer_to_update(inner_puzzle: Program, inner_solution: Program) -> Program:
+    # TODO: Fix hint errors and remove ignore
+    #  Returning Any from function declared to return "Program"
+    return Program.to(  # type: ignore
+        [
+            0,
+            inner_solution,
+            inner_puzzle,
+        ]
+    )
 
 
 def create_offer_fullpuz(
@@ -51,6 +69,33 @@ def create_offer_fullpuz(
         DB_HOST_MOD_HASH, singleton_struct, leaf_reveal, claim_target, recovery_target, recovery_timelock
     )
     return full_puz
+
+
+def solve_dl_offer_for_claim(
+    offer_amount: uint64, inner_puzzle_hash: bytes32, root: bytes32, proof_of_inclusion: Program
+) -> Program:
+    # TODO: Fix hint errors and remove ignore
+    #  Returning Any from function declared to return "Program"
+    return Program.to(  # type: ignore
+        [
+            1,
+            offer_amount,
+            inner_puzzle_hash,
+            root,
+            proof_of_inclusion,
+        ]
+    )
+
+
+def solve_dl_offer_for_recover(offer_amount: uint64) -> Program:
+    # TODO: Fix hint errors and remove ignore
+    #  Returning Any from function declared to return "Program"
+    return Program.to(  # type: ignore
+        [
+            0,
+            offer_amount,
+        ]
+    )
 
 
 def match_dl_singleton(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
