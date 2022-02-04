@@ -623,6 +623,8 @@ class WalletNode:
                     return None
                 if block.is_transaction_block:
                     return block
+                if block.prev_transaction_block_hash is None:
+                    return None
                 current_hash = block.prev_transaction_block_hash
             else:
                 break
@@ -1186,7 +1188,7 @@ class WalletNode:
                 if stored_record.header_hash == block.header_hash:
                     return True
 
-        weight_proof: WeightProof = self.wallet_state_manager.blockchain.synced_weight_proof
+        weight_proof: Optional[WeightProof] = self.wallet_state_manager.blockchain.synced_weight_proof
         if weight_proof is None:
             return False
 
