@@ -13,6 +13,12 @@ if [ -d  "${SCRIPT_DIR}/.n" ]; then
   echo "  ${N_PREFIX}"
 fi
 
+if [ -z "$VIRTUAL_ENV" ]; then
+  echo "This requires the chia python virtual environment."
+  echo "Execute '. ./activate' before running."
+  exit 1
+fi
+
 if ! npm version >/dev/null 2>&1; then
   echo "Please install GUI dependencies by:"
   echo "  sh install-gui.sh"
