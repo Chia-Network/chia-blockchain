@@ -169,10 +169,11 @@ class TestDLWallet:
         await asyncio.sleep(0.5)
 
         new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
-        dl_tx = await dl_wallet_0.create_update_state_spend(launcher_id, new_root)
+        txs = await dl_wallet_0.create_update_state_spend(launcher_id, new_root)
 
-        await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_tx)
-        await full_node_api.process_transaction_records(records=[dl_tx])
+        for tx in txs:
+            await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
+        await full_node_api.process_transaction_records(records=txs)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
         await asyncio.sleep(0.5)
@@ -206,7 +207,7 @@ class TestDLWallet:
 
         await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.farm_blocks(count=2, wallet=wallet_0)
+        funds = await full_node_api.farm_blocks(count=5, wallet=wallet_0)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -238,45 +239,55 @@ class TestDLWallet:
         previous_record = await dl_wallet.get_latest_singleton(launcher_id)
 
         new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
-        dl_tx = await dl_wallet.create_update_state_spend(launcher_id, new_root)
+
+        txs = await dl_wallet.create_update_state_spend(launcher_id, new_root, fee=uint64(1999999999999))
         with pytest.raises(ValueError, match="is currently pending"):
             await dl_wallet.create_update_state_spend(launcher_id, new_root)
+
         new_record = await dl_wallet.get_latest_singleton(launcher_id)
         assert new_record is not None
         assert new_record != previous_record
         assert not new_record.confirmed
 
-        await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_tx)
-        await full_node_api.process_transaction_records(records=[dl_tx])
+        for tx in txs:
+            await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
+        await full_node_api.process_transaction_records(records=txs)
 
         await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
+        await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds - 2000000000000)
+        await time_out_assert(10, wallet_0.get_confirmed_balance, funds - 2000000000000)
         await asyncio.sleep(0.5)
 
         for _ in range(0, 2):
             current_record = await dl_wallet.get_latest_singleton(launcher_id)
-            dl_tx, _ = await dl_wallet.create_report_spend(launcher_id)
+            txs, _ = await dl_wallet.create_report_spend(launcher_id, fee=uint64(2000000000000))
             new_record = await dl_wallet.get_latest_singleton(launcher_id)
             assert new_record is not None
             assert new_record != current_record
             assert not new_record.confirmed
 
-            await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_tx)
-            await full_node_api.process_transaction_records(records=[dl_tx])
+            for tx in txs:
+                await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
+            await full_node_api.process_transaction_records(records=txs)
 
             await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
             await asyncio.sleep(0.5)
 
+        await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds - 6000000000000)
+        await time_out_assert(10, wallet_0.get_confirmed_balance, funds - 6000000000000)
+
         previous_record = await dl_wallet.get_latest_singleton(launcher_id)
 
         new_root = MerkleTree([Program.to("new root").get_tree_hash()]).calculate_root()
-        dl_tx = await dl_wallet.create_update_state_spend(launcher_id, new_root)
+        txs = await dl_wallet.create_update_state_spend(launcher_id, new_root)
         new_record = await dl_wallet.get_latest_singleton(launcher_id)
         assert new_record is not None
         assert new_record != previous_record
         assert not new_record.confirmed
 
-        await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_tx)
-        await full_node_api.process_transaction_records(records=[dl_tx])
+        for tx in txs:
+            await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
+        await full_node_api.process_transaction_records(records=txs)
 
         await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
         await asyncio.sleep(0.5)
