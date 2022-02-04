@@ -106,7 +106,6 @@ class WalletStateManager:
     blockchain: WalletBlockchain
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
-    finished_sync_up_to: uint32
     interested_store: WalletInterestedStore
     weight_proof_handler: WalletWeightProofHandler
     server: ChiaServer
@@ -157,7 +156,6 @@ class WalletStateManager:
 
         self.wallet_node = wallet_node
         self.sync_mode = False
-        self.finished_sync_up_to = uint32(0)
         self.weight_proof_handler = WalletWeightProofHandler(self.constants)
         self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants, self.weight_proof_handler)
 
@@ -329,7 +327,6 @@ class WalletStateManager:
             await self.puzzle_store.add_derivation_paths(derivation_paths, in_transaction)
             for record in derivation_paths:
                 await self.add_interested_puzzle_hash(record.puzzle_hash, record.wallet_id, in_transaction)
-            # await self.wallet_node.new_puzzle_hash_created(puzzle_hashes)
         if unused > 0:
             await self.puzzle_store.set_used_up_to(uint32(unused - 1), in_transaction)
 
@@ -447,7 +444,7 @@ class WalletStateManager:
         if latest is None:
             return False
 
-        if latest.height - self.finished_sync_up_to > 2:
+        if latest.height - await self.blockchain.get_finished_sync_up_to() > 2:
             return False
 
         latest_timestamp = self.blockchain.get_latest_timestamp()

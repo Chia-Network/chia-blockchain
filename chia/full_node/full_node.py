@@ -986,21 +986,20 @@ class FullNode:
     ):
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
 
+        for peer in self.server.get_connections(NodeType.WALLET):
+            changes_for_peer[peer.peer_node_id] = set()
+
         states, hint_state = state_update
 
         for coin_record in states:
             if coin_record.name in self.coin_subscriptions:
                 subscribed_peers = self.coin_subscriptions[coin_record.name]
                 for peer in subscribed_peers:
-                    if peer not in changes_for_peer:
-                        changes_for_peer[peer] = set()
                     changes_for_peer[peer].add(coin_record.coin_state)
 
             if coin_record.coin.puzzle_hash in self.ph_subscriptions:
                 subscribed_peers = self.ph_subscriptions[coin_record.coin.puzzle_hash]
                 for peer in subscribed_peers:
-                    if peer not in changes_for_peer:
-                        changes_for_peer[peer] = set()
                     changes_for_peer[peer].add(coin_record.coin_state)
 
         # This is just a verification that the assumptions justifying the ignore below
@@ -1014,8 +1013,6 @@ class FullNode:
             subscribed_peers = self.ph_subscriptions.get(hint)  # type: ignore[call-overload]
             if subscribed_peers is not None:
                 for peer in subscribed_peers:
-                    if peer not in changes_for_peer:
-                        changes_for_peer[peer] = set()
                     for record in records.values():
                         changes_for_peer[peer].add(record.coin_state)
 
