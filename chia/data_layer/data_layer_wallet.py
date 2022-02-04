@@ -404,17 +404,14 @@ class DataLayerWallet:
     async def create_tandem_xch_tx(
         self, fee: uint64, announcement_to_assert: Announcement, coin_announcement: bool = True
     ) -> TransactionRecord:
-        kwargs: Dict[str, Any] = {
-            "amount": uint64(0),
-            "puzzle_hash": (await self.standard_wallet.get_new_puzzlehash()),
-            "fee": fee,
-            "negative_change_allowed": False,
-        }
-        if coin_announcement:
-            kwargs["coin_announcements_to_consume"] = {announcement_to_assert}
-        else:
-            kwargs["puzzle_announcements_to_consume"] = {announcement_to_assert}
-        chia_tx = await self.standard_wallet.generate_signed_transaction(**kwargs)
+        chia_tx = await self.standard_wallet.generate_signed_transaction(
+            amount=uint64(0),
+            puzzle_hash=await self.standard_wallet.get_new_puzzlehash(),
+            fee=fee,
+            negative_change_allowed=False,
+            coin_announcements_to_consume={announcement_to_assert} if coin_announcement else None,
+            puzzle_announcements_to_consume=None if coin_announcement else {announcement_to_assert},
+        )
         assert chia_tx.spend_bundle is not None
         return chia_tx
 
