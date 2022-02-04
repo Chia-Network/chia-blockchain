@@ -627,8 +627,6 @@ class WalletStateManager:
         self,
         coin_states: List[CoinState],
         peer: WSChiaConnection,
-        fork_height: Optional[uint32] = None,
-        current_height: Optional[uint32] = None,
     ):
         created_h_none = []
         for coin_st in coin_states.copy():
@@ -641,13 +639,6 @@ class WalletStateManager:
         trade_removals = await self.trade_manager.get_coins_of_interest()
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
         trade_coin_removed: List[CoinState] = []
-
-        # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
-        if fork_height is not None and current_height is not None and fork_height != current_height - 1:
-            # This only applies to trusted mode
-            await self.reorg_rollback(fork_height)
-
-        new_interested_coin_ids: List[bytes32] = []
 
         for coin_state_idx, coin_state in enumerate(coin_states):
             info = await self.get_wallet_id_for_puzzle_hash(coin_state.coin.puzzle_hash)
@@ -848,7 +839,7 @@ class WalletStateManager:
                                 record.wallet_type,
                             )
                             await self.coin_store.set_spent(curr_coin_state.coin.name(), curr_coin_state.spent_height)
-                            new_interested_coin_ids.append(new_singleton_coin.name())
+                            await self.interested_store.add_interested_coin_id(new_singleton_coin.name(), True)
                             new_coin_state: List[CoinState] = await self.wallet_node.get_coin_state(
                                 [new_singleton_coin.name()]
                             )
@@ -897,12 +888,10 @@ class WalletStateManager:
                     await self.coin_added(
                         coin_added, coin_state.spent_height, [], pool_wallet.id(), WalletType(pool_wallet.type())
                     )
-                    new_interested_coin_ids.append(coin_added.name())
+                    await self.interested_store.add_interested_coin_id(coin_added.name(), True)
 
             else:
                 raise RuntimeError("All cases already handled")  # Logic error, all cases handled
-        for new_coin_id in new_interested_coin_ids:
-            await self.add_interested_coin_id(new_coin_id)
         for coin_state_removed in trade_coin_removed:
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed)
 

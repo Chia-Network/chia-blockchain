@@ -473,12 +473,17 @@ class WalletNode:
     async def receive_state_from_peer(
         self, items: List[CoinState], peer: WSChiaConnection, fork_height: Optional[uint32], height: Optional[uint32]
     ):
+        assert self.wallet_state_manager is not None
         trusted = self.is_trusted(peer)
         # Validate states in parallel, apply serial
         if self.validation_semaphore is None:
             self.validation_semaphore = asyncio.Semaphore(6)
         if self.new_state_lock is None:
             self.new_state_lock = asyncio.Lock()
+
+        # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
+        if trusted and fork_height is not None and height is not None and fork_height != height - 1:
+            await self.wallet_state_manager.reorg_rollback(fork_height)
 
         all_tasks = []
 
@@ -500,7 +505,7 @@ class WalletNode:
                             self.log.info(f"new coin state received ({inner_idx} / {len(items)})")
                             assert self.new_state_lock is not None
                             async with self.new_state_lock:
-                                await self.wallet_state_manager.new_coin_state([inner_state], peer, fork_height, height)
+                                await self.wallet_state_manager.new_coin_state([inner_state], peer)
                         elif height is not None:
                             self.add_state_to_race_cache(height, inner_state)
                         else:
