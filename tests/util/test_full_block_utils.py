@@ -19,15 +19,41 @@ from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 
 from benchmarks.utils import rand_hash, rand_bytes, rewards, rand_g1, rand_g2, rand_vdf, rand_vdf_proof
 
+test_g2s = [rand_g2() for _ in range(10)]
+test_g1s = [rand_g1() for _ in range(10)]
+test_hashes = [rand_hash() for _ in range(100)]
+test_vdfs = [rand_vdf() for _ in range(100)]
+test_vdf_proofs = [rand_vdf_proof() for _ in range(100)]
+
+
+def g2():
+    return random.sample(test_g2s, 1)[0]
+
+
+def g1():
+    return random.sample(test_g1s, 1)[0]
+
+
+def hsh():
+    return random.sample(test_hashes, 1)[0]
+
+
+def vdf():
+    return random.sample(test_vdfs, 1)[0]
+
+
+def vdf_proof():
+    return random.sample(test_vdf_proofs, 1)[0]
+
 
 def get_proof_of_space():
-    for pool_pk in [rand_g1(), None]:
-        for plot_hash in [rand_hash(), None]:
+    for pool_pk in [g1(), None]:
+        for plot_hash in [hsh(), None]:
             yield ProofOfSpace(
-                rand_hash(),  # challenge
+                hsh(),  # challenge
                 pool_pk,
                 plot_hash,
-                rand_g1(),  # plot_public_key
+                g1(),  # plot_public_key
                 uint8(32),
                 rand_bytes(8 * 32),
             )
@@ -35,9 +61,9 @@ def get_proof_of_space():
 
 def get_reward_chain_block(height):
     for has_transactions in [True, False]:
-        for challenge_chain_sp_vdf in [rand_vdf(), None]:
-            for reward_chain_sp_vdf in [rand_vdf(), None]:
-                for infused_challenge_chain_ip_vdf in [rand_vdf(), None]:
+        for challenge_chain_sp_vdf in [vdf(), None]:
+            for reward_chain_sp_vdf in [vdf(), None]:
+                for infused_challenge_chain_ip_vdf in [vdf(), None]:
                     for proof_of_space in get_proof_of_space():
                         weight = uint128(random.randint(0, 1000000000))
                         iters = uint128(123456)
@@ -47,44 +73,44 @@ def get_reward_chain_block(height):
                             uint32(height),
                             iters,
                             sp_index,
-                            rand_hash(),  # pos_ss_cc_challenge_hash
+                            hsh(),  # pos_ss_cc_challenge_hash
                             proof_of_space,
                             challenge_chain_sp_vdf,
-                            rand_g2(),  # challenge_chain_sp_signature
-                            rand_vdf(),  # challenge_chain_ip_vdf
+                            g2(),  # challenge_chain_sp_signature
+                            vdf(),  # challenge_chain_ip_vdf
                             reward_chain_sp_vdf,
-                            rand_g2(),  # reward_chain_sp_signature
-                            rand_vdf(),  # reward_chain_ip_vdf
+                            g2(),  # reward_chain_sp_signature
+                            vdf(),  # reward_chain_ip_vdf
                             infused_challenge_chain_ip_vdf,
                             has_transactions,
                         )
 
 
 def get_foliage_block_data():
-    for pool_signature in [rand_g2(), None]:
+    for pool_signature in [g2(), None]:
         pool_target = PoolTarget(
-            rand_hash(),  # puzzle_hash
+            hsh(),  # puzzle_hash
             uint32(0),  # max_height
         )
 
         yield FoliageBlockData(
-            rand_hash(),  # unfinished_reward_block_hash
+            hsh(),  # unfinished_reward_block_hash
             pool_target,
             pool_signature,  # pool_signature
-            rand_hash(),  # farmer_reward_puzzle_hash
-            rand_hash(),  # extension_data
+            hsh(),  # farmer_reward_puzzle_hash
+            hsh(),  # extension_data
         )
 
 
 def get_foliage():
     for foliage_block_data in get_foliage_block_data():
-        for foliage_transaction_block_hash in [rand_hash(), None]:
-            for foliage_transaction_block_signature in [rand_g2(), None]:
+        for foliage_transaction_block_hash in [hsh(), None]:
+            for foliage_transaction_block_signature in [g2(), None]:
                 yield Foliage(
-                    rand_hash(),  # prev_block_hash
-                    rand_hash(),  # reward_block_hash
+                    hsh(),  # prev_block_hash
+                    hsh(),  # reward_block_hash
                     foliage_block_data,
-                    rand_g2(),  # foliage_block_data_signature
+                    g2(),  # foliage_block_data_signature
                     foliage_transaction_block_hash,
                     foliage_transaction_block_signature,
                 )
@@ -94,12 +120,12 @@ def get_foliage_transaction_block():
     yield None
     timestamp = uint64(1631794488)
     yield FoliageTransactionBlock(
-        rand_hash(),  # prev_transaction_block
+        hsh(),  # prev_transaction_block
         timestamp,
-        rand_hash(),  # filter_hash
-        rand_hash(),  # additions_root
-        rand_hash(),  # removals_root
-        rand_hash(),  # transactions_info_hash
+        hsh(),  # filter_hash
+        hsh(),  # additions_root
+        hsh(),  # removals_root
+        hsh(),  # transactions_info_hash
     )
 
 
@@ -110,9 +136,9 @@ def get_transactions_info(height):
     fees = uint64(random.randint(0, 150000))
 
     yield TransactionsInfo(
-        rand_hash(),  # generator_root
-        rand_hash(),  # generator_refs_root
-        rand_g2(),  # aggregated_signature
+        hsh(),  # generator_root
+        hsh(),  # generator_refs_root
+        g2(),  # aggregated_signature
         fees,
         uint64(random.randint(0, 12000000000)),  # cost
         reward_claims_incorporated,
@@ -120,12 +146,12 @@ def get_transactions_info(height):
 
 
 def get_challenge_chain_sub_slot():
-    for infused_chain_sub_slot_hash in [rand_hash(), None]:
-        for sub_epoch_summary_hash in [rand_hash(), None]:
+    for infused_chain_sub_slot_hash in [hsh(), None]:
+        for sub_epoch_summary_hash in [hsh(), None]:
             for new_sub_slot_iters in [uint64(random.randint(0, 4000000000)), None]:
                 for new_difficulty in [uint64(random.randint(1, 30)), None]:
                     yield ChallengeChainSubSlot(
-                        rand_vdf(),  # challenge_chain_end_of_slot_vdf
+                        vdf(),  # challenge_chain_end_of_slot_vdf
                         infused_chain_sub_slot_hash,
                         sub_epoch_summary_hash,
                         new_sub_slot_iters,
@@ -134,27 +160,27 @@ def get_challenge_chain_sub_slot():
 
 
 def get_reward_chain_sub_slot():
-    for infused_challenge_chain_sub_slot_hash in [rand_hash(), None]:
+    for infused_challenge_chain_sub_slot_hash in [hsh(), None]:
         yield RewardChainSubSlot(
-            rand_vdf(),  # end_of_slot_vdf
-            rand_hash(),  # challenge_chain_sub_slot_hash
+            vdf(),  # end_of_slot_vdf
+            hsh(),  # challenge_chain_sub_slot_hash
             infused_challenge_chain_sub_slot_hash,
             uint8(random.randint(0, 255)),  # deficit
         )
 
 
 def get_sub_slot_proofs():
-    for infused_challenge_chain_slot_proof in [rand_vdf_proof(), None]:
+    for infused_challenge_chain_slot_proof in [vdf_proof(), None]:
         yield SubSlotProofs(
-            rand_vdf_proof(),  # challenge_chain_slot_proof
+            vdf_proof(),  # challenge_chain_slot_proof
             infused_challenge_chain_slot_proof,
-            rand_vdf_proof(),  # reward_chain_slot_proof
+            vdf_proof(),  # reward_chain_slot_proof
         )
 
 
 def get_end_of_sub_slot():
     for challenge_chain in get_challenge_chain_sub_slot():
-        for infused_challenge_chain in [InfusedChallengeChainSubSlot(rand_vdf()), None]:
+        for infused_challenge_chain in [InfusedChallengeChainSubSlot(vdf()), None]:
             for reward_chain in get_reward_chain_sub_slot():
                 for proofs in get_sub_slot_proofs():
                     yield EndOfSubSlotBundle(
@@ -181,18 +207,18 @@ def get_full_blocks():
             height = random.randint(0, 1000000)
             for reward_chain_block in get_reward_chain_block(height):
                 for transactions_info in get_transactions_info(height):
-                    for challenge_chain_sp_proof in [rand_vdf_proof(), None]:
-                        for reward_chain_sp_proof in [rand_vdf_proof(), None]:
-                            for infused_challenge_chain_ip_proof in [rand_vdf_proof(), None]:
+                    for challenge_chain_sp_proof in [vdf_proof(), None]:
+                        for reward_chain_sp_proof in [vdf_proof(), None]:
+                            for infused_challenge_chain_ip_proof in [vdf_proof(), None]:
                                 for finished_sub_slots in get_finished_sub_slots():
 
                                     yield FullBlock(
                                         finished_sub_slots,
                                         reward_chain_block,
                                         challenge_chain_sp_proof,
-                                        rand_vdf_proof(),  # challenge_chain_ip_proof
+                                        vdf_proof(),  # challenge_chain_ip_proof
                                         reward_chain_sp_proof,
-                                        rand_vdf_proof(),  # reward_chain_ip_proof
+                                        vdf_proof(),  # reward_chain_ip_proof
                                         infused_challenge_chain_ip_proof,
                                         foliage,
                                         foliage_transaction_block,
