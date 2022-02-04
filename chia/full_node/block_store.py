@@ -297,6 +297,33 @@ class BlockStore:
                 ret.append(self.maybe_decompress(row[0]))
             return ret
 
+    async def get_generator(self, header_hash: bytes32) -> Optional[SerializedProgram]:
+
+        cached = self.block_cache.get(header_hash)
+        if cached is not None:
+            log.debug(f"cache hit for block {header_hash.hex()}")
+            return cached.transactions_generator
+
+        formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
+        async with self.db.execute(formatted_str, (self.maybe_to_hex(header_hash),)) as cursor:
+            row = await cursor.fetchone()
+            if row is None:
+                return None
+            if self.db_wrapper.db_version == 2:
+                block_bytes = zstd.decompress(row[0])
+            else:
+                block_bytes = row[0]
+
+            try:
+                return generator_from_block(block_bytes)
+            except Exception as e:
+                log.error(f"cheap parser failed for block at height {row[1]}: {e}")
+                # this is defensive, on the off-chance that
+                # generator_from_block() fails, fall back to the reliable
+                # definition of parsing a block
+                b = FullBlock.from_bytes(block_bytes)
+                return b.transactions_generator
+
     async def get_generators_at(self, heights: List[uint32]) -> List[SerializedProgram]:
         assert self.db_wrapper.db_version == 2
 
@@ -311,14 +338,12 @@ class BlockStore:
         )
         async with self.db.execute(formatted_str, heights_db) as cursor:
             async for row in cursor:
-                if self.db_wrapper.db_version == 2:
-                    block_bytes = zstd.decompress(row[0])
-                else:
-                    block_bytes = row[0]
+                block_bytes = zstd.decompress(row[0])
 
                 try:
                     gen = generator_from_block(block_bytes)
-                except BaseException:
+                except Exception as e:
+                    log.error(f"cheap parser failed for block at height {row[1]}: {e}")
                     # this is defensive, on the off-chance that
                     # generator_from_block() fails, fall back to the reliable
                     # definition of parsing a block
