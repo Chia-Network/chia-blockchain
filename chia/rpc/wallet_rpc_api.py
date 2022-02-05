@@ -1424,11 +1424,14 @@ class WalletRpcApi:
 
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                record = await wallet.create_update_state_spend(
-                    bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["new_root"])
+                records = await wallet.create_update_state_spend(
+                    bytes32.from_hexstr(request["launcher_id"]),
+                    bytes32.from_hexstr(request["new_root"]),
+                    fee=uint64(request.get("fee", 0)),
                 )
-                await self.service.wallet_state_manager.add_pending_transaction(record)
-                return {"tx_record": record.to_json_dict_convenience(self.service.config)}
+                for record in records:
+                    await self.service.wallet_state_manager.add_pending_transaction(record)
+                return {"tx_record": records[0].to_json_dict_convenience(self.service.config)}
 
         raise ValueError("No DataLayer wallet has been initialized")
 
@@ -1443,10 +1446,10 @@ class WalletRpcApi:
                 #       Otherwise spends are vulnerable to signature subtraction.
                 tx_records: List[TransactionRecord] = []
                 for launcher, root in request["updates"].items():
-                    record = await wallet.create_update_state_spend(
+                    records = await wallet.create_update_state_spend(
                         bytes32.from_hexstr(launcher), bytes32.from_hexstr(root)
                     )
-                    tx_records.append(record)
+                    tx_records.extend(records)
                 # Now that we have all the txs, we need to aggregate them all into just one spend
                 modified_txs: List[TransactionRecord] = []
                 aggregate_spend = SpendBundle([], G2Element())

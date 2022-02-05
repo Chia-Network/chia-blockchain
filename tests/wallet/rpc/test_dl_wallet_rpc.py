@@ -130,7 +130,7 @@ class TestWalletRpc:
             assert singleton_record.root == merkle_root
 
             new_root: bytes32 = bytes32([1] * 32)
-            await client.dl_update_root(launcher_id, new_root)
+            await client.dl_update_root(launcher_id, new_root, uint64(100))
 
             for i in range(0, 5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
