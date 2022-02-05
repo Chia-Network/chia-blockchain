@@ -4,7 +4,7 @@ import sys
 from os import remove
 from time import time
 
-from psutil import virtual_memory, disk_usage, PROCFS_PATH
+from psutil import virtual_memory, disk_usage
 
 # replaced aiosqlite by sqlite3 due to better performance and no aio is needed
 import sqlite3
@@ -54,16 +54,11 @@ def db_upgrade_func(
         db_path_replaced = db_pattern.replace("CHALLENGE", selected_network).replace("_v1_", "_v2_")
         out_db_path = path_from_root(root_path, db_path_replaced)
         mkdir(out_db_path.parent)
-#        print(f"{db_path_replaced}")
-#        print(f"{out_db_path}")
-#        print(f"{root_path}")
-#        out_path_string = db_path_replaced
-#        out_path_string = str(out_db_path)
 
     if check_only:
         check_db(in_db_path, temp_store_path, hdd, check_only)
     else:
-    #    check_db(in_db_path, temp_store_path, hdd, check_only)
+        check_db(in_db_path, temp_store_path, hdd, check_only)
         convert_v1_to_v2(in_db_path, out_db_path, offline, hdd, temp_store_path, check_only)
 
     if update_config and not check_only:
@@ -75,21 +70,6 @@ def db_upgrade_func(
         save_config(root_path, "config.yaml", config)
 
     print(f"\n\nLEAVING PREVIOUS DB FILE UNTOUCHED {in_db_path}\n")
-
-#BLOCK_COMMIT_RATE = 80000
-###BLOCK_COMMIT_RATE = 18600
-#COIN_COMMIT_RATE = 300000
-###COIN_COMMIT_RATE = 70000
-#SES_COMMIT_RATE = 50
-###SES_COMMIT_RATE = 12
-#HINT_COMMIT_RATE = 300000 #150000
-###HINT_COMMIT_RATE = 70000 #150000
-# Per 1 GiB would be
-##BLOCK_COMMIT_RATE_PER_GIB = 18600
-###COIN_COMMIT_RATE_PER_GIB = 70000
-###SES_COMMIT_RATE_PER_GIB = 12
-###HINT_COMMIT_RATE_PER_GIB = 70000
-
 
 def check_db(
     open_in_path: Path,
@@ -200,12 +180,6 @@ def connect_to_db(
     #    init_pagesize.execute("VACUUM")
     #    init_pagesize.close()
 
-#    if temp_store_path is not None:
-#        temp2_out_path = str(temp_store_path) + '/temp_coin_store.sqlite'
-#    else:
-#        temp2_out_path = out_path_string.replace("blockchain_v2_mainnet.sqlite", "temp_coin_store.sqlite")
-
-#    print(f"{temp2_out_path}")
     db.execute("ATTACH DATABASE ? AS v2db", (str(attach_out_path),))
     # Set parameter for attached database only
     db.execute("pragma v2db.journal_mode=OFF")
@@ -238,11 +212,6 @@ def convert_v1_to_v2(
     if mem_avail_until_swap < 5 * 1024 * 1024:
         print("Less than 512 MB memory available.")
 
-#    print(f"{mem.total}")
-#    print(f"{mem.available}")
-#    print(f"{mem_swap_threshold}")
-#    print(f"{mem_avail_until_swap}")
-#    print(f"{3.5 * 1024 * 1024 * 1024}")
     if mem_avail_until_swap < 3.5 * 1024 * 1024 * 1024:
         BLOCK_COMMIT_RATE = 18600
         COIN_COMMIT_RATE = 70000
@@ -266,33 +235,7 @@ def convert_v1_to_v2(
     print(f"\n\nopening file for reading: {in_path}")
     in_db = connect_to_db(in_path, out_path, mmap_size, offline, temp_store_path)
 
-    #  The update is split into the following stages
-    #  0. Initialzhe new target v2 database
-    #     a) create database_version table and save version
-    #     b) create current_peak table and save current peak
-    #     c) create empty target v2 tables
-    #        decided to don't source these statements from block_store.py, ... to not load LRU caches or such
-    #  1. Convert full_blocks to v2 and load data to target v2 tables
-    #   2. Create full_blocks indexes on v2 tables
-    #    decided to create indexes right after table data migration to get possible use of data in fs cache
-    #  3. Convert coin_store tables to temp sqlite db file
-    #     decided to use this approach and disconnect/recoonect sqlite sessions to get use of mmap
-    #  4. convert sub_epoch tables to temp sqlite db file
-    #  5. Migrate coin_store temp data to target v2 sqlite file
-    #  6. Create Indexes on coin_store tables
-    #  7. Migrate sub_epoch tables to target v2 sqlite file
-    #  8. Placeholder (was used to create unique index on sub_epoch table to test table without Pk)
-    #     Questions:
-    #     -) is it possible to move this table to a separate sqlite db file?
-    #        This table would imo benefit from 64k page size, due to the big size of its rows (on avg 600k).
-    #        Right now the data is scattered over the whole sqlite file.
-    #     -) on hints table, the PK was removed and a workaround using 'ON CONFLICT DO NOTHING' was introduced
-    #        I saw that data is inserted every about 9s with replace, so the hints approach is probably also valid here?
-    #  9. Convert and migrate hints table to target v2 sqlite file
-    # 10. Create indexes on hints table
-    # Finally update the database version to 2
-
-    print("\n[0/10] initializing v2 database with current_peak")
+    print("\n[0/9] initializing v2 database with current_peak")
 
     # CURRENT_PEAK START
     # The table current_peak would probably benefit from a without rowid implementation
@@ -370,10 +313,9 @@ def convert_v1_to_v2(
     # FULL BLOCKS/BLOCK_RECORDS
     # Source Table is ~19 GB/ Source Tables is ~1.3 GB
 
-    print("\n[1/10] converting full_blocks")
+    print("\n[1/9] converting full_blocks")
 
     # Cache Size of 1G to write to attached db
-    #in_db.execute("pragma v2db.cache_size=-1048576")
     in_db.execute("pragma v2db.cache_size=-524288")
 
     rate = 1.0
@@ -534,7 +476,7 @@ def convert_v1_to_v2(
     print(f"\n\tOverall Time: {full_blocks_end_time - block_start_time:.2f} seconds")
 
     # INDEXES BLOCK STORE START
-    print("\n[2/10] recreating block store indexes")
+    print("\n[2/9] recreating block store indexes")
     # Found out having best performance on index rebuild using small cache size
     in_db.execute("pragma v2db.cache_size=-2000")
 
@@ -559,13 +501,7 @@ def convert_v1_to_v2(
     block_heightmain_end = time()
     print(f"\tCreate Index on height/main_chain: {block_heightmain_end - block_compmain_end:.2f} seconds ")
 
-    # Leftover of non-PK test
-    # 4. INDEX
-    #   in_db.execute(
-    #       "CREATE UNIQUE INDEX IF NOT EXISTS v2db.fb_header_hash ON full_blocks(header_hash)"
-    #   )
     block_store_end = time()
-    #   print(f"\tCreate Unique Index on header_hash: {block_store_end - block_heightmain_end:.2f} seconds ")
 
     print(f"\tOverall Indexes: {block_store_end - block_store_start:.2f} seconds ")
     # INDEXES BLOCK STORE END
@@ -574,6 +510,7 @@ def convert_v1_to_v2(
     ############
 
     # Reconnect to get new mmap initalization for new table
+    # Change temp file path if specified
     if temp_store_path is not None:  
         temp2_out_path = temp_store_path / 'temp_coin_store.sqlite'
     else:
@@ -582,9 +519,8 @@ def convert_v1_to_v2(
 
     # COIN_RECORD
     # Source Table is ~9.5G
-    print("\n[3/10] converting coin_store")
+    print("\n[3/9] converting coin_store")
 
-    #temp2_db.execute("pragma v2db.cache_size=-1048576")
     temp2_db.execute("pragma v2db.cache_size=-524288")
 
     rate = 1.0
@@ -703,12 +639,11 @@ def convert_v1_to_v2(
         temp3_out_path = temp_store_path / 'temp_sub_epoch.sqlite'
     else:
         temp3_out_path = out_path.parent / 'temp_sub_epoch.sqlite'
-    #temp3_out_path = out_path_string.replace("blockchain_v2_mainnet.sqlite", "temp_sub_epoch.sqlite")
     temp3_db = connect_to_db(in_path, temp3_out_path, mmap_size, offline, temp_store_path)
 
     # SUB_EPOCH_SEGMENTS_V3
     # Source Table is 2.4G
-    print("\n[4/10] converting sub_epoch_segments_v3")
+    print("\n[4/9] converting sub_epoch_segments_v3")
 
     # Sub Epoch table also benefits when using cache size on source db file
     temp3_db.execute("pragma main.cache_size=-102400")
@@ -777,7 +712,7 @@ def convert_v1_to_v2(
     # and will be migrated to target db file now
     print(f"\nstarting migration to final db file: {out_path}")
 
-    print("\n[5/10] migrating temp table coin_record")
+    print("\n[5/9] migrating temp table coin_record")
     in_db = connect_to_db(temp2_out_path, out_path, mmap_size, True, temp_store_path)
 
     # Setting explicitly lower cache_spill to prevent to much memory usage
@@ -797,7 +732,7 @@ def convert_v1_to_v2(
     # COIN_RECORD END
 
     # INDEXES
-    print("\n[6/10] Recreating coin store indexes")
+    print("\n[6/9] Recreating coin store indexes")
     in_db.execute("pragma v2db.cache_size=-2000")
 
     # 1. INDEX
@@ -827,10 +762,7 @@ def convert_v1_to_v2(
     coin_spent_end = time()
     print(f"\tCreate Index on spent_index: {coin_spent_end - coin_conf_end:.2f} seconds                             ")
 
-    # 5. INDEX
-    #   in_db.execute("CREATE UNIQUE INDEX IF NOT EXISTS v2db.cr_coin_name on coin_record(coin_name)")
     coin_name_end = time()
-    #   print(f"\tCreate Unique Index on coin_name: {coin_name_end - coin_spent_end:.2f} seconds                  ")
 
     print(f"\tOverall Index Rebuild: {coin_name_end - coin_store_start:.2f} seconds                             ")
 
@@ -838,7 +770,7 @@ def convert_v1_to_v2(
     remove(temp2_out_path)
     ############
 
-    print("\n[7/10] migrating temp table sub_epoch_segments_v3")
+    print("\n[7/9] migrating temp table sub_epoch_segments_v3")
     in_db = connect_to_db(temp3_out_path, out_path, mmap_size, True, temp_store_path)
 
     in_db.execute("pragma v2db.cache_spill=100000")
@@ -854,23 +786,13 @@ def convert_v1_to_v2(
     in_db.commit()
     # SUB_EPOCH_SEGMENTS_V3 END
 
-    # INDEXES
-    print("\n[8/10] Recreating sub_epoch_segments_v3 indexes")
-    in_db.execute("pragma v2db.cache_size=-2000")
-
-    # 1. INDEX
-    #   ses_start = time()
-    #   in_db.execute("CREATE UNIQUE INDEX IF NOT EXISTS v2db.ses_block_hash on sub_epoch_segments_v3(ses_block_hash)")
-    #   ses_end = time()
-    #   print(f"\tCreate Unique Index on ses_block_hash: {ses_end - ses_start:.2f} seconds                          ")
-
     in_db.close()
     remove(temp3_out_path)
     ############
 
     # HINTS
     # Source Table is 40M
-    print("\n[9/10] converting hint_store")
+    print("\n[8/9] converting hint_store")
     in_db = connect_to_db(in_path, out_path, mmap_size, offline, temp_store_path)
 
     in_db.execute("pragma v2db.cache_size=-524288")
@@ -915,7 +837,7 @@ def convert_v1_to_v2(
     print(f"\tOverall Time: {end_time - hint_start_time:.2f} seconds                             ")
 
     # INDEXES
-    print("\n[10/10] recreating hints indexes")
+    print("\n[9/9] recreating hints indexes")
 
     in_db.execute("pragma v2db.cache_size=-2000")
 
