@@ -808,7 +808,6 @@ def convert_v1_to_v2(
 
     # DATA MIGRATION
 
-    count = 0
     in_db.execute("BEGIN TRANSACTION")
     while True:
         rows = cursor.fetchmany(HINT_COMMIT_RATE)
