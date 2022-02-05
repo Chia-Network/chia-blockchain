@@ -57,7 +57,7 @@ def db_upgrade_func(
         check_db(in_db_path, temp_store_path, hdd, check_only)
     else:
         # Commented out to save time during tests
-        #check_db(in_db_path, temp_store_path, hdd, check_only)
+        # check_db(in_db_path, temp_store_path, hdd, check_only)
         convert_v1_to_v2(in_db_path, out_db_path, offline, hdd, temp_store_path, check_only)
 
     if update_config and not check_only:
