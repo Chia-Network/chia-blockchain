@@ -136,6 +136,14 @@ def verify_cmd(message: str, public_key: str, signature: str):
     verify(message, public_key, signature)
 
 
+@keys_cmd.command("migrate", short_help="Attempt to migrate keys to the Chia keyring")
+@click.pass_context
+def migrate_cmd(ctx: click.Context):
+    from .keys_funcs import migrate_keys
+
+    migrate_keys()
+
+
 @keys_cmd.group("derive", short_help="Derive child keys or wallet addresses")
 @click.option(
     "--fingerprint",

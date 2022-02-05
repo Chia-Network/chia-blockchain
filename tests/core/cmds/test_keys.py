@@ -1,16 +1,20 @@
 import os
+import pkg_resources
 import pytest
 import re
 
+from blspy import PrivateKey
 from chia.cmds.chia import cli
 from chia.cmds.keys import delete_all_cmd, generate_and_print_cmd, show_cmd, sign_cmd, verify_cmd
 from chia.util.config import load_config
-from chia.util.keychain import generate_mnemonic
-from chia.util.keyring_wrapper import KeyringWrapper
+from chia.util.file_keyring import FileKeyring
+from chia.util.keychain import DEFAULT_USER, DEFAULT_SERVICE, Keychain, generate_mnemonic
+from chia.util.keyring_wrapper import DEFAULT_KEYS_ROOT_PATH, KeyringWrapper, LegacyKeyring
 from click.testing import CliRunner, Result
+from keyring.backend import KeyringBackend
 from pathlib import Path
 from tests.util.keyring import TempKeyring
-from typing import Dict
+from typing import Dict, List, Optional, Tuple
 
 
 TEST_MNEMONIC_SEED = (
@@ -19,6 +23,46 @@ TEST_MNEMONIC_SEED = (
     "tomato remind jaguar original blur embody project can"
 )
 TEST_FINGERPRINT = 2877570395
+
+
+class DummyLegacyKeyring(KeyringBackend):
+
+    # Fingerprint 2474840988
+    KEY_0 = (
+        "89e29e5f9c3105b2a853475cab2392468cbfb1d65c3faabea8ebc78fe903fd279e56a8d93f6325fc6c3d833a2ae74832"
+        "b8feaa3d6ee49998f43ce303b66dcc5abb633e5c1d80efe85c40766135e4a44c"
+    )
+
+    # Fingerprint 4149609062
+    KEY_1 = (
+        "8b0d72288727af6238fcd9b0a663cd7d4728738fca597d0046cbb42b6432e0a5ae8026683fc5f9c73df26fb3e1cec2c8"
+        "ad1b4f601107d96a99f6fa9b9d2382918fb1e107fb6655c7bdd8c77c1d9c201f"
+    )
+
+    # Fingerprint 3618811800
+    KEY_2 = (
+        "8b2a26ba319f83bd3da5b1b147a817ecc4ca557f037c9db1cfedc59b16ee6880971b7d292f023358710a292c8db0eb82"
+        "35808f914754ae24e493fad9bc7f654b0f523fb406973af5235256a39bed1283"
+    )
+
+    def __init__(self, populate: bool = True):
+        self.service_dict = {}
+
+        if populate:
+            self.service_dict[DEFAULT_SERVICE] = {
+                f"wallet-{DEFAULT_USER}-0": DummyLegacyKeyring.KEY_0,
+                f"wallet-{DEFAULT_USER}-1": DummyLegacyKeyring.KEY_1,
+                f"wallet-{DEFAULT_USER}-2": DummyLegacyKeyring.KEY_2,
+            }
+
+    def get_password(self, service, username, password=None):
+        return self.service_dict.get(service, {}).get(username)
+
+    def set_password(self, service, username, password):
+        self.service_dict.setdefault(service, {})[username] = password
+
+    def delete_password(self, service, username):
+        del self.service_dict[service][username]
 
 
 class TestKeysCommands:
@@ -40,6 +84,30 @@ class TestKeysCommands:
         with open(seed_file, "w") as f:
             f.write(TEST_MNEMONIC_SEED)
         return seed_file
+
+    @pytest.fixture(scope="function")
+    def setup_keyringwrapper(self, tmp_path):
+        KeyringWrapper.cleanup_shared_instance()
+        KeyringWrapper.set_keys_root_path(tmp_path)
+        _ = KeyringWrapper.get_shared_instance()
+        yield
+        KeyringWrapper.cleanup_shared_instance()
+        KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
+
+    @pytest.fixture(scope="function")
+    def setup_legacy_keyringwrapper(self, tmp_path, monkeypatch):
+        def mock_setup_keyring_file_watcher(_):
+            pass
+
+        # Silence errors in the watchdog module during testing
+        monkeypatch.setattr(FileKeyring, "setup_keyring_file_watcher", mock_setup_keyring_file_watcher)
+
+        KeyringWrapper.cleanup_shared_instance()
+        KeyringWrapper.set_keys_root_path(tmp_path)
+        KeyringWrapper.get_shared_instance().legacy_keyring = DummyLegacyKeyring()
+        yield
+        KeyringWrapper.cleanup_shared_instance()
+        KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
 
     def test_generate_with_new_config(self, tmp_path, empty_keyring):
         """
@@ -681,3 +749,224 @@ class TestKeysCommands:
             )
             != -1
         )
+
+    def test_migration_not_needed(self, tmp_path, setup_keyringwrapper, monkeypatch):
+        """
+        Test the `chia keys migrate` command when no migration is necessary
+        """
+
+        def mock_keychain_needs_migration() -> bool:
+            return False
+
+        monkeypatch.setattr(Keychain, "needs_migration", mock_keychain_needs_migration)
+
+        def mock_keychain_get_keys_needing_migration() -> Tuple[List[Tuple[PrivateKey, bytes]], Optional[Keychain]]:
+            return [], None
+
+        monkeypatch.setattr(Keychain, "get_keys_needing_migration", mock_keychain_get_keys_needing_migration)
+
+        runner = CliRunner()
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "keys",
+                "migrate",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert result.output.find("No keys need migration") != -1
+
+    def test_migration_full(self, tmp_path, setup_legacy_keyringwrapper):
+        """
+        Test the `chia keys migrate` command when a full migration is needed
+        """
+
+        legacy_keyring = KeyringWrapper.get_shared_instance().legacy_keyring
+
+        assert legacy_keyring is not None
+        assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 3
+
+        runner = CliRunner()
+        init_result: Result = runner.invoke(
+            cli,
+            ["--root-path", os.fspath(tmp_path), "init"],
+        )
+
+        assert init_result.exit_code == 0
+
+        runner = CliRunner()
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "keys",
+                "migrate",
+            ],
+            input="n\ny\ny\n",  # Prompts: 'n' = don't set a passphrase, 'y' = begin migration, 'y' = remove legacy keys
+        )
+
+        assert result.exit_code == 0
+        assert KeyringWrapper.get_shared_instance().using_legacy_keyring() is False  # legacy keyring unset
+        assert type(KeyringWrapper.get_shared_instance().keyring) is FileKeyring  # new keyring set
+        assert len(Keychain().get_all_public_keys()) == 3  # new keyring has 3 keys
+        assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 0  # legacy keys removed
+
+        current_version_str = pkg_resources.get_distribution("chia-blockchain").version
+        last_migration_version_str = (
+            KeyringWrapper.get_shared_instance().keys_root_path / ".last_legacy_migration"
+        ).read_text()
+        assert last_migration_version_str == current_version_str  # last migration version set
+
+    def test_migration_incremental(self, tmp_path, keyring_with_one_key, monkeypatch):
+        KeyringWrapper.set_keys_root_path(tmp_path)
+        KeyringWrapper.cleanup_shared_instance()
+
+        keychain = keyring_with_one_key
+        legacy_keyring = DummyLegacyKeyring()
+
+        def mock_get_legacy_keyring_instance() -> Optional[LegacyKeyring]:
+            nonlocal legacy_keyring
+            return legacy_keyring
+
+        from chia.util import keyring_wrapper
+
+        monkeypatch.setattr(keyring_wrapper, "get_legacy_keyring_instance", mock_get_legacy_keyring_instance)
+
+        assert len(keychain.get_all_private_keys()) == 1
+        assert keychain.keyring_wrapper.legacy_keyring is None
+        assert legacy_keyring is not None
+        assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 3
+
+        runner = CliRunner()
+        init_result: Result = runner.invoke(
+            cli,
+            ["--root-path", os.fspath(tmp_path), "init"],
+        )
+
+        assert init_result.exit_code == 0
+
+        runner = CliRunner()
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "keys",
+                "migrate",
+            ],
+            input="y\ny\n",  # Prompts: 'y' = migrate keys, 'y' = remove legacy keys
+        )
+
+        assert result.exit_code == 0
+        assert KeyringWrapper.get_shared_instance().using_legacy_keyring() is False  # legacy keyring is not set
+        assert type(KeyringWrapper.get_shared_instance().keyring) is FileKeyring  # new keyring set
+        assert len(Keychain().get_all_public_keys()) == 4  # new keyring has 4 keys
+        assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 0  # legacy keys removed
+
+        current_version_str = pkg_resources.get_distribution("chia-blockchain").version
+        last_migration_version_str = (
+            KeyringWrapper.get_shared_instance().keys_root_path / ".last_legacy_migration"
+        ).read_text()
+        assert last_migration_version_str == current_version_str  # last migration version set
+
+    def test_migration_silent(self, tmp_path, keyring_with_one_key, monkeypatch):
+        KeyringWrapper.set_keys_root_path(tmp_path)
+        KeyringWrapper.cleanup_shared_instance()
+
+        keychain = keyring_with_one_key
+        legacy_keyring = DummyLegacyKeyring()
+
+        def mock_get_legacy_keyring_instance() -> Optional[LegacyKeyring]:
+            nonlocal legacy_keyring
+            return legacy_keyring
+
+        from chia.util import keyring_wrapper
+
+        monkeypatch.setattr(keyring_wrapper, "get_legacy_keyring_instance", mock_get_legacy_keyring_instance)
+
+        assert len(keychain.get_all_private_keys()) == 1
+        assert len(Keychain().get_all_private_keys()) == 1
+        assert keychain.keyring_wrapper.legacy_keyring is None
+        assert legacy_keyring is not None
+        assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 3
+
+        keys_needing_migration, legacy_migration_keychain = Keychain.get_keys_needing_migration()
+        assert len(keys_needing_migration) == 3
+        assert legacy_migration_keychain is not None
+
+        Keychain.migrate_legacy_keys_silently()
+
+        assert type(KeyringWrapper.get_shared_instance().keyring) is FileKeyring  # new keyring set
+        assert len(Keychain().get_all_public_keys()) == 4  # new keyring has 4 keys
+        assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 3  # legacy keys still intact
+
+    def test_migration_silent_keys_already_present(self, tmp_path, keyring_with_one_key, monkeypatch):
+        KeyringWrapper.set_keys_root_path(tmp_path)
+        KeyringWrapper.cleanup_shared_instance()
+
+        keychain = keyring_with_one_key
+        pkent_str = keychain.keyring_wrapper.get_passphrase(DEFAULT_SERVICE, f"wallet-{DEFAULT_USER}-0")
+        legacy_keyring = DummyLegacyKeyring(populate=False)
+        legacy_keyring.set_password(DEFAULT_SERVICE, f"wallet-{DEFAULT_USER}-0", pkent_str)
+
+        def mock_get_legacy_keyring_instance() -> Optional[LegacyKeyring]:
+            nonlocal legacy_keyring
+            return legacy_keyring
+
+        from chia.util import keyring_wrapper
+
+        monkeypatch.setattr(keyring_wrapper, "get_legacy_keyring_instance", mock_get_legacy_keyring_instance)
+
+        assert len(keychain.get_all_private_keys()) == 1
+        assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 1
+
+        keys_needing_migration, legacy_migration_keychain = Keychain.get_keys_needing_migration()
+        assert len(keys_needing_migration) == 0
+        assert legacy_migration_keychain is not None
+
+        Keychain.migrate_legacy_keys_silently()
+
+        assert type(KeyringWrapper.get_shared_instance().keyring) is FileKeyring  # new keyring set
+        assert len(Keychain().get_all_public_keys()) == 1  # keyring has 1 key
+        assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 1  # legacy keys still intact
+
+    def test_migration_checked(self, tmp_path, monkeypatch):
+        KeyringWrapper.set_keys_root_path(tmp_path)
+        KeyringWrapper.cleanup_shared_instance()
+
+        assert Keychain.migration_checked_for_current_version() is False
+
+        dist_version = ""
+
+        class DummyDistribution:
+            def __init__(self, version):
+                self.version = version
+
+        def mock_get_distribution_version(_) -> DummyDistribution:
+            nonlocal dist_version
+            return DummyDistribution(dist_version)
+
+        monkeypatch.setattr(pkg_resources, "get_distribution", mock_get_distribution_version)
+
+        dist_version = "1.2.11.dev123"
+        assert pkg_resources.get_distribution("chia-blockchain").version == "1.2.11.dev123"
+
+        Keychain.mark_migration_checked_for_current_version()
+
+        last_migration_version_str = (
+            KeyringWrapper.get_shared_instance().keys_root_path / ".last_legacy_migration"
+        ).read_text()
+        assert last_migration_version_str == "1.2.11.dev123"  # last migration version set
+
+        assert Keychain.migration_checked_for_current_version() is True
+
+        dist_version = "1.2.11.dev345"
+        assert Keychain.migration_checked_for_current_version() is True  # We don't check the build number
+        dist_version = "1.2.10.dev111"
+        assert Keychain.migration_checked_for_current_version() is True  # Checked version > current version
+        dist_version = "1.3.0.dev100"
+        assert Keychain.migration_checked_for_current_version() is False  # Checked version < current version
