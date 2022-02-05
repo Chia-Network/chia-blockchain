@@ -59,8 +59,7 @@ async def test_locked_transaction_blocks_concurrency(counter_db_wrapper: DBWrapp
 
         tasks = []
         for index in range(concurrent_task_count):
-            name = f"lock_read_wait_write()[{index:4}]"
-            task = asyncio.create_task(lock_read_wait_write(db_wrapper=counter_db_wrapper), name=name)
+            task = asyncio.create_task(lock_read_wait_write(db_wrapper=counter_db_wrapper))
             tasks.append(task)
 
     await asyncio.wait_for(asyncio.gather(*tasks), timeout=10)
