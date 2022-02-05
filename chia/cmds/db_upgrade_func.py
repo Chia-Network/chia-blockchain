@@ -64,7 +64,7 @@ def db_upgrade_func(
         check_db(in_db_path, temp_store_path, hdd, check_only)
     else:
     #    check_db(in_db_path, temp_store_path, hdd, check_only)
-        convert_v1_to_v2(in_db_path, out_db_path, out_path_string, offline, hdd, temp_store_path, check_only)
+        convert_v1_to_v2(in_db_path, out_db_path, offline, hdd, temp_store_path, check_only)
 
     if update_config and not check_only:
         print("updating config.yaml")
@@ -218,7 +218,6 @@ def connect_to_db(
 def convert_v1_to_v2(
     in_path: Path, 
     out_path: Path, 
-    out_path_string: str, 
     offline: bool, 
     hdd: bool, 
     temp_store_path: Path,
@@ -578,7 +577,7 @@ def convert_v1_to_v2(
     if temp_store_path is not None:  
         temp2_out_path = temp_store_path / 'temp_coin_store.sqlite'
     else:
-        temp2_out_path = out_path / 'temp_coin_store.sqlite'
+        temp2_out_path = out_path.parent / 'temp_coin_store.sqlite'
     temp2_db = connect_to_db(in_path, temp2_out_path, mmap_size, offline, temp_store_path)
 
     # COIN_RECORD
@@ -703,7 +702,7 @@ def convert_v1_to_v2(
     if temp_store_path is not None:  
         temp3_out_path = temp_store_path / 'temp_sub_epoch.sqlite'
     else:
-        temp3_out_path = out_path / 'temp_sub_epoch.sqlite'
+        temp3_out_path = out_path.parent / 'temp_sub_epoch.sqlite'
     #temp3_out_path = out_path_string.replace("blockchain_v2_mainnet.sqlite", "temp_sub_epoch.sqlite")
     temp3_db = connect_to_db(in_path, temp3_out_path, mmap_size, offline, temp_store_path)
 
