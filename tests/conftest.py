@@ -17,6 +17,9 @@ from pathlib import Path
 #       fixtures avoids the issue.
 
 
+pytest_plugins = "pytester"
+
+
 @pytest.fixture(scope="function", params=[1, 2])
 async def empty_blockchain(request):
     """
