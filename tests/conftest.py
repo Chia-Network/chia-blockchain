@@ -106,11 +106,11 @@ sqlite3_memory_db_url = "file:memory_db_connection_db?mode=memory&cache=shared"
 
 @pytest.fixture(name="memory_db_connection", scope="function")
 async def memory_db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
-    async with aiosqlite.connect(sqlite3_memory_db_url) as connection:
+    async with aiosqlite.connect(sqlite3_memory_db_url, uri=True) as connection:
         yield connection
 
 
 @pytest.fixture(name="second_memory_db_connection", scope="function")
 async def second_memory_db_connection_fixture(memory_db_connection) -> AsyncIterable[aiosqlite.Connection]:
-    async with aiosqlite.connect(sqlite3_memory_db_url) as connection:
+    async with aiosqlite.connect(sqlite3_memory_db_url, uri=True) as connection:
         yield connection
