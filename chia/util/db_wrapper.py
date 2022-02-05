@@ -46,7 +46,7 @@ class DBWrapper:
 
     # TODO: Deprecate this, I do not like properties as an API.
     @property
-    def lock(self) -> aiosqlite.Connection:
+    def lock(self) -> asyncio.Lock:
         return connection_locks[self.db]
 
     async def begin_transaction(self):

@@ -34,7 +34,10 @@ async def counter_db_wrapper_fixture(db_wrapper: DBWrapper) -> AsyncIterator[DBW
 async def lock_read_wait_write(db_wrapper: DBWrapper) -> None:
     async with db_wrapper.locked_transaction() as connection:
         async with connection.execute("SELECT value FROM counter") as cursor:
-            [old_value] = await cursor.fetchone()
+            row = await cursor.fetchone()
+
+        assert row is not None
+        [old_value] = row
 
         await asyncio.sleep(0.010)
 
@@ -64,7 +67,10 @@ async def test_locked_transaction_blocks_concurrency(counter_db_wrapper: DBWrapp
 
     async with counter_db_wrapper.locked_transaction() as connection:
         async with connection.execute("SELECT value FROM counter") as cursor:
-            [value] = await cursor.fetchone()
+            row = await cursor.fetchone()
+
+        assert row is not None
+        [value] = row
 
     assert value == concurrent_task_count
 
@@ -73,7 +79,10 @@ async def test_locked_transaction_blocks_concurrency(counter_db_wrapper: DBWrapp
 async def test_locked_transaction_nests(counter_db_wrapper: DBWrapper) -> None:
     async with counter_db_wrapper.locked_transaction() as outer_connection:
         async with outer_connection.execute("SELECT value FROM counter") as cursor:
-            [old_value] = await cursor.fetchone()
+            row = await cursor.fetchone()
+
+        assert row is not None
+        [old_value] = row
 
         new_value = old_value + 1
         async with counter_db_wrapper.locked_transaction() as inner_connection:
@@ -81,7 +90,10 @@ async def test_locked_transaction_nests(counter_db_wrapper: DBWrapper) -> None:
 
     async with counter_db_wrapper.locked_transaction() as connection:
         async with connection.execute("SELECT value FROM counter") as cursor:
-            [value] = await cursor.fetchone()
+            row = await cursor.fetchone()
+
+        assert row is not None
+        [value] = row
 
     assert value == 1
 
