@@ -17,10 +17,10 @@ from tests import conftest
 @pytest.mark.parametrize(
     argnames="fixtures",
     argvalues=[
-        pytest.param([*first.values[0], *second.values[0]], id=f"{first.id},{second.id}")
-        for second in [pytest.param([], id="-"), pytest.param(["second_memory_db_connection"], id="second")]
-        for first in [pytest.param([], id="-"), pytest.param(["memory_db_connection"], id="first")]
-        if len([*first.values[0], *second.values[0]]) > 0
+        pytest.param([*first.values, *second.values], id=f"{first.id},{second.id}")
+        for second in [pytest.param(id="-"), pytest.param("second_memory_db_connection", id="second")]
+        for first in [pytest.param(id="-"), pytest.param("memory_db_connection", id="first")]
+        if len([*first.values, *second.values]) > 0
     ],
 )
 def test_memory_db_connection_cleared_after_function_scope(pytester, fixtures) -> None:
