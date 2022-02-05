@@ -9,7 +9,7 @@ def db_cmd() -> None:
     pass
 
 
-@db_cmd.command("upgrade", short_help="EXPERIMENTAL: upgrade a v1 database to v2 out of place")
+@db_cmd.command("upgrade", short_help="EXPERIMENTAL: upgrade a v1 database to v2")
 @click.option("--input", default=None, type=click.Path(), help="specify input database file")
 @click.option("--output", default=None, type=click.Path(), help="specify output database file")
 @click.option(
