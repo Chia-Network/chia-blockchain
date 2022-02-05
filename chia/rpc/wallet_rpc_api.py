@@ -1309,6 +1309,8 @@ class WalletRpcApi:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
 
+        log.info(f" ==== {request=}")
+
         if "target_puzzlehash" in request:
             target_puzzlehash = bytes32(hexstr_to_bytes(request["target_puzzlehash"]))
         assert target_puzzlehash is not None
