@@ -1306,7 +1306,7 @@ class WalletRpcApi:
         except KeyError as e:
             wallet_ids = self.service.wallet_state_manager.wallets.keys()
             wallet_ids_string = ", ".join(str(id) for id in wallet_ids)
-            raise ValueError("Wallet ID {wallet_id} not found, available IDs: {wallet_id_string}") from e
+            raise ValueError(f"Wallet ID {wallet_id} not found, available IDs: {wallet_ids_string}") from e
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
         owner_pubkey = pool_wallet_info.current.owner_pubkey
         target_puzzlehash = None
