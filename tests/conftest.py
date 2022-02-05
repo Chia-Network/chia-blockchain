@@ -101,7 +101,7 @@ async def tmp_dir():
         yield Path(folder)
 
 
-sqlite3_memory_db_url = "file::memory_db_connection_db?mode=memory&cache=shared"
+sqlite3_memory_db_url = "file:memory_db_connection_db?mode=memory&cache=shared"
 
 
 @pytest.fixture(name="memory_db_connection", scope="function")
