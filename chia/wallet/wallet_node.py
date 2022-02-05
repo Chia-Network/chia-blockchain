@@ -213,6 +213,7 @@ class WalletNode:
         standalone_path = path_from_root(STANDALONE_ROOT_PATH, f"{db_path_replaced.replace('v2', 'v1')}_new")
         if not path.exists():
             if standalone_path.exists():
+                self.log.info(f"Copying wallet db from {standalone_path} to {path}")
                 path.write_bytes(standalone_path.read_bytes())
 
         mkdir(path.parent)
