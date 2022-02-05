@@ -49,7 +49,7 @@ def get_os_passphrase_store() -> Optional[OSPassphraseStore]:
     return None
 
 
-def check_legacy_keyring_keys_present(keyring: Union[MacKeyring, WinKeyring]) -> bool:
+def check_legacy_keyring_keys_present(keyring: LegacyKeyring) -> bool:
     from keyring.credentials import SimpleCredential
     from chia.util.keychain import default_keychain_user, default_keychain_service, get_private_key_user, MAX_KEYS
 
@@ -104,14 +104,21 @@ class KeyringWrapper:
     cached_passphrase_is_validated: bool = False
     legacy_keyring = None
 
-    def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH):
+    def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH, force_legacy: bool = False):
         """
         Initializes the keyring backend based on the OS. For Linux, we previously
         used CryptFileKeyring. We now use our own FileKeyring backend and migrate
         the data from the legacy CryptFileKeyring (on write).
         """
         self.keys_root_path = keys_root_path
-        self.refresh_keyrings()
+        if force_legacy:
+            legacy_keyring = get_legacy_keyring_instance()
+            if check_legacy_keyring_keys_present(legacy_keyring):
+                self.keyring = legacy_keyring
+            else:
+                return None
+        else:
+            self.refresh_keyrings()
 
     def refresh_keyrings(self):
         self.keyring = None
@@ -187,6 +194,10 @@ class KeyringWrapper:
     @staticmethod
     def cleanup_shared_instance():
         KeyringWrapper.__shared_instance = None
+
+    @staticmethod
+    def get_legacy_instance() -> Optional["KeyringWrapper"]:
+        return KeyringWrapper(force_legacy=True)
 
     def get_keyring(self):
         """
@@ -421,6 +432,8 @@ class KeyringWrapper:
         # Write the keys directly to the new keyring (self.keyring)
         for (user, passphrase) in user_passphrase_pairs:
             self.keyring.set_password(service, user, passphrase)
+
+        Keychain.mark_migration_checked_for_current_version()
 
         return KeyringWrapper.MigrationResults(
             original_private_keys, self.legacy_keyring, service, [user for (user, _) in user_passphrase_pairs]
