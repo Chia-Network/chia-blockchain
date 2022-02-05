@@ -82,11 +82,9 @@ def create_example_fixture(request: SubRequest) -> Callable[[DataStore, bytes32]
 
 
 @pytest.fixture(name="db_connection", scope="function")
-async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
-    async with aiosqlite.connect(":memory:") as connection:
-        # make sure this is on for tests even if we disable it at run time
-        await connection.execute("PRAGMA foreign_keys = ON")
-        yield connection
+async def db_connection_fixture(memory_db_connection) -> AsyncIterable[aiosqlite.Connection]:
+    await memory_db_connection.execute("PRAGMA foreign_keys = ON")
+    yield memory_db_connection
 
 
 @pytest.fixture(name="db_wrapper", scope="function")
