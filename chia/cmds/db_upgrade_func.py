@@ -1,5 +1,5 @@
 from typing import Dict, Optional
-from pathlib import Path, PurePath
+from pathlib import Path
 import sys
 from os import remove
 from time import time
@@ -29,7 +29,7 @@ def db_upgrade_func(
     offline: bool = False,
     hdd: bool = False,
     temp_store_path: Optional[Path] = None,
-    check_only: bool = False
+    check_only: bool = False,
 ):
 
     update_config: bool = in_db_path is None and out_db_path is None and not no_update_config
@@ -48,8 +48,6 @@ def db_upgrade_func(
         in_db_path = path_from_root(root_path, db_path_replaced)
         print(f"{in_db_path}")
 
-    out_path_string: str
-    out_path_string = None
     if out_db_path is None:
         db_path_replaced = db_pattern.replace("CHALLENGE", selected_network).replace("_v1_", "_v2_")
         out_db_path = path_from_root(root_path, db_path_replaced)
@@ -71,13 +69,14 @@ def db_upgrade_func(
 
     print(f"\n\nLEAVING PREVIOUS DB FILE UNTOUCHED {in_db_path}\n")
 
+
 def check_db(
     open_in_path: Path,
-    temp_store_path: Path,
+    temp_store_dir: Optional[Path],
     hdd: bool,
     check_only: bool,
 ):
-    failed = False 
+    failed = False
     db_path = path_from_root(open_in_path, "")
     print("checking if available disk space is sufficient")
     print("querying database ...")
@@ -88,28 +87,29 @@ def check_db(
     try:
         if hdd:
             cursor1.execute(
-                "select sum(pgsize) FROM dbstat "
-                "where name in ('coin_record','sub_epoch_segments_v3','full_blocks')"
+                "select sum(pgsize) FROM dbstat " "where name in ('coin_record','sub_epoch_segments_v3','full_blocks')"
             )
         else:
-            cursor1.execute(
-                "select sum(pgsize) FROM dbstat "
-                "where name in ('coin_record','sub_epoch_segments_v3')"
-            )
+            cursor1.execute("select sum(pgsize) FROM dbstat " "where name in ('coin_record','sub_epoch_segments_v3')")
         temp_size_byte = cursor1.fetchone()
-        print(f"\tdisk space needed for temp storage: {temp_size_byte[0]} byte/{round(temp_size_byte[0]/1024/1024/1024,2)} GiB")
-        print(f"{temp_store_path}")
-        if temp_store_path is not None:
-            temp_store_free = disk_usage(temp_store_path).free
+        print(
+            f"\tdisk space needed for temp storage: {temp_size_byte[0]} "
+            f"byte/{round(temp_size_byte[0]/1024/1024/1024,2)} GiB"
+        )
+        print(f"{temp_store_dir}")
+        if temp_store_dir is not None:
+            temp_store_free = disk_usage(temp_store_dir).free
             if temp_size_byte[0] < temp_store_free:
-                print(f"\ttemp check passed: sufficient free space {temp_store_free} byte/"
-                      f"{round(temp_store_free/1024/1024/1024,2)} GiB "
-                      f"on path {temp_store_path}"
+                print(
+                    f"\ttemp check passed: sufficient free space {temp_store_free} byte/"
+                    f"{round(temp_store_free/1024/1024/1024,2)} GiB "
+                    f"on path {temp_store_dir}"
                 )
             else:
-                print(f"\ttemp check failed: not sufficient free space on path {temp_store_path} available"
-                      f"\n\tmissing {temp_size_byte[0]-temp_store_free} byte/"
-                      f"{round(temp_size_byte[0]-temp_store_free,2)/1024/1024/1024} GiB"
+                print(
+                    f"\ttemp check failed: not sufficient free space on path {temp_store_dir} available"
+                    f"\n\tmissing {temp_size_byte[0]-temp_store_free} byte/"
+                    f"{round(temp_size_byte[0]-temp_store_free,2)/1024/1024/1024} GiB"
                 )
                 failed = True
         page_count = cursor2.execute("PRAGMA PAGE_COUNT").fetchone()
@@ -118,18 +118,20 @@ def check_db(
         print(f"\n\tdisk space needed for db v2: {db_size_byte} byte/{round(db_size_byte/1024/1024/1024,2)} GiB")
         db_store_free = disk_usage(db_path).free
         if db_size_byte < db_store_free:
-            print(f"\tdb check passed: sufficient free space {db_store_free} byte/"
-                  f"{round(db_store_free/1024/1024/1024,2)} GiB "
-                  f"on path {db_path}"
+            print(
+                f"\tdb check passed: sufficient free space {db_store_free} byte/"
+                f"{round(db_store_free/1024/1024/1024,2)} GiB "
+                f"on path {db_path}"
             )
         else:
-            print(f"\tdb check failed: not sufficient free space on path {db_path} available"
-                  f"\n\tmissing {db_size_byte-db_store_free} byte/"
-                  f"{round(db_size_byte-db_store_free,2)/1024/1024/1024} GiB"
+            print(
+                f"\tdb check failed: not sufficient free space on path {db_path} available"
+                f"\n\tmissing {db_size_byte-db_store_free} byte/"
+                f"{round(db_size_byte-db_store_free,2)/1024/1024/1024} GiB"
             )
             failed = True
         if failed:
-            raise RuntimeError("checks failed.") 
+            raise RuntimeError("checks failed.")
         else:
             print("checks passed. proceeding with upgrade")
     except sqlite3.OperationalError:
@@ -141,11 +143,11 @@ def check_db(
 
 
 def connect_to_db(
-    open_in_path: Path, 
-    attach_out_path: Path, 
+    open_in_path: Path,
+    attach_out_path: Path,
     mmap_size: int,
-    offline: Optional[bool] = True,
-    temp_store_path: Optional[Path] = None,
+    offline: Optional[bool],
+    temp_store_path: Optional[Path],
 ):
     db = sqlite3.connect(open_in_path)
     cursor = db.cursor()
@@ -160,16 +162,16 @@ def connect_to_db(
     finally:
         cursor.close()
 
-    if offline: 
+    if offline:
         db.execute("PRAGMA JOURNAL_MODE=off")
     if temp_store_path is not None:
         db.execute("PRAGMA TEMP_STORE_DIRECTORY='" + (str(temp_store_path)) + "'")
     db.execute("PRAGMA SYNCHRONOUS=off")
     # Threads is only used for temp table or indexes, didn't bring any improvement
     # db.execute("PRAGMA threads=4")
-    #db.execute("PRAGMA mmap_size=2147418112")
+    # db.execute("PRAGMA mmap_size=2147418112")
     db.execute("PRAGMA mmap_size=" + (str(mmap_size)))
-    #db.execute("PRAGMA mmap_size=0")
+    # db.execute("PRAGMA mmap_size=0")
     db.execute("PRAGMA cache_spill=false")
 
     # CHANGE PAGE_SIZE
@@ -190,12 +192,7 @@ def connect_to_db(
 
 
 def convert_v1_to_v2(
-    in_path: Path, 
-    out_path: Path, 
-    offline: bool, 
-    hdd: bool, 
-    temp_store_path: Path,
-    check_only: bool
+    in_path: Path, out_path: Path, offline: bool, hdd: bool, temp_store_path: Optional[Path], check_only: bool
 ) -> None:
 
     if out_path.exists():
@@ -224,7 +221,7 @@ def convert_v1_to_v2(
         SES_COMMIT_RATE = 50
         HINT_COMMIT_RATE = 300000
         mmap_size = 2147418112
-    
+
     # These parameter were used to decouple pragma shring_memory from commit
     # commented out as shrink memory is not needed any more
     # BLOCK_SHRINK_RATE = BLOCK_COMMIT_RATE * 1.5
@@ -511,10 +508,10 @@ def convert_v1_to_v2(
 
     # Reconnect to get new mmap initalization for new table
     # Change temp file path if specified
-    if temp_store_path is not None:  
-        temp2_out_path = temp_store_path / 'temp_coin_store.sqlite'
+    if temp_store_path is not None:
+        temp2_out_path = temp_store_path / "temp_coin_store.sqlite"
     else:
-        temp2_out_path = out_path.parent / 'temp_coin_store.sqlite'
+        temp2_out_path = out_path.parent / "temp_coin_store.sqlite"
     temp2_db = connect_to_db(in_path, temp2_out_path, mmap_size, offline, temp_store_path)
 
     # COIN_RECORD
@@ -635,10 +632,10 @@ def convert_v1_to_v2(
     ###############
 
     # Again recoonnect to get benefit of mmap
-    if temp_store_path is not None:  
-        temp3_out_path = temp_store_path / 'temp_sub_epoch.sqlite'
+    if temp_store_path is not None:
+        temp3_out_path = temp_store_path / "temp_sub_epoch.sqlite"
     else:
-        temp3_out_path = out_path.parent / 'temp_sub_epoch.sqlite'
+        temp3_out_path = out_path.parent / "temp_sub_epoch.sqlite"
     temp3_db = connect_to_db(in_path, temp3_out_path, mmap_size, offline, temp_store_path)
 
     # SUB_EPOCH_SEGMENTS_V3
