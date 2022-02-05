@@ -330,9 +330,7 @@ class DataStore:
 
         return Root.from_row(row=row)
 
-    async def get_roots_between(
-        self, tree_id: bytes32, generation_begin: int, generation_end: int
-    ) -> List[Root]:
+    async def get_roots_between(self, tree_id: bytes32, generation_begin: int, generation_end: int) -> List[Root]:
         async with self.db_wrapper.locked_transaction():
             cursor = await self.db.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id "
@@ -379,9 +377,7 @@ class DataStore:
 
         return ancestors
 
-    async def get_keys_values(
-        self, tree_id: bytes32, root_hash: Optional[bytes32] = None
-    ) -> List[TerminalNode]:
+    async def get_keys_values(self, tree_id: bytes32, root_hash: Optional[bytes32] = None) -> List[TerminalNode]:
         async with self.db_wrapper.locked_transaction():
             if root_hash is None:
                 root = await self.get_tree_root(tree_id=tree_id)
@@ -511,9 +507,7 @@ class DataStore:
                 if root.node_hash is None:
                     raise Exception("Internal error.")
 
-                ancestors: List[InternalNode] = await self.get_ancestors(
-                    node_hash=reference_node_hash, tree_id=tree_id
-                )
+                ancestors: List[InternalNode] = await self.get_ancestors(node_hash=reference_node_hash, tree_id=tree_id)
 
                 if side == Side.LEFT:
                     left = new_terminal_node_hash

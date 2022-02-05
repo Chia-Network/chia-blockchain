@@ -10,7 +10,10 @@ import aiosqlite
 
 
 already_entered: contextvars.ContextVar[bool] = contextvars.ContextVar("already_entered", default=False)
-surrounding_task: contextvars.ContextVar[Optional[asyncio.Task]] = contextvars.ContextVar("surrounding_task", default=None)
+surrounding_task: contextvars.ContextVar[Optional[asyncio.Task]] = contextvars.ContextVar(
+    "surrounding_task",
+    default=None,
+)
 
 
 T = TypeVar("T")
@@ -25,7 +28,7 @@ def set_contextvar(contextvar: contextvars.ContextVar[T], value: T) -> Iterator[
         contextvar.reset(token)
 
 
-connection_locks = weakref.WeakKeyDictionary()
+connection_locks: weakref.WeakKeyDictionary[aiosqlite.Connection, asyncio.Lock] = weakref.WeakKeyDictionary()
 
 
 class DBWrapper:

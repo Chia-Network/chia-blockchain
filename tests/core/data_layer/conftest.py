@@ -82,7 +82,7 @@ def create_example_fixture(request: SubRequest) -> Callable[[DataStore, bytes32]
 
 
 @pytest.fixture(name="db_connection", scope="function")
-async def db_connection_fixture(memory_db_connection) -> AsyncIterable[aiosqlite.Connection]:
+async def db_connection_fixture(memory_db_connection: aiosqlite.Connection) -> AsyncIterable[aiosqlite.Connection]:
     await memory_db_connection.execute("PRAGMA foreign_keys = ON")
     yield memory_db_connection
 
