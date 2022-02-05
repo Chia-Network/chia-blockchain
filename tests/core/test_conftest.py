@@ -24,25 +24,25 @@ def test_memory_db_connection_cleared_after_function_scope(pytester, maybe_first
     test_file = f"""
     import pytest
 
+    async def get_table_names(connection):
+        async with connection.execute(
+            "SELECT name FROM sqlite_master WHERE type ='table' AND name NOT LIKE 'sqlite_%'"
+        ) as cursor:
+            return await cursor.fetchall()
+
     @pytest.mark.asyncio
     async def test_add({fixtures_as_parameters}):
         await {fixture_to_use}.execute("CREATE TABLE a_table(some_column INTEGER NOT NULL)")
 
-        async with {fixture_to_use}.execute(
-            "SELECT name FROM sqlite_master WHERE type ='table' AND name NOT LIKE 'sqlite_%'"
-        ) as cursor:
-            row = await cursor.fetchone()
+        rows = await get_table_names(connection={fixture_to_use})
 
-        assert row == ("a_table",)
+        assert rows == [("a_table",)]
 
     @pytest.mark.asyncio
     async def test_check({fixtures_as_parameters}):
-        async with {fixture_to_use}.execute(
-            "SELECT name FROM sqlite_master WHERE type ='table' AND name NOT LIKE 'sqlite_%'"
-        ) as cursor:
-            row = await cursor.fetchone()
+        rows = await get_table_names(connection={fixture_to_use})
 
-        assert row is None
+        assert rows == []
     """
 
     pytester.makepyfile(test_file)
