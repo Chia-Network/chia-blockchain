@@ -5,6 +5,7 @@ from time import time
 
 from typing import Dict, List, Optional, Tuple, Callable
 
+from clvm.casts import int_to_bytes
 import pytest
 
 import chia.server.ws_connection as ws
@@ -23,7 +24,6 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from chia.types.mempool_item import MempoolItem
-from chia.util.clvm import int_to_bytes
 from chia.util.condition_tools import conditions_for_solution, pkm_pairs
 from chia.util.errors import Err
 from chia.util.ints import uint64, uint32
