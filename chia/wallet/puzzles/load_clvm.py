@@ -32,7 +32,6 @@ if "CLVM_TOOLS_RS" in os.environ:
 
         def rust_compile_clvm(full_path, output, search_paths=[]):
             treated_include_paths = list(map(translate_path, search_paths))
-            print("compile_clvm_rs", full_path, output, treated_include_paths)
             compile_clvm_rs(str(full_path), str(output), treated_include_paths)
 
             if os.environ["CLVM_TOOLS_RS"] == "check":
