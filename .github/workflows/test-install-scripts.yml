@@ -136,7 +136,7 @@ jobs:
     - name: Prepare Rocky
       if: ${{ matrix.distribution.type == 'rocky' }}
       run: |
-        yum install --assumeyes git python39
+        yum install --assumeyes git
 
     - name: Prepare Ubuntu
       if: ${{ matrix.distribution.type == 'ubuntu' }}
