@@ -144,3 +144,11 @@ async def test_locked_transaction_allows_another_wrapper_with_another_connection
 ) -> None:
     async with counter_db_wrapper.locked_transaction():
         await asyncio.wait_for(enter_one(one=second_connection_db_wrapper), timeout=5)
+
+
+@pytest.mark.asyncio
+async def test_locked_transaction_sequential_blocks_subtask(counter_db_wrapper: DBWrapper) -> None:
+    for _ in range(5):
+        async with counter_db_wrapper.locked_transaction():
+            with pytest.raises(asyncio.TimeoutError):
+                await asyncio.wait_for(asyncio.create_task(enter_one(one=counter_db_wrapper)), timeout=1)
