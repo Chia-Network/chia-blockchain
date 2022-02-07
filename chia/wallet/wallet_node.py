@@ -887,8 +887,6 @@ class WalletNode:
             fork_height = top.height - 1
 
         blocks.reverse()
-        # Roll back coins and transactions
-        self.log.info(f"Rolling back to {fork_height}")
         await self.wallet_state_manager.reorg_rollback(fork_height)
         peak = await self.wallet_state_manager.blockchain.get_peak_block()
         self.rollback_request_caches(fork_height)
