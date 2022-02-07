@@ -34,49 +34,20 @@ class CoinStore:
 
         if self.db_wrapper.db_version == 2:
 
-            # the coin_name is unique in this table because the CoinStore always
-            # only represent a single peak
-            await self.coin_record_db.execute(
-                "CREATE TABLE IF NOT EXISTS coin_record("
-                "coin_name blob PRIMARY KEY,"
-                " confirmed_index bigint,"
-                " spent_index bigint,"  # if this is zero, it means the coin has not been spent
-                " coinbase int,"
-                " puzzle_hash blob,"
-                " coin_parent blob,"
-                " amount blob,"  # we use a blob of 8 bytes to store uint64
-                " timestamp bigint)"
-            )
+            with open('sql/coin_store_tables_v2.sql', 'r') as table_sql_file:
+                table_sql_script = table_sql_file.read()
+            with open('sql/coin_store_indexes_v2.sql', 'r') as index_sql_file:
+                index_sql_script = index_sql_file.read()
 
         else:
 
-            # the coin_name is unique in this table because the CoinStore always
-            # only represent a single peak
-            await self.coin_record_db.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS coin_record("
-                    "coin_name text PRIMARY KEY,"
-                    " confirmed_index bigint,"
-                    " spent_index bigint,"
-                    " spent int,"
-                    " coinbase int,"
-                    " puzzle_hash text,"
-                    " coin_parent text,"
-                    " amount blob,"
-                    " timestamp bigint)"
-                )
-            )
-
-        # Useful for reorg lookups
-        await self.coin_record_db.execute(
-            "CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)"
-        )
-
-        await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
-
-        await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)")
-
-        await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_parent_index on coin_record(coin_parent)")
+            with open('sql/coin_store_tables_v1.sql', 'r') as table_sql_file:
+                table_sql_script = table_sql_file.read()
+            with open('sql/coin_store_indexes_v1.sql', 'r') as index_sql_file:
+                index_sql_script = index_sql_file.read()
+        
+        await self.coin_record_db.executescript(table_sql_script)
+        await self.coin_record_db.executescript(index_sql_script)
 
         await self.coin_record_db.commit()
         self.coin_record_cache = LRUCache(cache_size)

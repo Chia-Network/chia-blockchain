@@ -31,73 +31,20 @@ class BlockStore:
 
         if self.db_wrapper.db_version == 2:
 
-            # TODO: most data in block is duplicated in block_record. The only
-            # reason for this is that our parsing of a FullBlock is so slow,
-            # it's faster to store duplicate data to parse less when we just
-            # need the BlockRecord. Once we fix the parsing (and data structure)
-            # of FullBlock, this can use less space
-            await self.db.execute(
-                "CREATE TABLE IF NOT EXISTS full_blocks("
-                "header_hash blob PRIMARY KEY,"
-                "prev_hash blob,"
-                "height bigint,"
-                "sub_epoch_summary blob,"
-                "is_fully_compactified tinyint,"
-                "in_main_chain tinyint,"
-                "block blob,"
-                "block_record blob)"
-            )
-
-            # This is a single-row table containing the hash of the current
-            # peak. The "key" field is there to make update statements simple
-            await self.db.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
-
-            await self.db.execute("CREATE INDEX IF NOT EXISTS height on full_blocks(height)")
-
-            # Sub epoch segments for weight proofs
-            await self.db.execute(
-                "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
-                "ses_block_hash blob PRIMARY KEY,"
-                "challenge_segments blob)"
-            )
-
-            await self.db.execute(
-                "CREATE INDEX IF NOT EXISTS is_fully_compactified ON"
-                " full_blocks(is_fully_compactified, in_main_chain) WHERE in_main_chain=1"
-            )
-            await self.db.execute(
-                "CREATE INDEX IF NOT EXISTS main_chain ON full_blocks(height, in_main_chain) WHERE in_main_chain=1"
-            )
+            with open('sql/block_store_tables_v2.sql', 'r') as table_sql_file:
+                table_sql_script = table_sql_file.read()
+            with open('sql/block_store_indexes_v2.sql', 'r') as index_sql_file:
+                index_sql_script = index_sql_file.read()
 
         else:
 
-            await self.db.execute(
-                "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, height bigint,"
-                "  is_block tinyint, is_fully_compactified tinyint, block blob)"
-            )
+            with open('sql/block_store_tables_v1.sql', 'r') as table_sql_file:
+                table_sql_script = table_sql_file.read()
+            with open('sql/block_store_indexes_v1.sql', 'r') as index_sql_file:
+                index_sql_script = index_sql_file.read()
 
-            # Block records
-            await self.db.execute(
-                "CREATE TABLE IF NOT EXISTS block_records(header_hash "
-                "text PRIMARY KEY, prev_hash text, height bigint,"
-                "block blob, sub_epoch_summary blob, is_peak tinyint, is_block tinyint)"
-            )
-
-            # Sub epoch segments for weight proofs
-            await self.db.execute(
-                "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3(ses_block_hash text PRIMARY KEY,"
-                "challenge_segments blob)"
-            )
-
-            # Height index so we can look up in order of height for sync purposes
-            await self.db.execute("CREATE INDEX IF NOT EXISTS full_block_height on full_blocks(height)")
-            await self.db.execute(
-                "CREATE INDEX IF NOT EXISTS is_fully_compactified on full_blocks(is_fully_compactified)"
-            )
-
-            await self.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
-
-            await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak) where is_peak = 1")
+        await self.coin_record_db.executescript(table_sql_script)
+        await self.coin_record_db.executescript(index_sql_script)
 
         await self.db.commit()
         self.block_cache = LRUCache(1000)

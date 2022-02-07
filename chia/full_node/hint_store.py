@@ -15,14 +15,22 @@ class HintStore:
         self.db_wrapper = db_wrapper
 
         if self.db_wrapper.db_version == 2:
-            await self.db_wrapper.db.execute(
-                "CREATE TABLE IF NOT EXISTS hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))"
-            )
+
+            with open('sql/hint_store_tables_v2.sql', 'r') as table_sql_file:
+                table_sql_script = table_sql_file.read()
+            with open('sql/hint_store_indexes_v2.sql', 'r') as index_sql_file:
+                index_sql_script = index_sql_file.read()
+
         else:
-            await self.db_wrapper.db.execute(
-                "CREATE TABLE IF NOT EXISTS hints(id INTEGER PRIMARY KEY AUTOINCREMENT, coin_id blob, hint blob)"
-            )
-        await self.db_wrapper.db.execute("CREATE INDEX IF NOT EXISTS hint_index on hints(hint)")
+
+            with open('sql/hint_store_tables_v1.sql', 'r') as table_sql_file:
+                table_sql_script = table_sql_file.read()
+            with open('sql/hint_store_indexes_v1.sql', 'r') as index_sql_file:
+                index_sql_script = index_sql_file.read()
+
+        await self.coin_record_db.executescript(table_sql_script)
+        await self.coin_record_db.executescript(index_sql_script)
+
         await self.db_wrapper.db.commit()
         return self
 
