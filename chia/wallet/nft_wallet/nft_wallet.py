@@ -166,10 +166,16 @@ class NFTWallet:
                 parent_coin = coin_record.coin
             if parent_coin is None:
                 raise ValueError("Error in finding parent")
-            inner_puzzle = nft_puzzles.create_nft_layer_puzzle(singleton_struct.rest().first().as_atom(), current_owner.as_atom(), nft_transfer_program_hash.as_atom())
-            child_puzzle = nft_puzzles.create_full_puzzle(singleton_struct.rest().first().as_atom(), self.nft_wallet_info.my_did, nft_transfer_program_hash.as_atom())
+            inner_puzzle: Program = nft_puzzles.create_nft_layer_puzzle(singleton_struct.rest().first().as_atom(), current_owner.as_atom(), nft_transfer_program_hash.as_atom())
+            child_coin: Optional[Coin] = None
+            for new_coin in coin_spend.additions():
+                if new_coin.amount % 2 == 1:
+                    child_coin = new_coin
+                    break
+            assert child_coin is not None
+            child_puzzle: Program = nft_puzzles.create_full_puzzle(singleton_struct.rest().first().as_atom(), self.nft_wallet_info.my_did, nft_transfer_program_hash.as_atom())
             await self.add_coin(
-                coin_spend.coin,
+                child_coin,
                 LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount),
                 nft_transfer_program,
                 child_puzzle
@@ -370,6 +376,7 @@ class NFTWallet:
             raise ValueError("Unable to created DID message spend.")
         my_did_amount = message_sb.coin_solutions[0].coin.amount
         my_did_parent = message_sb.coin_solutions[0].coin.parent_coin_info
+        # my_amount
         # my_did_inner_hash
         # my_did_amount
         # my_did_parent
@@ -413,7 +420,6 @@ class NFTWallet:
         nft_id = None
         for coin_spend in sending_sb.coin_spends:
             if nft_puzzles.match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))[0]:
-                breakpoint()
                 trade_price_discovered = nft_puzzles.get_trade_price_from_solution(
                     Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
                 )
