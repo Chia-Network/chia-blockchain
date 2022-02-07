@@ -110,7 +110,7 @@ if [ "$(uname)" = "Linux" ]; then
 		AMZN2_PY_LATEST=$(yum --showduplicates list python3 | expand | grep -P '(?!.*3.10.*)x86_64|(?!.*3.10.*)aarch64' | tail -n 1 | awk '{print $2}')
 		AMZN2_ARCH=$(uname -m)
 		sudo yum install -y python3-"$AMZN2_PY_LATEST"."$AMZN2_ARCH" git
-	elif type yum && [ -f "/etc/redhat-release" ] && if grep Rocky /etc/redhat-release; then
+	elif type yum && [ -f "/etc/redhat-release" ] && grep Rocky /etc/redhat-release; then
 		echo "Installing on Rocky."
 		# TODO: make this smarter about getting the latest version
 		sudo yum install --assumeyes python39
