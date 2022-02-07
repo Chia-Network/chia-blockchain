@@ -640,6 +640,8 @@ class WalletStateManager:
             # This only applies to trusted mode
             await self.reorg_rollback(fork_height)
 
+        new_interested_coin_ids: List[bytes32] = []
+
         for coin_state_idx, coin_state in enumerate(coin_states):
             info = await self.get_wallet_id_for_puzzle_hash(coin_state.coin.puzzle_hash)
             local_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_state.coin.name())
@@ -817,22 +819,33 @@ class WalletStateManager:
                             await self.tx_store.set_confirmed(unconfirmed_record.name, coin_state.spent_height)
 
                 if record.wallet_type == WalletType.POOLING_WALLET:
-                    if coin_state.spent_height is not None:
-                        cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
-                            peer, coin_state.spent_height, coin_state.coin
-                        )
+                    if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
                         wallet = self.wallets[uint32(record.wallet_id)]
-                        await wallet.apply_state_transitions(cs, coin_state.spent_height)
-                        if len(cs.additions()) > 0:
-                            added_pool_coin = cs.additions()[0]
+                        curr_coin_state: CoinState = coin_state
+                        while curr_coin_state.spent_height is not None:
+                            cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
+                                peer, curr_coin_state.spent_height, curr_coin_state.coin
+                            )
+                            success = await wallet.apply_state_transition(cs, curr_coin_state.spent_height)
+                            if not success:
+                                break
+                            new_singleton_coin: Optional[Coin] = wallet.get_next_interesting_coin(cs)
+                            if new_singleton_coin is None:
+                                # No more singleton (maybe destroyed?)
+                                break
                             await self.coin_added(
-                                added_pool_coin,
+                                new_singleton_coin,
                                 coin_state.spent_height,
                                 [],
                                 uint32(record.wallet_id),
                                 record.wallet_type,
                             )
-                            await self.add_interested_coin_id(added_pool_coin.name())
+                            new_interested_coin_ids.append(new_singleton_coin.name())
+                            new_coin_state: List[CoinState] = await self.wallet_node.get_coin_state(
+                                [new_singleton_coin.name()]
+                            )
+                            assert len(new_coin_state) == 1
+                            curr_coin_state = new_coin_state[0]
 
                 # Check if a child is a singleton launcher
                 if children is None:
@@ -872,16 +885,16 @@ class WalletStateManager:
                         False,
                         "pool_wallet",
                     )
-                    await pool_wallet.apply_state_transitions(launcher_spend, coin_state.spent_height)
                     coin_added = launcher_spend.additions()[0]
                     await self.coin_added(
                         coin_added, coin_state.spent_height, [], pool_wallet.id(), WalletType(pool_wallet.type())
                     )
-                    await self.add_interested_coin_id(coin_added.name())
+                    new_interested_coin_ids.append(coin_added.name())
 
             else:
                 raise RuntimeError("All cases already handled")  # Logic error, all cases handled
-
+        for new_coin_id in new_interested_coin_ids:
+            await self.add_interested_coin_id(new_coin_id)
         for coin_state_removed in trade_coin_removed:
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed)
 

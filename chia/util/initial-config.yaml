@@ -474,7 +474,8 @@ wallet:
     port: 8444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite
+  # v2 used by the light wallet sync protocol
+  database_path: wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite
   # wallet_peers_path is deprecated and has been replaced by wallet_peers_file_path
   wallet_peers_path: wallet/db/wallet_peers.sqlite
   wallet_peers_file_path: wallet/db/wallet_peers.dat
