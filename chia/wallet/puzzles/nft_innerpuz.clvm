@@ -31,7 +31,7 @@
                                      (sha256tree1 NFT_TRANSFER_PROGRAM_HASH)
                                      (sha256 ONE next_owner_did)
                                      (sha256tree1 SINGLETON_STRUCT)
-                                     NFT_MOD_HASH
+                                     (sha256 ONE NFT_MOD_HASH)
     )
   )
 
