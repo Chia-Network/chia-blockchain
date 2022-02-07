@@ -1,4 +1,4 @@
-from typing import Any, Optional, Union, Callable, Dict
+from typing import Any, Optional, Union, Dict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 import click
@@ -65,9 +65,7 @@ async def show_async(
     block_by_header_hash: str,
 ) -> None:
     import aiohttp
-    import time
     import traceback
-
     import time
     from typing import List, Optional
     from chia.consensus.block_record import BlockRecord
