@@ -44,8 +44,8 @@ def service_kwargs_for_full_node_crawler(
         network_id=network_id,
     )
 
-    if config.get("crawler_start_rpc_server", True):
-        kwargs["rpc_info"] = (CrawlerRpcApi, config.get("crawler_rpc_port", 8561))
+    if config.get("crawler", {}).get("start_rpc_server", True):
+        kwargs["rpc_info"] = (CrawlerRpcApi, config.get("crawler", {}).get("crawler_rpc_port", 8561))
 
     return kwargs
 
