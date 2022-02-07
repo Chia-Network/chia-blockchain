@@ -448,7 +448,7 @@ class TestPoolWalletRpc:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True])
-    @pytest.mark.parametrize("fee", [0])
+    @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
     async def test_absorb_self(self, one_wallet_node_and_rpc, fee, trusted):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         if trusted:

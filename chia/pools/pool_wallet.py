@@ -465,8 +465,8 @@ class PoolWallet:
             if s is None:
                 return self.standard_wallet.secret_key_store.secret_key_for_public_key(pk)
             else:
+                # Note that pool_wallet_index may be from another wallet than self.wallet_id
                 owner_sk, pool_wallet_index = s
-                assert pool_wallet_index == self.standard_wallet.wallet_id or pool_wallet_index == self.wallet_id
             if owner_sk is None:
                 return self.standard_wallet.secret_key_store.secret_key_for_public_key(pk)
             return owner_sk
