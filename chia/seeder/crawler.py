@@ -3,6 +3,7 @@ import logging
 import time
 import traceback
 import ipaddress
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -34,6 +35,7 @@ class Crawler:
     root_path: Path
     peer_count: int
     with_peak: set
+    minimum_version_count: int
 
     def __init__(
         self,
@@ -58,16 +60,20 @@ class Crawler:
         self.version_cache: List[Tuple[str, str]] = []
         self.handshake_time: Dict[str, int] = {}
         self.best_timestamp_per_peer: Dict[str, int] = {}
-        if "crawler_db_path" in config and config["crawler_db_path"] != "":
-            path = Path(config["crawler_db_path"])
-            self.db_path = path.resolve()
-        else:
-            db_path_replaced: str = "crawler.db"
-            self.db_path = path_from_root(root_path, db_path_replaced)
+        crawler_db_path: str = config.get("crawler_db_path", "crawler.db")
+        self.db_path = path_from_root(root_path, crawler_db_path)
         mkdir(self.db_path.parent)
         self.bootstrap_peers = config["bootstrap_peers"]
         self.minimum_height = config["minimum_height"]
         self.other_peers_port = config["other_peers_port"]
+        self.versions: Dict[str, int] = {}
+        self.minimum_version_count = self.config.get("minimum_version_count", 100)
+        if self.minimum_version_count < 1:
+            self.log.warning(
+                f"Crawler configuration minimum_version_count expected to be greater than zero: "
+                f"{self.minimum_version_count!r}"
+            )
+
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -217,11 +223,9 @@ class Crawler:
                     for host, timestamp in self.best_timestamp_per_peer.items()
                     if timestamp >= now - 5 * 24 * 3600
                 }
-                versions = {}
+                self.versions = defaultdict(lambda: 0)
                 for host, version in self.host_to_version.items():
-                    if version not in versions:
-                        versions[version] = 0
-                    versions[version] += 1
+                    self.versions[version] += 1
                 self.version_cache = []
                 self.peers_retrieved = []
 
@@ -263,9 +267,9 @@ class Crawler:
                 ipv6_addresses_count = 0
                 for host in self.best_timestamp_per_peer.keys():
                     try:
-                        _ = ipaddress.IPv6Address(host)
+                        ipaddress.IPv6Address(host)
                         ipv6_addresses_count += 1
-                    except ValueError:
+                    except ipaddress.AddressValueError:
                         continue
                 self.log.error(
                     "IPv4 addresses gossiped with timestamp in the last 5 days with respond_peers messages: "
@@ -278,21 +282,17 @@ class Crawler:
                 ipv6_available_peers = 0
                 for host in self.host_to_version.keys():
                     try:
-                        _ = ipaddress.IPv6Address(host)
+                        ipaddress.IPv6Address(host)
                         ipv6_available_peers += 1
-                    except ValueError:
+                    except ipaddress.AddressValueError:
                         continue
                 self.log.error(
                     f"Total IPv4 nodes reachable in the last 5 days: {available_peers - ipv6_available_peers}."
                 )
                 self.log.error(f"Total IPv6 nodes reachable in the last 5 days: {ipv6_available_peers}.")
                 self.log.error("Version distribution among reachable in the last 5 days (at least 100 nodes):")
-                if "minimum_version_count" in self.config and self.config["minimum_version_count"] > 0:
-                    minimum_version_count = self.config["minimum_version_count"]
-                else:
-                    minimum_version_count = 100
-                for version, count in sorted(versions.items(), key=lambda kv: kv[1], reverse=True):
-                    if count >= minimum_version_count:
+                for version, count in sorted(self.versions.items(), key=lambda kv: kv[1], reverse=True):
+                    if count >= self.minimum_version_count:
                         self.log.error(f"Version: {version} - Count: {count}")
                 self.log.error(f"Banned addresses in the DB: {banned_peers}")
                 self.log.error(f"Temporary ignored addresses in the DB: {ignored_peers}")
