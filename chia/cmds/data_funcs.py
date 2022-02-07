@@ -124,3 +124,33 @@ async def get_root_cmd(
     except Exception as e:
         print(f"Exception from 'data': {e}")
     return
+
+
+async def subscribe_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+    ip: str,
+    port: int,
+) -> None:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            await client.subscribe(store_id=store_id_bytes, ip=ip, port=uint16(port))
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")
+
+
+async def unsubscribe_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+) -> None:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            await client.unsubscribe(store_id=store_id_bytes)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")

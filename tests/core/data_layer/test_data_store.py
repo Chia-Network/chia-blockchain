@@ -839,7 +839,7 @@ async def test_left_to_right_ordering(data_store: DataStore, tree_id: bytes32) -
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
     root = await data_store.get_tree_root(tree_id)
     assert root.node_hash is not None
-    all_nodes = await data_store.get_left_to_right_ordering(root.node_hash, tree_id, num_nodes=1000)
+    all_nodes = await data_store.get_left_to_right_ordering(root.node_hash, tree_id, False, num_nodes=1000)
     expected_nodes = [
         bytes32.from_hexstr("7a5193a4e31a0a72f6623dfeb2876022ab74a48abb5966088a1c6f5451cc5d81"),
         bytes32.from_hexstr("c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2"),
@@ -859,13 +859,26 @@ async def test_left_to_right_ordering(data_store: DataStore, tree_id: bytes32) -
     ]
     assert [node.hash for node in all_nodes] == expected_nodes
     nodes_2 = await data_store.get_left_to_right_ordering(
-        bytes32.from_hexstr("cb9ab4524540e37fd79377891ff46c143dc97c2eb57f4c106c07e9c321100874"), tree_id, num_nodes=100
+        bytes32.from_hexstr("cb9ab4524540e37fd79377891ff46c143dc97c2eb57f4c106c07e9c321100874"),
+        tree_id,
+        False,
+        num_nodes=100,
     )
     assert [node.hash for node in nodes_2] == expected_nodes[3:]
     nodes_3 = await data_store.get_left_to_right_ordering(
-        bytes32.from_hexstr("924be8ff27e84cba17f5bc918097f8410fab9824713a4668a21c8e060a8cab40"), tree_id, num_nodes=4
+        bytes32.from_hexstr("924be8ff27e84cba17f5bc918097f8410fab9824713a4668a21c8e060a8cab40"),
+        tree_id,
+        False,
+        num_nodes=4,
     )
     assert [node.hash for node in nodes_3] == expected_nodes[6:10]
+    nodes_4 = await data_store.get_left_to_right_ordering(
+        bytes32.from_hexstr("cb9ab4524540e37fd79377891ff46c143dc97c2eb57f4c106c07e9c321100874"),
+        tree_id,
+        True,
+        num_nodes=100,
+    )
+    assert nodes_4 == nodes_2[:1]
 
 
 @pytest.mark.asyncio

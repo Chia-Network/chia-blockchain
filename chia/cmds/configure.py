@@ -114,6 +114,7 @@ def configure(
             config["ui"]["selected_network"] = testnet
             config["introducer"]["selected_network"] = testnet
             config["wallet"]["selected_network"] = testnet
+            config["data_layer"]["selected_network"] = testnet
             print("Default full node port, introducer and network setting updated")
             change_made = True
 

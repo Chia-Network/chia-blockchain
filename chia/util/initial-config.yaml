@@ -519,9 +519,7 @@ data_layer:
   host_ip: 127.0.0.1
   host_port: 8000
   # Data for running a data layer client.
-  client_database_path: "data_layer/db/client_data_layer_CHALLENGE.sqlite"
-  server_ip: 127.0.0.1
-  server_port: 8000
+  fetch_data_interval: 60
   selected_network: *selected_network
   # If True, starts an RPC server at the following port
   start_rpc_server: True
