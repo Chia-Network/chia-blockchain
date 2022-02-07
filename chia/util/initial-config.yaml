@@ -158,6 +158,10 @@ seeder:
   network_overrides: *network_overrides
   selected_network: *selected_network
   logging: *logging
+  # Prefixed with crawler_ since the seeder is its own component, and may need an RPC server
+  # in the future as well
+  crawler_start_rpc_server: True
+  crawler_rpc_port: 8561
 
 harvester:
   # The harvester server (if run) will run on this port
