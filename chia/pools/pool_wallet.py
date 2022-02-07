@@ -775,11 +775,11 @@ class PoolWallet:
         all_spends: List[CoinSpend] = []
         total_amount = 0
 
-        the_coin_record_in_question = None
+        current_coin_record = None
         for coin_record in unspent_coin_records:
             if coin_record.coin not in coin_to_height_farmed:
                 continue
-            the_coin_record_in_question = coin_record
+            current_coin_record = coin_record
             if len(all_spends) >= 100:
                 # Limit the total number of spends, so it fits into the block
                 break
@@ -798,7 +798,7 @@ class PoolWallet:
             self.log.info(
                 f"Farmer coin: {coin_record.coin} {coin_record.coin.name()} {coin_to_height_farmed[coin_record.coin]}"
             )
-        if len(all_spends) == 0 or the_coin_record_in_question is None:
+        if len(all_spends) == 0 or current_coin_record is None:
             raise ValueError("Nothing to claim, no unspent coinbase rewards")
 
         claim_spend: SpendBundle = SpendBundle(all_spends, G2Element())
@@ -819,7 +819,7 @@ class PoolWallet:
                 None,
                 None,
                 False,
-                {Announcement(the_coin_record_in_question.coin.name(), b"$")},
+                {Announcement(current_coin_record.coin.name(), b"$")},
             )
 
             full_spend = SpendBundle.aggregate([fee_tx.spend_bundle, claim_spend])
