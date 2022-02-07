@@ -111,7 +111,6 @@ def run_generator(
     for spend in coin_spends.as_iter():
 
         parent, puzzle, amount, solution = spend.as_iter()
-        print(f"parent:{parent}\npuzzle:{puzzle}\namount:{amount}\nsolution:{solution}\n")
         matched, curried_args = match_cat_puzzle(puzzle)
 
         if not matched:
