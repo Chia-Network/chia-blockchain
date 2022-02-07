@@ -149,7 +149,7 @@ if [ "$(uname)" = "Linux" ]; then
         LD_RUN_PATH=/usr/local/lib sudo make altinstall
       } >> "${TMP_PATH}/python3.9.9-install.log"
       cd "$CURRENT_WD"
-    fi 
+    fi
   elif type yum && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
     # Redhat or Fedora
     echo "Installing on Redhat/Fedora."
