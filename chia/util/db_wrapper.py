@@ -74,10 +74,13 @@ class DBWrapper:
         in_new_task = current_task != surrounding_task.get()
 
         if in_new_task:
-            # initialize in new tasks to force new tasks to acquire resources
+            # Initialize in new tasks to force new tasks to acquire resources.  If
+            # context variables could be configured to reset to defaults in a new
+            # context, as is created for each new task, this would be unneeded.
             already_entered.set(False)
             surrounding_task.set(current_task)
-        elif already_entered.get():
+
+        if already_entered.get():
             yield self.db
             return
 
