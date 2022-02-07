@@ -43,8 +43,8 @@ class BlockStore:
             with open('sql/block_store_indexes_v1.sql', 'r') as index_sql_file:
                 index_sql_script = index_sql_file.read()
 
-        await self.coin_record_db.executescript(table_sql_script)
-        await self.coin_record_db.executescript(index_sql_script)
+        await self.db.executescript(table_sql_script)
+        await self.db.executescript(index_sql_script)
 
         await self.db.commit()
         self.block_cache = LRUCache(1000)

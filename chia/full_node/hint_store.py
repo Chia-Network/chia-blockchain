@@ -28,8 +28,8 @@ class HintStore:
             with open('sql/hint_store_indexes_v1.sql', 'r') as index_sql_file:
                 index_sql_script = index_sql_file.read()
 
-        await self.coin_record_db.executescript(table_sql_script)
-        await self.coin_record_db.executescript(index_sql_script)
+        await self.db_wrapper.db.executescript(table_sql_script)
+        await self.db_wrapper.db.executescript(index_sql_script)
 
         await self.db_wrapper.db.commit()
         return self
