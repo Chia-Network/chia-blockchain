@@ -136,8 +136,8 @@ seeder:
   port: 8444
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
   other_peers_port: 8444
-  # Path to crawler DB. If empty, will use $CHIA_ROOT/crawler.db
-  crawler_db_path: ""
+  # Path to crawler DB. Defaults to $CHIA_ROOT/crawler.db
+  crawler_db_path: "crawler.db"
   # Peers used for the initial run.
   bootstrap_peers:
     - "node.chia.net"

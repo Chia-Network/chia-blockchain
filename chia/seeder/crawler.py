@@ -120,6 +120,9 @@ class Crawler:
         self.task = asyncio.create_task(self.crawl())
 
     async def crawl(self):
+        # Let daemon, etc register before starting the crawling
+        await asyncio.sleep(1)
+
         try:
             self.connection = await aiosqlite.connect(self.db_path)
             self.crawl_store = await CrawlStore.create(self.connection)
@@ -148,6 +151,9 @@ class Crawler:
 
             self.host_to_version, self.handshake_time = self.crawl_store.load_host_to_version()
             self.best_timestamp_per_peer = self.crawl_store.load_best_peer_reliability()
+
+            self._state_changed("loaded_initial_peers")
+
             while True:
                 self.with_peak = set()
                 peers_to_crawl = await self.crawl_store.get_peers_to_crawl(25000, 250000)
@@ -301,6 +307,8 @@ class Crawler:
                     f"{total_records - banned_peers - ignored_peers}"
                 )
                 self.log.error("***")
+
+                self._state_changed("crawl_batch_completed")
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
