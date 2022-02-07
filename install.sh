@@ -110,9 +110,49 @@ if [ "$(uname)" = "Linux" ]; then
     AMZN2_PY_LATEST=$(yum --showduplicates list python3 | expand | grep -P '(?!.*3.10.*)x86_64|(?!.*3.10.*)aarch64' | tail -n 1 | awk '{print $2}')
     AMZN2_ARCH=$(uname -m)
     sudo yum install -y python3-"$AMZN2_PY_LATEST"."$AMZN2_ARCH" git
-  elif type yum && [ -f "/etc/redhat-release" ] || [ -f "/etc/centos-release" ] || [ -f "/etc/fedora-release" ]; then
-    # CentOS or Redhat or Fedora
-    echo "Installing on CentOS/Redhat/Fedora."
+  elif type yum && [ -f "/etc/centos-release" ]; then
+    # CentOS
+    echo "Install on CentOS."
+    if ! command -v python3.9 >/dev/null 2>&1; then
+      CURRENT_WD=$(pwd)
+      TMP_PATH=/tmp
+
+      # Preparing installing Python
+      echo 'yum groupinstall -y "Development Tools"'
+      sudo yum groupinstall -y "Development Tools"
+      echo "sudo yum install -y openssl-devel libffi-devel bzip2-devel wget"
+      sudo yum install -y openssl-devel libffi-devel bzip2-devel wget
+
+      echo "cd $TMP_PATH"
+      cd "$TMP_PATH"
+      # Install sqlite>=3.37
+      # yum install sqlite-devel brings sqlite3.7 which is not compatible with chia
+      echo "wget https://www.sqlite.org/2022/sqlite-autoconf-3370200.tar.gz"
+      wget https://www.sqlite.org/2022/sqlite-autoconf-3370200.tar.gz
+      tar xvf sqlite-autoconf-3370200.tar.gz
+      cd sqlite-autoconf-3370200
+      {
+        ./configure --prefix=/usr/local
+        make -j"$(nproc)"
+        sudo make install
+      } >> "${TMP_PATH}/sqlite3-install.log"
+      # Install Python3.9.9
+      # yum install python3 brings Python3.6 which is not supported by chia
+      cd ..
+      echo "wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz"
+      wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz
+      tar xvf Python-3.9.9.tgz
+      cd Python-3.9.9
+      {
+        LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local
+        LD_RUN_PATH=/usr/local/lib make -j"$(nproc)"
+        LD_RUN_PATH=/usr/local/lib sudo make altinstall
+      } >> "${TMP_PATH}/python3.9.9-install.log"
+      cd "$CURRENT_WD"
+    fi 
+  elif type yum && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
+    # Redhat or Fedora
+    echo "Installing on Redhat/Fedora."
     if ! command -v python3.9 >/dev/null 2>&1; then
       sudo yum install -y python39
     fi
