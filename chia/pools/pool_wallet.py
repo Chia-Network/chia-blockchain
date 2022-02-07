@@ -461,8 +461,12 @@ class PoolWallet:
 
     async def sign(self, coin_spend: CoinSpend, fee: uint64) -> SpendBundle:
         async def pk_to_sk(pk: G1Element) -> PrivateKey:
-            owner_sk: Optional[PrivateKey] = await find_owner_sk([self.wallet_state_manager.private_key], pk)
-            # assert owner_sk is not None
+            s = find_owner_sk([self.wallet_state_manager.private_key], pk)
+            if s is None:
+                return self.standard_wallet.secret_key_store.secret_key_for_public_key(pk)
+            else:
+                owner_sk, pool_wallet_index = s
+                assert pool_wallet_index == self.standard_wallet.wallet_id or pool_wallet_index == self.wallet_id
             if owner_sk is None:
                 return self.standard_wallet.secret_key_store.secret_key_for_public_key(pk)
             return owner_sk
