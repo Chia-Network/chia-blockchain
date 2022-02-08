@@ -1,7 +1,7 @@
 import io
 import struct
-from typing import Any, BinaryIO, SupportsInt, SupportsIndex, Type, TypeVar, Union
-from typing_extensions import Protocol
+from typing import Any, BinaryIO, SupportsInt, Type, TypeVar, Union
+from typing_extensions import SupportsIndex, Protocol
 
 
 _T_StructStream = TypeVar("_T_StructStream", bound="StructStream")
