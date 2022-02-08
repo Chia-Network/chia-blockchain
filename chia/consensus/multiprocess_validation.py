@@ -3,7 +3,7 @@ import logging
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element
 
@@ -28,7 +28,7 @@ from chia.util.block_cache import BlockCache
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
-from chia.util.ints import uint16, uint64, uint32
+from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, dataclass_from_dict, streamable
 
 log = logging.getLogger(__name__)
@@ -90,6 +90,7 @@ def batch_pre_validate_blocks(
                         min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
                         cost_per_byte=constants.COST_PER_BYTE,
                         mempool_mode=False,
+                        height=block.height,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 if npc_result is not None and npc_result.error is not None:
@@ -370,6 +371,7 @@ def _run_generator(
     constants_dict: bytes,
     unfinished_block_bytes: bytes,
     block_generator_bytes: bytes,
+    height: uint32,
 ) -> Optional[bytes]:
     """
     Runs the CLVM generator from bytes inputs. This is meant to be called under a ProcessPoolExecutor, in order to
@@ -386,6 +388,7 @@ def _run_generator(
             min(constants.MAX_BLOCK_COST_CLVM, unfinished_block.transactions_info.cost),
             cost_per_byte=constants.COST_PER_BYTE,
             mempool_mode=False,
+            height=height,
         )
         return bytes(npc_result)
     except ValidationError as e:

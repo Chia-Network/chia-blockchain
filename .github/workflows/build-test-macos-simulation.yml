@@ -13,6 +13,11 @@ on:
     branches:
       - '**'
 
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: MacOS simulation Tests
@@ -26,12 +31,6 @@ jobs:
         os: [macOS-latest]
 
     steps:
-    - name: Cancel previous runs on the same branch
-      if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.9.1
-      with:
-        access_token: ${{ github.token }}
-
     - name: Checkout Code
       uses: actions/checkout@v2
       with:

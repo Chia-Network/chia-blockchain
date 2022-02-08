@@ -29,9 +29,7 @@ random.seed(123456789)
 
 
 def rand_class_group_element() -> ClassgroupElement:
-    # TODO: address hint errors and remove ignores
-    #       error: Argument 1 to "ClassgroupElement" has incompatible type "bytes"; expected "bytes100"  [arg-type]
-    return ClassgroupElement(rand_bytes(100))  # type: ignore[arg-type]
+    return ClassgroupElement(rand_bytes(100))
 
 
 def rand_vdf() -> VDFInfo:
@@ -227,11 +225,7 @@ async def run_add_block_benchmark(version: int):
             )
 
             start = time()
-            await block_store.add_full_block(
-                header_hash,
-                full_block,
-                record,
-            )
+            await block_store.add_full_block(header_hash, full_block, record)
             await block_store.set_in_chain([(header_hash,)])
             header_hashes.append(header_hash)
             await block_store.set_peak(header_hash)
