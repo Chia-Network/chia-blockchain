@@ -718,6 +718,10 @@ export const walletApi = apiWithTag.injectEndpoints({
         command: 'onSyncChanged',
         service: Wallet,
         endpoint: () => walletApi.endpoints.getSyncStatus,
+      }, {
+        command: 'onNewBlock',
+        service: Wallet,
+        endpoint: () => walletApi.endpoints.getSyncStatus,
       }]),
     }),
 
