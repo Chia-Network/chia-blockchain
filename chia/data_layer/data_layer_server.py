@@ -1,8 +1,7 @@
 import aiosqlite
 import aiohttp
 import json
-
-# from random import Random
+import logging
 from typing import Any, Dict
 from aiohttp import web  # lgtm [py/import and import from]
 from dataclasses import dataclass
@@ -11,15 +10,31 @@ from chia.data_layer.data_store import DataStore
 from chia.util.db_wrapper import DBWrapper
 from chia.types.blockchain_format.tree_hash import bytes32
 from chia.data_layer.data_layer_types import TerminalNode, InsertionData
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.path import path_from_root, mkdir
-
-# from tests.core.data_layer.util import generate_big_datastore
 
 
 @dataclass
 class DataLayerServer:
+    config: Dict[str, Any]
+    db_path: Path
+    log: logging.Logger
+
+    async def start(self) -> None:
+        self.log.info("Starting Data Layer Server.")
+        self.connection = await aiosqlite.connect(self.db_path)
+        self.db_wrapper = DBWrapper(self.connection)
+        self.data_store = await DataStore.create(db_wrapper=self.db_wrapper)
+        app = web.Application()
+        app.router.add_route("GET", "/ws", self.websocket_handler)
+        self.runner = web.AppRunner(app)
+        await self.runner.setup()
+        self.site = web.TCPSite(self.runner, self.config["host_ip"], port=self.config["host_port"])
+        await self.site.start()
+        self.log.info("Started Data Layer Server.")
+
+    async def stop(self) -> None:
+        self.log.info("Stopped Data Layer Server.")
+        await self.runner.cleanup()
+
     async def handle_tree_root(self, request: Dict[str, str]) -> str:
         tree_id = request["tree_id"]
         requested_hash = request["node_hash"]
@@ -121,34 +136,3 @@ class DataLayerServer:
                 await ws.send_str(json_response)
 
         return ws
-
-    async def start(self, config: Dict[Any, Any], db_path: Path) -> web.Application:
-        self.config = config
-        self.db_path = db_path
-        mkdir(self.db_path.parent)
-        self.connection = await aiosqlite.connect(self.db_path)
-        self.db_wrapper = DBWrapper(self.connection)
-        self.data_store = await DataStore.create(db_wrapper=self.db_wrapper)
-
-        """
-        Uncomment if you need mock data, for testing purposes.
-        random = Random()
-        random.seed(100, version=2)
-        tree_id = bytes32(b"\0" * 32)
-        await self.data_store.create_tree(tree_id=tree_id)
-        await generate_big_datastore(data_store=self.data_store, tree_id=tree_id, random=random)
-        print("Generated datastore.")
-        """
-
-        app = web.Application()
-        app.router.add_route("GET", "/ws", self.websocket_handler)
-        return app
-
-
-if __name__ == "__main__":
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "data_layer")
-    db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-    db_path = path_from_root(DEFAULT_ROOT_PATH, db_path_replaced)
-
-    data_layer_server = DataLayerServer()
-    web.run_app(data_layer_server.start(config, db_path), host=config["host_ip"], port=config["host_port"])

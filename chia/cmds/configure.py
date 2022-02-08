@@ -19,6 +19,7 @@ def configure(
     set_peer_count: str,
     testnet: str,
     peer_connect_timeout: str,
+    enable_data_server: str = "",
 ):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False
@@ -88,6 +89,13 @@ def configure(
     if set_peer_count:
         config["full_node"]["target_peer_count"] = int(set_peer_count)
         print("Target peer count updated")
+        change_made = True
+    if enable_data_server:
+        config["data_layer"]["run_server"] = str2bool(enable_data_server)
+        if str2bool(enable_data_server):
+            print("Data Server enabled.")
+        else:
+            print("Data Server disabled.")
         change_made = True
     if testnet:
         if testnet == "true" or testnet == "t":
@@ -197,6 +205,12 @@ def configure(
 )
 @click.option("--set-peer-count", help="Update the target peer count (default 80)", type=str)
 @click.option("--set-peer-connect-timeout", help="Update the peer connect timeout (default 30)", type=str)
+@click.option(
+    "--enable-data-server",
+    "--data-server",
+    help="Enable or disable data propagation server for your data layer",
+    type=click.Choice(["true", "t", "false", "f"]),
+)
 @click.pass_context
 def configure_cmd(
     ctx,
@@ -210,6 +224,7 @@ def configure_cmd(
     set_peer_count,
     testnet,
     set_peer_connect_timeout,
+    enable_data_server,
 ):
     configure(
         ctx.obj["root_path"],
@@ -223,4 +238,5 @@ def configure_cmd(
         set_peer_count,
         testnet,
         set_peer_connect_timeout,
+        enable_data_server,
     )
