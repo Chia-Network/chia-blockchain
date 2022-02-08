@@ -19,6 +19,10 @@ def configure(
     set_peer_count: str,
     testnet: str,
     peer_connect_timeout: str,
+    crawler_db_path: str,
+    crawler_minimum_version_count: int,
+    seeder_domain_name: str,
+    seeder_nameserver: str,
 ):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False
@@ -166,6 +170,22 @@ def configure(
         config["full_node"]["peer_connect_timeout"] = int(peer_connect_timeout)
         change_made = True
 
+    if crawler_db_path is not None and "seeder" in config:
+        config["seeder"]["crawler_db_path"] = crawler_db_path
+        change_made = True
+
+    if crawler_minimum_version_count is not None and "seeder" in config:
+        config["seeder"]["minimum_version_count"] = crawler_minimum_version_count
+        change_made = True
+
+    if seeder_domain_name is not None and "seeder" in config:
+        config["seeder"]["domain_name"] = seeder_domain_name
+        change_made = True
+
+    if seeder_nameserver is not None and "seeder" in config:
+        config["seeder"]["nameserver"] = seeder_nameserver
+        change_made = True
+
     if change_made:
         print("Restart any running chia services for changes to take effect")
         save_config(root_path, "config.yaml", config)
@@ -212,6 +232,26 @@ def configure(
 )
 @click.option("--set-peer-count", help="Update the target peer count (default 80)", type=str)
 @click.option("--set-peer-connect-timeout", help="Update the peer connect timeout (default 30)", type=str)
+@click.option(
+    "--crawler-db-path",
+    help="configures the path to the crawler database",
+    type=str,
+)
+@click.option(
+    "--crawler-minimum-version-count",
+    help="configures how many of a particular version must be seen to be reported in logs",
+    type=int,
+)
+@click.option(
+    "--seeder-domain-name",
+    help="configures the seeder domain_name setting. Ex: `seeder.example.com.`",
+    type=str,
+)
+@click.option(
+    "--seeder-nameserver",
+    help="configures the seeder nameserver setting. Ex: `example.com.`",
+    type=str,
+)
 @click.pass_context
 def configure_cmd(
     ctx,
@@ -225,6 +265,10 @@ def configure_cmd(
     set_peer_count,
     testnet,
     set_peer_connect_timeout,
+    crawler_db_path,
+    crawler_minimum_version_count,
+    seeder_domain_name,
+    seeder_nameserver,
 ):
     configure(
         ctx.obj["root_path"],
@@ -238,4 +282,8 @@ def configure_cmd(
         set_peer_count,
         testnet,
         set_peer_connect_timeout,
+        crawler_db_path,
+        crawler_minimum_version_count,
+        seeder_domain_name,
+        seeder_nameserver,
     )
