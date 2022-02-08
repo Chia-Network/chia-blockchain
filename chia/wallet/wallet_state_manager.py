@@ -571,7 +571,7 @@ class WalletStateManager:
         ):
             return None, None
 
-        response: List[CoinState] = await self.wallet_node.get_coin_state([coin_state.coin.parent_coin_info])
+        response: List[CoinState] = await self.wallet_node.get_coin_state([coin_state.coin.parent_coin_info], peer)
         if len(response) == 0:
             self.log.warning(f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info}")
             return None, None
@@ -869,7 +869,6 @@ class WalletStateManager:
                     except Exception as e:
                         self.log.debug(f"Not a pool wallet launcher {e}")
                         continue
-
                     # solution_to_pool_state may return None but this may not be an error
                     if pool_state is None:
                         self.log.debug("solution_to_pool_state returned None, ignore and continue")
