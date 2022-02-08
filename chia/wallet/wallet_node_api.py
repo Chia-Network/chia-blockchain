@@ -138,7 +138,6 @@ class WalletNodeAPI:
     @peer_required
     @api_request
     async def coin_state_update(self, request: wallet_protocol.CoinStateUpdate, peer: WSChiaConnection):
-        self.log.warning(f"SUR!! {request.height}")
         await self.wallet_node.state_update_received(request, peer)
 
     @api_request

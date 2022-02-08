@@ -154,17 +154,13 @@ async def request_and_validate_additions(
         additions_request
     )
     if additions_res is None or isinstance(additions_res, RejectAdditionsRequest):
-        log.warning(f"Requested: {additions_request}")
-        log.warning("retruning false 1")
         return False
 
-    validated = validate_additions(
+    return validate_additions(
         additions_res.coins,
         additions_res.proofs,
         additions_root,
     )
-    log.warning(f"retruning {validated} 1")
-    return validated
 
 
 def get_block_challenge(

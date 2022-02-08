@@ -325,10 +325,11 @@ class WalletStateManager:
                     )
                 )
             await self.puzzle_store.add_derivation_paths(derivation_paths, in_transaction)
-            for record in derivation_paths:
-                await self.add_interested_puzzle_hash(record.puzzle_hash, record.wallet_id, in_transaction)
-                self.log.info(f"Adding path: {record.index}")
-            await self.wallet_node.subscription_queue.put((0, [record.puzzle_hash for record in derivation_paths]))
+            await self.add_interested_puzzle_hashes(
+                [record.puzzle_hash for record in derivation_paths],
+                [record.wallet_id for record in derivation_paths],
+                in_transaction,
+            )
         if unused > 0:
             await self.puzzle_store.set_used_up_to(uint32(unused - 1), in_transaction)
 
@@ -446,8 +447,7 @@ class WalletStateManager:
         if latest is None:
             return False
 
-        if latest.height - await self.blockchain.get_finished_sync_up_to() > 2:
-            self.log.info(f"Latest: {latest.height} {await self.blockchain.get_finished_sync_up_to()}")
+        if latest.height - await self.blockchain.get_finished_sync_up_to() > 0:
             return False
 
         latest_timestamp = self.blockchain.get_latest_timestamp()
@@ -630,7 +630,7 @@ class WalletStateManager:
 
     async def new_coin_state(
         self, coin_states: List[CoinState], peer: WSChiaConnection, fork_height: Optional[uint32]
-    ) -> List[bytes32]:
+    ) -> None:
         created_h_none = []
         for coin_st in coin_states.copy():
             if coin_st.created_height is None:
@@ -642,7 +642,6 @@ class WalletStateManager:
         trade_removals = await self.trade_manager.get_coins_of_interest()
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
         trade_coin_removed: List[CoinState] = []
-        new_coin_subscriptions: List[bytes32] = []
 
         for coin_state_idx, coin_state in enumerate(coin_states):
             info = await self.get_wallet_id_for_puzzle_hash(coin_state.coin.puzzle_hash)
@@ -845,8 +844,7 @@ class WalletStateManager:
                                 record.wallet_type,
                             )
                             await self.coin_store.set_spent(curr_coin_state.coin.name(), curr_coin_state.spent_height)
-                            new_coin_subscriptions.append(new_singleton_coin.name())
-                            await self.interested_store.add_interested_coin_id(new_singleton_coin.name(), True)
+                            await self.add_interested_coin_ids([new_singleton_coin.name()], True)
                             new_coin_state: List[CoinState] = await self.wallet_node.get_coin_state(
                                 [new_singleton_coin.name()], fork_height
                             )
@@ -863,6 +861,7 @@ class WalletStateManager:
                     if await self.have_a_pool_wallet_with_launched_id(child.coin.name()):
                         continue
                     if child.spent_height is None:
+                        # TODO handle spending launcher later block
                         continue
                     launcher_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(
                         peer, coin_state.spent_height, child.coin
@@ -881,27 +880,30 @@ class WalletStateManager:
                         continue
 
                     assert child.spent_height is not None
-                    pool_wallet = await PoolWallet.create(
-                        self,
-                        self.main_wallet,
-                        child.coin.name(),
-                        [launcher_spend],
-                        child.spent_height,
-                        False,
-                        "pool_wallet",
-                    )
+                    try:
+                        pool_wallet = await PoolWallet.create(
+                            self,
+                            self.main_wallet,
+                            child.coin.name(),
+                            [launcher_spend],
+                            child.spent_height,
+                            False,
+                            "pool_wallet",
+                        )
+                    except Exception as e:
+                        self.log.warning("exception in PoolWallet.create")
+                    self.log.info("Created pool wallet")
                     coin_added = launcher_spend.additions()[0]
                     await self.coin_added(
                         coin_added, coin_state.spent_height, [], pool_wallet.id(), WalletType(pool_wallet.type())
                     )
-                    new_coin_subscriptions.append(coin_added.name())
-                    await self.interested_store.add_interested_coin_id(coin_added.name(), True)
+                    await self.add_interested_coin_ids([coin_added.name()], True)
+                    self.log.info("Created pool wallet 2")
 
             else:
                 raise RuntimeError("All cases already handled")  # Logic error, all cases handled
         for coin_state_removed in trade_coin_removed:
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed, fork_height)
-        return new_coin_subscriptions
 
     async def have_a_pool_wallet_with_launched_id(self, launcher_id: bytes32) -> bool:
         for wallet_id, wallet in self.wallets.items():
@@ -1061,11 +1063,10 @@ class WalletStateManager:
         all_coins_names.extend([coin.name() for coin in tx_record.additions])
         all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
-        for coin in tx_record.removals + tx_record.additions:
-            await self.interested_store.add_interested_coin_id(coin.name())
-        await self.wallet_node.subscription_queue.put(
-            (1, [coin.name() for coin in tx_record.removals + tx_record.additions])
-        )
+        for coin_name in all_coins_names:
+            await self.interested_store.add_interested_coin_id(coin_name)
+        if len(all_coins_names) > 0:
+            await self.wallet_node.subscription_queue.put((1, all_coins_names))
         self.tx_pending_changed()
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
@@ -1258,10 +1259,19 @@ class WalletStateManager:
             if wallet.type() == uint8(WalletType.POOLING_WALLET):
                 await wallet.new_peak(peak.height)
 
-    async def add_interested_puzzle_hash(
-        self, puzzle_hash: bytes32, wallet_id: int, in_transaction: bool = False
+    async def add_interested_puzzle_hashes(
+        self, puzzle_hashes: List[bytes32], wallet_ids: List[int], in_transaction: bool = False
     ) -> None:
-        await self.interested_store.add_interested_puzzle_hash(puzzle_hash, wallet_id, in_transaction)
+        for puzzle_hash, wallet_id in zip(puzzle_hashes, wallet_ids):
+            await self.interested_store.add_interested_puzzle_hash(puzzle_hash, wallet_id, in_transaction)
+        if len(puzzle_hashes) > 0:
+            await self.wallet_node.subscription_queue.put((0, puzzle_hashes))
+
+    async def add_interested_coin_ids(self, coin_ids: List[bytes32], in_transaction: bool = False) -> None:
+        for coin_id in coin_ids:
+            await self.interested_store.add_interested_coin_id(coin_id, in_transaction)
+        if len(coin_ids) > 0:
+            await self.wallet_node.subscription_queue.put((1, coin_ids))
 
     async def delete_trade_transactions(self, trade_id: bytes32):
         txs: List[TransactionRecord] = await self.tx_store.get_transactions_by_trade_id(trade_id)

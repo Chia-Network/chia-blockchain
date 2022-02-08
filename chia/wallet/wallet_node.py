@@ -388,6 +388,7 @@ class WalletNode:
                     else:
                         assert False
                     async with self.wallet_state_manager.lock:
+                        self.log.info(f"Receiving state from subscription: {coin_states}")
                         await self.receive_state_from_peer(coin_states, peer)
             except Exception as e:
                 self.log.error(f"Got error {e} while processing subscriptions: {traceback.format_exc()}")
@@ -592,10 +593,7 @@ class WalletNode:
                             self.log.info(f"new coin state received ({inner_idx + 1} / {len(items)})")
                             assert self.new_state_lock is not None
                             async with self.new_state_lock:
-                                new_coin_subscriptions: List[bytes32] = await self.wallet_state_manager.new_coin_state(
-                                    [inner_state], peer, fork_height
-                                )
-                                await self.subscription_queue.put((1, new_coin_subscriptions))
+                                await self.wallet_state_manager.new_coin_state([inner_state], peer, fork_height)
                     except Exception as e:
                         tb = traceback.format_exc()
                         self.log.error(f"Exception while adding state: {e} {tb}")
@@ -716,7 +714,6 @@ class WalletNode:
 
         # TODO handle the case where syncing takes many hours, and we have a huge backlog here
         async with self._new_peak_lock_high_priority:
-            self.log.warning(f"state_update_received is {request}")
             async with self.wallet_state_manager.lock:
                 await self.receive_state_from_peer(
                     request.items,
@@ -946,7 +943,7 @@ class WalletNode:
                 peer.peer_node_id in self.synced_peers
                 and peak.height > await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
             ):
-                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(request.height)
+                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(peak.height)
             await self.wallet_state_manager.new_peak(peak)
 
     async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer) -> int:
