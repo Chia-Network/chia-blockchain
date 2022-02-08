@@ -1,5 +1,5 @@
 import { app, dialog, net, shell, ipcMain, BrowserWindow, IncomingMessage, Menu, session, nativeImage } from 'electron';
-import { default as remoteMain, initialize } from '@electron/remote/main';
+import { initialize } from '@electron/remote/main';
 import path from 'path';
 import React from 'react';
 import url from 'url';
@@ -17,6 +17,8 @@ import { i18n } from '../config/locales';
 import About from '../components/about/About';
 import packageJson from '../../package.json';
 import AppIcon from '../assets/img/chia64x64.png';
+
+app.disableHardwareAcceleration();
 
 initialize();
 
