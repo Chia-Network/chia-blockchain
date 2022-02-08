@@ -100,7 +100,7 @@ if getattr(sys, "frozen", False):
         "chia_timelord": "start_timelord",
         "chia_timelord_launcher": "timelord_launcher",
         "chia_full_node_simulator": "start_simulator",
-        "chia_seeder": "chia_seeder",
+        "chia_seeder": "start_seeder",
         "chia_crawler": "start_crawler",
     }
 
