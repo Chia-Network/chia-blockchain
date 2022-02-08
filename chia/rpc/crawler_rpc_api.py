@@ -19,14 +19,14 @@ class CrawlerRpcApi:
         payloads = []
 
         if change_data is None:
-            change_data = {}
+            change_data = await self.get_peer_counts({})
 
         if change == "crawl_batch_completed" or change == "loaded_initial_peers":
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
         return payloads
 
-    async def get_peer_counts(self, request: Dict) -> Dict:
+    async def get_peer_counts(self, _request: Dict) -> Dict[str, Any]:
         ipv6_addresses_count = 0
         for host in self.service.best_timestamp_per_peer.keys():
             try:
