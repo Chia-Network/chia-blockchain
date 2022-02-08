@@ -92,6 +92,7 @@ class PlotEvent(str, Enum):
 if getattr(sys, "frozen", False):
     name_map = {
         "chia": "chia",
+        "chia_data_layer": "chia_data_layer",
         "chia_wallet": "start_wallet",
         "chia_full_node": "start_full_node",
         "chia_harvester": "start_harvester",
