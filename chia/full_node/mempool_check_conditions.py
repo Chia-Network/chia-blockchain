@@ -1,12 +1,12 @@
 import logging
 import time
 from typing import Dict, List, Optional
-from clvm_rs import STRICT_MODE as MEMPOOL_MODE
+from clvm_rs import MEMPOOL_MODE, COND_CANON_INTS, NO_NEG_DIV
 
 from clvm.casts import int_from_bytes, int_to_bytes
 from chia.consensus.cost_calculator import NPCResult
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.generator import create_generator_args, setup_generator_args
-from chia.types.blockchain_format.program import NIL
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
@@ -16,7 +16,6 @@ from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint16
 from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-from chia.consensus.cost_calculator import conditions_cost
 
 GENERATOR_MOD = get_generator()
 
@@ -108,15 +107,38 @@ def add_cond(
     conds[op].append(ConditionWithArgs(op, args))
 
 
+def unwrap(x: Optional[uint32]) -> uint32:
+    assert x is not None
+    return x
+
+
 def get_name_puzzle_conditions(
-    generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, mempool_mode: bool
+    generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, mempool_mode: bool, height: Optional[uint32] = None
 ) -> NPCResult:
     block_program, block_program_args = setup_generator_args(generator)
-    max_cost -= len(bytes(generator.program)) * cost_per_byte
+    size_cost = len(bytes(generator.program)) * cost_per_byte
+    max_cost -= size_cost
     if max_cost < 0:
         return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), [], uint64(0))
 
-    flags = MEMPOOL_MODE if mempool_mode else 0
+    # in mempool mode, the height doesn't matter, because it's always strict.
+    # But otherwise, height must be specified to know which rules to apply
+    assert mempool_mode or height is not None
+
+    # mempool mode also has these rules apply
+    assert (MEMPOOL_MODE & COND_CANON_INTS) != 0
+    assert (MEMPOOL_MODE & NO_NEG_DIV) != 0
+
+    if mempool_mode:
+        flags = MEMPOOL_MODE
+    elif unwrap(height) >= DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT:
+        # conditions must use integers in canonical encoding (i.e. no redundant
+        # leading zeros)
+        # the division operator may not be used with negative operands
+        flags = COND_CANON_INTS | NO_NEG_DIV
+    else:
+        flags = 0
+
     try:
         err, result = GENERATOR_MOD.run_as_generator(max_cost, flags, block_program, block_program_args)
 
@@ -124,7 +146,6 @@ def get_name_puzzle_conditions(
             assert err != 0
             return NPCResult(uint16(err), [], uint64(0))
 
-        condition_cost = 0
         first = True
         npc_list = []
         for r in result.spends:
@@ -153,15 +174,9 @@ def get_name_puzzle_conditions(
                 for sig in result.agg_sig_unsafe:
                     add_cond(conditions, ConditionOpcode.AGG_SIG_UNSAFE, [sig[0], sig[1]])
 
-            condition_cost += conditions_cost(conditions)
             npc_list.append(NPC(r.coin_id, r.puzzle_hash, [(op, cond) for op, cond in conditions.items()]))
 
-        # this is a temporary hack. The NPCResult clvm_cost field is not
-        # supposed to include conditions cost # but the result from run_generator2() does
-        # include that cost. So, until we change which cost we include in NPCResult,
-        # subtract the conditions cost. The pure CLVM cost is what will remain.
-        clvm_cost = result.cost - condition_cost
-        return NPCResult(None, npc_list, uint64(clvm_cost))
+        return NPCResult(None, npc_list, uint64(result.cost + size_cost))
 
     except BaseException as e:
         log.debug(f"get_name_puzzle_condition failed: {e}")
@@ -171,10 +186,7 @@ def get_name_puzzle_conditions(
 def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin_name: bytes, max_cost: int):
     try:
         block_program = generator.program
-        if not generator.generator_args:
-            block_program_args = [NIL]
-        else:
-            block_program_args = create_generator_args(generator.generator_refs())
+        block_program_args = create_generator_args(generator.generator_refs)
 
         cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(
             max_cost, block_program, block_program_args, coin_name

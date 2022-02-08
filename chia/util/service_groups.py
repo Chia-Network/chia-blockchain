@@ -10,8 +10,7 @@ SERVICES_FOR_GROUP = {
     "timelord": "chia_timelord_launcher chia_timelord chia_full_node".split(),
     "timelord-only": "chia_timelord".split(),
     "timelord-launcher-only": "chia_timelord_launcher".split(),
-    "wallet": "chia_wallet chia_full_node".split(),
-    "wallet-only": "chia_wallet".split(),
+    "wallet": "chia_wallet".split(),
     "introducer": "chia_introducer".split(),
     "simulator": "chia_full_node_simulator".split(),
 }

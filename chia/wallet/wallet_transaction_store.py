@@ -257,7 +257,7 @@ class WalletTransactionStore:
             name=record.name,
             memos=record.memos,
         )
-        await self.add_transaction_record(tx, True)
+        await self.add_transaction_record(tx, False)
 
     async def get_transaction_record(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         """
@@ -471,7 +471,7 @@ class WalletTransactionStore:
                 to_delete.append(tx)
         for tx in to_delete:
             self.tx_record_cache.pop(tx.name)
-
+        self.tx_submitted = {}
         c1 = await self.db_connection.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))
         await c1.close()
 

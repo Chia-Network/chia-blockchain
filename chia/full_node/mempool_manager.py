@@ -11,7 +11,7 @@ from chiabip158 import PyBIP158
 from chia.util import cached_bls
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
+from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool import Mempool
@@ -284,7 +284,7 @@ class MempoolManager:
         assert npc_result.error is None
         if program is None:
             program = simple_solution_generator(new_spend).program
-        cost = calculate_cost_of_program(program, npc_result, self.constants.COST_PER_BYTE)
+        cost = npc_result.cost
 
         log.debug(f"Cost: {cost}")
 

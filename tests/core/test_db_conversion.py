@@ -47,6 +47,22 @@ class TestDbUpgrade:
         for i in range(351):
             hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
 
+        # the v1 schema allows duplicates in the hints table
+        for i in range(10):
+            coin_id = bytes32(rand_bytes(32))
+            hint = rand_bytes(20)
+            hints.append((coin_id, hint))
+            hints.append((coin_id, hint))
+
+        for i in range(2000):
+            hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
+
+        for i in range(5):
+            coin_id = bytes32(rand_bytes(32))
+            hint = rand_bytes(20)
+            hints.append((coin_id, hint))
+            hints.append((coin_id, hint))
+
         with TempFile() as in_file, TempFile() as out_file:
 
             async with aiosqlite.connect(in_file) as conn:

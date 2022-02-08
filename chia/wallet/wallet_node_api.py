@@ -101,10 +101,7 @@ class WalletNodeAPI:
         self, request: introducer_protocol.RespondPeersIntroducer, peer: WSChiaConnection
     ):
         if self.wallet_node.wallet_peers is not None:
-            if not self.wallet_node.has_full_node():
-                await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), False)
-            else:
-                await self.wallet_node.wallet_peers.ensure_is_closed()
+            await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), False)
 
         if peer is not None and peer.connection_type is NodeType.INTRODUCER:
             await peer.close()
@@ -114,12 +111,10 @@ class WalletNodeAPI:
     async def respond_peers(self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection):
         if self.wallet_node.wallet_peers is None:
             return None
-        if not self.wallet_node.has_full_node():
-            self.log.info(f"Wallet received {len(request.peer_list)} peers.")
-            await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), True)
-        else:
-            self.log.info(f"Wallet received {len(request.peer_list)} peers, but ignoring, since we have a full node.")
-            await self.wallet_node.wallet_peers.ensure_is_closed()
+
+        self.log.info(f"Wallet received {len(request.peer_list)} peers.")
+        await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), True)
+
         return None
 
     @api_request
