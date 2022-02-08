@@ -824,7 +824,6 @@ class WalletStateManager:
                         wallet = self.wallets[uint32(record.wallet_id)]
                         curr_coin_state: CoinState = coin_state
 
-                        # TODO: refactor to not refetch everything recursively
                         while curr_coin_state.spent_height is not None:
                             cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
                                 peer, curr_coin_state.spent_height, curr_coin_state.coin

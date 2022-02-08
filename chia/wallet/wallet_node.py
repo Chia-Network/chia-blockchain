@@ -167,6 +167,7 @@ class WalletNode:
         self._node_peaks = {}
         self.validation_semaphore = None
         self.local_node_synced = False
+        self.LONG_SYNC_THRESHOLD = 200
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
@@ -210,7 +211,8 @@ class WalletNode:
     ) -> bool:
         # Makes sure the coin_state_updates get higher priority than new_peak messages
         self._new_peak_lock = asyncio.Lock()
-        self._new_peak_lock_queue = LockQueue(self._new_peak_lock)
+        # TODO: a limited max size can cause a problem, but too many tasks can also overload the node (do a queue)
+        self._new_peak_lock_queue = LockQueue(self._new_peak_lock, maxsize=10 * self.LONG_SYNC_THRESHOLD)
         self._new_peak_lock_high_priority = LockClient(1, self._new_peak_lock_queue)
         self._new_peak_lock_low_priority = LockClient(2, self._new_peak_lock_queue)
         self.subscription_queue = asyncio.Queue()
@@ -371,6 +373,9 @@ class WalletNode:
     async def _process_new_subscriptions(self):
         while not self._shut_down:
             try:
+                # Here we get new subscription values and immediately subscribe to all connected nodes.
+                # It is important that these get processed, so that users see all the coins that they own.
+                # TODO: if the node crashes at this point, we might lose some subscriptions
                 sub_type, byte_values = await self.subscription_queue.get()
                 for peer in self.server.get_full_node_connections():
                     if sub_type == 0:
@@ -712,7 +717,7 @@ class WalletNode:
         assert self.wallet_state_manager is not None
         assert self.server is not None
 
-        # TODO handle the case where syncing takes many hours, and we have a huge backlog here
+        # TODO: ensure we don't drop any things here, but allow waiting until sync is done.
         async with self._new_peak_lock_high_priority:
             async with self.wallet_state_manager.lock:
                 await self.receive_state_from_peer(
@@ -805,6 +810,7 @@ class WalletNode:
         # updates from being processed. State updates must be processed before the new_peak messages for each height.
         # If there was no coin_state_update before the new_peak message, we will assume that there were no tx of
         # interest for the wallet.
+        # TODO: handle the stackig of too many new_peaks in the lock during a long sync
         async with self._new_peak_lock_low_priority:
             self.log.info(f"Processing new peak {peak.height} {peak.header_hash}")
             peak_hb: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
@@ -844,9 +850,8 @@ class WalletNode:
                         await self.long_sync(peak.height, peer, True, None)
                         self.wallet_state_manager.set_sync_mode(False)
             else:
-                long_sync_threshold = 200
                 far_behind: bool = (
-                    peak.height - self.wallet_state_manager.blockchain.get_peak_height() > long_sync_threshold
+                    peak.height - self.wallet_state_manager.blockchain.get_peak_height() > self.LONG_SYNC_THRESHOLD
                 )
 
                 # check if claimed peak is heavier or same as our current peak
