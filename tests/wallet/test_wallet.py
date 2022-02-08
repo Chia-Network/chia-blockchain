@@ -167,7 +167,7 @@ class TestWalletSimulator:
 
     @pytest.mark.parametrize(
         "trusted",
-        [True, False],
+        [False],
     )
     @pytest.mark.asyncio
     async def test_wallet_coinbase_reorg(self, wallet_node, trusted):

@@ -570,13 +570,17 @@ class WalletStateManager:
                 removals[coin.name()] = coin
         return removals
 
-    async def fetch_parent_and_check_for_cat(self, peer, coin_state) -> Tuple[Optional[uint32], Optional[WalletType]]:
+    async def fetch_parent_and_check_for_cat(
+        self, peer: WSChiaConnection, coin_state: CoinState, fork_height: Optional[uint32]
+    ) -> Tuple[Optional[uint32], Optional[WalletType]]:
         if self.is_pool_reward(coin_state.created_height, coin_state.coin.parent_coin_info) or self.is_farmer_reward(
             coin_state.created_height, coin_state.coin.parent_coin_info
         ):
             return None, None
 
-        response: List[CoinState] = await self.wallet_node.get_coin_state([coin_state.coin.parent_coin_info])
+        response: List[CoinState] = await self.wallet_node.get_coin_state(
+            [coin_state.coin.parent_coin_info], fork_height
+        )
         if len(response) == 0:
             self.log.warning(f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info}")
             return None, None
@@ -622,7 +626,9 @@ class WalletStateManager:
 
         return wallet_id, wallet_type
 
-    async def new_coin_state(self, coin_states: List[CoinState], peer: WSChiaConnection) -> List[bytes32]:
+    async def new_coin_state(
+        self, coin_states: List[CoinState], peer: WSChiaConnection, fork_height: Optional[uint32]
+    ) -> List[bytes32]:
         created_h_none = []
         for coin_st in coin_states.copy():
             if coin_st.created_height is None:
@@ -659,7 +665,7 @@ class WalletStateManager:
                 wallet_id = uint32(local_record.wallet_id)
                 wallet_type = local_record.wallet_type
             elif coin_state.created_height is not None:
-                wallet_id, wallet_type = await self.fetch_parent_and_check_for_cat(peer, coin_state)
+                wallet_id, wallet_type = await self.fetch_parent_and_check_for_cat(peer, coin_state, fork_height)
 
             if wallet_id is None or wallet_type is None:
                 self.log.info(f"No wallet for coin state: {coin_state}")
@@ -741,7 +747,7 @@ class WalletStateManager:
                         )
                         await self.tx_store.add_transaction_record(tx_record, False)
 
-                    children = await self.wallet_node.fetch_children(peer, coin_state.coin.name())
+                    children = await self.wallet_node.fetch_children(peer, coin_state.coin.name(), fork_height)
                     assert children is not None
                     additions = [state.coin for state in children]
                     if len(children) > 0:
@@ -840,14 +846,14 @@ class WalletStateManager:
                             new_coin_subscriptions.append(new_singleton_coin.name())
                             await self.interested_store.add_interested_coin_id(new_singleton_coin.name(), True)
                             new_coin_state: List[CoinState] = await self.wallet_node.get_coin_state(
-                                [new_singleton_coin.name()]
+                                [new_singleton_coin.name()], fork_height
                             )
                             assert len(new_coin_state) == 1
                             curr_coin_state = new_coin_state[0]
 
                 # Check if a child is a singleton launcher
                 if children is None:
-                    children = await self.wallet_node.fetch_children(peer, coin_state.coin.name())
+                    children = await self.wallet_node.fetch_children(peer, coin_state.coin.name(), fork_height)
                 assert children is not None
                 for child in children:
                     if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
@@ -892,7 +898,7 @@ class WalletStateManager:
             else:
                 raise RuntimeError("All cases already handled")  # Logic error, all cases handled
         for coin_state_removed in trade_coin_removed:
-            await self.trade_manager.coins_of_interest_farmed(coin_state_removed)
+            await self.trade_manager.coins_of_interest_farmed(coin_state_removed, fork_height)
         return new_coin_subscriptions
 
     async def have_a_pool_wallet_with_launched_id(self, launcher_id: bytes32) -> bool:
