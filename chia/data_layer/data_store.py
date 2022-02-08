@@ -993,12 +993,18 @@ class DataStore:
         lock: bool = True,
     ) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
+            insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
             for node_type, value1, value2 in batch:
                 if node_type == NodeType.INTERNAL:
-                    await self._insert_internal_node(bytes32.from_hexstr(value1), bytes32.from_hexstr(value2), tree_id)
+                    left = bytes32.from_hexstr(value1)
+                    right = bytes32.from_hexstr(value2)
+                    await self._insert_internal_node(left, right)
+                    insert_ancestors_cache.append((left, right, tree_id))
                 if node_type == NodeType.TERMINAL:
-                    await self._insert_terminal_node(bytes.fromhex(value1), bytes.fromhex(value2), tree_id)
+                    await self._insert_terminal_node(bytes.fromhex(value1), bytes.fromhex(value2))
             await self._insert_root(tree_id, root_hash, Status.COMMITTED, generation)
+            for left_hash, right_hash, tree_id in insert_ancestors_cache:
+                await self._insert_ancestor_table(left_hash, right_hash, tree_id, generation)
 
     async def get_operations(
         self,
