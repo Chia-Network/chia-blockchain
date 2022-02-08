@@ -134,11 +134,11 @@ if [ "$(uname)" = "Linux" ]; then
       cd sqlite-autoconf-3370200
       echo "./configure --prefix=/usr/local"
       # '| stdbuf ...' seems weird but this makes command ouputs stay in single line.
-      ./configure --prefix=/usr/local | stdbuf -o0 cut -b1-$(tput cols) | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+      ./configure --prefix=/usr/local | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
       echo "make -j$(nproc)"
-      make -j"$(nproc)" | stdbuf -o0 cut -b1-$(tput cols) | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+      make -j"$(nproc)" | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
       echo "sudo make install"
-      sudo make install | stdbuf -o0 cut -b1-$(tput cols) | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+      sudo make install | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
       # yum install python3 brings Python3.6 which is not supported by chia
       cd ..
       echo "wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz"
@@ -148,11 +148,11 @@ if [ "$(uname)" = "Linux" ]; then
       cd Python-3.9.9
       echo "LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local"
       # '| stdbuf ...' seems weird but this makes command ouputs stay in single line.
-      LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local | stdbuf -o0 cut -b1-$(tput cols) | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+      LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
       echo "LD_RUN_PATH=/usr/local/lib make -j$(nproc)"
-      LD_RUN_PATH=/usr/local/lib make -j"$(nproc)" | stdbuf -o0 cut -b1-$(tput cols) | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+      LD_RUN_PATH=/usr/local/lib make -j"$(nproc)" | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
       echo "LD_RUN_PATH=/usr/local/lib sudo make altinstall"
-      LD_RUN_PATH=/usr/local/lib sudo make altinstall | stdbuf -o0 cut -b1-$(tput cols) | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+      LD_RUN_PATH=/usr/local/lib sudo make altinstall | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
       cd "$CURRENT_WD"
     fi
   elif type yum && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
