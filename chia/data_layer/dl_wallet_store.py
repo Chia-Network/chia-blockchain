@@ -163,7 +163,8 @@ class DataLayerStore:
         if latest_confirmed:
             # get latest confirmed root
             cursor = await self.db_connection.execute(
-                "SELECT * from singleton_records WHERE launcher_id=? and confirmed = TRUE ORDER BY generation DESC LIMIT 1",
+                "SELECT * from singleton_records WHERE launcher_id=? and confirmed = TRUE "
+                "ORDER BY generation DESC LIMIT 1",
                 (launcher_id,),
             )
         else:
