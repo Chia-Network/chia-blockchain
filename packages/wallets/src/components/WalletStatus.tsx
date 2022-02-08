@@ -15,7 +15,9 @@ type Props = {
 
 export default function WalletStatus(props: Props) {
   const { variant, height, indicator } = props;
-  const { data: walletState, isLoading } = useGetSyncStatusQuery();
+  const { data: walletState, isLoading } = useGetSyncStatusQuery({}, {
+    pollingInterval: 10000,
+  });
 
   if (isLoading || !walletState) {
     return (

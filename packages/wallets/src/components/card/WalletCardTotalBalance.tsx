@@ -28,6 +28,8 @@ export default function WalletCardTotalBalance(props: Props) {
     error,
   } = useGetWalletBalanceQuery({
     walletId,
+  }, {
+    pollingInterval: 10000,
   });
 
   const { wallet, unit = '', loading } = useWallet(walletId);
