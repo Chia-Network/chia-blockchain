@@ -2,6 +2,7 @@ from typing import List, Tuple
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
 import logging
+import os
 
 log = logging.getLogger(__name__)
 
@@ -16,22 +17,23 @@ class HintStore:
 
         if self.db_wrapper.db_version == 2:
 
-            with open('sql/hint_store_tables_v2.sql', 'r') as table_sql_file:
+            with open(os.path.join(os.path.dirname(__file__), "sql/hint_store_tables_v2.sql"), "r") as table_sql_file:
                 table_sql_script = table_sql_file.read()
-            with open('sql/hint_store_indexes_v2.sql', 'r') as index_sql_file:
+            with open(os.path.join(os.path.dirname(__file__), "sql/hint_store_indexes_v2.sql"), "r") as index_sql_file:
                 index_sql_script = index_sql_file.read()
 
         else:
 
-            with open('sql/hint_store_tables_v1.sql', 'r') as table_sql_file:
+            with open(os.path.join(os.path.dirname(__file__), "sql/hint_store_tables_v1.sql"), "r") as table_sql_file:
                 table_sql_script = table_sql_file.read()
-            with open('sql/hint_store_indexes_v1.sql', 'r') as index_sql_file:
+            with open(os.path.join(os.path.dirname(__file__), "sql/hint_store_indexes_v1.sql"), "r") as index_sql_file:
                 index_sql_script = index_sql_file.read()
 
         await self.db_wrapper.db.executescript(table_sql_script)
         await self.db_wrapper.db.executescript(index_sql_script)
 
         await self.db_wrapper.db.commit()
+
         return self
 
     async def get_coin_ids(self, hint: bytes) -> List[bytes32]:

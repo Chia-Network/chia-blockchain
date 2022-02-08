@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List, Optional, Tuple, Any
 
 import aiosqlite
+import os
 import zstd
 
 from chia.consensus.block_record import BlockRecord
@@ -31,22 +32,23 @@ class BlockStore:
 
         if self.db_wrapper.db_version == 2:
 
-            with open('sql/block_store_tables_v2.sql', 'r') as table_sql_file:
+            with open(os.path.join(os.path.dirname(__file__), "sql/block_store_tables_v2.sql"), "r") as table_sql_file:
                 table_sql_script = table_sql_file.read()
-            with open('sql/block_store_indexes_v2.sql', 'r') as index_sql_file:
+            with open(os.path.join(os.path.dirname(__file__), "sql/block_store_indexes_v2.sql"), "r") as index_sql_file:
                 index_sql_script = index_sql_file.read()
 
         else:
 
-            with open('sql/block_store_tables_v1.sql', 'r') as table_sql_file:
+            with open(os.path.join(os.path.dirname(__file__), "sql/block_store_tables_v1.sql"), "r") as table_sql_file:
                 table_sql_script = table_sql_file.read()
-            with open('sql/block_store_indexes_v1.sql', 'r') as index_sql_file:
+            with open(os.path.join(os.path.dirname(__file__), "sql/block_store_indexes_v1.sql"), "r") as index_sql_file:
                 index_sql_script = index_sql_file.read()
 
         await self.db.executescript(table_sql_script)
         await self.db.executescript(index_sql_script)
 
         await self.db.commit()
+
         self.block_cache = LRUCache(1000)
         self.ses_challenge_cache = LRUCache(50)
         return self

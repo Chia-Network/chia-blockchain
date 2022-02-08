@@ -8,6 +8,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
 from time import time
+import os
 import logging
 
 log = logging.getLogger(__name__)
@@ -34,22 +35,23 @@ class CoinStore:
 
         if self.db_wrapper.db_version == 2:
 
-            with open('sql/coin_store_tables_v2.sql', 'r') as table_sql_file:
+            with open(os.path.join(os.path.dirname(__file__), "sql/coin_store_tables_v2.sql"), "r") as table_sql_file:
                 table_sql_script = table_sql_file.read()
-            with open('sql/coin_store_indexes_v2.sql', 'r') as index_sql_file:
+            with open(os.path.join(os.path.dirname(__file__), "sql/coin_store_indexes_v2.sql"), "r") as index_sql_file:
                 index_sql_script = index_sql_file.read()
 
         else:
 
-            with open('sql/coin_store_tables_v1.sql', 'r') as table_sql_file:
+            with open(os.path.join(os.path.dirname(__file__), "sql/coin_store_tables_v1.sql"), "r") as table_sql_file:
                 table_sql_script = table_sql_file.read()
-            with open('sql/coin_store_indexes_v1.sql', 'r') as index_sql_file:
+            with open(os.path.join(os.path.dirname(__file__), "sql/coin_store_indexes_v1.sql"), "r") as index_sql_file:
                 index_sql_script = index_sql_file.read()
-        
+
         await self.coin_record_db.executescript(table_sql_script)
         await self.coin_record_db.executescript(index_sql_script)
 
         await self.coin_record_db.commit()
+
         self.coin_record_cache = LRUCache(cache_size)
         return self
 
