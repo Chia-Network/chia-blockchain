@@ -154,16 +154,22 @@ class DataLayerStore:
             return self._row_to_singleton_record(row)
         return None
 
-    async def get_latest_singleton(self, launcher_id: bytes32) -> Optional[SingletonRecord]:
+    async def get_latest_singleton(self, launcher_id: bytes32, latest_confirmed: bool) -> Optional[SingletonRecord]:
         """
         Checks DB for SingletonRecords with launcher_id: launcher_id and returns the most recent.
         """
         # if tx_id in self.tx_record_cache:
         #     return self.tx_record_cache[tx_id]
-
-        cursor = await self.db_connection.execute(
-            "SELECT * from singleton_records WHERE launcher_id=? ORDER BY generation DESC LIMIT 1", (launcher_id,)
-        )
+        if latest_confirmed:
+            # get latest confirmed root
+            cursor = await self.db_connection.execute(
+                "SELECT * from singleton_records WHERE launcher_id=? and confirmed = TRUE ORDER BY generation DESC LIMIT 1",
+                (launcher_id,),
+            )
+        else:
+            cursor = await self.db_connection.execute(
+                "SELECT * from singleton_records WHERE launcher_id=? ORDER BY generation DESC LIMIT 1", (launcher_id,)
+            )
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:

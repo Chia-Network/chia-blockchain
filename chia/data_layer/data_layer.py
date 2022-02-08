@@ -138,7 +138,7 @@ class DataLayer:
         return res
 
     async def get_root(self, store_id: bytes32) -> Tuple[Optional[bytes32], Status]:
-        latest = await self.wallet_rpc.dl_latest_singleton(store_id)
+        latest = await self.wallet_rpc.dl_latest_singleton(store_id, True)
         if latest is None:
             self.log.error(f"Failed to get root for {store_id.hex()}")
             return None, Status.PENDING
@@ -174,7 +174,7 @@ class DataLayer:
 
     async def fetch_and_validate(self, subscription: Subscription) -> None:
         tree_id = subscription.tree_id
-        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id)
+        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
         if singleton_record is None:
             self.log.info(f"Fetch data: No singleton record for {tree_id}.")
             return
