@@ -189,7 +189,6 @@ def configure(
     if change_made:
         print("Restart any running chia services for changes to take effect")
         save_config(root_path, "config.yaml", config)
-    return 0
 
 
 @click.command("configure", short_help="Modify configuration")
