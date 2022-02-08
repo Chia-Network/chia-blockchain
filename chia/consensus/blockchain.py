@@ -250,35 +250,38 @@ class Blockchain(BlockchainInterface):
         )
         # Always add the block to the database
         async with self.block_store.db_wrapper.lock:
-            try:
-                header_hash: bytes32 = block.header_hash
-                # Perform the DB operations to update the state, and rollback if something goes wrong
-                await self.block_store.db_wrapper.begin_transaction()
-                await self.block_store.add_full_block(header_hash, block, block_record)
-                fork_height, peak_height, records, (coin_record_change, hint_changes) = await self._reconsider_peak(
-                    block_record, genesis, fork_point_with_peak, npc_result
-                )
-                await self.block_store.db_wrapper.commit_transaction()
-
-                # Then update the memory cache. It is important that this task is not cancelled and does not throw
-                self.add_block_record(block_record)
-                for fetched_block_record in records:
-                    self.__height_map.update_height(
-                        fetched_block_record.height,
-                        fetched_block_record.header_hash,
-                        fetched_block_record.sub_epoch_summary_included,
+            # Perform the DB operations to update the state, and rollback if something goes wrong
+            async with self.block_store.db.connection() as connection:
+                transaction = await connection.transaction()
+                try:
+                    header_hash: bytes32 = block.header_hash
+                    await self.block_store.add_full_block(header_hash, block, block_record)
+                    fork_height, peak_height, records, (coin_record_change, hint_changes) = await self._reconsider_peak(
+                        block_record, genesis, fork_point_with_peak, npc_result
                     )
-                if peak_height is not None:
-                    self._peak_height = peak_height
-                    await self.__height_map.maybe_flush()
-            except BaseException as e:
-                self.block_store.rollback_cache_block(header_hash)
-                await self.block_store.db_wrapper.rollback_transaction()
-                log.error(
-                    f"Error while adding block {block.header_hash} height {block.height},"
-                    f" rolling back: {traceback.format_exc()} {e}"
-                )
-                raise
+
+
+                    # Then update the memory cache. It is important that this task is not cancelled and does not throw
+                    self.add_block_record(block_record)
+                    for fetched_block_record in records:
+                        self.__height_map.update_height(
+                            fetched_block_record.height,
+                            fetched_block_record.header_hash,
+                            fetched_block_record.sub_epoch_summary_included,
+                        )
+                    if peak_height is not None:
+                        self._peak_height = peak_height
+                        await self.__height_map.maybe_flush()
+                except BaseException as e:
+                    self.block_store.rollback_cache_block(header_hash)
+                    await transaction.rollback()
+                    log.error(
+                        f"Error while adding block {block.header_hash} height {block.height},"
+                        f" rolling back: {traceback.format_exc()} {e}"
+                    )
+                    raise
+                else:
+                    await transaction.commit()
 
         if fork_height is not None:
             # new coin records added
@@ -345,7 +348,7 @@ class Blockchain(BlockchainInterface):
                     )
                 else:
                     added, _ = [], []
-                await self.block_store.set_in_chain([(block_record.header_hash,)])
+                await self.block_store.set_in_chain([block_record.header_hash])
                 await self.block_store.set_peak(block_record.header_hash)
                 return uint32(0), uint32(0), [block_record], (added, {})
             return None, None, [], ([], {})
@@ -430,7 +433,7 @@ class Blockchain(BlockchainInterface):
                                 hint_coin_state[key] = {}
                             hint_coin_state[key][coin_id] = lastest_coin_state[coin_id]
 
-            await self.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
+            await self.block_store.set_in_chain([br.header_hash for br in records_to_add])
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)

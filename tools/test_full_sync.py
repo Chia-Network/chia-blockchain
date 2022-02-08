@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import asyncio
-import aiosqlite
 import zstd
 import click
 from pathlib import Path
@@ -14,9 +13,10 @@ from chia.util.config import load_config
 from chia.full_node.full_node import FullNode
 
 from chia.cmds.init_funcs import chia_init
+from chia.util.db_factory import get_database_connection
 
 
-async def run_sync_test(file: Path, db_version=2) -> None:
+def run_sync_test(file: Path, db_version=2) -> None:
 
     with tempfile.TemporaryDirectory() as root_dir:
 
@@ -32,44 +32,49 @@ async def run_sync_test(file: Path, db_version=2) -> None:
             consensus_constants=constants,
         )
 
-        try:
-            await full_node._start()
+        asyncio.run(run_sync_test_async(full_node, file))
 
-            print()
-            counter = 0
-            async with aiosqlite.connect(file) as in_db:
 
-                rows = await in_db.execute("SELECT header_hash, height, block FROM full_blocks ORDER BY height")
+async def run_sync_test_async(full_node: FullNode, file: Path):
+    try:
+        await full_node._start()
 
+        print()
+        counter = 0
+
+        async with await get_database_connection(file) as in_db:
+
+            rows = await in_db.fetch_all("SELECT header_hash, height, block FROM full_blocks ORDER BY height")
+
+            block_batch = []
+
+            start_time = time()
+            for r in rows:
+                block = FullBlock.from_bytes(zstd.decompress(r[2]))
+
+                block_batch.append(block)
+                if len(block_batch) < 32:
+                    continue
+
+                success, advanced_peak, fork_height, coin_changes = await full_node.receive_block_batch(
+                    block_batch, None, None  # type: ignore[arg-type]
+                )
+                assert success
+                assert advanced_peak
+                counter += len(block_batch)
+                print(f"\rheight {counter} {counter/(time() - start_time):0.2f} blocks/s   ", end="")
                 block_batch = []
-
-                start_time = time()
-                async for r in rows:
-                    block = FullBlock.from_bytes(zstd.decompress(r[2]))
-
-                    block_batch.append(block)
-                    if len(block_batch) < 32:
-                        continue
-
-                    success, advanced_peak, fork_height, coin_changes = await full_node.receive_block_batch(
-                        block_batch, None, None  # type: ignore[arg-type]
-                    )
-                    assert success
-                    assert advanced_peak
-                    counter += len(block_batch)
-                    print(f"\rheight {counter} {counter/(time() - start_time):0.2f} blocks/s   ", end="")
-                    block_batch = []
-        finally:
-            print("closing full node")
-            full_node._close()
-            await full_node._await_closed()
+    finally:
+        print("closing full node")
+        full_node._close()
+        await full_node._await_closed()
 
 
 @click.command()
 @click.argument("file", type=click.Path(), required=True)
 @click.argument("db-version", type=int, required=False, default=2)
 def main(file: Path, db_version) -> None:
-    asyncio.run(run_sync_test(Path(file), db_version))
+    run_sync_test(Path(file), db_version)
 
 
 if __name__ == "__main__":

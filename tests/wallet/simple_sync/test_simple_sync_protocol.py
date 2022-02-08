@@ -58,7 +58,7 @@ class TestSimpleSyncProtocol:
 
     async def get_all_messages_in_queue(self, queue):
         all_messages = []
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         while not queue.empty():
             message, peer = await queue.get()
             all_messages.append(message)

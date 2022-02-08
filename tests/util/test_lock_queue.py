@@ -27,7 +27,7 @@ class TestLockQueue:
         high_priority_client = LockClient(0, queue)
 
         async def very_slow_func():
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
             raise CancelledError()
 
         async def slow_func():
@@ -75,7 +75,7 @@ class TestLockQueue:
                 winner = "l"
             if l_finished and h.done():
                 break
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
         assert winner == "h"
 
         queue.close()

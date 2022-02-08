@@ -52,7 +52,7 @@ async def test_harvester_handshake(environment):
         return farmer.harvester_handshake_task is not None
 
     async def handshake_done() -> bool:
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         return harvester.plot_manager._refresh_thread is not None and len(harvester.plot_manager.farmer_public_keys) > 0
 
     # First remove all keys from the keychain
@@ -73,7 +73,7 @@ async def test_harvester_handshake(environment):
     assert not await handshake_done()
     # Handshake task should be stopped again
     await time_out_assert(5, handshake_task_active, False)
-    await asyncio.sleep(1)
+    await asyncio.sleep(3)
     assert harvester.plot_manager._refresh_thread is None
     assert len(harvester.plot_manager.farmer_public_keys) == 0
     # Re-start the harvester and make sure the handshake task gets started but the handshake still doesn't go through

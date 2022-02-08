@@ -1,5 +1,4 @@
-import aiosqlite
-
+from databases import Database
 from typing import Optional, List, Dict, Tuple, Any
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -23,6 +22,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.coinbase import create_pool_coin, create_farmer_coin
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from chia.consensus.cost_calculator import NPCResult
+from chia.util.temp_file_db import TempFileDatabase
 
 """
 The purpose of this file is to provide a lightweight simulator for the testing of Chialisp smart contracts.
@@ -54,7 +54,8 @@ class SimBlockRecord:
 
 class SpendSim:
 
-    connection: aiosqlite.Connection
+    temp_file_db: TempFileDatabase
+    connection: Database
     mempool_manager: MempoolManager
     block_records: List[SimBlockRecord]
     blocks: List[SimFullBlock]
@@ -65,7 +66,9 @@ class SpendSim:
     @classmethod
     async def create(cls, defaults=DEFAULT_CONSTANTS):
         self = cls()
-        self.connection = await aiosqlite.connect(":memory:")
+        self.temp_file_db = TempFileDatabase()
+        self.connection = self.temp_file_db.connection
+        await self.connection.connect()
         coin_store = await CoinStore.create(DBWrapper(self.connection))
         self.mempool_manager = MempoolManager(coin_store, defaults)
         self.block_records = []
@@ -76,7 +79,7 @@ class SpendSim:
         return self
 
     async def close(self):
-        await self.connection.close()
+        await self.temp_file_db.disconnect()
 
     async def new_peak(self):
         await self.mempool_manager.new_peak(self.block_records[-1], [])
@@ -92,12 +95,11 @@ class SpendSim:
 
     async def all_non_reward_coins(self) -> List[Coin]:
         coins = set()
-        cursor = await self.mempool_manager.coin_store.coin_record_db.execute(
-            "SELECT * from coin_record WHERE coinbase=0 AND spent=0 ",
-        )
-        rows = await cursor.fetchall()
 
-        await cursor.close()
+        rows = await self.mempool_manager.coin_store.coin_record_db.fetch_all(
+            "SELECT * from coin_record WHERE coinbase=0 AND spent=0 "
+        )
+
         for row in rows:
             coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
             coins.add(coin)

@@ -28,7 +28,7 @@ from chia.util.ints import uint32
 from tests.block_tools import create_block_tools, test_constants
 from tests.util.keyring import TempKeyring
 
-from .ram_db import create_ram_blockchain
+from .temp_file_blockchain import create_temp_file_blockchain
 from ...blockchain.blockchain_test_utils import _validate_and_add_block
 
 
@@ -73,7 +73,7 @@ async def check_spend_bundle_validity(
     `SpendBundle`, and then invokes `receive_block` to ensure that it's accepted (if `expected_err=None`)
     or fails with the correct error code.
     """
-    connection, blockchain = await create_ram_blockchain(constants)
+    temp_db, blockchain  = await create_temp_file_blockchain(constants)
     try:
         for block in blocks:
             await _validate_and_add_block(blockchain, block)
@@ -99,7 +99,7 @@ async def check_spend_bundle_validity(
 
     finally:
         # if we don't close the connection, the test process doesn't exit cleanly
-        await connection.close()
+        await temp_db.disconnect()
 
         # we must call `shut_down` or the executor in `Blockchain` doesn't stop
         blockchain.shut_down()

@@ -5,8 +5,10 @@ from time import time
 
 import asyncio
 import zstd
+from chia.util import dialect_utils
 
 from chia.util.config import load_config, save_config
+from chia.util.db_factory import get_database_connection
 from chia.util.path import mkdir, path_from_root
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -65,7 +67,6 @@ COIN_COMMIT_RATE = 30000
 
 
 async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
-    import aiosqlite
     from chia.util.db_wrapper import DBWrapper
 
     if out_path.exists():
@@ -73,51 +74,52 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         raise RuntimeError("already exists")
 
     print(f"opening file for reading: {in_path}")
-    async with aiosqlite.connect(in_path) as in_db:
+    async with await get_database_connection(in_path) as in_db:
         try:
-            async with in_db.execute("SELECT * from database_version") as cursor:
-                row = await cursor.fetchone()
-                if row is not None and row[0] != 1:
-                    print(f"blockchain database already version {row[0]}\nDone")
-                    raise RuntimeError("already v2")
-        except aiosqlite.OperationalError:
+            row = await in_db.fetch_one("SELECT * from database_version")
+
+            if row is not None and row[0] != 1:
+                print(f"blockchain database already version {row[0]}\nDone")
+                raise RuntimeError("already v2")
+        except:
             pass
 
         store_v1 = await BlockStore.create(DBWrapper(in_db, db_version=1))
 
         print(f"opening file for writing: {out_path}")
-        async with aiosqlite.connect(out_path) as out_db:
-            await out_db.execute("pragma journal_mode=OFF")
-            await out_db.execute("pragma synchronous=OFF")
-            await out_db.execute("pragma cache_size=131072")
-            await out_db.execute("pragma locking_mode=exclusive")
+        async with await get_database_connection(out_path) as out_db:
+            async with out_db.connection() as connection:
+                if out_db.url.dialect == 'sqlite':
+                        await out_db.execute("pragma journal_mode=OFF")
+                        await out_db.execute("pragma synchronous=OFF")
+                        await out_db.execute("pragma cache_size=131072")
+                        await out_db.execute("pragma locking_mode=exclusive")
+                async with connection.transaction():
+                    print("initializing v2 version")
+                    await out_db.execute("CREATE TABLE database_version(version int)")
+                    await out_db.execute("INSERT INTO database_version VALUES(:version)", {"version": 2})
 
-            print("initializing v2 version")
-            await out_db.execute("CREATE TABLE database_version(version int)")
-            await out_db.execute("INSERT INTO database_version VALUES(?)", (2,))
+                    print("initializing v2 block store")
+                    await out_db.execute(
+                        "CREATE TABLE full_blocks("
+                        f"header_hash {dialect_utils.data_type('blob-as-index', out_db.url.dialect)} PRIMARY KEY,"
+                        f"prev_hash {dialect_utils.data_type('blob', out_db.url.dialect)},"
+                        "height bigint,"
+                        f"sub_epoch_summary {dialect_utils.data_type('blob', out_db.url.dialect)},"
+                        f"is_fully_compactified {dialect_utils.data_type('tinyint', out_db.url.dialect)},"
+                        f"in_main_chain {dialect_utils.data_type('tinyint', out_db.url.dialect)},"
+                        f"block {dialect_utils.data_type('blob', out_db.url.dialect)},"
+                        f"block_record {dialect_utils.data_type('blob', out_db.url.dialect)})"
+                    )
+                    await out_db.execute(
+                        f"CREATE TABLE sub_epoch_segments_v3(ses_block_hash {dialect_utils.data_type('blob-as-index', out_db.url.dialect)} PRIMARY KEY, challenge_segments {dialect_utils.data_type('blob', out_db.url.dialect)})"
+                    )
+                    await out_db.execute(f"CREATE TABLE current_peak(key int PRIMARY KEY, hash {dialect_utils.data_type('blob', out_db.url.dialect)})")
 
-            print("initializing v2 block store")
-            await out_db.execute(
-                "CREATE TABLE full_blocks("
-                "header_hash blob PRIMARY KEY,"
-                "prev_hash blob,"
-                "height bigint,"
-                "sub_epoch_summary blob,"
-                "is_fully_compactified tinyint,"
-                "in_main_chain tinyint,"
-                "block blob,"
-                "block_record blob)"
-            )
-            await out_db.execute(
-                "CREATE TABLE sub_epoch_segments_v3(" "ses_block_hash blob PRIMARY KEY," "challenge_segments blob)"
-            )
-            await out_db.execute("CREATE TABLE current_peak(key int PRIMARY KEY, hash blob)")
+                    peak_hash, peak_height = await store_v1.get_peak()
+                    print(f"peak: {peak_hash.hex()} height: {peak_height}")
 
-            peak_hash, peak_height = await store_v1.get_peak()
-            print(f"peak: {peak_hash.hex()} height: {peak_height}")
-
-            await out_db.execute("INSERT INTO current_peak VALUES(?, ?)", (0, peak_hash))
-            await out_db.commit()
+                    await out_db.execute("INSERT INTO current_peak(key, hash) VALUES(:key, :hash)", {"key": 0, "hash":  peak_hash})
 
             print("[1/5] converting full_blocks")
             height = peak_height + 1
@@ -129,73 +131,70 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             block_start_time = start_time
             block_values = []
 
-            async with in_db.execute(
+            block_record_rows = await in_db.fetch_all(
                 "SELECT header_hash, prev_hash, block, sub_epoch_summary FROM block_records ORDER BY height DESC"
-            ) as cursor:
-                async with in_db.execute(
-                    "SELECT header_hash, height, is_fully_compactified, block FROM full_blocks ORDER BY height DESC"
-                ) as cursor_2:
+            )
+            full_block_rows_map = {}
+            for full_block_row in (await in_db.fetch_all("SELECT header_hash, height, is_fully_compactified, block FROM full_blocks ORDER BY height DESC")):
+                full_block_rows_map[bytes.fromhex(full_block_row[0])] = full_block_row
 
-                    await out_db.execute("begin transaction")
-                    async for row in cursor:
+            for block_record_row in block_record_rows:
 
-                        header_hash = bytes.fromhex(row[0])
-                        if header_hash != hh:
-                            continue
+                header_hash = bytes.fromhex(block_record_row[0])
+                if header_hash != hh:
+                    continue
 
-                        # progress cursor_2 until we find the header hash
-                        while True:
-                            row_2 = await cursor_2.fetchone()
-                            if row_2 is None:
-                                print(f"ERROR: could not find block {hh.hex()}")
-                                raise RuntimeError(f"block {hh.hex()} not found")
-                            if bytes.fromhex(row_2[0]) == hh:
-                                break
 
-                        assert row_2[1] == height - 1
-                        height = row_2[1]
-                        is_fully_compactified = row_2[2]
-                        block_bytes = row_2[3]
+                if hh in full_block_rows_map:
+                    target_full_block_row = full_block_rows_map[hh]
+                else:
+                    print(f"ERROR: could not find block {hh.hex()}")
+                    raise RuntimeError(f"block {hh.hex()} not found")
 
-                        prev_hash = bytes.fromhex(row[1])
-                        block_record = row[2]
-                        ses = row[3]
 
-                        block_values.append(
-                            (
-                                hh,
-                                prev_hash,
-                                height,
-                                ses,
-                                is_fully_compactified,
-                                1,  # in_main_chain
-                                zstd.compress(block_bytes),
-                                block_record,
-                            )
-                        )
-                        hh = prev_hash
-                        if (height % 1000) == 0:
-                            print(
-                                f"\r{height: 10d} {(peak_height-height)*100/peak_height:.2f}% "
-                                f"{rate:0.1f} blocks/s ETA: {height//rate} s    ",
-                                end="",
-                            )
-                            sys.stdout.flush()
-                        commit_in -= 1
-                        if commit_in == 0:
-                            commit_in = BLOCK_COMMIT_RATE
-                            await out_db.executemany(
-                                "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)", block_values
-                            )
-                            await out_db.commit()
-                            await out_db.execute("begin transaction")
-                            block_values = []
-                            end_time = time()
-                            rate = BLOCK_COMMIT_RATE / (end_time - start_time)
-                            start_time = end_time
+                assert target_full_block_row[1] == height - 1
+                height = target_full_block_row[1]
+                is_fully_compactified = target_full_block_row[2]
+                block_bytes = target_full_block_row[3]
 
-            await out_db.executemany("INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)", block_values)
-            await out_db.commit()
+                prev_hash = bytes.fromhex(block_record_row[1])
+                block_record = block_record_row[2]
+                ses = block_record_row[3]
+
+                block_values.append(
+                    {
+                        "header_hash": hh,
+                        "prev_hash": prev_hash,
+                        "height": int(height),
+                        "sub_epoch_summary": ses,
+                        "is_fully_compactified": int(is_fully_compactified),
+                        "in_main_chain": 1,  # in_main_chain
+                        "block": zstd.compress(block_bytes),
+                        "block_record": block_record,
+                    }
+                )
+                hh = prev_hash
+                if (height % 1000) == 0:
+                    print(
+                        f"\r{height: 10d} {(peak_height-height)*100/peak_height:.2f}% "
+                        f"{rate:0.1f} blocks/s ETA: {height//rate} s    ",
+                        end="",
+                    )
+                    sys.stdout.flush()
+                commit_in -= 1
+                if commit_in == 0:
+                    commit_in = BLOCK_COMMIT_RATE
+                    await out_db.execute_many(
+                        "INSERT OR REPLACE INTO full_blocks(header_hash, prev_hash, height, sub_epoch_summary, is_fully_compactified, in_main_chain, block, block_record) VALUES(:header_hash, :prev_hash, :height, :sub_epoch_summary, :is_fully_compactified, :in_main_chain, :block, :block_record)", block_values
+                    )
+                    block_values = []
+                    end_time = time()
+                    rate = BLOCK_COMMIT_RATE / (end_time - start_time)
+                    start_time = end_time
+
+            await out_db.execute_many(
+                "INSERT OR REPLACE INTO full_blocks(header_hash, prev_hash, height, sub_epoch_summary, is_fully_compactified, in_main_chain, block, block_record) VALUES(:header_hash, :prev_hash, :height, :sub_epoch_summary, :is_fully_compactified, :in_main_chain, :block, :block_record)", block_values
+            )
             end_time = time()
             print(f"\r      {end_time - block_start_time:.2f} seconds                             ")
 
@@ -204,28 +203,24 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             commit_in = SES_COMMIT_RATE
             ses_values = []
             ses_start_time = time()
-            async with in_db.execute("SELECT ses_block_hash, challenge_segments FROM sub_epoch_segments_v3") as cursor:
-                count = 0
-                await out_db.execute("begin transaction")
-                async for row in cursor:
-                    block_hash = bytes32.fromhex(row[0])
-                    ses = row[1]
-                    ses_values.append((block_hash, ses))
-                    count += 1
-                    if (count % 100) == 0:
-                        print(f"\r{count:10d}  ", end="")
-                        sys.stdout.flush()
+            rows = await in_db.fetch_all("SELECT ses_block_hash, challenge_segments FROM sub_epoch_segments_v3")
+            count = 0
+            for row in rows:
+                block_hash = bytes32.fromhex(row[0])
+                ses = row[1]
+                ses_values.append({"ses_block_hash": block_hash, "challenge_segments":  ses})
+                count += 1
+                if (count % 100) == 0:
+                    print(f"\r{count:10d}  ", end="")
+                    sys.stdout.flush()
 
-                    commit_in -= 1
-                    if commit_in == 0:
-                        commit_in = SES_COMMIT_RATE
-                        await out_db.executemany("INSERT INTO sub_epoch_segments_v3 VALUES (?, ?)", ses_values)
-                        await out_db.commit()
-                        await out_db.execute("begin transaction")
-                        ses_values = []
+                commit_in -= 1
+                if commit_in == 0:
+                    commit_in = SES_COMMIT_RATE
+                    await out_db.execute_many("INSERT INTO sub_epoch_segments_v3(ses_block_hash, challenge_segments) VALUES (:ses_block_hash, :challenge_segments)", ses_values)
+                    ses_values = []
 
-            await out_db.executemany("INSERT INTO sub_epoch_segments_v3 VALUES (?, ?)", ses_values)
-            await out_db.commit()
+            await out_db.execute_many("INSERT INTO sub_epoch_segments_v3(ses_block_hash, challenge_segments) VALUES (:ses_block_hash, :challenge_segments)", ses_values)
 
             end_time = time()
             print(f"\r      {end_time - ses_start_time:.2f} seconds                             ")
@@ -235,23 +230,22 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             commit_in = HINT_COMMIT_RATE
             hint_start_time = time()
             hint_values = []
-            await out_db.execute("CREATE TABLE hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))")
-            await out_db.commit()
-            async with in_db.execute("SELECT coin_id, hint FROM hints") as cursor:
-                count = 0
-                await out_db.execute("begin transaction")
-                async for row in cursor:
-                    hint_values.append((row[0], row[1]))
-                    commit_in -= 1
-                    if commit_in == 0:
-                        commit_in = HINT_COMMIT_RATE
-                        await out_db.executemany("INSERT OR IGNORE INTO hints VALUES(?, ?)", hint_values)
-                        await out_db.commit()
-                        await out_db.execute("begin transaction")
-                        hint_values = []
+            await out_db.execute(f"CREATE TABLE hints(coin_id {dialect_utils.data_type('blob-as-index', out_db.url.dialect)}, hint {dialect_utils.data_type('blob-as-index', out_db.url.dialect)}, UNIQUE (coin_id, hint))")
+            rows = await in_db.fetch_all("SELECT coin_id, hint FROM hints")
+            count = 0
+            for row in rows:
+                hint_values.append({"coin_id": row[0], "hint":  row[1]})
+                commit_in -= 1
+                if commit_in == 0:
+                    commit_in = HINT_COMMIT_RATE
+                    if len(hint_values) > 0:
+                        await out_db.execute_many(
+                            dialect_utils.insert_or_ignore_query('hints', ['coin_id'], hint_values[0].keys(), out_db.url.dialect),
+                            hint_values
+                        )
+                    hint_values = []
 
-            await out_db.executemany("INSERT OR IGNORE INTO hints VALUES (?, ?)", hint_values)
-            await out_db.commit()
+            await out_db.execute_many(dialect_utils.insert_or_ignore_query('hints', ['coin_id'], hint_values[0].keys(), out_db.url.dialect), hint_values)
 
             end_time = time()
             print(f"\r      {end_time - hint_start_time:.2f} seconds                             ")
@@ -259,67 +253,74 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             print("[4/5] converting coin_store")
             await out_db.execute(
                 "CREATE TABLE coin_record("
-                "coin_name blob PRIMARY KEY,"
+                f"coin_name {dialect_utils.data_type('blob-as-index', out_db.url.dialect)} PRIMARY KEY,"
                 " confirmed_index bigint,"
                 " spent_index bigint,"  # if this is zero, it means the coin has not been spent
                 " coinbase int,"
-                " puzzle_hash blob,"
-                " coin_parent blob,"
-                " amount blob,"  # we use a blob of 8 bytes to store uint64
+                f" puzzle_hash {dialect_utils.data_type('blob', out_db.url.dialect)},"
+                f" coin_parent {dialect_utils.data_type('blob', out_db.url.dialect)},"
+                f" amount {dialect_utils.data_type('blob', out_db.url.dialect)},"  # we use a blob of 8 bytes to store uint64
                 " timestamp bigint)"
             )
-            await out_db.commit()
 
             commit_in = COIN_COMMIT_RATE
             rate = 1.0
             start_time = time()
             coin_values = []
             coin_start_time = start_time
-            async with in_db.execute(
+            rows = await in_db.fetch_all(
                 "SELECT coin_name, confirmed_index, spent_index, coinbase, puzzle_hash, coin_parent, amount, timestamp "
-                "FROM coin_record WHERE confirmed_index <= ?",
-                (peak_height,),
-            ) as cursor:
-                count = 0
-                await out_db.execute("begin transaction")
-                async for row in cursor:
-                    spent_index = row[2]
+                "FROM coin_record WHERE confirmed_index <= :peak_height",
+                {"peak_height": int(peak_height)},
+            )
+            count = 0
+            for row in rows:
+                spent_index = row[2]
 
-                    # in order to convert a consistent snapshot of the
-                    # blockchain state, any coin that was spent *after* our
-                    # cutoff must be converted into an unspent coin
-                    if spent_index > peak_height:
-                        spent_index = 0
+                # in order to convert a consistent snapshot of the
+                # blockchain state, any coin that was spent *after* our
+                # cutoff must be converted into an unspent coin
+                if spent_index > peak_height:
+                    spent_index = 0
 
-                    coin_values.append(
+                coin_values.append(
+                    {
+                        "coin_name": bytes.fromhex(row[0]),
+                        "confirmed_index": int(row[1]),
+                        "spent_index": int(spent_index),
+                        "coinbase": int(row[3]),
+                        "puzzle_hash": bytes.fromhex(row[4]),
+                        "coin_parent": bytes.fromhex(row[5]),
+                        "amount": row[6],
+                        "timestamp": int(row[7]),
+                    }
+                )
+                count += 1
+                if (count % 2000) == 0:
+                    print(f"\r{count//1000:10d}k coins {rate:0.1f} coins/s  ", end="")
+                    sys.stdout.flush()
+                commit_in -= 1
+                if commit_in == 0:
+                    commit_in = COIN_COMMIT_RATE
+                    await out_db.execute_many(
                         (
-                            bytes.fromhex(row[0]),
-                            row[1],
-                            spent_index,
-                            row[3],
-                            bytes.fromhex(row[4]),
-                            bytes.fromhex(row[5]),
-                            row[6],
-                            row[7],
-                        )
+                            "INSERT INTO coin_record(coin_name, confirmed_index, spent_index, coinbase, puzzle_hash, coin_parent, amount, timestamp) "
+                            "VALUES(:coin_name, :confirmed_index, :spent_index, :coinbase, :puzzle_hash, :coin_parent, :amount, :timestamp)"
+                        ),
+                        coin_values
                     )
-                    count += 1
-                    if (count % 2000) == 0:
-                        print(f"\r{count//1000:10d}k coins {rate:0.1f} coins/s  ", end="")
-                        sys.stdout.flush()
-                    commit_in -= 1
-                    if commit_in == 0:
-                        commit_in = COIN_COMMIT_RATE
-                        await out_db.executemany("INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)", coin_values)
-                        await out_db.commit()
-                        await out_db.execute("begin transaction")
-                        coin_values = []
-                        end_time = time()
-                        rate = COIN_COMMIT_RATE / (end_time - start_time)
-                        start_time = end_time
+                    coin_values = []
+                    end_time = time()
+                    rate = COIN_COMMIT_RATE / (end_time - start_time)
+                    start_time = end_time
 
-            await out_db.executemany("INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)", coin_values)
-            await out_db.commit()
+            await out_db.execute_many(
+                (
+                    "INSERT INTO coin_record(coin_name, confirmed_index, spent_index, coinbase, puzzle_hash, coin_parent, amount, timestamp) "
+                    "VALUES(:coin_name, :confirmed_index, :spent_index, :coinbase, :puzzle_hash, :coin_parent, :amount, :timestamp)"
+                ),
+                coin_values
+            )
             end_time = time()
             print(f"\r      {end_time - coin_start_time:.2f} seconds                             ")
 

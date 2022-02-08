@@ -1,5 +1,5 @@
+from chia.util.db_factory import get_database_connection
 import pytest
-import aiosqlite
 import tempfile
 import random
 from pathlib import Path
@@ -65,7 +65,7 @@ class TestDbUpgrade:
 
         with TempFile() as in_file, TempFile() as out_file:
 
-            async with aiosqlite.connect(in_file) as conn:
+            async with await get_database_connection(in_file) as conn:
                 db_wrapper1 = DBWrapper(conn, 1)
                 block_store1 = await BlockStore.create(db_wrapper1)
                 coin_store1 = await CoinStore.create(db_wrapper1, 0)
@@ -77,7 +77,6 @@ class TestDbUpgrade:
                 bc = await Blockchain.create(
                     coin_store1, block_store1, test_constants, hint_store1, Path("."), reserved_cores=0
                 )
-                await db_wrapper1.commit_transaction()
 
                 for block in blocks:
                     await _validate_and_add_block(bc, block)
@@ -85,7 +84,7 @@ class TestDbUpgrade:
                 # now, convert v1 in_file to v2 out_file
                 await convert_v1_to_v2(in_file, out_file)
 
-                async with aiosqlite.connect(out_file) as conn2:
+                async with await get_database_connection(out_file) as conn2:
                     db_wrapper2 = DBWrapper(conn2, 2)
                     block_store2 = await BlockStore.create(db_wrapper2)
                     coin_store2 = await CoinStore.create(db_wrapper2, 0)

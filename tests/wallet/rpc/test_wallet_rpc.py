@@ -408,7 +408,7 @@ class TestWalletRpc:
             assert should_be_none is None
             assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
@@ -425,7 +425,7 @@ class TestWalletRpc:
             colour_1 = bytes.fromhex(res["asset_id"])
             assert colour_1 == asset_id
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
@@ -439,7 +439,7 @@ class TestWalletRpc:
 
             await client.cat_spend(cat_0_id, 4, addr_1, 0, ["the cat memo"])
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
@@ -487,7 +487,7 @@ class TestWalletRpc:
             all_offers = await client.get_all_offers()
             assert len(all_offers) == 2
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)

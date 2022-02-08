@@ -3,6 +3,7 @@ import struct
 from chia.full_node.block_height_map import BlockHeightMap
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.db_wrapper import DBWrapper
+from chia.util import dialect_utils
 
 from tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -33,33 +34,31 @@ async def new_block(
     ses: Optional[SubEpochSummary],
 ):
     if db.db_version == 2:
-        cursor = await db.db.execute(
-            "INSERT INTO full_blocks VALUES(?, ?, ?, ?)",
-            (
-                block_hash,
-                parent,
-                height,
+        await db.db.execute(
+            "INSERT INTO full_blocks VALUES(:block_hash, :parent, :height, :sub_epoch_summary)",
+            {
+                "block_hash": block_hash,
+                "parent": parent,
+                "height": int(height),
                 # sub epoch summary
-                None if ses is None else bytes(ses),
-            ),
+                "sub_epoch_summary": None if ses is None else bytes(ses),
+            }
         )
-        await cursor.close()
         if is_peak:
-            cursor = await db.db.execute("INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, block_hash))
-            await cursor.close()
+            row_to_insert = {"key": 0, "hash":  block_hash}
+            await db.db.execute(dialect_utils.upsert_query('current_peak', ['key'], row_to_insert.keys(), db.db.url.dialect), row_to_insert)
     else:
-        cursor = await db.db.execute(
-            "INSERT INTO block_records VALUES(?, ?, ?, ?, ?)",
-            (
-                block_hash.hex(),
-                parent.hex(),
-                height,
+        await db.db.execute(
+            "INSERT INTO block_records VALUES(:header_hash, :prev_hash, :height, :sub_epoch_summary, :is_peak)",
+            {
+                "header_hash": block_hash.hex(),
+                "prev_hash": parent.hex(),
+                "height": int(height),
                 # sub epoch summary
-                None if ses is None else bytes(ses),
-                is_peak,
-            ),
+                "sub_epoch_summary": None if ses is None else bytes(ses),
+                "is_peak": is_peak,
+            }
         )
-        await cursor.close()
 
 
 async def setup_db(db: DBWrapper):
@@ -67,27 +66,27 @@ async def setup_db(db: DBWrapper):
     if db.db_version == 2:
         await db.db.execute(
             "CREATE TABLE IF NOT EXISTS full_blocks("
-            "header_hash blob PRIMARY KEY,"
-            "prev_hash blob,"
+            f"header_hash {dialect_utils.data_type('blob', db.db.url.dialect)} PRIMARY KEY,"
+            f"prev_hash {dialect_utils.data_type('blob', db.db.url.dialect)},"
             "height bigint,"
-            "sub_epoch_summary blob)"
+            f"sub_epoch_summary {dialect_utils.data_type('blob', db.db.url.dialect)})"
         )
-        await db.db.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
+        await db.db.execute(f"CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash {dialect_utils.data_type('blob', db.db.url.dialect)})")
 
-        await db.db.execute("CREATE INDEX IF NOT EXISTS height on full_blocks(height)")
-        await db.db.execute("CREATE INDEX IF NOT EXISTS hh on full_blocks(header_hash)")
+        await dialect_utils.create_index_if_not_exists(db.db, 'height', 'full_blocks', ['height'])
+        await dialect_utils.create_index_if_not_exists(db.db, 'hh', 'full_blocks', ['header_hash'])
     else:
         await db.db.execute(
             "CREATE TABLE IF NOT EXISTS block_records("
-            "header_hash text PRIMARY KEY,"
+            f"header_hash {dialect_utils.data_type('text-as-index', db.db.url.dialect)} PRIMARY KEY,"
             "prev_hash text,"
             "height bigint,"
-            "sub_epoch_summary blob,"
-            "is_peak tinyint)"
+            f"sub_epoch_summary {dialect_utils.data_type('blob', db.db.url.dialect)},"
+            f"is_peak {dialect_utils.data_type('tinyint', db.db.url.dialect)})"
         )
-        await db.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
-        await db.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
-        await db.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
+        await dialect_utils.create_index_if_not_exists(db.db, 'height', 'block_records', ['height'])
+        await dialect_utils.create_index_if_not_exists(db.db, 'hh', 'block_records', ['header_hash'])
+        await dialect_utils.create_index_if_not_exists(db.db, 'peak', 'block_records', ['is_peak'])
 
 
 # if chain_id != 0, the last block in the chain won't be considered the peak,

@@ -1,7 +1,6 @@
 import asyncio
 import atexit
 import signal
-import sqlite3
 
 from secrets import token_bytes
 from typing import Dict, List, Optional
@@ -20,6 +19,7 @@ from chia.simulator.start_simulator import service_kwargs_for_full_node_simulato
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.db_factory import get_database_connection
 from tests.block_tools import create_block_tools, create_block_tools_async, test_constants
 from tests.util.keyring import TempKeyring
 from chia.util.hash import std_hash
@@ -87,11 +87,10 @@ async def setup_full_node(
     if db_path.exists():
         db_path.unlink()
 
-        if db_version > 1:
-            with sqlite3.connect(db_path) as connection:
-                connection.execute("CREATE TABLE database_version(version int)")
-                connection.execute("INSERT INTO database_version VALUES (?)", (db_version,))
-                connection.commit()
+        if db_version > 1:     
+            async with await get_database_connection(db_path) as connection:
+                await connection.execute("CREATE TABLE database_version(version int)")
+                await connection.execute("INSERT INTO database_version VALUES (:version)", {"version": db_version})
 
     config = local_bt.config["full_node"]
     config["database_path"] = db_name

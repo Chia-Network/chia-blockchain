@@ -55,7 +55,7 @@ class TestTransactions:
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
         # funds += calculate_base_farmer_reward(0)
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         print(await wallet.get_confirmed_balance(), funds)
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
 

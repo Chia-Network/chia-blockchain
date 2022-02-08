@@ -7,7 +7,7 @@ from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-import aiosqlite
+from databases import Database
 from blspy import G1Element, PrivateKey
 
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
@@ -28,6 +28,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint128, uint8
 from chia.util.db_synchronous import db_synchronous_on
+from chia.util.db_factory import get_database_connection
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -93,7 +94,7 @@ class WalletStateManager:
     pending_tx_callback: Optional[Callable]
     puzzle_hash_created_callbacks: Dict = defaultdict(lambda *x: None)
     db_path: Path
-    db_connection: aiosqlite.Connection
+    db_connection: Database
     db_wrapper: DBWrapper
 
     main_wallet: Wallet
@@ -135,12 +136,13 @@ class WalletStateManager:
         self.log = logging.getLogger(name if name else __name__)
         self.lock = asyncio.Lock()
         self.log.debug(f"Starting in db path: {db_path}")
-        self.db_connection = await aiosqlite.connect(db_path)
-        await self.db_connection.execute("pragma journal_mode=wal")
+        self.db_connection = await get_database_connection(str(db_path))
+        if self.db_connection.url.dialect == "sqlite":
+            await self.db_connection.execute("pragma journal_mode=wal")
 
-        await self.db_connection.execute(
-            "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), db_path))
-        )
+            await self.db_connection.execute(
+                "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), db_path))
+            )
 
         self.db_wrapper = DBWrapper(self.db_connection)
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
@@ -806,10 +808,10 @@ class WalletStateManager:
                         for rem_coin in out_tx_record.removals:
                             if rem_coin.name() == coin_state.coin.name():
                                 rem_tx_records.append(out_tx_record)
-
-                    for tx_record in rem_tx_records:
-                        await self.tx_store.set_confirmed(tx_record.name, coin_state.spent_height)
-                    await self.coin_store.db_connection.commit()
+                    async with self.db_connection.connection() as connection:
+                        async with connection.transaction():
+                            for tx_record in rem_tx_records:
+                                await self.tx_store.set_confirmed(tx_record.name, coin_state.spent_height)
                 for unconfirmed_record in all_unconfirmed:
                     for rem_coin in unconfirmed_record.removals:
                         if rem_coin.name() == coin_state.coin.name():
@@ -1112,11 +1114,12 @@ class WalletStateManager:
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
         """
-        await self.coin_store.rollback_to_block(height)
+        async with self.db_connection.connection() as connection:
+            async with connection.transaction():
+                await self.coin_store.rollback_to_block(height)
 
-        reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
-        await self.tx_store.rollback_to_block(height)
-        await self.coin_store.db_wrapper.commit_transaction()
+                reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
+                await self.tx_store.rollback_to_block(height)
         for record in reorged:
             if record.type in [
                 TransactionType.OUTGOING_TX,
@@ -1139,7 +1142,7 @@ class WalletStateManager:
             self.wallets.pop(wallet_id)
 
     async def _await_closed(self) -> None:
-        await self.db_connection.close()
+        await self.db_connection.disconnect()
         if self.weight_proof_handler is not None:
             self.weight_proof_handler.cancel_weight_proof_tasks()
 

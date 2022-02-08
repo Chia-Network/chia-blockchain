@@ -25,7 +25,7 @@ async def empty_blockchain(request):
     bc1, connection, db_path = await create_blockchain(test_constants, request.param)
     yield bc1
 
-    await connection.close()
+    await connection.disconnect()
     bc1.shut_down()
     db_path.unlink()
 

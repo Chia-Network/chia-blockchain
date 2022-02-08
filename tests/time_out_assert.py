@@ -24,7 +24,7 @@ async def time_out_assert_custom_interval(timeout: int, interval, function, valu
 
 async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
     __tracebackhide__ = True
-    await time_out_assert_custom_interval(timeout, 0.05, function, value, *args, **kwargs)
+    await time_out_assert_custom_interval(timeout, 0.2, function, value, *args, **kwargs)
 
 
 async def time_out_assert_not_none(timeout: int, function, *args, **kwargs):
@@ -36,7 +36,7 @@ async def time_out_assert_not_none(timeout: int, function, *args, **kwargs):
             f_res = function(*args, **kwargs)
         if f_res is not None:
             return None
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.2)
     assert False, "Timed assertion timed out"
 
 

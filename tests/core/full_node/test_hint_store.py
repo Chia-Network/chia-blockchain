@@ -39,7 +39,6 @@ class TestHintStore:
 
             hints = [(coin_id_0, hint_0), (coin_id_1, hint_0), (coin_id_2, hint_1)]
             await hint_store.add_hints(hints)
-            await db_wrapper.commit_transaction()
             coins_for_hint_0 = await hint_store.get_coin_ids(hint_0)
 
             assert coin_id_0 in coins_for_hint_0
@@ -61,7 +60,6 @@ class TestHintStore:
 
             hints = [(coin_id_0, hint_0), (coin_id_0, hint_1)]
             await hint_store.add_hints(hints)
-            await db_wrapper.commit_transaction()
             coins_for_hint_0 = await hint_store.get_coin_ids(hint_0)
             assert coin_id_0 in coins_for_hint_0
 
@@ -80,7 +78,6 @@ class TestHintStore:
 
             hints = [(coin_id_0, hint_0), (coin_id_1, hint_0)]
             await hint_store.add_hints(hints)
-            await db_wrapper.commit_transaction()
             coins_for_hint_0 = await hint_store.get_coin_ids(hint_0)
             assert coin_id_0 in coins_for_hint_0
             assert coin_id_1 in coins_for_hint_0
@@ -98,12 +95,10 @@ class TestHintStore:
             for i in range(0, 2):
                 hints = [(coin_id_0, hint_0), (coin_id_0, hint_0)]
                 await hint_store.add_hints(hints)
-                await db_wrapper.commit_transaction()
             coins_for_hint_0 = await hint_store.get_coin_ids(hint_0)
             assert coin_id_0 in coins_for_hint_0
 
-            cursor = await db_wrapper.db.execute("SELECT COUNT(*) FROM hints")
-            rows = await cursor.fetchall()
+            rows = await db_wrapper.db.fetch_all("SELECT COUNT(*) FROM hints")
 
             if db_wrapper.db_version == 2:
                 # even though we inserted the pair multiple times, there's only one
@@ -167,7 +162,6 @@ class TestHintStore:
             coin_id_1 = 32 * b"\5"
             hints = [(coin_id_0, hint_0), (coin_id_1, hint_1)]
             await hint_store.add_hints(hints)
-            await db_wrapper.commit_transaction()
 
             count = await hint_store.count_hints()
             assert count == 2

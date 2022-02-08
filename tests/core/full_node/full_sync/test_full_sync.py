@@ -338,7 +338,7 @@ class TestFullSync:
             peak_block.reward_chain_block.get_unfinished().get_hash(),
         )
         await full_node_2.full_node.new_peak(peak, con)
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         assert not full_node_2.full_node.sync_store.get_sync_mode()
         for block in default_1000_blocks[1000 - num_blocks_initial :]:
             await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(block))

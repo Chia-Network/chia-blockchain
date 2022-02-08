@@ -94,13 +94,13 @@ class TestCATTrades:
             cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
                 wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, uint64(100)
             )
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
 
         async with wallet_node_taker.wallet_state_manager.lock:
             new_cat_wallet_taker: CATWallet = await CATWallet.create_new_cat_wallet(
                 wallet_node_taker.wallet_state_manager, wallet_taker, {"identifier": "genesis_by_id"}, uint64(100)
             )
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
 
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
@@ -160,7 +160,7 @@ class TestCATTrades:
         # Execute all of the trades
         # chia_for_cat
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, fee=uint64(1))
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_make is not None
@@ -168,7 +168,7 @@ class TestCATTrades:
         success, trade_take, error = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer), fee=uint64(1)
         )
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_take is not None
@@ -211,13 +211,13 @@ class TestCATTrades:
 
         # cat_for_chia
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia)
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_make is not None
 
         success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_take is not None
@@ -259,12 +259,12 @@ class TestCATTrades:
 
         # cat_for_cat
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_cat)
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_make is not None
         success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_take is not None
@@ -293,12 +293,12 @@ class TestCATTrades:
 
         # chia_for_multiple_cat
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_multiple_cat)
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_make is not None
         success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_take is not None
@@ -329,12 +329,12 @@ class TestCATTrades:
 
         # multiple_cat_for_chia
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(multiple_cat_for_chia)
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_make is not None
         success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_take is not None
@@ -365,12 +365,12 @@ class TestCATTrades:
 
         # chia_and_cat_for_cat
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_and_cat_for_cat)
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_make is not None
         success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_take is not None
@@ -442,7 +442,7 @@ class TestCATTrades:
             return TradeStatus(trade_rec.status)
 
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia)
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_make is not None
@@ -454,7 +454,7 @@ class TestCATTrades:
         # Uncomment this when/if it does
 
         # success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
-        # await asyncio.sleep(1)
+        # await asyncio.sleep(3)
         # assert error is None
         # assert success is True
         # assert trade_take is not None
@@ -487,21 +487,21 @@ class TestCATTrades:
         await time_out_assert(15, wallet_taker.get_confirmed_balance, TAKER_CHIA_BALANCE)
 
         success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is not None
         assert success is False
         assert trade_take is None
 
         # Now we're going to create the other way around for test coverage sake
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is None
         assert success is True
         assert trade_make is not None
 
         # This take should fail since we have no CATs to fulfill it with
         success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert error is not None
         assert success is False
         assert trade_take is None

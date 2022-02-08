@@ -1,11 +1,12 @@
 from typing import List, Optional
 
-import aiosqlite
+from databases import Database
 
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
+from chia.util import dialect_utils
 
 
 class WalletUserStore:
@@ -13,7 +14,7 @@ class WalletUserStore:
     WalletUserStore keeps track of all user created wallets and necessary smart-contract data
     """
 
-    db_connection: aiosqlite.Connection
+    db_connection: Database
     cache_size: uint32
     db_wrapper: DBWrapper
 
@@ -23,24 +24,25 @@ class WalletUserStore:
 
         self.db_wrapper = db_wrapper
         self.db_connection = db_wrapper.db
-        await self.db_connection.execute(
-            (
-                "CREATE TABLE IF NOT EXISTS users_wallets("
-                "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                " name text,"
-                " wallet_type int,"
-                " data text)"
-            )
-        )
+        async with self.db_connection.connection() as connection:
+            async with connection.transaction():
+                await self.db_connection.execute(
+                    (
+                        "CREATE TABLE IF NOT EXISTS users_wallets("
+                        f"id INTEGER PRIMARY KEY {dialect_utils.clause('AUTOINCREMENT', self.db_connection.url.dialect)},"
+                        f" name {dialect_utils.data_type('text-as-index', self.db_connection.url.dialect)},"
+                        " wallet_type int,"
+                        f" data {dialect_utils.data_type('text-as-index', self.db_connection.url.dialect)})"
+                    )
+                )
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS name on users_wallets(name)")
+                await dialect_utils.create_index_if_not_exists(self.db_connection, 'name', 'users_wallets', ['name'])
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS type on users_wallets(wallet_type)")
+                await dialect_utils.create_index_if_not_exists(self.db_connection, 'type', 'users_wallets', ['wallet_type'])
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS data on users_wallets(data)")
+                await dialect_utils.create_index_if_not_exists(self.db_connection, 'data', 'users_wallets', ['data'])
 
-        await self.db_connection.commit()
-        await self.init_wallet()
+                await self.init_wallet()
         return self
 
     async def init_wallet(self):
@@ -49,9 +51,7 @@ class WalletUserStore:
             await self.create_wallet("Chia Wallet", WalletType.STANDARD_WALLET, "")
 
     async def _clear_database(self):
-        cursor = await self.db_connection.execute("DELETE FROM users_wallets")
-        await cursor.close()
-        await self.db_connection.commit()
+        await self.db_connection.execute("DELETE FROM users_wallets")
 
     async def create_wallet(
         self, name: str, wallet_type: int, data: str, id: Optional[int] = None, in_transaction=False
@@ -60,14 +60,18 @@ class WalletUserStore:
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
         try:
-            cursor = await self.db_connection.execute(
-                "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
-                (id, name, wallet_type, data),
-            )
-            await cursor.close()
+            if id is None:
+                await self.db_connection.execute(
+                    "INSERT INTO users_wallets(name, wallet_type, data) VALUES(:name, :wallet_type, :data)",
+                    {"name":  name, "wallet_type":  int(wallet_type), "data":  data},
+                )
+            else:
+                await self.db_connection.execute(
+                    "INSERT INTO users_wallets(id, name, wallet_type, data) VALUES(:id, :name, :wallet_type, :data)",
+                    {"id": int(id), "name":  name, "wallet_type":  int(wallet_type), "data":  data},
+                )
         finally:
             if not in_transaction:
-                await self.db_connection.commit()
                 self.db_wrapper.lock.release()
 
         return await self.get_last_wallet()
@@ -76,36 +80,30 @@ class WalletUserStore:
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
         try:
-            cursor = await self.db_connection.execute(f"DELETE FROM users_wallets where id={id}")
-            await cursor.close()
+            await self.db_connection.execute(f"DELETE FROM users_wallets where id={int(id)}")
         finally:
             if not in_transaction:
-                await self.db_connection.commit()
                 self.db_wrapper.lock.release()
 
     async def update_wallet(self, wallet_info: WalletInfo, in_transaction):
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
         try:
-            cursor = await self.db_connection.execute(
-                "INSERT or REPLACE INTO users_wallets VALUES(?, ?, ?, ?)",
-                (
-                    wallet_info.id,
-                    wallet_info.name,
-                    wallet_info.type,
-                    wallet_info.data,
-                ),
+            await self.db_connection.execute(
+                "INSERT or REPLACE INTO users_wallets VALUES(:id, :name, :wallet_type, :data)",
+                {
+                    "id": int(wallet_info.id),
+                    "name": wallet_info.name,
+                    "wallet_type": int(wallet_info.type),
+                    "data": wallet_info.data,
+                }
             )
-            await cursor.close()
         finally:
             if not in_transaction:
-                await self.db_connection.commit()
                 self.db_wrapper.lock.release()
 
     async def get_last_wallet(self) -> Optional[WalletInfo]:
-        cursor = await self.db_connection.execute("SELECT MAX(id) FROM users_wallets;")
-        row = await cursor.fetchone()
-        await cursor.close()
+        row = await self.db_connection.fetch_one("SELECT MAX(id) FROM users_wallets;")
 
         if row is None:
             return None
@@ -117,9 +115,7 @@ class WalletUserStore:
         Return a set containing all wallets
         """
 
-        cursor = await self.db_connection.execute("SELECT * from users_wallets")
-        rows = await cursor.fetchall()
-        await cursor.close()
+        rows = await self.db_connection.fetch_all("SELECT * from users_wallets")
         result = []
 
         for row in rows:
@@ -132,9 +128,7 @@ class WalletUserStore:
         Return a wallet by id
         """
 
-        cursor = await self.db_connection.execute("SELECT * from users_wallets WHERE id=?", (id,))
-        row = await cursor.fetchone()
-        await cursor.close()
+        row = await self.db_connection.fetch_one("SELECT * from users_wallets WHERE id=:id", {"id": int(id)})
 
         if row is None:
             return None

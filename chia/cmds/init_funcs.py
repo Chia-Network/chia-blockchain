@@ -2,6 +2,7 @@ import os
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import asyncio
 
 import yaml
 
@@ -22,6 +23,7 @@ from chia.util.config import (
     save_config,
     unflatten_properties,
 )
+from chia.util.db_factory import get_database_connection
 from chia.util.keychain import Keychain
 from chia.util.path import mkdir, path_from_root
 from chia.util.ssl_check import (
@@ -436,14 +438,15 @@ def chia_init(
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         db_path = path_from_root(root_path, db_path_replaced)
         mkdir(db_path.parent)
-        import sqlite3
 
-        with sqlite3.connect(db_path) as connection:
-            connection.execute("CREATE TABLE database_version(version int)")
-            connection.execute("INSERT INTO database_version VALUES (2)")
-            connection.commit()
+        asyncio.run(create_database_versions_table(db_path))
 
     print("")
     print("To see your keys, run 'chia keys show --show-mnemonic-seed'")
 
     return 0
+
+async def create_database_versions_table(db_path: Path):
+    async with await get_database_connection(str(db_path)) as connection:
+        await connection.execute("CREATE TABLE database_version(version int)")
+        await connection.execute("INSERT INTO database_version VALUES (2)")

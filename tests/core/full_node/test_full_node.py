@@ -75,7 +75,7 @@ async def new_transaction_not_requested(incoming, new_spend):
 
 
 async def new_transaction_requested(incoming, new_spend):
-    await asyncio.sleep(1)
+    await asyncio.sleep(3)
     while not incoming.empty():
         response, peer = await incoming.get()
         if (
@@ -536,12 +536,12 @@ class TestFullNodeProtocol:
         )
         # Already have sub slot
         await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(blocks[-1].finished_sub_slots[-3]), peer)
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         assert incoming_queue.qsize() == 0
 
         # Add empty slots unsuccessful
         await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(blocks[-1].finished_sub_slots[-1]), peer)
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         assert incoming_queue.qsize() == 0
 
         # Add some blocks
@@ -1082,7 +1082,7 @@ class TestFullNodeProtocol:
             farmer_reward_puzzle_hash=cb_ph,
             pool_reward_puzzle_hash=cb_ph,
         )
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         while incoming_queue.qsize() > 0:
             await incoming_queue.get()
 
@@ -1102,7 +1102,7 @@ class TestFullNodeProtocol:
         msg = await full_node_1.respond_transaction(respond_transaction, peer)
         assert msg is None
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert incoming_queue.qsize() == 0
 
     @pytest.mark.asyncio

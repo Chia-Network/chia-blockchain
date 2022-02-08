@@ -1,0 +1,15 @@
+version: '3.7'
+services:
+  db:
+    image: postgres:14.1-alpine
+    environment:
+      - POSTGRES_DB=full_node_db
+      - POSTGRES_USER=chia
+      - POSTGRES_PASSWORD=chia
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - 54321:5432
+    volumes:
+      - postgres_volume:/var/lib/postgresql/data/pgdata
+volumes:
+  postgres_volume:

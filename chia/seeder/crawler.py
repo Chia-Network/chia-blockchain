@@ -3,10 +3,9 @@ import logging
 import time
 import traceback
 import ipaddress
+from databases import Database
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
-
-import aiosqlite
 
 import chia.server.ws_connection as ws
 from chia.consensus.constants import ConsensusConstants
@@ -16,6 +15,7 @@ from chia.seeder.crawl_store import CrawlStore
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.server import ChiaServer
 from chia.types.peer_info import PeerInfo
+from chia.util.db_factory import get_database_connection
 from chia.util.path import mkdir, path_from_root
 from chia.util.ints import uint32, uint64
 
@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 class Crawler:
     sync_store: Any
     coin_store: CoinStore
-    connection: aiosqlite.Connection
+    connection: Database
     config: Dict
     server: Any
     log: logging.Logger
@@ -115,7 +115,7 @@ class Crawler:
 
     async def crawl(self):
         try:
-            self.connection = await aiosqlite.connect(self.db_path)
+            self.connection = await get_database_connection(str(self.db_path))
             self.crawl_store = await CrawlStore.create(self.connection)
             self.log.info("Started")
             t_start = time.time()
@@ -333,4 +333,4 @@ class Crawler:
         self._shut_down = True
 
     async def _await_closed(self):
-        await self.connection.close()
+        await self.connection.disconnect()

@@ -708,7 +708,7 @@ class TestWalletSimulator:
 
         # Farm a few blocks so we can confirm the resubmitted transaction
         for i in range(0, num_blocks):
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         # By this point, the transaction should be confirmed

@@ -1,10 +1,10 @@
 import asyncio
 from pathlib import Path
 from secrets import token_bytes
-import aiosqlite
 import pytest
 
 from chia.types.blockchain_format.coin import Coin
+from chia.util.db_factory import get_database_connection
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
 
@@ -25,7 +25,7 @@ class TestWalletInterestedStore:
         if db_filename.exists():
             db_filename.unlink()
 
-        db_connection = await aiosqlite.connect(db_filename)
+        db_connection = await get_database_connection(str(db_filename))
         db_wrapper = DBWrapper(db_connection)
         store = await WalletInterestedStore.create(db_wrapper)
         try:
@@ -55,5 +55,5 @@ class TestWalletInterestedStore:
             assert len(await store.get_interested_puzzle_hashes()) == 0
 
         finally:
-            await db_connection.close()
+            await db_connection.disconnect()
             db_filename.unlink()

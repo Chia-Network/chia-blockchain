@@ -11,7 +11,11 @@ dependencies = [
     "clvm_rs==0.1.19",
     "clvm_tools==0.4.3",
     "aiohttp==3.7.4",  # HTTP server for full node rpc
-    "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
+    "aiosqlite==0.17.0",
+    "aiopg==1.3.3",
+    "aiomysql==0.0.22",
+    "databases==0.5.3",  # asyncio wrapper for database, to store blocks
+    "databases[postgresql]==0.5.3",
     "bitstring==3.1.9",  # Binary data management library
     "colorama==0.4.4",  # Colorizes terminal output
     "colorlog==5.0.1",  # Adds color to logs
@@ -43,7 +47,7 @@ upnp_dependencies = [
 dev_dependencies = [
     "pre-commit",
     "pytest",
-    "pytest-asyncio",
+    "pytest-asyncio==0.17.2",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
     "flake8",

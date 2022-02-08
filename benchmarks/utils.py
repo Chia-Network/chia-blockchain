@@ -6,8 +6,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
 from typing import Tuple
 from pathlib import Path
-from datetime import datetime
-import aiosqlite
+from chia.util.db_factory import get_database_connection
 import os
 import sys
 import random
@@ -52,19 +51,10 @@ async def setup_db(name: str, db_version: int) -> DBWrapper:
         os.unlink(db_filename)
     except FileNotFoundError:
         pass
-    connection = await aiosqlite.connect(db_filename)
+    connection = await get_database_connection(str(db_filename))
 
-    def sql_trace_callback(req: str):
-        sql_log_path = "sql.log"
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")
-        log = open(sql_log_path, "a")
-        log.write(timestamp + " " + req + "\n")
-        log.close()
-
-    if "--sql-logging" in sys.argv:
-        await connection.set_trace_callback(sql_trace_callback)
-
-    await connection.execute("pragma journal_mode=wal")
-    await connection.execute("pragma synchronous=full")
+    if connection.url.dialect == "sqlite":
+        await connection.execute("pragma journal_mode=wal")
+        await connection.execute("pragma synchronous=full")
 
     return DBWrapper(connection, db_version)

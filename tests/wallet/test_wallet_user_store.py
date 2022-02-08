@@ -1,5 +1,5 @@
 from pathlib import Path
-import aiosqlite
+from chia.util.db_factory import get_database_connection
 import pytest
 
 from chia.util.db_wrapper import DBWrapper
@@ -15,7 +15,7 @@ async def test_store():
     if db_filename.exists():
         db_filename.unlink()
 
-    db_connection = await aiosqlite.connect(db_filename)
+    db_connection = await get_database_connection(db_filename)
     db_wrapper = DBWrapper(db_connection)
     store = await WalletUserStore.create(db_wrapper)
     try:
@@ -41,5 +41,5 @@ async def test_store():
         assert await store.get_last_wallet() == wallet
 
     finally:
-        await db_connection.close()
+        await db_connection.disconnect()
         db_filename.unlink()

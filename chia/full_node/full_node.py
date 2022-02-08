@@ -7,8 +7,8 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
-import aiosqlite
 from blspy import AugSchemeMPL
+from databases import Database
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.block_creation import unfinished_block_to_full_block
@@ -63,6 +63,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED
+from chia.util.db_factory import get_database_connection
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -81,7 +82,7 @@ class FullNode:
     sync_store: Any
     coin_store: CoinStore
     mempool_manager: MempoolManager
-    connection: aiosqlite.Connection
+    connection: Database
     _sync_task: Optional[asyncio.Task]
     _init_weight_proof: Optional[asyncio.Task] = None
     blockchain: Blockchain
@@ -155,24 +156,14 @@ class FullNode:
         # These many respond_transaction tasks can be active at any point in time
         self.respond_transaction_semaphore = asyncio.Semaphore(200)
         # create the store (db) and full node instance
-        self.connection = await aiosqlite.connect(self.db_path)
-        await self.connection.execute("pragma journal_mode=wal")
+        self.connection = await get_database_connection(str(self.db_path))
+        if self.connection.url.dialect == "sqlite":
+            await self.connection.execute("pragma journal_mode=wal")
 
-        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
-        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
-        await self.connection.execute("pragma synchronous={}".format(db_sync))
+            db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
+            self.log.info(f"opening blockchain DB: synchronous={db_sync}")
+            await self.connection.execute("pragma synchronous={}".format(db_sync))
 
-        if self.config.get("log_sqlite_cmds", False):
-            sql_log_path = path_from_root(self.root_path, "log/sql.log")
-            self.log.info(f"logging SQL commands to {sql_log_path}")
-
-            def sql_trace_callback(req: str):
-                timestamp = datetime.now().strftime("%H:%M:%S.%f")
-                log = open(sql_log_path, "a")
-                log.write(timestamp + " " + req + "\n")
-                log.close()
-
-            await self.connection.set_trace_callback(sql_trace_callback)
 
         db_version: int = await lookup_db_version(self.connection)
 
@@ -734,7 +725,7 @@ class FullNode:
         cancel_task_safe(self._sync_task, self.log)
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
             cancel_task_safe(task, self.log)
-        await self.connection.close()
+        await self.connection.disconnect()
         if self._init_weight_proof is not None:
             await asyncio.wait([self._init_weight_proof])
         if hasattr(self, "_blockchain_lock_queue"):
@@ -2180,12 +2171,9 @@ class FullNode:
             return False
         async with self.db_wrapper.lock:
             try:
-                await self.block_store.db_wrapper.begin_transaction()
                 await self.block_store.replace_proof(header_hash, new_block)
-                await self.block_store.db_wrapper.commit_transaction()
                 return True
             except BaseException as e:
-                await self.block_store.db_wrapper.rollback_transaction()
                 self.log.error(
                     f"_replace_proof error while adding block {block.header_hash} height {block.height},"
                     f" rolling back: {e} {traceback.format_exc()}"

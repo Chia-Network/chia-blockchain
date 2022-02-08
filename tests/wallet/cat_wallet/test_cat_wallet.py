@@ -570,7 +570,7 @@ class TestCATWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
 
         async def check_all_there():
             spendable = await cat_wallet.get_cat_spendable_coins()

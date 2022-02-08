@@ -13,7 +13,7 @@ from chia.protocols import full_node_protocol, introducer_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
 from chia.server.address_manager_store import AddressManagerStore
-from chia.server.address_manager_sqlite_store import create_address_manager_from_db
+from chia.server.address_manager_db_store import create_address_manager_from_db
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
@@ -221,6 +221,7 @@ class FullNodeDiscovery:
                 return
             for rdtype in ["A", "AAAA"]:
                 peers: List[TimestampedPeerInfo] = []
+                self.log.info(f"Introducer dns address: {dns_address}")
                 result = await self.resolver.resolve(qname=dns_address, rdtype=rdtype, lifetime=30)
                 for ip in result:
                     peers.append(

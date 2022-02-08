@@ -175,7 +175,7 @@ class TestDos:
         assert response.extra == str(int(Err.INVALID_HANDSHAKE.value))  # We want INVALID_HANDSHAKE and not UNKNOWN
         await ws.close()
         await session.close()
-        await asyncio.sleep(1)  # give some time for cleanup to work
+        await asyncio.sleep(3)  # give some time for cleanup to work
 
     @pytest.mark.asyncio
     async def test_spam_tx(self, setup_two_nodes):
@@ -201,14 +201,14 @@ class TestDos:
         for i in range(4000):
             await ws_con._send_message(new_tx_message)
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert not ws_con.closed
 
         # Tests outbound rate limiting, we will not send too much data
         for i in range(2000):
             await ws_con._send_message(new_tx_message)
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert not ws_con.closed
 
         # Remove outbound rate limiter to test inbound limits
@@ -216,7 +216,7 @@ class TestDos:
 
         for i in range(6000):
             await ws_con._send_message(new_tx_message)
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
 
         def is_closed():
             return ws_con.closed
@@ -256,14 +256,14 @@ class TestDos:
         )
         for i in range(2):
             await ws_con._send_message(new_message)
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert not ws_con.closed
 
         # Tests outbound rate limiting, we will not send too much data
         for i in range(10):
             await ws_con._send_message(new_message)
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert not ws_con.closed
 
         # Remove outbound rate limiter to test inbound limits
@@ -306,7 +306,7 @@ class TestDos:
         # Tests outbound rate limiting, we will not send big messages
         await ws_con._send_message(new_message)
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         assert not ws_con.closed
 
         # Remove outbound rate limiter to test inbound limits

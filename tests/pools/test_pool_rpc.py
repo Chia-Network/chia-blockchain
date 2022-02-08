@@ -398,9 +398,9 @@ class TestPoolWalletRpc:
 
         # Create some CAT wallets to increase wallet IDs
         for i in range(5):
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
             res = await client.create_new_cat_and_wallet(20)
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
             summaries_response = await client.get_wallets()
             assert res["success"]
             cat_0_id = res["wallet_id"]
@@ -483,7 +483,7 @@ class TestPoolWalletRpc:
             creation_tx.name,
         )
         await self.farm_blocks(full_node_api, our_ph, 1)
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         status: PoolWalletInfo = (await client.pw_status(2))[0]
 
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
@@ -500,7 +500,7 @@ class TestPoolWalletRpc:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-2]))
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
 
             bal = await client.get_wallet_balance(2)
             assert bal["confirmed_wallet_balance"] == 2 * 1750000000000
@@ -514,7 +514,7 @@ class TestPoolWalletRpc:
                 absorb_tx.name,
             )
             await self.farm_blocks(full_node_api, our_ph, 2)
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
             new_status: PoolWalletInfo = (await client.pw_status(2))[0]
             assert status.current == new_status.current
             assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
@@ -533,7 +533,7 @@ class TestPoolWalletRpc:
             )
 
             await self.farm_blocks(full_node_api, our_ph, 2)
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
             bal = await client.get_wallet_balance(2)
             assert bal["confirmed_wallet_balance"] == 0
 
@@ -595,7 +595,7 @@ class TestPoolWalletRpc:
             creation_tx.name,
         )
         await self.farm_blocks(full_node_api, our_ph, 1)
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         status: PoolWalletInfo = (await client.pw_status(2))[0]
 
         assert status.current.state == PoolSingletonState.FARMING_TO_POOL.value
@@ -658,7 +658,7 @@ class TestPoolWalletRpc:
             num_trials = 3
             status = new_status
 
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
             if fee == 0:
                 for i in range(num_trials):
                     all_blocks = await full_node_api.get_all_full_blocks()
@@ -671,7 +671,7 @@ class TestPoolWalletRpc:
                     )
                     for block in blocks[-10:]:
                         await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(3)
 
                     absorb_tx: TransactionRecord = await client.pw_absorb_rewards(2, fee)
                     await time_out_assert(
@@ -682,7 +682,7 @@ class TestPoolWalletRpc:
                     )
 
                     await self.farm_blocks(full_node_api, our_ph, 2)
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(3)
                     new_status: PoolWalletInfo = (await client.pw_status(2))[0]
                     assert status.current == new_status.current
                     assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
@@ -758,7 +758,7 @@ class TestPoolWalletRpc:
                         wallet_id_2 = summary["id"]
                     else:
                         wallet_id = summary["id"]
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
             assert wallet_id is not None
             assert wallet_id_2 is not None
             status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]

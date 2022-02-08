@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import sqlite3
 import sys
 import zstd
 import click
@@ -8,13 +7,13 @@ from pathlib import Path
 
 from typing import List
 from time import time
-
-
+import asyncio
 from clvm_rs import run_generator2, MEMPOOL_MODE
 
 from chia.types.full_block import FullBlock
 from chia.types.blockchain_format.program import Program
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.util.db_factory import get_database_connection
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 from chia.util.ints import uint32
 
@@ -55,10 +54,10 @@ def run_gen(env_data: bytes, block_program_args: bytes, flags: uint32):
 @click.option(
     "--mempool-mode", default=False, is_flag=True, help="execute all block generators in the strict mempool mode"
 )
-def main(file: Path, mempool_mode: bool):
-    c = sqlite3.connect(file)
+async def main(file: Path, mempool_mode: bool):
+    c = await get_database_connection(file)
 
-    rows = c.execute("SELECT header_hash, height, block FROM full_blocks ORDER BY height")
+    rows = await c.fetch_all("SELECT header_hash, height, block FROM full_blocks ORDER BY height")
 
     height_to_hash: List[bytes] = []
 
@@ -78,8 +77,8 @@ def main(file: Path, mempool_mode: bool):
             h = height - 1
             while height_to_hash[h] != prev_hh:
                 height_to_hash[h] = prev_hh
-                ref = c.execute("SELECT block FROM full_blocks WHERE header_hash=?", (prev_hh,))
-                ref_block = FullBlock.from_bytes(zstd.decompress(ref.fetchone()[0]))
+                row = await c.fetch_one("SELECT block FROM full_blocks WHERE header_hash=:header_hash", {"header_hash": prev_hh.hex()})
+                ref_block = FullBlock.from_bytes(zstd.decompress(row[0]))
                 prev_hh = ref_block.prev_header_hash
                 h -= 1
                 if h < 0:
@@ -95,12 +94,12 @@ def main(file: Path, mempool_mode: bool):
         num_refs = 0
         start_time = time()
         for h in block.transactions_generator_ref_list:
-            ref = c.execute("SELECT block FROM full_blocks WHERE header_hash=?", (height_to_hash[h],))
-            ref_block = FullBlock.from_bytes(zstd.decompress(ref.fetchone()[0]))
+            row = await c.fetch_one("SELECT block FROM full_blocks WHERE header_hash=:header_hash", {"header_hash": height_to_hash[h]})
+            ref_block = FullBlock.from_bytes(row[0])
             block_program_args += b"\xff"
             block_program_args += Program.to(bytes(ref_block.transactions_generator)).as_bin()
             num_refs += 1
-            ref.close()
+            await c.disconnect()
         ref_lookup_time = time() - start_time
 
         block_program_args += b"\x80\x80"
@@ -130,4 +129,4 @@ def main(file: Path, mempool_mode: bool):
 
 if __name__ == "__main__":
     # pylint: disable = no-value-for-parameter
-    main()
+    asyncio.run(main())

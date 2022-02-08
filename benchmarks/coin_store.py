@@ -75,7 +75,6 @@ async def run_new_block_benchmark(version: int):
                 additions,
                 removals,
             )
-            await db_wrapper.db.commit()
 
             # 19 seconds per block
             timestamp += 19
@@ -117,7 +116,6 @@ async def run_new_block_benchmark(version: int):
                 additions,
                 removals,
             )
-            await db_wrapper.db.commit()
             stop = time()
 
             # 19 seconds per block
@@ -168,7 +166,6 @@ async def run_new_block_benchmark(version: int):
                 additions,
                 removals,
             )
-            await db_wrapper.db.commit()
 
             stop = time()
 
@@ -218,7 +215,6 @@ async def run_new_block_benchmark(version: int):
                 additions,
                 removals,
             )
-            await db_wrapper.db.commit()
             stop = time()
 
             # 19 seconds per block
@@ -305,7 +301,7 @@ async def run_new_block_benchmark(version: int):
         print(f"all tests completed in {all_test_time:0.4f}s")
 
     finally:
-        await db_wrapper.db.close()
+        await db_wrapper.db.disconnect()
 
     db_size = os.path.getsize(Path("coin-store-benchmark.db"))
     print(f"database size: {db_size/1000000:.3f} MB")

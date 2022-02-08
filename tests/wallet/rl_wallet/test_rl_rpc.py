@@ -82,7 +82,7 @@ class TestRLWallet:
         val = await api_user.create_new_wallet(
             {"wallet_type": "rl_wallet", "rl_type": "user", "host": f"{self_hostname}:5000"}
         )
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         assert isinstance(val, dict)
         if "success" in val:
             assert val["success"]
@@ -114,7 +114,7 @@ class TestRLWallet:
         admin_wallet_id = val["id"]
         admin_pubkey = val["pubkey"]
         origin: Coin = val["origin"]
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
 
         await api_user.rl_set_user_info(
             {
@@ -129,7 +129,7 @@ class TestRLWallet:
                 "admin_pubkey": admin_pubkey,
             }
         )
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
 
         assert (await api_user.get_wallet_balance({"wallet_id": user_wallet_id}))["wallet_balance"][
             "confirmed_wallet_balance"
@@ -143,7 +143,7 @@ class TestRLWallet:
         address = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash(), "xch")
         assert await receiving_wallet.get_spendable_balance() == 0
         val = await api_user.send_transaction({"wallet_id": user_wallet_id, "amount": 3, "fee": 2, "address": address})
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         assert "transaction_id" in val
         await time_out_assert(15, is_transaction_in_mempool, True, user_wallet_id, api_user, val["transaction_id"])
         for i in range(0, num_blocks):
@@ -155,7 +155,7 @@ class TestRLWallet:
 
         val = await api_admin.add_rate_limited_funds({"wallet_id": admin_wallet_id, "amount": 100, "fee": 7})
         assert val["status"] == "SUCCESS"
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         for i in range(0, 50):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, wallet_height_at_least, True, wallet_node, 68)
@@ -165,7 +165,7 @@ class TestRLWallet:
         val = await api_user.send_transaction(
             {"wallet_id": user_wallet_id, "amount": 105, "fee": 0, "address": puzzle_hash}
         )
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         await time_out_assert(15, is_transaction_in_mempool, True, user_wallet_id, api_user, val["transaction_id"])
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
@@ -175,7 +175,7 @@ class TestRLWallet:
         assert await receiving_wallet.get_spendable_balance() == 108
 
         val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id, "fee": 11})
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         await time_out_assert(15, is_transaction_in_mempool, True, user_wallet_id, api_admin, val["transaction_id"])
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))

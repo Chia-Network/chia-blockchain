@@ -617,7 +617,7 @@ class TestBlockHeaderValidation:
 
             await _validate_and_add_block(bc1, block)
 
-        await connection.close()
+        await connection.disconnect()
         bc1.shut_down()
         db_path.unlink()
 
@@ -2364,7 +2364,7 @@ class TestBodyValidation:
         #         assert False
         #     except Exception as e:
         #         pass
-        #     await connection.close()
+        #     await connection.disconnect()
         #     b.shut_down()
         #     db_path.unlink()
 

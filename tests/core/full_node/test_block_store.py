@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import random
-import sqlite3
 import dataclasses
 
 import pytest
@@ -28,7 +27,6 @@ def event_loop():
 class TestBlockStore:
     @pytest.mark.asyncio
     async def test_block_store(self, tmp_dir, db_version):
-        assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(10)
 
         async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
@@ -52,7 +50,7 @@ class TestBlockStore:
                 assert block == await store.get_full_block(block.header_hash)
                 assert block == await store.get_full_block(block.header_hash)
                 assert block_record == (await store.get_block_record(block_record_hh))
-                await store.set_in_chain([(block_record.header_hash,)])
+                await store.set_in_chain([block_record.header_hash])
                 await store.set_peak(block_record.header_hash)
                 await store.set_peak(block_record.header_hash)
 
@@ -120,24 +118,24 @@ class TestBlockStore:
                 assert len(set(ret)) == count
 
             for block in blocks:
-                async with db_wrapper.db.execute(
-                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=?", (block.header_hash,)
-                ) as cursor:
-                    rows = await cursor.fetchall()
-                    assert len(rows) == 1
-                    assert rows[0][0]
+                rows = await db_wrapper.db.fetch_all(
+                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=:header_hash",
+                    {"header_hash": block.header_hash}
+                )
+                assert len(rows) == 1
+                assert rows[0][0]
 
             await block_store.rollback(5)
 
             count = 0
             for block in blocks:
-                async with db_wrapper.db.execute(
-                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=? ORDER BY height", (block.header_hash,)
-                ) as cursor:
-                    rows = await cursor.fetchall()
-                    print(count, rows)
-                    assert len(rows) == 1
-                    assert rows[0][0] == (count <= 5)
+                rows = await db_wrapper.db.fetch_all(
+                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=:header_hash ORDER BY height",
+                    {"header_hash": block.header_hash}
+                )
+                print(count, rows)
+                assert len(rows) == 1
+                assert rows[0][0] == (count <= 5)
                 count += 1
 
     @pytest.mark.asyncio
