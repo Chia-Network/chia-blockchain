@@ -12,7 +12,7 @@ export default function ModalDialogsProvider(props: Props) {
   const [dialogs, setDialogs] = useState([]);
 
   function hide(dialog) {
-    setDialogs(dialogs.filter((d) => d.dialog !== dialog));
+    setDialogs((dialogs) => dialogs.filter((d) => d.dialog !== dialog));
   }
 
   function show(dialog) {
@@ -29,7 +29,7 @@ export default function ModalDialogsProvider(props: Props) {
         resolve(value);
       }
 
-      setDialogs([...dialogs, {
+      setDialogs((dialogs) => [...dialogs, {
         id,
         dialog,
         handleClose,

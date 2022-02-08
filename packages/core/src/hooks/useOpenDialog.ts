@@ -21,11 +21,11 @@ export default function useOpenDialog() {
   }, []);
 
   async function handleOpen<T>(dialog: ReactNode): Promise<T> {
-    setDialogs([...dialogs, dialog]);
+    setDialogs((dialogs) => [...dialogs, dialog]);
 
     const result = await show(dialog);
 
-    setDialogs(dialogs.filter((d) => d !== dialog));
+    setDialogs((dialogs) => dialogs.filter((d) => d !== dialog));
 
     return result;
   }

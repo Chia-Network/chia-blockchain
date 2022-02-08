@@ -1023,12 +1023,10 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
             </Flex>
           </Flex>
           {showSuppressionCheckbox && (
-            <>
-              <FormControlLabel
-                control={<Checkbox name="cancelWithTransaction" checked={!!suppressShareOnCreate} onChange={(event) => toggleSuppression(event.target.checked)} />}
-                label={<Trans>Do not show this dialog again</Trans>}
-              />
-            </>
+            <FormControlLabel
+              control={<Checkbox name="cancelWithTransaction" checked={!!suppressShareOnCreate} onChange={(event) => toggleSuppression(event.target.checked)} />}
+              label={<Trans>Do not show this dialog again</Trans>}
+            />
           )}
         </Flex>
       </DialogContent>
