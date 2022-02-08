@@ -213,7 +213,6 @@ class WalletNode:
         self._new_peak_lock_high_priority = LockClient(1, self._new_peak_lock_queue)
         self._new_peak_lock_low_priority = LockClient(2, self._new_peak_lock_queue)
         self.subscription_queue = asyncio.Queue()
-        self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
 
         self.synced_peers = set()
         private_key = await self.get_key_for_fingerprint(fingerprint)
@@ -260,6 +259,7 @@ class WalletNode:
 
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
+        self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
 
         self.sync_event = asyncio.Event()
         if fingerprint is None:
@@ -369,22 +369,25 @@ class WalletNode:
 
     async def _process_new_subscriptions(self):
         while not self._shut_down:
-            sub_type, sub = self.subscription_queue.get()
-            for peer in self.server.get_full_node_connections():
-                if sub_type == 0:
-                    self.log.info(f"Processing new PH subscription: {sub}")
-                    # Puzzle hash subscription
-                    coin_states: List[CoinState] = await self.subscribe_to_phs([sub], peer, False, uint32(0), None)
-                elif sub_type == 1:
-                    # Coin id subscription
-                    self.log.info(f"Processing new Coin subscription: {sub}")
-                    coin_states: List[CoinState] = await self.subscribe_to_coin_updates(
-                        [sub], peer, False, uint32(0), None
-                    )
-                else:
-                    assert False
-                with self.wallet_state_manager.lock:
-                    await self.receive_state_from_peer(coin_states, peer)
+            try:
+                sub_type, sub = await self.subscription_queue.get()
+                for peer in self.server.get_full_node_connections():
+                    if sub_type == 0:
+                        self.log.info(f"Processing new PH subscription: {sub}")
+                        # Puzzle hash subscription
+                        coin_states: List[CoinState] = await self.subscribe_to_phs([sub], peer, True, uint32(0), None)
+                    elif sub_type == 1:
+                        # Coin id subscription
+                        self.log.info(f"Processing new Coin subscription: {sub}")
+                        coin_states: List[CoinState] = await self.subscribe_to_coin_updates(
+                            [sub], peer, True, uint32(0), None
+                        )
+                    else:
+                        assert False
+                    async with self.wallet_state_manager.lock:
+                        await self.receive_state_from_peer(coin_states, peer)
+            except Exception as e:
+                self.log.error(f"Got error {e} while processing subscriptions: {traceback.format_exc()}")
 
     def set_server(self, server: ChiaServer):
         self.server = server

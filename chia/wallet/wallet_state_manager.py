@@ -327,6 +327,7 @@ class WalletStateManager:
             await self.puzzle_store.add_derivation_paths(derivation_paths, in_transaction)
             for record in derivation_paths:
                 await self.add_interested_puzzle_hash(record.puzzle_hash, record.wallet_id, in_transaction)
+                self.log.info(f"Adding path: {record.index}")
                 await self.wallet_node.subscription_queue.put((0, record.puzzle_hash))
         if unused > 0:
             await self.puzzle_store.set_used_up_to(uint32(unused - 1), in_transaction)
