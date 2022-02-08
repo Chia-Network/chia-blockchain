@@ -120,6 +120,13 @@ class Crawler:
         self.task = asyncio.create_task(self.crawl())
 
     async def crawl(self):
+        # Ensure the state_changed callback is set up before moving on
+        # Sometimes, the daemon connection + state changed callback isn't up and ready
+        # by the time we get to the first _state_changed call, so this just ensures it's there before moving on
+        while self.state_changed_callback is None:
+            self.log.info("Waiting for state changed callback...")
+            await asyncio.sleep(0.1)
+
         try:
             self.connection = await aiosqlite.connect(self.db_path)
             self.crawl_store = await CrawlStore.create(self.connection)
