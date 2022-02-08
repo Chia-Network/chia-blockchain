@@ -10,6 +10,7 @@ import {
 import { useNavigate } from 'react-router';
 import { Alert } from '@material-ui/lab';
 import {
+  useGetKeyringStatusQuery,
   useGetPublicKeysQuery,
   useDeleteAllKeysMutation,
   useLogInAndSkipImportMutation,
@@ -23,6 +24,8 @@ import TooltipIcon from '../../components/TooltipIcon';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import useOpenDialog from '../../hooks/useOpenDialog';
 import useShowError from '../../hooks/useShowError';
+import useSkipMigration from '../../hooks/useSkipMigration';
+import useKeyringMigrationPrompt from '../../hooks/useKeyringMigrationPrompt';
 
 const StyledContainer = styled(Container)`
   padding-bottom: 1rem;
@@ -34,8 +37,11 @@ export default function SelectKey() {
   const [deleteAllKeys] = useDeleteAllKeysMutation();
   const [logIn, { isLoading: isLoadingLogIn}] = useLogInAndSkipImportMutation();
   const { data: publicKeyFingerprints, isLoading: isLoadingPublicKeys, error, refetch } = useGetPublicKeysQuery();
+  const { data: keyringState, isLoading: isLoadingKeyringStatus } = useGetKeyringStatusQuery();
   const hasFingerprints = !!publicKeyFingerprints?.length;
   const [selectedFingerprint, setSelectedFingerprint] = useState<number | undefined>();
+  const [skippedMigration, _] = useSkipMigration();
+  const [promptForKeyringMigration] = useKeyringMigrationPrompt();
   const showError = useShowError();
 
   const isLoading = isLoadingPublicKeys || isLoadingLogIn;
@@ -50,7 +56,7 @@ export default function SelectKey() {
       await logIn({
         fingerprint,
       }).unwrap();
-  
+
       navigate('/dashboard');
     } catch (error) {
       showError(error)
@@ -58,8 +64,14 @@ export default function SelectKey() {
       setSelectedFingerprint(undefined);
     }
   }
-  
+
   async function handleDeleteAllKeys() {
+    const canModifyKeyring = await handleKeyringMutator();
+
+    if (!canModifyKeyring) {
+      return;
+    }
+
     await openDialog(
       <ConfirmDialog
         title={<Trans>Delete all keys</Trans>}
@@ -76,6 +88,25 @@ export default function SelectKey() {
     );
   }
 
+  async function handleKeyringMutator(): Promise<boolean> {
+    // If the keyring requires migration and the user previously skipped migration, prompt again
+    if (isLoadingKeyringStatus || (keyringState?.needsMigration && skippedMigration)) {
+      await promptForKeyringMigration();
+
+      return false;
+    }
+
+    return true;
+  }
+
+  async function handleNavigationIfKeyringIsMutable(url: string) {
+    const canModifyKeyring = await handleKeyringMutator();
+
+    if (canModifyKeyring) {
+      navigate(url);
+    }
+  }
+
   return (
     <StyledContainer maxWidth="xs">
       <Flex flexDirection="column" alignItems="center" gap={3}>
@@ -85,7 +116,7 @@ export default function SelectKey() {
             <Trans>Loading list of the keys</Trans>
           </Loading>
         ) : error ? (
-          <Alert 
+          <Alert
             severity="error"
             action={
               <Button onClick={refetch} color="inherit" size="small">
@@ -138,7 +169,7 @@ export default function SelectKey() {
             </Card>
           )}
           <Button
-            to="/wallet/add"
+            onClick={() => handleNavigationIfKeyringIsMutable("/wallet/add")}
             variant="contained"
             color="primary"
             size="large"
@@ -148,7 +179,7 @@ export default function SelectKey() {
             <Trans>Create a new private key</Trans>
           </Button>
           <Button
-            to="/wallet/import"
+            onClick={() => handleNavigationIfKeyringIsMutable("/wallet/import")}
             type="submit"
             variant="outlined"
             size="large"
