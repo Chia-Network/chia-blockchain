@@ -95,6 +95,7 @@ def configure(
             testnet_port = "58444"
             testnet_introducer = "introducer-testnet10.chia.net"
             testnet_dns_introducer = "dns-introducer-testnet10.chia.net"
+            bootstrap_peers = ["testnet10-node.chia.net"]
             testnet = "testnet10"
             config["full_node"]["port"] = int(testnet_port)
             config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
@@ -114,6 +115,13 @@ def configure(
             config["ui"]["selected_network"] = testnet
             config["introducer"]["selected_network"] = testnet
             config["wallet"]["selected_network"] = testnet
+
+            if "seeder" in config:
+                config["seeder"]["port"] = int(testnet_port)
+                config["seeder"]["other_peers_port"] = int(testnet_port)
+                config["seeder"]["selected_network"] = testnet
+                config["seeder"]["bootstrap_peers"] = bootstrap_peers
+
             print("Default full node port, introducer and network setting updated")
             change_made = True
 
@@ -122,6 +130,7 @@ def configure(
             mainnet_port = "8444"
             mainnet_introducer = "introducer.chia.net"
             mainnet_dns_introducer = "dns-introducer.chia.net"
+            bootstrap_peers = ["node.chia.net"]
             net = "mainnet"
             config["full_node"]["port"] = int(mainnet_port)
             config["full_node"]["introducer_peer"]["port"] = int(mainnet_port)
@@ -141,6 +150,13 @@ def configure(
             config["ui"]["selected_network"] = net
             config["introducer"]["selected_network"] = net
             config["wallet"]["selected_network"] = net
+
+            if "seeder" in config:
+                config["seeder"]["port"] = int(mainnet_port)
+                config["seeder"]["other_peers_port"] = int(mainnet_port)
+                config["seeder"]["selected_network"] = net
+                config["seeder"]["bootstrap_peers"] = bootstrap_peers
+
             print("Default full node port, introducer and network setting updated")
             change_made = True
         else:
