@@ -29,6 +29,7 @@ class Crawler:
     connection: aiosqlite.Connection
     config: Dict
     server: Any
+    crawl_store: Optional[CrawlStore]
     log: logging.Logger
     constants: ConsensusConstants
     _shut_down: bool
@@ -66,7 +67,7 @@ class Crawler:
         self.bootstrap_peers = config["bootstrap_peers"]
         self.minimum_height = config["minimum_height"]
         self.other_peers_port = config["other_peers_port"]
-        self.versions: Dict[str, int] = {}
+        self.versions: Dict[str, int] = defaultdict(lambda: 0)
         self.minimum_version_count = self.config.get("minimum_version_count", 100)
         if self.minimum_version_count < 1:
             self.log.warning(
@@ -148,6 +149,9 @@ class Crawler:
 
             self.host_to_version, self.handshake_time = self.crawl_store.load_host_to_version()
             self.best_timestamp_per_peer = self.crawl_store.load_best_peer_reliability()
+            self.versions = defaultdict(lambda: 0)
+            for host, version in self.host_to_version.items():
+                self.versions[version] += 1
 
             self._state_changed("loaded_initial_peers")
 
