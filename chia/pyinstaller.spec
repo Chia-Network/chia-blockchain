@@ -54,6 +54,7 @@ version_data = copy_metadata(get_distribution("chia-blockchain"))[0]
 block_cipher = None
 
 SERVERS = [
+    "data_layer",
     "wallet",
     "full_node",
     "harvester",
