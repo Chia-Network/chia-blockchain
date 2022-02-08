@@ -7,6 +7,7 @@ import aiosqlite as aiosqlite
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ints import uint16
 
 
 class Status(IntEnum):
@@ -185,6 +186,19 @@ class DeletionData:
     hash: Optional[bytes32]
     key: bytes
     root_status: Status
+
+
+class DownloadMode(IntEnum):
+    LATEST = 0
+    HISTORY = 1
+
+
+@dataclass(frozen=True)
+class Subscription:
+    tree_id: bytes32
+    mode: DownloadMode
+    ip: str
+    port: uint16
 
 
 @dataclass(frozen=True)

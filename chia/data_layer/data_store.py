@@ -23,6 +23,8 @@ from chia.data_layer.data_layer_types import (
     Status,
     InsertionData,
     DeletionData,
+    DownloadMode,
+    Subscription,
     DiffData,
     OperationType,
 )
@@ -31,6 +33,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
+from chia.util.ints import uint16
 
 log = logging.getLogger(__name__)
 
@@ -100,6 +103,23 @@ class DataStore:
                     FOREIGN KEY(tree_id, generation) REFERENCES root(tree_id, generation),
                     FOREIGN KEY(ancestor) REFERENCES node(hash)
                 )
+                """
+            )
+            await self.db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS subscriptions(
+                    tree_id TEXT NOT NULL,
+                    mode INTEGER NOT NULL,
+                    ip TEXT NOT NULL,
+                    port INTEGER NOT NULL,
+                    validated_wallet_generation INTEGER NOT NULL,
+                    PRIMARY KEY(tree_id)
+                )
+                """
+            )
+            await self.db.execute(
+                """
+                CREATE INDEX IF NOT EXISTS node_hash ON root(node_hash)
                 """
             )
 
@@ -398,6 +418,18 @@ class DataStore:
 
         return Root.from_row(row=row)
 
+    async def tree_id_exists(self, tree_id: bytes32, *, lock: bool = True) -> bool:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                "SELECT 1 FROM root WHERE tree_id == :tree_id",
+                {"tree_id": tree_id.hex()},
+            )
+            row = await cursor.fetchone()
+
+        if row is None:
+            return False
+        return True
+
     async def get_roots_between(
         self, tree_id: bytes32, generation_begin: int, generation_end: int, *, lock: bool = True
     ) -> List[Root]:
@@ -410,6 +442,24 @@ class DataStore:
             roots = [Root.from_row(row=row) async for row in cursor]
 
         return roots
+
+    async def get_last_tree_root_by_hash(
+        self, tree_id: bytes32, hash: bytes32, max_generation: Optional[int] = None, *, lock: bool = True
+    ) -> Optional[Root]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            max_generation_str = f"AND generation < {max_generation} " if max_generation is not None else ""
+            cursor = await self.db.execute(
+                "SELECT * FROM root WHERE tree_id == :tree_id "
+                f"{max_generation_str}"
+                "AND node_hash == :node_hash "
+                "ORDER BY generation DESC LIMIT 1",
+                {"tree_id": tree_id.hex(), "node_hash": hash.hex()},
+            )
+            row = await cursor.fetchone()
+
+        if row is None:
+            return None
+        return Root.from_row(row=row)
 
     async def get_ancestors(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> List[InternalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -834,15 +884,19 @@ class DataStore:
         self,
         node_hash: bytes32,
         tree_id: bytes32,
+        get_subtree_only: bool,
         *,
         lock: bool = True,
-        num_nodes: int = 2500,
+        num_nodes: int = 1000000000,
     ) -> List[Node]:
         ancestors = await self.get_ancestors(node_hash, tree_id, lock=True)
         path_hashes = {node_hash, *(ancestor.hash for ancestor in ancestors)}
         # The hashes that need to be traversed, initialized here as the hashes to the right of the ancestors
         # ordered from shallowest (root) to deepest (leaves) so .pop() from the end gives the deepest first.
-        stack = [ancestor.right_hash for ancestor in reversed(ancestors) if ancestor.right_hash not in path_hashes]
+        if not get_subtree_only:
+            stack = [ancestor.right_hash for ancestor in reversed(ancestors) if ancestor.right_hash not in path_hashes]
+        else:
+            stack = []
         nodes: List[Node] = []
         while len(nodes) < num_nodes:
             try:
@@ -929,11 +983,29 @@ class DataStore:
                         assert isinstance(new_terminal_node, TerminalNode)
                         return DeletionData(copy_root_hash_end, new_terminal_node.key, root_status)
 
+    async def insert_batch_for_generation(
+        self,
+        batch: List[Tuple[NodeType, str, str]],
+        tree_id: bytes32,
+        root_hash: bytes32,
+        generation: int,
+        *,
+        lock: bool = True,
+    ) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            for node_type, value1, value2 in batch:
+                if node_type == NodeType.INTERNAL:
+                    await self._insert_internal_node(bytes32.from_hexstr(value1), bytes32.from_hexstr(value2), tree_id)
+                if node_type == NodeType.TERMINAL:
+                    await self._insert_terminal_node(bytes.fromhex(value1), bytes.fromhex(value2), tree_id)
+            await self._insert_root(tree_id, root_hash, Status.COMMITTED, generation)
+
     async def get_operations(
         self,
         tree_id: bytes32,
         generation_begin: int,
-        num_generations: int = 10,
+        max_generation: int,
+        num_generations: int = 10000000,
         *,
         lock: bool = True,
     ) -> List[Union[InsertionData, DeletionData]]:
@@ -943,6 +1015,7 @@ class DataStore:
             query_generation_end = min(
                 generation_begin + num_generations, await self.get_tree_generation(tree_id=tree_id, lock=False) + 1
             )
+            query_generation_end = min(query_generation_end, max_generation + 1)
             roots = await self.get_roots_between(tree_id, query_generation_begin, query_generation_end, lock=False)
             previous_root = None
             for current_root in roots:
@@ -957,6 +1030,67 @@ class DataStore:
                 previous_root = current_root
 
         return result
+
+    async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self.db.execute(
+                "INSERT INTO subscriptions(tree_id, mode, ip, port, validated_wallet_generation) "
+                "VALUES (:tree_id, :mode, :ip, :port, 0)",
+                {
+                    "tree_id": subscription.tree_id.hex(),
+                    "mode": subscription.mode.value,
+                    "ip": subscription.ip,
+                    "port": subscription.port,
+                },
+            )
+
+    async def unsubscribe(self, tree_id: bytes32, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self.db.execute(
+                "DELETE FROM subscriptions WHERE tree_id == :tree_id",
+                {"tree_id": tree_id.hex()},
+            )
+            await self.db.execute(
+                "DELETE FROM root WHERE tree_id == :tree_id",
+                {"tree_id": tree_id.hex()},
+            )
+
+    async def get_subscriptions(self, *, lock: bool = True) -> List[Subscription]:
+        subscriptions: List[Subscription] = []
+
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                "SELECT * from subscriptions",
+            )
+            async for row in cursor:
+                tree_id = bytes32.fromhex(row["tree_id"])
+                mode_value = int(row["mode"])
+                ip = row["ip"]
+                port = uint16(row["port"])
+                subscriptions.append(Subscription(tree_id, DownloadMode(mode_value), ip, port))
+
+        return subscriptions
+
+    async def get_validated_wallet_generation(self, tree_id: bytes32, *, lock: bool = True) -> int:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                "SELECT validated_wallet_generation FROM subscriptions WHERE tree_id == :tree_id",
+                {"tree_id": tree_id.hex()},
+            )
+            row = await cursor.fetchone()
+
+        assert row is not None
+        generation: int = row["validated_wallet_generation"]
+        return generation
+
+    async def set_validated_wallet_generation(self, tree_id: bytes32, generation: int, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self.db.execute(
+                """
+                UPDATE subscriptions SET validated_wallet_generation = :generation WHERE tree_id == :tree_id
+                """,
+                {"tree_id": tree_id.hex(), "generation": generation},
+            )
 
     async def get_kv_diff(
         self,

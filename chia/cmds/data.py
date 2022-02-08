@@ -93,17 +93,30 @@ def create_rpc_port_option() -> "IdentityFunction":
     )
 
 
+def create_fee_option() -> "IdentityFunction":
+    return click.option(
+        "-m",
+        "--fee",
+        help="Set the fees for the transaction, in XCH",
+        type=str,
+        default=None,
+        show_default=True,
+        required=False,
+    )
+
+
 @data_cmd.command("create_data_store", short_help="Get a data row by its hash")
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
+@create_fee_option()
 def create_data_store(
-    # table_string: str,
     fingerprint: int,
     data_rpc_port: int,
+    fee: Optional[str],
 ) -> None:
     from chia.cmds.data_funcs import create_data_store_cmd
 
-    run(create_data_store_cmd(data_rpc_port, ""))
+    run(create_data_store_cmd(data_rpc_port, fee))
 
 
 @data_cmd.command("get_value", short_help="Get a data row by its hash")
@@ -127,15 +140,17 @@ def get_value(
 @create_changelist_option()
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
+@create_fee_option()
 def update_data_store(
     id: str,
     changelist_string: str,
     fingerprint: int,
     data_rpc_port: int,
+    fee: str,
 ) -> None:
     from chia.cmds.data_funcs import update_data_store_cmd
 
-    run(update_data_store_cmd(data_rpc_port, id, json.loads(changelist_string)))
+    run(update_data_store_cmd(rpc_port=data_rpc_port, store_id=id, changelist=json.loads(changelist_string), fee=fee))
 
 
 @data_cmd.command("get_keys_values", short_help="")
@@ -164,3 +179,31 @@ def get_root(
     from chia.cmds.data_funcs import get_root_cmd
 
     run(get_root_cmd(rpc_port=data_rpc_port, store_id=id))
+
+
+@data_cmd.command("subscribe", short_help="")
+@create_data_store_id_option()
+@click.option("-ip", "--ip", help="", type=str)
+@click.option("-port", "--port", help="", type=int)
+@create_rpc_port_option()
+def subscribe(
+    id: str,
+    ip: str,
+    port: int,
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import subscribe_cmd
+
+    run(subscribe_cmd(rpc_port=data_rpc_port, store_id=id, ip=ip, port=port))
+
+
+@data_cmd.command("unsubscribe", short_help="")
+@create_data_store_id_option()
+@create_rpc_port_option()
+def unsubscribe(
+    id: str,
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import unsubscribe_cmd
+
+    run(unsubscribe_cmd(rpc_port=data_rpc_port, store_id=id))
