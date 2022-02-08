@@ -79,6 +79,10 @@ class Service:
         chia_ca_crt, chia_ca_key = chia_ssl_ca_paths(root_path, self.config)
         inbound_rlp = self.config.get("inbound_rate_limit_percent")
         outbound_rlp = self.config.get("outbound_rate_limit_percent")
+        if NodeType == NodeType.WALLET:
+            inbound_rlp = service_config.get("inbound_rate_limit_percent", inbound_rlp)
+            outbound_rlp = service_config.get("outbound_rate_limit_percent", 60)
+
         assert inbound_rlp and outbound_rlp
         self._server = ChiaServer(
             advertised_port,
@@ -133,6 +137,7 @@ class Service:
         self._enable_signals()
 
         await self._node._start(**kwargs)
+        self._node._shut_down = False
 
         for port in self._upnp_ports:
             if self.upnp is None:
@@ -242,6 +247,8 @@ class Service:
             # this is a blocking call, waiting for the UPnP thread to exit
             self.upnp.shutdown()
 
+        self._did_start = False
+        self._is_stopping.clear()
         self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
 
 

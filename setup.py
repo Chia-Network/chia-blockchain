@@ -3,12 +3,12 @@ from setuptools import setup
 dependencies = [
     "multidict==5.1.0",  # Avoid 5.2.0 due to Avast
     "aiofiles==0.7.0",  # Async IO for files
-    "blspy==1.0.8",  # Signature library
-    "chiavdf==1.0.3",  # timelord and vdf verification
-    "chiabip158==1.0",  # bip158-style wallet filters
-    "chiapos==1.0.7",  # proof of space
+    "blspy==1.0.9",  # Signature library
+    "chiavdf==1.0.5",  # timelord and vdf verification
+    "chiabip158==1.1",  # bip158-style wallet filters
+    "chiapos==1.0.9",  # proof of space
     "clvm==0.9.7",
-    "clvm_rs==0.1.16",
+    "clvm_rs==0.1.19",
     "clvm_tools==0.4.3",
     "aiohttp==3.7.4",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
@@ -26,10 +26,14 @@ dependencies = [
     "setproctitle==1.2.2",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
+    # TODO: when moving to click 8 remove the pinning of black noted below
     "click==7.1.2",  # For the CLI
     "dnspythonchia==2.2.0",  # Query DNS seeds
     "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
-    "dnslib==0.9.14",  # dns lib
+    "dnslib==0.9.17",  # dns lib
+    "typing-extensions==4.0.1",  # typing backports like Protocol and TypedDict
+    "zstd==1.5.0.4",
+    "packaging==21.0",
 ]
 
 upnp_dependencies = [
@@ -37,13 +41,15 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    "pre-commit",
     "pytest",
     "pytest-asyncio",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
     "flake8",
     "mypy",
-    "black",
+    # TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
+    "black==21.12b0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
     "types-aiofiles",
@@ -97,7 +103,7 @@ kwargs = dict(
         "chia.wallet",
         "chia.wallet.puzzles",
         "chia.wallet.rl_wallet",
-        "chia.wallet.cc_wallet",
+        "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
         "chia.wallet.settings",
         "chia.wallet.trading",

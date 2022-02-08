@@ -26,11 +26,11 @@ async def create_blockchain(constants: ConsensusConstants, db_version: int):
         db_path.unlink()
     blockchain_db_counter += 1
     connection = await aiosqlite.connect(db_path)
-    wrapper = DBWrapper(connection, False, db_version)
+    wrapper = DBWrapper(connection, db_version)
     coin_store = await CoinStore.create(wrapper)
     store = await BlockStore.create(wrapper)
     hint_store = await HintStore.create(wrapper)
-    bc1 = await Blockchain.create(coin_store, store, constants, hint_store, Path("."))
+    bc1 = await Blockchain.create(coin_store, store, constants, hint_store, Path("."), 2)
     assert bc1.get_peak() is None
     return bc1, connection, db_path
 

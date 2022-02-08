@@ -7,9 +7,10 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, List, Tuple, Type, Callable, Optional, Iterator
+from typing import Any, BinaryIO, Dict, get_type_hints, List, Tuple, Type, Callable, Optional, Iterator
 
 from blspy import G1Element, G2Element, PrivateKey
+from typing_extensions import Literal
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -125,6 +126,7 @@ def recurse_jsonify(d):
 
 
 PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
+FIELDS_FOR_STREAMABLE_CLASS = {}
 
 
 def streamable(cls: Any):
@@ -178,9 +180,12 @@ def streamable(cls: Any):
 
     parse_functions = []
     try:
-        fields = cls1.__annotations__  # pylint: disable=no-member
+        hints = get_type_hints(t)
+        fields = {field.name: hints.get(field.name, field.type) for field in dataclasses.fields(t)}
     except Exception:
         fields = {}
+
+    FIELDS_FOR_STREAMABLE_CLASS[t] = fields
 
     for _, f_type in fields.items():
         parse_functions.append(cls.function_to_parse_one_item(f_type))
@@ -200,13 +205,13 @@ def parse_bool(f: BinaryIO) -> bool:
         raise ValueError("Bool byte must be 0 or 1")
 
 
-def parse_uint32(f: BinaryIO, byteorder: str = "big") -> uint32:
+def parse_uint32(f: BinaryIO, byteorder: Literal["little", "big"] = "big") -> uint32:
     size_bytes = f.read(4)
     assert size_bytes is not None and len(size_bytes) == 4  # Checks for EOF
     return uint32(int.from_bytes(size_bytes, byteorder))
 
 
-def write_uint32(f: BinaryIO, value: uint32, byteorder: str = "big"):
+def write_uint32(f: BinaryIO, value: uint32, byteorder: Literal["little", "big"] = "big"):
     f.write(value.to_bytes(4, byteorder))
 
 
@@ -294,7 +299,7 @@ class Streamable:
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
         obj: Streamable = object.__new__(cls)
-        fields: Iterator[str] = iter(getattr(cls, "__annotations__", {}))
+        fields: Iterator[str] = iter(FIELDS_FOR_STREAMABLE_CLASS.get(cls, {}))
         values: Iterator = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
         for field, value in zip(fields, values):
             object.__setattr__(obj, field, value)
@@ -346,7 +351,7 @@ class Streamable:
 
     def stream(self, f: BinaryIO) -> None:
         try:
-            fields = self.__annotations__  # pylint: disable=no-member
+            fields = FIELDS_FOR_STREAMABLE_CLASS[type(self)]
         except Exception:
             fields = {}
         for f_name, f_type in fields.items():

@@ -5,13 +5,13 @@ import logging
 import time
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Set, Tuple
-from blspy import G1Element, GTElement
+from blspy import GTElement
 from chiabip158 import PyBIP158
 
 from chia.util import cached_bls
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
+from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool import Mempool
@@ -19,7 +19,7 @@ from chia.full_node.mempool_check_conditions import mempool_check_conditions_dic
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -50,24 +50,20 @@ def validate_clvm_and_signature(
         bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
         program = simple_solution_generator(bundle)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        result: NPCResult = get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True)
+        result: NPCResult = get_name_puzzle_conditions(
+            program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True
+        )
 
         if result.error is not None:
             return Err(result.error), b"", {}
 
-        pks: List[G1Element] = []
-        msgs: List[bytes32] = []
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "List[bytes]", variable has type
-        #       "List[bytes32]")  [assignment]
-        pks, msgs = pkm_pairs(result.npc_list, additional_data)  # type: ignore[assignment]
+        pks: List[bytes48]
+        msgs: List[bytes]
+        pks, msgs = pkm_pairs(result.npc_list, additional_data)
 
         # Verify aggregated signature
         cache: LRUCache = LRUCache(10000)
-        # TODO: address hint error and remove ignore
-        #       error: Argument 2 to "aggregate_verify" has incompatible type "List[bytes32]"; expected "List[bytes]"
-        #       [arg-type]
-        if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):  # type: ignore[arg-type]  # noqa: E501
+        if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):
             return Err.BAD_AGGREGATE_SIGNATURE, b"", {}
         new_cache_entries: Dict[bytes, bytes] = {}
         for k, v in cache.cache.items():
@@ -100,7 +96,7 @@ class MempoolManager:
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
-        self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 5)
+        self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1)
         self.seen_cache_size = 10000
         self.pool = ProcessPoolExecutor(max_workers=2)
 
@@ -212,8 +208,11 @@ class MempoolManager:
             conflicting_fees += item.fee
             conflicting_cost += item.cost
 
-            # All coins spent in all conflicting items must also be spent in
-            # the new item
+            # All coins spent in all conflicting items must also be spent in the new item. (superset rule). This is
+            # important because otherwise there exists an attack. A user spends coin A. An attacker replaces the
+            # bundle with AB with a higher fee. An attacker then replaces the bundle with just B with a higher
+            # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
+            # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
             for coin in item.removals:
                 if coin.name() not in removals:
                     log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
@@ -247,6 +246,7 @@ class MempoolManager:
         start_time = time.time()
         if new_spend_bytes is None:
             new_spend_bytes = bytes(new_spend)
+
         err, cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
             self.pool,
             validate_clvm_and_signature,
@@ -255,6 +255,7 @@ class MempoolManager:
             self.constants.COST_PER_BYTE,
             self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
+
         if err is not None:
             raise ValidationError(err)
         for cache_entry_key, cached_entry_value in new_cache_entries.items():
@@ -283,7 +284,7 @@ class MempoolManager:
         assert npc_result.error is None
         if program is None:
             program = simple_solution_generator(new_spend).program
-        cost = calculate_cost_of_program(program, npc_result, self.constants.COST_PER_BYTE)
+        cost = npc_result.cost
 
         log.debug(f"Cost: {cost}")
 
@@ -342,15 +343,19 @@ class MempoolManager:
                 return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
             elif name in additions_dict:
                 removal_coin = additions_dict[name]
-                # TODO(straya): what timestamp to use here?
+                # The timestamp and block-height of this coin being spent needs
+                # to be consistent with what we use to check time-lock
+                # conditions (below). All spends (including ephemeral coins) are
+                # spent simultaneously. Ephemeral coins with an
+                # ASSERT_SECONDS_RELATIVE 0 condition are still OK to spend in
+                # the same block.
                 assert self.peak.timestamp is not None
                 removal_record = CoinRecord(
                     removal_coin,
                     uint32(self.peak.height + 1),  # In mempool, so will be included in next height
                     uint32(0),
                     False,
-                    False,
-                    uint64(self.peak.timestamp + 1),
+                    self.peak.timestamp,
                 )
 
             assert removal_record is not None
@@ -361,7 +366,6 @@ class MempoolManager:
         removals: List[Coin] = [coin for coin in removal_coin_dict.values()]
 
         if addition_amount > removal_amount:
-            print(addition_amount, removal_amount)
             return None, MempoolInclusionStatus.FAILED, Err.MINTING_COIN
 
         fees = uint64(removal_amount - addition_amount)
@@ -523,31 +527,16 @@ class MempoolManager:
         self.peak = new_peak
 
         if use_optimization:
-            changed_coins_set: Set[bytes32] = set()
+            # We don't reinitialize a mempool, just kick removed items
             for coin_record in coin_changes:
-                changed_coins_set.add(coin_record.coin.name())
-
-        old_pool = self.mempool
-        self.mempool = Mempool(self.mempool_max_total_cost)
-
-        for item in old_pool.spends.values():
-            if use_optimization:
-                # If use_optimization, we will automatically re-add all bundles where none of it's removals were
-                # spend (since we only advanced 1 transaction block). This is a nice benefit of the coin set model
-                # vs account model, all spends are guaranteed to succeed.
-                failed = False
-                for removed_coin in item.removals:
-                    if removed_coin.name() in changed_coins_set:
-                        failed = True
-                        break
-                if not failed:
-                    self.mempool.add_to_pool(item)
-                else:
-                    # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
-                    # successfully added to the new mempool. In this case, remove it from seen, so in the case of a
-                    # reorg, it can be resubmitted
+                if coin_record.name in self.mempool.removals:
+                    item = self.mempool.removals[coin_record.name]
+                    self.mempool.remove_from_pool(item)
                     self.remove_seen(item.spend_bundle_name)
-            else:
+        else:
+            old_pool = self.mempool
+            self.mempool = Mempool(self.mempool_max_total_cost)
+            for item in old_pool.spends.values():
                 _, result, _ = await self.add_spendbundle(
                     item.spend_bundle, item.npc_result, item.spend_bundle_name, item.program
                 )
@@ -567,7 +556,7 @@ class MempoolManager:
                 txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
         log.info(
             f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
-            f"minimum fee to get in: {self.mempool.get_min_fee_rate(100000)}"
+            f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
         )
         return txs_added
 

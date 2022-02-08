@@ -158,9 +158,9 @@ class FullNode:
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
 
-        await self.connection.execute(
-            "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path))
-        )
+        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
+        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
+        await self.connection.execute("pragma synchronous={}".format(db_sync))
 
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
@@ -176,17 +176,16 @@ class FullNode:
 
         db_version: int = await lookup_db_version(self.connection)
 
-        self.db_wrapper = DBWrapper(
-            self.connection, self.config.get("allow_database_upgrades", False), db_version=db_version
-        )
+        self.db_wrapper = DBWrapper(self.connection, db_version=db_version)
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
         self.hint_store = await HintStore.create(self.db_wrapper)
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
+        reserved_cores = self.config.get("reserved_cores", 0)
         self.blockchain = await Blockchain.create(
-            self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent
+            self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent, reserved_cores
         )
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
 
@@ -213,6 +212,13 @@ class FullNode:
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
             self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
+            num_unspent = await self.coin_store.num_unspent()
+            if num_unspent > 0:
+                self.log.error(
+                    f"Inconsistent blockchain DB file! Could not find peak block but found {num_unspent} coins! "
+                    "This is a fatal error. The blockchain database may be corrupt"
+                )
+                raise RuntimeError("corrupt blockchain DB")
         else:
             self.log.info(
                 f"Blockchain initialized to peak {self.blockchain.get_peak().header_hash} height"
@@ -323,9 +329,9 @@ class FullNode:
             self.log.error(f"Exception in peer discovery: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    def _state_changed(self, change: str):
+    def _state_changed(self, change: str, change_data: Dict[str, Any] = None):
         if self.state_changed_callback is not None:
-            self.state_changed_callback(change)
+            self.state_changed_callback(change, change_data)
 
     async def short_sync_batch(self, peer: ws.WSChiaConnection, start_height: uint32, target_height: uint32) -> bool:
         """
@@ -394,12 +400,8 @@ class FullNode:
                             mempool_new_peak_result, fns_peak_result = await self.peak_post_processing(
                                 peak_fb, peak, fork_height, peer, coin_changes[0]
                             )
-                            # TODO: address hint error and remove ignore
-                            #       error: Argument 5 to "peak_post_processing_2" of "FullNode" has incompatible type
-                            #       "Tuple[List[CoinRecord], Dict[bytes, Dict[bytes, CoinRecord]]]"; expected
-                            #       "Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]"  [arg-type]
                             await self.peak_post_processing_2(
-                                peak_fb, peak, fork_height, peer, coin_changes, mempool_new_peak_result, fns_peak_result  # type: ignore[arg-type]  # noqa: E501
+                                peak_fb, peak, fork_height, peer, coin_changes, mempool_new_peak_result, fns_peak_result
                             )
                         except asyncio.CancelledError:
                             # Still do post processing after cancel
@@ -897,7 +899,7 @@ class FullNode:
                         if peer.closed:
                             peers_with_peak.remove(peer)
                             continue
-                        response = await peer.request_blocks(request, timeout=10)
+                        response = await peer.request_blocks(request, timeout=30)
                         if response is None:
                             await peer.close()
                             peers_with_peak.remove(peer)
@@ -1001,12 +1003,16 @@ class FullNode:
                         changes_for_peer[peer] = set()
                     changes_for_peer[peer].add(coin_record.coin_state)
 
+        # This is just a verification that the assumptions justifying the ignore below
+        # are valid.
+        hint: bytes
         for hint, records in hint_state.items():
-            if hint in self.ph_subscriptions:
-                # TODO: address hint error and remove ignore
-                #       error: Invalid index type "bytes" for "Dict[bytes32, Set[bytes32]]"; expected type "bytes32"
-                #       [index]
-                subscribed_peers = self.ph_subscriptions[hint]  # type: ignore[index]
+            # While `hint` is typed as a `bytes`, and this is locally verified
+            # immediately above, if it has length 32 then it might match an entry in
+            # `self.ph_subscriptions`.  It is unclear if there is a more proper means
+            # of handling this situation.
+            subscribed_peers = self.ph_subscriptions.get(hint)  # type: ignore[call-overload]
+            if subscribed_peers is not None:
                 for peer in subscribed_peers:
                     if peer not in changes_for_peer:
                         changes_for_peer[peer] = set()
@@ -1027,7 +1033,7 @@ class FullNode:
         peer: ws.WSChiaConnection,
         fork_point: Optional[uint32],
         wp_summaries: Optional[List[SubEpochSummary]] = None,
-    ) -> Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes, CoinRecord]]]]:
+    ) -> Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]]:
         advanced_peak = False
         fork_height: Optional[uint32] = uint32(0)
 
@@ -1039,17 +1045,17 @@ class FullNode:
         if len(blocks_to_validate) == 0:
             return True, False, fork_height, ([], {})
 
+        # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
+        # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.time()
-        pre_validation_results: Optional[
-            List[PreValidationResult]
-        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {}, wp_summaries=wp_summaries)
+        pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
+            blocks_to_validate, {}, wp_summaries=wp_summaries, validate_signatures=True
+        )
         pre_validate_end = time.time()
         if pre_validate_end - pre_validate_start > 10:
             self.log.warning(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
         else:
             self.log.debug(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
-        if pre_validation_results is None:
-            return False, False, None, ([], {})
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
@@ -1093,13 +1099,7 @@ class FullNode:
                 f"Total time for {len(blocks_to_validate)} blocks: {time.time() - pre_validate_start}, "
                 f"advanced: {advanced_peak}"
             )
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible return value type (got
-        #       "Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]]",
-        #       expected
-        #       "Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes, CoinRecord]]]]")
-        #       [return-value]
-        return True, advanced_peak, fork_height, (list(all_coin_changes.values()), all_hint_changes)  # type: ignore[return-value]  # noqa: E501
+        return True, advanced_peak, fork_height, (list(all_coin_changes.values()), all_hint_changes)
 
     async def _finish_sync(self):
         """
@@ -1411,6 +1411,8 @@ class FullNode:
                 and unf_block.transactions_generator is not None
                 and unf_block.foliage_transaction_block == block.foliage_transaction_block
             ):
+                # We checked that the transaction block is the same, therefore all transactions and the signature
+                # must be identical in the unfinished and finished blocks. We can therefore use the cache.
                 pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
                 assert pre_validation_result is not None
                 block = dataclasses.replace(
@@ -1455,11 +1457,16 @@ class FullNode:
             npc_results = {}
             if pre_validation_result is not None and pre_validation_result.npc_result is not None:
                 npc_results[block.height] = pre_validation_result.npc_result
-            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
+
+            # Don't validate signatures because we want to validate them in the main thread later, since we have a
+            # cache available
+            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(
+                [block], npc_results, validate_signatures=False
+            )
             added: Optional[ReceiveBlockResult] = None
             pre_validation_time = time.time() - validation_start
             try:
-                if pre_validation_results is None:
+                if len(pre_validation_results) < 1:
                     raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
                 if pre_validation_results[0].error is not None:
                     if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
@@ -1559,7 +1566,31 @@ class FullNode:
         self.full_node_store.clear_unfinished_blocks_below(clear_height)
         if peak.height % 1000 == 0 and not self.sync_store.get_sync_mode():
             await self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
-        self._state_changed("block")
+
+        state_changed_data: Dict[str, Any] = {
+            "transaction_block": False,
+            "k_size": block.reward_chain_block.proof_of_space.size,
+            "header_hash": block.header_hash,
+            "height": block.height,
+        }
+
+        if block.transactions_info is not None:
+            state_changed_data["transaction_block"] = True
+            state_changed_data["block_cost"] = block.transactions_info.cost
+            state_changed_data["block_fees"] = block.transactions_info.fees
+
+        if block.foliage_transaction_block is not None:
+            state_changed_data["timestamp"] = block.foliage_transaction_block.timestamp
+
+        if block.transactions_generator is not None:
+            state_changed_data["transaction_generator_size_bytes"] = len(bytes(block.transactions_generator))
+
+        state_changed_data["transaction_generator_ref_list"] = block.transactions_generator_ref_list
+        if added is not None:
+            state_changed_data["receive_block_result"] = added.value
+
+        self._state_changed("block", state_changed_data)
+
         record = self.blockchain.block_record(block.header_hash)
         if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
             if self._segment_task is None or self._segment_task.done():
@@ -1644,7 +1675,8 @@ class FullNode:
             if block_bytes is None:
                 block_bytes = bytes(block)
 
-            npc_result = await self.blockchain.run_generator(block_bytes, block_generator)
+            height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
+            npc_result = await self.blockchain.run_generator(block_bytes, block_generator, height)
             pre_validation_time = time.time() - pre_validation_start
 
             pairs_pks, pairs_msgs = pkm_pairs(npc_result.npc_list, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
@@ -1664,6 +1696,9 @@ class FullNode:
                     return
                 raise ConsensusError(Err(validate_result.error))
             validation_time = time.time() - validation_start
+
+        # respond_block will later use the cache (validated_signature=True)
+        validate_result = dataclasses.replace(validate_result, validated_signature=True)
 
         assert validate_result.required_iters is not None
 
@@ -1753,6 +1788,7 @@ class FullNode:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
         else:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
+
         self._state_changed("unfinished_block")
 
     async def new_infusion_point_vdf(
@@ -2078,6 +2114,10 @@ class FullNode:
         if is_fully_compactified is None or is_fully_compactified:
             self.log.info(f"Already compactified block: {header_hash}. Ignoring.")
             return False
+        peak = self.blockchain.get_peak()
+        if peak is None or peak.height - height < 5:
+            self.log.debug("Will not compactify recent block")
+            return False
         if vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
             self.log.error(f"Received vdf proof is not compact: {vdf_proof}.")
             return False
@@ -2093,59 +2133,64 @@ class FullNode:
             self.log.info(f"Duplicate compact proof. Height: {height}. Header hash: {header_hash}.")
         return is_new_proof
 
+    # returns True if we ended up replacing the proof, and False otherwise
     async def _replace_proof(
         self,
         vdf_info: VDFInfo,
         vdf_proof: VDFProof,
-        height: uint32,
+        header_hash: bytes32,
         field_vdf: CompressibleVDFField,
     ) -> bool:
-        full_blocks = await self.block_store.get_full_blocks_at([height])
-        assert len(full_blocks) > 0
-        replaced = False
-        expected_header_hash = self.blockchain.height_to_hash(height)
-        for block in full_blocks:
-            new_block = None
-            if block.header_hash != expected_header_hash:
-                continue
-            block_record = await self.blockchain.get_block_record_from_db(expected_header_hash)
-            assert block_record is not None
 
-            if field_vdf == CompressibleVDFField.CC_EOS_VDF:
-                for index, sub_slot in enumerate(block.finished_sub_slots):
-                    if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf == vdf_info:
-                        new_proofs = dataclasses.replace(sub_slot.proofs, challenge_chain_slot_proof=vdf_proof)
-                        new_subslot = dataclasses.replace(sub_slot, proofs=new_proofs)
-                        new_finished_subslots = block.finished_sub_slots
-                        new_finished_subslots[index] = new_subslot
-                        new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
-                        break
-            if field_vdf == CompressibleVDFField.ICC_EOS_VDF:
-                for index, sub_slot in enumerate(block.finished_sub_slots):
-                    if (
-                        sub_slot.infused_challenge_chain is not None
-                        and sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf == vdf_info
-                    ):
-                        new_proofs = dataclasses.replace(sub_slot.proofs, infused_challenge_chain_slot_proof=vdf_proof)
-                        new_subslot = dataclasses.replace(sub_slot, proofs=new_proofs)
-                        new_finished_subslots = block.finished_sub_slots
-                        new_finished_subslots[index] = new_subslot
-                        new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
-                        break
-            if field_vdf == CompressibleVDFField.CC_SP_VDF:
-                if block.reward_chain_block.challenge_chain_sp_vdf == vdf_info:
-                    assert block.challenge_chain_sp_proof is not None
-                    new_block = dataclasses.replace(block, challenge_chain_sp_proof=vdf_proof)
-            if field_vdf == CompressibleVDFField.CC_IP_VDF:
-                if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
-                    new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
-            if new_block is None:
-                continue
-            async with self.db_wrapper.lock:
-                await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
+        block = await self.block_store.get_full_block(header_hash)
+        if block is None:
+            return False
+
+        new_block = None
+
+        if field_vdf == CompressibleVDFField.CC_EOS_VDF:
+            for index, sub_slot in enumerate(block.finished_sub_slots):
+                if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf == vdf_info:
+                    new_proofs = dataclasses.replace(sub_slot.proofs, challenge_chain_slot_proof=vdf_proof)
+                    new_subslot = dataclasses.replace(sub_slot, proofs=new_proofs)
+                    new_finished_subslots = block.finished_sub_slots
+                    new_finished_subslots[index] = new_subslot
+                    new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
+                    break
+        if field_vdf == CompressibleVDFField.ICC_EOS_VDF:
+            for index, sub_slot in enumerate(block.finished_sub_slots):
+                if (
+                    sub_slot.infused_challenge_chain is not None
+                    and sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf == vdf_info
+                ):
+                    new_proofs = dataclasses.replace(sub_slot.proofs, infused_challenge_chain_slot_proof=vdf_proof)
+                    new_subslot = dataclasses.replace(sub_slot, proofs=new_proofs)
+                    new_finished_subslots = block.finished_sub_slots
+                    new_finished_subslots[index] = new_subslot
+                    new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
+                    break
+        if field_vdf == CompressibleVDFField.CC_SP_VDF:
+            if block.reward_chain_block.challenge_chain_sp_vdf == vdf_info:
+                assert block.challenge_chain_sp_proof is not None
+                new_block = dataclasses.replace(block, challenge_chain_sp_proof=vdf_proof)
+        if field_vdf == CompressibleVDFField.CC_IP_VDF:
+            if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
+                new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
+        if new_block is None:
+            return False
+        async with self.db_wrapper.lock:
+            try:
+                await self.block_store.db_wrapper.begin_transaction()
+                await self.block_store.replace_proof(header_hash, new_block)
                 await self.block_store.db_wrapper.commit_transaction()
-                replaced = True
-        return replaced
+                return True
+            except BaseException as e:
+                await self.block_store.db_wrapper.rollback_transaction()
+                self.log.error(
+                    f"_replace_proof error while adding block {block.header_hash} height {block.height},"
+                    f" rolling back: {e} {traceback.format_exc()}"
+                )
+                raise
 
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
         field_vdf = CompressibleVDFField(int(request.field_vdf))
@@ -2154,7 +2199,7 @@ class FullNode:
         ):
             return None
         async with self.blockchain.compact_proof_lock:
-            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
+            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.header_hash, field_vdf)
         if not replaced:
             self.log.error(f"Could not replace compact proof: {request.height}")
             return None
@@ -2237,7 +2282,7 @@ class FullNode:
         async with self.blockchain.compact_proof_lock:
             if self.blockchain.seen_compact_proofs(request.vdf_info, request.height):
                 return None
-            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
+            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.header_hash, field_vdf)
         if not replaced:
             self.log.error(f"Could not replace compact proof: {request.height}")
             return None

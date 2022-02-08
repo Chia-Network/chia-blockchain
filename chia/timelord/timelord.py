@@ -2,12 +2,13 @@ import asyncio
 import dataclasses
 import io
 import logging
+import os
 import random
 import time
 import traceback
-import os
-from typing import Callable, Dict, List, Optional, Tuple, Set
-from chia.util.streamable import Streamable, streamable
+from concurrent.futures import ProcessPoolExecutor
+from typing import Callable, Dict, List, Optional, Set, Tuple
+
 from chiavdf import create_discriminant, prove
 
 from chia.consensus.constants import ConsensusConstants
@@ -32,7 +33,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
-from concurrent.futures import ProcessPoolExecutor
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +64,6 @@ class Timelord:
         self.constants = constants
         self._shut_down = False
         self.free_clients: List[Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = []
-        self.potential_free_clients: List = []
         self.ip_whitelist = self.config["vdf_clients"]["ip"]
         self.server: Optional[ChiaServer] = None
         self.chain_type_to_stream: Dict[Chain, Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = {}
@@ -162,10 +162,6 @@ class Timelord:
             if client_ip in self.ip_whitelist:
                 self.free_clients.append((client_ip, reader, writer))
                 log.debug(f"Added new VDF client {client_ip}.")
-                for ip, end_time in list(self.potential_free_clients):
-                    if ip == client_ip:
-                        self.potential_free_clients.remove((ip, end_time))
-                        break
 
     async def _stop_chain(self, chain: Chain):
         try:
@@ -178,7 +174,6 @@ class Timelord:
                     log.warning(f"Trying to stop a crashed chain: {chain}.")
                     return None
             stop_ip, _, stop_writer = self.chain_type_to_stream[chain]
-            self.potential_free_clients.append((stop_ip, time.time()))
             stop_writer.write(b"010")
             await stop_writer.drain()
             if chain in self.allows_iters:

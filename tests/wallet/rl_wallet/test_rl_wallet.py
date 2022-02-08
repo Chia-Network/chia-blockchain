@@ -16,7 +16,7 @@ def event_loop():
     yield loop
 
 
-class TestCCWallet:
+class TestCATWallet:
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}):
