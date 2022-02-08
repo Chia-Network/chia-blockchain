@@ -129,25 +129,30 @@ if [ "$(uname)" = "Linux" ]; then
       # yum install sqlite-devel brings sqlite3.7 which is not compatible with chia
       echo "wget https://www.sqlite.org/2022/sqlite-autoconf-3370200.tar.gz"
       wget https://www.sqlite.org/2022/sqlite-autoconf-3370200.tar.gz
-      tar xvf sqlite-autoconf-3370200.tar.gz
+      tar xf sqlite-autoconf-3370200.tar.gz
+      echo "cd sqlite-autoconf-3370200"
       cd sqlite-autoconf-3370200
-      {
-        ./configure --prefix=/usr/local
-        make -j"$(nproc)"
-        sudo make install
-      } >> "${TMP_PATH}/sqlite3-install.log"
-      # Install Python3.9.9
+      echo "./configure --prefix=/usr/local"
+      # '| stdbuf ...' seems weird but this makes command ouputs stay in single line.
+      ./configure --prefix=/usr/local | stdbuf -o0 cut -b1-$(tput cols) | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+      echo "make -j$(nproc)"
+      make -j"$(nproc)" | stdbuf -o0 cut -b1-$(tput cols) | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+      echo "sudo make install"
+      sudo make install | stdbuf -o0 cut -b1-$(tput cols) | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
       # yum install python3 brings Python3.6 which is not supported by chia
       cd ..
       echo "wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz"
       wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz
-      tar xvf Python-3.9.9.tgz
+      tar xf Python-3.9.9.tgz
+      echo "cd Python-3.9.9"
       cd Python-3.9.9
-      {
-        LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local
-        LD_RUN_PATH=/usr/local/lib make -j"$(nproc)"
-        LD_RUN_PATH=/usr/local/lib sudo make altinstall
-      } >> "${TMP_PATH}/python3.9.9-install.log"
+      echo "LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local"
+      # '| stdbuf ...' seems weird but this makes command ouputs stay in single line.
+      LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local | stdbuf -o0 cut -b1-$(tput cols) | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+      echo "LD_RUN_PATH=/usr/local/lib make -j$(nproc)"
+      LD_RUN_PATH=/usr/local/lib make -j"$(nproc)" | stdbuf -o0 cut -b1-$(tput cols) | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+      echo "LD_RUN_PATH=/usr/local/lib sudo make altinstall"
+      LD_RUN_PATH=/usr/local/lib sudo make altinstall | stdbuf -o0 cut -b1-$(tput cols) | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
       cd "$CURRENT_WD"
     fi
   elif type yum && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
