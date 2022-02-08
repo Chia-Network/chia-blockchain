@@ -2339,3 +2339,5 @@ async def node_next_block_check(
         if peak is not None and block_response.block.prev_header_hash == peak.header_hash:
             return True
     return False
+
+
