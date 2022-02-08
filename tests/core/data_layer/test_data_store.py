@@ -172,16 +172,16 @@ async def test_insert_internal_node_does_nothing_if_matching(data_store: DataSto
     ancestors = await data_store.get_ancestors(node_hash=kv_node.hash, tree_id=tree_id)
     parent = ancestors[0]
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.savepoint():
         cursor = await data_store.db.execute("SELECT * FROM node")
         before = await cursor.fetchall()
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.savepoint():
         await data_store._insert_internal_node(
             left_hash=parent.left_hash, right_hash=parent.right_hash, tree_id=tree_id
         )
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.savepoint():
         cursor = await data_store.db.execute("SELECT * FROM node")
         after = await cursor.fetchall()
 
@@ -194,14 +194,14 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
 
     kv_node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.savepoint():
         cursor = await data_store.db.execute("SELECT * FROM node")
         before = await cursor.fetchall()
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.savepoint():
         await data_store._insert_terminal_node(key=kv_node.key, value=kv_node.value, tree_id=tree_id)
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.savepoint():
         cursor = await data_store.db.execute("SELECT * FROM node")
         after = await cursor.fetchall()
 
@@ -652,7 +652,7 @@ async def test_check_internal_key_value_are_null(
     raw_data_store: DataStore,
     key_value: Dict[str, Optional[str]],
 ) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
+    async with raw_data_store.db_wrapper.savepoint():
         await raw_data_store.db.execute(
             "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
             {"hash": a_bytes_32.hex(), "node_type": NodeType.INTERNAL, **key_value},
@@ -675,7 +675,7 @@ async def test_check_internal_key_value_are_null(
 )
 @pytest.mark.asyncio
 async def test_check_internal_left_right_are_bytes32(raw_data_store: DataStore, left_right: Dict[str, str]) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
+    async with raw_data_store.db_wrapper.savepoint():
         # needed to satisfy foreign key constraints
         await raw_data_store.db.execute(
             "INSERT INTO node(hash, node_type) VALUES(:hash, :node_type)",
@@ -704,7 +704,7 @@ async def test_check_internal_left_right_are_bytes32(raw_data_store: DataStore, 
 )
 @pytest.mark.asyncio
 async def test_check_terminal_left_right_are_null(raw_data_store: DataStore, left_right: Dict[str, str]) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
+    async with raw_data_store.db_wrapper.savepoint():
         await raw_data_store.db.execute(
             "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
             {"hash": a_bytes_32.hex(), "node_type": NodeType.TERMINAL, **left_right},
@@ -721,7 +721,7 @@ async def test_check_terminal_left_right_are_null(raw_data_store: DataStore, lef
 async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataStore) -> None:
     tree_id = hexstr_to_bytes("c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd")
 
-    async with raw_data_store.db_wrapper.locked_transaction():
+    async with raw_data_store.db_wrapper.savepoint():
         for generation in range(1, 5):
             await raw_data_store.db.execute(
                 """
@@ -747,7 +747,7 @@ async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataSto
 async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> None:
     tree_id = hexstr_to_bytes("c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd")
 
-    async with raw_data_store.db_wrapper.locked_transaction():
+    async with raw_data_store.db_wrapper.savepoint():
         for generation in [*range(5), *range(6, 10)]:
             await raw_data_store.db.execute(
                 """
@@ -771,7 +771,7 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
 
 @pytest.mark.asyncio
 async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
+    async with raw_data_store.db_wrapper.savepoint():
         await raw_data_store.db.execute(
             "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
             {
@@ -791,7 +791,7 @@ async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
 
 @pytest.mark.asyncio
 async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
-    async with raw_data_store.db_wrapper.locked_transaction():
+    async with raw_data_store.db_wrapper.savepoint():
         await raw_data_store.db.execute(
             "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
             {
