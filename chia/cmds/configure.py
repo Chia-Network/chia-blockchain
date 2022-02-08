@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 import click
 
@@ -20,7 +20,7 @@ def configure(
     testnet: str,
     peer_connect_timeout: str,
     crawler_db_path: str,
-    crawler_minimum_version_count: int,
+    crawler_minimum_version_count: Optional[int],
     seeder_domain_name: str,
     seeder_nameserver: str,
 ):
