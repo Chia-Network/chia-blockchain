@@ -92,7 +92,7 @@ def get_backpayment_amount_from_solution(solution: Program) -> uint64:
 
 def get_trade_price_from_solution(solution: Program) -> uint64:
     try:
-        prog = solution.rest().rest().rest().rest().rest().rest().rest().first()
+        prog = solution.rest().rest().rest().rest().rest().rest().rest().rest().first()
         return prog.as_int()
     except Exception:
         return None

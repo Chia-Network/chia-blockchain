@@ -154,7 +154,6 @@ class TestNFTWallet:
 
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 201)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 201)
-
         nft_wallet_1 = await NFTWallet.create_new_nft_wallet(
             wallet_node_1.wallet_state_manager, wallet_1, did_wallet_1.id()
         )

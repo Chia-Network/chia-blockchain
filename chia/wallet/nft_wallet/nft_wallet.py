@@ -6,6 +6,7 @@ from chia.util.streamable import streamable, Streamable
 from typing import Dict, Optional, List, Any, Set, Tuple
 from blspy import AugSchemeMPL
 from secrets import token_bytes
+from clvm.casts import int_to_bytes
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -370,7 +371,7 @@ class NFTWallet:
     ):
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
         # 1 is a coin announcement
-        messages = [(1, bytes(trade_price) + bytes(new_did))]  # TODO: check this bytes concatenation is correct
+        messages = [(1, int_to_bytes(trade_price) + bytes(new_did))]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
@@ -431,7 +432,7 @@ class NFTWallet:
         assert trade_price_discovered is not None
         assert nft_id is not None
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
-        messages = [(1, bytes(trade_price_discovered) + bytes(nft_id))]
+        messages = [(1, int_to_bytes(trade_price_discovered) + bytes(nft_id))]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
