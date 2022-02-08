@@ -159,8 +159,8 @@ class DataLayerRpcApi:
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        res = await self.service.get_root(store_id)
-        return {"hash": res}
+        hash, status = await self.service.get_root(store_id)
+        return {"hash": hash, "status": status}
 
     async def get_roots(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -173,8 +173,8 @@ class DataLayerRpcApi:
         roots = []
         for id in store_ids:
             id_bytes = bytes32.from_hexstr(id)
-            res = await self.service.get_root(store_id=id_bytes)
-            roots.append({"id": id_bytes, "hash": res})
+            hash, status = await self.service.get_root(id_bytes)
+            roots.append({"id": id_bytes, "hash": hash, "status": status})
         return {"root_hashes": roots}
 
     async def subscribe(self, request: Dict[str, Any]) -> bool:
