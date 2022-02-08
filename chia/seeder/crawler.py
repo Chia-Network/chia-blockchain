@@ -28,7 +28,7 @@ class Crawler:
     coin_store: CoinStore
     connection: aiosqlite.Connection
     config: Dict
-    server: Any
+    server: Optional[ChiaServer]
     crawl_store: Optional[CrawlStore]
     log: logging.Logger
     constants: ConsensusConstants
@@ -117,6 +117,10 @@ class Crawler:
             await self.crawl_store.peer_failed_to_connect(peer)
 
     async def _start(self):
+        # We override the default peer_connect_timeout when running from the crawler
+        crawler_peer_timeout = self.config.get("peer_connect_timeout", 2)
+        self.server.config["peer_connect_timeout"] = crawler_peer_timeout
+
         self.task = asyncio.create_task(self.crawl())
 
     async def crawl(self):
