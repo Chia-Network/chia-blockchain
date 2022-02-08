@@ -35,7 +35,7 @@ def command(verbose, root_str):
     stream_handler = logging.StreamHandler()
     logger.addHandler(stream_handler)
 
-    tree_roots = ["chia", "tests"]
+    tree_roots = ["benchmarks", "build_scripts", "chia", "tests", "tools"]
     failed = False
     root = pathlib.Path(root_str).resolve()
     directories = sorted(
