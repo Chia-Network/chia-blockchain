@@ -75,7 +75,6 @@ class Crawler:
                 f"{self.minimum_version_count!r}"
             )
 
-
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
 

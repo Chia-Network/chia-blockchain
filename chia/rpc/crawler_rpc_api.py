@@ -22,14 +22,7 @@ class CrawlerRpcApi:
             change_data = {}
 
         if change == "crawl_batch_completed" or change == "loaded_initial_peers":
-            payloads.append(
-                create_payload_dict(
-                    change,
-                    change_data,
-                    self.service_name,
-                    "metrics"
-                )
-            )
+            payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
         return payloads
 
