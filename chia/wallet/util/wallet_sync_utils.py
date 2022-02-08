@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional, Tuple, Union, Dict
 
 from chia.consensus.constants import ConsensusConstants
@@ -9,16 +10,21 @@ from chia.protocols.wallet_protocol import (
     RespondRemovals,
     RequestRemovals,
 )
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import hash_coin_list, Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
+from chia.util.ints import uint32
 from chia.util.merkle_set import confirm_not_included_already_hashed, confirm_included_already_hashed, MerkleSet
+
+
+log = logging.getLogger(__name__)
 
 
 def validate_additions(
     coins: List[Tuple[bytes32, List[Coin]]],
     proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]],
-    root,
+    root: bytes32,
 ):
     if proofs is None:
         # Verify root
@@ -77,7 +83,9 @@ def validate_additions(
     return True
 
 
-def validate_removals(coins, proofs, root):
+def validate_removals(
+    coins: List[Tuple[bytes32, Optional[Coin]]], proofs: Optional[List[Tuple[bytes32, bytes]]], root: bytes32
+):
     if proofs is None:
         # If there are no proofs, it means all removals were returned in the response.
         # we must find the ones relevant to our wallets.
@@ -124,7 +132,9 @@ def validate_removals(coins, proofs, root):
     return True
 
 
-async def request_and_validate_removals(peer, height, header_hash, coin_name, removals_root) -> bool:
+async def request_and_validate_removals(
+    peer: WSChiaConnection, height: uint32, header_hash: bytes32, coin_name: bytes32, removals_root: bytes32
+) -> bool:
     removals_request = RequestRemovals(height, header_hash, [coin_name])
 
     removals_res: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.request_removals(
@@ -132,15 +142,20 @@ async def request_and_validate_removals(peer, height, header_hash, coin_name, re
     )
     if removals_res is None or isinstance(removals_res, RejectRemovalsRequest):
         return False
+    assert removals_res.proofs is not None
     return validate_removals(removals_res.coins, removals_res.proofs, removals_root)
 
 
-async def request_and_validate_additions(peer, height, header_hash, puzzle_hash, additions_root):
+async def request_and_validate_additions(
+    peer: WSChiaConnection, height: uint32, header_hash: bytes32, puzzle_hash: bytes32, additions_root: bytes32
+):
     additions_request = RequestAdditions(height, header_hash, [puzzle_hash])
     additions_res: Optional[Union[RespondAdditions, RejectAdditionsRequest]] = await peer.request_additions(
         additions_request
     )
     if additions_res is None or isinstance(additions_res, RejectAdditionsRequest):
+        log.warning(f"Requested: {additions_request}")
+        log.warning("retruning false 1")
         return False
 
     validated = validate_additions(
@@ -148,6 +163,7 @@ async def request_and_validate_additions(peer, height, header_hash, puzzle_hash,
         additions_res.proofs,
         additions_root,
     )
+    log.warning(f"retruning {validated} 1")
     return validated
 
 

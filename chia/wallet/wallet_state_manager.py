@@ -328,7 +328,7 @@ class WalletStateManager:
             for record in derivation_paths:
                 await self.add_interested_puzzle_hash(record.puzzle_hash, record.wallet_id, in_transaction)
                 self.log.info(f"Adding path: {record.index}")
-                await self.wallet_node.subscription_queue.put((0, record.puzzle_hash))
+            await self.wallet_node.subscription_queue.put((0, [record.puzzle_hash for record in derivation_paths]))
         if unused > 0:
             await self.puzzle_store.set_used_up_to(uint32(unused - 1), in_transaction)
 
@@ -447,6 +447,7 @@ class WalletStateManager:
             return False
 
         if latest.height - await self.blockchain.get_finished_sync_up_to() > 2:
+            self.log.info(f"Latest: {latest.height} {await self.blockchain.get_finished_sync_up_to()}")
             return False
 
         latest_timestamp = self.blockchain.get_latest_timestamp()
@@ -1062,7 +1063,9 @@ class WalletStateManager:
 
         for coin in tx_record.removals + tx_record.additions:
             await self.interested_store.add_interested_coin_id(coin.name())
-            await self.wallet_node.subscription_queue.put((1, coin.name()))
+        await self.wallet_node.subscription_queue.put(
+            (1, [coin.name() for coin in tx_record.removals + tx_record.additions])
+        )
         self.tx_pending_changed()
         self.state_changed("pending_transaction", tx_record.wallet_id)
 

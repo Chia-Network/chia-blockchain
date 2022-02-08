@@ -33,6 +33,7 @@ from chia.protocols.wallet_protocol import (
     RespondSESInfo,
     RequestHeaderBlocks,
     RespondHeaderBlocks,
+    RequestBlockHeader,
 )
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -370,17 +371,19 @@ class WalletNode:
     async def _process_new_subscriptions(self):
         while not self._shut_down:
             try:
-                sub_type, sub = await self.subscription_queue.get()
+                sub_type, byte_values = await self.subscription_queue.get()
                 for peer in self.server.get_full_node_connections():
                     if sub_type == 0:
-                        self.log.info(f"Processing new PH subscription: {sub}")
+                        self.log.info(f"Processing new PH subscription: {byte_values}")
                         # Puzzle hash subscription
-                        coin_states: List[CoinState] = await self.subscribe_to_phs([sub], peer, True, uint32(0), None)
+                        coin_states: List[CoinState] = await self.subscribe_to_phs(
+                            byte_values, peer, True, uint32(0), None
+                        )
                     elif sub_type == 1:
                         # Coin id subscription
-                        self.log.info(f"Processing new Coin subscription: {sub}")
+                        self.log.info(f"Processing new Coin subscription: {byte_values}")
                         coin_states: List[CoinState] = await self.subscribe_to_coin_updates(
-                            [sub], peer, True, uint32(0), None
+                            byte_values, peer, True, uint32(0), None
                         )
                     else:
                         assert False
@@ -566,6 +569,9 @@ class WalletNode:
         # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
         if trusted and fork_height is not None and height is not None and fork_height != height - 1:
             await self.wallet_state_manager.reorg_rollback(fork_height)
+        cache: PeerRequestCache = self.get_cache_for_peer(peer)
+        if fork_height is not None:
+            cache.clear_after_height(fork_height)
 
         all_tasks = []
 
@@ -581,9 +587,7 @@ class WalletNode:
                         if trusted:
                             valid = True
                         else:
-                            valid = await self.validate_received_state_from_peer(
-                                inner_state, peer, self.get_cache_for_peer(peer), fork_height
-                            )
+                            valid = await self.validate_received_state_from_peer(inner_state, peer, cache, fork_height)
                         if valid:
                             self.log.info(f"new coin state received ({inner_idx + 1} / {len(items)})")
                             assert self.new_state_lock is not None
@@ -591,8 +595,7 @@ class WalletNode:
                                 new_coin_subscriptions: List[bytes32] = await self.wallet_state_manager.new_coin_state(
                                     [inner_state], peer, fork_height
                                 )
-                                for new_coin_id in new_coin_subscriptions:
-                                    await self.subscription_queue.put((1, new_coin_id))
+                                await self.subscription_queue.put((1, new_coin_subscriptions))
                     except Exception as e:
                         tb = traceback.format_exc()
                         self.log.error(f"Exception while adding state: {e} {tb}")
@@ -906,7 +909,6 @@ class WalletNode:
                         return
                     # This is the (untrusted) case where we already synced and are not too far behind. Here we just
                     # fetch one by one.
-                    self.log.info(f"Starting backtrack sync to {peer.get_peer_info()}")
                     async with self.wallet_state_manager.lock:
                         backtrack_fork_height = await self.wallet_short_sync_backtrack(header_block, peer)
 
@@ -920,9 +922,6 @@ class WalletNode:
                             coin_updates: List[CoinState] = await self.subscribe_to_coin_updates(
                                 all_coin_ids, peer, True, uint32(0), None
                             )
-                            self.log.info(
-                                f"Receiving state from edge case number {len(coin_updates)} {len(ph_updates)}"
-                            )
                             peer_new_peak_height, peer_new_peak_hash = self._node_peaks[peer.peer_node_id]
                             await self.receive_state_from_peer(
                                 ph_updates + coin_updates,
@@ -935,26 +934,19 @@ class WalletNode:
                         # For every block, we need to apply the cache from race_cache
                         for potential_height in range(backtrack_fork_height + 1, peak.height + 1):
                             header_hash = self.wallet_state_manager.blockchain.height_to_hash(uint32(potential_height))
-                            self.log.info(f"potential race: {potential_height} {header_hash}")
-                            if header_hash not in self.race_cache:
-                                # The coin_state_update message should come before the new_peak message
-                                self.log.info(f"Might have missed state, no state for height: {potential_height}")
-                            else:
+                            if header_hash in self.race_cache:
                                 self.log.info(f"Receiving race state: {self.race_cache[header_hash]}")
-                                if potential_height == 6:
-                                    pass
-                                    self.log.warning("its 6")
                                 await self.receive_state_from_peer(list(self.race_cache[header_hash]), peer)
 
-                        if (
-                            peer.peer_node_id in self.synced_peers
-                            and peak.height > await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
-                        ):
-                            await self.wallet_state_manager.blockchain.set_finished_sync_up_to(request.height)
                         self.wallet_state_manager.set_sync_mode(False)
                         self.wallet_state_manager.state_changed("new_block")
                         self.log.info(f"Finished processing new peak of {peak.height}")
 
+            if (
+                peer.peer_node_id in self.synced_peers
+                and peak.height > await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
+            ):
+                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(request.height)
             await self.wallet_state_manager.new_peak(peak)
 
     async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer) -> int:
@@ -1065,9 +1057,7 @@ class WalletNode:
         if coin_state.get_hash() not in peer_request_cache.states_validated:
             return False
         if fork_height is None:
-            self.log.info(f"returning true from _can_use_cache {fork_height}")
             return True
-
         if coin_state.created_height is None and coin_state.spent_height is None:
             # Performing a reorg
             return False
@@ -1075,7 +1065,6 @@ class WalletNode:
             return False
         if coin_state.spent_height is not None and coin_state.spent_height > fork_height:
             return False
-        self.log.info(f"Returinng true second from _can_use_cache {coin_state} {fork_height}")
         return True
 
     async def validate_received_state_from_peer(
@@ -1094,7 +1083,6 @@ class WalletNode:
         # Only use the cache if we are talking about states before the fork point. If we are evaluating something
         # in a reorg, we cannot use the cache, since we don't know if it's actually in the new chain after the reorg.
         if await self._can_use_cache(coin_state, peer_request_cache, fork_height):
-            self.log.warning(f"Using cache... {fork_height}")
             return True
 
         spent_height = coin_state.spent_height
@@ -1130,6 +1118,13 @@ class WalletNode:
         else:
             request = RequestHeaderBlocks(confirmed_height, confirmed_height)
             res = await peer.request_header_blocks(request)
+            if res is None:
+                self.log.info(f"Requestiung block: {confirmed_height}")
+                self.log.info(f"Res: {res}")
+                self.log.info(f"Requestiung block indiv: {confirmed_height}")
+                request = RequestBlockHeader(confirmed_height)
+                res_2 = await peer.request_block_header(request)
+                self.log.info(f"Res2: {res_2}")
             state_block = res.header_blocks[0]
             peer_request_cache.blocks[confirmed_height] = state_block
 
@@ -1144,6 +1139,7 @@ class WalletNode:
         )
 
         if validate_additions_result is False:
+            self.log.warning("Validate false 1")
             await peer.close(9999)
             return False
 
@@ -1174,6 +1170,7 @@ class WalletNode:
                 spent_state_block.foliage_transaction_block.removals_root,
             )
             if validate_removals_result is False:
+                self.log.warning("Validate false 2")
                 await peer.close(9999)
                 return False
             validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
@@ -1199,6 +1196,7 @@ class WalletNode:
                 spent_state_block.foliage_transaction_block.removals_root,
             )
             if validate_removals_result is False:
+                self.log.warning("Validate false 3")
                 await peer.close(9999)
                 return False
             validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
