@@ -65,10 +65,10 @@ jobs:
           type: arch
           url: "docker://archlinux:latest"
         - name: centos:7
-          type centos
+          type: centos
           url: "docker://centos:7"
         - name: centos:8
-          type centos
+          type: centos
           url: "docker://centos:8"
         - name: debian:buster
           type: debian
