@@ -1,5 +1,7 @@
+import importlib.resources
 from typing import List, Optional, Set, Dict, Any, Tuple
 import aiosqlite
+from chia.full_node import sql
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -33,12 +35,12 @@ class CoinStore:
         self.coin_record_db = db_wrapper.db
 
         table_sql_script = importlib.resources.read_text(
-            package=chia.full_node.sql,
+            package=sql,
             resource=f"coin_store_tables_v{self.db_wrapper.db_version}.sql",
             encoding="utf-8",
         )
         index_sql_script = importlib.resources.read_text(
-            package=chia.full_node.sql,
+            package=sql,
             resource=f"coin_store_indexes_v{self.db_wrapper.db_version}.sql",
             encoding="utf-8",
         )

@@ -1,3 +1,4 @@
+import importlib.resources
 import logging
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -5,6 +6,7 @@ import aiosqlite
 import zstd
 
 from chia.consensus.block_record import BlockRecord
+from chia.full_node import sql
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
@@ -30,12 +32,12 @@ class BlockStore:
         self.db = db_wrapper.db
 
         table_sql_script = importlib.resources.read_text(
-            package=chia.full_node.sql,
+            package=sql,
             resource=f"block_store_tables_v{self.db_wrapper.db_version}.sql",
             encoding="utf-8",
         )
         index_sql_script = importlib.resources.read_text(
-            package=chia.full_node.sql,
+            package=sql,
             resource=f"block_store_indexes_v{self.db_wrapper.db_version}.sql",
             encoding="utf-8",
         )
