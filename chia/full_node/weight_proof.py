@@ -605,43 +605,46 @@ class WeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0), []
 
-        executor = ProcessPoolExecutor(self._num_processes)
-        constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
-            self.constants, summaries, weight_proof
-        )
+        executor = ProcessPoolExecutor(6)
+        try:
+            constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
+                self.constants, summaries, weight_proof
+            )
 
-        recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
-            executor, _validate_recent_blocks, constants, wp_recent_chain_bytes, summary_bytes
-        )
+            recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
+                executor, _validate_recent_blocks, constants, wp_recent_chain_bytes, summary_bytes
+            )
 
-        segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
-            constants, rng, wp_segment_bytes, summary_bytes
-        )
-        if not segments_validated:
-            return False, uint32(0), []
-
-        vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
-        vdf_tasks = []
-        for chunk in vdf_chunks:
-            byte_chunks = []
-            for vdf_proof, classgroup, vdf_info in chunk:
-                byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
-
-            vdf_task = asyncio.get_running_loop().run_in_executor(executor, _validate_vdf_batch, constants, byte_chunks)
-            vdf_tasks.append(vdf_task)
-
-        for vdf_task in vdf_tasks:
-            validated = await vdf_task
-            if not validated:
+            segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
+                constants, rng, wp_segment_bytes, summary_bytes
+            )
+            if not segments_validated:
                 return False, uint32(0), []
 
-        valid_recent_blocks_task = recent_blocks_validation_task
-        valid_recent_blocks = await valid_recent_blocks_task
-        if not valid_recent_blocks:
-            log.error("failed validating weight proof recent blocks")
-            return False, uint32(0), []
+            vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
+            vdf_tasks = []
+            for chunk in vdf_chunks:
+                byte_chunks = []
+                for vdf_proof, classgroup, vdf_info in chunk:
+                    byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
 
-        return True, self.get_fork_point(summaries), summaries
+                vdf_task = asyncio.get_running_loop().run_in_executor(executor, _validate_vdf_batch, constants, byte_chunks)
+                vdf_tasks.append(vdf_task)
+
+            for vdf_task in vdf_tasks:
+                validated = await vdf_task
+                if not validated:
+                    return False, uint32(0), []
+
+            valid_recent_blocks_task = recent_blocks_validation_task
+            valid_recent_blocks = await valid_recent_blocks_task
+            if not valid_recent_blocks:
+                log.error("failed validating weight proof recent blocks")
+                return False, uint32(0), []
+
+            return True, self.get_fork_point(summaries), summaries
+        finally:
+            executor.shutdown()
 
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point
