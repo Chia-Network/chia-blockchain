@@ -245,9 +245,7 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                     commit_in -= 1
                     if commit_in == 0:
                         commit_in = HINT_COMMIT_RATE
-                        await out_db.executemany(
-                            "INSERT OR IGNORE INTO hints VALUES(?, ?) ON CONFLICT DO NOTHING", hint_values
-                        )
+                        await out_db.executemany("INSERT OR IGNORE INTO hints VALUES(?, ?)", hint_values)
                         await out_db.commit()
                         await out_db.execute("begin transaction")
                         hint_values = []
