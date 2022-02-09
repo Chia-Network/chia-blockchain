@@ -1,10 +1,11 @@
 import asyncio
+import math
 
 import pytest
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import make_msg
-from chia.server.rate_limits import RateLimiter, NON_TX_FREQ
+from chia.server.rate_limits import rate_limits_tx, rate_limits_other, RateLimiter, NON_TX_FREQ
 from tests.setup_nodes import test_constants
 
 
@@ -20,14 +21,19 @@ constants = test_constants
 class TestRateLimits:
     @pytest.mark.asyncio
     async def test_too_many_messages(self):
+        # The new_*_count values presume that these tests will only span one minute (rate limit)
+        # boundary, not two.
+        new_transaction_count = math.ceil(rate_limits_tx[ProtocolMessageTypes.new_transaction] * 1.1)
+        new_peak_count = math.ceil(rate_limits_other[ProtocolMessageTypes.new_peak] * 1.1)
+
         # Too many messages
         r = RateLimiter(incoming=True)
         new_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 40))
-        for i in range(3000):
+        for i in range(new_transaction_count):
             assert r.process_msg_and_check(new_tx_message)
 
         saw_disconnect = False
-        for i in range(3000):
+        for i in range(new_transaction_count):
             response = r.process_msg_and_check(new_tx_message)
             if not response:
                 saw_disconnect = True
@@ -36,11 +42,11 @@ class TestRateLimits:
         # Non-tx message
         r = RateLimiter(incoming=True)
         new_peak_message = make_msg(ProtocolMessageTypes.new_peak, bytes([1] * 40))
-        for i in range(20):
+        for i in range(new_peak_count):
             assert r.process_msg_and_check(new_peak_message)
 
         saw_disconnect = False
-        for i in range(200):
+        for i in range(new_peak_count):
             response = r.process_msg_and_check(new_peak_message)
             if not response:
                 saw_disconnect = True
