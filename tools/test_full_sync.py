@@ -4,6 +4,7 @@ import asyncio
 import aiosqlite
 import zstd
 import click
+import logging
 from pathlib import Path
 from time import time
 import tempfile
@@ -17,6 +18,17 @@ from chia.cmds.init_funcs import chia_init
 
 
 async def run_sync_test(file: Path, db_version=2) -> None:
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.WARNING)
+    handler = logging.FileHandler("test-full-sync.log")
+    handler.setFormatter(
+        logging.Formatter(
+            "\n%(levelname)-8s %(message)s",
+            datefmt="%Y-%m-%dT%H:%M:%S",
+        )
+    )
+    logger.addHandler(handler)
 
     with tempfile.TemporaryDirectory() as root_dir:
 

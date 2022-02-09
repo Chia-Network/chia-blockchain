@@ -1053,9 +1053,15 @@ class FullNode:
         )
         pre_validate_end = time.time()
         if pre_validate_end - pre_validate_start > 10:
-            self.log.warning(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
+            self.log.warning(
+                f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds "
+                f"({len(blocks_to_validate)} blocks, height: {blocks_to_validate[0].height})"
+            )
         else:
-            self.log.debug(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
+            self.log.debug(
+                f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds "
+                f"({len(blocks_to_validate)} blocks)"
+            )
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
@@ -1553,7 +1559,7 @@ class FullNode:
             f"Block validation time: {validation_time:0.2f} seconds, "
             f"pre_validation time: {pre_validation_time:0.2f} seconds, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
-            f"{percent_full_str}",
+            f"{percent_full_str} header_hash: {header_hash} height: {block.height}",
         )
 
         # This code path is reached if added == ADDED_AS_ORPHAN or NEW_TIP
