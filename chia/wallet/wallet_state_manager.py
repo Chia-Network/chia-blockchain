@@ -631,23 +631,30 @@ class WalletStateManager:
     async def new_coin_state(
         self, coin_states: List[CoinState], peer: WSChiaConnection, fork_height: Optional[uint32]
     ) -> None:
-        created_h_none = []
+        # TODO: add comment about what this method does
+
+        # Sort by created height, then add the reorg states (created_height is None) to the end
+        created_h_none: List[CoinState] = []
         for coin_st in coin_states.copy():
             if coin_st.created_height is None:
                 coin_states.remove(coin_st)
                 created_h_none.append(coin_st)
         coin_states.sort(key=lambda x: x.created_height, reverse=False)  # type: ignore
         coin_states.extend(created_h_none)
+
         all_txs_per_wallet: Dict[int, List[TransactionRecord]] = {}
         trade_removals = await self.trade_manager.get_coins_of_interest()
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
         trade_coin_removed: List[CoinState] = []
 
         for coin_state_idx, coin_state in enumerate(coin_states):
-            info = await self.get_wallet_id_for_puzzle_hash(coin_state.coin.puzzle_hash)
+            wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
+                coin_state.coin.puzzle_hash
+            )
             local_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_state.coin.name())
             self.log.debug(f"{coin_state.coin.name()}: {coin_state}")
 
+            # If we already have this coin, and it was spent and confirmed at the same heights, then we return (done)
             if local_record is not None:
                 local_spent = None
                 if local_record.spent_block_height != 0:
@@ -658,10 +665,10 @@ class WalletStateManager:
                 ):
                     continue
 
-            wallet_id = None
-            wallet_type = None
-            if info is not None:
-                wallet_id, wallet_type = info
+            wallet_id: Optional[uint32] = None
+            wallet_type: Optional[WalletType] = None
+            if wallet_info is not None:
+                wallet_id, wallet_type = wallet_info
             elif local_record is not None:
                 wallet_id = uint32(local_record.wallet_id)
                 wallet_type = local_record.wallet_type
@@ -889,13 +896,11 @@ class WalletStateManager:
                         False,
                         "pool_wallet",
                     )
-                    self.log.info("Created pool wallet")
                     coin_added = launcher_spend.additions()[0]
                     await self.coin_added(
                         coin_added, coin_state.spent_height, [], pool_wallet.id(), WalletType(pool_wallet.type())
                     )
                     await self.add_interested_coin_ids([coin_added.name()], True)
-                    self.log.info("Created pool wallet 2")
 
             else:
                 raise RuntimeError("All cases already handled")  # Logic error, all cases handled
@@ -936,7 +941,7 @@ class WalletStateManager:
         info = await self.puzzle_store.wallet_info_for_puzzle_hash(puzzle_hash)
         if info is not None:
             wallet_id, wallet_type = info
-            return wallet_id, wallet_type
+            return uint32(wallet_id), wallet_type
 
         interested_wallet_id = await self.interested_store.get_interested_puzzle_hash_wallet_id(puzzle_hash=puzzle_hash)
         if interested_wallet_id is not None:
@@ -944,7 +949,7 @@ class WalletStateManager:
             if wallet_id not in self.wallets.keys():
                 self.log.warning(f"Do not have wallet {wallet_id} for puzzle_hash {puzzle_hash}")
             wallet_type = WalletType(self.wallets[uint32(wallet_id)].type())
-            return wallet_id, wallet_type
+            return uint32(wallet_id), wallet_type
         return None
 
     async def coin_added(
