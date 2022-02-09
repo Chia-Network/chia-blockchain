@@ -470,7 +470,7 @@ class WalletNode:
         """
         Sync algorithm:
         - Download and verify weight proof (if not trusted)
-        - The minimum height is finished_sync_up_to - 32, roll back anything after it (if syncing)
+        - The minimum height is finished_sync_up_to - 256, roll back anything after it (if syncing)
         - Subscribe to all puzzle_hashes over and over until there are no more updates
         - Subscribe to all coin_ids over and over until there are no more updates
         - syncing=False means that we are just double-checking with this peer to make sure we don't have any
@@ -483,7 +483,7 @@ class WalletNode:
         start_time = time.time()
         # This is the greatest height where we have downloaded all transactions before it, and we know it's valid
         current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
-        min_height: uint32 = uint32(max(0, current_height - 32))
+        min_height: uint32 = uint32(max(0, current_height - 256))
 
         if syncing:
             await self.wallet_state_manager.reorg_rollback(min_height)
