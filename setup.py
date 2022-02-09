@@ -84,6 +84,7 @@ kwargs = dict(
         "chia.consensus",
         "chia.daemon",
         "chia.full_node",
+        "chia.full_node.sql",
         "chia.timelord",
         "chia.farmer",
         "chia.harvester",
@@ -130,6 +131,7 @@ kwargs = dict(
     package_data={
         "chia": ["pyinstaller.spec"],
         "": ["*.clvm", "*.clvm.hex", "*.clib", "*.clinc", "*.clsp", "py.typed"],
+        "chia.full_node.sql": ["block_store_indexes_v1.sql", "*.sql"],
         "chia.util": ["initial-*.yaml", "english.txt"],
         "chia.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
         "mozilla-ca": ["cacert.pem"],
