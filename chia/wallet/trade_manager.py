@@ -168,6 +168,7 @@ class TradeManager:
 
     async def cancel_pending_offer(self, trade_id: bytes32):
         await self.trade_store.set_status(trade_id, TradeStatus.CANCELLED, False)
+        self.wallet_state_manager.state_changed("offer_cancelled")
 
     async def cancel_pending_offer_safely(
         self, trade_id: bytes32, fee: uint64 = uint64(0)
@@ -220,6 +221,7 @@ class TradeManager:
 
     async def save_trade(self, trade: TradeRecord):
         await self.trade_store.add_trade_record(trade, False)
+        self.wallet_state_manager.state_changed("offer_added")
 
     async def create_offer_for_ids(
         self, offer: Dict[Union[int, bytes32], int], fee: uint64 = uint64(0), validate_only: bool = False
