@@ -7,7 +7,7 @@ import os
 import sys
 
 from benchmarks.utils import clvm_generator
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint128, uint64, uint32, uint8
 from utils import (
     rewards,
@@ -40,7 +40,7 @@ random.seed(123456789)
 async def run_add_block_benchmark(version: int):
 
     verbose: bool = "--verbose" in sys.argv
-    db_wrapper: DBWrapper = await setup_db("block-store-benchmark.db", version)
+    db_wrapper: DBWrapper2 = await setup_db("block-store-benchmark.db", version)
 
     # keep track of benchmark total time
     all_test_time = 0.0
@@ -218,7 +218,6 @@ async def run_add_block_benchmark(version: int):
             await block_store.set_in_chain([(header_hash,)])
             header_hashes.append(header_hash)
             await block_store.set_peak(header_hash)
-            await db_wrapper.db.commit()
 
             stop = monotonic()
             total_time += stop - start
@@ -411,7 +410,7 @@ async def run_add_block_benchmark(version: int):
         print(f"database size: {db_size/1000000:.3f} MB")
 
     finally:
-        await db_wrapper.db.close()
+        await db_wrapper.close()
 
 
 if __name__ == "__main__":

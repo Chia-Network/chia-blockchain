@@ -257,16 +257,14 @@ class Blockchain(BlockchainInterface):
             None,
         )
         # Always add the block to the database
-        async with self.block_store.db_wrapper.lock:
+        async with self.block_store.db_wrapper.write_db():
             try:
                 header_hash: bytes32 = block.header_hash
                 # Perform the DB operations to update the state, and rollback if something goes wrong
-                await self.block_store.db_wrapper.begin_transaction()
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 fork_height, peak_height, records, (coin_record_change, hint_changes) = await self._reconsider_peak(
                     block_record, genesis, fork_point_with_peak, npc_result
                 )
-                await self.block_store.db_wrapper.commit_transaction()
 
                 # Then update the memory cache. It is important that this task is not cancelled and does not throw
                 self.add_block_record(block_record)
@@ -281,7 +279,6 @@ class Blockchain(BlockchainInterface):
                     await self.__height_map.maybe_flush()
             except BaseException as e:
                 self.block_store.rollback_cache_block(header_hash)
-                await self.block_store.db_wrapper.rollback_transaction()
                 log.error(
                     f"Error while adding block {block.header_hash} height {block.height},"
                     f" rolling back: {traceback.format_exc()} {e}"
