@@ -490,9 +490,9 @@ class WalletRpcClient(RpcClient):
         return None
 
     async def dl_latest_singleton(
-        self, launcher_id: bytes32, latest_confirmed: bool = False
+        self, launcher_id: bytes32, only_confirmed: bool = False
     ) -> Optional[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex(), "latest_confirmed": latest_confirmed}
+        request = {"launcher_id": launcher_id.hex(), "only_confirmed": only_confirmed}
         response = await self.fetch("dl_latest_singleton", request)
         return None if response["singleton"] is None else SingletonRecord.from_json_dict(response["singleton"])
 
