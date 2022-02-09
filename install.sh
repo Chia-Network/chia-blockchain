@@ -32,7 +32,7 @@ UBUNTU=false
 DEBIAN=false
 if [ "$(uname)" = "Linux" ]; then
   #LINUX=1
-  if command -v apt-get &> /dev/null; then
+  if command -v apt-get >/dev/null; then
     OS_ID=$(lsb_release -is)
     if [ "$OS_ID" = "Debian" ]; then
       DEBIAN=true
