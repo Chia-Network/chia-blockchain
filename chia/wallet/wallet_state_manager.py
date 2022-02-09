@@ -686,6 +686,7 @@ class WalletStateManager:
 
             if coin_state.created_height is None:
                 # TODO implements this coin got reorged
+                # TODO: we need to potentially roll back the pool wallet here
                 pass
             elif coin_state.created_height is not None and coin_state.spent_height is None:
                 await self.coin_added(coin_state.coin, coin_state.created_height, all_txs, wallet_id, wallet_type)
@@ -1059,10 +1060,7 @@ class WalletStateManager:
         all_coins_names.extend([coin.name() for coin in tx_record.additions])
         all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
-        for coin_name in all_coins_names:
-            await self.interested_store.add_interested_coin_id(coin_name)
-        if len(all_coins_names) > 0:
-            await self.wallet_node.subscription_queue.put((1, all_coins_names))
+        await self.add_interested_coin_ids(all_coins_names)
         self.tx_pending_changed()
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
@@ -1261,13 +1259,13 @@ class WalletStateManager:
         for puzzle_hash, wallet_id in zip(puzzle_hashes, wallet_ids):
             await self.interested_store.add_interested_puzzle_hash(puzzle_hash, wallet_id, in_transaction)
         if len(puzzle_hashes) > 0:
-            await self.wallet_node.subscription_queue.put((0, puzzle_hashes))
+            await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(puzzle_hashes)
 
     async def add_interested_coin_ids(self, coin_ids: List[bytes32], in_transaction: bool = False) -> None:
         for coin_id in coin_ids:
             await self.interested_store.add_interested_coin_id(coin_id, in_transaction)
         if len(coin_ids) > 0:
-            await self.wallet_node.subscription_queue.put((1, coin_ids))
+            await self.wallet_node.new_peak_queue.subscribe_to_coin_ids(coin_ids)
 
     async def delete_trade_transactions(self, trade_id: bytes32):
         txs: List[TransactionRecord] = await self.tx_store.get_transactions_by_trade_id(trade_id)
