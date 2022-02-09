@@ -1,5 +1,5 @@
-import importlib.resources
 from typing import List, Tuple
+import pkg_resources
 from chia.full_node import sql
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
@@ -16,16 +16,12 @@ class HintStore:
         self = cls()
         self.db_wrapper = db_wrapper
 
-        table_sql_script = importlib.resources.read_text(
-            package=sql,
-            resource=f"hint_store_tables_v{self.db_wrapper.db_version}.sql",
-            encoding="utf-8",
-        )
-        index_sql_script = importlib.resources.read_text(
-            package=sql,
-            resource=f"hint_store_indexes_v{self.db_wrapper.db_version}.sql",
-            encoding="utf-8",
-        )
+        table_sql_script = pkg_resources.resource_string(
+            "chia.full_node.sql", f"hint_store_tables_v{self.db_wrapper.db_version}.sql"
+        ).decode("utf-8")
+        index_sql_script = pkg_resources.resource_string(
+            "chia.full_node.sql", f"hint_store_indexes_v{self.db_wrapper.db_version}.sql"
+        ).decode("utf-8")
 
         await self.db_wrapper.db.executescript(table_sql_script)
         await self.db_wrapper.db.executescript(index_sql_script)
