@@ -144,6 +144,17 @@ class DataLayer:
             return None, Status.PENDING
         return latest.root, Status.COMMITTED
 
+    async def get_root_history(self, store_id: bytes32) -> List[SingletonRecord]:
+        records = await self.wallet_rpc.dl_history(store_id)
+        if records is None:
+            self.log.error(f"Failed to get root history for {store_id.hex()}")
+        root_history = []
+        prev: Optional[SingletonRecord] = None
+        for record in records:
+            if prev is not None and record.root != prev.root:
+                root_history.append(record)
+        return root_history
+
     async def _validate_batch(
         self,
         tree_id: bytes32,

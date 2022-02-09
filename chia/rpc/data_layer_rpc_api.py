@@ -210,3 +210,17 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         await self.service.unsubscribe(store_id)
         return True
+
+    async def get_root_history(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        get history of state hashes for a store
+        """
+        if self.service is None:
+            raise Exception("Data layer not created")
+        store_id = request["id"]
+        id_bytes = bytes32.from_hexstr(store_id)
+        records = await self.service.get_root_history(id_bytes)
+        res = []
+        for rec in records:
+            res.append({"root_hash": rec.root, "status": rec.confirmed}) # add timestamp from block
+        return {"root_history": res}
