@@ -854,7 +854,7 @@ class WalletStateManager:
                             await self.coin_store.set_spent(curr_coin_state.coin.name(), curr_coin_state.spent_height)
                             await self.add_interested_coin_ids([new_singleton_coin.name()], True)
                             new_coin_state: List[CoinState] = await self.wallet_node.get_coin_state(
-                                [new_singleton_coin.name()], fork_height
+                                [new_singleton_coin.name()], fork_height, peer
                             )
                             assert len(new_coin_state) == 1
                             curr_coin_state = new_coin_state[0]

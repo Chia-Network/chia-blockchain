@@ -11,6 +11,9 @@ from chia.protocols.wallet_protocol import (
     RespondRemovals,
     RequestRemovals,
     RespondBlockHeader,
+    CoinState,
+    RespondToPhUpdates,
+    RespondToCoinUpdates,
 )
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import hash_coin_list, Coin
@@ -38,6 +41,36 @@ async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Opt
             break
         request_height = request_height - 1
     return None
+
+
+async def subscribe_to_phs(
+    puzzle_hashes: List[bytes32],
+    peer: WSChiaConnection,
+    min_height: int,
+) -> List[CoinState]:
+    """
+    Tells full nodes that we are interested in puzzle hashes, and returns the response.
+    """
+    msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, uint32(max(min_height, uint32(0))))
+    all_coins_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
+    if all_coins_state is not None:
+        return all_coins_state.coin_states
+    return []
+
+
+async def subscribe_to_coin_updates(
+    coin_names: List[bytes32],
+    peer: WSChiaConnection,
+    min_height: int,
+) -> List[CoinState]:
+    """
+    Tells full nodes that we are interested in coin ids, and returns the response.
+    """
+    msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(max(0, min_height)))
+    all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
+    if all_coins_state is not None:
+        return all_coins_state.coin_states
+    return []
 
 
 def validate_additions(
