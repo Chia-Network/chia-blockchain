@@ -16,10 +16,12 @@ from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.data_layer.data_layer_wallet import SingletonRecord
 from chia.data_layer.download_data import download_data
+from chia.data_layer.data_layer_server import DataLayerServer
 
 
 class DataLayer:
     data_store: DataStore
+    data_layer_server: DataLayerServer
     db_wrapper: DBWrapper
     db_path: Path
     connection: Optional[aiosqlite.Connection]
@@ -50,6 +52,7 @@ class DataLayer:
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
+        self.data_layer_server = DataLayerServer(self.config, self.db_path, self.log)
 
     def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
         self.state_changed_callback = callback
@@ -64,16 +67,20 @@ class DataLayer:
         self.wallet_rpc = await self.wallet_rpc_init
         self.periodically_fetch_data_task: asyncio.Task[Any] = asyncio.create_task(self.periodically_fetch_data())
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
+        if self.config.get("run_server", False):
+            await self.data_layer_server.start()
         return True
 
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
         self._shut_down = True
-        self.periodically_fetch_data_task.cancel()
 
     async def _await_closed(self) -> None:
         if self.connection is not None:
             await self.connection.close()
+        if self.config.get("run_server", False):
+            await self.data_layer_server.stop()
+        self.periodically_fetch_data_task.cancel()
 
     async def create_store(
         self, fee: uint64, root: bytes32 = bytes32([0] * 32)
