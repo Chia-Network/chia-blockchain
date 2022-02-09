@@ -380,4 +380,14 @@ export default class Wallet extends Service {
   ) {
     return this.onStateChanged('pending_transaction', callback, processData);
   }
+
+  onOfferAdded(
+    callback: (data: any, message: Message) => void) {
+    return this.onStateChanged('offer_added', callback);
+  }
+
+  onOfferUpdated(
+    callback: (data: any, message: Message) => void) {
+    return this.onStateChanged('offer_cancelled', callback);
+  }
 }

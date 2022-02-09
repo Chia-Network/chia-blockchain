@@ -283,6 +283,14 @@ export const walletApi = apiWithTag.injectEndpoints({
         command: 'onPendingTransaction',
         service: Wallet,
         endpoint: () => walletApi.endpoints.getWalletBalance,
+      }, {
+        command: 'onOfferAdded',
+        service: Wallet,
+        endpoint: () => walletApi.endpoints.getWalletBalance,
+      }, {
+        command: 'onOfferUpdated',
+        service: Wallet,
+        endpoint: () => walletApi.endpoints.getWalletBalance,
       }]),
     }),
 
