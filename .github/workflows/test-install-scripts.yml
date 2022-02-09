@@ -64,7 +64,12 @@ jobs:
         - name: arch:latest
           type: arch
           url: "docker://archlinux:latest"
-        # TODO: what CentOS version provides Python3.7-3.9?
+        - name: centos:7
+          type centos
+          url: "docker://centos:7"
+        - name: centos:8
+          type centos
+          url: "docker://centos:8"
         - name: debian:buster
           type: debian
           # https://packages.debian.org/buster/python/python3 (3.7)
@@ -116,6 +121,12 @@ jobs:
       if: ${{ matrix.distribution.type == 'arch' }}
       run: |
         pacman --noconfirm --refresh base --sync git sudo
+
+    - name: Prepare CentOS
+      if: ${{ matrix.distribution.type == 'centos' }}
+      run: |
+        yum update --assumeyes
+        yum install git sudo --assumeyes
 
     - name: Prepare Debian
       if: ${{ matrix.distribution.type == 'debian' }}
