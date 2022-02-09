@@ -47,6 +47,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.util.compute_memos import compute_memos
+import traceback
 
 
 # This should probably not live in this file but it's for experimental right now
@@ -280,16 +281,6 @@ class CATWallet:
                 break
 
         if search_for_parent:
-            data: Dict[str, Any] = {
-                "data": {
-                    "action_data": {
-                        "api_name": "request_puzzle_solution",
-                        "height": height,
-                        "coin_name": coin.parent_coin_info,
-                        "received_coin": coin.name(),
-                    }
-                }
-            }
             for node_id, node in self.wallet_state_manager.wallet_node.server.all_connections.items():
                 try:
                     coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
@@ -302,9 +293,7 @@ class CATWallet:
                     await self.puzzle_solution_received(coin_spend)
                     break
                 except Exception as e:
-                    import traceback
-                    self.log.debug(f"{traceback.format_exc()}")
-                    pass
+                    self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
 
     async def puzzle_solution_received(self, coin_spend: CoinSpend):
         coin_name = coin_spend.coin.name()
