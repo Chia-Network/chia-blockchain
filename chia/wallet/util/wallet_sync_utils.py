@@ -1,7 +1,8 @@
 import logging
-from typing import List, Optional, Tuple, Union, Dict
+from typing import List, Optional, Tuple, Union, Dict, Any
 
 from chia.consensus.constants import ConsensusConstants
+from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import (
     RequestAdditions,
     RespondAdditions,
@@ -9,16 +10,80 @@ from chia.protocols.wallet_protocol import (
     RejectRemovalsRequest,
     RespondRemovals,
     RequestRemovals,
+    CoinState,
+    RespondBlockHeader,
 )
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import hash_coin_list, Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
+from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32
 from chia.util.merkle_set import confirm_not_included_already_hashed, confirm_included_already_hashed, MerkleSet
 
 
 log = logging.getLogger(__name__)
+
+
+class PeerRequestCache:
+    blocks: Dict[uint32, HeaderBlock]
+    block_requests: Dict[Tuple[int, int], Any]
+    ses_requests: Dict[int, Any]
+    states_validated: Dict[bytes32, CoinState]
+
+    def __init__(self):
+        self.blocks = {}
+        self.ses_requests = {}
+        self.block_requests = {}
+        self.states_validated = {}
+
+    def clear_after_height(self, height: int):
+        # Remove any cached item which relates to an event that happened at a height above height.
+        self.blocks = {k: v for k, v in self.blocks.items() if k <= height}
+        self.block_requests = {k: v for k, v in self.block_requests.items() if k[0] <= height and k[1] <= height}
+        self.ses_requests = {k: v for k, v in self.ses_requests.items() if k <= height}
+
+        remove_keys_states: List[bytes32] = []
+        for k4, coin_state in self.states_validated.items():
+            if coin_state.created_height is not None and coin_state.created_height > height:
+                remove_keys_states.append(k4)
+            elif coin_state.spent_height is not None and coin_state.spent_height > height:
+                remove_keys_states.append(k4)
+        for k5 in remove_keys_states:
+            self.states_validated.pop(k5)
+
+
+async def can_use_peer_request_cache(
+    coin_state: CoinState, peer_request_cache: PeerRequestCache, fork_height: Optional[uint32]
+):
+    if coin_state.get_hash() not in peer_request_cache.states_validated:
+        return False
+    if fork_height is None:
+        return True
+    if coin_state.created_height is None and coin_state.spent_height is None:
+        # Performing a reorg
+        return False
+    if coin_state.created_height is not None and coin_state.created_height > fork_height:
+        return False
+    if coin_state.spent_height is not None and coin_state.spent_height > fork_height:
+        return False
+    return True
+
+
+async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Optional[HeaderBlock]:
+    request_height: int = height
+    while True:
+        if request_height == -1:
+            return None
+        request = wallet_protocol.RequestBlockHeader(uint32(request_height))
+        response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+        if response is not None and isinstance(response, RespondBlockHeader):
+            if response.header_block.is_transaction_block:
+                return response.header_block
+        else:
+            break
+        request_height = request_height - 1
+    return None
 
 
 def validate_additions(

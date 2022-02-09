@@ -57,40 +57,15 @@ from chia.wallet.util.filter_coin_states import filter_coin_states
 from chia.wallet.util.wallet_sync_utils import (
     request_and_validate_removals,
     request_and_validate_additions,
+    can_use_peer_request_cache,
+    PeerRequestCache,
+    fetch_last_tx_from_peer,
 )
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_action import WalletAction
 from chia.util.profiler import profile_task
-
-
-class PeerRequestCache:
-    blocks: Dict[uint32, HeaderBlock]
-    block_requests: Dict[Tuple[int, int], Any]
-    ses_requests: Dict[int, Any]
-    states_validated: Dict[bytes32, CoinState]
-
-    def __init__(self):
-        self.blocks = {}
-        self.ses_requests = {}
-        self.block_requests = {}
-        self.states_validated = {}
-
-    def clear_after_height(self, height: int):
-        # Remove any cached item which relates to an event that happened at a height above height.
-        self.blocks = {k: v for k, v in self.blocks.items() if k <= height}
-        self.block_requests = {k: v for k, v in self.block_requests.items() if k[0] <= height and k[1] <= height}
-        self.ses_requests = {k: v for k, v in self.ses_requests.items() if k <= height}
-
-        remove_keys_states: List[bytes32] = []
-        for k4, coin_state in self.states_validated.items():
-            if coin_state.created_height is not None and coin_state.created_height > height:
-                remove_keys_states.append(k4)
-            elif coin_state.spent_height is not None and coin_state.spent_height > height:
-                remove_keys_states.append(k4)
-        for k5 in remove_keys_states:
-            self.states_validated.pop(k5)
 
 
 class WalletNode:
@@ -437,7 +412,7 @@ class WalletNode:
                 None,
                 self.log,
             )
-            asyncio.create_task(self.wallet_peers.start())
+            await self.wallet_peers.start()
 
     def on_disconnect(self, peer: WSChiaConnection):
         if self.is_trusted(peer):
@@ -474,7 +449,7 @@ class WalletNode:
             await peer.send_message(msg)
 
         if self.wallet_peers is not None:
-            asyncio.create_task(self.wallet_peers.on_connect(peer))
+            await self.wallet_peers.on_connect(peer)
 
     async def long_sync(
         self,
@@ -694,7 +669,7 @@ class WalletNode:
         assert header_response is not None
 
         # Get last timestamp
-        last_tx: Optional[HeaderBlock] = await self.fetch_last_tx_from_peer(height, peer)
+        last_tx: Optional[HeaderBlock] = await fetch_last_tx_from_peer(height, peer)
         latest_timestamp: Optional[uint64] = None
         if last_tx is not None:
             assert last_tx.foliage_transaction_block is not None
@@ -709,7 +684,7 @@ class WalletNode:
         assert self.server is not None
         return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
 
-    def add_state_to_race_cache(self, header_hash: bytes32, height: uint32, coin_state: CoinState):
+    def add_state_to_race_cache(self, header_hash: bytes32, height: uint32, coin_state: CoinState) -> None:
         # Clears old state that is no longer relevant
         delete_threshold = 100
         for rc_height, rc_hh in self.race_cache_hashes:
@@ -723,7 +698,7 @@ class WalletNode:
             self.race_cache[header_hash] = set()
         self.race_cache[header_hash].add(coin_state)
 
-    async def state_update_received(self, request: wallet_protocol.CoinStateUpdate, peer: WSChiaConnection):
+    async def state_update_received(self, request: wallet_protocol.CoinStateUpdate, peer: WSChiaConnection) -> None:
         # This gets called from the full node every time there is a new coin or puzzle hash change in the DB
         # that is of interest to this wallet. It is not guaranteed to come for every height. This message is guaranteed
         # to come before the corresponding new_peak for each height. We handle this differently for trusted and
@@ -742,27 +717,12 @@ class WalletNode:
                     request.peak_hash,
                 )
 
-    def get_full_node_peer(self):
+    def get_full_node_peer(self) -> Optional[WSChiaConnection]:
         nodes = self.server.get_full_node_connections()
         if len(nodes) > 0:
             return nodes[0]
         else:
             return None
-
-    async def fetch_last_tx_from_peer(self, height: uint32, peer: WSChiaConnection) -> Optional[HeaderBlock]:
-        request_height: int = height
-        while True:
-            if request_height == -1:
-                return None
-            request = wallet_protocol.RequestBlockHeader(uint32(request_height))
-            response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
-            if response is not None and isinstance(response, RespondBlockHeader):
-                if response.header_block.is_transaction_block:
-                    return response.header_block
-            else:
-                break
-            request_height = request_height - 1
-        return None
 
     async def disconnect_and_stop_wpeers(self):
         # Close connection of non trusted peers
@@ -792,19 +752,13 @@ class WalletNode:
                 ):
                     self.height_to_time[height] = block.foliage_transaction_block.timestamp
                     return block.foliage_transaction_block.timestamp
-
-        peer = self.get_full_node_peer()
-        assert peer is not None
-        curr_height: uint32 = height
-        while True:
-            request = wallet_protocol.RequestBlockHeader(curr_height)
-            response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
-            if response is None or not isinstance(response, RespondBlockHeader):
-                raise ValueError(f"Invalid response from {peer}, {response}")
-            if response.header_block.foliage_transaction_block is not None:
-                self.height_to_time[height] = response.header_block.foliage_transaction_block.timestamp
-                return response.header_block.foliage_transaction_block.timestamp
-            curr_height = uint32(curr_height - 1)
+        peer: Optional[WSChiaConnection] = self.get_full_node_peer()
+        if peer is None:
+            raise ValueError("Cannot fetch timestamp, no peers")
+        last_tx_block: Optional[HeaderBlock] = await fetch_last_tx_from_peer(height, peer)
+        if last_tx_block is None:
+            raise ValueError(f"Error fetching blocks from peer {peer.get_peer_info()}")
+        return last_tx_block.foliage_transaction_block.timestamp
 
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         self.log.debug(f"New peak wallet.. {peak.height} {peer.get_peer_info()}")
@@ -960,7 +914,7 @@ class WalletNode:
                 await self.wallet_state_manager.blockchain.set_finished_sync_up_to(peak.height)
             await self.wallet_state_manager.new_peak(peak)
 
-    async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer) -> int:
+    async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer: WSChiaConnection) -> int:
         assert self.wallet_state_manager is not None
         peak: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
 
@@ -1062,22 +1016,6 @@ class WalletNode:
         all_coin_names.update(await self.wallet_state_manager.interested_store.get_interested_coin_ids())
         return list(all_coin_names)
 
-    async def _can_use_cache(
-        self, coin_state: CoinState, peer_request_cache: PeerRequestCache, fork_height: Optional[uint32]
-    ):
-        if coin_state.get_hash() not in peer_request_cache.states_validated:
-            return False
-        if fork_height is None:
-            return True
-        if coin_state.created_height is None and coin_state.spent_height is None:
-            # Performing a reorg
-            return False
-        if coin_state.created_height is not None and coin_state.created_height > fork_height:
-            return False
-        if coin_state.spent_height is not None and coin_state.spent_height > fork_height:
-            return False
-        return True
-
     async def validate_received_state_from_peer(
         self,
         coin_state: CoinState,
@@ -1093,7 +1031,7 @@ class WalletNode:
 
         # Only use the cache if we are talking about states before the fork point. If we are evaluating something
         # in a reorg, we cannot use the cache, since we don't know if it's actually in the new chain after the reorg.
-        if await self._can_use_cache(coin_state, peer_request_cache, fork_height):
+        if await can_use_peer_request_cache(coin_state, peer_request_cache, fork_height):
             return True
 
         spent_height = coin_state.spent_height
