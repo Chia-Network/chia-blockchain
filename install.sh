@@ -62,10 +62,54 @@ if $UBUNTU; then
   if ! command -v bc > /dev/null 2>&1; then
     sudo apt install bc -y
   fi
-  # Mint 20.04 repsonds with 20 here so 20 instead of 20.04
+  # Mint 20.04 responds with 20 here so 20 instead of 20.04
   UBUNTU_PRE_2004=$(echo "$LSB_RELEASE<20" | bc)
   UBUNTU_2100=$(echo "$LSB_RELEASE>=21" | bc)
 fi
+
+install_python3_and_sqlite3_from_source_with_yum() {
+  CURRENT_WD=$(pwd)
+  TMP_PATH=/tmp
+
+  # Preparing installing Python
+  echo 'yum groupinstall -y "Development Tools"'
+  sudo yum groupinstall -y "Development Tools"
+  echo "sudo yum install -y openssl-devel libffi-devel bzip2-devel wget"
+  sudo yum install -y openssl-devel libffi-devel bzip2-devel wget
+
+  echo "cd $TMP_PATH"
+  cd "$TMP_PATH"
+  # Install sqlite>=3.37
+  # yum install sqlite-devel brings sqlite3.7 which is not compatible with chia
+  echo "wget https://www.sqlite.org/2022/sqlite-autoconf-3370200.tar.gz"
+  wget https://www.sqlite.org/2022/sqlite-autoconf-3370200.tar.gz
+  tar xf sqlite-autoconf-3370200.tar.gz
+  echo "cd sqlite-autoconf-3370200"
+  cd sqlite-autoconf-3370200
+  echo "./configure --prefix=/usr/local"
+  # '| stdbuf ...' seems weird but this makes command outputs stay in single line.
+  ./configure --prefix=/usr/local | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+  echo "make -j$(nproc)"
+  make -j"$(nproc)" | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+  echo "sudo make install"
+  sudo make install | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+  # yum install python3 brings Python3.6 which is not supported by chia
+  cd ..
+  echo "wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz"
+  wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz
+  tar xf Python-3.9.9.tgz
+  echo "cd Python-3.9.9"
+  cd Python-3.9.9
+  echo "LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local"
+  # '| stdbuf ...' seems weird but this makes command outputs stay in single line.
+  LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+  echo "LD_RUN_PATH=/usr/local/lib make -j$(nproc)"
+  LD_RUN_PATH=/usr/local/lib make -j"$(nproc)" | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+  echo "LD_RUN_PATH=/usr/local/lib sudo make altinstall"
+  LD_RUN_PATH=/usr/local/lib sudo make altinstall | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
+  cd "$CURRENT_WD"
+}
+
 
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
@@ -107,53 +151,14 @@ if [ "$(uname)" = "Linux" ]; then
   elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
     # AMZN 2
     echo "Installing on Amazon Linux 2."
-    AMZN2_PY_LATEST=$(yum --showduplicates list python3 | expand | grep -P '(?!.*3.10.*)x86_64|(?!.*3.10.*)aarch64' | tail -n 1 | awk '{print $2}')
-    AMZN2_ARCH=$(uname -m)
-    sudo yum install -y python3-"$AMZN2_PY_LATEST"."$AMZN2_ARCH" git
+    if ! command -v python3.9 >/dev/null 2>&1; then
+      install_python3_and_sqlite3_from_source_with_yum
+    fi
   elif type yum && [ -f "/etc/centos-release" ]; then
     # CentOS
     echo "Install on CentOS."
     if ! command -v python3.9 >/dev/null 2>&1; then
-      CURRENT_WD=$(pwd)
-      TMP_PATH=/tmp
-
-      # Preparing installing Python
-      echo 'yum groupinstall -y "Development Tools"'
-      sudo yum groupinstall -y "Development Tools"
-      echo "sudo yum install -y openssl-devel libffi-devel bzip2-devel wget"
-      sudo yum install -y openssl-devel libffi-devel bzip2-devel wget
-
-      echo "cd $TMP_PATH"
-      cd "$TMP_PATH"
-      # Install sqlite>=3.37
-      # yum install sqlite-devel brings sqlite3.7 which is not compatible with chia
-      echo "wget https://www.sqlite.org/2022/sqlite-autoconf-3370200.tar.gz"
-      wget https://www.sqlite.org/2022/sqlite-autoconf-3370200.tar.gz
-      tar xf sqlite-autoconf-3370200.tar.gz
-      echo "cd sqlite-autoconf-3370200"
-      cd sqlite-autoconf-3370200
-      echo "./configure --prefix=/usr/local"
-      # '| stdbuf ...' seems weird but this makes command ouputs stay in single line.
-      ./configure --prefix=/usr/local | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
-      echo "make -j$(nproc)"
-      make -j"$(nproc)" | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
-      echo "sudo make install"
-      sudo make install | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
-      # yum install python3 brings Python3.6 which is not supported by chia
-      cd ..
-      echo "wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz"
-      wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz
-      tar xf Python-3.9.9.tgz
-      echo "cd Python-3.9.9"
-      cd Python-3.9.9
-      echo "LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local"
-      # '| stdbuf ...' seems weird but this makes command ouputs stay in single line.
-      LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
-      echo "LD_RUN_PATH=/usr/local/lib make -j$(nproc)"
-      LD_RUN_PATH=/usr/local/lib make -j"$(nproc)" | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
-      echo "LD_RUN_PATH=/usr/local/lib sudo make altinstall"
-      LD_RUN_PATH=/usr/local/lib sudo make altinstall | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
-      cd "$CURRENT_WD"
+      install_python3_and_sqlite3_from_source_with_yum
     fi
   elif type yum && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
     # Redhat or Fedora
@@ -204,8 +209,36 @@ fi
 
 INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION:-3.7}
 
+if ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
+  echo "${INSTALL_PYTHON_PATH} was not found"
+  exit 1
+fi
+
 echo "Python version is $INSTALL_PYTHON_VERSION"
-$INSTALL_PYTHON_PATH -m venv venv
+
+# Check sqlite3 version bound to python
+SQLITE_VERSION=$($INSTALL_PYTHON_PATH -c 'import sqlite3; print(sqlite3.sqlite_version)')
+SQLITE_MAJOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f1)
+SQLITE_MINOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f2)
+echo "SQLite version of the Python is ${SQLITE_VERSION}"
+if [ "$SQLITE_MAJOR_VER" -lt "3" ] || [ "$SQLITE_MAJOR_VER" = "3" ] && [ "$SQLITE_MINOR_VER" -lt "8" ]; then
+  echo "Only sqlite>=3.8 is supported"
+  exit 1
+fi
+
+# If version of `python` and "$INSTALL_PYTHON_VERSION" does not match, clear old version
+VENV_CLEAR=""
+if [ -e venv/bin/python ]; then
+  VENV_PYTHON_VER=$(venv/bin/python -V)
+  TARGET_PYTHON_VER=$($INSTALL_PYTHON_PATH -V)
+  if [ "$VENV_PYTHON_VER" != "$TARGET_PYTHON_VER" ]; then
+    echo "existing python version in venv is $VENV_PYTHON_VER while target python version is $TARGET_PYTHON_VER"
+    echo "Refreshing venv modules..."
+    VENV_CLEAR="--clear"
+  fi
+fi
+
+$INSTALL_PYTHON_PATH -m venv venv $VENV_CLEAR
 if [ ! -f "activate" ]; then
   ln -s venv/bin/activate .
 fi
