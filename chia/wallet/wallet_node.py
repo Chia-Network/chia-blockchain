@@ -402,8 +402,9 @@ class WalletNode:
                         else:
                             assert False
                         # Here we lock the wallet state manager because we might be changing state in the WSM
-                        async with self.wallet_state_manager.lock:
-                            await self.receive_state_from_peer(coin_states, peer)
+                        if len(coin_states) > 0:
+                            async with self.wallet_state_manager.lock:
+                                await self.receive_state_from_peer(coin_states, peer)
             except Exception as e:
                 self.log.error(f"Got error {e} while processing subscriptions: {traceback.format_exc()}")
 
@@ -503,6 +504,7 @@ class WalletNode:
         if syncing:
             await self.wallet_state_manager.reorg_rollback(min_height)
             self.rollback_request_caches(min_height)
+            await self.update_ui()
 
         already_checked_ph: Set[bytes32] = set()
         continue_while: bool = True
@@ -621,6 +623,7 @@ class WalletNode:
                 await asyncio.sleep(2)
 
         await asyncio.gather(*all_tasks)
+        await self.update_ui()
 
     async def subscribe_to_phs(
         self,
@@ -738,8 +741,6 @@ class WalletNode:
                     request.height,
                     request.peak_hash,
                 )
-
-        await self.update_ui()
 
     def get_full_node_peer(self):
         nodes = self.server.get_full_node_connections()
@@ -987,6 +988,7 @@ class WalletNode:
         if fork_height < peak_height:
             self.log.info(f"Rolling back to {fork_height}")
             await self.wallet_state_manager.reorg_rollback(fork_height)
+            await self.update_ui()
         self.rollback_request_caches(fork_height)
 
         if peak is not None:
