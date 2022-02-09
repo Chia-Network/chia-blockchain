@@ -447,7 +447,7 @@ class WalletStateManager:
         if latest is None:
             return False
 
-        if latest.height - await self.blockchain.get_finished_sync_up_to() > 0:
+        if latest.height - await self.blockchain.get_finished_sync_up_to() > 1:
             return False
 
         latest_timestamp = self.blockchain.get_latest_timestamp()
@@ -879,18 +879,15 @@ class WalletStateManager:
                         continue
 
                     assert child.spent_height is not None
-                    try:
-                        pool_wallet = await PoolWallet.create(
-                            self,
-                            self.main_wallet,
-                            child.coin.name(),
-                            [launcher_spend],
-                            child.spent_height,
-                            False,
-                            "pool_wallet",
-                        )
-                    except Exception as e:
-                        self.log.warning("exception in PoolWallet.create")
+                    pool_wallet = await PoolWallet.create(
+                        self,
+                        self.main_wallet,
+                        child.coin.name(),
+                        [launcher_spend],
+                        child.spent_height,
+                        False,
+                        "pool_wallet",
+                    )
                     self.log.info("Created pool wallet")
                     coin_added = launcher_spend.additions()[0]
                     await self.coin_added(
