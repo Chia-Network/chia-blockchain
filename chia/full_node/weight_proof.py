@@ -605,8 +605,7 @@ class WeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0), []
 
-        executor = ProcessPoolExecutor(6)
-        try:
+        with ProcessPoolExecutor(self._num_processes) as executor:
             constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
                 self.constants, summaries, weight_proof
             )
@@ -643,8 +642,6 @@ class WeightProofHandler:
                 return False, uint32(0), []
 
             return True, self.get_fork_point(summaries), summaries
-        finally:
-            executor.shutdown()
 
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point
