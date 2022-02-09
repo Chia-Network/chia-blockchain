@@ -75,7 +75,7 @@ do_install_npm_locally(){
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
   #LINUX=1
-  if type apt-get; then
+  if type apt-get >/dev/null 2>&1; then
     # Debian/Ubuntu
 
     # Check if we are running a Raspberry PI 4
@@ -93,7 +93,7 @@ if [ "$(uname)" = "Linux" ]; then
       fi
       do_install_npm_locally
     fi
-  elif type yum &&  [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ]; then
+  elif type yum >/dev/null 2>&1 &&  [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ]; then
     # AMZN 2
     if ! nodejs_is_installed; then
       echo "Installing nodejs on Amazon Linux 2."
@@ -101,7 +101,7 @@ if [ "$(uname)" = "Linux" ]; then
       sudo yum install -y nodejs
     fi
     do_install_npm_locally
-  elif type yum && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ] && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
+  elif type yum >/dev/null 2>&1 && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ] && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
     # CentOS or Redhat
     if ! nodejs_is_installed; then
       echo "Installing nodejs on CentOS/Redhat."
@@ -109,7 +109,7 @@ if [ "$(uname)" = "Linux" ]; then
       sudo yum install -y nodejs
     fi
     do_install_npm_locally
-  elif type yum && [ -f /etc/rocky-release ] || [ -f /etc/fedora-release ]; then
+  elif type yum >/dev/null 2>&1 && [ -f /etc/rocky-release ] || [ -f /etc/fedora-release ]; then
     # RockyLinux
     if ! nodejs_is_installed; then
       echo "Installing nodejs on RockyLinux/Fedora"
@@ -118,7 +118,7 @@ if [ "$(uname)" = "Linux" ]; then
     fi
     do_install_npm_locally
   fi
-elif [ "$(uname)" = "Darwin" ] && type brew; then
+elif [ "$(uname)" = "Darwin" ] && type brew >/dev/null 2>&1; then
   # MacOS
   if ! nodejs_is_installed; then
     echo "Installing nodejs on MacOS"
