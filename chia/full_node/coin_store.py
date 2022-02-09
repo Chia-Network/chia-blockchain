@@ -7,7 +7,7 @@ from chia.types.coin_record import CoinRecord
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
-from time import time
+import time
 import logging
 
 log = logging.getLogger(__name__)
@@ -114,7 +114,7 @@ class CoinStore:
         Returns a list of the CoinRecords that were added by this block
         """
 
-        start = time()
+        start = time.monotonic()
 
         additions = []
 
@@ -146,7 +146,7 @@ class CoinStore:
         await self._add_coin_records(additions)
         await self._set_spent(tx_removals, height)
 
-        end = time()
+        end = time.monotonic()
         log.log(
             logging.WARNING if end - start > 10 else logging.DEBUG,
             f"Height {height}: It took {end - start:0.2f}s to apply {len(tx_additions)} additions and "

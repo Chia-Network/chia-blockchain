@@ -1047,21 +1047,18 @@ class FullNode:
 
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
-        pre_validate_start = time.time()
+        pre_validate_start = time.monotonic()
         pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
             blocks_to_validate, {}, wp_summaries=wp_summaries, validate_signatures=True
         )
-        pre_validate_end = time.time()
-        if pre_validate_end - pre_validate_start > 10:
-            self.log.warning(
-                f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds "
-                f"({len(blocks_to_validate)} blocks, height: {blocks_to_validate[0].height})"
-            )
-        else:
-            self.log.debug(
-                f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds "
-                f"({len(blocks_to_validate)} blocks)"
-            )
+        pre_validate_end = time.monotonic()
+        pre_validate_time = pre_validate_end - pre_validate_start
+
+        self.log.log(
+            logging.WARNING if pre_validate_time > 10 else logging.DEBUG,
+            f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds "
+            f"({len(blocks_to_validate)} blocks, start height: {blocks_to_validate[0].height})",
+        )
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
