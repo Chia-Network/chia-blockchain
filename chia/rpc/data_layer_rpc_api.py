@@ -222,5 +222,5 @@ class DataLayerRpcApi:
         records = await self.service.get_root_history(id_bytes)
         res = []
         for rec in records:
-            res.append({"root_hash": rec.root, "status": rec.confirmed}) # add timestamp from block
+            res.append({"root_hash": rec.root, "status": rec.confirmed})  # add timestamp from block
         return {"root_history": res}
