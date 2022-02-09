@@ -148,19 +148,19 @@ if [ "$(uname)" = "Linux" ]; then
         ;;
       esac
     sudo pacman ${PACMAN_AUTOMATED} -S --needed git
-  elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
+  elif type yum >/dev/null 2>&1 && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
     # AMZN 2
     echo "Installing on Amazon Linux 2."
     if ! command -v python3.9 >/dev/null 2>&1; then
       install_python3_and_sqlite3_from_source_with_yum
     fi
-  elif type yum && [ -f "/etc/centos-release" ]; then
+  elif type yum >/dev/null 2>&1 && [ -f "/etc/centos-release" ]; then
     # CentOS
     echo "Install on CentOS."
     if ! command -v python3.9 >/dev/null 2>&1; then
       install_python3_and_sqlite3_from_source_with_yum
     fi
-  elif type yum && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
+  elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
     # Redhat or Fedora
     echo "Installing on Redhat/Fedora."
     if ! command -v python3.9 >/dev/null 2>&1; then
