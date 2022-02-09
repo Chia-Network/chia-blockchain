@@ -46,6 +46,7 @@ class WalletNodeAPI:
         """
         The full node sent as a new peak
         """
+        self.wallet_node.node_peaks[peer.peer_node_id] = (peak.height, peak.header_hash)
         await self.wallet_node.new_peak_queue.new_peak_wallet(peak, peer)
 
     @api_request
@@ -135,6 +136,7 @@ class WalletNodeAPI:
     async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
         self.log.warning(f"Reject header blocks: {request}")
 
+    @execute_task
     @peer_required
     @api_request
     async def coin_state_update(self, request: wallet_protocol.CoinStateUpdate, peer: WSChiaConnection):

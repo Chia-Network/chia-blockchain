@@ -89,7 +89,7 @@ class WalletNode:
     race_cache_hashes: List[Tuple[uint32, bytes32]]
     new_peak_queue: NewPeakQueue
     _process_new_subscriptions_task: Optional[asyncio.Task]
-    _node_peaks: Dict[bytes32, Tuple[uint32, bytes32]]
+    node_peaks: Dict[bytes32, Tuple[uint32, bytes32]]
     validation_semaphore: Optional[asyncio.Semaphore]
     local_node_synced: bool
     new_state_lock: Optional[asyncio.Lock]
@@ -133,7 +133,7 @@ class WalletNode:
         self.race_cache = {}  # in Untrusted mode wallet might get the state update before receiving the block
         self.race_cache_hashes = []
         self._process_new_subscriptions_task = None
-        self._node_peaks = {}
+        self.node_peaks = {}
         self.validation_semaphore = None
         self.local_node_synced = False
         self.LONG_SYNC_THRESHOLD = 200
@@ -350,9 +350,9 @@ class WalletNode:
                     # Subscriptions are the highest priority, because we don't want to process any more peaks or
                     # state updates until we are sure that we subscribed to everything that we need to. Otherwise,
                     # we might not be able to process some state.
+                    coin_ids: List[bytes32] = item.data
+                    self.log.info(f"Processing new Coin subscription: {coin_ids}")
                     for peer in self.server.get_full_node_connections():
-                        coin_ids: List[bytes32] = item.data
-                        self.log.debug(f"Processing new Coin subscription: {coin_ids}")
                         coin_states: List[CoinState] = await self.subscribe_to_coin_updates(
                             coin_ids, peer, True, uint32(0), None
                         )
@@ -360,9 +360,9 @@ class WalletNode:
                             async with self.wallet_state_manager.lock:
                                 await self.receive_state_from_peer(coin_states, peer)
                 elif item.item_type == NewPeakQueueTypes.PUZZLE_HASH_SUBSCRIPTION:
+                    puzzle_hashes: List[bytes32] = item.data
+                    self.log.info(f"Processing new PH subscription: {puzzle_hashes}")
                     for peer in self.server.get_full_node_connections():
-                        puzzle_hashes: List[bytes32] = item.data
-                        self.log.debug(f"Processing new PH subscription: {puzzle_hashes}")
                         # Puzzle hash subscription
                         coin_states: List[CoinState] = await self.subscribe_to_phs(
                             puzzle_hashes, peer, True, uint32(0), None
@@ -431,8 +431,8 @@ class WalletNode:
             self.untrusted_caches.pop(peer.peer_node_id)
         if peer.peer_node_id in self.synced_peers:
             self.synced_peers.remove(peer.peer_node_id)
-        if peer.peer_node_id in self._node_peaks:
-            self._node_peaks.pop(peer.peer_node_id)
+        if peer.peer_node_id in self.node_peaks:
+            self.node_peaks.pop(peer.peer_node_id)
 
     async def on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None:
@@ -775,7 +775,6 @@ class WalletNode:
             # When logging out of wallet
             return
         assert self.server is not None
-        self._node_peaks[peer.peer_node_id] = (peak.height, peak.header_hash)
         request_time = uint64(int(time.time()))
         trusted: bool = self.is_trusted(peer)
         peak_hb: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
@@ -884,7 +883,7 @@ class WalletNode:
                         coin_updates: List[CoinState] = await self.subscribe_to_coin_updates(
                             all_coin_ids, peer, True, uint32(0), None
                         )
-                        peer_new_peak_height, peer_new_peak_hash = self._node_peaks[peer.peer_node_id]
+                        peer_new_peak_height, peer_new_peak_hash = self.node_peaks[peer.peer_node_id]
                         await self.receive_state_from_peer(
                             ph_updates + coin_updates,
                             peer,

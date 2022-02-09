@@ -939,10 +939,10 @@ class FullNode:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
-                await self.send_peak_to_wallets()
                 peak = self.blockchain.get_peak()
                 if len(coin_states) > 0 and fork_height is not None:
                     await self.update_wallets(peak.height, fork_height, peak.header_hash, coin_states)
+                await self.send_peak_to_wallets()
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
         loop = asyncio.get_event_loop()
