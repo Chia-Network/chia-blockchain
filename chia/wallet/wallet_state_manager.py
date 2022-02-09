@@ -642,9 +642,9 @@ class WalletStateManager:
                 for wallet_info in await self.get_all_wallet_info_entries():
                     if wallet_info.type == WalletType.NFT:
                         nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
-                        if nft_wallet_info.my_did == current_owner_did:
-                            wallet_id = wallet_info.id
-                            wallet_type = WalletType.NFT
+                        for hint in hint_list:
+                            if nft_wallet_info.my_did == hint:
+                                return wallet_info.id, WalletType.NFT
 
         return wallet_id, wallet_type
 

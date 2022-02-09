@@ -141,7 +141,7 @@ class NFTWallet:
     async def puzzle_solution_received(self, coin_spend: CoinSpend):
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        solution: Program = Program.from_bytes(bytes(coin_spend.solution))
+        solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
         matched, curried_args = nft_puzzles.match_nft_puzzle(puzzle)
         nft_transfer_program = None
         if matched:
@@ -155,6 +155,7 @@ class NFTWallet:
                 if attempt is not None:
                     nft_transfer_program = attempt
                     await self.add_transfer_program(nft_transfer_program)
+
             assert nft_transfer_program is not None
             self.log.info(f"found the info for coin {coin_name}")
             parent_coin = None
