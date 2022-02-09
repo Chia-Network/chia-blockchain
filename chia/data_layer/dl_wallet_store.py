@@ -154,7 +154,7 @@ class DataLayerStore:
             return self._row_to_singleton_record(row)
         return None
 
-    async def get_latest_singleton(self, launcher_id: bytes32, latest_confirmed: bool) -> Optional[SingletonRecord]:
+    async def get_latest_singleton(self, launcher_id: bytes32, latest_confirmed: bool = False) -> Optional[SingletonRecord]:
         """
         Checks DB for SingletonRecords with launcher_id: launcher_id and returns the most recent.
         """
