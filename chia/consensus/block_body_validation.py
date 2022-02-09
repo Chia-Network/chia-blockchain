@@ -156,7 +156,7 @@ async def validate_block_body(
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
 
-    # In header validation we check that timestamp is not more that 10 minutes into the future
+    # In header validation we check that timestamp is not more that 5 minutes into the future
     # 6. No transactions before INITIAL_TRANSACTION_FREEZE timestamp
     # (this test has been removed)
 

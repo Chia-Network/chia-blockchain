@@ -427,7 +427,7 @@ def chia_init(
     config: Dict
     if v1_db:
         config = load_config(root_path, "config.yaml")
-        db_pattern = config["database_path"]
+        db_pattern = config["full_node"]["database_path"]
         new_db_path = db_pattern.replace("_v2_", "_v1_")
         config["full_node"]["database_path"] = new_db_path
         save_config(root_path, "config.yaml", config)

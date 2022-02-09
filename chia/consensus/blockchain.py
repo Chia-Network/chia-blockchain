@@ -6,7 +6,7 @@ import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple
 
 from clvm.casts import int_from_bytes
 
@@ -47,6 +47,7 @@ from chia.util.errors import ConsensusError, Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.streamable import recurse_jsonify
+from chia.types.block_protocol import BlockInfo
 
 log = logging.getLogger(__name__)
 
@@ -861,7 +862,7 @@ class Blockchain(BlockchainInterface):
         return False
 
     async def get_block_generator(
-        self, block: Union[FullBlock, UnfinishedBlock], additional_blocks=None
+        self, block: BlockInfo, additional_blocks: Dict[bytes32, FullBlock] = None
     ) -> Optional[BlockGenerator]:
         if additional_blocks is None:
             additional_blocks = {}
@@ -895,7 +896,7 @@ class Blockchain(BlockchainInterface):
         else:
             # First tries to find the blocks in additional_blocks
             reorg_chain: Dict[uint32, FullBlock] = {}
-            curr: Union[FullBlock, UnfinishedBlock] = block
+            curr = block
             additional_height_dict = {}
             while curr.prev_header_hash in additional_blocks:
                 prev: FullBlock = additional_blocks[curr.prev_header_hash]

@@ -106,6 +106,7 @@ class WalletStateManager:
     blockchain: WalletBlockchain
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
+    finished_sync_up_to: uint32
     interested_store: WalletInterestedStore
     weight_proof_handler: WalletWeightProofHandler
     server: ChiaServer
@@ -156,6 +157,7 @@ class WalletStateManager:
 
         self.wallet_node = wallet_node
         self.sync_mode = False
+        self.finished_sync_up_to = uint32(0)
         self.weight_proof_handler = WalletWeightProofHandler(self.constants)
         self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants, self.weight_proof_handler)
 
@@ -581,7 +583,7 @@ class WalletStateManager:
             return None, None
 
         response: List[CoinState] = await self.wallet_node.get_coin_state(
-            [coin_state.coin.parent_coin_info], fork_height
+            [coin_state.coin.parent_coin_info], fork_height, peer
         )
         if len(response) == 0:
             self.log.warning(f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info}")
@@ -641,7 +643,6 @@ class WalletStateManager:
                 created_h_none.append(coin_st)
         coin_states.sort(key=lambda x: x.created_height, reverse=False)  # type: ignore
         coin_states.extend(created_h_none)
-
         all_txs_per_wallet: Dict[int, List[TransactionRecord]] = {}
         trade_removals = await self.trade_manager.get_coins_of_interest()
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()

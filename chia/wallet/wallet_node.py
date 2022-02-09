@@ -196,13 +196,16 @@ class WalletNode:
             .replace("CHALLENGE", self.config["selected_network"])
             .replace("KEY", db_path_key_suffix)
         )
-        path = path_from_root(self.root_path, f"{db_path_replaced}_new")
-        standalone_path = path_from_root(STANDALONE_ROOT_PATH, f"{db_path_replaced}_new")
+        path = path_from_root(self.root_path, db_path_replaced.replace("v1", "v2"))
+        mkdir(path.parent)
+
+        standalone_path = path_from_root(STANDALONE_ROOT_PATH, f"{db_path_replaced.replace('v2', 'v1')}_new")
         if not path.exists():
             if standalone_path.exists():
+                self.log.info(f"Copying wallet db from {standalone_path} to {path}")
                 path.write_bytes(standalone_path.read_bytes())
 
-        mkdir(path.parent)
+        self.new_peak_lock = asyncio.Lock()
         assert self.server is not None
         self.wallet_state_manager = await WalletStateManager.create(
             private_key,
@@ -402,7 +405,7 @@ class WalletNode:
 
         connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", True)
         testing = self.config.get("testing", False)
-        if connect_to_unknown_peers and not testing:
+        if self.wallet_peers is None and connect_to_unknown_peers and not testing:
             self.wallet_peers = WalletPeers(
                 self.server,
                 self.config["target_peer_count"],
@@ -426,6 +429,7 @@ class WalletNode:
     def on_disconnect(self, peer: WSChiaConnection):
         if self.is_trusted(peer):
             self.local_node_synced = False
+            self.initialize_wallet_peers()
 
         if peer.peer_node_id in self.untrusted_caches:
             self.untrusted_caches.pop(peer.peer_node_id)
@@ -1156,7 +1160,7 @@ class WalletNode:
                 if stored_record.header_hash == block.header_hash:
                     return True
 
-        weight_proof = self.wallet_state_manager.blockchain.synced_weight_proof
+        weight_proof: Optional[WeightProof] = self.wallet_state_manager.blockchain.synced_weight_proof
         if weight_proof is None:
             return False
 
@@ -1177,26 +1181,30 @@ class WalletNode:
                 compare_to_recent = True
                 end = first_height_recent
             else:
-                request = RequestSESInfo(block.height, block.height + 32)
-                if block.height in peer_request_cache.ses_requests:
-                    res_ses: RespondSESInfo = peer_request_cache.ses_requests[block.height]
+                if block.height < self.constants.SUB_EPOCH_BLOCKS:
+                    inserted = weight_proof.sub_epochs[1]
+                    end = self.constants.SUB_EPOCH_BLOCKS + inserted.num_blocks_overflow
                 else:
-                    res_ses = await peer.request_ses_hashes(request)
-                    peer_request_cache.ses_requests[block.height] = res_ses
+                    request = RequestSESInfo(block.height, block.height + 32)
+                    if block.height in peer_request_cache.ses_requests:
+                        res_ses: RespondSESInfo = peer_request_cache.ses_requests[block.height]
+                    else:
+                        res_ses = await peer.request_ses_hashes(request)
+                        peer_request_cache.ses_requests[block.height] = res_ses
 
-                ses_0 = res_ses.reward_chain_hash[0]
-                last_height = res_ses.heights[0][-1]  # Last height in sub epoch
-                end = last_height
-                for idx, ses in enumerate(weight_proof.sub_epochs):
-                    if idx > len(weight_proof.sub_epochs) - 3:
-                        break
-                    if ses.reward_chain_hash == ses_0:
-                        current_ses = ses
-                        inserted = weight_proof.sub_epochs[idx + 2]
-                        break
-                if current_ses is None:
-                    self.log.error("Failed validation 2")
-                    return False
+                    ses_0 = res_ses.reward_chain_hash[0]
+                    last_height = res_ses.heights[0][-1]  # Last height in sub epoch
+                    end = last_height
+                    for idx, ses in enumerate(weight_proof.sub_epochs):
+                        if idx > len(weight_proof.sub_epochs) - 3:
+                            break
+                        if ses.reward_chain_hash == ses_0:
+                            current_ses = ses
+                            inserted = weight_proof.sub_epochs[idx + 2]
+                            break
+                    if current_ses is None:
+                        self.log.error("Failed validation 2")
+                        return False
 
             blocks: List[HeaderBlock] = []
             for i in range(start - (start % 32), end + 1, 32):

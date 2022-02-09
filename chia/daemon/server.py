@@ -385,6 +385,8 @@ class WebSocketServer:
             "passphrase_hint": passphrase_hint,
             "passphrase_requirements": requirements,
         }
+        # Help diagnose GUI launch issues
+        self.log.debug(f"Keyring status: {response}")
         return response
 
     async def unlock_keyring(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -398,6 +400,18 @@ class WebSocketServer:
             if Keychain.master_passphrase_is_valid(key, force_reload=True):
                 Keychain.set_cached_master_passphrase(key)
                 success = True
+
+                # Attempt to silently migrate legacy keys if necessary. Non-fatal if this fails.
+                try:
+                    if not Keychain.migration_checked_for_current_version():
+                        self.log.info("Will attempt to migrate legacy keys...")
+                        Keychain.migrate_legacy_keys_silently()
+                        self.log.info("Migration of legacy keys complete.")
+                    else:
+                        self.log.debug("Skipping legacy key migration (previously attempted).")
+                except Exception:
+                    self.log.exception("Failed to migrate keys silently. Run `chia keys migrate` manually.")
+
                 # Inform the GUI of keyring status changes
                 self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
             else:
