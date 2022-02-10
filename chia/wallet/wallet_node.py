@@ -354,14 +354,13 @@ class WalletNode:
             try:
                 peer, item = None, None
                 item = await self.new_peak_queue.get()
-                self.log.debug(f"Got: {item}")
+                self.log.info(f"Pulled from queue: {item}")
                 assert item is not None
                 if item.item_type == NewPeakQueueTypes.COIN_ID_SUBSCRIPTION:
                     # Subscriptions are the highest priority, because we don't want to process any more peaks or
                     # state updates until we are sure that we subscribed to everything that we need to. Otherwise,
                     # we might not be able to process some state.
                     coin_ids: List[bytes32] = item.data
-                    self.log.info(f"Processing new Coin subscription: {coin_ids}")
                     for peer in self.server.get_full_node_connections():
                         coin_states: List[CoinState] = await subscribe_to_coin_updates(coin_ids, peer, uint32(0))
                         if len(coin_states) > 0:
@@ -369,7 +368,6 @@ class WalletNode:
                                 await self.receive_state_from_peer(coin_states, peer)
                 elif item.item_type == NewPeakQueueTypes.PUZZLE_HASH_SUBSCRIPTION:
                     puzzle_hashes: List[bytes32] = item.data
-                    self.log.info(f"Processing new PH subscription: {puzzle_hashes}")
                     for peer in self.server.get_full_node_connections():
                         # Puzzle hash subscription
                         coin_states: List[CoinState] = await subscribe_to_phs(puzzle_hashes, peer, uint32(0))
@@ -735,7 +733,6 @@ class WalletNode:
         return last_tx_block.foliage_transaction_block.timestamp
 
     async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
-        self.log.debug(f"New peak wallet.. {new_peak.height} {peer.get_peer_info()}")
         if self.wallet_state_manager is None:
             # When logging out of wallet
             return
@@ -857,7 +854,7 @@ class WalletNode:
                 # fetch one by one.
                 async with self.wallet_state_manager.lock:
                     peak_hb = await self.wallet_state_manager.blockchain.get_peak_block()
-                    if peak_hb is not None and new_peak.weight > peak_hb.weight:
+                    if peak_hb is None or new_peak.weight > peak_hb.weight:
                         backtrack_fork_height: int = await self.wallet_short_sync_backtrack(header_block, peer)
                     else:
                         backtrack_fork_height = new_peak.height - 1
