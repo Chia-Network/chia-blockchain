@@ -91,7 +91,7 @@ class TradeStore:
                 try:
                     await self.db_connection.execute(f"ALTER TABLE trade_records ADD COLUMN is_my_offer {dialect_utils.data_type('tinyint', self.db_connection.url.dialect)}")
                     needs_is_my_offer_migration = True
-                except:
+                except Exception:
                     pass  # ignore what is likely Duplicate column error
 
                 await dialect_utils.create_index_if_not_exists(self.db_connection, 'trade_confirmed_index', 'trade_records', ['confirmed_at_index'])

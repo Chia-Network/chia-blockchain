@@ -65,7 +65,7 @@ class CrawlStore:
 
                 try:
                     await self.crawl_db.execute("ALTER TABLE peer_records ADD COLUMN tls_version text")
-                except:
+                except Exception:
                     pass  # ignore what is likely Duplicate column error
 
                 await self.crawl_db.execute(f"CREATE TABLE IF NOT EXISTS good_peers(ip {dialect_utils.data_type('text-as-index', self.crawl_db.url.dialect)})")

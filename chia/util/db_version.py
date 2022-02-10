@@ -8,6 +8,6 @@ async def lookup_db_version(db: Database) -> int:
             return 2
         else:
             return 1
-    except:
+    except Exception:
         # expects OperationalError('no such table: database_version')
         return 1

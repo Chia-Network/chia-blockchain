@@ -1,5 +1,4 @@
 import logging
-import traceback
 from typing import Any
 
 from databases import Database

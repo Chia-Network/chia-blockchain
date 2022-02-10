@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Mapping
 
 
 from chia.types.blockchain_format.coin import Coin
@@ -11,7 +11,6 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from databases import Database
 from sqlalchemy import bindparam
 from sqlalchemy.sql import text
-import typing
 
 
 class WalletCoinStore:
@@ -156,7 +155,7 @@ class WalletCoinStore:
         await self.add_coin_record(spent)
         return spent
 
-    def coin_record_from_row(self, row: typing.Mapping) -> WalletCoinRecord:
+    def coin_record_from_row(self, row: Mapping) -> WalletCoinRecord:
         coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
         return WalletCoinRecord(
             coin, uint32(row[1]), uint32(row[2]), bool(row[3]), bool(row[4]), WalletType(row[8]), row[9]
