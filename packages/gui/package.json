@@ -9,6 +9,37 @@
   "engines": {
     "node": ">=12.20.0"
   },
+  "build": {
+    "appId": "net.chia.blockchain",
+    "asar": true,
+    "asarUnpack": "**/daemon/**",
+    "productName": "Chia",
+    "mac": {
+      "category": "public.app-category.finance"
+    },
+    "files": [
+      "build",
+      "daemon",
+      "node_modules",
+      "src"
+    ],
+    "fileAssociations": [
+      {
+        "ext": "offer",
+        "name": "Chia Offer",
+        "description": "Chia Offer",
+        "role": "Editor"
+      }
+    ],
+    "protocols": [
+      {
+        "name": "chia",
+        "schemes": [
+          "chia"
+        ]
+      }
+    ]
+  },
   "scripts": {
     "start": "npm run electron",
     "dev:electron": "cross-env NODE_ENV=development webpack --config webpack.electron.babel.ts --mode development && electron .",
