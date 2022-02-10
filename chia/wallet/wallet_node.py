@@ -3,6 +3,7 @@ import json
 import logging
 import time
 import traceback
+from asyncio import CancelledError
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple, Any
 
@@ -392,6 +393,9 @@ class WalletNode:
                     await self.new_peak_wallet(request, peer)
                 else:
                     assert False
+            except CancelledError:
+                self.log.info("Queue task cancelled, exiting.")
+                raise
             except Exception as e:
                 self.log.error(f"Exception handling {item}, {e} {traceback.format_exc()}")
                 if peer is not None:
