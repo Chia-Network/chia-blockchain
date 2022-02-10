@@ -600,7 +600,13 @@ class WeightProofHandler:
         peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
         log.info(f"validate weight proof peak height {peak_height}")
 
+        # TODO: Consider if this can be spun off to a thread as an alternative to
+        #       sprinkling async sleeps around.
+
+        # timing reference: start
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
+        await asyncio.sleep(0)  # break up otherwise multi-second sync code
+        # timing reference: 1 second
         if summaries is None:
             log.error("weight proof failed sub epoch data validation")
             return False, uint32(0), []
@@ -611,12 +617,17 @@ class WeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0), []
 
+        # timing reference: 1 second
         with ProcessPoolExecutor(6) as executor:
             try:
+                await asyncio.sleep(0)  # break up otherwise multi-second sync code
+                # timing reference: 1.1 second
                 constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
                     self.constants, summaries, weight_proof
                 )
+                await asyncio.sleep(0)  # break up otherwise multi-second sync code
 
+                # timing reference: 2 second
                 recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
                     executor,
                     _validate_recent_blocks,
@@ -626,14 +637,18 @@ class WeightProofHandler:
                     pathlib.Path(self._executor_shutdown_tempfile.name),
                 )
 
+                # timing reference: 2 second
                 segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
                     constants, rng, wp_segment_bytes, summary_bytes
                 )
+                await asyncio.sleep(0)  # break up otherwise multi-second sync code
                 if not segments_validated:
                     return False, uint32(0), []
 
+                # timing reference: 4 second
                 vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
                 vdf_tasks = []
+                # timing reference: 4 second
                 for chunk in vdf_chunks:
                     byte_chunks = []
                     for vdf_proof, classgroup, vdf_info in chunk:
@@ -650,6 +665,7 @@ class WeightProofHandler:
                     # give other stuff a turn
                     await asyncio.sleep(0)
 
+                # timing reference: 4 second
                 for vdf_task in asyncio.as_completed(vdf_tasks):
                     validated = await vdf_task
                     if not validated:
