@@ -582,21 +582,19 @@ def convert_v1_to_v2(
         if not rows:
             break
         for row in rows:
-            # The following part was in the original upgrade script
-            # Not sure if this was necessary,
-            # as the fetching query already had a condition where confirmed_index <= peak
-
             # in order to convert a consistent snapshot of the
             # blockchain state, any coin that was spent *after* our
             # cutoff must be converted into an unspent coin
-            # if spent_index > peak_height:
-            #    spent_index = 0
+
+            spent_index = row[2]
+            if spent_index > peak_height:
+                spent_index = 0
 
             coin_values.append(
                 (
                     bytes.fromhex(row[0]),
                     row[1],
-                    row[2],
+                    spent_index,
                     row[3],
                     bytes.fromhex(row[4]),
                     bytes.fromhex(row[5]),
