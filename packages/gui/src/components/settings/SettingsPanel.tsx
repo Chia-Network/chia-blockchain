@@ -134,7 +134,6 @@ export default function SettingsPanel() {
       tooltipTitle = (<Trans>Secure your keychain using a strong passphrase</Trans>);
       
       if (userPassphraseIsSet) {
-        state = State.SUCCESS;
         icon = (<LockIcon style={{ color: '#3AAC59',  marginRight: 6 }} />);
         statusMessage = (<Trans>Passphrase protection is enabled</Trans>);
       } else {
@@ -145,7 +144,7 @@ export default function SettingsPanel() {
     }
 
     return (
-      <StateTypography variant="body2" state={state}>
+      <StateTypography variant="body2" state={state} color="textSecondary">
         {statusMessage}
         &nbsp;
         <Tooltip title={tooltipTitle}>
