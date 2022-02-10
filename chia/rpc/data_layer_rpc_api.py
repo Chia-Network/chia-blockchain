@@ -198,7 +198,7 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         store_id_bytes = bytes32.from_hexstr(store_id)
         await self.service.subscribe(store_id=store_id_bytes, mode=mode, ip=ip, port=port)
-        return True
+        return {}
 
     async def unsubscribe(self, request: Dict[str, Any]) -> bool:
         """
@@ -211,4 +211,4 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         store_id_bytes = bytes32.from_hexstr(store_id)
         await self.service.unsubscribe(store_id_bytes)
-        return True
+        return {}
