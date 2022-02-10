@@ -479,6 +479,15 @@ class WalletNode:
           missing transactions, so we don't need to rollback
         """
 
+        def is_old_state_update(cs: CoinState) -> bool:
+            if cs.spent_height is None and cs.created_height is None:
+                return False
+            if cs.spent_height is not None and cs.spent_height >= fork_height:
+                return False
+            if cs.created_height is not None and cs.created_height >= fork_height:
+                return False
+            return True
+
         trusted: bool = self.is_trusted(full_node)
         self.log.info(f"Starting sync trusted: {trusted} to peer {full_node.peer_host}")
         assert self.wallet_state_manager is not None
@@ -497,8 +506,9 @@ class WalletNode:
             ph_chunks: List[List[bytes32]] = chunks(all_puzzle_hashes, 1000)
             for chunk in ph_chunks:
                 ph_update_res: List[CoinState] = await subscribe_to_phs(
-                    [p for p in chunk if p not in already_checked_ph], full_node, fork_height
+                    [p for p in chunk if p not in already_checked_ph], full_node, 0
                 )
+                ph_update_res = list(filter(is_old_state_update, ph_update_res))
                 await self.receive_state_from_peer(ph_update_res, full_node)
                 already_checked_ph.update(chunk)
 
@@ -518,7 +528,8 @@ class WalletNode:
         while continue_while:
             one_k_chunks = chunks(all_coin_ids, 1000)
             for chunk in one_k_chunks:
-                c_update_res: List[CoinState] = await subscribe_to_coin_updates(chunk, full_node, fork_height)
+                c_update_res: List[CoinState] = await subscribe_to_coin_updates(chunk, full_node, 0)
+                c_update_res = list(filter(is_old_state_update, c_update_res))
                 await self.receive_state_from_peer(c_update_res, full_node)
                 already_checked_coin_ids.update(chunk)
 
@@ -785,10 +796,7 @@ class WalletNode:
                         return
                     assert weight_proof is not None
                     old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
-                    if syncing:
-                        fork_point: int = max(0, current_height - 256)
-                    else:
-                        fork_point = max(0, current_height - 50000)
+                    fork_point: int = max(0, current_height - 32)
                     if old_proof is not None:
                         # If the weight proof fork point is in the past, rollback more to ensure we don't have duplicate
                         # state
@@ -841,6 +849,10 @@ class WalletNode:
                             header_hash=peer_new_peak_hash,
                         )
                         self.synced_peers.add(peer.peer_node_id)
+                    else:
+                        if peak_hb is not None and peak.weight <= peak_hb.weight:
+                            # Don't process blocks at the same weight
+                            return
 
                     # For every block, we need to apply the cache from race_cache
                     for potential_height in range(backtrack_fork_height + 1, peak.height + 1):
@@ -1113,6 +1125,8 @@ class WalletNode:
         if block.height >= weight_proof.recent_chain_data[0].height:
             # this was already validated as part of the wp validation
             index = block.height - weight_proof.recent_chain_data[0].height
+            if index >= len(weight_proof.recent_chain_data):
+                return False
             if weight_proof.recent_chain_data[index].header_hash != block.header_hash:
                 self.log.error("Failed validation 1")
                 return False

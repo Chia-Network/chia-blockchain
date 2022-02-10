@@ -287,6 +287,7 @@ class TestPoolWalletRpc:
         await self.farm_blocks(full_node_api, our_ph, 6)
         assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
 
+        await time_out_assert(5, wallet_is_synced, wallet_node_0, full_node_api)
         summaries_response = await client.get_wallets()
         wallet_id: Optional[int] = None
         for summary in summaries_response:

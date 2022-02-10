@@ -364,8 +364,7 @@ class CoinStore:
         self,
         include_spent_coins: bool,
         coin_ids: List[bytes32],
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        min_height: uint32 = uint32(0),
     ) -> List[CoinState]:
         if len(coin_ids) == 0:
             return []
@@ -379,9 +378,9 @@ class CoinStore:
         async with self.coin_record_db.execute(
             f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
             f'coin_parent, amount, timestamp FROM coin_record WHERE coin_name in ({"?," * (len(coin_ids) - 1)}?) '
-            f"AND confirmed_index>=? AND confirmed_index<? "
+            f"AND confirmed_index>=? OR spent_index>=? "
             f"{'' if include_spent_coins else 'AND spent_index=0'}",
-            coin_ids_db + (start_height, end_height),
+            coin_ids_db + (min_height, min_height),
         ) as cursor:
 
             for row in await cursor.fetchall():
