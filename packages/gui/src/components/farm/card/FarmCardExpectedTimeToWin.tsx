@@ -2,8 +2,7 @@ import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import { useGetBlockchainStateQuery, useGetCombinedPlotsQuery } from '@chia/api-react';
 import moment from 'moment';
-import { State } from '@chia/core';
-import FarmCard from './FarmCard';
+import { State, CardSimple } from '@chia/core';
 import type Plot from '../../../types/Plot';
 import FullNodeState from '../../../constants/FullNodeState';
 import useFullNodeState from '../../../hooks/useFullNodeState';
@@ -14,11 +13,12 @@ const MINUTES_PER_BLOCK = (24 * 60) / 4608; // 0.3125
 export default function FarmCardExpectedTimeToWin() {
   const fullNodeState = useFullNodeState();
 
-  const { data, isLoading: isLoadingBlockchainState } = useGetBlockchainStateQuery();
-  const { data: plots, isLoading: isLoadingPlots } = useGetCombinedPlotsQuery();
+  const { data, isLoading: isLoadingBlockchainState, error: errorBlockchainState } = useGetBlockchainStateQuery();
+  const { data: plots, isLoading: isLoadingPlots, error: errorLoadingPlots  } = useGetCombinedPlotsQuery();
   const totalNetworkSpace = data?.space ?? 0;
 
   const isLoading = isLoadingBlockchainState || isLoadingPlots;
+  const error = errorBlockchainState || errorLoadingPlots;
 
   const farmerSpace = useMemo(() => {
     if (!plots) {
@@ -47,7 +47,7 @@ export default function FarmCardExpectedTimeToWin() {
   }
 
   return (
-    <FarmCard
+    <CardSimple
       title={<Trans>Estimated Time to Win</Trans>}
       value={`${expectedTimeToWin}`}
       tooltip={
@@ -58,6 +58,7 @@ export default function FarmCardExpectedTimeToWin() {
         </Trans>
       }
       loading={isLoading}
+      error={error}
     />
   );
 }

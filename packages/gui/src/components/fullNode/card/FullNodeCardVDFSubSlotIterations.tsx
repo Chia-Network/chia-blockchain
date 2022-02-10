@@ -4,7 +4,7 @@ import { FormatLargeNumber, CardSimple } from '@chia/core';
 import { useGetBlockchainStateQuery } from '@chia/api-react';
 
 export default function FullNodeCardVDFSubSlotIterations() {
-  const { data, isLoading } = useGetBlockchainStateQuery();
+  const { data, isLoading, error } = useGetBlockchainStateQuery();
   const value = data?.peak?.subSlotIters ?? 0;
 
   return (
@@ -13,6 +13,7 @@ export default function FullNodeCardVDFSubSlotIterations() {
       valueColor="textPrimary"
       title={<Trans>VDF Sub Slot Iterations</Trans>}
       value={<FormatLargeNumber value={value} />}
+      error={error}
     />
   );
 }

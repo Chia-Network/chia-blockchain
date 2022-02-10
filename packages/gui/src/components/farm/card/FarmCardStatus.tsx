@@ -1,7 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { StateIndicator, State } from '@chia/core';
-import FarmCard from './FarmCard';
+import { StateIndicator, State, CardSimple } from '@chia/core';
 import FarmCardNotAvailable from './FarmCardNotAvailable';
 import useFarmerStatus from '../../../hooks/useFarmerStatus';
 import FarmerStatus from '../../../constants/FarmerStatus';
@@ -11,7 +10,7 @@ export default function FarmCardStatus() {
 
   if (farmerStatus === FarmerStatus.SYNCHING) {
     return (
-      <FarmCard
+      <CardSimple
         title={<Trans>Farming Status</Trans>}
         value={
           <StateIndicator state={State.WARNING} indicator>
@@ -28,7 +27,7 @@ export default function FarmCardStatus() {
 
   if (farmerStatus === FarmerStatus.NOT_CONNECTED) {
     return (
-      <FarmCard
+      <CardSimple
         title={<Trans>Farming Status</Trans>}
         value={
           <StateIndicator state={State.ERROR} indicator>
@@ -42,7 +41,7 @@ export default function FarmCardStatus() {
 
   if (farmerStatus === FarmerStatus.NOT_RUNNING) {
     return (
-      <FarmCard
+      <CardSimple
         title={<Trans>Farming Status</Trans>}
         value={
           <StateIndicator state={State.ERROR} indicator>
@@ -55,7 +54,7 @@ export default function FarmCardStatus() {
   }
 
   return (
-    <FarmCard
+    <CardSimple
       title={<Trans>Farming Status</Trans>}
       value={
         <StateIndicator state={State.SUCCESS} indicator>

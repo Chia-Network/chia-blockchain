@@ -48,7 +48,7 @@ function getData(sync) {
 }
 
 export default function FullNodeCardStatus() {
-  const { data: state, isLoading } = useGetBlockchainStateQuery();
+  const { data: state, isLoading, error } = useGetBlockchainStateQuery();
 
   if (isLoading) {
     return <CardSimple loading title={<Trans>Status</Trans>} />;
@@ -62,6 +62,7 @@ export default function FullNodeCardStatus() {
       title={<Trans>Status</Trans>}
       tooltip={tooltip}
       value={value}
+      error={error}
     />
   );
 }

@@ -4,7 +4,7 @@ import { FormatLargeNumber, CardSimple } from '@chia/core';
 import { useGetBlockchainStateQuery } from '@chia/api-react';
 
 export default function FullNodeCardTotalIterations() {
-  const { data, isLoading } = useGetBlockchainStateQuery();
+  const { data, isLoading, error } = useGetBlockchainStateQuery();
   const value = data?.peak?.totalIters ?? 0;
 
   return (
@@ -16,6 +16,7 @@ export default function FullNodeCardTotalIterations() {
         <Trans>Total iterations since the start of the blockchain</Trans>
       }
       value={<FormatLargeNumber value={value} />}
+      error={error}
     />
   );
 }

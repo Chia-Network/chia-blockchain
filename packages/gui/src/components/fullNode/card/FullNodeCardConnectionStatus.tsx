@@ -5,7 +5,7 @@ import { ServiceName } from '@chia/api';
 import { useIsServiceRunningQuery } from '@chia/api-react';
 
 export default function FullNodeCardConnectionStatus() {
-  const { data: isRunning, isLoading } = useIsServiceRunningQuery({
+  const { data: isRunning, isLoading, error } = useIsServiceRunningQuery({
     service: ServiceName.FULL_NODE,
   }, {
     pollingInterval: 1000,
@@ -19,6 +19,7 @@ export default function FullNodeCardConnectionStatus() {
       value={
         isRunning ? <Trans>Connected</Trans> : <Trans>Not connected</Trans>
       }
+      error={error}
     />
   );
 }

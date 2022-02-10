@@ -1,4 +1,4 @@
-import React, { ReactNode, ReactElement } from 'react';
+import React, { type ReactNode, ReactElement } from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import Flex from '../Flex';
