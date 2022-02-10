@@ -34,6 +34,7 @@ const StyledLink = styled.a`
 
 const StyledLogoContainer = styled.div`
   width: 200px;
+  margin: 0 auto;
 
   img {
     height: 200px;
