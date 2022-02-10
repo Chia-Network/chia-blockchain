@@ -529,7 +529,7 @@ class WalletNode:
             one_k_chunks = chunks(all_coin_ids, 1000)
             for chunk in one_k_chunks:
                 c_update_res: List[CoinState] = await subscribe_to_coin_updates(chunk, full_node, 0)
-                c_update_res = list(filter(is_old_state_update, c_update_res))
+                c_update_res = list(filter(is_new_state_update, c_update_res))
                 await self.receive_state_from_peer(c_update_res, full_node)
                 already_checked_coin_ids.update(chunk)
 
@@ -796,7 +796,10 @@ class WalletNode:
                         return
                     assert weight_proof is not None
                     old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
-                    fork_point: int = max(0, current_height - 32)
+                    if syncing:
+                        fork_point: int = max(0, current_height - 32)
+                    else:
+                        fork_point = max(0, current_height - 50000)
                     if old_proof is not None:
                         # If the weight proof fork point is in the past, rollback more to ensure we don't have duplicate
                         # state
@@ -817,7 +820,9 @@ class WalletNode:
                         > self.wallet_state_manager.blockchain.synced_weight_proof.recent_chain_data[-1].weight
                     ):
                         await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
-                except Exception:
+                except Exception as e:
+                    tb = traceback.format_exc()
+                    self.log.error(f"Error syncing to {peer.get_peer_info()} {e} {tb}")
                     if syncing:
                         self.wallet_state_manager.set_sync_mode(False)
                     tb = traceback.format_exc()
