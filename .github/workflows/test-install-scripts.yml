@@ -124,9 +124,22 @@ jobs:
 
     - name: Prepare CentOS
       if: ${{ matrix.distribution.type == 'centos' }}
+      # Installing Git from yum brings git@1.x which doesn't work on actions/checkout.
+      # So install git@2.x from source
       run: |
-        yum update --assumeyes
-        yum install git sudo --assumeyes
+        if [ "$(rpm --eval %{centos_ver})" = "8" ]; then
+          sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*;
+        fi
+        yum update -y
+        yum install -y sudo gcc autoconf make wget curl-devel expat-devel gettext-devel openssl-devel perl-devel zlib-devel
+        wget https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.29.0.tar.gz
+        tar zxf git-2.29.0.tar.gz
+        pushd git-2.29.0
+        make configure
+        ./configure --prefix=/usr/local
+        make all
+        make install
+        popd
 
     - name: Prepare Debian
       if: ${{ matrix.distribution.type == 'debian' }}
