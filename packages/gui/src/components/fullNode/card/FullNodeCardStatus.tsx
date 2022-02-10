@@ -9,6 +9,14 @@ const StyledWarning = styled.span`
 `;
 
 function getData(sync) {
+  if (!sync) {
+    return {
+      value: <Trans>Not Synced</Trans>,
+      color: 'error',
+      tooltip: <Trans>The node is not synced</Trans>,
+    };
+  }
+
   if (sync.syncMode) {
     const progress = sync.syncProgressHeight;
     const tip = sync.syncTipHeight;
@@ -54,7 +62,7 @@ export default function FullNodeCardStatus() {
     return <CardSimple loading title={<Trans>Status</Trans>} />;
   }
 
-  const { value, tooltip, color } = getData(state.sync);
+  const { value, tooltip, color } = getData(state?.sync);
 
   return (
     <CardSimple
