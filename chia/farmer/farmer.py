@@ -588,10 +588,12 @@ class Farmer:
             self.farmer_target_encoded = farmer_target_encoded
             self.farmer_target = decode_puzzle_hash(farmer_target_encoded)
             config["farmer"]["xch_target_address"] = farmer_target_encoded
+            # self.config["farmer"]["xch_target_address"] = farmer_target_encoded
         if pool_target_encoded is not None:
             self.pool_target_encoded = pool_target_encoded
             self.pool_target = decode_puzzle_hash(pool_target_encoded)
             config["pool"]["xch_target_address"] = pool_target_encoded
+            # self.config["pool"]["xch_target_address"] = pool_target_encoded
         save_config(self._root_path, "config.yaml", config)
 
     async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str):

@@ -5,7 +5,8 @@ import math
 import pathlib
 import random
 from concurrent.futures.process import ProcessPoolExecutor
-from typing import Dict, List, Optional, Tuple
+import tempfile
+from typing import Dict, IO, List, Optional, Tuple
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -43,6 +44,10 @@ from chia.util.streamable import dataclass_from_dict, recurse_jsonify
 log = logging.getLogger(__name__)
 
 
+def _create_shutdown_file() -> IO:
+    return tempfile.NamedTemporaryFile(prefix="chia_full_node_weight_proof_handler_executor_shutdown_trigger")
+
+
 class WeightProofHandler:
 
     LAMBDA_L = 100
@@ -53,6 +58,7 @@ class WeightProofHandler:
         self,
         constants: ConsensusConstants,
         blockchain: BlockchainInterface,
+        log: logging.Logger,
     ):
         self.tip: Optional[bytes32] = None
         self.proof: Optional[WeightProof] = None
@@ -60,6 +66,9 @@ class WeightProofHandler:
         self.blockchain = blockchain
         self.lock = asyncio.Lock()
         self._num_processes = 4
+        self._executor_shutdown_tempfile: IO = _create_shutdown_file()
+
+        self.log = log
 
     async def get_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
 
@@ -605,43 +614,64 @@ class WeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0), []
 
-        with ProcessPoolExecutor(self._num_processes) as executor:
-            constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
-                self.constants, summaries, weight_proof
-            )
+        self.log.info(f" ==== about to create executor")
+        try:
+            with ProcessPoolExecutor(6) as executor:
+                try:
+                    self.log.info(f" ==== just created executor")
+                    constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
+                        self.constants, summaries, weight_proof
+                    )
+                    self.log.info(f" ==== executor checkpoint: 1")
 
-            recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
-                executor, _validate_recent_blocks, constants, wp_recent_chain_bytes, summary_bytes
-            )
+                    recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
+                        executor, _validate_recent_blocks, constants, wp_recent_chain_bytes, summary_bytes, pathlib.Path(self._executor_shutdown_tempfile.name),
+                    )
 
-            segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
-                constants, rng, wp_segment_bytes, summary_bytes
-            )
-            if not segments_validated:
-                return False, uint32(0), []
+                    self.log.info(f" ==== executor checkpoint: 2")
+                    segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
+                        constants, rng, wp_segment_bytes, summary_bytes
+                    )
+                    self.log.info(f" ==== executor checkpoint: 3")
+                    if not segments_validated:
+                        return False, uint32(0), []
 
-            vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
-            vdf_tasks = []
-            for chunk in vdf_chunks:
-                byte_chunks = []
-                for vdf_proof, classgroup, vdf_info in chunk:
-                    byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
+                    self.log.info(f" ==== executor checkpoint: 4")
+                    vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
+                    self.log.info(f" ==== executor checkpoint: 5")
+                    vdf_tasks = []
+                    for chunk in vdf_chunks:
+                        byte_chunks = []
+                        for vdf_proof, classgroup, vdf_info in chunk:
+                            byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
 
-                vdf_task = asyncio.get_running_loop().run_in_executor(executor, _validate_vdf_batch, constants, byte_chunks)
-                vdf_tasks.append(vdf_task)
+                        vdf_task = asyncio.get_running_loop().run_in_executor(executor, _validate_vdf_batch, constants, byte_chunks, pathlib.Path(self._executor_shutdown_tempfile.name))
+                        vdf_tasks.append(vdf_task)
+                        # give other stuff a chance
+                        await asyncio.sleep(0)
 
-            for vdf_task in vdf_tasks:
-                validated = await vdf_task
-                if not validated:
-                    return False, uint32(0), []
+                    self.log.info(f" ==== executor checkpoint: 6")
+                    for index, vdf_task in enumerate(asyncio.as_completed(vdf_tasks)):
+                        self.log.info(f" ==== executor checkpoint: 6.{index} before")
+                        validated = await vdf_task
+                        self.log.info(f" ==== executor checkpoint: 6.{index} after {validated=}")
+                        if not validated:
+                            return False, uint32(0), []
 
-            valid_recent_blocks_task = recent_blocks_validation_task
-            valid_recent_blocks = await valid_recent_blocks_task
-            if not valid_recent_blocks:
-                log.error("failed validating weight proof recent blocks")
-                return False, uint32(0), []
+                    self.log.info(f" ==== executor checkpoint: 7")
+                    valid_recent_blocks_task = recent_blocks_validation_task
+                    valid_recent_blocks = await valid_recent_blocks_task
+                finally:
+                    self.log.info(f" ==== about to close the executor")
+                    self._executor_shutdown_tempfile.close()
+        finally:
+            self.log.info(f" ==== just closed the executor")
 
-            return True, self.get_fork_point(summaries), summaries
+        if not valid_recent_blocks:
+            log.error("failed validating weight proof recent blocks")
+            return False, uint32(0), []
+
+        return True, self.get_fork_point(summaries), summaries
 
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point
@@ -1294,10 +1324,11 @@ def validate_recent_blocks(
     return True, [bytes(sub) for sub in sub_blocks._block_records.values()]
 
 
-def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, summaries_bytes: List[bytes]) -> bool:
+def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, summaries_bytes: List[bytes],     shutdown_file_path: Optional[pathlib.Path] = None,
+) -> bool:
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
-    success, records = validate_recent_blocks(constants, recent_chain, summaries)
+    success, records = validate_recent_blocks(constants, recent_chain, summaries, shutdown_file_path)
     return success
 
 
