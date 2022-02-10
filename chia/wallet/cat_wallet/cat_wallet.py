@@ -199,7 +199,7 @@ class CATWallet:
             self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
             for coin_id, lineage in cat_info.lineage_proofs:
                 await self.add_lineage(coin_id, lineage)
-            self.save_info(self.cat_info, False)
+            await self.save_info(self.cat_info, False)
 
         return self
 
