@@ -118,7 +118,10 @@ export default function PlotAddForm(props: Props) {
           initialTargetState,
           initialTargetState: { state },
         } = nftData;
-        const { transaction, p2SingletonPuzzleHash } = await createNewPoolWallet(initialTargetState, fee).unwrap();
+        const { transaction, p2SingletonPuzzleHash } = await createNewPoolWallet({
+          initialTargetState,
+          fee,
+        }).unwrap();
 
         if (!p2SingletonPuzzleHash) {
           throw new Error(t`p2SingletonPuzzleHash is not defined`);
