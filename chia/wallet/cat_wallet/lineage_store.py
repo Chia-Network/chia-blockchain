@@ -55,7 +55,7 @@ class CATLineageStore:
 
     async def remove_lineage_proof(self, coin_id: bytes32) -> None:
         cursor = await self.db_connection.execute(
-            f"DELETE * FROM {self.table_name} WHERE coin_id=?;",
+            f"DELETE FROM {self.table_name} WHERE coin_id=?;",
             (coin_id.hex(),),
         )
 
