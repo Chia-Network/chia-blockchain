@@ -73,7 +73,7 @@ We at Chia have been working hard to bring all of our new features together into
 
 - When you are adding plots and you choose the option to “create a Plot NFT”, you will get an error message “Initial_target_state” and the plots will not get created
   - Workaround: Create the Plot NFT first in the “Pool” tab, and then add your plots and choose the created plot NFT in the drop down.
-- If you are installing on a machine for the first time, when the GUI loads and you don’t have any pre-existing wallet keys, the GUI will flicker and load anything.
+- If you are installing on a machine for the first time, when the GUI loads and you don’t have any pre-existing wallet keys, the GUI will flicker and not load anything.
   - Workaround: close and relaunch the GUI
 - When you close the Chia app, regardless if you are in farmer mode or wallet, the content on the exit dialog isn’t correct
 - If you start with wallet mode and then switch to farmer mode and back to wallet mode, the full node will continue to sync in the background. To get the full node to stop syncing after switching to wallet mode, you will need to close the Chia and relaunch the Chia app.
