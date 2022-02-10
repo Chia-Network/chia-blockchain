@@ -16,38 +16,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test_scripts:
-    name: Test Install Scripts
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        python-version: [3.9]
-        os: [macOS-latest, ubuntu-latest]
-
-    steps:
-    - name: Checkout Code
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-
-    - name: Setup Python environment
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Run install script
-      env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
-      run: sh install.sh
-
-    - name: Run install-gui script
-      run: |
-        . ./activate
-        sh install-gui.sh
-
   test_scripts_in_docker:
     name: Test Install Scripts ${{ matrix.distribution.name }}
     runs-on: ${{ matrix.os }}
@@ -58,15 +26,9 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         distribution:
-        - name: amazonlinux:2
-          type: amazon
-          url: "docker://amazonlinux:2"
         - name: centos:7
           type: centos
           url: "docker://centos:7"
-        - name: centos:8
-          type: centos
-          url: "docker://centos:8"
 
     steps:
     - name: Prepare Amazon Linux
@@ -86,7 +48,7 @@ jobs:
         yum update -y
         yum install -y sudo
         yum install -y https://repo.ius.io/ius-release-el7.rpm https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-        yum install -y git224-2.24.2-1.el7.ius.x86_64
+        yum install -y git --enablerepo=ius --disablerepo=base,epel,extras,updates
 
     - name: Prepare Debian
       if: ${{ matrix.distribution.type == 'debian' }}
