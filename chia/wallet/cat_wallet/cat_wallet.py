@@ -273,7 +273,8 @@ class CATWallet:
         assert Program.fromhex(tail_program).get_tree_hash() == self.cat_info.limitations_program_hash
         await self.save_info(
             CATInfo(
-                self.cat_info.limitations_program_hash, Program.fromhex(tail_program),
+                self.cat_info.limitations_program_hash,
+                Program.fromhex(tail_program),
             ),
             False,
         )

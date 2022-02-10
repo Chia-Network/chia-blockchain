@@ -20,6 +20,7 @@ class CATLineageStore:
     lock: asyncio.Lock
     db_wrapper: DBWrapper
     table_name: str
+
     @classmethod
     async def create(cls, db_wrapper: DBWrapper, asset_id: str):
         self = cls()
@@ -27,11 +28,7 @@ class CATLineageStore:
         self.db_wrapper = db_wrapper
         self.db_connection = self.db_wrapper.db
         await self.db_connection.execute(
-            (
-                f"CREATE TABLE IF NOT EXISTS {self.table_name}("
-                " coin_id text PRIMARY_KEY,"
-                " lineage blob)"
-            )
+            (f"CREATE TABLE IF NOT EXISTS {self.table_name}(" " coin_id text PRIMARY_KEY," " lineage blob)")
         )
 
         await self.db_connection.commit()
@@ -65,9 +62,7 @@ class CATLineageStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def get_lineage_proof(
-        self, coin_id: bytes32
-    ) -> Optional[LineageProof]:
+    async def get_lineage_proof(self, coin_id: bytes32) -> Optional[LineageProof]:
 
         cursor = await self.db_connection.execute(
             f"SELECT * FROM {self.table_name} WHERE coin_id=?;",
@@ -82,9 +77,7 @@ class CATLineageStore:
         return None
 
     async def get_all_lineage_proofs(self) -> Dict[bytes32, LineageProof]:
-        cursor = await self.db_connection.execute(
-            f"SELECT * FROM {self.table_name}"
-        )
+        cursor = await self.db_connection.execute(f"SELECT * FROM {self.table_name}")
         rows = await cursor.fetchall()
         await cursor.close()
 
