@@ -25,6 +25,7 @@ const StyledBaseLink = styled(({ fullWidth, noWrap, ...rest }) => (
 ))`
   width: ${({ fullWidth }) => (fullWidth ? '100%' : 'inherit')};
   ${({ noWrap }) => `white-space: nowrap;`}
+  cursor: pointer;
 `;
 
 export default function Link(props: Props) {
