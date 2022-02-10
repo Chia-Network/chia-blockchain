@@ -1,7 +1,6 @@
 from typing import List, Optional, Set, Dict, Any, Tuple
 import aiosqlite
 import pkg_resources
-from chia.full_node import sql
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
