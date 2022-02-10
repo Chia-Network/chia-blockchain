@@ -378,7 +378,7 @@ class CoinStore:
         async with self.coin_record_db.execute(
             f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
             f'coin_parent, amount, timestamp FROM coin_record WHERE coin_name in ({"?," * (len(coin_ids) - 1)}?) '
-            f"AND confirmed_index>=? OR spent_index>=? "
+            f"AND (confirmed_index>=? OR spent_index>=?)"
             f"{'' if include_spent_coins else 'AND spent_index=0'}",
             coin_ids_db + (min_height, min_height),
         ) as cursor:

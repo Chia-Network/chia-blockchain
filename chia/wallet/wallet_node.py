@@ -90,6 +90,7 @@ class WalletNode:
     race_cache_hashes: List[Tuple[uint32, bytes32]]
     new_peak_queue: NewPeakQueue
     _process_new_subscriptions_task: Optional[asyncio.Task]
+    _secondary_peer_sync_task: Optional[asyncio.Task]
     node_peaks: Dict[bytes32, Tuple[uint32, bytes32]]
     validation_semaphore: Optional[asyncio.Semaphore]
     local_node_synced: bool
@@ -134,6 +135,7 @@ class WalletNode:
         self.race_cache = {}  # in Untrusted mode wallet might get the state update before receiving the block
         self.race_cache_hashes = []
         self._process_new_subscriptions_task = None
+        self._secondary_peer_sync_task = None
         self.node_peaks = {}
         self.validation_semaphore = None
         self.local_node_synced = False
@@ -254,6 +256,8 @@ class WalletNode:
 
         if self._process_new_subscriptions_task is not None:
             self._process_new_subscriptions_task.cancel()
+        if self._secondary_peer_sync_task is not None:
+            self._secondary_peer_sync_task.cancel()
 
     async def _await_closed(self):
         self.log.info("self._await_closed")
@@ -349,6 +353,7 @@ class WalletNode:
             try:
                 peer, item = None, None
                 item = await self.new_peak_queue.get()
+                self.log.debug(f"Got: {item}")
                 assert item is not None
                 if item.item_type == NewPeakQueueTypes.COIN_ID_SUBSCRIPTION:
                     # Subscriptions are the highest priority, because we don't want to process any more peaks or
@@ -595,6 +600,7 @@ class WalletNode:
                         if header_hash is not None:
                             assert height is not None
                             self.add_state_to_race_cache(header_hash, height, inner_state)
+                            self.log.info(f"Added to race cache: {height}, {inner_state}")
                         if trusted:
                             valid = True
                         else:
@@ -811,9 +817,19 @@ class WalletNode:
                     await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
                     if syncing:
                         async with self.wallet_state_manager.lock:
+                            self.log.info("Primary peer syncing")
                             await self.long_sync(peak.height, peer, fork_point, rollback=True)
                     else:
-                        await self.long_sync(peak.height, peer, fork_point, rollback=False)
+                        if self._secondary_peer_sync_task is None or self._secondary_peer_sync_task.done():
+                            self.log.info("Secondary peer syncing")
+                            self._secondary_peer_sync_task = asyncio.create_task(
+                                self.long_sync(peak.height, peer, fork_point, rollback=False)
+                            )
+                            return
+                        else:
+                            self.log.info("Will not do secondary sync, there is already another sync task running.")
+                            return
+                    self.log.info(f"New peak wallet.. {peak.height} {peer.get_peer_info()} 12")
                     if (
                         self.wallet_state_manager.blockchain.synced_weight_proof is None
                         or weight_proof.recent_chain_data[-1].weight
