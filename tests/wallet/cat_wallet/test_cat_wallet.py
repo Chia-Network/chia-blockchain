@@ -116,6 +116,7 @@ class TestCATWallet:
         new_cat_wallet = await CATWallet.create(wallet_node.wallet_state_manager, wallet, wallet_info)
         assert new_cat_wallet.cat_info.limitations_program_hash == cat_wallet.cat_info.limitations_program_hash
         assert new_cat_wallet.cat_info.my_tail == cat_wallet.cat_info.my_tail
+        assert await cat_wallet.lineage_store.get_all_lineage_proofs() == all_lineage
 
     @pytest.mark.parametrize(
         "trusted",

@@ -191,13 +191,16 @@ class CATWallet:
         self.standard_wallet = wallet
         try:
             self.cat_info = CATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+            self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
         except AssertionError:
             # Do a migration of the lineage proofs
             cat_info = LegacyCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
             self.cat_info = CATInfo(cat_info.limitations_program_hash, cat_info.my_tail)
+            self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
+            for coin_id, lineage in cat_info.lineage_proofs:
+                await self.add_lineage(coin_id, lineage)
             self.save_info(self.cat_info, False)
 
-        self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
         return self
 
     @classmethod
