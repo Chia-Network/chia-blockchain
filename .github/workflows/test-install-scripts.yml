@@ -81,9 +81,12 @@ jobs:
 
     - name: Prepare CentOS
       if: ${{ matrix.distribution.type == 'centos' }}
+      # Installing Git from yum brings git@1.x which doesn't work.
       run: |
-        yum update --assumeyes
-        yum install --assumeyes git sudo
+        yum update -y
+        yum install -y sudo
+        yum install -y https://repo.ius.io/ius-release-el7.rpm https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+        yum install -y git224-2.24.2-1.el7.ius.x86_64
 
     - name: Prepare Debian
       if: ${{ matrix.distribution.type == 'debian' }}
