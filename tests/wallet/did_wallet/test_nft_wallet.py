@@ -164,7 +164,7 @@ class TestNFTWallet:
         # new_did_amount,
         # trade_price,
         did_coin_threeple = await did_wallet_1.get_info_for_recovery()
-        trade_price = 50
+        trade_price = 10
 
         sb = await nft_wallet_0.transfer_nft(
             coins[0],
@@ -177,9 +177,37 @@ class TestNFTWallet:
         assert sb is not None
 
         full_sb = await nft_wallet_1.receive_nft(sb)
+        await asyncio.sleep(3)
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        await asyncio.sleep(3)
 
         coins = nft_wallet_1.nft_wallet_info.my_nft_coins
+        assert len(coins) == 1
+        #qcoins = nft_wallet_0.nft_wallet_info.my_nft_coins
+        #assert len(coins) == 0
+
+        # Send it back to original owner
+        did_coin_threeple = await did_wallet_0.get_info_for_recovery()
+        trade_price = 10
+
+        nsb = await nft_wallet_1.transfer_nft(
+            coins[0],
+            nft_wallet_0.nft_wallet_info.my_did,
+            did_coin_threeple[0],
+            did_coin_threeple[1],
+            did_coin_threeple[2],
+            trade_price
+        )
+        assert sb is not None
+
+        full_sb = await nft_wallet_0.receive_nft(nsb)
+        await asyncio.sleep(3)
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        await asyncio.sleep(3)
+
+        coins = nft_wallet_0.nft_wallet_info.my_nft_coins
         assert len(coins) == 1

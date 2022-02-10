@@ -193,6 +193,12 @@ class WalletStateManager:
                     self.main_wallet,
                     wallet_info,
                 )
+            elif wallet_info.type == WalletType.NFT:
+                wallet = await NFTWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
             elif wallet_info.type == WalletType.POOLING_WALLET:
                 wallet = await PoolWallet.create_from_db(
                     self,
