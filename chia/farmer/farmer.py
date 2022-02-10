@@ -153,6 +153,11 @@ class Farmer:
             log.warning(no_keys_error_str)
             return False
 
+        config = load_config(self._root_path, "config.yaml")
+        if "xch_target_address" not in self.config:
+            self.config = config["farmer"]
+        if "xch_target_address" not in self.pool_config:
+            self.pool_config = config["pool"]
         if "xch_target_address" not in self.config or "xch_target_address" not in self.pool_config:
             log.debug("xch_target_address missing in the config")
             return False
