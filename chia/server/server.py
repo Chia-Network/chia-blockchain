@@ -727,10 +727,7 @@ class ChiaServer:
                 self.log.error(f"Exception while closing connection {e}")
 
     def close_all(self) -> None:
-        try:
-            self.connection_close_task = asyncio.create_task(self.close_all_connections())
-        except RuntimeError as e:
-            raise RuntimeError(f"{self._local_type=}") from e
+        self.connection_close_task = asyncio.create_task(self.close_all_connections())
         if self.runner is not None:
             self.site_shutdown_task = asyncio.create_task(self.runner.cleanup())
         if self.app is not None:

@@ -284,7 +284,7 @@ class FullNode:
             raise
 
     async def initialize_weight_proof(self):
-        self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain, log=self.log)
+        self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
         peak = self.blockchain.get_peak()
         if peak is not None:
             await self.weight_proof_handler.create_sub_epoch_segments()
@@ -729,12 +729,10 @@ class FullNode:
             self._transaction_queue_task.cancel()
         if hasattr(self, "_blockchain_lock_queue"):
             self._blockchain_lock_queue.close()
-        self.log.info(f" ==== about to maybe cancel {self._sync_task=}")
         cancel_task_safe(self._sync_task, self.log)
 
     async def _await_closed(self):
         if self._sync_task is not None:
-            self.log.info(f" ==== about to await {self._sync_task=}")
             await self._sync_task
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
             cancel_task_safe(task, self.log)
@@ -856,8 +854,6 @@ class FullNode:
             except Exception as e:
                 await weight_proof_peer.close(600)
                 raise ValueError(f"Weight proof validation threw an error {e}")
-            finally:
-                self.log.info(f" ==== outside validate_weight_proof")
 
             if not validated:
                 await weight_proof_peer.close(600)
