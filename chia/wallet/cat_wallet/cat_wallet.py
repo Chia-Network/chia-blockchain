@@ -284,7 +284,7 @@ class CATWallet:
             for node_id, node in self.wallet_state_manager.wallet_node.server.all_connections.items():
                 try:
                     coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
-                        [coin.parent_coin_info], node
+                        [coin.parent_coin_info], None, node
                     )
                     assert coin_state[0].coin.name() == coin.parent_coin_info
                     coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
