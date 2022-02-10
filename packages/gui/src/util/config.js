@@ -17,9 +17,10 @@ async function loadConfig(net) {
     const config_root_dir =
       'CHIA_ROOT' in process.env
         ? process.env.CHIA_ROOT
-        : path.join(os.homedir(), '.chia', net);
+        : path.resolve(os.homedir(), '.chia', net);
+
     const config = yaml.load(
-      fs.readFileSync(path.join(config_root_dir, 'config/config.yaml'), 'utf8'),
+      fs.readFileSync(path.resolve(config_root_dir, 'config/config.yaml'), 'utf8'),
     );
 
     self_hostname = lodash.get(config, 'ui.daemon_host', 'localhost'); // jshint ignore:line
@@ -27,7 +28,7 @@ async function loadConfig(net) {
 
     // store these in the global object so they can be used by both main and renderer processes
     global.daemon_rpc_ws = `wss://${self_hostname}:${daemon_port}`;
-    global.cert_path = path.join(
+    global.cert_path = path.resolve(
       config_root_dir,
       lodash.get(
         config,
@@ -35,7 +36,7 @@ async function loadConfig(net) {
         'config/ssl/daemon/private_daemon.crt',
       ),
     ); // jshint ignore:line
-    global.key_path = path.join(
+    global.key_path = path.resolve(
       config_root_dir,
       lodash.get(
         config,
