@@ -45,8 +45,11 @@ jobs:
       if: ${{ matrix.distribution.type == 'centos' }}
       # Installing Git from yum brings git@1.x which doesn't work.
       run: |
+        if [ "$(rpm --eval %{centos_ver})" = "8" ]; then
+          sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*;
+        fi
         yum update -y
-        yum install -y sudo
+        yum install -y sudo perl perl-Error perl-TermReadKey less pcre2 openssh-clients libsecret emacs-filesystem
         yum install -y https://repo.ius.io/ius-release-el7.rpm https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
         yum install -y git --enablerepo=ius --disablerepo=base,epel,extras,updates
 
