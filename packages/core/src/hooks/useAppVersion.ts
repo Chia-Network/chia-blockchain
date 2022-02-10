@@ -12,8 +12,6 @@ export default function useAppVersion() {
     getVersion();
   }, []);
 
-  console.log('version', version);
-
   return {
     version,
     isLoading: version === undefined,

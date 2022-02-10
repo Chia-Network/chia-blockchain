@@ -128,8 +128,6 @@ export const walletApi = apiWithTag.injectEndpoints({
         onUpdate: (draft, data, { transactionId }) => {
           const { additionalData: { transaction } } = data;
 
-          console.log('on tx update', transaction.name, transactionId, transaction.name === transactionId, transaction);
-
           if (transaction.name === transactionId) {
             Object.assign(draft, transaction);
           }
