@@ -820,6 +820,13 @@ class PoolWallet:
         # If fee is 0, no signatures are required to absorb
         full_spend: SpendBundle = claim_spend
 
+        fee_tx = None
+        if fee > 0:
+            absorb_announce = Announcement(current_coin_record.coin.name(), b"$")
+            fee_tx = await self.generate_fee_transaction(fee, coin_announcements=[absorb_announce])
+            full_spend = SpendBundle.aggregate([fee_tx.spend_bundle, claim_spend])
+
+        assert full_spend.fees() == fee
         current_time = uint64(int(time.time()))
         # The claim spend, minus the fee amount from the main wallet
         absorb_transaction: TransactionRecord = TransactionRecord(
@@ -827,7 +834,7 @@ class PoolWallet:
             created_at_time=current_time,
             to_puzzle_hash=current_state.current.target_puzzle_hash,
             amount=uint64(total_amount),
-            fee_amount=uint64(0),  # Notice that fee is zero here - is is accounted in self.standard_wallet
+            fee_amount=fee,  # This will not be double counted in self.standard_wallet
             confirmed=False,
             sent=uint32(0),
             spend_bundle=full_spend,
@@ -841,14 +848,7 @@ class PoolWallet:
             name=full_spend.name(),
         )
 
-        fee_tx = None
-        if fee > 0:
-            absorb_announce = Announcement(current_coin_record.coin.name(), b"$")
-            fee_tx = await self.generate_fee_transaction(fee, coin_announcements=[absorb_announce])
-            full_spend = SpendBundle.aggregate([fee_tx.spend_bundle, claim_spend])
-
         await self.publish_transactions(absorb_transaction, fee_tx)
-        assert full_spend.fees() == fee
         return absorb_transaction, fee_tx
 
     async def new_peak(self, peak_height: uint64) -> None:

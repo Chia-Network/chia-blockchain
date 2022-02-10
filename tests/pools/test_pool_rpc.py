@@ -506,7 +506,7 @@ class TestPoolWalletRpc:
             assert bal["confirmed_wallet_balance"] == 2 * 1750000000000
 
             # Claim 2 * 1.75, and farm a new 1.75
-            absorb_tx: TransactionRecord = await client.pw_absorb_rewards(2, fee)
+            absorb_tx: TransactionRecord = (await client.pw_absorb_rewards(2, fee))["transaction"]
             await time_out_assert(
                 5,
                 full_node_api.full_node.mempool_manager.get_spendbundle,
@@ -522,7 +522,7 @@ class TestPoolWalletRpc:
             assert bal["confirmed_wallet_balance"] == 1 * 1750000000000
 
             # Claim another 1.75
-            absorb_tx1: TransactionRecord = await client.pw_absorb_rewards(2, fee)
+            absorb_tx1: TransactionRecord = (await client.pw_absorb_rewards(2, fee))["transaction"]
             absorb_tx1.spend_bundle.debug()
 
             await time_out_assert(
@@ -556,6 +556,10 @@ class TestPoolWalletRpc:
 
             with pytest.raises(ValueError):
                 await client.pw_absorb_rewards(2, fee)
+
+            tx1 = await client.get_transactions(1)
+            assert (250000000000 + fee) in [tx.additions[0].amount for tx in tx1]
+            # await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True, False])
@@ -618,7 +622,7 @@ class TestPoolWalletRpc:
             assert bal["confirmed_wallet_balance"] == 0
 
             # Claim 2 * 1.75, and farm a new 1.75
-            absorb_tx: TransactionRecord = await client.pw_absorb_rewards(2, fee)
+            absorb_tx: TransactionRecord = (await client.pw_absorb_rewards(2, fee))["transaction"]
             await time_out_assert(
                 5,
                 full_node_api.full_node.mempool_manager.get_spendbundle,
@@ -634,7 +638,8 @@ class TestPoolWalletRpc:
             assert bal["confirmed_wallet_balance"] == 0
 
             # Claim another 1.75
-            absorb_tx: TransactionRecord = await client.pw_absorb_rewards(2, fee)
+            ret = await client.pw_absorb_rewards(2, fee)
+            absorb_tx: TransactionRecord = ret["transaction"]
             absorb_tx.spend_bundle.debug()
             await time_out_assert(
                 5,
@@ -642,6 +647,12 @@ class TestPoolWalletRpc:
                 absorb_tx.spend_bundle,
                 absorb_tx.name,
             )
+
+            if fee == 0:
+                assert ret["fee_transaction"] is None
+            else:
+                assert ret["fee_transaction"].fee_amount == fee
+            assert absorb_tx.fee_amount == fee
 
             await self.farm_blocks(full_node_api, our_ph, 2)
             await asyncio.sleep(5)
@@ -673,7 +684,8 @@ class TestPoolWalletRpc:
                         await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
                     await asyncio.sleep(2)
 
-                    absorb_tx: TransactionRecord = await client.pw_absorb_rewards(2, fee)
+                    ret = await client.pw_absorb_rewards(2, fee)
+                    absorb_tx: TransactionRecord = ret["transaction"]
                     await time_out_assert(
                         5,
                         full_node_api.full_node.mempool_manager.get_spendbundle,
@@ -687,6 +699,14 @@ class TestPoolWalletRpc:
                     assert status.current == new_status.current
                     assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
                     status = new_status
+                    assert ret["fee_transaction"] is None
+
+            bal2 = await client.get_wallet_balance(2)
+            assert bal2["confirmed_wallet_balance"] == 0
+            # Note: as written, confirmed balance will not reflect on absorbs, because the fee
+            # is paid back into the same client's wallet in this test.
+            tx1 = await client.get_transactions(1)
+            assert (250000000000 + fee) in [tx.additions[0].amount for tx in tx1]
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True])
@@ -900,6 +920,7 @@ class TestPoolWalletRpc:
             assert status.current.state == 1
             assert status.current.version == 1
 
+            assert status.target
             assert status.target.pool_url == "https://pool.example.com"
             assert status.target.relative_lock_height == 5
             assert status.target.state == 3
