@@ -177,7 +177,7 @@ class DataLayerRpcApi:
             roots.append({"id": id_bytes, "hash": res})
         return {"root_hashes": roots}
 
-    async def subscribe(self, request: Dict[str, Any]) -> bool:
+    async def subscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         subscribe to singleton
         """
@@ -200,7 +200,7 @@ class DataLayerRpcApi:
         await self.service.subscribe(store_id=store_id_bytes, mode=mode, ip=ip, port=port)
         return {}
 
-    async def unsubscribe(self, request: Dict[str, Any]) -> bool:
+    async def unsubscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         unsubscribe from singleton
         """
