@@ -46,15 +46,22 @@ jobs:
 
     - name: Prepare CentOS
       if: ${{ matrix.distribution.type == 'centos' }}
-      # Installing Git from yum brings git@1.x which doesn't work.
+      # Installing Git from yum brings git@1.x which doesn't work on actions/checkout.
+      # So install git@2.x from source
       run: |
         if [ "$(rpm --eval %{centos_ver})" = "8" ]; then
           sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*;
         fi
         yum update -y
-        yum install -y sudo perl perl-Error perl-TermReadKey less pcre2 openssh-clients libsecret emacs-filesystem
-        yum install -y https://repo.ius.io/ius-release-el7.rpm https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-        yum install -y git --enablerepo=ius --disablerepo=base,epel,extras,updates
+        yum install -y sudo gcc autoconf make wget curl-devel expat-devel gettext-devel openssl-devel perl-devel zlib-devel
+        wget https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.29.0.tar.gz
+        tar zxf git-2.29.0.tar.gz
+        pushd git-2.29.0
+        make configure
+        ./configure --prefix=/usr/local
+        make all
+        make install
+        popd
 
     - name: Prepare Debian
       if: ${{ matrix.distribution.type == 'debian' }}
