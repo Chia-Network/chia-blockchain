@@ -209,6 +209,7 @@ class TestPoolWalletRpc:
         await self.farm_blocks(full_node_api, our_ph, 6)
         assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
 
+        await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
         summaries_response = await client.get_wallets()
         wallet_id: Optional[int] = None
         for summary in summaries_response:
@@ -480,6 +481,7 @@ class TestPoolWalletRpc:
             if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                 assert False
 
+        await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "", 0, "localhost:5000", "new", "SELF_POOLING", fee
         )

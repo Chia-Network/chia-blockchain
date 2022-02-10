@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from secrets import token_bytes
 from typing import List
 
@@ -16,8 +15,6 @@ from chia.wallet.transaction_record import TransactionRecord
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
-
-log = logging.getLogger(__name__)
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id):
@@ -87,7 +84,7 @@ async def wallets_prefarm(two_wallet_nodes, trusted):
 
 @pytest.mark.parametrize(
     "trusted",
-    [False],
+    [True, False],
 )
 class TestCATTrades:
     @pytest.mark.asyncio
@@ -421,7 +418,7 @@ class TestCATTrades:
             await time_out_assert(
                 15, tx_in_pool, True, full_node.full_node.mempool_manager, tx_queue[0].spend_bundle.name()
             )
-        log.warning("Added to mempool")
+
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 

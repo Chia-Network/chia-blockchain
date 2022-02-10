@@ -31,9 +31,9 @@ class LockQueue:
     Must be created under an asyncio running loop, and close and await_closed should be called.
     """
 
-    def __init__(self, inner_lock: asyncio.Lock, maxsize=0):
+    def __init__(self, inner_lock: asyncio.Lock):
         self._inner_lock: asyncio.Lock = inner_lock
-        self._task_queue: asyncio.PriorityQueue = asyncio.PriorityQueue(maxsize=maxsize)
+        self._task_queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
         self._run_task = asyncio.create_task(self._run())
         self._release_event = asyncio.Event()
 
