@@ -198,6 +198,7 @@ class NFTWallet:
         my_nft_coins.append(NFTCoinInfo(coin, lineage_proof, transfer_program, puzzle))
         new_nft_wallet_info = NFTWalletInfo(self.nft_wallet_info.my_did, self.nft_wallet_info.did_wallet_id, my_nft_coins, self.nft_wallet_info.known_transfer_programs)
         await self.save_info(new_nft_wallet_info, False)
+        await self.wallet_state_manager.add_interested_coin_id(coin.name())
         return
 
     async def remove_coin(self, coin: Coin):
@@ -206,7 +207,7 @@ class NFTWallet:
             if coin_info.coin == coin:
                 my_nft_coins.remove(coin_info)
         new_nft_wallet_info = NFTWalletInfo(self.nft_wallet_info.my_did, self.nft_wallet_info.did_wallet_id, my_nft_coins, self.nft_wallet_info.known_transfer_programs)
-        await self.save_info(new_nft_wallet_info)
+        await self.save_info(new_nft_wallet_info, False)
         return
 
     async def add_transfer_program(self, transfer_program: Program):

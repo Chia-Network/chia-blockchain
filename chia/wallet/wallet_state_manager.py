@@ -726,6 +726,7 @@ class WalletStateManager:
             # if the new coin has not been spent (i.e not ephemeral)
             elif coin_state.created_height is not None and coin_state.spent_height is None:
                 await self.coin_added(coin_state.coin, coin_state.created_height, all_txs, wallet_id, wallet_type)
+            # if the coin has been spent
             elif coin_state.created_height is not None and coin_state.spent_height is not None:
                 self.log.info(f"Coin Removed: {coin_state}")
                 record = await self.coin_store.get_coin_record(coin_state.coin.name())
@@ -884,6 +885,11 @@ class WalletStateManager:
                             )
                             assert len(new_coin_state) == 1
                             curr_coin_state = new_coin_state[0]
+
+                elif record.wallet_type == WalletType.NFT:
+                    if coin_state.spent_height is not None:
+                        nft_wallet = self.wallets[uint32(record.wallet_id)]
+                        await nft_wallet.remove_coin(coin_state.coin)
 
                 # Check if a child is a singleton launcher
                 if children is None:

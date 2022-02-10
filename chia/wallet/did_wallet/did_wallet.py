@@ -720,6 +720,8 @@ class DIDWallet:
         return message_spend_bundle
 
     async def get_info_for_recovery(self) -> Tuple[bytes32, bytes32, uint64]:
+        assert self.did_info.current_inner is not None
+        assert self.did_info.origin_coin is not None
         coins = await self.select_coins(1)
         coin = coins.pop()
         parent = coin.parent_coin_info
