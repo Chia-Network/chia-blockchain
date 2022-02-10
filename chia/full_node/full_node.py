@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import dataclasses
 import logging
 import random
@@ -733,7 +734,8 @@ class FullNode:
 
     async def _await_closed(self):
         if self._sync_task is not None:
-            await self._sync_task
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._sync_task
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
             cancel_task_safe(task, self.log)
         await self.connection.close()
