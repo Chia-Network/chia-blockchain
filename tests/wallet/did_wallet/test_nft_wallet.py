@@ -210,10 +210,10 @@ class TestNFTWallet:
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-        await asyncio.sleep(3)
 
+        await asyncio.sleep(3)
         coins = nft_wallet_0.nft_wallet_info.my_nft_coins
         assert len(coins) == 1
 
-        # coins = nft_wallet_1.nft_wallet_info.my_nft_coins
-        # assert len(coins) == 0
+        coins = nft_wallet_1.nft_wallet_info.my_nft_coins
+        assert len(coins) == 0

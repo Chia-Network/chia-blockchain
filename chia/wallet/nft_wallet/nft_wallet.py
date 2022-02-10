@@ -121,6 +121,9 @@ class NFTWallet:
     async def coin_added(self, coin: Coin, height: uint32):
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f" NFT wallet has been notified that {coin} was added")
+        for coin_info in self.nft_wallet_info.my_nft_coins:
+            if coin_info.coin == coin:
+                return
         wallet_node = self.wallet_state_manager.wallet_node
         server = wallet_node.server
         full_nodes: Dict[bytes32, WSChiaConnection] = server.connection_by_type.get(NodeType.FULL_NODE, {})
@@ -194,6 +197,9 @@ class NFTWallet:
                         await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
 
     async def add_coin(self, coin: Coin, lineage_proof: LineageProof, transfer_program: Program, puzzle: Program):
+        for coin_info in self.nft_wallet_info.my_nft_coins:
+            if coin_info.coin == coin:
+                return
         my_nft_coins = self.nft_wallet_info.my_nft_coins
         my_nft_coins.append(NFTCoinInfo(coin, lineage_proof, transfer_program, puzzle))
         new_nft_wallet_info = NFTWalletInfo(self.nft_wallet_info.my_did, self.nft_wallet_info.did_wallet_id, my_nft_coins, self.nft_wallet_info.known_transfer_programs)
