@@ -65,7 +65,6 @@ class WeightProofHandler:
         self.blockchain = blockchain
         self.lock = asyncio.Lock()
         self._num_processes = 4
-        self._executor_shutdown_tempfile: IO = _create_shutdown_file()
 
     async def get_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
 
@@ -619,7 +618,10 @@ class WeightProofHandler:
 
         # timing reference: 1 second
         with ProcessPoolExecutor(6) as executor:
-            try:
+            # TODO: Consider implementing an async polling closer for the executor.
+            # This must be inside so we request the workers close prior to waiting for
+            # them to close.
+            with _create_shutdown_file() as shutdown_file:
                 await asyncio.sleep(0)  # break up otherwise multi-second sync code
                 # timing reference: 1.1 second
                 constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
@@ -634,7 +636,7 @@ class WeightProofHandler:
                     constants,
                     wp_recent_chain_bytes,
                     summary_bytes,
-                    pathlib.Path(self._executor_shutdown_tempfile.name),
+                    pathlib.Path(shutdown_file.name),
                 )
 
                 # timing reference: 2 second
@@ -659,7 +661,7 @@ class WeightProofHandler:
                         _validate_vdf_batch,
                         constants,
                         byte_chunks,
-                        pathlib.Path(self._executor_shutdown_tempfile.name),
+                        pathlib.Path(shutdown_file.name),
                     )
                     vdf_tasks.append(vdf_task)
                     # give other stuff a turn
@@ -673,8 +675,6 @@ class WeightProofHandler:
 
                 valid_recent_blocks_task = recent_blocks_validation_task
                 valid_recent_blocks = await valid_recent_blocks_task
-            finally:
-                self._executor_shutdown_tempfile.close()
 
         if not valid_recent_blocks:
             log.error("failed validating weight proof recent blocks")
