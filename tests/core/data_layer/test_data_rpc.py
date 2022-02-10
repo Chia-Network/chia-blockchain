@@ -336,7 +336,7 @@ async def test_get_roots(one_wallet_node_and_rpc: nodes) -> None:
         await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec0)
         roots = await data_rpc_api.get_roots({"ids": [store_id1.hex(), store_id2.hex()]})
         assert roots["root_hashes"][1]["id"] == store_id2
-        assert roots["root_hashes"][1]["hash"] ==  bytes32([0] * 32)
+        assert roots["root_hashes"][1]["hash"] == bytes32([0] * 32)
         key4 = b"d"
         value4 = b"\x06\x03"
         changelist = [{"action": "insert", "key": key4.hex(), "value": value4.hex()}]
