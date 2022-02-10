@@ -856,11 +856,9 @@ class WalletNode:
                 # This is the (untrusted) case where we already synced and are not too far behind. Here we just
                 # fetch one by one.
                 async with self.wallet_state_manager.lock:
-                    peak_hb: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
+                    peak_hb = await self.wallet_state_manager.blockchain.get_peak_block()
                     if peak_hb is not None and new_peak.weight > peak_hb.weight:
-                        backtrack_fork_height: Optional[int] = await self.wallet_short_sync_backtrack(
-                            header_block, peer
-                        )
+                        backtrack_fork_height: int = await self.wallet_short_sync_backtrack(header_block, peer)
                     else:
                         backtrack_fork_height = new_peak.height - 1
 
