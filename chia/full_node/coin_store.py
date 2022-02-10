@@ -326,9 +326,12 @@ class CoinStore:
             puzzle_hashes_db + (start_height, end_height),
         ) as cursor:
 
-            for row in await cursor.fetchall():
-                coins.add(self.row_to_coin_state(row))
-
+            while True:
+                rows = await cursor.fetchmany(10)
+                if not rows:
+                    break
+                for row in rows:
+                    coins.add(self.row_to_coin_state(row))
             return list(coins)
 
     async def get_coin_records_by_parent_ids(
