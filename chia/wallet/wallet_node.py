@@ -734,8 +734,8 @@ class WalletNode:
         assert last_tx_block.foliage_transaction_block is not None
         return last_tx_block.foliage_transaction_block.timestamp
 
-    async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
-        self.log.debug(f"New peak wallet.. {peak.height} {peer.get_peer_info()}")
+    async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
+        self.log.debug(f"New peak wallet.. {new_peak.height} {peer.get_peer_info()}")
         if self.wallet_state_manager is None:
             # When logging out of wallet
             return
@@ -743,11 +743,11 @@ class WalletNode:
         request_time = uint64(int(time.time()))
         trusted: bool = self.is_trusted(peer)
         peak_hb: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
-        if peak_hb is not None and peak.weight < peak_hb.weight:
+        if peak_hb is not None and new_peak.weight < peak_hb.weight:
             # Discards old blocks, but accepts blocks that are equal in weight to peak
             return
 
-        request = wallet_protocol.RequestBlockHeader(peak.height)
+        request = wallet_protocol.RequestBlockHeader(new_peak.height)
         response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
         if response is None:
             self.log.warning(f"Peer {peer.get_peer_info()} did not respond in time.")
@@ -776,18 +776,18 @@ class WalletNode:
                 # disconnected), we assume that the full node will continue to give us state updates, so we do
                 # not need to resync.
                 if peer.peer_node_id not in self.synced_peers:
-                    await self.long_sync(peak.height, peer, uint32(max(0, current_height - 256)), rollback=True)
+                    await self.long_sync(new_peak.height, peer, uint32(max(0, current_height - 256)), rollback=True)
                     self.wallet_state_manager.set_sync_mode(False)
         else:
             far_behind: bool = (
-                peak.height - self.wallet_state_manager.blockchain.get_peak_height() > self.LONG_SYNC_THRESHOLD
+                new_peak.height - self.wallet_state_manager.blockchain.get_peak_height() > self.LONG_SYNC_THRESHOLD
             )
 
             # check if claimed peak is heavier or same as our current peak
             # if we haven't synced fully to this peer sync again
             if (
                 peer.peer_node_id not in self.synced_peers or far_behind
-            ) and peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+            ) and new_peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                 syncing = False
                 if far_behind or len(self.synced_peers) == 0:
                     syncing = True
@@ -822,18 +822,18 @@ class WalletNode:
                     if syncing:
                         async with self.wallet_state_manager.lock:
                             self.log.info("Primary peer syncing")
-                            await self.long_sync(peak.height, peer, fork_point, rollback=True)
+                            await self.long_sync(new_peak.height, peer, fork_point, rollback=True)
                     else:
                         if self._secondary_peer_sync_task is None or self._secondary_peer_sync_task.done():
                             self.log.info("Secondary peer syncing")
                             self._secondary_peer_sync_task = asyncio.create_task(
-                                self.long_sync(peak.height, peer, fork_point, rollback=False)
+                                self.long_sync(new_peak.height, peer, fork_point, rollback=False)
                             )
                             return
                         else:
                             self.log.info("Will not do secondary sync, there is already another sync task running.")
                             return
-                    self.log.info(f"New peak wallet.. {peak.height} {peer.get_peer_info()} 12")
+                    self.log.info(f"New peak wallet.. {new_peak.height} {peer.get_peer_info()} 12")
                     if (
                         self.wallet_state_manager.blockchain.synced_weight_proof is None
                         or weight_proof.recent_chain_data[-1].weight
@@ -856,7 +856,13 @@ class WalletNode:
                 # This is the (untrusted) case where we already synced and are not too far behind. Here we just
                 # fetch one by one.
                 async with self.wallet_state_manager.lock:
-                    backtrack_fork_height = await self.wallet_short_sync_backtrack(header_block, peer)
+                    peak_hb: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
+                    if peak_hb is not None and new_peak.weight > peak_hb.weight:
+                        backtrack_fork_height: Optional[int] = await self.wallet_short_sync_backtrack(
+                            header_block, peer
+                        )
+                    else:
+                        backtrack_fork_height = new_peak.height - 1
 
                     if peer.peer_node_id not in self.synced_peers:
                         # Edge case, this happens when the peak < WEIGHT_PROOF_RECENT_BLOCKS
@@ -875,27 +881,27 @@ class WalletNode:
                         )
                         self.synced_peers.add(peer.peer_node_id)
                     else:
-                        if peak_hb is not None and peak.weight <= peak_hb.weight:
+                        if peak_hb is not None and new_peak.weight <= peak_hb.weight:
                             # Don't process blocks at the same weight
                             return
 
                     # For every block, we need to apply the cache from race_cache
-                    for potential_height in range(backtrack_fork_height + 1, peak.height + 1):
+                    for potential_height in range(backtrack_fork_height + 1, new_peak.height + 1):
                         header_hash = self.wallet_state_manager.blockchain.height_to_hash(uint32(potential_height))
                         if header_hash in self.race_cache:
                             self.log.debug(f"Receiving race state: {self.race_cache[header_hash]}")
                             await self.receive_state_from_peer(list(self.race_cache[header_hash]), peer)
 
-                    self.wallet_state_manager.set_sync_mode(False)
                     self.wallet_state_manager.state_changed("new_block")
-                    self.log.info(f"Finished processing new peak of {peak.height}")
+                    self.wallet_state_manager.set_sync_mode(False)
+                    self.log.info(f"Finished processing new peak of {new_peak.height}")
 
         if (
             peer.peer_node_id in self.synced_peers
-            and peak.height > await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
+            and new_peak.height > await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
         ):
-            await self.wallet_state_manager.blockchain.set_finished_sync_up_to(peak.height)
-        await self.wallet_state_manager.new_peak(peak)
+            await self.wallet_state_manager.blockchain.set_finished_sync_up_to(new_peak.height)
+        await self.wallet_state_manager.new_peak(new_peak)
 
     async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer: WSChiaConnection) -> int:
         assert self.wallet_state_manager is not None
