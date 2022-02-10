@@ -1127,17 +1127,17 @@ class WalletStateManager:
         """
         await self.coin_store.rollback_to_block(height)
 
-        # reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
+        reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
         await self.coin_store.db_wrapper.commit_transaction()
-        # for record in reorged:
-        #     if record.type in [
-        #         TransactionType.OUTGOING_TX,
-        #         TransactionType.OUTGOING_TRADE,
-        #         TransactionType.INCOMING_TRADE,
-        #     ]:
-        #         await self.tx_store.tx_reorged(record)
-        # self.tx_pending_changed()
+        for record in reorged:
+            if record.type in [
+                TransactionType.OUTGOING_TX,
+                TransactionType.OUTGOING_TRADE,
+                TransactionType.INCOMING_TRADE,
+            ]:
+                await self.tx_store.tx_reorged(record)
+        self.tx_pending_changed()
 
         # Removes wallets that were created from a blockchain transaction which got reorged.
         remove_ids = []

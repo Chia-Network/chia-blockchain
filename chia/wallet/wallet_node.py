@@ -479,14 +479,14 @@ class WalletNode:
           missing transactions, so we don't need to rollback
         """
 
-        def is_old_state_update(cs: CoinState) -> bool:
+        def is_new_state_update(cs: CoinState) -> bool:
             if cs.spent_height is None and cs.created_height is None:
-                return False
+                return True
             if cs.spent_height is not None and cs.spent_height >= fork_height:
-                return False
+                return True
             if cs.created_height is not None and cs.created_height >= fork_height:
-                return False
-            return True
+                return True
+            return False
 
         trusted: bool = self.is_trusted(full_node)
         self.log.info(f"Starting sync trusted: {trusted} to peer {full_node.peer_host}")
@@ -508,7 +508,7 @@ class WalletNode:
                 ph_update_res: List[CoinState] = await subscribe_to_phs(
                     [p for p in chunk if p not in already_checked_ph], full_node, 0
                 )
-                ph_update_res = list(filter(is_old_state_update, ph_update_res))
+                ph_update_res = list(filter(is_new_state_update, ph_update_res))
                 await self.receive_state_from_peer(ph_update_res, full_node)
                 already_checked_ph.update(chunk)
 
