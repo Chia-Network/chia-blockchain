@@ -730,7 +730,7 @@ class FullNode:
             self._transaction_queue_task.cancel()
         if hasattr(self, "_blockchain_lock_queue"):
             self._blockchain_lock_queue.close()
-        cancel_task_safe(self._sync_task, self.log)
+        cancel_task_safe(task=self._sync_task, log=self.log)
 
     async def _await_closed(self):
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):

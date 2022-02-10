@@ -617,10 +617,10 @@ class WeightProofHandler:
             return False, uint32(0), []
 
         # timing reference: 1 second
-        with ProcessPoolExecutor(6) as executor:
-            # TODO: Consider implementing an async polling closer for the executor.
-            # This must be inside so we request the workers close prior to waiting for
-            # them to close.
+        # TODO: Consider implementing an async polling closer for the executor.
+        with ProcessPoolExecutor(max_workers=self._num_processes) as executor:
+            # The shutdown file manager must be inside of the executor manager so that
+            # we request the workers close prior to waiting for them to close.
             with _create_shutdown_file() as shutdown_file:
                 await asyncio.sleep(0)  # break up otherwise multi-second sync code
                 # timing reference: 1.1 second
@@ -668,14 +668,13 @@ class WeightProofHandler:
                     await asyncio.sleep(0)
 
                 # timing reference: 4 second
-                for vdf_task in asyncio.as_completed(vdf_tasks):
+                for vdf_task in asyncio.as_completed(fs=vdf_tasks):
                     validated = await vdf_task
                     if not validated:
                         return False, uint32(0), []
 
                 valid_recent_blocks_task = recent_blocks_validation_task
                 valid_recent_blocks = await valid_recent_blocks_task
-
         if not valid_recent_blocks:
             log.error("failed validating weight proof recent blocks")
             return False, uint32(0), []
@@ -1341,7 +1340,12 @@ def _validate_recent_blocks(
 ) -> bool:
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
-    success, records = validate_recent_blocks(constants, recent_chain, summaries, shutdown_file_path)
+    success, records = validate_recent_blocks(
+        constants=constants,
+        recent_chain=recent_chain,
+        summaries=summaries,
+        shutdown_file_path=shutdown_file_path,
+    )
     return success
 
 
@@ -1353,7 +1357,12 @@ def _validate_recent_blocks_and_get_records(
 ) -> Tuple[bool, List[bytes]]:
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
-    return validate_recent_blocks(constants, recent_chain, summaries, shutdown_file_path)
+    return validate_recent_blocks(
+        constants=constants,
+        recent_chain=recent_chain,
+        summaries=summaries,
+        shutdown_file_path=shutdown_file_path,
+    )
 
 
 def _validate_pospace_recent_chain(

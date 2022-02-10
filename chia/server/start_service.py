@@ -184,13 +184,13 @@ class Service:
         main_pid = os.getpid()
         loop = asyncio.get_running_loop()
         loop.add_signal_handler(
-            signal.SIGINT, functools.partial(self._accept_signal, signal_number=signal.SIGINT, stack_frame=None)
+            signal.SIGINT,
+            functools.partial(self._accept_signal, signal_number=signal.SIGINT),
         )
         loop.add_signal_handler(
-            signal.SIGTERM, functools.partial(self._accept_signal, signal_number=signal.SIGTERM, stack_frame=None)
+            signal.SIGTERM,
+            functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
         )
-        # signal.signal(signal.SIGINT, self._accept_signal)
-        # signal.signal(signal.SIGTERM, self._accept_signal)
         if platform == "win32" or platform == "cygwin":
             # pylint: disable=E1101
             signal.signal(signal.SIGBREAK, self._accept_signal)  # type: ignore
