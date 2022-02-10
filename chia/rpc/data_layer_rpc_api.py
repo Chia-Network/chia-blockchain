@@ -1,6 +1,5 @@
 import dataclasses
-from typing import Any, Callable, Dict
-
+from typing import Any, Callable, Dict, List
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_types import Side, DownloadMode
@@ -220,7 +219,7 @@ class DataLayerRpcApi:
         store_id = request["id"]
         id_bytes = bytes32.from_hexstr(store_id)
         records = await self.service.get_root_history(id_bytes)
-        res = []
+        res: List[Dict[str, Any]] = []
         for rec in records:
-            res.append({"root_hash": rec.root, "status": rec.confirmed})  # add timestamp from block
+            res.insert(0, {"root_hash": rec.root, "status": rec.confirmed})  # add timestamp from block
         return {"root_history": res}

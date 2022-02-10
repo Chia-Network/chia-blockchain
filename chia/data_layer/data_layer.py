@@ -151,7 +151,7 @@ class DataLayer:
         root_history = []
         prev: Optional[SingletonRecord] = None
         for record in records:
-            if prev is not None and record.root != prev.root:
+            if prev is None or record.root != prev.root:
                 root_history.append(record)
         return root_history
 
