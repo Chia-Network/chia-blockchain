@@ -100,6 +100,7 @@ def ssl_context_for_client(
 class ChiaServer:
     def __init__(
         self,
+        host: str,
         port: int,
         node: Any,
         api: Any,
@@ -129,6 +130,7 @@ class ChiaServer:
             NodeType.INTRODUCER: {},
         }
 
+        self._host = host
         self._port = port  # TCP port to identify our node
         self._local_type: NodeType = local_type
 
@@ -261,7 +263,7 @@ class ChiaServer:
 
         self.site = web.TCPSite(
             self.runner,
-            host="::1",
+            host=self._host,
             port=self._port,
             shutdown_timeout=3,
             ssl_context=ssl_context,

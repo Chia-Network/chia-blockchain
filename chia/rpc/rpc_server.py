@@ -310,7 +310,7 @@ async def start_rpc_server(
         daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
     runner = aiohttp.web.AppRunner(app, access_log=None)
     await runner.setup()
-    site = aiohttp.web.TCPSite(runner, "::1", int(rpc_port), ssl_context=rpc_server.ssl_context)
+    site = aiohttp.web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
     await site.start()
 
     async def cleanup():

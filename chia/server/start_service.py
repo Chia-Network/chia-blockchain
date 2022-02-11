@@ -85,6 +85,7 @@ class Service:
 
         assert inbound_rlp and outbound_rlp
         self._server = ChiaServer(
+            self.self_hostname,
             advertised_port,
             node,
             peer_api,
