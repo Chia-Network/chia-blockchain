@@ -19,17 +19,19 @@ def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth:
     else:
         peer_info = PeerInfo(get_host_addr(peer_info_arg, prefer_ipv6), peer_info_arg.port)
 
-    async def connection_check():
+    async def connection_check(fs):
         x = True
         while True:
-            if x:
-                log.info(f" ==== {prefer_ipv6} {peer_info_arg=} {traceback.format_stack()}")
-                x = False
             peer_retry = True
             for _, connection in server.all_connections.items():
                 if connection.get_peer_info() == peer_info or connection.get_peer_info() == peer_info_arg:
                     peer_retry = False
             if peer_retry:
+                if x:
+                    log.info(f" ==== {prefer_ipv6} {peer_info_arg=}")
+                    log.info(f" ==== {fs}")
+                    log.info(f" ==== {traceback.format_stack()}")
+                    x = False
                 log.info(f"Reconnecting to peer {peer_info}")
                 try:
                     await server.start_client(peer_info, None, auth=auth)
@@ -37,4 +39,4 @@ def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth:
                     log.info(f"Failed to connect to {peer_info} {e}")
             await asyncio.sleep(3)
 
-    return asyncio.create_task(connection_check())
+    return asyncio.create_task(connection_check(traceback.format_stack()))
