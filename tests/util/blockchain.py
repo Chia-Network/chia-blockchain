@@ -44,7 +44,7 @@ def persistent_blocks(
     normalized_to_identity_icc_eos: bool = False,
     normalized_to_identity_cc_sp: bool = False,
     normalized_to_identity_cc_ip: bool = False,
-):
+) -> List[FullBlock]:
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
     block_path_dir = Path("~/.chia/blocks").expanduser()
@@ -87,7 +87,7 @@ def new_test_db(
     normalized_to_identity_icc_eos: bool = False,  # ICC_EOS
     normalized_to_identity_cc_sp: bool = False,  # CC_SP,
     normalized_to_identity_cc_ip: bool = False,  # CC_IP
-):
+) -> List[FullBlock]:
     print(f"create {path} with {num_of_blocks} blocks with ")
     blocks: List[FullBlock] = bt.get_consecutive_blocks(
         num_of_blocks,

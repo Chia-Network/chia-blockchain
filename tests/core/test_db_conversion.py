@@ -106,10 +106,6 @@ class TestDbUpgrade:
             await convert_v1_to_v2(in_file, out_file, offline=offline, vacuum=vacuum)
 
             async with aiosqlite.connect(in_file) as conn, aiosqlite.connect(out_file) as conn2:
-                db_wrapper2 = DBWrapper(conn2, 2)
-                block_store2 = await BlockStore.create(db_wrapper2)
-                coin_store2 = await CoinStore.create(db_wrapper2, uint32(0))
-                hint_store2 = await HintStore.create(db_wrapper2)
 
                 db_wrapper1 = DBWrapper(conn, 1)
                 block_store1 = await BlockStore.create(db_wrapper1)
@@ -150,6 +146,7 @@ class TestDbUpgrade:
 
                 # check coins
                 for block in blocks:
+
                     coins = await coin_store1.get_coins_added_at_height(block.height)
                     assert await coin_store2.get_coins_added_at_height(block.height) == coins
                     assert await coin_store1.get_coins_removed_at_height(

@@ -79,8 +79,8 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path, *, offline: bool, vacu
     print(f"opening file for reading: {in_path}{' in offline mode' if offline else ''}")
     async with aiosqlite.connect(in_path) as in_db:
         if offline:
-            await in_db.execute("pragma journal_mode=OFF")
-            await in_db.execute("pragma locking_mode=exclusive")
+            await (await in_db.execute("pragma journal_mode=OFF")).close()
+            await (await in_db.execute("pragma locking_mode=exclusive")).close()
 
         try:
             async with in_db.execute("SELECT * from database_version") as cursor:
