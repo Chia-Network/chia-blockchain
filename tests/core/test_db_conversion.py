@@ -9,11 +9,7 @@ from typing import List, Tuple
 from tests.setup_nodes import test_constants
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-<<<<<<< HEAD
 from chia.util.ints import uint32, uint64
-=======
-from chia.util.ints import uint32
->>>>>>> 5fe115b6b (add option to open input database in offline mode when upgrading from v1 to v2)
 from chia.cmds.db_upgrade_func import convert_v1_to_v2
 from chia.util.db_wrapper import DBWrapper
 from chia.full_node.block_store import BlockStore
@@ -52,8 +48,8 @@ def event_loop():
 class TestDbUpgrade:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("with_hints", [True, False])
-    @pytest.mark.parametrize("offline", [True, False])
-    async def test_blocks(self, default_1000_blocks, with_hints: bool, offline: bool):
+    @pytest.mark.parametrize("offline, vacuum", [(True, True), (True, False), (False, False)])
+    async def test_blocks(self, default_1000_blocks, with_hints: bool, offline: bool, vacuum: bool):
 
         blocks = default_1000_blocks
 
@@ -107,7 +103,7 @@ class TestDbUpgrade:
                     assert err is None
 
             # now, convert v1 in_file to v2 out_file
-            await convert_v1_to_v2(in_file, out_file)
+            await convert_v1_to_v2(in_file, out_file, offline=offline, vacuum=vacuum)
 
             async with aiosqlite.connect(in_file) as conn, aiosqlite.connect(out_file) as conn2:
                 db_wrapper2 = DBWrapper(conn2, 2)

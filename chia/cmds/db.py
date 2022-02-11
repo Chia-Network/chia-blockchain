@@ -26,8 +26,19 @@ def db_cmd() -> None:
     "the database file, you must not have a full node running against it. This may "
     "provide some performance improvements",
 )
+@click.option(
+    "--vacuum",
+    default=False,
+    is_flag=True,
+    help="vacuum the input database in an attempt to improve performance when "
+    "converting. This is only valid when also specifying --offline.",
+)
 @click.pass_context
-def db_upgrade_cmd(ctx: click.Context, no_update_config: bool, offline: bool, **kwargs) -> None:
+def db_upgrade_cmd(ctx: click.Context, no_update_config: bool, offline: bool, vacuum: bool, **kwargs) -> None:
+
+    if vacuum and not offline:
+        print("--vacuum is only valid when also specifying --offline")
+        raise RuntimeError("invalid command line option")
 
     in_db_path = kwargs.get("input")
     out_db_path = kwargs.get("output")
@@ -37,6 +48,7 @@ def db_upgrade_cmd(ctx: click.Context, no_update_config: bool, offline: bool, **
         None if out_db_path is None else Path(out_db_path),
         no_update_config=no_update_config,
         offline=offline,
+        vacuum=vacuum,
     )
 
 

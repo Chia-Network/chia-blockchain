@@ -26,6 +26,7 @@ def db_upgrade_func(
     *,
     no_update_config: bool = False,
     offline: bool = False,
+    vacuum: bool = False,
 ):
 
     update_config: bool = in_db_path is None and out_db_path is None and not no_update_config
@@ -48,7 +49,7 @@ def db_upgrade_func(
         out_db_path = path_from_root(root_path, db_path_replaced)
         mkdir(out_db_path.parent)
 
-    asyncio.run(convert_v1_to_v2(in_db_path, out_db_path, offline=offline))
+    asyncio.run(convert_v1_to_v2(in_db_path, out_db_path, offline=offline, vacuum=vacuum))
 
     if update_config:
         print("updating config.yaml")
@@ -67,7 +68,7 @@ HINT_COMMIT_RATE = 2000
 COIN_COMMIT_RATE = 30000
 
 
-async def convert_v1_to_v2(in_path: Path, out_path: Path, *, offline: bool) -> None:
+async def convert_v1_to_v2(in_path: Path, out_path: Path, *, offline: bool, vacuum: bool) -> None:
     import aiosqlite
     from chia.util.db_wrapper import DBWrapper
 
@@ -89,6 +90,13 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path, *, offline: bool) -> N
                     raise RuntimeError("already v2")
         except aiosqlite.OperationalError:
             pass
+
+        if offline and vacuum:
+            print("vacuuming input database")
+            start_time = time()
+            await in_db.execute("vacuum")
+            end_time = time()
+            print(f"\r      {end_time - start_time:.2f} seconds                             ")
 
         store_v1 = await BlockStore.create(DBWrapper(in_db, db_version=1))
 
