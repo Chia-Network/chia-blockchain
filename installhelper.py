@@ -16,7 +16,7 @@ from pkg_resources import parse_version
 # https://github.com/inveniosoftware/invenio-assets/blob/maint-1.0/invenio_assets/npm.py
 # Copyright (C) 2015-2018 CERN.
 #
-def make_semver(version_str):
+def make_semver(version_str: str) -> str:
     v = parse_version(version_str)
     major = v._version.release[0]
     try:
@@ -47,7 +47,7 @@ def make_semver(version_str):
     return version
 
 
-def get_chia_version():
+def get_chia_version() -> str:
     version: str = "0.0"
     output = subprocess.run(["chia", "version"], capture_output=True)
     if output.returncode == 0:
@@ -55,7 +55,7 @@ def get_chia_version():
     return make_semver(version)
 
 
-def update_version(package_json_path):
+def update_version(package_json_path: str):
     if not exists(package_json_path):
         return
 
