@@ -73,17 +73,23 @@ class Service:
         else:
             service_config = load_config(root_path, "config.yaml", service_name)
         initialize_logging(service_name, service_config["logging"], root_path)
+        self._log.info(f" ==== Service.__init__ logging initialized")
 
         self._rpc_info = rpc_info
+        self._log.info(f" ==== Service.__init__")
         private_ca_crt, private_ca_key = private_ssl_ca_paths(root_path, self.config)
+        self._log.info(f" ==== Service.__init__")
         chia_ca_crt, chia_ca_key = chia_ssl_ca_paths(root_path, self.config)
+        self._log.info(f" ==== Service.__init__")
         inbound_rlp = self.config.get("inbound_rate_limit_percent")
         outbound_rlp = self.config.get("outbound_rate_limit_percent")
         if NodeType == NodeType.WALLET:
             inbound_rlp = service_config.get("inbound_rate_limit_percent", inbound_rlp)
             outbound_rlp = service_config.get("outbound_rate_limit_percent", 60)
 
+        self._log.info(f" ==== Service.__init__")
         assert inbound_rlp and outbound_rlp
+        self._log.info(f" ==== Service.__init__")
         self._server = ChiaServer(
             advertised_port,
             node,
@@ -99,6 +105,7 @@ class Service:
             (chia_ca_crt, chia_ca_key),
             name=f"{service_name}_server",
         )
+        self._log.info(f" ==== Service.__init__")
         f = getattr(node, "set_server", None)
         if f:
             f(self._server)

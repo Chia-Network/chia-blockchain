@@ -118,7 +118,7 @@ class Timelord:
         self.bluebox_pool: Optional[ProcessPoolExecutor] = None
 
     async def _start(self):
-        log.info(f" ==== _start")
+        log.info(f" ==== Timelord._start")
         self.lock: asyncio.Lock = asyncio.Lock()
         self.vdf_server = await asyncio.start_server(
             self._handle_client,
