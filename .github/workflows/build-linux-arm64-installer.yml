@@ -139,7 +139,6 @@ jobs:
       run: |
           GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
           CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
-          echo "GIT_SHORT_HASH=$GIT_SHORT_HASH" >>$GITHUB_ENV
           echo "CHIA_DEV_BUILD=$CHIA_DEV_BUILD" >>$GITHUB_ENV
           aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb" "s3://download-chia-net/dev/chia-blockchain_${CHIA_DEV_BUILD}_arm64.deb"
 
