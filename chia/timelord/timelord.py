@@ -874,6 +874,7 @@ class Timelord:
         # Labels a proof to the current state only
         proof_label: Optional[int] = None,
     ):
+        log.info(f" ==== _do_process_communication")
         disc: int = create_discriminant(challenge, self.constants.DISCRIMINANT_SIZE_BITS)
 
         try:
@@ -891,6 +892,7 @@ class Timelord:
                         writer.write(b"T")
                 await writer.drain()
 
+            log.info(f" ==== _do_process_communication")
             prefix = str(len(str(disc)))
             if len(prefix) == 1:
                 prefix = "00" + prefix
@@ -900,6 +902,7 @@ class Timelord:
                 writer.write((prefix + str(disc)).encode())
                 await writer.drain()
 
+            log.info(f" ==== _do_process_communication")
             # Send initial_form prefixed with its length.
             async with self.lock:
                 writer.write(bytes([len(initial_form.data)]) + initial_form.data)
@@ -918,9 +921,11 @@ class Timelord:
 
             log.debug("Got handshake with VDF client.")
             if not self.bluebox_mode:
+                log.info(f" ==== _do_process_communication")
                 async with self.lock:
                     self.allows_iters.append(chain)
             else:
+                log.info(f" ==== _do_process_communication")
                 async with self.lock:
                     assert chain is Chain.BLUEBOX
                     assert bluebox_iteration is not None
@@ -933,6 +938,7 @@ class Timelord:
 
             # Listen to the client until "STOP" is received.
             while True:
+                log.info(f" ==== _do_process_communication")
                 try:
                     data = await reader.readexactly(4)
                 except (
@@ -951,6 +957,7 @@ class Timelord:
                     msg = data.decode()
                 except Exception:
                     pass
+                log.info(f" ==== _do_process_communication {msg=}")
                 if msg == "STOP":
                     log.debug(f"Stopped client running on ip {ip}.")
                     async with self.lock:
@@ -972,6 +979,7 @@ class Timelord:
                         async with self.lock:
                             self.vdf_failures.append((chain, proof_label))
                             self.vdf_failures_count += 1
+                        log.info(f" ==== _do_process_communication")
                         break
 
                     iterations_needed = uint64(int.from_bytes(stdout_bytes_io.read(8), "big", signed=True))
@@ -986,6 +994,7 @@ class Timelord:
                     # Verifies our own proof just in case
                     form_size = ClassgroupElement.get_size(self.constants)
                     output = ClassgroupElement.from_bytes(y_bytes[:form_size])
+                    log.info(f" ==== _do_process_communication {self.bluebox_mode=}")
                     if not self.bluebox_mode:
                         time_taken = time.time() - self.chain_start_time[chain]
                         ips = int(iterations_needed / time_taken * 10) / 10
