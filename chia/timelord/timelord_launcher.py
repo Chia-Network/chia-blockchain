@@ -50,6 +50,7 @@ async def spawn_process(host: str, port: int, counter: int, prefer_ipv6: Optiona
         try:
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
+            # log.info(f" ==== {host=} {prefer_ipv6=}")
             resolved = get_host_addr(host, prefer_ipv6)
             proc = await asyncio.create_subprocess_shell(
                 f"{basename} {resolved} {port} {counter}",
