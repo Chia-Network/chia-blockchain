@@ -60,6 +60,7 @@ def main() -> None:
         config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
         config["database_path"] = config["simulator_database_path"]
         config["peers_file_path"] = config["simulator_peers_file_path"]
+        # TODO: probably ought to change this to be ipv6 preference aware
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = 58555
         config["selected_network"] = "testnet0"
