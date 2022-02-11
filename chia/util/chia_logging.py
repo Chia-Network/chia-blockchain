@@ -20,7 +20,7 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
         handler.setFormatter(
             colorlog.ColoredFormatter(
                 f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: "
-                f"%(log_color)s%(levelname)-8s%(reset)s %(message)s",
+                f"%(log_color)s%(levelname)-8s%(reset)s %(message)s :::: %(filename)s %(funcName)s %(lineno)d",
                 datefmt=log_date_format,
                 reset=True,
             )
@@ -35,7 +35,7 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
         handler = ConcurrentRotatingFileHandler(log_path, "a", maxBytes=maxbytesrotation, backupCount=maxrotation)
         handler.setFormatter(
             logging.Formatter(
-                fmt=f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: %(levelname)-8s %(message)s",
+                fmt=f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: %(levelname)-8s %(message)s :::: %(filename)s %(funcName)s %(lineno)d",
                 datefmt=log_date_format,
             )
         )
@@ -45,7 +45,11 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
         log_syslog_host = logging_config.get("log_syslog_host", "localhost")
         log_syslog_port = logging_config.get("log_syslog_port", 514)
         log_syslog_handler = SysLogHandler(address=(log_syslog_host, log_syslog_port))
-        log_syslog_handler.setFormatter(logging.Formatter(fmt=f"{service_name} %(message)s", datefmt=log_date_format))
+        log_syslog_handler.setFormatter(
+            logging.Formatter(
+                fmt=f"{service_name} %(message)s :::: %(filename)s %(funcName)s %(lineno)d", datefmt=log_date_format
+            )
+        )
         logger = logging.getLogger()
         logger.addHandler(log_syslog_handler)
 
