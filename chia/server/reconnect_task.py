@@ -32,7 +32,7 @@ def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth:
                     log.info(f" ==== {fs}")
                     log.info(f" ==== {traceback.format_stack()}")
                     x = False
-                log.info(f"Reconnecting to peer {peer_info}")
+                log.info(f"Reconnecting to peer *ahem* {peer_info}")
                 try:
                     await server.start_client(peer_info, None, auth=auth)
                 except Exception as e:
