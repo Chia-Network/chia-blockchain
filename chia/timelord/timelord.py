@@ -118,6 +118,7 @@ class Timelord:
         self.bluebox_pool: Optional[ProcessPoolExecutor] = None
 
     async def _start(self):
+        log.info(f" ==== _start")
         self.lock: asyncio.Lock = asyncio.Lock()
         self.vdf_server = await asyncio.start_server(
             self._handle_client,
@@ -822,6 +823,7 @@ class Timelord:
             await self._reset_chains()
 
     async def _manage_chains(self):
+        log.info(f" ==== _manage_chains")
         async with self.lock:
             await asyncio.sleep(5)
             await self._reset_chains(True)
@@ -1038,6 +1040,7 @@ class Timelord:
             log.debug(f"Connection reset with VDF client {e}")
 
     async def _manage_discriminant_queue_sanitizer(self):
+        log.info(f" ==== _manage_discriminant_queue_sanitizer")
         while not self._shut_down:
             async with self.lock:
                 try:
