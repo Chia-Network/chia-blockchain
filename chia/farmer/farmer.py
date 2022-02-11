@@ -128,6 +128,17 @@ class Farmer:
         self.started = False
         self.harvester_handshake_task: Optional[asyncio.Task] = None
 
+        # From p2_singleton_puzzle_hash to pool state dict
+        self.pool_state: Dict[bytes32, Dict] = {}
+
+        # From p2_singleton to auth PrivateKey
+        self.authentication_keys: Dict[bytes32, PrivateKey] = {}
+
+        # Last time we updated pool_state based on the config file
+        self.last_config_access_time: uint64 = uint64(0)
+
+        self.harvester_cache: Dict[str, Dict[str, HarvesterCacheEntry]] = {}
+
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
             if self.local_keychain:
@@ -180,19 +191,6 @@ class Farmer:
         if len(self.pool_sks_map) == 0:
             log.warning(no_keys_error_str)
             return False
-
-        # The variables below are for use with an actual pool
-
-        # From p2_singleton_puzzle_hash to pool state dict
-        self.pool_state: Dict[bytes32, Dict] = {}
-
-        # From p2_singleton to auth PrivateKey
-        self.authentication_keys: Dict[bytes32, PrivateKey] = {}
-
-        # Last time we updated pool_state based on the config file
-        self.last_config_access_time: uint64 = uint64(0)
-
-        self.harvester_cache: Dict[str, Dict[str, HarvesterCacheEntry]] = {}
 
         return True
 
