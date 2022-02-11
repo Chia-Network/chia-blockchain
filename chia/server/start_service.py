@@ -54,7 +54,7 @@ class Service:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")
         ping_interval = self.config.get("ping_interval")
-        self.self_hostname = self.config.get("self_hostname")
+        self.self_hostname = self.config.get("self_hostname", "localhost")
         self.daemon_port = self.config.get("daemon_port")
         assert ping_interval is not None
         self._connect_to_daemon = connect_to_daemon
