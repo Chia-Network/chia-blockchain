@@ -2,7 +2,7 @@ min_mainnet_k_size: 32
 
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
-self_hostname: &self_hostname "localhost"
+self_hostname: &self_hostname "::1"
 prefer_ipv6: True
 daemon_port: 55400
 daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
