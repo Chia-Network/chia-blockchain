@@ -29,8 +29,8 @@ def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth:
             if peer_retry:
                 if True:#x:
                     log.info(f" ==== {prefer_ipv6} {peer_info_arg=}")
-                    log.info(f" ==== {fs}")
-                    log.info(f" ==== {traceback.format_stack()}")
+                    log.info(f" ==== {''.join(fs)=}")
+                    log.info(f" ==== {''.join(traceback.format_stack())=}")
                     x = False
                 log.info(f"Reconnecting to peer *ahem* {peer_info}")
                 try:
