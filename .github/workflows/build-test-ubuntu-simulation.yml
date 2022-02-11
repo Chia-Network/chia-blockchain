@@ -96,6 +96,18 @@ jobs:
         sh install-timelord.sh
         ./vdf_bench square_asm 400000
 
+    - name: Port?
+      run: |
+        lsof -i:8000 || true
+        echo
+        echo ======================
+        echo
+        nmap -6 -p 0-65535 ::1 || true
+        echo
+        echo ======================
+        echo
+        nmap -p 0-65535 localhost || true
+
     - name: Test simulation code with pytest
       run: |
         . ./activate
