@@ -98,7 +98,12 @@ jobs:
 
     - name: Port?
       run: |
+        sudo apt-get install --yes nmap
         lsof -i:8000 || true
+        echo
+        echo ======================
+        echo
+        lsof -i:8446 || true
         echo
         echo ======================
         echo
