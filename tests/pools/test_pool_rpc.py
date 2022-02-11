@@ -40,6 +40,10 @@ def get_pool_plot_dir():
     return get_plot_dir() / Path("pool_tests")
 
 
+if ":" in self_hostname and "." not in self_hostname:
+    self_hostname = f"[{self_hostname.strip('[]')}]"
+
+
 @dataclass
 class TemporaryPoolPlot:
     p2_singleton_puzzle_hash: bytes32

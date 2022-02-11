@@ -267,6 +267,8 @@ class RpcServer:
                 if self.shut_down:
                     break
                 async with aiohttp.ClientSession() as session:
+                    if ":" in self_hostname and "." not in self_hostname:
+                        self_hostname = f"[{self_hostname.strip('[]')}]"
                     async with session.ws_connect(
                         f"wss://{self_hostname}:{daemon_port}",
                         autoclose=True,
