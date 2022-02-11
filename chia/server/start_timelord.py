@@ -34,6 +34,7 @@ def service_kwargs_for_timelord(
     node = Timelord(root_path, config, updated_constants)
     peer_api = TimelordAPI(node)
     network_id = config["selected_network"]
+    log.info(f" ==== {config['port']=}")
     kwargs = dict(
         root_path=root_path,
         peer_api=peer_api,
