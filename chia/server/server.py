@@ -259,16 +259,20 @@ class ChiaServer:
                 self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path, log=self.log
             )
 
-        self._log.info(f" ==== ChiaServer.start_server")
-        self.site = web.TCPSite(
-            self.runner,
-            port=self._port,
-            shutdown_timeout=3,
-            ssl_context=ssl_context,
-        )
-        self._log.info(f" ==== ChiaServer.start_server")
+        self.log.info(f" ==== ChiaServer.start_server")
+        try:
+            self.site = web.TCPSite(
+                self.runner,
+                port=self._port,
+                shutdown_timeout=3,
+                ssl_context=ssl_context,
+            )
+        except BaseException as e:
+            self.log.info(f" ==== ChiaServer.start_server {e} {traceback.format_exc()}")
+            raise
+        self.log.info(f" ==== ChiaServer.start_server")
         await self.site.start()
-        self._log.info(f" ==== ChiaServer.start_server")
+        self.log.info(f" ==== ChiaServer.start_server")
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
