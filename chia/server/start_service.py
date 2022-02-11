@@ -122,29 +122,39 @@ class Service:
         self.upnp: Optional[UPnP] = None
 
     async def start(self, **kwargs) -> None:
+        self._log.info(f" ==== Service.start")
         # we include `kwargs` as a hack for the wallet, which for some
         # reason allows parameters to `_start`. This is serious BRAIN DAMAGE,
         # and should be fixed at some point.
         # TODO: move those parameters to `__init__`
         if self._did_start:
+            self._log.info(f" ==== Service.start")
             return None
 
+        self._log.info(f" ==== Service.start")
         assert self.self_hostname is not None
+        self._log.info(f" ==== Service.start")
         assert self.daemon_port is not None
+        self._log.info(f" ==== Service.start")
 
         self._did_start = True
 
+        self._log.info(f" ==== Service.start")
         self._enable_signals()
 
+        self._log.info(f" ==== Service.start {kwargs=}")
         await self._node._start(**kwargs)
+        self._log.info(f" ==== Service.start")
         self._node._shut_down = False
 
+        self._log.info(f" ==== Service.start")
         for port in self._upnp_ports:
             if self.upnp is None:
                 self.upnp = UPnP()
 
             self.upnp.remap(port)
 
+        self._log.info(f" ==== Service.start")
         await self._server.start_server(self._on_connect_callback)
 
         self._reconnect_tasks = [
