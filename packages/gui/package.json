@@ -2,6 +2,7 @@
   "name": "@chia/gui",
   "author": "Chia Network <hello@chia.net> (https://chia.net/)",
   "description": "GUI for Chia Blockchain",
+  "license": "Apache-2.0",
   "productName": "Chia Blockchain",
   "private": true,
   "homepage": "./",
@@ -10,12 +11,19 @@
     "node": ">=12.20.0"
   },
   "build": {
+    "productName": "Chia",
     "appId": "net.chia.blockchain",
     "asar": true,
     "asarUnpack": "**/daemon/**",
-    "productName": "Chia",
     "mac": {
-      "category": "public.app-category.finance"
+      "category": "public.app-category.finance",
+      "target": "dmg",
+      "icon": "src/assets/img/chia.icns",
+      "entitlements": "entitlements.mac.plist",
+      "provisioningProfile": "chiablockchain.provisionprofile",
+      "darkModeSupport": true,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
     },
     "files": [
       "build",
@@ -33,9 +41,15 @@
     ],
     "protocols": [
       {
-        "name": "chia",
+        "name": "Chia URL",
         "schemes": [
           "chia"
+        ]
+      },
+      {
+        "name": "Chia XCH Address",
+        "schemes": [
+          "xch"
         ]
       }
     ]
