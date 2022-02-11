@@ -3,6 +3,7 @@ from chia.types.peer_info import PeerInfo
 from tests.block_tools import BlockTools, create_block_tools_async
 from chia.util.ints import uint16
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+from chia.util.network import get_host_addr
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import setup_daemon, self_hostname, setup_full_system
@@ -57,7 +58,7 @@ class TestDaemon:
             yield get_b_tools
 
     @pytest.mark.asyncio
-    async def test_daemon_simulation(self, simulation, get_daemon, get_b_tools):
+    async def test_daemon_simulation(self, simulation, get_daemon, get_b_tools: BlockTools):
         node1, node2, _, _, _, _, _, _, _, _, server1 = simulation
         await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
 
@@ -71,8 +72,11 @@ class TestDaemon:
         session = aiohttp.ClientSession()
         ssl_context = get_b_tools.get_daemon_ssl_context()
 
+        raw_host = get_b_tools._config["self_hostname"]
+        prefer_ipv6 = get_b_tools._config["prefer_ipv6"]
+        host = get_host_addr(host=raw_host, prefer_ipv6=prefer_ipv6)
         ws = await session.ws_connect(
-            "wss://127.0.0.1:55401",
+            f"wss://{host}:55401",
             autoclose=True,
             autoping=True,
             heartbeat=60,
