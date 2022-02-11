@@ -180,12 +180,18 @@ class Service:
             )
 
     async def run(self) -> None:
+        self._log.info(f" ==== Service.start")
         lockfile = singleton(service_launch_lock_path(self.root_path, self._service_name))
+        self._log.info(f" ==== Service.start")
         if lockfile is None:
+            self._log.info(f" ==== Service.start")
             self._log.error(f"{self._service_name}: already running")
             raise ValueError(f"{self._service_name}: already running")
+        self._log.info(f" ==== Service.start")
         await self.start()
+        self._log.info(f" ==== Service.start")
         await self.wait_closed()
+        self._log.info(f" ==== Service.start")
 
     def _enable_signals(self) -> None:
 
