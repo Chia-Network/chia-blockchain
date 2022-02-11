@@ -23,7 +23,9 @@ def db_upgrade_func(
     root_path: Path,
     in_db_path: Optional[Path] = None,
     out_db_path: Optional[Path] = None,
+    *,
     no_update_config: bool = False,
+    offline: bool = False,
 ):
 
     update_config: bool = in_db_path is None and out_db_path is None and not no_update_config
@@ -46,7 +48,7 @@ def db_upgrade_func(
         out_db_path = path_from_root(root_path, db_path_replaced)
         mkdir(out_db_path.parent)
 
-    asyncio.run(convert_v1_to_v2(in_db_path, out_db_path))
+    asyncio.run(convert_v1_to_v2(in_db_path, out_db_path, offline=offline))
 
     if update_config:
         print("updating config.yaml")
@@ -65,7 +67,7 @@ HINT_COMMIT_RATE = 2000
 COIN_COMMIT_RATE = 30000
 
 
-async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
+async def convert_v1_to_v2(in_path: Path, out_path: Path, *, offline: bool) -> None:
     import aiosqlite
     from chia.util.db_wrapper import DBWrapper
 
@@ -73,8 +75,12 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         print(f"output file already exists. {out_path}")
         raise RuntimeError("already exists")
 
-    print(f"opening file for reading: {in_path}")
+    print(f"opening file for reading: {in_path}{' in offline mode' if offline else ''}")
     async with aiosqlite.connect(in_path) as in_db:
+        if offline:
+            await in_db.execute("pragma journal_mode=OFF")
+            await in_db.execute("pragma locking_mode=exclusive")
+
         try:
             async with in_db.execute("SELECT * from database_version") as cursor:
                 row = await cursor.fetchone()

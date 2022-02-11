@@ -18,8 +18,16 @@ def db_cmd() -> None:
     help="don't update config file to point to new database. When specifying a "
     "custom output file, the config will not be updated regardless",
 )
+@click.option(
+    "--offline",
+    default=False,
+    is_flag=True,
+    help="open the input database in offline-mode. no other process may use "
+    "the database file, you must not have a full node running against it. This may "
+    "provide some performance improvements",
+)
 @click.pass_context
-def db_upgrade_cmd(ctx: click.Context, no_update_config: bool, **kwargs) -> None:
+def db_upgrade_cmd(ctx: click.Context, no_update_config: bool, offline: bool, **kwargs) -> None:
 
     in_db_path = kwargs.get("input")
     out_db_path = kwargs.get("output")
@@ -27,7 +35,8 @@ def db_upgrade_cmd(ctx: click.Context, no_update_config: bool, **kwargs) -> None
         Path(ctx.obj["root_path"]),
         None if in_db_path is None else Path(in_db_path),
         None if out_db_path is None else Path(out_db_path),
-        no_update_config,
+        no_update_config=no_update_config,
+        offline=offline,
     )
 
 
