@@ -469,7 +469,7 @@ class NFTWallet:
         await self.standard_wallet.push_transaction(nft_record)
         return full_spend
 
-    async def get_current_nfts(self):
+    def get_current_nfts(self):
         return self.nft_wallet_info.my_nft_coins
 
     async def save_info(self, nft_info: NFTWalletInfo, in_transaction):

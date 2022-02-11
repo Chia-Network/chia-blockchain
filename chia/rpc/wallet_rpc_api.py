@@ -114,6 +114,7 @@ class WalletRpcApi:
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_current_nfts": self.nft_get_current_nfts,
             "/nft_transfer_nft": self.nft_transfer_nft,
+            "/nft_receive_nft": self.nft_receive_nft,
             # RL wallet
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
@@ -1146,12 +1147,15 @@ class WalletRpcApi:
         # percentage: uint64,
         # backpayment_address: bytes32,
         # amount: int = 1
+        address = request["artist_address"]
+        if isinstance(address, str):
+            address = decode_puzzle_hash(address)
         if "amount" in request:
             await nft_wallet.generate_new_nft(
-                request["uri"], request["artist_percentage"], request["artist_address"], request["amount"]
+                request["uri"], request["artist_percentage"], address, request["amount"]
             )
         else:
-            await nft_wallet.generate_new_nft(request["uri"], request["artist_percentage"], request["artist_address"])
+            await nft_wallet.generate_new_nft(request["uri"], address, request["artist_address"])
         return {"wallet_id": wallet_id, "success": True}
 
     async def nft_get_current_nfts(self, request):
@@ -1176,6 +1180,21 @@ class WalletRpcApi:
             request["new_did_amount"],
             request["trade_price"],
         )
+        return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
+
+    async def nft_receive_nft(self, request):
+        wallet_id = int(request["wallet_id"])
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if isinstance(request["spend_bundle"], str):
+            sending_sb = SpendBundle.from_bytes(bytes.from_hex(request["spend_bundle"]))
+        else:
+            sending_sb = request["spend_bundle"]
+
+        if "fee" in request:
+            fee = request["fee"]
+        else:
+            fee = 0
+        sb = await nft_wallet.receive_nft(sending_sb, fee)
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
 
     ##########################################################################################
