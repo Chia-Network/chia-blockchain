@@ -89,7 +89,8 @@ fi
 # fi
 
 echo "Listing dist contents"
-ls -al dist
+ls -alh dist
+ls -alh dist/mac
 
 # mv Chia-darwin-x64 ../../../build_scripts/dist/
 # cd ../../../build_scripts || exit
