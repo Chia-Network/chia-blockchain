@@ -91,6 +91,7 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
+        hint_keys_values = await self.data_store.get_keys_values_dict(tree_id)
         for change in changelist:
             if change["action"] == "insert":
                 key = change["key"]
@@ -98,12 +99,12 @@ class DataLayer:
                 reference_node_hash = change.get("reference_node_hash")
                 side = change.get("side")
                 if reference_node_hash or side:
-                    await self.data_store.insert(key, value, tree_id, reference_node_hash, side)
-                await self.data_store.autoinsert(key, value, tree_id)
+                    await self.data_store.insert(key, value, tree_id, reference_node_hash, side, hint_keys_values)
+                await self.data_store.autoinsert(key, value, tree_id, hint_keys_values)
             else:
                 assert change["action"] == "delete"
                 key = change["key"]
-                await self.data_store.delete(key, tree_id)
+                await self.data_store.delete(key, tree_id, hint_keys_values)
 
         await self.data_store.get_tree_root(tree_id)
         root = await self.data_store.get_tree_root(tree_id)

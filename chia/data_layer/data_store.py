@@ -601,6 +601,7 @@ class DataStore:
         key: bytes,
         value: bytes,
         tree_id: bytes32,
+        hint_keys_values: Optional[Dict[bytes, bytes]] = None,
         *,
         lock: bool = True,
     ) -> bytes32:
@@ -620,8 +621,14 @@ class DataStore:
                 tree_id=tree_id,
                 reference_node_hash=reference_node_hash,
                 side=side,
+                hint_keys_values=hint_keys_values,
                 lock=False,
             )
+
+    async def get_keys_values_dict(self, tree_id: bytes32, *, lock: bool = True) -> Dict[bytes, bytes]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
+            return {node.key: node.value for node in pairs}
 
     async def insert(
         self,
@@ -630,6 +637,7 @@ class DataStore:
         tree_id: bytes32,
         reference_node_hash: Optional[bytes32],
         side: Optional[Side],
+        hint_keys_values: Optional[Dict[bytes, bytes]] = None,
         use_optimized: bool = True,
         *,
         lock: bool = True,
@@ -640,10 +648,14 @@ class DataStore:
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
 
             if not was_empty:
-                # TODO: is there any way the db can enforce this?
-                pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
-                if any(key == node.key for node in pairs):
-                    raise Exception(f"Key already present: {key.hex()}")
+                if hint_keys_values is None:
+                    # TODO: is there any way the db can enforce this?
+                    pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
+                    if any(key == node.key for node in pairs):
+                        raise Exception(f"Key already present: {key.hex()}")
+                else:
+                    if key in hint_keys_values:
+                        raise Exception(f"Key already present: {key.hex()}")
 
             if reference_node_hash is None:
                 if not was_empty:
@@ -718,19 +730,30 @@ class DataStore:
                 for left_hash, right_hash, tree_id in insert_ancestors_cache:
                     await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
 
+        if hint_keys_values is not None:
+            hint_keys_values[key] = value
         return new_terminal_node_hash
 
     async def delete(
         self,
         key: bytes,
         tree_id: bytes32,
+        hint_keys_values: Optional[Dict[bytes, bytes]] = None,
         use_optimized: bool = True,
         *,
         lock: bool = True,
         status: Status = Status.PENDING,
     ) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
+            if hint_keys_values is None:
+                node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
+            else:
+                if key not in hint_keys_values:
+                    raise Exception(f"Key not found: {key.hex()}")
+                value = hint_keys_values[key]
+                node_hash = Program.to((key, value)).get_tree_hash()
+                node = TerminalNode(node_hash, key, value)
+                del hint_keys_values[key]
             if use_optimized:
                 ancestors: List[InternalNode] = await self.get_ancestors_optimized(
                     node_hash=node.hash, tree_id=tree_id, lock=False
