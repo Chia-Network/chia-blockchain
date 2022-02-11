@@ -20,8 +20,11 @@ def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth:
         peer_info = PeerInfo(get_host_addr(peer_info_arg, prefer_ipv6), peer_info_arg.port)
 
     async def connection_check():
-        log.info(f" ==== {prefer_ipv6} {peer_info_arg=} {traceback.format_stack()}")
+        x = True
         while True:
+            if x:
+                log.info(f" ==== {prefer_ipv6} {peer_info_arg=} {traceback.format_stack()}")
+                x = False
             peer_retry = True
             for _, connection in server.all_connections.items():
                 if connection.get_peer_info() == peer_info or connection.get_peer_info() == peer_info_arg:
