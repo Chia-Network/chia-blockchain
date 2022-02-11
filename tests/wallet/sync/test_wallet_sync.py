@@ -313,5 +313,5 @@ class TestWalletSync:
             uint32(len(blocks_reorg_1))
         )
 
-        await time_out_assert(10, get_tx_count, 2, 1)
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, get_tx_count, 2, 1)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)

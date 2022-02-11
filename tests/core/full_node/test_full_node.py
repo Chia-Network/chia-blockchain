@@ -183,9 +183,9 @@ class TestFullNodeBlockCompression:
         for i in range(4):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 4)
-        await time_out_assert(10, node_height_at_least, True, full_node_1, 4)
-        await time_out_assert(10, node_height_at_least, True, full_node_2, 4)
+        await time_out_assert(30, wallet_height_at_least, True, wallet_node_1, 4)
+        await time_out_assert(30, node_height_at_least, True, full_node_1, 4)
+        await time_out_assert(30, node_height_at_least, True, full_node_2, 4)
 
         # Send a transaction to mempool
         tr: TransactionRecord = await wallet.generate_signed_transaction(
@@ -202,16 +202,16 @@ class TestFullNodeBlockCompression:
 
         # Farm a block
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        await time_out_assert(10, node_height_at_least, True, full_node_1, 5)
-        await time_out_assert(10, node_height_at_least, True, full_node_2, 5)
-        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 5)
+        await time_out_assert(30, node_height_at_least, True, full_node_1, 5)
+        await time_out_assert(30, node_height_at_least, True, full_node_2, 5)
+        await time_out_assert(30, wallet_height_at_least, True, wallet_node_1, 5)
 
         async def check_transaction_confirmed(transaction) -> bool:
             tx = await wallet_node_1.wallet_state_manager.get_transaction(transaction.name)
             return tx.confirmed
 
-        await time_out_assert(10, check_transaction_confirmed, True, tr)
-        await asyncio.sleep(0.5)
+        await time_out_assert(30, check_transaction_confirmed, True, tr)
+        await asyncio.sleep(2)
 
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator

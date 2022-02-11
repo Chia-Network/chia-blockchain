@@ -587,6 +587,7 @@ class TestPoolWalletRpc:
         await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
         await time_out_assert(10, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
 
+        await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
         our_ph = await wallet_0.get_new_puzzlehash()
         summaries_response = await client.get_wallets()
         for summary in summaries_response:
@@ -759,6 +760,7 @@ class TestPoolWalletRpc:
 
             await self.farm_blocks(full_node_api, our_ph, 6)
             assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
+            await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
 
             summaries_response = await client.get_wallets()
             wallet_id: Optional[int] = None
