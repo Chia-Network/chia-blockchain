@@ -61,7 +61,7 @@ cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
 echo "Building macOS Electron app"
-npx electron-build build -m
+npx electron-build build -m 2>&1
 # electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
 # --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 # --appVersion=$CHIA_INSTALLER_VERSION

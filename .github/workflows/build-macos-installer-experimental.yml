@@ -124,8 +124,8 @@ jobs:
     - name: Build MacOS DMG in Catalina - Experimental
       env:
         NOTARIZE: ${{ steps.check_secrets.outputs.HAS_SECRET }}
-        CSC_LINK: "${{ secrets.APPLE_NOTARIZE_USERNAME }}"
-        CSC_KEY_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
+        CSC_LINK: "${{ secrets.APPLE_DEV_ID_APP }}"
+        CSC_KEY_PASSWORD: "${{ secrets.APPLE_DEV_ID_APP_PASS }}"
       run: |
         . ./activate
         cd ./chia-blockchain-gui
