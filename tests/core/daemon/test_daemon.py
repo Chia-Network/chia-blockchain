@@ -75,8 +75,6 @@ class TestDaemon:
         raw_host = get_b_tools._config["self_hostname"]
         prefer_ipv6 = get_b_tools._config["prefer_ipv6"]
         host = get_host_addr(host=raw_host, prefer_ipv6=prefer_ipv6)
-        if ":" in host and "." not in host:
-            host = f"[{host.strip('[]')}]"
         ws = await session.ws_connect(
             f"wss://[{host}]:55401",
             autoclose=True,
