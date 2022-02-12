@@ -268,9 +268,10 @@ class RpcServer:
                     break
                 async with aiohttp.ClientSession() as session:
                     if ":" in self_hostname and "." not in self_hostname:
-                        self_hostname = f"[{self_hostname.strip('[]')}]"
+                        self_hostname = self_hostname.strip('[]')
+                    url = f"wss://[{self_hostname}]:{daemon_port}"
                     async with session.ws_connect(
-                        f"wss://[{self_hostname}]:{daemon_port}",
+                        url,
                         autoclose=True,
                         autoping=True,
                         heartbeat=60,
@@ -281,7 +282,7 @@ class RpcServer:
                         await self.connection(ws)
                     self.websocket = None
             except aiohttp.ClientConnectorError:
-                self.log.warning(f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
+                self.log.warning(f"Cannot connect to daemon at {url}")
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.warning(f"Exception: {tb} {type(e)}")
