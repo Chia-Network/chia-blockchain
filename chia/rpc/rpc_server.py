@@ -14,6 +14,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
+from chia.util.network import Url
 from chia.util.ws_message import create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
@@ -267,11 +268,9 @@ class RpcServer:
                 if self.shut_down:
                     break
                 async with aiohttp.ClientSession() as session:
-                    if ":" in self_hostname and "." not in self_hostname:
-                        self_hostname = self_hostname.strip("[]")
-                    url = f"wss://[{self_hostname}]:{daemon_port}"
+                    url = Url.create(scheme="wss", host=self_hostname, port=daemon_port)
                     async with session.ws_connect(
-                        url,
+                        url.for_connections(),
                         autoclose=True,
                         autoping=True,
                         heartbeat=60,

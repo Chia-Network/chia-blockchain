@@ -9,6 +9,7 @@ import websockets
 
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
+from chia.util.network import Url
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
@@ -129,7 +130,8 @@ async def connect_to_daemon(self_hostname: str, daemon_port: int, ssl_context: O
     Connect to the local daemon.
     """
 
-    client = DaemonProxy(f"wss://[{self_hostname}]:{daemon_port}", ssl_context)
+    url = Url.create(scheme="wss", host=self_hostname, port=daemon_port)
+    client = DaemonProxy(url.for_connections(), ssl_context)
     await client.start()
     return client
 

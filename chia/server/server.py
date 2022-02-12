@@ -30,7 +30,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
-from chia.util.network import is_in_network, is_localhost
+from chia.util.network import is_in_network, is_localhost, Url
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 
@@ -421,17 +421,17 @@ class ChiaServer:
             except ValueError:
                 pass
 
-            url = f"wss://[{target_node.host}]:{target_node.port}/ws"
-            self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
+            url = Url.create(scheme="wss", host=target_node.host, port=target_node.port, path="ws")
+            self.log.debug(f"Connecting: {url.for_user()}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(
-                    url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
+                    url.for_connections(), autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
                 )
             except ServerDisconnectedError:
-                self.log.debug(f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")
+                self.log.debug(f"Server disconnected error connecting to {url.for_user()}. Perhaps we are banned by the peer.")
                 return False
             except asyncio.TimeoutError:
-                self.log.debug(f"Timeout error connecting to {url}")
+                self.log.debug(f"Timeout error connecting to {url.for_user()}")
                 return False
             if ws is None:
                 return False
