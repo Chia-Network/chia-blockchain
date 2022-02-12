@@ -32,7 +32,7 @@ class RpcClient:
         self = cls()
         self.hostname = self_hostname
         self.port = port
-        self.url = f"https://{self_hostname}:{str(port)}/"
+        self.url = f"https://[{self_hostname}]:{str(port)}/"
         self.session = aiohttp.ClientSession()
         ca_crt_path, ca_key_path = private_ssl_ca_paths(root_path, net_config)
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
