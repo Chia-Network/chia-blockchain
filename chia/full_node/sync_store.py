@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from typing import Dict, List, Optional, Set, Tuple
+from collections import OrderedDict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint128
@@ -12,7 +13,7 @@ class SyncStore:
     # Whether or not we are syncing
     sync_mode: bool
     long_sync: bool
-    peak_to_peer: Dict[bytes32, Set[bytes32]]  # Header hash : peer node id
+    peak_to_peer: OrderedDict[bytes32, Set[bytes32]]  # Header hash : peer node id
     peer_to_peak: Dict[bytes32, Tuple[bytes32, uint32, uint128]]  # peer node id : [header_hash, height, weight]
     sync_target_header_hash: Optional[bytes32]  # Peak hash we are syncing towards
     sync_target_height: Optional[uint32]  # Peak height we are syncing towards
@@ -29,7 +30,7 @@ class SyncStore:
         self.sync_target_header_hash = None
         self.sync_target_height = None
         self.peak_fork_point = {}
-        self.peak_to_peer = {}
+        self.peak_to_peer = OrderedDict()
         self.peer_to_peak = {}
         self.peers_changed = asyncio.Event()
 
@@ -73,7 +74,8 @@ class SyncStore:
             self.peak_to_peer[header_hash].add(peer_id)
         else:
             self.peak_to_peer[header_hash] = {peer_id}
-
+            if len(self.peak_to_peer) > 4608:  # 1 day of blocks
+                self.peak_to_peer.popitem(last=False)  # Remove the oldest entry
         if new_peak:
             self.peer_to_peak[peer_id] = (header_hash, height, weight)
 
@@ -126,7 +128,7 @@ class SyncStore:
         """
         Clears the peak_to_peer info which can get quite large.
         """
-        self.peak_to_peer = {}
+        self.peak_to_peer = OrderedDict()
 
     def peer_disconnected(self, node_id: bytes32):
         if node_id in self.peer_to_peak:
