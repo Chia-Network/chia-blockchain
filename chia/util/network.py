@@ -3,10 +3,12 @@ from __future__ import annotations
 import dataclasses
 import socket
 from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
-from typing import Iterable, List, Literal, Tuple, Type, TypeVar, Union, Any, Optional
+from typing import Iterable, List, Tuple, Type, TypeVar, Union, Any, Optional
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
+
+from typing_extensions import Literal
 
 
 def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]) -> bool:
@@ -84,7 +86,7 @@ def get_host_addr(host: Union[PeerInfo, str], prefer_ipv6: Optional[bool]) -> st
 
 
 _T_Url = TypeVar("_T_Url", bound="Url")
-SchemeType = Literal["wss"]
+SchemeType = Literal["https", "wss"]
 
 
 @dataclasses.dataclass(frozen=True)

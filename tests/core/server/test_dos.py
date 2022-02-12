@@ -16,6 +16,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
 from chia.util.errors import Err
+from chia.util.network import Url
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -59,20 +60,20 @@ class TestDos:
         # Use the server_2 ssl information to connect to server_1, and send a huge message
         timeout = ClientTimeout(total=10)
         session = ClientSession(timeout=timeout)
-        url = f"wss://[{self_hostname}]:{server_1._port}/ws"
+        url = Url.create(scheme="wss", host=self_hostname, port=server_1._port, path="/ws")
 
         ssl_context = ssl_context_for_client(
             server_2.chia_ca_crt_path, server_2.chia_ca_key_path, server_2.p2p_crt_path, server_2.p2p_key_path
         )
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url=url.for_connections(), autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
         assert not ws.closed
         await ws.close()
         assert ws.closed
 
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url=url.for_connections(), autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
         assert not ws.closed
 
@@ -90,7 +91,7 @@ class TestDos:
         assert ws.closed
         try:
             ws = await session.ws_connect(
-                url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+                url=url.for_connections(), autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
             response: WSMessage = await ws.receive()
             assert response.type == WSMsgType.CLOSE
@@ -154,13 +155,13 @@ class TestDos:
         # Use the server_2 ssl information to connect to server_1
         timeout = ClientTimeout(total=10)
         session = ClientSession(timeout=timeout)
-        url = f"wss://[{self_hostname}]:{server_1._port}/ws"
+        url = Url.create(scheme="wss", host=self_hostname, port=server_1.port, path="/ws")
 
         ssl_context = ssl_context_for_client(
             server_2.chia_ca_crt_path, server_2.chia_ca_key_path, server_2.p2p_crt_path, server_2.p2p_key_path
         )
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url=url.for_connections(), autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
 
         # Construct an otherwise valid handshake message

@@ -10,6 +10,7 @@ from tests.setup_nodes import setup_daemon, self_hostname, setup_full_system
 from tests.simulation.test_simulation import test_constants_modified
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.keyring import TempKeyring
+from chia.util.network import Url
 
 import asyncio
 import json
@@ -75,8 +76,9 @@ class TestDaemon:
         raw_host = get_b_tools._config["self_hostname"]
         prefer_ipv6 = get_b_tools._config["prefer_ipv6"]
         host = get_host_addr(host=raw_host, prefer_ipv6=prefer_ipv6)
+        url = Url.create(scheme="wss", host=host, port=55401)
         ws = await session.ws_connect(
-            f"wss://[{host}]:55401",
+            url=url.for_connections(),
             autoclose=True,
             autoping=True,
             heartbeat=60,
@@ -178,8 +180,9 @@ class TestDaemon:
             assert message["data"]["success"] is False
 
         async with aiohttp.ClientSession() as session:
+            url = Url.create(scheme="wss", host="::1", port=55401)
             async with session.ws_connect(
-                "wss://[::1]:55401",
+                url=url.for_connections(),
                 autoclose=True,
                 autoping=True,
                 heartbeat=60,

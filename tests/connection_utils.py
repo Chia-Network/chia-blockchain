@@ -15,6 +15,7 @@ from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
+from chia.util.network import Url
 from tests.setup_nodes import self_hostname
 from tests.time_out_assert import time_out_assert
 
@@ -45,8 +46,8 @@ async def add_dummy_connection(
     pem_cert = x509.load_pem_x509_certificate(dummy_crt_path.read_bytes(), default_backend())
     der_cert = x509.load_der_x509_certificate(pem_cert.public_bytes(serialization.Encoding.DER), default_backend())
     peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
-    url = f"wss://[{self_hostname}]:{server._port}/ws"
-    ws = await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context)
+    url = Url.create(scheme="wss", host=self_hostname, port=server._port, path="/ws")
+    ws = await session.ws_connect(url=url.for_connections(), autoclose=True, autoping=True, ssl=ssl_context)
     wsc = WSChiaConnection(
         type,
         ws,
