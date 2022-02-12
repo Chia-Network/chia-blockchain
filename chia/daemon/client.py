@@ -129,7 +129,7 @@ async def connect_to_daemon(self_hostname: str, daemon_port: int, ssl_context: O
     Connect to the local daemon.
     """
 
-    client = DaemonProxy(f"wss://{self_hostname}:{daemon_port}", ssl_context)
+    client = DaemonProxy(f"wss://[{self_hostname}]:{daemon_port}", ssl_context)
     await client.start()
     return client
 

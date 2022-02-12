@@ -417,11 +417,11 @@ class ChiaServer:
 
             try:
                 if type(ip_address(target_node.host)) is IPv6Address:
-                    target_node = PeerInfo(f"[{target_node.host}]", target_node.port)
+                    target_node = PeerInfo(f"{target_node.host}", target_node.port)
             except ValueError:
                 pass
 
-            url = f"wss://{target_node.host}:{target_node.port}/ws"
+            url = f"wss://[{target_node.host}]:{target_node.port}/ws"
             self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(

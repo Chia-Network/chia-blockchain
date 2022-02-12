@@ -270,7 +270,7 @@ class RpcServer:
                     if ":" in self_hostname and "." not in self_hostname:
                         self_hostname = f"[{self_hostname.strip('[]')}]"
                     async with session.ws_connect(
-                        f"wss://{self_hostname}:{daemon_port}",
+                        f"wss://[{self_hostname}]:{daemon_port}",
                         autoclose=True,
                         autoping=True,
                         heartbeat=60,

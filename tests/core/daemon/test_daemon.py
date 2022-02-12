@@ -78,7 +78,7 @@ class TestDaemon:
         if ":" in host and "." not in host:
             host = f"[{host.strip('[]')}]"
         ws = await session.ws_connect(
-            f"wss://{host}:55401",
+            f"wss://[{host}]:55401",
             autoclose=True,
             autoping=True,
             heartbeat=60,
