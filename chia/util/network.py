@@ -15,7 +15,7 @@ def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Netw
 
 
 def is_localhost(peer_host: str) -> bool:
-    return peer_host == "127.0.0.1" or peer_host == "localhost" or peer_host == "::1" or peer_host == "0:0:0:0:0:0:0:1"
+    return peer_host == "127.0.0.1" or peer_host == "localhost" or peer_host == "::1" or peer_host == "[::1]" or peer_host == "0:0:0:0:0:0:0:1"
 
 
 def class_for_type(type: NodeType) -> Any:
