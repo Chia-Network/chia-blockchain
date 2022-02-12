@@ -500,8 +500,9 @@ wallet:
     public_crt:  "config/ssl/wallet/public_wallet.crt"
     public_key:  "config/ssl/wallet/public_wallet.key"
 
+  # node IDs of trusted full node peers
   trusted_peers:
-    trusted_node_1: "config/ssl/full_node/public_full_node.crt"
+    # trusted_node_1: "0000000000000000000000000000000000000000000000000000000000000000"
 
   short_sync_blocks_behind_threshold: 20
 
