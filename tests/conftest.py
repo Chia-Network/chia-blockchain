@@ -14,6 +14,11 @@ from pathlib import Path
 #       fixtures avoids the issue.
 
 
+import logging
+
+logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
+
+
 @pytest.fixture(scope="function", params=[1, 2])
 async def empty_blockchain(request):
     """
