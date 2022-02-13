@@ -67,8 +67,6 @@ def get_host_addr(host: Union[PeerInfo, str], prefer_ipv6: Optional[bool]) -> st
         if PeerInfo(hoststr, uint16(0)).is_valid(True):
             return hoststr
 
-    if isinstance(hoststr, dict):
-        print(f" ==== {host=} {hoststr=}")
     if hoststr.strip() == "localhost":
         if prefer_ipv6:
             return "::1"
