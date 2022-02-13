@@ -14,9 +14,10 @@ from chia.server.rate_limits import RateLimiter
 from chia.server.server import ssl_context_for_client
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
+from chia.util.config import load_config
 from chia.util.ints import uint16, uint64
 from chia.util.errors import Err
-from chia.util.network import Url
+from chia.util.network import get_host_addr, Url
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -60,7 +61,11 @@ class TestDos:
         # Use the server_2 ssl information to connect to server_1, and send a huge message
         timeout = ClientTimeout(total=10)
         session = ClientSession(timeout=timeout)
-        url = Url.create(scheme="wss", host=self_hostname, port=server_1._port, path="/ws")
+
+        prefer_ipv6 = server_1.config["prefer_ipv6"]
+        host = get_host_addr(host=self_hostname, prefer_ipv6=prefer_ipv6)
+
+        url = Url.create(scheme="wss", host=host, port=server_1._port, path="/ws")
 
         ssl_context = ssl_context_for_client(
             server_2.chia_ca_crt_path, server_2.chia_ca_key_path, server_2.p2p_crt_path, server_2.p2p_key_path
@@ -125,8 +130,10 @@ class TestDos:
         timeout = ClientTimeout(total=10)
         session = ClientSession(timeout=timeout)
 
-        # host = get_addr_info(host=self_hostname, prefer_ipv6=)
-        url = Url(scheme="wss", host=self_hostname, port=server_1._port, path="/ws")
+        prefer_ipv6 = server_1.config["prefer_ipv6"]
+        host = get_host_addr(host=self_hostname, prefer_ipv6=prefer_ipv6)
+
+        url = Url.create(scheme="wss", host=host, port=server_1._port, path="/ws")
 
         ssl_context = ssl_context_for_client(
             server_2.chia_ca_crt_path, server_2.chia_ca_key_path, server_2.p2p_crt_path, server_2.p2p_key_path
@@ -187,8 +194,11 @@ class TestDos:
         # Use the server_2 ssl information to connect to server_1
         timeout = ClientTimeout(total=10)
         session = ClientSession(timeout=timeout)
-        # host = get_addr_info(host=self_hostname, prefer_ipv6=)
-        url = Url.create(scheme="wss", host=self_hostname, port=server_1.port, path="/ws")
+
+        prefer_ipv6 = server_1.config["prefer_ipv6"]
+        host = get_host_addr(host=self_hostname, prefer_ipv6=prefer_ipv6)
+
+        url = Url.create(scheme="wss", host=host, port=server_1._port, path="/ws")
 
         ssl_context = ssl_context_for_client(
             server_2.chia_ca_crt_path, server_2.chia_ca_key_path, server_2.p2p_crt_path, server_2.p2p_key_path

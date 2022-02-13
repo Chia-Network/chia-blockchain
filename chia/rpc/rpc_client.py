@@ -9,7 +9,7 @@ from chia.server.ssl_context import private_ssl_ca_paths
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
-from chia.util.network import Url
+from chia.util.network import get_host_addr, Url
 
 
 class RpcClient:
@@ -33,7 +33,8 @@ class RpcClient:
         self = cls()
         self.hostname = self_hostname
         self.port = port
-        url = Url.create(scheme="https", host=self_hostname, port=port)
+        host = get_host_addr(host=self_hostname, prefer_ipv6=net_config["prefer_ipv6"])
+        url = Url.create(scheme="https", host=host, port=port)
         # TODO: Maybe just save the Url object and check all uses?
         self.url = url.for_connections()
         self.session = aiohttp.ClientSession()
