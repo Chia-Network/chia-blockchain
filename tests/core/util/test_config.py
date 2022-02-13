@@ -149,7 +149,7 @@ class TestConfig:
         assert config is not None
         # Expect: config values should match the defaults (from a small sampling)
         assert config["daemon_port"] == default_config_dict["daemon_port"] == 55400
-        assert config["self_hostname"] == default_config_dict["self_hostname"] == "::1"
+        assert config["self_hostname"] == default_config_dict["self_hostname"] == "localhost"
         assert (
             config["farmer"]["network_overrides"]["constants"]["mainnet"]["GENESIS_CHALLENGE"]
             == default_config_dict["farmer"]["network_overrides"]["constants"]["mainnet"]["GENESIS_CHALLENGE"]
