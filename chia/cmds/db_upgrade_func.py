@@ -1,4 +1,5 @@
 from typing import Dict, Optional
+import sqlite3
 from pathlib import Path
 import sys
 from time import time
@@ -237,18 +238,21 @@ async def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             hint_values = []
             await out_db.execute("CREATE TABLE hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))")
             await out_db.commit()
-            async with in_db.execute("SELECT coin_id, hint FROM hints") as cursor:
-                count = 0
-                await out_db.execute("begin transaction")
-                async for row in cursor:
-                    hint_values.append((row[0], row[1]))
-                    commit_in -= 1
-                    if commit_in == 0:
-                        commit_in = HINT_COMMIT_RATE
-                        await out_db.executemany("INSERT OR IGNORE INTO hints VALUES(?, ?)", hint_values)
-                        await out_db.commit()
-                        await out_db.execute("begin transaction")
-                        hint_values = []
+            try:
+                async with in_db.execute("SELECT coin_id, hint FROM hints") as cursor:
+                    count = 0
+                    await out_db.execute("begin transaction")
+                    async for row in cursor:
+                        hint_values.append((row[0], row[1]))
+                        commit_in -= 1
+                        if commit_in == 0:
+                            commit_in = HINT_COMMIT_RATE
+                            await out_db.executemany("INSERT OR IGNORE INTO hints VALUES(?, ?)", hint_values)
+                            await out_db.commit()
+                            await out_db.execute("begin transaction")
+                            hint_values = []
+            except sqlite3.OperationalError:
+                print("      no hints table, skipping")
 
             await out_db.executemany("INSERT OR IGNORE INTO hints VALUES (?, ?)", hint_values)
             await out_db.commit()
