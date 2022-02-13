@@ -38,7 +38,8 @@ class DataLayerStore:
                 " confirmed tinyint,"
                 " confirmed_at_height int,"
                 " proof blob,"
-                " generation int)"  # This first singleton will be 0, then 1, and so on.  This is handled by the DB.
+                " generation int"
+                "timestamp int)"  # This first singleton will be 0, then 1, and so on.  This is handled by the DB.
             )
         )
 
@@ -73,6 +74,7 @@ class DataLayerStore:
             uint32(row[5]),
             LineageProof.from_bytes(row[6]),
             uint32(row[7]),
+            uint64(row[8]),
         )
 
     async def add_singleton_record(self, record: SingletonRecord, in_transaction: bool) -> None:
@@ -84,7 +86,7 @@ class DataLayerStore:
             await self.db_wrapper.lock.acquire()
         try:
             cursor = await self.db_connection.execute(
-                "INSERT OR REPLACE INTO singleton_records VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO singleton_records VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)",
                 (
                     record.coin_id,
                     record.launcher_id,
