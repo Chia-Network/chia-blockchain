@@ -11,7 +11,7 @@ from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.peer_info import PeerInfo
 from tests.block_tools import test_constants
 from chia.util.ints import uint16
-from chia.util.network import Url
+from chia.util.network import get_host_addr, Url
 from tests.setup_nodes import (
     bt,
     self_hostname,
@@ -27,7 +27,9 @@ async def establish_connection(server: ChiaServer, dummy_port: int, ssl_context)
     session = aiohttp.ClientSession(timeout=timeout)
     try:
         incoming_queue: asyncio.Queue = asyncio.Queue()
-        url = Url.create(scheme="wss", host=self_hostname, port=server._port, path="/ws")
+        prefer_ipv6 = server.config["prefer_ipv6"]
+        host = get_host_addr(host=self_hostname, prefer_ipv6=prefer_ipv6)
+        url = Url.create(scheme="wss", host=host, port=server._port, path="/ws")
         ws = await session.ws_connect(url=url.for_connections(), autoclose=False, autoping=True, ssl=ssl_context)
         wsc = WSChiaConnection(
             NodeType.FULL_NODE,
