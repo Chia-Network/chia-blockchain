@@ -282,7 +282,7 @@ class RpcServer:
                         await self.connection(ws)
                     self.websocket = None
             except aiohttp.ClientConnectorError:
-                self.log.warning(f"Cannot connect to daemon at {url.for_user()} {self.service_name=}")
+                self.log.warning(f"Cannot connect to daemon at {url.for_user()}")
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.warning(f"Exception: {tb} {type(e)}")
