@@ -77,6 +77,7 @@ def load_config(
             "harvester",
             "introducer",
             "timelord",
+            "timelord_launcher",
             "wallet",
         }:
             final_config.setdefault("prefer_ipv6", all_config.get("prefer_ipv6", True))

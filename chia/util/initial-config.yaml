@@ -246,6 +246,7 @@ timelord_launcher:
   # The server where the VDF clients will connect to.
   host: *self_hostname
   port: 8000
+  prefer_ipv6: *prefer_ipv6
   # Number of VDF client processes to keep alive in the local machine.
   process_count: 3
   logging: *logging
