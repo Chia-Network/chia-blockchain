@@ -23,11 +23,13 @@ def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
     loop = asyncio.get_event_loop()
     yield loop
 
-async def is_singleton_confirmed(dl_wallet:DataLayerWallet,lid: bytes32) -> bool:
+
+async def is_singleton_confirmed(dl_wallet: DataLayerWallet, lid: bytes32) -> bool:
     rec = await dl_wallet.get_latest_singleton(lid)
     if rec is None:
         return False
     return rec.confirmed
+
 
 class TestDLWallet:
     @pytest.fixture(scope="function")
@@ -59,7 +61,6 @@ class TestDLWallet:
         "trusted",
         [True, False],
     )
-
     @pytest.mark.asyncio
     async def test_initial_creation(self, wallet_node: SimulatorsAndWallets, trusted: bool) -> None:
         full_nodes, wallets = wallet_node
@@ -88,7 +89,6 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-
         for i in range(0, 2):
             dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(
                 current_root, fee=uint64(1999999999999)
@@ -100,7 +100,7 @@ class TestDLWallet:
             await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
             await full_node_api.process_transaction_records(records=[dl_record, std_record])
 
-            await time_out_assert(15, is_singleton_confirmed, True,dl_wallet, launcher_id)
+            await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
             await asyncio.sleep(0.5)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, 0)
@@ -222,7 +222,7 @@ class TestDLWallet:
         await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
         await full_node_api.process_transaction_records(records=[dl_record, std_record])
 
-        await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
+        await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
         await asyncio.sleep(0.5)
 
         previous_record = await dl_wallet.get_latest_singleton(launcher_id)
@@ -242,7 +242,7 @@ class TestDLWallet:
             await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
         await full_node_api.process_transaction_records(records=txs)
 
-        await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
+        await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds - 2000000000000)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds - 2000000000000)
         await asyncio.sleep(0.5)
@@ -259,7 +259,7 @@ class TestDLWallet:
                 await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
             await full_node_api.process_transaction_records(records=txs)
 
-            await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
+            await time_out_assert(15, is_singleton_confirmed, True,dl_wallet,  launcher_id)
             await asyncio.sleep(0.5)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds - 6000000000000)
@@ -278,7 +278,7 @@ class TestDLWallet:
             await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
         await full_node_api.process_transaction_records(records=txs)
 
-        await time_out_assert(15, is_singleton_confirmed, True, launcher_id)
+        await time_out_assert(15, is_singleton_confirmed, True,dl_wallet, launcher_id)
         await asyncio.sleep(0.5)
 
     # @pytest.mark.skip(reason="DLO Wallet is not supported yet")
