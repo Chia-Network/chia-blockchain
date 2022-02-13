@@ -11,6 +11,8 @@ from chia.timelord.timelord_api import TimelordAPI
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.network import get_host_addr
+
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -26,8 +28,8 @@ def service_kwargs_for_timelord(
     config: Dict,
     constants: ConsensusConstants,
 ) -> Dict:
-
-    connect_peers = [PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])]
+    full_node_peer_host = get_host_addr(host=config["full_node_peer"]["host"], prefer_ipv6=config["prefer_ipv6"])
+    connect_peers = [PeerInfo(full_node_peer_host, config["full_node_peer"]["port"])]
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = constants.replace_str_to_bytes(**overrides)
 

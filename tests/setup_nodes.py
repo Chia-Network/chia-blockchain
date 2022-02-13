@@ -25,6 +25,7 @@ from tests.util.keyring import TempKeyring
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import bytes_to_mnemonic
+from chia.util.network import get_host_addr
 from tests.time_out_assert import time_out_assert_custom_interval
 
 
@@ -202,10 +203,11 @@ async def setup_harvester(
     port, farmer_port, consensus_constants: ConsensusConstants, b_tools, start_service: bool = True
 ):
     kwargs = service_kwargs_for_harvester(b_tools.root_path, b_tools.config["harvester"], consensus_constants)
+    host = get_host_addr(host=self_hostname, prefer_ipv6=b_tools.config["harvester"]["prefer_ipv6"])
     kwargs.update(
         server_listen_ports=[port],
         advertised_port=port,
-        connect_peers=[PeerInfo(self_hostname, farmer_port)],
+        connect_peers=[PeerInfo(host, farmer_port)],
         parse_cli_args=False,
         connect_to_daemon=False,
     )

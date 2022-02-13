@@ -12,6 +12,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
+from chia.util.network import get_host_addr
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -30,7 +31,8 @@ def service_kwargs_for_farmer(
     connect_peers = []
     fnp = config.get("full_node_peer")
     if fnp is not None:
-        connect_peers.append(PeerInfo(fnp["host"], fnp["port"]))
+        host = get_host_addr(host=fnp["host"], prefer_ipv6=config["prefer_ipv6"])
+        connect_peers.append(PeerInfo(host, fnp["port"]))
 
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
