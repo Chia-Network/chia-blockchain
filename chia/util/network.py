@@ -20,13 +20,7 @@ def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Netw
 
 
 def is_localhost(peer_host: str) -> bool:
-    return (
-        peer_host == "127.0.0.1"
-        or peer_host == "localhost"
-        or peer_host == "::1"
-        or peer_host == "[::1]"
-        or peer_host == "0:0:0:0:0:0:0:1"
-    )
+    return peer_host == "127.0.0.1" or peer_host == "localhost" or peer_host == "::1" or peer_host == "0:0:0:0:0:0:0:1"
 
 
 def class_for_type(type: NodeType) -> Any:
@@ -72,6 +66,15 @@ def get_host_addr(host: Union[PeerInfo, str], prefer_ipv6: Optional[bool]) -> st
         hoststr = host
         if PeerInfo(hoststr, uint16(0)).is_valid(True):
             return hoststr
+
+    if isinstance(hoststr, dict):
+        print(f" ==== {host=} {hoststr=}")
+    if hoststr.strip() == "localhost":
+        if prefer_ipv6:
+            return "::1"
+
+        return "127.0.0.1"
+
     addrset: List[
         Tuple["socket.AddressFamily", "socket.SocketKind", int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
     ] = socket.getaddrinfo(hoststr, None)

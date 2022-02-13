@@ -14,7 +14,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
-from chia.util.network import Url
+from chia.util.network import get_host_addr, Url
 from chia.util.ws_message import create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
@@ -268,7 +268,8 @@ class RpcServer:
                 if self.shut_down:
                     break
                 async with aiohttp.ClientSession() as session:
-                    url = Url.create(scheme="wss", host=self_hostname, port=daemon_port)
+                    host = get_host_addr(host=self_hostname, prefer_ipv6=bool(self.net_config["prefer_ipv6"]))
+                    url = Url.create(scheme="wss", host=host, port=daemon_port)
                     async with session.ws_connect(
                         url.for_connections(),
                         autoclose=True,
@@ -281,7 +282,7 @@ class RpcServer:
                         await self.connection(ws)
                     self.websocket = None
             except aiohttp.ClientConnectorError:
-                self.log.warning(f"Cannot connect to daemon at {url}")
+                self.log.warning(f"Cannot connect to daemon at {url.for_user()} {self.service_name=}")
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.warning(f"Exception: {tb} {type(e)}")
@@ -313,6 +314,7 @@ async def start_rpc_server(
     runner = aiohttp.web.AppRunner(app, access_log=None)
     await runner.setup()
     site = aiohttp.web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
+    # site = aiohttp.web.TCPSite(runner, "::1", int(rpc_port), ssl_context=rpc_server.ssl_context)
     await site.start()
 
     async def cleanup():

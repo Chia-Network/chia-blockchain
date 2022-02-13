@@ -312,9 +312,7 @@ async def connect_to_keychain(
     """
 
     url = Url.create(scheme="wss", host=self_hostname, port=daemon_port)
-    client = KeychainProxy(
-        uri=url.for_connections(), ssl_context=ssl_context, log=log, user=user, service=service
-    )
+    client = KeychainProxy(uri=url.for_connections(), ssl_context=ssl_context, log=log, user=user, service=service)
     # Connect to the service if the proxy isn't using a local keychain
     if not client.use_local_keychain():
         await client.start()
