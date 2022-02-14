@@ -9,11 +9,11 @@ from chia.data_layer.data_store import DataStore
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.path import path_from_root
-from chia.data_layer.data_layer_types import Side
-from typing import Optional
+from chia.data_layer.data_layer_types import Side, TerminalNode
+from typing import Optional, Dict
 
 
-async def generate_datastore(num_nodes):
+async def generate_datastore(num_nodes: int) -> None:
     db_path = path_from_root(DEFAULT_ROOT_PATH, "dl_benchmark")
     if os.path.exists(db_path):
         os.remove(db_path)
@@ -22,16 +22,16 @@ async def generate_datastore(num_nodes):
     db_wrapper = DBWrapper(connection)
     data_store = await DataStore.create(db_wrapper=db_wrapper)
     random = Random()
-    hint_keys_values = {}
+    hint_keys_values: Dict[bytes, bytes] = {}
 
     tree_id = bytes32(b"0" * 32)
     await data_store.create_tree(tree_id)
 
-    insert_time = 0
+    insert_time = 0.0
     insert_count = 0
-    autoinsert_time = 0
+    autoinsert_time = 0.0
     autoinsert_count = 0
-    delete_time = 0
+    delete_time = 0.0
     delete_count = 0
 
     for i in range(num_nodes):
@@ -69,7 +69,9 @@ async def generate_datastore(num_nodes):
             autoinsert_count += 1
         else:
             t1 = time.time()
+            assert reference_node_hash is not None
             node = await data_store.get_node(reference_node_hash)
+            assert isinstance(node, TerminalNode)
             await data_store.delete(key=node.key, tree_id=tree_id, hint_keys_values=hint_keys_values)
             t2 = time.time()
             delete_time += t2 - t1
