@@ -12,6 +12,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
+from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -74,6 +75,9 @@ async def wallets_prefarm(two_wallet_nodes, trusted):
 
     for i in range(0, buffer):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
+
+    await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
+    await time_out_assert(10, wallet_is_synced, True, wallet_node_1, full_node_api)
 
     return wallet_node_0, wallet_node_1, full_node_api
 
@@ -409,6 +413,7 @@ class TestCATTrades:
             cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
                 wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, uint64(100)
             )
+
             tx_queue: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
             await time_out_assert(
                 15, tx_in_pool, True, full_node.full_node.mempool_manager, tx_queue[0].spend_bundle.name()

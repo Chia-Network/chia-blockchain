@@ -24,6 +24,7 @@ class WalletBlockchain(BlockchainInterface):
     _weight_proof_handler: WalletWeightProofHandler
 
     synced_weight_proof: Optional[WeightProof]
+    _finished_sync_up_to: uint32
 
     _peak: Optional[HeaderBlock]
     _height_to_hash: Dict[uint32, bytes32]
@@ -48,6 +49,9 @@ class WalletBlockchain(BlockchainInterface):
         self.CACHE_SIZE = constants.SUB_EPOCH_BLOCKS + 100
         self._weight_proof_handler = weight_proof_handler
         self.synced_weight_proof = await self._basic_store.get_object("SYNCED_WEIGHT_PROOF", WeightProof)
+        self._finished_sync_up_to = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
+        if self._finished_sync_up_to is None:
+            self._finished_sync_up_to = uint32(0)
         self._peak = None
         self._peak = await self.get_peak_block()
         self._latest_timestamp = uint64(0)
@@ -156,6 +160,8 @@ class WalletBlockchain(BlockchainInterface):
         await self._basic_store.remove_object("PEAK_BLOCK")
 
     def get_peak_height(self) -> uint32:
+        # The peak height is the latest height that we know of in the blockchain, it does not mean
+        # that we have downloaded all transactions up to that height.
         if self._peak is None:
             return uint32(0)
         return self._peak.height
@@ -167,12 +173,21 @@ class WalletBlockchain(BlockchainInterface):
             self._latest_timestamp = timestamp
         elif block.foliage_transaction_block is not None:
             self._latest_timestamp = block.foliage_transaction_block.timestamp
-        log.info(f"Peak set to : {self._peak.height} timestamp: {self._latest_timestamp}")
+        log.info(f"Peak set to: {self._peak.height} timestamp: {self._latest_timestamp}")
 
     async def get_peak_block(self) -> Optional[HeaderBlock]:
         if self._peak is not None:
             return self._peak
         return await self._basic_store.get_object("PEAK_BLOCK", HeaderBlock)
+
+    async def set_finished_sync_up_to(self, height: uint32):
+        await self._basic_store.set_object("FINISHED_SYNC_UP_TO", height)
+
+    async def get_finished_sync_up_to(self):
+        h: Optional[uint32] = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
+        if h is None:
+            return uint32(0)
+        return h
 
     def get_latest_timestamp(self) -> uint64:
         return self._latest_timestamp
