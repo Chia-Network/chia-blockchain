@@ -10,6 +10,7 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.path import path_from_root
 from chia.data_layer.data_layer_types import Side
+from typing import Optional
 
 
 async def generate_datastore(num_nodes):
