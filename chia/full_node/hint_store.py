@@ -38,7 +38,7 @@ class HintStore:
     async def add_hints(self, coin_hint_list: List[Tuple[bytes32, bytes]]) -> None:
         if self.db_wrapper.db_version == 2:
             cursor = await self.db_wrapper.db.executemany(
-                "INSERT INTO hints VALUES(?, ?) ON CONFLICT DO NOTHING",
+                "INSERT OR IGNORE INTO hints VALUES(?, ?)",
                 coin_hint_list,
             )
         else:

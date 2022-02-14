@@ -46,6 +46,7 @@ from clvm_rs import COND_CANON_INTS, NO_NEG_DIV
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.full_node.generator import create_generator_args
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.coin import Coin
 from chia.types.condition_opcodes import ConditionOpcode
@@ -101,15 +102,15 @@ def run_generator(
     else:
         flags = 0
 
-    _, result = block_generator.program.run_with_cost(max_cost, flags, block_generator.generator_refs)
+    args = create_generator_args(block_generator.generator_refs).first()
+    _, block_result = block_generator.program.run_with_cost(max_cost, flags, args)
 
-    coin_spends = result.first()
+    coin_spends = block_result.first()
 
     cat_list: List[CAT] = []
     for spend in coin_spends.as_iter():
 
         parent, puzzle, amount, solution = spend.as_iter()
-
         matched, curried_args = match_cat_puzzle(puzzle)
 
         if not matched:
@@ -118,11 +119,11 @@ def run_generator(
         _, asset_id, _ = curried_args
         memo = ""
 
-        result = puzzle.run(solution)
+        puzzle_result = puzzle.run(solution)
 
         conds: Dict[ConditionOpcode, List[ConditionWithArgs]] = {}
 
-        for condition in result.as_python():
+        for condition in puzzle_result.as_python():
             op = ConditionOpcode(condition[0])
 
             if op not in conds:
