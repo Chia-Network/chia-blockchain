@@ -270,3 +270,11 @@ def get_block_challenge(
                 curr = all_blocks.get(curr.prev_header_hash, None)
             challenge = reversed_challenge_hashes[challenges_to_look_for - 1]
     return challenge
+
+
+def cs_sort(cs: CoinState) -> int:
+    if cs.spent_height is not None:
+        return cs.spent_height
+    if cs.created_height is not None:
+        return cs.created_height
+    return 0
