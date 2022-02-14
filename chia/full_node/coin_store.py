@@ -1,5 +1,6 @@
 from typing import List, Optional, Set, Dict, Any, Tuple
 import aiosqlite
+import pkg_resources
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -33,19 +34,12 @@ class CoinStore:
         self.db_wrapper = db_wrapper
         self.coin_record_db = db_wrapper.db
 
-        if self.db_wrapper.db_version == 2:
-
-            with open(os.path.join(os.path.dirname(__file__), "sql/coin_store_tables_v2.sql"), "r") as table_sql_file:
-                table_sql_script = table_sql_file.read()
-            with open(os.path.join(os.path.dirname(__file__), "sql/coin_store_indexes_v2.sql"), "r") as index_sql_file:
-                index_sql_script = index_sql_file.read()
-
-        else:
-
-            with open(os.path.join(os.path.dirname(__file__), "sql/coin_store_tables_v1.sql"), "r") as table_sql_file:
-                table_sql_script = table_sql_file.read()
-            with open(os.path.join(os.path.dirname(__file__), "sql/coin_store_indexes_v1.sql"), "r") as index_sql_file:
-                index_sql_script = index_sql_file.read()
+        table_sql_script = pkg_resources.resource_string(
+            "chia.full_node.sql", f"coin_store_tables_v{self.db_wrapper.db_version}.sql"
+        ).decode("utf-8")
+        index_sql_script = pkg_resources.resource_string(
+            "chia.full_node.sql", f"coin_store_indexes_v{self.db_wrapper.db_version}.sql"
+        ).decode("utf-8")
 
         await self.coin_record_db.executescript(table_sql_script)
         await self.coin_record_db.executescript(index_sql_script)
