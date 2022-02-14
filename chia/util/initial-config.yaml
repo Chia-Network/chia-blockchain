@@ -136,8 +136,10 @@ seeder:
   port: 8444
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
   other_peers_port: 8444
-  # Path to crawler DB. If empty, will use $CHIA_ROOT/crawler.db
-  crawler_db_path: ""
+  # This will override the default full_node.peer_connect_timeout for the crawler full node
+  peer_connect_timeout: 2
+  # Path to crawler DB. Defaults to $CHIA_ROOT/crawler.db
+  crawler_db_path: "crawler.db"
   # Peers used for the initial run.
   bootstrap_peers:
     - "node.chia.net"
@@ -158,6 +160,13 @@ seeder:
   network_overrides: *network_overrides
   selected_network: *selected_network
   logging: *logging
+  # Crawler is its own standalone service within the seeder component
+  crawler:
+    start_rpc_server: True
+    rpc_port: 8561
+    ssl:
+      private_crt: "config/ssl/crawler/private_crawler.crt"
+      private_key: "config/ssl/crawler/private_crawler.key"
 
 harvester:
   # The harvester server (if run) will run on this port
