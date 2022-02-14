@@ -1,7 +1,7 @@
 import asyncio
 import logging
-from typing import Dict, List, Optional, Set, Tuple
-from collections import OrderedDict
+from typing import Dict, List, Optional, Set, Tuple, OrderedDict
+from collections import OrderedDict as orderedDict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint128
@@ -30,7 +30,7 @@ class SyncStore:
         self.sync_target_header_hash = None
         self.sync_target_height = None
         self.peak_fork_point = {}
-        self.peak_to_peer = OrderedDict()
+        self.peak_to_peer = orderedDict()
         self.peer_to_peak = {}
         self.peers_changed = asyncio.Event()
 
