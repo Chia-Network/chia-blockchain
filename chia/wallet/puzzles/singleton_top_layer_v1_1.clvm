@@ -11,14 +11,14 @@
 ; It takes its singleton identity from a coin with a launcher puzzle which guarantees that it is unique.
 
   (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)
+  (include curry-and-treehash.clinc)  ; also imports the constant ONE == 1
   (include singleton_truths.clib)
 
   ; takes a lisp tree and returns the hash of it
   (defun sha256tree1 (TREE)
       (if (l TREE)
           (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
-          (sha256 1 TREE)
+          (sha256 ONE TREE)
       )
   )
 
@@ -80,7 +80,7 @@
   ;; Returns a (bool . bool)
   (defun odd_cons_m113 (output_amount)
     (c
-      (= (logand output_amount 1) 1) ;; is it odd?
+      (= (logand output_amount ONE) ONE) ;; is it odd?
       (= output_amount -113) ;; is it the escape value?
     )
   )
@@ -166,7 +166,7 @@
 
   ; if our value is not an odd amount then we are invalid
   ; this calculates my_innerpuzhash and passes all values to stager_one
-  (if (logand my_amount 1)
+  (if (logand my_amount ONE)
     (stager_one SINGLETON_STRUCT lineage_proof (sha256tree1 INNER_PUZZLE) my_amount INNER_PUZZLE inner_solution)
     (x)
   )
