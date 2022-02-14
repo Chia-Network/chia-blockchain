@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, Callable, Coroutine, Dict, List
+from typing import Any, Callable, Coroutine, Dict, List, Optional
 
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.exceptions import (
@@ -108,54 +108,27 @@ class Receiver:
     async def _process(
         self, method: Callable[[_T_Streamable], Any], message_type: ProtocolMessageTypes, message: Any
     ) -> None:
+        async def send_response(plot_sync_error: Optional[PlotSyncError] = None):
+            if self._connection is not None:
+                await self._connection.send_message(
+                    make_msg(
+                        ProtocolMessageTypes.plot_sync_response,
+                        PlotSyncResponse(message.identifier, int16(message_type.value), plot_sync_error),
+                    )
+                )
+
         try:
             await method(message)
-            if self._connection is not None:
-                await self._connection.send_message(
-                    make_msg(
-                        ProtocolMessageTypes.plot_sync_response,
-                        PlotSyncResponse(message.identifier, int16(message_type.value), None),
-                    )
-                )
+            await send_response()
         except InvalidIdentifierError as e:
             log.warning(f"_process: InvalidIdentifierError {e}")
-            if self._connection is not None:
-                await self._connection.send_message(
-                    make_msg(
-                        ProtocolMessageTypes.plot_sync_response,
-                        PlotSyncResponse(
-                            message.identifier,
-                            int16(message_type.value),
-                            PlotSyncError(int16(e.error_code), f"{e}", e.expected_identifier),
-                        ),
-                    )
-                )
+            await send_response(PlotSyncError(int16(e.error_code), f"{e}", e.expected_identifier))
         except PlotSyncException as e:
             log.warning(f"_process: Error {e}")
-            if self._connection is not None:
-                await self._connection.send_message(
-                    make_msg(
-                        ProtocolMessageTypes.plot_sync_response,
-                        PlotSyncResponse(
-                            message.identifier,
-                            int16(message_type.value),
-                            PlotSyncError(int16(e.error_code), f"{e}", None),
-                        ),
-                    )
-                )
+            await send_response(PlotSyncError(int16(e.error_code), f"{e}", None))
         except Exception as e:
             log.warning(f"_process: Exception {e}")
-            if self._connection is not None:
-                await self._connection.send_message(
-                    make_msg(
-                        ProtocolMessageTypes.plot_sync_response,
-                        PlotSyncResponse(
-                            message.identifier,
-                            int16(message_type.value),
-                            PlotSyncError(int16(ErrorCodes.unknown), f"{e}", None),
-                        ),
-                    )
-                )
+            await send_response(PlotSyncError(int16(ErrorCodes.unknown), f"{e}", None))
 
     def _validate_identifier(self, identifier: PlotSyncIdentifier, start: bool = False) -> None:
         sync_id_match = identifier.sync_id == self._expected_sync_id
