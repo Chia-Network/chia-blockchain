@@ -128,7 +128,7 @@ class SyncStore:
         """
         Clears the peak_to_peer info which can get quite large.
         """
-        self.peak_to_peer = OrderedDict()
+        self.peak_to_peer = orderedDict()
 
     def peer_disconnected(self, node_id: bytes32):
         if node_id in self.peer_to_peak:
