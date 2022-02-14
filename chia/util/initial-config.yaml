@@ -473,7 +473,6 @@ wallet:
   start_height_buffer: 100  # Wallet will stop fly sync at starting_height - buffer
   num_sync_batches: 50
   initial_num_public_keys: 100
-  initial_num_public_keys_new_wallet: 5
 
   dns_servers:
     - "dns-introducer.chia.net"
