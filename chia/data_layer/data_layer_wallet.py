@@ -737,9 +737,9 @@ class DataLayerWallet:
                     self.id(),
                 )
             )
-            await self.check_for_rebase(singleton_record.launcher_id)
+            await self.potentially_handle_resubmit(singleton_record.launcher_id)
 
-    async def check_for_rebase(self, launcher_id: bytes32) -> None:
+    async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:
         """
         This method is meant to detect a fork in our expected pending singletons and the singletons that have actually
         been confirmed on chain.  If there is a fork and the root on chain never changed, we will attempt to rebase our
@@ -761,7 +761,7 @@ class DataLayerWallet:
         parent_singleton = await self.wallet_state_manager.dl_store.get_singleton_record(
             unconfirmed_singletons[0].lineage_proof.parent_name
         )
-        if parent_singleton is None or {parent_singleton.root} != {s.root for s in full_branch if s.confirmed}:
+        if parent_singleton is None or any(parent_singleton.root != s.root for s in full_branch if s.confirmed):
             root_changed: bool = True
         else:
             root_changed = False
@@ -781,7 +781,7 @@ class DataLayerWallet:
             TransactionRecord
         ] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.standard_wallet.id())
         relevant_std_txs: List[TransactionRecord] = [
-            tx for tx in unconfirmed_std_txs if all_removal_ids & set([c.name() for c in tx.removals])
+            tx for tx in unconfirmed_std_txs if any(c.name() in all_removal_ids for c in tx.removals)
         ]
         # Delete all of the relevant transactions
         for tx in [*relevant_dl_txs, *relevant_std_txs]:
@@ -792,23 +792,24 @@ class DataLayerWallet:
 
         if not root_changed:
             # The root never changed so let's attempt a rebase
-            all_txs: List[TransactionRecord] = []
             try:
+                all_txs: List[TransactionRecord] = []
                 for singleton in unconfirmed_singletons:
                     for tx in relevant_dl_txs:
-                        if {singleton.coin_id} & set([c.name() for c in tx.additions]):
+                        if any(c.name() == singleton.coin_id for c in tx.additions):
                             if tx.spend_bundle is not None:
                                 fee = uint64(tx.spend_bundle.fees())
                             else:
                                 fee = uint64(0)
 
                             all_txs.extend(await self.create_update_state_spend(launcher_id, singleton.root, fee))
-            except Exception:
+                for tx in all_txs:
+                    await self.wallet_state_manager.add_pending_transaction(tx)
+            except Exception as e:
+                self.log.warning(f"Something went wrong during attempted DL resubmit: {str(e)}")
                 # Something went wrong so let's delete anything pending that was created
                 for singleton in unconfirmed_singletons:
                     await self.wallet_state_manager.dl_store.delete_singleton_record(singleton.coin_id)
-            for tx in all_txs:
-                await self.wallet_state_manager.add_pending_transaction(tx)
 
     async def stop_tracking_singleton(self, launcher_id: bytes32) -> None:
         await self.wallet_state_manager.dl_store.delete_singleton_records_by_launcher_id(launcher_id)

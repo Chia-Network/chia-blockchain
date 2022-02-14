@@ -179,10 +179,7 @@ class DataLayerStore:
         )
         rows = await cursor.fetchall()
         await cursor.close()
-        records = []
-
-        for row in rows:
-            records.append(self._row_to_singleton_record(row))
+        records = [self._row_to_singleton_record(row) for row in rows]
 
         return records
 
