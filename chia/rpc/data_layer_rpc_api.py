@@ -176,7 +176,7 @@ class DataLayerRpcApi:
             roots.append({"id": id_bytes, "hash": hash, "status": status})
         return {"root_hashes": roots}
 
-    async def subscribe(self, request: Dict[str, Any]) -> bool:
+    async def subscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         subscribe to singleton
         """
@@ -195,10 +195,11 @@ class DataLayerRpcApi:
             mode = DownloadMode(req_mode)
         if self.service is None:
             raise Exception("Data layer not created")
-        await self.service.subscribe(store_id=store_id, mode=mode, ip=ip, port=port)
-        return True
+        store_id_bytes = bytes32.from_hexstr(store_id)
+        await self.service.subscribe(store_id=store_id_bytes, mode=mode, ip=ip, port=port)
+        return {}
 
-    async def unsubscribe(self, request: Dict[str, Any]) -> bool:
+    async def unsubscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         unsubscribe from singleton
         """
@@ -207,8 +208,9 @@ class DataLayerRpcApi:
             raise Exception("missing store id in request")
         if self.service is None:
             raise Exception("Data layer not created")
-        await self.service.unsubscribe(store_id)
-        return True
+        store_id_bytes = bytes32.from_hexstr(store_id)
+        await self.service.unsubscribe(store_id_bytes)
+        return {}
 
     async def get_root_history(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
