@@ -23,7 +23,7 @@ from chia.cmds.init_funcs import chia_init
 
 class ExitOnError(logging.Handler):
     def __init__(self):
-        logging.Handler.__init__(self)
+        super().__init__()
         self.exit_with_failure = False
 
     def emit(self, record):
