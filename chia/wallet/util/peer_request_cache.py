@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Any, Optional, List
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.sized_bytes import bytes32

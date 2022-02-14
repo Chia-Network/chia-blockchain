@@ -1,24 +1,23 @@
 #!/usr/bin/env python3
 
 import asyncio
-import aiosqlite
-import zstd
-import click
-import logging
 import cProfile
+import logging
+import tempfile
+import time
+from contextlib import contextmanager
+from pathlib import Path
 from typing import Iterator
 
-from pathlib import Path
-import time
-import tempfile
-from contextlib import contextmanager
-
-from chia.types.full_block import FullBlock
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.util.config import load_config
-from chia.full_node.full_node import FullNode
+import aiosqlite
+import click
+import zstd
 
 from chia.cmds.init_funcs import chia_init
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.full_node.full_node import FullNode
+from chia.types.full_block import FullBlock
+from chia.util.config import load_config
 
 
 class ExitOnError(logging.Handler):
@@ -128,8 +127,8 @@ def run(file: Path, db_version: int, profile: bool) -> None:
 
 @main.command("analyze", short_help="generate call stacks for all profiles dumped to current directory")
 def analyze() -> None:
-    from shlex import quote
     from glob import glob
+    from shlex import quote
     from subprocess import check_call
 
     for input_file in glob("slow-batch-*.profile"):

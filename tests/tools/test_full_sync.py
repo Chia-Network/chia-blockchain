@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 import asyncio
-from tools.test_full_sync import run_sync_test
 import os
 from pathlib import Path
+
+from tools.test_full_sync import run_sync_test
 
 
 def test_full_sync_test():
