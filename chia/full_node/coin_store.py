@@ -9,7 +9,6 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
 from time import time
-import os
 import logging
 
 log = logging.getLogger(__name__)

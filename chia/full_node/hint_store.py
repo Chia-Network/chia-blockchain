@@ -2,7 +2,6 @@ from typing import List, Tuple
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
 import logging
-import os
 
 import pkg_resources
 

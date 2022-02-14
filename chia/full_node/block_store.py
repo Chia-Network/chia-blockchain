@@ -2,7 +2,6 @@ import logging
 from typing import Dict, List, Optional, Tuple, Any
 
 import aiosqlite
-import os
 import pkg_resources
 import zstd
 
