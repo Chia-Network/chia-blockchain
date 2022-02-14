@@ -197,10 +197,11 @@ class NFTWallet:
                         await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
 
     async def add_coin(self, coin: Coin, lineage_proof: LineageProof, transfer_program: Program, puzzle: Program):
-        for coin_info in self.nft_wallet_info.my_nft_coins:
-            if coin_info.coin == coin:
-                return
         my_nft_coins = self.nft_wallet_info.my_nft_coins
+        for coin_info in my_nft_coins:
+            if coin_info.coin == coin:
+                my_nft_coins.remove(coin_info)
+
         my_nft_coins.append(NFTCoinInfo(coin, lineage_proof, transfer_program, puzzle))
         new_nft_wallet_info = NFTWalletInfo(self.nft_wallet_info.my_did, self.nft_wallet_info.did_wallet_id, my_nft_coins, self.nft_wallet_info.known_transfer_programs)
         await self.save_info(new_nft_wallet_info, False)
