@@ -2,6 +2,7 @@ import asyncio
 from typing import List
 
 import pytest
+import pytest_asyncio
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.mempool_manager import MempoolManager
@@ -34,17 +35,17 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
 
 
 class TestCATWallet:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def three_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 3, {}):
             yield _

@@ -1,5 +1,6 @@
 import asyncio
 import pytest
+import pytest_asyncio
 import time
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols.full_node_protocol import RespondBlock
@@ -27,27 +28,27 @@ def event_loop():
 
 
 class TestWalletSimulator:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}, True):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node_100_pk(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}, initial_num_public_keys=100):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}, True):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes_five_freeze(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}, True):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def three_sim_two_wallets(self):
         async for _ in setup_simulators_and_wallets(3, 2, {}, True):
             yield _
