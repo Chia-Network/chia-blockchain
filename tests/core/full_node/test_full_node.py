@@ -8,6 +8,7 @@ from secrets import token_bytes
 from typing import Dict, Optional, List
 from blspy import G2Element
 
+from clvm.casts import int_to_bytes
 import pytest
 
 from chia.consensus.blockchain import ReceiveBlockResult
@@ -34,7 +35,6 @@ from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from tests.block_tools import get_signage_point
-from chia.util.clvm import int_to_bytes
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
