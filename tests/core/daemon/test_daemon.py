@@ -15,10 +15,11 @@ import json
 
 import aiohttp
 import pytest
+import pytest_asyncio
 
 
 class TestDaemon:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def get_daemon(self, get_b_tools):
         async for _ in setup_daemon(btools=get_b_tools):
             yield _
@@ -27,23 +28,23 @@ class TestDaemon:
     # fixture, to test all versions of the database schema. This doesn't work
     # because of a hack in shutting down the full node, which means you cannot run
     # more than one simulations per process.
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def simulation(self, get_b_tools, get_b_tools_1):
         async for _ in setup_full_system(
             test_constants_modified, b_tools=get_b_tools, b_tools_1=get_b_tools_1, connect_to_daemon=True, db_version=1
         ):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def get_temp_keyring(self):
         with TempKeyring() as keychain:
             yield keychain
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def get_b_tools_1(self, get_temp_keyring):
         return await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def get_b_tools(self, get_temp_keyring):
         local_b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
         new_config = local_b_tools._config
@@ -51,7 +52,7 @@ class TestDaemon:
         local_b_tools.change_config(new_config)
         return local_b_tools
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def get_daemon_with_temp_keyring(self, get_b_tools):
         async for _ in setup_daemon(btools=get_b_tools):
             yield get_b_tools

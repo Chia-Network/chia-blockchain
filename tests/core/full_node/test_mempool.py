@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple, Callable
 
 from clvm.casts import int_to_bytes
 import pytest
+import pytest_asyncio
 
 import chia.server.ws_connection as ws
 
@@ -86,7 +87,7 @@ def event_loop():
 # The reason for this is that our simulators can't be destroyed correctly, which
 # means you can't instantiate more than one per process, so this is a hack until
 # that is fixed. For now, our tests are not independent
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module")
 async def two_nodes():
     async_gen = setup_simulators_and_wallets(2, 1, {})
     nodes, _ = await async_gen.__anext__()
