@@ -766,9 +766,11 @@ class DataLayerWallet:
     # UTILITY #
     ###########
 
-    async def get_latest_singleton(self, launcher_id: bytes32) -> Optional[SingletonRecord]:
+    async def get_latest_singleton(
+        self, launcher_id: bytes32, only_confirmed: bool = False
+    ) -> Optional[SingletonRecord]:
         singleton: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_latest_singleton(
-            launcher_id
+            launcher_id, only_confirmed
         )
         return singleton
 

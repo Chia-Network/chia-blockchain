@@ -1,6 +1,5 @@
 import dataclasses
-from typing import Any, Callable, Dict
-
+from typing import Any, Callable, Dict, List
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_types import Side, DownloadMode
@@ -159,8 +158,8 @@ class DataLayerRpcApi:
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        res = await self.service.get_root(store_id)
-        return {"hash": res}
+        hash, status = await self.service.get_root(store_id)
+        return {"hash": hash, "status": status}
 
     async def get_roots(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -173,8 +172,8 @@ class DataLayerRpcApi:
         roots = []
         for id in store_ids:
             id_bytes = bytes32.from_hexstr(id)
-            res = await self.service.get_root(store_id=id_bytes)
-            roots.append({"id": id_bytes, "hash": res})
+            hash, status = await self.service.get_root(id_bytes)
+            roots.append({"id": id_bytes, "hash": hash, "status": status})
         return {"root_hashes": roots}
 
     async def subscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -212,3 +211,17 @@ class DataLayerRpcApi:
         store_id_bytes = bytes32.from_hexstr(store_id)
         await self.service.unsubscribe(store_id_bytes)
         return {}
+
+    async def get_root_history(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        get history of state hashes for a store
+        """
+        if self.service is None:
+            raise Exception("Data layer not created")
+        store_id = request["id"]
+        id_bytes = bytes32.from_hexstr(store_id)
+        records = await self.service.get_root_history(id_bytes)
+        res: List[Dict[str, Any]] = []
+        for rec in records:
+            res.insert(0, {"root_hash": rec.root, "status": rec.confirmed})  # add timestamp from block
+        return {"root_history": res}
