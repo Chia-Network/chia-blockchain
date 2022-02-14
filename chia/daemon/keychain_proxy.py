@@ -19,6 +19,7 @@ from chia.util.keychain import (
     mnemonic_to_seed,
     supports_keyring_passphrase,
 )
+from chia.util.network import Url
 from chia.util.ws_message import WsRpcMessage
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -310,9 +311,8 @@ async def connect_to_keychain(
     Connect to the local daemon.
     """
 
-    client = KeychainProxy(
-        uri=f"wss://{self_hostname}:{daemon_port}", ssl_context=ssl_context, log=log, user=user, service=service
-    )
+    url = Url.create(scheme="wss", host=self_hostname, port=daemon_port)
+    client = KeychainProxy(uri=url.for_connections(), ssl_context=ssl_context, log=log, user=user, service=service)
     # Connect to the service if the proxy isn't using a local keychain
     if not client.use_local_keychain():
         await client.start()

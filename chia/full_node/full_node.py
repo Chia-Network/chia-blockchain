@@ -66,6 +66,7 @@ from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.network import get_host_addr
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
@@ -304,6 +305,16 @@ class FullNode:
             # If `dns_servers` misses from the `config`, hardcode it if we're running mainnet.
             dns_servers.append("dns-introducer.chia.net")
         try:
+            if self.config["introducer_peer"] is None:
+                introducer_peer = None
+            else:
+                introducer_peer = {
+                    "host": get_host_addr(
+                        host=self.config["introducer_peer"]["host"],
+                        prefer_ipv6=self.config["prefer_ipv6"],
+                    ),
+                    "port": self.config["introducer_peer"]["port"],
+                }
             self.full_node_peers = FullNodePeers(
                 self.server,
                 self.config["target_peer_count"] - self.config["target_outbound_peer_count"],
@@ -316,7 +327,7 @@ class FullNode:
                     legacy_peer_db_path_key=PEER_DB_PATH_KEY_DEPRECATED,
                     default_peers_file_path="db/peers.dat",
                 ),
-                self.config["introducer_peer"],
+                introducer_peer,
                 dns_servers,
                 self.config["peer_connect_interval"],
                 self.config["selected_network"],

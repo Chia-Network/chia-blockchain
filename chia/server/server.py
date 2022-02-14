@@ -30,7 +30,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
-from chia.util.network import is_in_network, is_localhost
+from chia.util.network import get_host_addr, is_in_network, is_localhost, Url
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 
@@ -100,6 +100,7 @@ def ssl_context_for_client(
 class ChiaServer:
     def __init__(
         self,
+        host: str,
         port: int,
         node: Any,
         api: Any,
@@ -129,6 +130,7 @@ class ChiaServer:
             NodeType.INTRODUCER: {},
         }
 
+        self._host = host
         self._port = port  # TCP port to identify our node
         self._local_type: NodeType = local_type
 
@@ -261,6 +263,8 @@ class ChiaServer:
 
         self.site = web.TCPSite(
             self.runner,
+            host=self._host,
+            # host="::1",
             port=self._port,
             shutdown_timeout=3,
             ssl_context=ssl_context,
@@ -414,21 +418,29 @@ class ChiaServer:
 
             try:
                 if type(ip_address(target_node.host)) is IPv6Address:
-                    target_node = PeerInfo(f"[{target_node.host}]", target_node.port)
+                    target_node = PeerInfo(f"{target_node.host}", target_node.port)
             except ValueError:
                 pass
 
-            url = f"wss://{target_node.host}:{target_node.port}/ws"
-            self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
+            host = get_host_addr(host=target_node.host, prefer_ipv6=bool(self.config["prefer_ipv6"]))
+            url = Url.create(scheme="wss", host=host, port=target_node.port, path="ws")
+            self.log.debug(f"Connecting: {url.for_user()}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(
-                    url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
+                    url.for_connections(),
+                    autoclose=True,
+                    autoping=True,
+                    heartbeat=60,
+                    ssl=ssl_context,
+                    max_msg_size=50 * 1024 * 1024,
                 )
             except ServerDisconnectedError:
-                self.log.debug(f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")
+                self.log.debug(
+                    f"Server disconnected error connecting to {url.for_user()}. Perhaps we are banned by the peer.",
+                )
                 return False
             except asyncio.TimeoutError:
-                self.log.debug(f"Timeout error connecting to {url}")
+                self.log.debug(f"Timeout error connecting to {url.for_user()}")
                 return False
             if ws is None:
                 return False

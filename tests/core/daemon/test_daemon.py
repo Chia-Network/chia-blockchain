@@ -3,12 +3,14 @@ from chia.types.peer_info import PeerInfo
 from tests.block_tools import BlockTools, create_block_tools_async
 from chia.util.ints import uint16
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+from chia.util.network import get_host_addr
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import setup_daemon, self_hostname, setup_full_system
 from tests.simulation.test_simulation import test_constants_modified
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.keyring import TempKeyring
+from chia.util.network import Url
 
 import asyncio
 import json
@@ -59,7 +61,8 @@ class TestDaemon:
     @pytest.mark.asyncio
     async def test_daemon_simulation(self, simulation, get_daemon, get_b_tools):
         node1, node2, _, _, _, _, _, _, _, _, server1 = simulation
-        await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
+        host = get_host_addr(host=self_hostname, prefer_ipv6=get_b_tools.config["prefer_ipv6"])
+        await server1.start_client(PeerInfo(host, uint16(21238)))
 
         async def num_connections():
             count = len(node2.server.connection_by_type[NodeType.FULL_NODE].items())
@@ -71,8 +74,12 @@ class TestDaemon:
         session = aiohttp.ClientSession()
         ssl_context = get_b_tools.get_daemon_ssl_context()
 
+        raw_host = get_b_tools._config["self_hostname"]
+        prefer_ipv6 = get_b_tools._config["prefer_ipv6"]
+        host = get_host_addr(host=raw_host, prefer_ipv6=prefer_ipv6)
+        url = Url.create(scheme="wss", host=host, port=55401)
         ws = await session.ws_connect(
-            "wss://127.0.0.1:55401",
+            url=url.for_connections(),
             autoclose=True,
             autoping=True,
             heartbeat=60,
@@ -174,8 +181,9 @@ class TestDaemon:
             assert message["data"]["success"] is False
 
         async with aiohttp.ClientSession() as session:
+            url = Url.create(scheme="wss", host="::1", port=55401)
             async with session.ws_connect(
-                "wss://127.0.0.1:55401",
+                url=url.for_connections(),
                 autoclose=True,
                 autoping=True,
                 heartbeat=60,

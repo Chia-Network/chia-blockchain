@@ -33,6 +33,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from chia.util.network import get_host_addr
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -119,9 +120,10 @@ class Timelord:
 
     async def _start(self):
         self.lock: asyncio.Lock = asyncio.Lock()
+        host = get_host_addr(host=self.config["vdf_server"]["host"], prefer_ipv6=self.config["prefer_ipv6"])
         self.vdf_server = await asyncio.start_server(
             self._handle_client,
-            self.config["vdf_server"]["host"],
+            host,
             self.config["vdf_server"]["port"],
         )
         self.last_state: LastState = LastState(self.constants)

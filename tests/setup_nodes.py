@@ -25,6 +25,7 @@ from tests.util.keyring import TempKeyring
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import bytes_to_mnemonic
+from chia.util.network import get_host_addr
 from tests.time_out_assert import time_out_assert_custom_interval
 
 
@@ -202,10 +203,11 @@ async def setup_harvester(
     port, farmer_port, consensus_constants: ConsensusConstants, b_tools, start_service: bool = True
 ):
     kwargs = service_kwargs_for_harvester(b_tools.root_path, b_tools.config["harvester"], consensus_constants)
+    host = get_host_addr(host=self_hostname, prefer_ipv6=b_tools.config["harvester"]["prefer_ipv6"])
     kwargs.update(
         server_listen_ports=[port],
         advertised_port=port,
-        connect_peers=[PeerInfo(self_hostname, farmer_port)],
+        connect_peers=[PeerInfo(host, farmer_port)],
         parse_cli_args=False,
         connect_to_daemon=False,
     )
@@ -283,7 +285,10 @@ async def setup_introducer(port):
 
 
 async def setup_vdf_client(port):
-    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, bt.config.get("prefer_ipv6")))
+    # TODO: if we're passing through prefer_ipv6 it seems this shouldn't be needed
+    #       but...  if the subprocess doesn't localhost->::1 then...  maybe.
+    host = get_host_addr(host=self_hostname, prefer_ipv6=bt.config["prefer_ipv6"])
+    vdf_task_1 = asyncio.create_task(spawn_process(host, port, 1, bt.config.get("prefer_ipv6")))
 
     def stop():
         asyncio.create_task(kill_processes())

@@ -64,10 +64,25 @@ def load_config(
         print("** please run `chia init` to migrate or create new config files **")
         # TODO: fix this hack
         sys.exit(-1)
-    r = yaml.safe_load(open(path, "r"))
-    if sub_config is not None:
-        r = r.get(sub_config)
-    return r
+    all_config = yaml.safe_load(open(path, "r"))
+    if sub_config is None:
+        final_config = all_config
+    else:
+        final_config = all_config.get(sub_config)
+        # TODO: don't do this...  probably just overlay the loaded config over the
+        #       the default config instead to handle this in general.
+        if isinstance(final_config, dict) and sub_config in {
+            "farmer",
+            "full_node",
+            "harvester",
+            "introducer",
+            "timelord",
+            "timelord_launcher",
+            "wallet",
+        }:
+            final_config.setdefault("prefer_ipv6", all_config.get("prefer_ipv6", True))
+
+    return final_config
 
 
 def load_config_cli(root_path: Path, filename: str, sub_config: Optional[str] = None) -> Dict:
