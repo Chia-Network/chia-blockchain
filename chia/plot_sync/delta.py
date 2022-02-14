@@ -1,13 +1,13 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Dict, List, Union
 
 from chia.protocols.harvester_protocol import Plot
 
 
 @dataclass
 class DeltaType:
-    additions: Any
-    removals: Any
+    additions: Union[Dict[str, Plot], List[str]]
+    removals: List[str]
 
     def __str__(self) -> str:
         return f"+{len(self.additions)}/-{len(self.removals)}"

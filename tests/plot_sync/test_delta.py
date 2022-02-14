@@ -80,8 +80,10 @@ def test_delta() -> None:
     for d in [delta.valid, delta.invalid, delta.keys_missing]:
         if type(d) == PlotListDelta:
             d.additions["0"] = dummy_plot("0")
-        else:
+        elif type(d) == PathListDelta:
             d.additions.append("0")
+        else:
+            assert False, "Invalid delta type"
         assert not delta.empty()
         d.clear()
         assert delta.empty()
