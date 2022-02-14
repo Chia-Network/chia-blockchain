@@ -182,3 +182,41 @@ class TestNFTRPC:
 
         assert val["success"]
         assert len(val["nfts"]) == 1
+        nft_coin_info = val["nfts"][0]
+
+        val = await api_1.did_get_current_coin_info({"wallet_id": did_wallet_id_0})
+        assert val["success"]
+
+        trade_price = 50
+
+        val = await api_0.nft_transfer_nft({
+            "wallet_id": nft_wallet_id_0,
+            "nft_coin_info": nft_coin_info,
+            "new_did": did_1,
+            "new_did_parent": val["did_parent"],
+            "new_did_inner_hash": val["did_innerpuz"],
+            "new_did_amount": val["did_amount"],
+            "trade_price": trade_price
+        })
+
+        assert val["success"]
+        assert val["spend_bundle"] is not None
+
+        val = await api_1.nft_receive_nft({
+            "wallet_id": nft_wallet_id_1,
+            "spend_bundle": val["spend_bundle"]
+        })
+
+        assert val["success"]
+
+        await asyncio.sleep(5)
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+        await asyncio.sleep(5)
+
+        val = await api_1.nft_get_current_nfts({"wallet_id": nft_wallet_id_1})
+
+        assert val["success"]
+        assert len(val["nfts"]) == 1

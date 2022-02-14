@@ -109,6 +109,7 @@ class WalletRpcApi:
             "/did_get_recovery_list": self.did_get_recovery_list,
             "/did_create_attest": self.did_create_attest,
             "/did_get_information_needed_for_recovery": self.did_get_information_needed_for_recovery,
+            "/did_get_current_coin_info": self.did_get_current_coin_info,
             "/did_create_backup_file": self.did_create_backup_file,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
@@ -1130,6 +1131,22 @@ class WalletRpcApi:
             "backup_dids": did_wallet.did_info.backup_ids,
         }
 
+    async def did_get_current_coin_info(self, request):
+        wallet_id = int(request["wallet_id"])
+        did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        my_did = did_wallet.get_my_DID()
+        did_coin_threeple = await did_wallet.get_info_for_recovery()
+        assert my_did is not None
+        assert did_coin_threeple is not None
+        return {
+            "success": True,
+            "wallet_id": wallet_id,
+            "my_did": my_did,
+            "did_parent": did_coin_threeple[0],
+            "did_innerpuz": did_coin_threeple[1],
+            "did_amount": did_coin_threeple[2],
+        }
+
     async def did_create_backup_file(self, request):
         wallet_id = int(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
@@ -1155,7 +1172,7 @@ class WalletRpcApi:
                 request["uri"], request["artist_percentage"], address, request["amount"]
             )
         else:
-            await nft_wallet.generate_new_nft(request["uri"], address, request["artist_address"])
+            await nft_wallet.generate_new_nft(request["uri"], request["artist_percentage"], address)
         return {"wallet_id": wallet_id, "success": True}
 
     async def nft_get_current_nfts(self, request):
@@ -1175,8 +1192,9 @@ class WalletRpcApi:
         # trade_price,
         sb = await nft_wallet.transfer_nft(
             request["nft_coin_info"],
-            request["new_did"],
+            bytes.fromhex(request["new_did"]),
             request["new_did_parent"],
+            request["new_did_inner_hash"],
             request["new_did_amount"],
             request["trade_price"],
         )

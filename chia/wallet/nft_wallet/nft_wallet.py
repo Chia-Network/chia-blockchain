@@ -154,7 +154,7 @@ class NFTWallet:
                 if hash == bytes32(nft_transfer_program_hash.as_atom()):
                     nft_transfer_program = reveal
             if nft_transfer_program is None:
-                attempt = nft_puzzles.get_transfer_program_from_solution(solution)
+                attempt = nft_puzzles.get_transfer_program_from_inner_solution(solution)
                 if attempt is not None:
                     nft_transfer_program = attempt
                     await self.add_transfer_program(nft_transfer_program)
@@ -430,15 +430,16 @@ class NFTWallet:
         nft_id = None
         for coin_spend in sending_sb.coin_spends:
             if nft_puzzles.match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))[0]:
-                trade_price_discovered = nft_puzzles.get_trade_price_from_solution(
+                trade_price_discovered = nft_puzzles.get_trade_price_from_inner_solution(
                     Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
                 )
-                backpayment_amount = nft_puzzles.get_backpayment_amount_from_solution(
+                backpayment_amount = nft_puzzles.get_backpayment_amount_from_inner_solution(
                     Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
                 )
                 nft_id = nft_puzzles.get_nft_id_from_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
 
         assert trade_price_discovered is not None
+        assert backpayment_amount is not None
         assert nft_id is not None
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
         messages = [(1, int_to_bytes(trade_price_discovered) + bytes(nft_id))]
