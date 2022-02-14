@@ -164,7 +164,7 @@ if [ "$(uname)" = "Linux" ]; then
     echo "Installing on Rocky."
     # TODO: make this smarter about getting the latest version
     sudo yum install --assumeyes python39
-  elif type yum && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
+  elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
     # Redhat or Fedora
     echo "Installing on Redhat/Fedora."
     if ! command -v python3.9 >/dev/null 2>&1; then
