@@ -134,7 +134,7 @@ class Receiver:
         sync_id_match = identifier.sync_id == self._expected_sync_id
         message_id_match = identifier.message_id == self._expected_message_id
         identifier_match = sync_id_match and message_id_match
-        if start and not message_id_match or not start and not identifier_match:
+        if (start and not message_id_match) or (not start and not identifier_match):
             expected: PlotSyncIdentifier = PlotSyncIdentifier(
                 identifier.timestamp, self._expected_sync_id, self._expected_message_id
             )
