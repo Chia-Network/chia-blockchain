@@ -30,15 +30,19 @@ class BlockStore:
         self.db_wrapper = db_wrapper
         self.db = db_wrapper.db
 
-        table_sql_script = pkg_resources.resource_string(
+        block_table_sql_script = pkg_resources.resource_string(
             "chia.full_node.sql", f"block_store_tables_v{self.db_wrapper.db_version}.sql"
         ).decode("utf-8")
-        index_sql_script = pkg_resources.resource_string(
+        block_index_sql_script = pkg_resources.resource_string(
             "chia.full_node.sql", f"block_store_indexes_v{self.db_wrapper.db_version}.sql"
         ).decode("utf-8")
+        weight_table_sql_script = pkg_resources.resource_string(
+            "chia.full_node.sql", f"weight_store_tables_v{self.db_wrapper.db_version}.sql"
+        ).decode("utf-8")
 
-        await self.db.executescript(table_sql_script)
-        await self.db.executescript(index_sql_script)
+        await self.db.executescript(block_table_sql_script)
+        await self.db.executescript(block_index_sql_script)
+        await self.db.executescript(weight_table_sql_script)
 
         await self.db.commit()
 
