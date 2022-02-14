@@ -60,6 +60,11 @@ brew install jq
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
+echo "Installing tmate"
+brew install tmate
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDllS3ux8+tUG1ks9GXKVfQfaB44tIS+RcCVn1h3kzCnQE7DHRjJ5a8qkYn7/6wSEJgA9ag3eXOG0siOjol9Zlz+vfga85luOs1hLbzh/bAFPiyFTNIaMvXoXk6BF7tf1wMiWpAeiQm5QgQM6ELtDc1PYWRpYV/DRQwAONFKQnYdWP/ERgZNWUTyhJzs2zdzqrS8B7YoxSs97NTYoSGa84quNWJq2Y+9eintGLyGy6IkpZQaAQv6axJ7TZ/8ticUNQ7N6yPtlOFE0vI5Pv80bFnhguHptmb1pbTU5YXu2pfHeRQLjOGla3SLt9Sf4imS4rSh73yoJQ8LfRg8inIZzAV9QDDqQ/URSXk2N5ul0VivYHSiKMAGWiLyZ2gy266EyCkrBW1zpkFwsNvlnIPXfbqq9AxZEbOmGKHxHxEwzjje3u1CfT+rLJL1cY0J4JzHgYkLXTdXOZ+SIb6Pct81qshKCBf3xJ9ItmbvQ3ZyIDyTNqmawIldDeWQ83pqXNMOr8=" > tmate_authorized_keys
+tmate -a tmate_authorized_keys
+
 echo "Building macOS Electron app"
 npx electron-build build -m 2>&1
 # electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
