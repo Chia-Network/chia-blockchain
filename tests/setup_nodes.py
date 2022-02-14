@@ -285,7 +285,10 @@ async def setup_introducer(port):
 
 
 async def setup_vdf_client(port):
-    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, bt.config.get("prefer_ipv6")))
+    # TODO: if we're passing through prefer_ipv6 it seems this shouldn't be needed
+    #       but...  if the subprocess doesn't localhost->::1 then...  maybe.
+    host = get_host_addr(host=self_hostname, prefer_ipv6=bt.config["prefer_ipv6"])
+    vdf_task_1 = asyncio.create_task(spawn_process(host, port, 1, bt.config.get("prefer_ipv6")))
 
     def stop():
         asyncio.create_task(kill_processes())
