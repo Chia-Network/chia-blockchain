@@ -35,7 +35,6 @@ from tests.core.data_layer.util import (
     add_0123_example,
     add_01234567_example,
     Example,
-    get_terminal_node_for_random_seed,
 )
 
 
@@ -274,7 +273,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
             if not deleted_all:
                 while node_count > 0:
                     node_count -= 1
-                    node_hash = await get_terminal_node_for_random_seed(data_store, tree_id, random)
+                    node_hash = await data_store.get_terminal_node_for_random_seed(tree_id, random)
                     assert node_hash is not None
                     node = await data_store.get_node(node_hash)
                     assert isinstance(node, TerminalNode)
@@ -287,7 +286,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
                     is_insert = True
                 elif node_count < 4 and random.randint(0, 2):
                     is_insert = True
-        node_hash = await get_terminal_node_for_random_seed(data_store, tree_id, random)
+        node_hash = await data_store.get_terminal_node_for_random_seed(tree_id, random)
         if is_insert:
             node_count += 1
             key = (i % 350).to_bytes(4, byteorder="big")
@@ -383,7 +382,20 @@ async def test_inserting_duplicate_key_fails(
             side=Side.RIGHT,
         )
 
+    hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
+    # TODO: more specific exception
+    with pytest.raises(Exception):
+        await data_store.insert(
+            key=key,
+            value=second_value,
+            tree_id=tree_id,
+            reference_node_hash=first_hash,
+            side=Side.RIGHT,
+            hint_keys_values=hint_keys_values,
+        )
 
+
+@pytest.mark.xfail()
 @pytest.mark.asyncio()
 async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: bytes32) -> None:
     expected = Program.to(
@@ -423,6 +435,7 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
     assert result == expected
 
 
+@pytest.mark.xfail()
 @pytest.mark.asyncio()
 async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
@@ -469,9 +482,17 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    "use_hint",
+    [True, False],
+)
 @pytest.mark.asyncio()
-async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: bytes32, use_hint: bool) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    hint_keys_values = None
+    if use_hint:
+        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
 
     expected = Program.to(
         (
@@ -495,15 +516,23 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
         ),
     )
 
-    await data_store.delete(key=Program.to(b"\x04"), tree_id=tree_id)
+    await data_store.delete(key=Program.to(b"\x04"), tree_id=tree_id, hint_keys_values=hint_keys_values)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    "use_hint",
+    [True, False],
+)
 @pytest.mark.asyncio()
-async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_id: bytes32, use_hint: bool) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    hint_keys_values = None
+    if use_hint:
+        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
 
     expected = Program.to(
         (
@@ -524,16 +553,24 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_i
         ),
     )
 
-    await data_store.delete(key=Program.to(b"\x04"), tree_id=tree_id)
-    await data_store.delete(key=Program.to(b"\x05"), tree_id=tree_id)
+    await data_store.delete(key=Program.to(b"\x04"), tree_id=tree_id, hint_keys_values=hint_keys_values)
+    await data_store.delete(key=Program.to(b"\x05"), tree_id=tree_id, hint_keys_values=hint_keys_values)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    "use_hint",
+    [True, False],
+)
 @pytest.mark.asyncio()
-async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: bytes32, use_hint: bool) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    hint_keys_values = None
+    if use_hint:
+        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
 
     expected = Program.to(
         (
@@ -557,15 +594,23 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: b
         ),
     )
 
-    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id)
+    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id, hint_keys_values=hint_keys_values)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    "use_hint",
+    [True, False],
+)
 @pytest.mark.asyncio()
-async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_id: bytes32, use_hint: bool) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    hint_keys_values = None
+    if use_hint:
+        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
 
     expected = Program.to(
         (
@@ -586,8 +631,8 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
         ),
     )
 
-    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id)
-    await data_store.delete(key=Program.to(b"\x02"), tree_id=tree_id)
+    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id, hint_keys_values=hint_keys_values)
+    await data_store.delete(key=Program.to(b"\x02"), tree_id=tree_id, hint_keys_values=hint_keys_values)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -1033,7 +1078,7 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
     insertions = 0
     expected_diff: Set[DiffData] = set()
     for i in range(500):
-        node_hash = await get_terminal_node_for_random_seed(data_store, tree_id, random)
+        node_hash = await data_store.get_terminal_node_for_random_seed(tree_id, random)
         if random.randint(0, 4) > 0 or insertions < 10:
             insertions += 1
             key = (i + 100).to_bytes(4, byteorder="big")

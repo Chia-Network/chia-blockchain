@@ -2,6 +2,7 @@ import logging
 import aiosqlite
 from collections import defaultdict
 from dataclasses import dataclass, replace
+from random import Random
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from chia.data_layer.data_layer_errors import (
@@ -48,10 +49,12 @@ class DataStore:
 
     db: aiosqlite.Connection
     db_wrapper: DBWrapper
+    random: Random
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper) -> "DataStore":
-        self = cls(db=db_wrapper.db, db_wrapper=db_wrapper)
+        random = Random()
+        self = cls(db=db_wrapper.db, db_wrapper=db_wrapper, random=random)
         self.db.row_factory = aiosqlite.Row
 
         await self.db.execute("pragma journal_mode=wal")
@@ -596,6 +599,23 @@ class DataStore:
 
         return NodeType(raw_node_type["node_type"])
 
+    async def get_terminal_node_for_random_seed(
+        self, tree_id: bytes32, random: Random, *, lock: bool = True
+    ) -> Optional[bytes32]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            root = await self.get_tree_root(tree_id, lock=False)
+            if root is None or root.node_hash is None:
+                return None
+            node_hash = root.node_hash
+            while True:
+                node = await self.get_node(node_hash, lock=False)
+                assert node is not None
+                if isinstance(node, TerminalNode):
+                    break
+                node_hash = random.choice([node.left_hash, node.right_hash])
+
+            return node_hash
+
     async def autoinsert(
         self,
         key: bytes,
@@ -606,14 +626,13 @@ class DataStore:
         lock: bool = True,
     ) -> bytes32:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
-
-            if len(pairs) == 0:
+            was_empty = await self.table_is_empty(tree_id=tree_id, lock=False)
+            if was_empty:
                 reference_node_hash = None
                 side = None
             else:
-                reference_node_hash = pairs[0].hash
-                side = Side.RIGHT
+                reference_node_hash = await self.get_terminal_node_for_random_seed(tree_id, self.random, lock=False)
+                side = self.random.choice([Side.LEFT, Side.RIGHT])
 
             return await self.insert(
                 key=key,
@@ -654,7 +673,7 @@ class DataStore:
                     if any(key == node.key for node in pairs):
                         raise Exception(f"Key already present: {key.hex()}")
                 else:
-                    if key in hint_keys_values:
+                    if bytes(key) in hint_keys_values:
                         raise Exception(f"Key already present: {key.hex()}")
 
             if reference_node_hash is None:
@@ -731,7 +750,7 @@ class DataStore:
                     await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
 
         if hint_keys_values is not None:
-            hint_keys_values[key] = value
+            hint_keys_values[bytes(key)] = value
         return new_terminal_node_hash
 
     async def delete(
@@ -748,12 +767,12 @@ class DataStore:
             if hint_keys_values is None:
                 node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             else:
-                if key not in hint_keys_values:
+                if bytes(key) not in hint_keys_values:
                     raise Exception(f"Key not found: {key.hex()}")
-                value = hint_keys_values[key]
+                value = hint_keys_values[bytes(key)]
                 node_hash = Program.to((key, value)).get_tree_hash()
                 node = TerminalNode(node_hash, key, value)
-                del hint_keys_values[key]
+                del hint_keys_values[bytes(key)]
             if use_optimized:
                 ancestors: List[InternalNode] = await self.get_ancestors_optimized(
                     node_hash=node.hash, tree_id=tree_id, lock=False
