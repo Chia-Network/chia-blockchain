@@ -394,13 +394,13 @@ class TestCATWallet:
 
         ph = await wallet_0.get_new_puzzlehash()
         if trusted:
+            wallet_node_0.config["full_node_peer"] = {"host": "127.0.0.1"}
             wallet_node_1.config["full_node_peer"] = {"host": "127.0.0.1"}
             wallet_node_2.config["full_node_peer"] = {"host": "127.0.0.1"}
-            wallet_node_3.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
+            wallet_node_0.config["full_node_peer"] = {}
             wallet_node_1.config["full_node_peer"] = {}
             wallet_node_2.config["full_node_peer"] = {}
-            wallet_node_3.config["full_node_peer"] = {}
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
