@@ -181,7 +181,8 @@ class WalletBlockchain(BlockchainInterface):
         return await self._basic_store.get_object("PEAK_BLOCK", HeaderBlock)
 
     async def set_finished_sync_up_to(self, height: uint32):
-        await self._basic_store.set_object("FINISHED_SYNC_UP_TO", height)
+        if height > await self.get_finished_sync_up_to():
+            await self._basic_store.set_object("FINISHED_SYNC_UP_TO", height)
 
     async def get_finished_sync_up_to(self):
         h: Optional[uint32] = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)

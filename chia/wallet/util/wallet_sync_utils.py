@@ -272,9 +272,9 @@ def get_block_challenge(
     return challenge
 
 
-def cs_sort(cs: CoinState) -> int:
+def last_change_height_cs(cs: CoinState) -> uint32:
     if cs.spent_height is not None:
         return cs.spent_height
     if cs.created_height is not None:
         return cs.created_height
-    return 0
+    return uint32(0)
