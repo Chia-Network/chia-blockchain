@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 
 def _create_shutdown_file() -> IO:
-    return tempfile.NamedTemporaryFile(prefix="chia_executor_shutdown_trigger")
+    return tempfile.NamedTemporaryFile(prefix="chia_wallet_weight_proof_handler_executor_shutdown_trigger")
 
 
 class WalletWeightProofHandler:
