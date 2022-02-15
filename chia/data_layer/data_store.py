@@ -599,6 +599,7 @@ class DataStore:
     async def get_terminal_node_for_seed(
         self, tree_id: bytes32, seed: bytes32, *, lock: bool = True
     ) -> Optional[bytes32]:
+        path = int(seed.hex(), 16)
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id, lock=False)
             if root is None or root.node_hash is None:
@@ -609,10 +610,11 @@ class DataStore:
                 assert node is not None
                 if isinstance(node, TerminalNode):
                     break
-                if str(seed) < str(node.hash):
+                if path % 2 == 0:
                     node_hash = node.left_hash
                 else:
                     node_hash = node.right_hash
+                path = path // 2
 
             return node_hash
 
