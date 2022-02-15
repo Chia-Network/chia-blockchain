@@ -1,6 +1,6 @@
 import asyncio
 import random
-from time import time
+from time import monotonic
 from pathlib import Path
 from chia.full_node.coin_store import CoinStore
 from typing import List, Tuple
@@ -109,7 +109,7 @@ async def run_new_block_benchmark(version: int):
             all_unspent = all_unspent[100:]
             total_remove += 100
 
-            start = time()
+            start = monotonic()
             await coin_store.new_block(
                 height,
                 timestamp,
@@ -118,7 +118,7 @@ async def run_new_block_benchmark(version: int):
                 removals,
             )
             await db_wrapper.db.commit()
-            stop = time()
+            stop = monotonic()
 
             # 19 seconds per block
             timestamp += 19
@@ -160,7 +160,7 @@ async def run_new_block_benchmark(version: int):
             all_unspent = all_unspent[700:]
             total_remove += 700
 
-            start = time()
+            start = monotonic()
             await coin_store.new_block(
                 height,
                 timestamp,
@@ -170,7 +170,7 @@ async def run_new_block_benchmark(version: int):
             )
             await db_wrapper.db.commit()
 
-            stop = time()
+            stop = monotonic()
 
             # 19 seconds per block
             timestamp += 19
@@ -210,7 +210,7 @@ async def run_new_block_benchmark(version: int):
             all_unspent = all_unspent[2000:]
             total_remove += 2000
 
-            start = time()
+            start = monotonic()
             await coin_store.new_block(
                 height,
                 timestamp,
@@ -219,7 +219,7 @@ async def run_new_block_benchmark(version: int):
                 removals,
             )
             await db_wrapper.db.commit()
-            stop = time()
+            stop = monotonic()
 
             # 19 seconds per block
             timestamp += 19
@@ -242,9 +242,9 @@ async def run_new_block_benchmark(version: int):
         found_coins = 0
         for i in range(NUM_ITERS):
             lookup = random.sample(all_coins, 200)
-            start = time()
+            start = monotonic()
             records = await coin_store.get_coin_records_by_names(True, lookup)
-            total_time += time() - start
+            total_time += monotonic() - start
             assert len(records) == 200
             found_coins += len(records)
             if verbose:
@@ -265,9 +265,9 @@ async def run_new_block_benchmark(version: int):
         found_coins = 0
         for i in range(NUM_ITERS):
             lookup = random.sample(all_coins, 200)
-            start = time()
+            start = monotonic()
             records = await coin_store.get_coin_records_by_names(False, lookup)
-            total_time += time() - start
+            total_time += monotonic() - start
             assert len(records) <= 200
             found_coins += len(records)
             if verbose:
@@ -287,9 +287,9 @@ async def run_new_block_benchmark(version: int):
         total_time = 0
         found_coins = 0
         for i in range(1, block_height):
-            start = time()
+            start = monotonic()
             records = await coin_store.get_coins_removed_at_height(i)
-            total_time += time() - start
+            total_time += monotonic() - start
             found_coins += len(records)
             if verbose:
                 print(".", end="")
