@@ -1093,7 +1093,7 @@ class WebSocketServer:
             self.log.info(f"Service {service_command} already registered")
             already_running = True
 
-        if already_running is False and error is None:
+        if not already_running and error is None:
             try:
                 exe_command = service_command
                 if testing is True:
