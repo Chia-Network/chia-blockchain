@@ -1,4 +1,3 @@
-
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 from chia.types.blockchain_format.program import Program
@@ -17,9 +16,7 @@ NFT_TRANSFER_PROGRAM = load_clvm("nft_transfer_program.clvm")
 
 
 def create_nft_layer_puzzle(
-    singleton_id: bytes32,
-    current_owner_did: bytes32,
-    nft_transfer_program_hash: bytes32
+    singleton_id: bytes32, current_owner_did: bytes32, nft_transfer_program_hash: bytes32
 ) -> Program:
     # NFT_MOD_HASH
     # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (NFT_SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
@@ -52,6 +49,7 @@ def match_nft_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
                 return True, curried_args.as_iter()
     except Exception:
         import traceback
+
         print(f"exception: {traceback.format_exc()}")
         return False, iter(())
     return False, iter(())

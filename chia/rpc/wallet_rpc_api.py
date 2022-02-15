@@ -1168,9 +1168,7 @@ class WalletRpcApi:
         if isinstance(address, str):
             address = decode_puzzle_hash(address)
         if "amount" in request:
-            await nft_wallet.generate_new_nft(
-                request["uri"], request["artist_percentage"], address, request["amount"]
-            )
+            await nft_wallet.generate_new_nft(request["uri"], request["artist_percentage"], address, request["amount"])
         else:
             await nft_wallet.generate_new_nft(request["uri"], request["artist_percentage"], address)
         return {"wallet_id": wallet_id, "success": True}

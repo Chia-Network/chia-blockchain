@@ -81,7 +81,9 @@ class NFTWallet:
         # std_wallet_id = self.standard_wallet.wallet_id
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         # TODO: check if I need both
-        full_nodes: Dict[bytes32, WSChiaConnection] = self.wallet_state_manager.wallet_node.server.connection_by_type.get(NodeType.FULL_NODE, {})
+        full_nodes: Dict[
+            bytes32, WSChiaConnection
+        ] = self.wallet_state_manager.wallet_node.server.connection_by_type.get(NodeType.FULL_NODE, {})
 
         for node_id, node in full_nodes.copy().items():
             await self.wallet_state_manager.wallet_node.subscribe_to_phs([my_did], node)
@@ -128,14 +130,14 @@ class NFTWallet:
         server = wallet_node.server
         full_nodes: Dict[bytes32, WSChiaConnection] = server.connection_by_type.get(NodeType.FULL_NODE, {})
         cs: Optional[CoinSpend] = None
-        coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
+        coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
+            [coin.parent_coin_info]
+        )
         assert coin_states is not None
         parent_coin = coin_states[0].coin
         for node_id in full_nodes:
             node = server.all_connections[node_id]
-            cs: CoinSpend = await wallet_node.fetch_puzzle_solution(
-                node, height, parent_coin
-            )
+            cs: CoinSpend = await wallet_node.fetch_puzzle_solution(node, height, parent_coin)
             if cs is not None:
                 break
         assert cs is not None
@@ -164,26 +166,34 @@ class NFTWallet:
             parent_coin = None
             coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
             if coin_record is None:
-                coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state([coin_name])
+                coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
+                    [coin_name]
+                )
                 if coin_states is not None:
                     parent_coin = coin_states[0].coin
             if coin_record is not None:
                 parent_coin = coin_record.coin
             if parent_coin is None:
                 raise ValueError("Error in finding parent")
-            inner_puzzle: Program = nft_puzzles.create_nft_layer_puzzle(singleton_struct.rest().first().as_atom(), current_owner.as_atom(), nft_transfer_program_hash.as_atom())
+            inner_puzzle: Program = nft_puzzles.create_nft_layer_puzzle(
+                singleton_struct.rest().first().as_atom(), current_owner.as_atom(), nft_transfer_program_hash.as_atom()
+            )
             child_coin: Optional[Coin] = None
             for new_coin in coin_spend.additions():
                 if new_coin.amount % 2 == 1:
                     child_coin = new_coin
                     break
             assert child_coin is not None
-            child_puzzle: Program = nft_puzzles.create_full_puzzle(singleton_struct.rest().first().as_atom(), self.nft_wallet_info.my_did, nft_transfer_program_hash.as_atom())
+            child_puzzle: Program = nft_puzzles.create_full_puzzle(
+                singleton_struct.rest().first().as_atom(),
+                self.nft_wallet_info.my_did,
+                nft_transfer_program_hash.as_atom(),
+            )
             await self.add_coin(
                 child_coin,
                 LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount),
                 nft_transfer_program,
-                child_puzzle
+                child_puzzle,
             )
         else:
             # The parent is not an NFT which means we need to scrub all of its children from our DB
@@ -203,7 +213,12 @@ class NFTWallet:
                 my_nft_coins.remove(coin_info)
 
         my_nft_coins.append(NFTCoinInfo(coin, lineage_proof, transfer_program, puzzle))
-        new_nft_wallet_info = NFTWalletInfo(self.nft_wallet_info.my_did, self.nft_wallet_info.did_wallet_id, my_nft_coins, self.nft_wallet_info.known_transfer_programs)
+        new_nft_wallet_info = NFTWalletInfo(
+            self.nft_wallet_info.my_did,
+            self.nft_wallet_info.did_wallet_id,
+            my_nft_coins,
+            self.nft_wallet_info.known_transfer_programs,
+        )
         await self.save_info(new_nft_wallet_info, False)
         await self.wallet_state_manager.add_interested_coin_id(coin.name())
         return
@@ -213,14 +228,24 @@ class NFTWallet:
         for coin_info in my_nft_coins:
             if coin_info.coin == coin:
                 my_nft_coins.remove(coin_info)
-        new_nft_wallet_info = NFTWalletInfo(self.nft_wallet_info.my_did, self.nft_wallet_info.did_wallet_id, my_nft_coins, self.nft_wallet_info.known_transfer_programs)
+        new_nft_wallet_info = NFTWalletInfo(
+            self.nft_wallet_info.my_did,
+            self.nft_wallet_info.did_wallet_id,
+            my_nft_coins,
+            self.nft_wallet_info.known_transfer_programs,
+        )
         await self.save_info(new_nft_wallet_info, False)
         return
 
     async def add_transfer_program(self, transfer_program: Program):
         my_transfer_programs = self.nft_wallet_info.known_transfer_programs
         my_transfer_programs.append((transfer_program.get_tree_hash(), transfer_program))
-        new_nft_wallet_info = NFTWalletInfo(self.nft_wallet_info.my_did, self.nft_wallet_info.did_wallet_id, self.nft_wallet_info.my_nft_coins, my_transfer_programs)
+        new_nft_wallet_info = NFTWalletInfo(
+            self.nft_wallet_info.my_did,
+            self.nft_wallet_info.did_wallet_id,
+            self.nft_wallet_info.my_nft_coins,
+            my_transfer_programs,
+        )
         await self.save_info(new_nft_wallet_info, False)
         return
 
@@ -230,11 +255,7 @@ class NFTWallet:
         return Program.to([8, pk])
 
     async def generate_new_nft(
-        self,
-        uri: str,
-        percentage: uint64,
-        backpayment_address: bytes32,
-        amount: int = 1
+        self, uri: str, percentage: uint64, backpayment_address: bytes32, amount: int = 1
     ) -> Optional[TransactionRecord]:
         """
         This must be called under the wallet state manager lock
@@ -249,9 +270,7 @@ class NFTWallet:
 
         nft_transfer_program = nft_puzzles.create_transfer_puzzle(uri, percentage, backpayment_address)
         eve_fullpuz = nft_puzzles.create_full_puzzle(
-            launcher_coin.name(),
-            self.nft_wallet_info.my_did,
-            nft_transfer_program.get_tree_hash()
+            launcher_coin.name(), self.nft_wallet_info.my_did, nft_transfer_program.get_tree_hash()
         )
         announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([eve_fullpuz.get_tree_hash(), amount, bytes(0x80)]).get_tree_hash()
@@ -274,20 +293,16 @@ class NFTWallet:
         # EVE SPEND BELOW
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
         # 1 is a coin announcement
-        messages = [(1, 'a')]
+        messages = [(1, "a")]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
         my_did_amount = message_sb.coin_solutions[0].coin.amount
         my_did_parent = message_sb.coin_solutions[0].coin.parent_coin_info
 
-        innersol = Program.to([
-            eve_coin.amount,
-            did_wallet.did_info.current_inner.get_tree_hash(),
-            my_did_amount,
-            my_did_parent,
-            0
-        ])
+        innersol = Program.to(
+            [eve_coin.amount, did_wallet.did_info.current_inner.get_tree_hash(), my_did_amount, my_did_parent, 0]
+        )
         fullsol = Program.to(
             [
                 [launcher_coin.parent_coin_info, launcher_coin.amount],
@@ -324,20 +339,22 @@ class NFTWallet:
     async def make_announce_spend(self, nft_coin_info: NFTCoinInfo):
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
         # 1 is a coin announcement
-        messages = [(1, 'a')]
+        messages = [(1, "a")]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
         my_did_amount = message_sb.coin_solutions[0].coin.amount
         my_did_parent = message_sb.coin_solutions[0].coin.parent_coin_info
 
-        innersol = Program.to([
-            nft_coin_info.coin.amount,
-            did_wallet.did_info.current_inner.get_tree_hash(),
-            my_did_amount,
-            my_did_parent,
-            0
-        ])
+        innersol = Program.to(
+            [
+                nft_coin_info.coin.amount,
+                did_wallet.did_info.current_inner.get_tree_hash(),
+                my_did_amount,
+                my_did_parent,
+                0,
+            ]
+        )
         fullsol = Program.to(
             [
                 nft_coin_info.lineage_proof.to_program(),
@@ -397,19 +414,21 @@ class NFTWallet:
         # trade_price
         # transfer_program_reveal
         # transfer_program_solution
-        innersol = Program.to([
-            nft_coin_info.coin.amount,
-            did_wallet.did_info.current_inner.get_tree_hash(),
-            my_did_amount,
-            my_did_parent,
-            new_did,
-            new_did_parent,
-            new_did_inner_hash,
-            new_did_amount,
-            trade_price,
-            nft_coin_info.transfer_program,
-            0,  # this should be expanded for other possible transfer_programs
-        ])
+        innersol = Program.to(
+            [
+                nft_coin_info.coin.amount,
+                did_wallet.did_info.current_inner.get_tree_hash(),
+                my_did_amount,
+                my_did_parent,
+                new_did,
+                new_did_parent,
+                new_did_inner_hash,
+                new_did_amount,
+                trade_price,
+                nft_coin_info.transfer_program,
+                0,  # this should be expanded for other possible transfer_programs
+            ]
+        )
         fullsol = Program.to(
             [
                 nft_coin_info.lineage_proof.to_program(),
@@ -423,9 +442,7 @@ class NFTWallet:
         # this full spend should be aggregated with the DID announcement spend of the recipient DID
         return full_spend
 
-    async def receive_nft(
-        self, sending_sb: SpendBundle, fee: uint64 = 0
-    ) -> SpendBundle:
+    async def receive_nft(self, sending_sb: SpendBundle, fee: uint64 = 0) -> SpendBundle:
         trade_price_discovered = None
         nft_id = None
         for coin_spend in sending_sb.coin_spends:
