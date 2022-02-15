@@ -939,10 +939,10 @@ class FullNode:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
-                await self.send_peak_to_wallets()
                 peak = self.blockchain.get_peak()
                 if len(coin_states) > 0 and fork_height is not None:
                     await self.update_wallets(peak.height, fork_height, peak.header_hash, coin_states)
+                await self.send_peak_to_wallets()
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
         loop = asyncio.get_event_loop()
@@ -1047,15 +1047,18 @@ class FullNode:
 
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
-        pre_validate_start = time.time()
+        pre_validate_start = time.monotonic()
         pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
             blocks_to_validate, {}, wp_summaries=wp_summaries, validate_signatures=True
         )
-        pre_validate_end = time.time()
-        if pre_validate_end - pre_validate_start > 10:
-            self.log.warning(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
-        else:
-            self.log.debug(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
+        pre_validate_end = time.monotonic()
+        pre_validate_time = pre_validate_end - pre_validate_start
+
+        self.log.log(
+            logging.WARNING if pre_validate_time > 10 else logging.DEBUG,
+            f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds "
+            f"({len(blocks_to_validate)} blocks, start height: {blocks_to_validate[0].height})",
+        )
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
@@ -1553,7 +1556,7 @@ class FullNode:
             f"Block validation time: {validation_time:0.2f} seconds, "
             f"pre_validation time: {pre_validation_time:0.2f} seconds, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
-            f"{percent_full_str}",
+            f"{percent_full_str} header_hash: {header_hash} height: {block.height}",
         )
 
         # This code path is reached if added == ADDED_AS_ORPHAN or NEW_TIP
