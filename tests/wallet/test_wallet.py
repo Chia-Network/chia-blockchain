@@ -785,11 +785,11 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+            wallet_node.config["full_node_peer"] = {"host": "127.0.0.1"}
+            wallet_node_2.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.config["full_node_peer"] = {}
+            wallet_node_2.config["full_node_peer"] = {}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
@@ -830,3 +830,29 @@ class TestWalletSimulator:
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds - AMOUNT_TO_SEND)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)
+
+    @pytest.mark.asyncio
+    async def test_trusted_peer_config(self, wallet_node):
+        full_nodes, wallets = wallet_node
+        full_node_api = full_nodes[0]
+        fn_server = full_node_api.full_node.server
+        wallet_node, server_2 = wallets[0]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        peer = list(wallet_node.server.all_connections.values())[0]
+
+        wallet_node.config["full_node_peer"] = {"host": "127.0.0.1"}
+        assert wallet_node.is_trusted(peer)
+
+        wallet_node.config["full_node_peer"] = {"host": "127.0.0.1", "node_id": peer.peer_node_id.hex()}
+        assert wallet_node.is_trusted(peer)
+
+        wallet_node.config["full_node_peer"] = {"host": "127.0.0.1", "node_id": peer.peer_node_id.hex() + "typo"}
+        assert not wallet_node.is_trusted(peer)
+
+        wallet_node.config["full_node_peer"] = {"host": "1.1.1.1"}
+        assert not wallet_node.is_trusted(peer)
+
+        wallet_node.config["full_node_peer"] = {"host": "1.2.3.4"}
+        assert not wallet_node.is_trusted(peer)
