@@ -2,7 +2,6 @@ import logging
 import aiosqlite
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from random import Random
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from chia.data_layer.data_layer_errors import (
@@ -49,12 +48,10 @@ class DataStore:
 
     db: aiosqlite.Connection
     db_wrapper: DBWrapper
-    random: Random
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper) -> "DataStore":
-        random = Random()
-        self = cls(db=db_wrapper.db, db_wrapper=db_wrapper, random=random)
+        self = cls(db=db_wrapper.db, db_wrapper=db_wrapper)
         self.db.row_factory = aiosqlite.Row
 
         await self.db.execute("pragma journal_mode=wal")
@@ -599,8 +596,8 @@ class DataStore:
 
         return NodeType(raw_node_type["node_type"])
 
-    async def get_terminal_node_for_random_seed(
-        self, tree_id: bytes32, random: Random, *, lock: bool = True
+    async def get_terminal_node_for_seed(
+        self, tree_id: bytes32, seed: bytes32, *, lock: bool = True
     ) -> Optional[bytes32]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id, lock=False)
@@ -612,7 +609,10 @@ class DataStore:
                 assert node is not None
                 if isinstance(node, TerminalNode):
                     break
-                node_hash = random.choice([node.left_hash, node.right_hash])
+                if str(seed) < str(node.hash):
+                    node_hash = node.left_hash
+                else:
+                    node_hash = node.right_hash
 
             return node_hash
 
@@ -631,8 +631,10 @@ class DataStore:
                 reference_node_hash = None
                 side = None
             else:
-                reference_node_hash = await self.get_terminal_node_for_random_seed(tree_id, self.random, lock=False)
-                side = self.random.choice([Side.LEFT, Side.RIGHT])
+                seed = Program.to((key, value)).get_tree_hash()
+                reference_node_hash = await self.get_terminal_node_for_seed(tree_id, seed, lock=False)
+                side_seed = bytes(seed)[0]
+                side = Side.LEFT if side_seed < 128 else Side.RIGHT
 
             return await self.insert(
                 key=key,
@@ -720,6 +722,7 @@ class DataStore:
                     left = reference_node_hash
                     right = new_terminal_node_hash
 
+                assert len(ancestors) <= 65
                 # update ancestors after inserting root, to keep table constraints.
                 insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
                 new_generation = root.generation + 1
@@ -784,6 +787,7 @@ class DataStore:
                 )
                 assert ancestors == ancestors_2
 
+            assert len(ancestors) <= 65
             if len(ancestors) == 0:
                 # the only node is being deleted
                 await self._insert_root(tree_id=tree_id, node_hash=None, status=status)

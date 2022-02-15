@@ -273,7 +273,8 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
             if not deleted_all:
                 while node_count > 0:
                     node_count -= 1
-                    node_hash = await data_store.get_terminal_node_for_random_seed(tree_id, random)
+                    seed = bytes32(b"0" * 32)
+                    node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
                     assert node_hash is not None
                     node = await data_store.get_node(node_hash)
                     assert isinstance(node, TerminalNode)
@@ -286,11 +287,12 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
                     is_insert = True
                 elif node_count < 4 and random.randint(0, 2):
                     is_insert = True
-        node_hash = await data_store.get_terminal_node_for_random_seed(tree_id, random)
+        key = (i % 350).to_bytes(4, byteorder="big")
+        value = (i % 350).to_bytes(4, byteorder="big")
+        seed = Program.to((key, value)).get_tree_hash()
+        node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
         if is_insert:
             node_count += 1
-            key = (i % 350).to_bytes(4, byteorder="big")
-            value = (i % 350).to_bytes(4, byteorder="big")
             side = None if node_hash is None else random.choice([Side.LEFT, Side.RIGHT])
 
             node_hash = await data_store.insert(
@@ -1078,11 +1080,12 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
     insertions = 0
     expected_diff: Set[DiffData] = set()
     for i in range(500):
-        node_hash = await data_store.get_terminal_node_for_random_seed(tree_id, random)
+        key = (i + 100).to_bytes(4, byteorder="big")
+        value = (i + 200).to_bytes(4, byteorder="big")
+        seed = Program.to((key, value)).get_tree_hash()
+        node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
         if random.randint(0, 4) > 0 or insertions < 10:
             insertions += 1
-            key = (i + 100).to_bytes(4, byteorder="big")
-            value = (i + 200).to_bytes(4, byteorder="big")
             side = None if node_hash is None else Side.LEFT if random.randint(0, 1) == 0 else Side.RIGHT
 
             _ = await data_store.insert(

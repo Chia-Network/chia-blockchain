@@ -3,14 +3,14 @@ import sys
 import aiosqlite
 import time
 import os
-from random import Random
+from typing import Optional, Dict
 from chia.util.db_wrapper import DBWrapper
 from chia.data_layer.data_store import DataStore
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.path import path_from_root
 from chia.data_layer.data_layer_types import Side, TerminalNode
-from typing import Optional, Dict
+from chia.types.blockchain_format.program import Program
 
 
 async def generate_datastore(num_nodes: int) -> None:
@@ -21,7 +21,6 @@ async def generate_datastore(num_nodes: int) -> None:
     connection = await aiosqlite.connect(db_path)
     db_wrapper = DBWrapper(connection)
     data_store = await DataStore.create(db_wrapper=db_wrapper)
-    random = Random()
     hint_keys_values: Dict[bytes, bytes] = {}
 
     tree_id = bytes32(b"0" * 32)
@@ -37,8 +36,10 @@ async def generate_datastore(num_nodes: int) -> None:
     for i in range(num_nodes):
         key = i.to_bytes(4, byteorder="big")
         value = (2 * i).to_bytes(4, byteorder="big")
-        reference_node_hash: Optional[bytes32] = await data_store.get_terminal_node_for_random_seed(tree_id, random)
-        side: Optional[Side] = random.choice([Side.LEFT, Side.RIGHT])
+        seed = Program.to((key, value)).get_tree_hash()
+        reference_node_hash: Optional[bytes32] = await data_store.get_terminal_node_for_seed(tree_id, seed)
+        side_seed = bytes(seed)[0]
+        side: Optional[Side] = Side.LEFT if side_seed < 128 else Side.RIGHT
 
         if i == 0:
             reference_node_hash = None
