@@ -6,6 +6,79 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.3.0 Beta Chia blockchain 2021-2-10
+
+We at Chia have been working hard to bring all of our new features together into one easy-to-use release. Today, we’re proud to announce the beta release of our 1.3 client. Because this release is still in beta, we recommend that you only install it on non mission-critical systems. If you are running a large farm, you should wait for the full 1.3 release before upgrading. When will the full version of 1.3 be released? Soon.
+
+### Added:
+
+- CAT wallet support - add wallets for your favorite CATs
+- Offers - make, take, and share your offers
+- Integrated light wallet sync - to get you synced up faster while your full node syncs
+- Wallet mode - Access just the wallet features to make and receive transactions
+- Farmer mode - All your farming tools, and full node, while getting all the benefits of the upgraded wallet features
+- New v2 DB - improved compression for smaller footprint
+- Key derivation tool via CLI - lets you derive wallet addresses, child keys, and also search your keys for arbitrary wallet addresses/keys
+- Light wallet data migration - CAT wallets you set up and your offer history will be carried over
+- The farmer will report version info in User-Agent field for pool protocol (Thanks @FazendaPool)
+- Added new RPC, get_version, to the daemon to return the version of Chia (Thanks @dkackman)
+- Added new config.yaml setting, reserved_cores, to specify how many cores Chia will not use when launching process pools. Using 0 will allow Chia to use all cores for process pools. Set the default to 0 to allow Chia to use all cores. This can result in faster syncing and better performance overall especially on lower-end CPUs like the Raspberry Pi4.
+- Added new RPC, get_logged_in_fingerprint, to the wallet to return the currently logged in fingerprint.
+- Added new CLI option, chia keys derive, to allow deriving any number of keys in various ways. This is particularly useful to do an exhaustive search for a given address using chia keys derive search.
+- Div soft fork block height set to 2,300,000
+
+### Changed:
+
+- Light wallet client sync updated to only require 3 peers instead of 5
+- Only CATs from the default CAT list will be automatically added, all other unknown CATs will need to be manually added
+- New sorting pattern for offer history - Open/pending offers sorted on top ordered by creation date > confirmation block height > trade id, and then Confirmed and Cancelled offers sorted by the same order
+- When plotting multiple plots with the GUI, new items are taken from the top of the list instead of the bottom
+- CA certificate store update
+- VDF, chiapos, and blspy workflows updated to support python 3.10 wheels
+- We now store peers and peer information in a serialized format instead of sqlite. The new files are called peers.dat and wallet_peers.dat. New settings peers_file_path and wallet_peers_file_path added to config.yaml.
+- CLI option chia show will display the currently selected network (mainnet or testnet)
+- CLI option chia plots check will display the Pool Contract Address for Portable (PlotNFT) plots
+- Thanks to @cross for adding the ability to resolve IPv6 from hostnames in config.yaml. Added new config option prefer_ipv6 to toggle whether to resolve to IPv6 or IPv4. Default is false (IPv4)
+- The default timeout when syncing the node was increased from 10 seconds to 30 seconds to avoid timing out when syncing from slower peers.
+- TLS 1.2 is now the minimum required for all communication including peer-to-peer. The TLS 1.2 allowed cipher list is set to: "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256"
+- In a future release the minimum TLS version will be set to TLS 1.3. A warning in the log will be emitted if the version of openssl in use does not support TLS 1.3. If supported, all local connections will be restricted to TLS 1.3.
+- The new testnet is testnet10
+- Switch to using npm ci from npm install in the GUI install scripts
+- Improved sync performance of the full node by doing BLS validation in separate processes.
+- Default log rotation was changed to 50MiB from 20MiB - added config.yaml setting log_maxbytesrotation to configure this.
+- Thanks to @cross for an optimization to chiapos to use rename instead of copy if the tmp2 and final files are on the same filesystem.
+- Updated to use chiapos 1.0.9
+- Updated to use blspy 1.0.8
+- Implemented a limit to the number of PlotNFTs a user can create - with the limit set to 20. This is to prevent users from incorrectly creating multiple PlotNFTs. This limit can be overridden for those users who have specific use cases that require more than 20 PlotNFTs
+
+### Fixed:
+
+- Offer history limit has been fixed to show all offers now instead of limiting to just 49 offers
+- Fixed issues with using madmax CLI options -w, -G, -2, -t and -d (Issue 9163) (thanks @randomisresistance and @lasers8oclockday1)
+- Fixed issues with CLI option –passhrase-file (Issue 9032) (thanks @moonlitbugs)
+- Fixed issues with displaying IPv6 address in CLI with chia show -c
+- Thanks to @chuwt for fix to looping logic during node synching
+- Fixed the chia-blockchain RPM to set the permission of chrome-sandbox properly
+- Fixed issues where the wallet code would not generate enough addresses when looking for coins, which can result in missed coins due to the address not being checked. Deprecated the config setting initial_num_public_keys_new_wallet. The config setting initial_num_public_keys is now used in all cases.
+- Thanks to @risner for fixes related to using colorlog
+- Fixed issues in reading the pool_list from config if set to null
+- Fixed display info in CLI chia show -c when No Info should be displayed
+- Thanks to @madMAx42v3r for fixes in chiapos related to a possible race condition when multiple threads call Verifier::ValidateProof
+- Thanks to @PastaPastaPasta for some compiler warning fixes in bls-signatures
+- Thanks to @random-zebra for fixing a bug in the bls-signature copy assignment operator
+- Thanks to @lourkeur for fixes in blspy related to pybind11 2.8+
+- Thanks to @nioos-ledger with a fix to the python implementation of bls-signatures
+
+### Known Issues:
+
+- When you are adding plots and you choose the option to “create a Plot NFT”, you will get an error message “Initial_target_state” and the plots will not get created
+  - Workaround: Create the Plot NFT first in the “Pool” tab, and then add your plots and choose the created plot NFT in the drop down.
+- If you are installing on a machine for the first time, when the GUI loads and you don’t have any pre-existing wallet keys, the GUI will flicker and not load anything.
+  - Workaround: close and relaunch the GUI
+- When you close the Chia app, regardless if you are in farmer mode or wallet, the content on the exit dialog isn’t correct
+- If you start with wallet mode and then switch to farmer mode and back to wallet mode, the full node will continue to sync in the background. To get the full node to stop syncing after switching to wallet mode, you will need to close the Chia and relaunch the Chia app.
+- Wallets with large number of transactions or large number of coins will take longer to sync (more than a few minutes), but should take less time than a full node sync. It could fail in some cases.
+
 ## 1.2.11 Chia blockchain 2021-11-4
 
 Farmers rejoice: today's release integrates two plotters in broad use in the Chia community: Bladebit, created by @harold-b, and Madmax, created by @madMAx43v3r. Both of these plotters bring significant improvements in plotting time. More plotting info [here](https://github.com/Chia-Network/chia-blockchain/wiki/Alternative--Plotters).

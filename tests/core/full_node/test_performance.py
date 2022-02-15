@@ -6,6 +6,7 @@ import random
 import time
 from typing import Dict
 
+from clvm.casts import int_to_bytes
 import pytest
 import cProfile
 
@@ -15,7 +16,6 @@ from chia.protocols import full_node_protocol as fnp
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.clvm import int_to_bytes
 from chia.util.ints import uint64
 from tests.wallet_tools import WalletTool
 
