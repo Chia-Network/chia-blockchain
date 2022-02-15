@@ -403,7 +403,7 @@ class Wallet:
                 continue
 
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-            solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})
+            solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash}, primaries=[])
             spends.append(
                 CoinSpend(
                     coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
