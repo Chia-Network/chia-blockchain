@@ -3,12 +3,12 @@ import json
 import logging
 import os
 import signal
+import ssl
 import subprocess
 import sys
 import time
 import traceback
 import uuid
-
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
@@ -100,9 +100,8 @@ if getattr(sys, "frozen", False):
         "chia_timelord": "start_timelord",
         "chia_timelord_launcher": "timelord_launcher",
         "chia_full_node_simulator": "start_simulator",
-        "chia_seeder": "chia_seeder",
-        "chia_seeder_crawler": "chia_seeder_crawler",
-        "chia_seeder_dns": "chia_seeder_dns",
+        "chia_seeder": "start_seeder",
+        "chia_crawler": "start_crawler",
     }
 
     def executable_for_service(service_name: str) -> str:
@@ -157,6 +156,19 @@ class WebSocketServer:
 
     async def start(self):
         self.log.info("Starting Daemon Server")
+
+        if ssl.OPENSSL_VERSION_NUMBER < 0x10101000:
+            self.log.warning(
+                (
+                    "Deprecation Warning: Your version of openssl (%s) does not support TLS1.3. "
+                    "A future version of Chia will require TLS1.3."
+                ),
+                ssl.OPENSSL_VERSION,
+            )
+        else:
+            if self.ssl_context is not None:
+                # Daemon is internal connections, so override to TLS1.3 only
+                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
 
         def master_close_cb():
             asyncio.create_task(self.stop())
@@ -372,6 +384,8 @@ class WebSocketServer:
             "passphrase_hint": passphrase_hint,
             "passphrase_requirements": requirements,
         }
+        # Help diagnose GUI launch issues
+        self.log.debug(f"Keyring status: {response}")
         return response
 
     async def unlock_keyring(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -385,6 +399,18 @@ class WebSocketServer:
             if Keychain.master_passphrase_is_valid(key, force_reload=True):
                 Keychain.set_cached_master_passphrase(key)
                 success = True
+
+                # Attempt to silently migrate legacy keys if necessary. Non-fatal if this fails.
+                try:
+                    if not Keychain.migration_checked_for_current_version():
+                        self.log.info("Will attempt to migrate legacy keys...")
+                        Keychain.migrate_legacy_keys_silently()
+                        self.log.info("Migration of legacy keys complete.")
+                    else:
+                        self.log.debug("Skipping legacy key migration (previously attempted).")
+                except Exception:
+                    self.log.exception("Failed to migrate keys silently. Run `chia keys migrate` manually.")
+
                 # Inform the GUI of keyring status changes
                 self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
             else:

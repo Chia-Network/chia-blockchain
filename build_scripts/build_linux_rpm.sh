@@ -25,15 +25,18 @@ fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
-npm install electron-packager -g
-npm install electron-installer-redhat -g
+cd npm_linux_rpm || exit
+npm ci
+GLOBAL_NPM_ROOT=$(pwd)/node_modules
+PATH=$(npm bin):$PATH
+cd .. || exit
 
 echo "Create dist/"
 rm -rf dist
 mkdir dist
 
 echo "Create executables with pyinstaller"
-pip install pyinstaller==4.5
+pip install pyinstaller==4.9
 SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
@@ -42,13 +45,15 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-cp -r dist/daemon ../chia-blockchain-gui
+cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 cd .. || exit
 cd chia-blockchain-gui || exit
 
 echo "npm build"
-npm install
-npm audit fix
+lerna clean -y
+npm ci
+# Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
+# npm audit fix
 npm run build
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
@@ -56,13 +61,16 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
+# Change to the gui package
+cd packages/gui || exit
+
 # sets the version for chia-blockchain in package.json
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
 electron-packager . chia-blockchain --asar.unpack="**/daemon/**" --platform=linux \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
---appVersion=$CHIA_INSTALLER_VERSION
+--appVersion=$CHIA_INSTALLER_VERSION --executable-name=chia-blockchain
 LAST_EXIT_CODE=$?
 
 # reset the package.json to the original
@@ -73,27 +81,29 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-mv $DIR_NAME ../build_scripts/dist/
-cd ../build_scripts || exit
+mv $DIR_NAME ../../../build_scripts/dist/
+cd ../../../build_scripts || exit
 
 if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
 	echo "Create chia-blockchain-$CHIA_INSTALLER_VERSION.rpm"
 
-	# shellcheck disable=SC2046
-	NODE_ROOT="$(dirname $(dirname $(which node)))"
-
 	# Disables build links from the generated rpm so that we dont conflict with other packages. See https://github.com/Chia-Network/chia-blockchain/issues/3846
 	# shellcheck disable=SC2086
-	sed -i '1s/^/%define _build_id_links none\n%global _enable_debug_package 0\n%global debug_package %{nil}\n%global __os_install_post \/usr\/lib\/rpm\/brp-compress %{nil}\n/' "$NODE_ROOT/lib/node_modules/electron-installer-redhat/resources/spec.ejs"
+	sed -i '1s/^/%define _build_id_links none\n%global _enable_debug_package 0\n%global debug_package %{nil}\n%global __os_install_post \/usr\/lib\/rpm\/brp-compress %{nil}\n/' "$GLOBAL_NPM_ROOT/electron-installer-redhat/resources/spec.ejs"
+
+	# Use attr feature of RPM to set the chrome-sandbox permissions
+	# adds a %attr line after the %files line
+	# The location is based on the existing location inside spec.ej
+	sed -i '/^%files/a %attr(4755, root, root) /usr/lib/<%= name %>/chrome-sandbox' "$GLOBAL_NPM_ROOT/electron-installer-redhat/resources/spec.ejs"
 
 	# Updates the requirements for building an RPM on Centos 7 to allow older version of rpm-build and not use the boolean dependencies
 	# See https://github.com/electron-userland/electron-installer-redhat/issues/157
 	# shellcheck disable=SC2086
-	sed -i "s#throw new Error('Please upgrade to RPM 4.13.*#console.warn('You are using RPM < 4.13')\n      return { requires: [ 'gtk3', 'libnotify', 'nss', 'libXScrnSaver', 'libXtst', 'xdg-utils', 'at-spi2-core', 'libdrm', 'mesa-libgbm', 'libxcb' ] }#g" $NODE_ROOT/lib/node_modules/electron-installer-redhat/src/dependencies.js
+	sed -i "s#throw new Error('Please upgrade to RPM 4.13.*#console.warn('You are using RPM < 4.13')\n      return { requires: [ 'gtk3', 'libnotify', 'nss', 'libXScrnSaver', 'libXtst', 'xdg-utils', 'at-spi2-core', 'libdrm', 'mesa-libgbm', 'libxcb' ] }#g" $GLOBAL_NPM_ROOT/electron-installer-redhat/src/dependencies.js
 
   electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
   --arch "$REDHAT_PLATFORM" --options.version $CHIA_INSTALLER_VERSION \
-  --license ../LICENSE
+  --license ../LICENSE --options.bin chia-blockchain --options.name chia-blockchain
   LAST_EXIT_CODE=$?
   if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	  echo >&2 "electron-installer-redhat failed!"

@@ -101,6 +101,58 @@ class TestPeerStoreResolver:
         # Expect: the config doesn't add a legacy peer_db_path value
         assert config.get("peer_db_path") is None
 
+    def test_resolve_both_peers_file_path_and_legacy_peer_db_path_exist(self, tmp_path: Path):
+        """
+        When the config has values for both the legacy peer_db_path and peer_files_path, the
+        peers_file_path value should take precedence.
+        """
+
+        root_path: Path = tmp_path
+        config: Dict[str, str] = {
+            "peer_db_path": "db/peer_table_node.sqlite",
+            "peers_file_path": "db/peers.dat",
+        }
+        resolver: PeerStoreResolver = PeerStoreResolver(
+            root_path,
+            config,
+            selected_network="mainnet",
+            peers_file_path_key="peers_file_path",
+            legacy_peer_db_path_key="peer_db_path",
+            default_peers_file_path="db/peers.dat",
+        )
+        # Expect: peers.dat path is the same as the location specified in the config
+        assert resolver.peers_file_path == root_path / Path("db/peers.dat")
+        # Expect: the config is updated with the new value
+        assert config["peers_file_path"] == "db/peers.dat"
+        # Expect: the config retains the legacy peer_db_path value
+        assert config["peer_db_path"] == "db/peer_table_node.sqlite"
+
+    def test_resolve_modified_both_peers_file_path_and_legacy_peer_db_path_exist(self, tmp_path: Path):
+        """
+        When the config has modified values for both the peers_file_path and legacy peer_db_path,
+        the resolver should use the peers_file_path value.
+        """
+
+        root_path: Path = tmp_path
+        config: Dict[str, str] = {
+            "peer_db_path": "some/modified/db/path/peer_table_node.sqlite",
+            "peers_file_path": "some/modified/db/path/peers.dat",
+        }
+        resolver: PeerStoreResolver = PeerStoreResolver(
+            root_path,
+            config,
+            selected_network="mainnet",
+            peers_file_path_key="peers_file_path",
+            legacy_peer_db_path_key="peer_db_path",
+            default_peers_file_path="db/peers.dat",
+        )
+        # Expect: peers.dat path is the same as the location specified in the config
+        assert resolver.peers_file_path == root_path / Path("some/modified/db/path/peers.dat")
+        # Expect: the config is updated with the new value
+        assert config["peers_file_path"] == "some/modified/db/path/peers.dat"
+        # Expect: the config retains the legacy peer_db_path value
+        assert config["peer_db_path"] == "some/modified/db/path/peer_table_node.sqlite"
+
     # use tmp_path pytest fixture to create a temporary directory
     def test_resolve_missing_keys(self, tmp_path: Path):
         """

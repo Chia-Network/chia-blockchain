@@ -1,4 +1,3 @@
-import aiosqlite
 import logging
 from typing import Dict, List, Optional, Tuple
 from chia.util.ints import uint32
@@ -9,6 +8,7 @@ import aiofiles
 from dataclasses import dataclass
 from chia.util.streamable import Streamable, streamable
 from chia.util.files import write_file_async
+from chia.util.db_wrapper import DBWrapper
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class SesCache(Streamable):
 
 
 class BlockHeightMap:
-    db: aiosqlite.Connection
+    db: DBWrapper
 
     # the below dictionaries are loaded from the database, from the peak
     # and back in time on startup.
@@ -47,7 +47,7 @@ class BlockHeightMap:
     __ses_filename: Path
 
     @classmethod
-    async def create(cls, blockchain_dir: Path, db: aiosqlite.Connection) -> "BlockHeightMap":
+    async def create(cls, blockchain_dir: Path, db: DBWrapper) -> "BlockHeightMap":
         self = BlockHeightMap()
         self.db = db
 
@@ -57,14 +57,26 @@ class BlockHeightMap:
         self.__height_to_hash_filename = blockchain_dir / "height-to-hash"
         self.__ses_filename = blockchain_dir / "sub-epoch-summaries"
 
-        res = await self.db.execute(
-            "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records WHERE is_peak=1"
-        )
-        row = await res.fetchone()
-        await res.close()
+        if db.db_version == 2:
+            async with self.db.db.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
+                peak_row = await cursor.fetchone()
+                if peak_row is None:
+                    return self
 
-        if row is None:
-            return self
+            async with db.db.execute(
+                "SELECT header_hash,prev_hash,height,sub_epoch_summary FROM full_blocks WHERE header_hash=?",
+                (peak_row[0],),
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row is None:
+                    return self
+        else:
+            async with await db.db.execute(
+                "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records WHERE is_peak=1"
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row is None:
+                    return self
 
         try:
             async with aiofiles.open(self.__height_to_hash_filename, "rb") as f:
@@ -80,14 +92,14 @@ class BlockHeightMap:
             # it's OK if this file doesn't exist, we can rebuild it
             pass
 
-        # TODO: address hint errors and remove ignores
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        peak: bytes32 = bytes.fromhex(row[0])  # type: ignore[assignment]
-        # TODO: address hint errors and remove ignores
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        prev_hash: bytes32 = bytes.fromhex(row[1])  # type: ignore[assignment]
+        peak: bytes32
+        prev_hash: bytes32
+        if db.db_version == 2:
+            peak = row[0]
+            prev_hash = row[1]
+        else:
+            peak = bytes32.fromhex(row[0])
+            prev_hash = bytes32.fromhex(row[1])
         height = row[2]
 
         # allocate memory for height to hash map
@@ -145,24 +157,29 @@ class BlockHeightMap:
         while height > 0:
             # load 5000 blocks at a time
             window_end = max(0, height - 5000)
-            cursor = await self.db.execute(
-                "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records "
-                "INDEXED BY height WHERE height>=? AND height <?",
-                (window_end, height),
-            )
 
-            rows = await cursor.fetchall()
-            await cursor.close()
+            if self.db.db_version == 2:
+                query = (
+                    "SELECT header_hash,prev_hash,height,sub_epoch_summary from full_blocks "
+                    "INDEXED BY height WHERE height>=? AND height <?"
+                )
+            else:
+                query = (
+                    "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records "
+                    "INDEXED BY height WHERE height>=? AND height <?"
+                )
 
-            # maps block-hash -> (height, prev-hash, sub-epoch-summary)
-            ordered: Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]] = {}
-            for r in rows:
-                # TODO: address hint errors and remove ignores
-                #       error: Invalid index type "bytes" for "Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]]";
-                #       expected type "bytes32"  [index]
-                #       error: Incompatible types in assignment (expression has type "Tuple[Any, bytes, Any]", target
-                #       has type "Tuple[uint32, bytes32, Optional[bytes]]")  [assignment]
-                ordered[bytes.fromhex(r[0])] = (r[2], bytes.fromhex(r[1]), r[3])  # type: ignore[index,assignment]
+            async with self.db.db.execute(query, (window_end, height)) as cursor:
+
+                # maps block-hash -> (height, prev-hash, sub-epoch-summary)
+                ordered: Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]] = {}
+
+                if self.db.db_version == 2:
+                    for r in await cursor.fetchall():
+                        ordered[r[0]] = (r[2], r[1], r[3])
+                else:
+                    for r in await cursor.fetchall():
+                        ordered[bytes32.fromhex(r[0])] = (r[2], bytes32.fromhex(r[1]), r[3])
 
             while height > window_end:
                 entry = ordered[prev_hash]
@@ -188,9 +205,7 @@ class BlockHeightMap:
     def get_hash(self, height: uint32) -> bytes32:
         idx = height * 32
         assert idx + 32 <= len(self.__height_to_hash)
-        # TODO: address hint errors and remove ignores
-        #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
-        return bytes(self.__height_to_hash[idx : idx + 32])  # type: ignore[return-value]
+        return bytes32(self.__height_to_hash[idx : idx + 32])
 
     def contains_height(self, height: uint32) -> bool:
         return height * 32 < len(self.__height_to_hash)

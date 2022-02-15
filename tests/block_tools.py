@@ -163,6 +163,7 @@ class BlockTools:
         mkdir(self.plot_dir)
         mkdir(self.temp_dir)
         self.expected_plots: Dict[bytes32, Path] = {}
+        self.created_plots: int = 0
         self.total_result = PlotRefreshResult()
 
         def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult):
@@ -175,7 +176,7 @@ class BlockTools:
                 self.total_result.processed += update_result.processed
                 self.total_result.duration += update_result.duration
                 assert update_result.remaining == len(self.expected_plots) - self.total_result.processed
-                assert update_result.loaded <= self.refresh_parameter.batch_size
+                assert len(update_result.loaded) <= self.refresh_parameter.batch_size
 
             if event == PlotRefreshEvents.done:
                 assert self.total_result.loaded == update_result.loaded
@@ -230,17 +231,29 @@ class BlockTools:
         save_config(self.root_path, "config.yaml", self._config)
 
     async def setup_plots(self):
-        assert len(self.expected_plots) == 0
+        assert self.created_plots == 0
         # OG Plots
         for i in range(15):
             await self.new_plot()
         # Pool Plots
         for i in range(5):
             await self.new_plot(self.pool_ph)
+        # Some plots with keys that are not in the keychain
+        for i in range(3):
+            await self.new_plot(
+                path=self.plot_dir / "not_in_keychain",
+                plot_keys=PlotKeys(G1Element(), G1Element(), None),
+                exclude_final_dir=True,
+            )
+
         await self.refresh_plots()
 
     async def new_plot(
-        self, pool_contract_puzzle_hash: Optional[bytes32] = None, path: Path = None
+        self,
+        pool_contract_puzzle_hash: Optional[bytes32] = None,
+        path: Path = None,
+        plot_keys: Optional[PlotKeys] = None,
+        exclude_final_dir: bool = False,
     ) -> Optional[bytes32]:
         final_dir = self.plot_dir
         if path is not None:
@@ -253,7 +266,7 @@ class BlockTools:
         args.num = 1
         args.buffer = 100
         args.tmp_dir = self.temp_dir
-        args.tmp2_dir = final_dir
+        args.tmp2_dir = self.temp_dir
         args.final_dir = final_dir
         args.plotid = None
         args.memo = None
@@ -263,23 +276,26 @@ class BlockTools:
         args.nobitfield = False
         args.exclude_final_dir = False
         args.list_duplicates = False
+        args.exclude_final_dir = exclude_final_dir
         try:
-            pool_pk: Optional[G1Element] = None
-            pool_address: Optional[str] = None
-            if pool_contract_puzzle_hash is None:
-                pool_pk = self.pool_pk
-            else:
-                pool_address = encode_puzzle_hash(pool_contract_puzzle_hash, "xch")
+            if plot_keys is None:
+                pool_pk: Optional[G1Element] = None
+                pool_address: Optional[str] = None
+                if pool_contract_puzzle_hash is None:
+                    pool_pk = self.pool_pk
+                else:
+                    pool_address = encode_puzzle_hash(pool_contract_puzzle_hash, "xch")
 
-            keys = PlotKeys(self.farmer_pk, pool_pk, pool_address)
+                plot_keys = PlotKeys(self.farmer_pk, pool_pk, pool_address)
             # No datetime in the filename, to get deterministic filenames and not re-plot
             created, existed = await create_plots(
                 args,
-                keys,
+                plot_keys,
                 self.root_path,
                 use_datetime=False,
-                test_private_keys=[AugSchemeMPL.key_gen(std_hash(len(self.expected_plots).to_bytes(2, "big")))],
+                test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots.to_bytes(2, "big")))],
             )
+            self.created_plots += 1
 
             plot_id_new: Optional[bytes32] = None
             path_new: Path = Path()
@@ -292,10 +308,11 @@ class BlockTools:
                 assert len(created) == 0
                 plot_id_new, path_new = list(existed.items())[0]
 
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, Path]"; expected type "bytes32"
-            #       [index]
-            self.expected_plots[plot_id_new] = path_new  # type: ignore[index]
+            if not exclude_final_dir:
+                # TODO: address hint error and remove ignore
+                #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, Path]"; expected type "bytes32"
+                #       [index]
+                self.expected_plots[plot_id_new] = path_new  # type: ignore[index]
 
             # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
             self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[
@@ -305,7 +322,7 @@ class BlockTools:
             return plot_id_new
 
         except KeyboardInterrupt:
-            shutil.rmtree(self.plot_dir, ignore_errors=True)
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
             sys.exit(1)
 
     async def refresh_plots(self):
@@ -704,6 +721,7 @@ class BlockTools:
                 )
                 pending_ses = True
 
+            ses_hash: Optional[bytes32]
             if sub_epoch_summary is not None:
                 ses_hash = sub_epoch_summary.get_hash()
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
@@ -711,10 +729,7 @@ class BlockTools:
 
                 log.info(f"Sub epoch summary: {sub_epoch_summary}")
             else:
-                # TODO: address hint error and remove ignore
-                #       error: Incompatible types in assignment (expression has type "None", variable has type
-                #       "bytes32")  [assignment]
-                ses_hash = None  # type: ignore[assignment]
+                ses_hash = None
                 new_sub_slot_iters = None
                 new_difficulty = None
 
@@ -1568,7 +1583,7 @@ def get_full_block_and_block_record(
 def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Optional[uint16], uint64]:
     try:
         block_program, block_program_args = setup_generator_args(generator)
-        clvm_cost, result = GENERATOR_MOD.run_safe_with_cost(INFINITE_COST, block_program, block_program_args)
+        clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, block_program, block_program_args)
         size_cost = len(bytes(generator.program)) * cost_per_byte
         condition_cost = 0
 
@@ -1683,7 +1698,7 @@ def create_test_foliage(
 
         # Calculate the cost of transactions
         if block_generator is not None:
-            generator_block_heights_list = block_generator.block_height_list()
+            generator_block_heights_list = block_generator.block_height_list
             err, cost = compute_cost_test(block_generator, constants.COST_PER_BYTE)
             assert err is None
 
@@ -1807,17 +1822,12 @@ def create_test_foliage(
             prev_transaction_block_hash = prev_transaction_block.header_hash
 
         assert transactions_info is not None
-        # TODO: address hint error and remove ignore
-        #       error: Argument 4 to "FoliageTransactionBlock" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
-        #       error: Argument 5 to "FoliageTransactionBlock" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
         foliage_transaction_block: Optional[FoliageTransactionBlock] = FoliageTransactionBlock(
             prev_transaction_block_hash,
             timestamp,
             filter_hash,
-            additions_root,  # type: ignore[arg-type]
-            removals_root,  # type: ignore[arg-type]
+            additions_root,
+            removals_root,
             transactions_info.get_hash(),
         )
         assert foliage_transaction_block is not None
@@ -1993,7 +2003,7 @@ def create_test_unfinished_block(
         foliage_transaction_block,
         transactions_info,
         block_generator.program if block_generator else None,
-        block_generator.block_height_list() if block_generator else [],
+        block_generator.block_height_list if block_generator else [],  # TODO: can block_generator ever be None?
     )
 
 
