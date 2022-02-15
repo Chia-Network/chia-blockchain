@@ -586,7 +586,6 @@ class WalletNode:
     ) -> bool:
         # Adds the state to the wallet state manager. If the peer is trusted, we do not validate. If the peer is
         # untrusted we do, but we might not add the state, since we need to receive the new_peak message as well.
-        self.log.info(f"Processing: {[(cs.created_height, cs.spent_height) for cs in items[:150]]}")
         assert self.wallet_state_manager is not None
         trusted = self.is_trusted(peer)
         # Validate states in parallel, apply serial
@@ -648,7 +647,6 @@ class WalletNode:
                 await asyncio.sleep(1)
             all_tasks.append(asyncio.create_task(receive_and_validate(potential_state, idx)))
             num_concurrent_tasks += 1
-            self.log.info(f"Number of tasks: {num_concurrent_tasks}")
 
         await asyncio.gather(*all_tasks)
         await self.update_ui()
@@ -1061,16 +1059,12 @@ class WalletNode:
             current_spent_height = current.spent_block_height
 
         # Same as current state, nothing to do
-        self.log.info(
-            f"coin: {coin_state.coin} current: {current} {coin_state.created_height} {coin_state.spent_height}"
-        )
         if (
             current is not None
             and current_spent_height == spent_height
             and current.confirmed_block_height == confirmed_height
         ):
             peer_request_cache.states_validated[coin_state.get_hash()] = coin_state
-            self.log.info("DB Cache hit!")
             return True
 
         reorg_mode = False
