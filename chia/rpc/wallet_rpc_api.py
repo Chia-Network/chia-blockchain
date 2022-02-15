@@ -1321,8 +1321,8 @@ class WalletRpcApi:
             uint32(request["relative_lock_height"]),
         )
         async with self.service.wallet_state_manager.lock:
-            total_fee, tx = await wallet.join_pool(new_target_state, fee)
-            return {"total_fee": total_fee, "transaction": tx}
+            total_fee, tx, fee_tx = await wallet.join_pool(new_target_state, fee)
+            return {"total_fee": total_fee, "transaction": tx, "fee_transaction": fee_tx}
 
     async def pw_self_pool(self, request) -> Dict:
         if self.service.wallet_state_manager is None:
@@ -1338,8 +1338,8 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced.")
 
         async with self.service.wallet_state_manager.lock:
-            total_fee, tx = await wallet.self_pool(fee)  # total_fee: uint64, tx: TransactionRecord
-            return {"total_fee": total_fee, "transaction": tx}
+            total_fee, tx, fee_tx = await wallet.self_pool(fee)
+            return {"total_fee": total_fee, "transaction": tx, "fee_transaction": fee_tx}
 
     async def pw_absorb_rewards(self, request) -> Dict:
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
@@ -1352,9 +1352,9 @@ class WalletRpcApi:
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         async with self.service.wallet_state_manager.lock:
-            transaction: TransactionRecord = await wallet.claim_pool_rewards(fee)
+            transaction, fee_tx = await wallet.claim_pool_rewards(fee)
             state: PoolWalletInfo = await wallet.get_current_state()
-        return {"state": state.to_json_dict(), "transaction": transaction}
+        return {"state": state.to_json_dict(), "transaction": transaction, "fee_transaction": fee_tx}
 
     async def pw_status(self, request) -> Dict:
         """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""

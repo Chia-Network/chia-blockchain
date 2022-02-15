@@ -1436,12 +1436,12 @@ class FullNodeAPI:
 
         # Send all coins with requested puzzle hash that have been created after the specified height
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
-            include_spent_coins=True, puzzle_hashes=request.puzzle_hashes, start_height=request.min_height
+            include_spent_coins=True, puzzle_hashes=request.puzzle_hashes, min_height=request.min_height
         )
 
         if len(hint_coin_ids) > 0:
-            hint_states = await self.full_node.coin_store.get_coin_state_by_ids(
-                include_spent_coins=True, coin_ids=hint_coin_ids, start_height=request.min_height
+            hint_states = await self.full_node.coin_store.get_coin_states_by_ids(
+                include_spent_coins=True, coin_ids=hint_coin_ids, min_height=request.min_height
             )
             states.extend(hint_states)
 
@@ -1471,8 +1471,8 @@ class FullNodeAPI:
                 self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
                 self.full_node.peer_sub_counter[peer.peer_node_id] += 1
 
-        states: List[CoinState] = await self.full_node.coin_store.get_coin_state_by_ids(
-            include_spent_coins=True, coin_ids=request.coin_ids, start_height=request.min_height
+        states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
+            include_spent_coins=True, coin_ids=request.coin_ids, min_height=request.min_height
         )
 
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
