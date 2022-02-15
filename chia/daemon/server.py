@@ -1093,7 +1093,9 @@ class WebSocketServer:
             self.log.info(f"Service {service_command} already registered")
             already_running = True
 
-        if not already_running and error is None:
+        if already_running:
+            success = True
+        elif error is None:
             try:
                 exe_command = service_command
                 if testing is True:
@@ -1104,8 +1106,6 @@ class WebSocketServer:
             except (subprocess.SubprocessError, IOError):
                 log.exception(f"problem starting {service_command}")
                 error = "start failed"
-        elif already_running:
-            success = True
 
         response = {"success": success, "service": service_command, "error": error}
         return response
