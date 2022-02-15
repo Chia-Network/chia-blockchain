@@ -837,7 +837,6 @@ class TestWalletSimulator:
         full_node_api = full_nodes[0]
         fn_server = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
-        wallet = wallet_node.wallet_state_manager.main_wallet
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         peer = list(wallet_node.server.all_connections.values())[0]
