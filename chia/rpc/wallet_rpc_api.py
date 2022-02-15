@@ -125,12 +125,13 @@ class WalletRpcApi:
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
         """
+        payloads = []
         if args[0] is not None and args[0] == "sync_changed":
             # Metrics is the only current consumer for this event
-            return [create_payload_dict(args[0], {}, self.service_name, "metrics")]
+            payloads.append(create_payload_dict(args[0], {}, self.service_name, "metrics"))
 
         if len(args) < 2:
-            return []
+            return payloads
 
         data = {
             "state": args[0],
@@ -140,7 +141,7 @@ class WalletRpcApi:
         if args[2] is not None:
             data["additional_data"] = args[2]
 
-        payloads = [create_payload_dict("state_changed", data, self.service_name, "wallet_ui")]
+        payloads.append(create_payload_dict("state_changed", data, self.service_name, "wallet_ui"))
 
         if args[0] == "coin_added":
             payloads.append(create_payload_dict(args[0], data, self.service_name, "metrics"))

@@ -1,6 +1,8 @@
+import logging
 from typing import List, Optional, Tuple, Union, Dict
 
 from chia.consensus.constants import ConsensusConstants
+from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import (
     RequestAdditions,
     RespondAdditions,
@@ -8,17 +10,73 @@ from chia.protocols.wallet_protocol import (
     RejectRemovalsRequest,
     RespondRemovals,
     RequestRemovals,
+    RespondBlockHeader,
+    CoinState,
+    RespondToPhUpdates,
+    RespondToCoinUpdates,
 )
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import hash_coin_list, Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
+from chia.types.header_block import HeaderBlock
+from chia.util.ints import uint32
 from chia.util.merkle_set import confirm_not_included_already_hashed, confirm_included_already_hashed, MerkleSet
+
+
+log = logging.getLogger(__name__)
+
+
+async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Optional[HeaderBlock]:
+    request_height: int = height
+    while True:
+        if request_height == -1:
+            return None
+        request = wallet_protocol.RequestBlockHeader(uint32(request_height))
+        response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+        if response is not None and isinstance(response, RespondBlockHeader):
+            if response.header_block.is_transaction_block:
+                return response.header_block
+        else:
+            break
+        request_height = request_height - 1
+    return None
+
+
+async def subscribe_to_phs(
+    puzzle_hashes: List[bytes32],
+    peer: WSChiaConnection,
+    min_height: int,
+) -> List[CoinState]:
+    """
+    Tells full nodes that we are interested in puzzle hashes, and returns the response.
+    """
+    msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, uint32(max(min_height, uint32(0))))
+    all_coins_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
+    if all_coins_state is not None:
+        return all_coins_state.coin_states
+    return []
+
+
+async def subscribe_to_coin_updates(
+    coin_names: List[bytes32],
+    peer: WSChiaConnection,
+    min_height: int,
+) -> List[CoinState]:
+    """
+    Tells full nodes that we are interested in coin ids, and returns the response.
+    """
+    msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(max(0, min_height)))
+    all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
+    if all_coins_state is not None:
+        return all_coins_state.coin_states
+    return []
 
 
 def validate_additions(
     coins: List[Tuple[bytes32, List[Coin]]],
     proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]],
-    root,
+    root: bytes32,
 ):
     if proofs is None:
         # Verify root
@@ -77,7 +135,9 @@ def validate_additions(
     return True
 
 
-def validate_removals(coins, proofs, root):
+def validate_removals(
+    coins: List[Tuple[bytes32, Optional[Coin]]], proofs: Optional[List[Tuple[bytes32, bytes]]], root: bytes32
+):
     if proofs is None:
         # If there are no proofs, it means all removals were returned in the response.
         # we must find the ones relevant to our wallets.
@@ -124,7 +184,9 @@ def validate_removals(coins, proofs, root):
     return True
 
 
-async def request_and_validate_removals(peer, height, header_hash, coin_name, removals_root) -> bool:
+async def request_and_validate_removals(
+    peer: WSChiaConnection, height: uint32, header_hash: bytes32, coin_name: bytes32, removals_root: bytes32
+) -> bool:
     removals_request = RequestRemovals(height, header_hash, [coin_name])
 
     removals_res: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.request_removals(
@@ -132,10 +194,13 @@ async def request_and_validate_removals(peer, height, header_hash, coin_name, re
     )
     if removals_res is None or isinstance(removals_res, RejectRemovalsRequest):
         return False
+    assert removals_res.proofs is not None
     return validate_removals(removals_res.coins, removals_res.proofs, removals_root)
 
 
-async def request_and_validate_additions(peer, height, header_hash, puzzle_hash, additions_root):
+async def request_and_validate_additions(
+    peer: WSChiaConnection, height: uint32, header_hash: bytes32, puzzle_hash: bytes32, additions_root: bytes32
+):
     additions_request = RequestAdditions(height, header_hash, [puzzle_hash])
     additions_res: Optional[Union[RespondAdditions, RejectAdditionsRequest]] = await peer.request_additions(
         additions_request
@@ -143,12 +208,11 @@ async def request_and_validate_additions(peer, height, header_hash, puzzle_hash,
     if additions_res is None or isinstance(additions_res, RejectAdditionsRequest):
         return False
 
-    validated = validate_additions(
+    return validate_additions(
         additions_res.coins,
         additions_res.proofs,
         additions_root,
     )
-    return validated
 
 
 def get_block_challenge(
