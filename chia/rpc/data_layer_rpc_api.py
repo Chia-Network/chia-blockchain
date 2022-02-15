@@ -158,8 +158,10 @@ class DataLayerRpcApi:
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        hash, status = await self.service.get_root(store_id)
-        return {"hash": hash, "status": status}
+        rec = await self.service.get_root(store_id)
+        if rec is None:
+            raise Exception(f"Failed to get root for {store_id.hex()}")
+        return {"hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp}
 
     async def get_roots(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -172,8 +174,9 @@ class DataLayerRpcApi:
         roots = []
         for id in store_ids:
             id_bytes = bytes32.from_hexstr(id)
-            hash, status = await self.service.get_root(id_bytes)
-            roots.append({"id": id_bytes, "hash": hash, "status": status})
+            rec = await self.service.get_root(id_bytes)
+            if rec is not None:
+                roots.append({"id": id_bytes, "hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp})
         return {"root_hashes": roots}
 
     async def subscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -223,5 +226,5 @@ class DataLayerRpcApi:
         records = await self.service.get_root_history(id_bytes)
         res: List[Dict[str, Any]] = []
         for rec in records:
-            res.insert(0, {"root_hash": rec.root, "status": rec.confirmed})  # add timestamp from block
+            res.insert(0, {"root_hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp})
         return {"root_history": res}

@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable
 import aiosqlite
 import traceback
 import asyncio
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode, DownloadMode, Subscription, Root, Status
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode, DownloadMode, Subscription, Root
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -144,12 +144,11 @@ class DataLayer:
             self.log.error("Failed to get ancestors")
         return res
 
-    async def get_root(self, store_id: bytes32) -> Tuple[Optional[bytes32], Status]:
+    async def get_root(self, store_id: bytes32) -> Optional[SingletonRecord]:
         latest = await self.wallet_rpc.dl_latest_singleton(store_id, True)
         if latest is None:
             self.log.error(f"Failed to get root for {store_id.hex()}")
-            return None, Status.PENDING
-        return latest.root, Status.COMMITTED
+        return latest
 
     async def get_root_history(self, store_id: bytes32) -> List[SingletonRecord]:
         records = await self.wallet_rpc.dl_history(store_id)

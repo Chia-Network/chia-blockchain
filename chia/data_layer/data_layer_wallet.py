@@ -49,6 +49,7 @@ class SingletonRecord(Streamable):
     confirmed_at_height: uint32
     lineage_proof: LineageProof
     generation: uint32
+    timestamp: uint64
 
 
 _T_DataLayerWallet = TypeVar("_T_DataLayerWallet", bound="DataLayerWallet")
@@ -219,7 +220,6 @@ class DataLayerWallet:
         if height is None:
             height = (await self.get_launcher_coin_state(launcher_id)).spent_height
             assert height is not None
-
         full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(
             launcher_spend.solution.to_program()
         )
@@ -232,10 +232,12 @@ class DataLayerWallet:
             if (  # This is an unconfirmed singleton that we know about
                 singleton_record.coin_id == new_singleton.name() and not singleton_record.confirmed
             ):
-                await self.wallet_state_manager.dl_store.set_confirmed(singleton_record.coin_id, height)
+                timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
+                await self.wallet_state_manager.dl_store.set_confirmed(singleton_record.coin_id, height, timestamp)
             else:
                 self.log.info(f"Spend of launcher {launcher_id} has already been processed")
         else:
+            timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
             await self.wallet_state_manager.dl_store.add_singleton_record(
                 SingletonRecord(
                     coin_id=new_singleton.name(),
@@ -244,6 +246,7 @@ class DataLayerWallet:
                     inner_puzzle_hash=inner_puzhash,
                     confirmed=True,
                     confirmed_at_height=height,
+                    timestamp=timestamp,
                     lineage_proof=LineageProof(
                         launcher_id,
                         create_host_layer_puzzle(inner_puzhash, root).get_tree_hash(),
@@ -389,6 +392,7 @@ class DataLayerWallet:
             inner_puzzle_hash=inner_puzzle.get_tree_hash(),
             confirmed=False,
             confirmed_at_height=uint32(0),
+            timestamp=uint64(0),
             lineage_proof=LineageProof(
                 launcher_coin.name(),
                 create_host_layer_puzzle(inner_puzzle.get_tree_hash(), initial_root).get_tree_hash(),
@@ -519,6 +523,7 @@ class DataLayerWallet:
             inner_puzzle_hash=next_inner_puzzle.get_tree_hash(),
             confirmed=False,
             confirmed_at_height=uint32(0),
+            timestamp=uint64(0),
             lineage_proof=LineageProof(
                 singleton_record.coin_id,
                 next_inner_puzzle.get_tree_hash(),
@@ -604,6 +609,7 @@ class DataLayerWallet:
             root=singleton_record.root,
             confirmed=False,
             confirmed_at_height=uint32(0),
+            timestamp=uint64(0),
             inner_puzzle_hash=singleton_record.inner_puzzle_hash,
             lineage_proof=LineageProof(
                 singleton_record.coin_id,
@@ -709,6 +715,7 @@ class DataLayerWallet:
                 return
 
             new_singleton = Coin(parent_name, full_puzzle_hash, amount)
+            timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
             await self.wallet_state_manager.dl_store.add_singleton_record(
                 SingletonRecord(
                     coin_id=new_singleton.name(),
@@ -717,6 +724,7 @@ class DataLayerWallet:
                     inner_puzzle_hash=inner_puzzle_hash,
                     confirmed=True,
                     confirmed_at_height=height,
+                    timestamp=timestamp,
                     lineage_proof=LineageProof(
                         parent_name,
                         create_host_layer_puzzle(inner_puzzle_hash, root).get_tree_hash(),
