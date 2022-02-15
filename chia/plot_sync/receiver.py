@@ -177,6 +177,7 @@ class Receiver:
 
     async def process_path_list(
         self,
+        *,
         state: State,
         next_state: State,
         target: Collection[str],
@@ -199,14 +200,25 @@ class Receiver:
         self.bump_expected_message_id()
 
     async def _process_removed(self, paths: PlotSyncPathList) -> None:
-        await self.process_path_list(State.removed, State.invalid, self._plots, self._delta.valid.removals, paths, True)
+        await self.process_path_list(
+            state=State.removed,
+            next_state=State.invalid,
+            target=self._plots,
+            delta=self._delta.valid.removals,
+            paths=paths,
+            is_removal=True,
+        )
 
     async def process_removed(self, paths: PlotSyncPathList) -> None:
         await self._process(self._process_removed, ProtocolMessageTypes.plot_sync_removed, paths)
 
     async def _process_invalid(self, paths: PlotSyncPathList) -> None:
         await self.process_path_list(
-            State.invalid, State.keys_missing, self._invalid, self._delta.invalid.additions, paths
+            state=State.invalid,
+            next_state=State.keys_missing,
+            target=self._invalid,
+            delta=self._delta.invalid.additions,
+            paths=paths,
         )
 
     async def process_invalid(self, paths: PlotSyncPathList) -> None:
@@ -214,11 +226,11 @@ class Receiver:
 
     async def _process_keys_missing(self, paths: PlotSyncPathList) -> None:
         await self.process_path_list(
-            State.keys_missing,
-            State.duplicates,
-            self._keys_missing,
-            self._delta.keys_missing.additions,
-            paths,
+            state=State.keys_missing,
+            next_state=State.duplicates,
+            target=self._keys_missing,
+            delta=self._delta.keys_missing.additions,
+            paths=paths,
         )
 
     async def process_keys_missing(self, paths: PlotSyncPathList) -> None:
@@ -226,11 +238,11 @@ class Receiver:
 
     async def _process_duplicates(self, paths: PlotSyncPathList) -> None:
         await self.process_path_list(
-            State.duplicates,
-            State.done,
-            self._duplicates,
-            self._delta.duplicates.additions,
-            paths,
+            state=State.duplicates,
+            next_state=State.done,
+            target=self._duplicates,
+            delta=self._delta.duplicates.additions,
+            paths=paths,
         )
 
     async def process_duplicates(self, paths: PlotSyncPathList) -> None:
