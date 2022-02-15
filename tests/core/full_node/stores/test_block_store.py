@@ -1,8 +1,8 @@
 import asyncio
+import dataclasses
 import logging
 import random
 import sqlite3
-import dataclasses
 
 import pytest
 
@@ -10,11 +10,11 @@ from chia.consensus.blockchain import Blockchain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
-from chia.util.ints import uint8
 from chia.types.blockchain_format.vdf import VDFProof
+from chia.util.ints import uint8
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from tests.util.db_connection import DBConnection
 from tests.setup_nodes import bt, test_constants
+from tests.util.db_connection import DBConnection
 
 log = logging.getLogger(__name__)
 
