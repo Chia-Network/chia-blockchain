@@ -59,9 +59,9 @@ class TestWalletSync:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node.config["trusted_peers"] = {}
+            wallet_node.config["full_node_peer"] = {}
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         # The second node should eventually catch up to the first one, and have the
@@ -96,9 +96,9 @@ class TestWalletSync:
         ph = await wallet.get_new_puzzlehash()
 
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node.config["trusted_peers"] = {}
+            wallet_node.config["full_node_peer"] = {}
 
         # Tests a reorg with the wallet
         num_blocks = 20
@@ -129,9 +129,9 @@ class TestWalletSync:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node.config["trusted_peers"] = {}
+            wallet_node.config["full_node_peer"] = {}
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         # The second node should eventually catch up to the first one, and have the
@@ -150,9 +150,9 @@ class TestWalletSync:
         for block in default_400_blocks[:200]:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node.config["trusted_peers"] = {}
+            wallet_node.config["full_node_peer"] = {}
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
@@ -175,9 +175,9 @@ class TestWalletSync:
         for block in default_400_blocks:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node.config["trusted_peers"] = {}
+            wallet_node.config["full_node_peer"] = {}
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
@@ -223,9 +223,9 @@ class TestWalletSync:
         ph = await wallet.get_new_puzzlehash()
 
         if trusted:
-            wallet_node.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
+            wallet_node.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node.config["trusted_peers"] = {}
+            wallet_node.config["full_node_peer"] = {}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
 
@@ -277,9 +277,9 @@ class TestWalletSync:
         ph = await wallet.get_new_puzzlehash()
 
         if trusted:
-            wallet_node.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
+            wallet_node.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node.config["trusted_peers"] = {}
+            wallet_node.config["full_node_peer"] = {}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
 
