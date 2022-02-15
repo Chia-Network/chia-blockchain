@@ -102,10 +102,15 @@ MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 #          PH = None
 #          L = LineageProof(Launcher, PH, amount)
 #
+#       - Note: the Eve singleton's .parent_coin_info should match Launcher here.
+#
 #      Otherwise
 #
-#          PH = ParentOf(S).puzzle_hash
+#          PH = ParentOf(S).inner_puzzle_hash
 #          L = LineageProof(ParentOf(S).name(), PH, amount)
+#
+#       - Note: ParentOf(S).name is the .parent_coin_info member of the
+#         coin record for S.
 #
 # Now the coin S can be spent.
 # The puzzle to use in the spend is given by
