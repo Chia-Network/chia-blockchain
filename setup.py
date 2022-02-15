@@ -46,6 +46,7 @@ dev_dependencies = [
     "pytest-asyncio",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
+    "isort",
     "flake8",
     "mypy",
     # TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
