@@ -803,7 +803,10 @@ class TestWalletSimulator:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks+1)]
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks + 1)
+            ]
         )
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
@@ -819,7 +822,7 @@ class TestWalletSimulator:
             coins=coins,
             origin_id=coins[2].name(),
         )
-        paid_coin: Coin = [coin for coin in tx.spend_bundle.additions() if coin.amount == AMOUNT_TO_SEND][0]
+        paid_coin = [coin for coin in tx.spend_bundle.additions() if coin.amount == AMOUNT_TO_SEND][0]
         assert paid_coin.parent_coin_info == coins[2].name()
         await wallet.push_transaction(tx)
 
