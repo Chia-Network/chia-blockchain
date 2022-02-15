@@ -14,6 +14,20 @@ from chia.wallet.lineage_proof import LineageProof
 _T_DataLayerStore = TypeVar("_T_DataLayerStore", bound="DataLayerStore")
 
 
+def _row_to_singleton_record(row: Row) -> SingletonRecord:
+    return SingletonRecord(
+        bytes32(row[0]),
+        bytes32(row[1]),
+        bytes32(row[2]),
+        bytes32(row[3]),
+        bool(row[4]),
+        uint32(row[5]),
+        LineageProof.from_bytes(row[6]),
+        uint32(row[7]),
+        uint64(row[8]),
+    )
+
+
 class DataLayerStore:
     """
     WalletUserStore keeps track of all user created wallets and necessary smart-contract data
@@ -38,7 +52,8 @@ class DataLayerStore:
                 " confirmed tinyint,"
                 " confirmed_at_height int,"
                 " proof blob,"
-                " generation int)"  # This first singleton will be 0, then 1, and so on.  This is handled by the DB.
+                " generation int,"  # This first singleton will be 0, then 1, and so on.  This is handled by the DB.
+                " timestamp int)"
             )
         )
 
@@ -63,18 +78,6 @@ class DataLayerStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    def _row_to_singleton_record(self, row: Row) -> SingletonRecord:
-        return SingletonRecord(
-            bytes32(row[0]),
-            bytes32(row[1]),
-            bytes32(row[2]),
-            bytes32(row[3]),
-            bool(row[4]),
-            uint32(row[5]),
-            LineageProof.from_bytes(row[6]),
-            uint32(row[7]),
-        )
-
     async def add_singleton_record(self, record: SingletonRecord, in_transaction: bool) -> None:
         """
         Store SingletonRecord in DB.
@@ -84,7 +87,7 @@ class DataLayerStore:
             await self.db_wrapper.lock.acquire()
         try:
             cursor = await self.db_connection.execute(
-                "INSERT OR REPLACE INTO singleton_records VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO singleton_records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     record.coin_id,
                     record.launcher_id,
@@ -94,6 +97,7 @@ class DataLayerStore:
                     record.confirmed_at_height,
                     bytes(record.lineage_proof),
                     record.generation,
+                    record.timestamp,
                 ),
             )
             await cursor.close()
@@ -136,7 +140,7 @@ class DataLayerStore:
         records = []
 
         for row in rows:
-            records.append(self._row_to_singleton_record(row))
+            records.append(_row_to_singleton_record(row))
 
         return records
 
@@ -151,7 +155,7 @@ class DataLayerStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            return self._row_to_singleton_record(row)
+            return _row_to_singleton_record(row)
         return None
 
     async def get_latest_singleton(
@@ -176,7 +180,7 @@ class DataLayerStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            return self._row_to_singleton_record(row)
+            return _row_to_singleton_record(row)
         return None
 
     async def get_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> List[SingletonRecord]:
@@ -189,11 +193,11 @@ class DataLayerStore:
         records = []
 
         for row in rows:
-            records.append(self._row_to_singleton_record(row))
+            records.append(_row_to_singleton_record(row))
 
         return records
 
-    async def set_confirmed(self, coin_id: bytes32, height: uint32) -> None:
+    async def set_confirmed(self, coin_id: bytes32, height: uint32, timestamp: uint64) -> None:
         """
         Updates singleton record to be confirmed.
         """
@@ -201,7 +205,9 @@ class DataLayerStore:
         if current is None or current.confirmed_at_height == height:
             return
 
-        await self.add_singleton_record(dataclasses.replace(current, confirmed=True, confirmed_at_height=height), True)
+        await self.add_singleton_record(
+            dataclasses.replace(current, confirmed=True, confirmed_at_height=height, timestamp=timestamp), True
+        )
 
     async def delete_singleton_record(self, coin_id: bytes32) -> None:
         c = await self.db_connection.execute("DELETE FROM singleton_records WHERE coin_id=?", (coin_id,))
