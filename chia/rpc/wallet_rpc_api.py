@@ -1427,14 +1427,15 @@ class WalletRpcApi:
 
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                records = await wallet.create_update_state_spend(
-                    bytes32.from_hexstr(request["launcher_id"]),
-                    bytes32.from_hexstr(request["new_root"]),
-                    fee=uint64(request.get("fee", 0)),
-                )
-                for record in records:
-                    await self.service.wallet_state_manager.add_pending_transaction(record)
-                return {"tx_record": records[0].to_json_dict_convenience(self.service.config)}
+                async with self.service.wallet_state_manager.lock:
+                    records = await wallet.create_update_state_spend(
+                        bytes32.from_hexstr(request["launcher_id"]),
+                        bytes32.from_hexstr(request["new_root"]),
+                        fee=uint64(request.get("fee", 0)),
+                    )
+                    for record in records:
+                        await self.service.wallet_state_manager.add_pending_transaction(record)
+                    return {"tx_record": records[0].to_json_dict_convenience(self.service.config)}
 
         raise ValueError("No DataLayer wallet has been initialized")
 
@@ -1445,25 +1446,26 @@ class WalletRpcApi:
 
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                # TODO: This method should optionally link the singletons with announcements.
-                #       Otherwise spends are vulnerable to signature subtraction.
-                tx_records: List[TransactionRecord] = []
-                for launcher, root in request["updates"].items():
-                    records = await wallet.create_update_state_spend(
-                        bytes32.from_hexstr(launcher), bytes32.from_hexstr(root)
-                    )
-                    tx_records.extend(records)
-                # Now that we have all the txs, we need to aggregate them all into just one spend
-                modified_txs: List[TransactionRecord] = []
-                aggregate_spend = SpendBundle([], G2Element())
-                for tx in tx_records:
-                    if tx.spend_bundle is not None:
-                        aggregate_spend = SpendBundle.aggregate([aggregate_spend, tx.spend_bundle])
-                        modified_txs.append(dataclasses.replace(tx, spend_bundle=None))
-                modified_txs[0] = dataclasses.replace(modified_txs[0], spend_bundle=aggregate_spend)
-                for tx in modified_txs:
-                    await self.service.wallet_state_manager.add_pending_transaction(tx)
-                return {"tx_records": [rec.to_json_dict_convenience(self.service.config) for rec in modified_txs]}
+                async with self.service.wallet_state_manager.lock:
+                    # TODO: This method should optionally link the singletons with announcements.
+                    #       Otherwise spends are vulnerable to signature subtraction.
+                    tx_records: List[TransactionRecord] = []
+                    for launcher, root in request["updates"].items():
+                        records = await wallet.create_update_state_spend(
+                            bytes32.from_hexstr(launcher), bytes32.from_hexstr(root)
+                        )
+                        tx_records.extend(records)
+                    # Now that we have all the txs, we need to aggregate them all into just one spend
+                    modified_txs: List[TransactionRecord] = []
+                    aggregate_spend = SpendBundle([], G2Element())
+                    for tx in tx_records:
+                        if tx.spend_bundle is not None:
+                            aggregate_spend = SpendBundle.aggregate([aggregate_spend, tx.spend_bundle])
+                            modified_txs.append(dataclasses.replace(tx, spend_bundle=None))
+                    modified_txs[0] = dataclasses.replace(modified_txs[0], spend_bundle=aggregate_spend)
+                    for tx in modified_txs:
+                        await self.service.wallet_state_manager.add_pending_transaction(tx)
+                    return {"tx_records": [rec.to_json_dict_convenience(self.service.config) for rec in modified_txs]}
 
         raise ValueError("No DataLayer wallet has been initialized")
 
