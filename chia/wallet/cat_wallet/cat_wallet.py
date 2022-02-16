@@ -598,12 +598,13 @@ class CATWallet:
         spendable_cc_list = []
         chia_tx = None
         first = True
+        announcement: Announcement
         for coin in cat_coins:
             if first:
                 first = False
+                announcement = Announcement(coin.name(), b"$", b"\xca")
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
-                        announcement = Announcement(coin.name(), b"$", b"\xca")
                         chia_tx, _ = await self.create_tandem_xch_tx(
                             fee, uint64(regular_chia_to_claim), announcement_to_assert=announcement
                         )
@@ -616,16 +617,22 @@ class CATWallet:
                     elif regular_chia_to_claim > fee:
                         chia_tx, _ = await self.create_tandem_xch_tx(fee, uint64(regular_chia_to_claim))
                         innersol = self.standard_wallet.make_solution(
-                            primaries=primaries, coin_announcements_to_assert={announcement.name()}
+                            primaries=primaries,
+                            coin_announcements={announcement.message},
+                            coin_announcements_to_assert={announcement.name()},
                         )
                 else:
                     innersol = self.standard_wallet.make_solution(
                         primaries=primaries,
+                        coin_announcements={announcement.message},
                         coin_announcements_to_assert=coin_announcements_bytes,
                         puzzle_announcements_to_assert=puzzle_announcements_bytes,
                     )
             else:
-                innersol = self.standard_wallet.make_solution(primaries=[])
+                innersol = self.standard_wallet.make_solution(
+                    primaries=[],
+                    coin_announcements_to_assert={announcement.name()},
+                )
             inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
