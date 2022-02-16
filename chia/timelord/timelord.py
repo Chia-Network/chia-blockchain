@@ -155,7 +155,7 @@ class Timelord:
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
 
-    def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None):
+    def state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None):
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
@@ -1001,7 +1001,7 @@ class Timelord:
                             f" iters, "
                             f"Estimated IPS: {ips}, Chain: {chain}"
                         )
-                        self._state_changed(
+                        self.state_changed(
                             "finished_pot_challenge", {"estimated_ips": ips, "iters": iterations_needed, "chain": chain}
                         )
 
@@ -1035,7 +1035,7 @@ class Timelord:
                         if self.server is not None:
                             message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
                             await self.server.send_to_all([message], NodeType.FULL_NODE)
-                        self._state_changed(
+                        self.state_changed(
                             "new_compact_proof", {"header_hash": header_hash, "height": height, "field_vdf": field_vdf}
                         )
 
