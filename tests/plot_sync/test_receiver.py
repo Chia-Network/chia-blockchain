@@ -9,10 +9,10 @@ from Crypto.Random import get_random_bytes
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.util import ErrorCodes, State
 from chia.protocols.harvester_protocol import (
+    Plot,
     PlotSyncDone,
     PlotSyncIdentifier,
     PlotSyncPathList,
-    Plot,
     PlotSyncPlotList,
     PlotSyncResponse,
     PlotSyncStart,
