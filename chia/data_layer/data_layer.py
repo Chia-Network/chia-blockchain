@@ -307,7 +307,6 @@ class DataLayer:
         subscriptions = await self.get_subscriptions()
         if tree_id not in [subscription.tree_id for subscription in subscriptions]:
             raise RuntimeError("No subscription found for the given tree_id.")
-            return
         async with self.subscription_lock:
             await self.data_store.unsubscribe(tree_id)
         await self.wallet_rpc.dl_stop_tracking(tree_id)
