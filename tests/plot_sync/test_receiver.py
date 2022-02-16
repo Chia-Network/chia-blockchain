@@ -145,7 +145,7 @@ async def run_sync_step(receiver: Receiver, sync_step: SyncStepData, expected_st
 
 def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
     harvester_connection = get_dummy_connection(NodeType.HARVESTER)
-    receiver = Receiver(harvester_connection, dummy_callback)
+    receiver = Receiver(harvester_connection, dummy_callback)  # type:ignore[arg-type]
 
     # Create example plot data
     path_list = [str(x) for x in range(0, 40)]
@@ -180,7 +180,7 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
 
 
 def test_default_values() -> None:
-    assert_default_values(Receiver(get_dummy_connection(NodeType.HARVESTER), dummy_callback))
+    assert_default_values(Receiver(get_dummy_connection(NodeType.HARVESTER), dummy_callback))  # type:ignore[arg-type]
 
 
 @pytest.mark.asyncio

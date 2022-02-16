@@ -14,19 +14,20 @@ from chia.util.ints import uint64
 from tests.time_out_assert import time_out_assert
 
 
-def get_dummy_connection(node_type: NodeType, peer_id=None):
-    @dataclass
-    class WSChiaConnection:
-        connection_type: NodeType = node_type
-        peer_node_id: bytes32 = bytes32(get_random_bytes(32)) if peer_id is None else peer_id
-        peer_host: str = "localhost"
-        peer_port: int = 0
-        last_sent_message: Optional[Message] = None
+@dataclass
+class WSChiaConnectionDummy:
+    connection_type: NodeType
+    peer_node_id: bytes32
+    peer_host: str = "localhost"
+    peer_port: int = 0
+    last_sent_message: Optional[Message] = None
 
-        async def send_message(self, message: Message):
-            self.last_sent_message = message
+    async def send_message(self, message: Message):
+        self.last_sent_message = message
 
-    return WSChiaConnection()
+
+def get_dummy_connection(node_type: NodeType, peer_id=None) -> WSChiaConnectionDummy:
+    return WSChiaConnectionDummy(node_type, bytes32(get_random_bytes(32)) if peer_id is None else peer_id)
 
 
 def plot_sync_identifier(current_sync_id: uint64, message_id: uint64):

@@ -36,7 +36,7 @@ def test_set_connection_values() -> None:
                 get_dummy_connection(connection_type, farmer_connection.peer_node_id),
             )
     # Test setting a valid connection works
-    sender.set_connection(farmer_connection)
+    sender.set_connection(farmer_connection)  # type:ignore[arg-type]
     assert sender._connection == farmer_connection
 
 
