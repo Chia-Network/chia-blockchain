@@ -4,6 +4,7 @@ from shutil import copy
 from typing import List, Optional
 
 import pytest
+import pytest_asyncio
 from blspy import G1Element
 
 from chia.farmer.farmer_api import Farmer
@@ -256,8 +257,7 @@ class Environment:
         )
 
 
-@pytest.fixture(scope="function")
-@pytest.mark.asyncio
+@pytest_asyncio.fixture(scope="function")
 async def environment(tmp_path, farmer_multi_harvester) -> Environment:
     def new_test_dir(name: str, plot_list: List[Path]) -> TestDirectory:
         return TestDirectory(tmp_path / "plots" / name, plot_list)

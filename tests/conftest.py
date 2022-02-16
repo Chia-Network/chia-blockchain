@@ -160,7 +160,7 @@ def tmp_dir():
         yield Path(folder)
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def farmer_multi_harvester(request: pytest.FixtureRequest, tmp_path: Path, bt: BlockTools) -> AsyncIterator:
     from tests.setup_nodes import setup_farmer_multi_harvester, test_constants
 
