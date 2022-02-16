@@ -910,6 +910,20 @@ class DataStore:
                 },
             )
 
+    async def update_existing_subscription(self, subscription: Subscription, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self.db.execute(
+                """
+                UPDATE subscriptions SET ip = :ip, port = :port, mode = :mode WHERE tree_id == :tree_id
+                """,
+                {
+                    "tree_id": subscription.tree_id.hex(),
+                    "mode": subscription.mode.value,
+                    "ip": subscription.ip,
+                    "port": subscription.port,
+                },
+            )
+
     async def unsubscribe(self, tree_id: bytes32, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute(

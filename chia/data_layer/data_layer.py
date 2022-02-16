@@ -295,6 +295,8 @@ class DataLayer:
         subscription = Subscription(store_id, mode, ip, port)
         subscriptions = await self.get_subscriptions()
         if subscription.tree_id in [subscription.tree_id for subscription in subscriptions]:
+            await self.data_store.update_existing_subscription(subscription)
+            self.log.info(f"Successfully updated subscription {subscription.tree_id}")
             return
         await self.wallet_rpc.dl_track_new(subscription.tree_id)
         async with self.subscription_lock:
@@ -304,6 +306,7 @@ class DataLayer:
     async def unsubscribe(self, tree_id: bytes32) -> None:
         subscriptions = await self.get_subscriptions()
         if tree_id not in [subscription.tree_id for subscription in subscriptions]:
+            raise RuntimeError("No subscription found for the given tree_id.")
             return
         async with self.subscription_lock:
             await self.data_store.unsubscribe(tree_id)
