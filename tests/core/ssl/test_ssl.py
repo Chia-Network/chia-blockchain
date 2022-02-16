@@ -68,7 +68,7 @@ class TestSSL:
 
     @pytest.fixture(scope="function")
     async def timelord(self):
-        async for _ in setup_timelord(21236, 21237, False, test_constants, bt):
+        async for _ in setup_timelord(21236, 21237, 0, False, test_constants, bt):
             yield _
 
     @pytest.mark.asyncio
