@@ -607,12 +607,11 @@ class WalletNode:
         num_concurrent_tasks: int = 0
 
         async def receive_and_validate(inner_state: CoinState, inner_idx: int):
-            nonlocal num_concurrent_tasks
-            assert self.wallet_state_manager is not None
-            assert self.validation_semaphore is not None
-            # if height is not None:
-            async with self.validation_semaphore:
-                try:
+            try:
+                assert self.validation_semaphore is not None
+                async with self.validation_semaphore:
+                    nonlocal num_concurrent_tasks
+                    assert self.wallet_state_manager is not None
                     if header_hash is not None:
                         assert height is not None
                         self.add_state_to_race_cache(header_hash, height, inner_state)
@@ -630,11 +629,11 @@ class WalletNode:
                             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
                                 last_change_height_cs(inner_state)
                             )
-                except Exception as e:
-                    tb = traceback.format_exc()
-                    self.log.error(f"Exception while adding state: {e} {tb}")
-                finally:
-                    num_concurrent_tasks -= 1
+            except Exception as e:
+                tb = traceback.format_exc()
+                self.log.error(f"Exception while adding state: {e} {tb}")
+            finally:
+                num_concurrent_tasks -= 1
 
         for idx, potential_state in enumerate(items):
             if self.server is None:
