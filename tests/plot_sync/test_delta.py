@@ -3,7 +3,7 @@ import logging
 import pytest
 from blspy import G1Element
 
-from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
+from chia.plot_sync.delta import Delta, DeltaType, PathListDelta, PlotListDelta
 from chia.protocols.harvester_protocol import Plot
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint64
@@ -22,7 +22,7 @@ def dummy_plot(path: str) -> Plot:
         pytest.param(PlotListDelta(), id="plot list"),
     ],
 )
-def test_list_delta(delta) -> None:
+def test_list_delta(delta: DeltaType) -> None:
     assert delta.empty()
     if type(delta) == PathListDelta:
         assert delta.additions == []
@@ -34,8 +34,10 @@ def test_list_delta(delta) -> None:
     assert delta.empty()
     if type(delta) == PathListDelta:
         delta.additions.append("0")
-    else:
+    elif type(delta) == PlotListDelta:
         delta.additions["0"] = dummy_plot("0")
+    else:
+        assert False, "Invalid delta type"
     assert not delta.empty()
     delta.removals.append("0")
     assert not delta.empty()

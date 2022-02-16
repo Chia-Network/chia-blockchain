@@ -329,7 +329,7 @@ async def setup_farmer_multi_harvester(
     harvester_count: int,
     temp_dir: Path,
     consensus_constants: ConsensusConstants,
-):
+) -> AsyncIterator[Tuple[List[Service], Service]]:
     farmer_port = find_available_listen_port("farmer")
     farmer_rpc_port = find_available_listen_port("farmer rpc")
 

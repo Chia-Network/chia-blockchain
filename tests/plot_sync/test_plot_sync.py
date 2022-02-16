@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 from shutil import copy
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import pytest
 import pytest_asyncio
@@ -258,7 +258,7 @@ class Environment:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def environment(tmp_path, farmer_multi_harvester) -> Environment:
+async def environment(tmp_path: Path, farmer_multi_harvester: Tuple[List[Service], Service]) -> Environment:
     def new_test_dir(name: str, plot_list: List[Path]) -> TestDirectory:
         return TestDirectory(tmp_path / "plots" / name, plot_list)
 

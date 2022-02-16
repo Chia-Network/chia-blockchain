@@ -4,7 +4,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 import pytest
 from blspy import G1Element
@@ -144,7 +144,9 @@ class TestData:
 class TestRunner:
     test_data: List[TestData]
 
-    def __init__(self, harvesters: List[Harvester], farmer: Farmer, event_loop) -> None:
+    def __init__(
+        self, harvesters: List[Harvester], farmer: Farmer, event_loop: asyncio.events.AbstractEventLoop
+    ) -> None:
         self.test_data = []
         for harvester in harvesters:
             assert harvester.server is not None
@@ -219,7 +221,9 @@ async def _testable_process(self, peer, message_type, message) -> None:
     await self.original_process(peer, message_type, message)
 
 
-async def create_test_runner(harvester_services: List[Service], farmer: Farmer, event_loop) -> TestRunner:
+async def create_test_runner(
+    harvester_services: List[Service], farmer: Farmer, event_loop: asyncio.events.AbstractEventLoop
+) -> TestRunner:
     assert len(farmer.plot_sync_receivers) == 0
     harvesters: List[Harvester] = [await start_harvester_service(service) for service in harvester_services]
     for receiver in farmer.plot_sync_receivers.values():
@@ -261,7 +265,9 @@ def create_example_plots(count: int) -> List[PlotInfo]:
 
 @pytest.mark.harvesters(count=3)
 @pytest.mark.asyncio
-async def test_sync_simulated(farmer_multi_harvester, event_loop) -> None:
+async def test_sync_simulated(
+    farmer_multi_harvester: Tuple[List[Service], Service], event_loop: asyncio.events.AbstractEventLoop
+) -> None:
     harvester_services: List[Service]
     farmer_service: Service
     harvester_services, farmer_service = farmer_multi_harvester
@@ -340,7 +346,11 @@ async def test_sync_simulated(farmer_multi_harvester, event_loop) -> None:
     ],
 )
 @pytest.mark.asyncio
-async def test_farmer_error_simulation(farmer_multi_harvester, event_loop, simulate_error: int) -> None:
+async def test_farmer_error_simulation(
+    farmer_multi_harvester: Tuple[List[Service], Service],
+    event_loop: asyncio.events.AbstractEventLoop,
+    simulate_error: int,
+) -> None:
     Constants.message_timeout = 5
     harvester_services: List[Service]
     farmer_service: Service
@@ -370,7 +380,9 @@ async def test_farmer_error_simulation(farmer_multi_harvester, event_loop, simul
     ],
 )
 @pytest.mark.asyncio
-async def test_sync_reset_cases(farmer_multi_harvester, event_loop, simulate_error) -> None:
+async def test_sync_reset_cases(
+    farmer_multi_harvester: Tuple[List[Service], Service], event_loop: asyncio.events.AbstractEventLoop, simulate_error
+) -> None:
     harvester_services: List[Service]
     farmer_service: Service
     harvester_services, farmer_service = farmer_multi_harvester

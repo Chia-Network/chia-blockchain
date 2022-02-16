@@ -5,7 +5,7 @@ import time
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, Generic, Iterable, List, Optional, Protocol, Tuple, Type, TypeVar
 
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
 from chia.plot_sync.util import Constants
@@ -45,15 +45,23 @@ def _convert_plot_info_list(plot_infos: List[PlotInfo]) -> List[Plot]:
     return converted
 
 
+class PayloadType(Protocol):
+    def __init__(self, identifier: PlotSyncIdentifier, *args: object) -> None:
+        ...
+
+
+T = TypeVar("T", bound=PayloadType)
+
+
 @dataclass
-class MessageGenerator:
+class MessageGenerator(Generic[T]):
     sync_id: uint64
     message_type: ProtocolMessageTypes
     message_id: uint64
-    payload_type: Any
-    args: Any
+    payload_type: Type[T]
+    args: Iterable[object]
 
-    def generate(self) -> Tuple[PlotSyncIdentifier, Any]:
+    def generate(self) -> Tuple[PlotSyncIdentifier, T]:
         identifier = PlotSyncIdentifier(uint64(int(time.time())), self.sync_id, self.message_id)
         payload = self.payload_type(identifier, *self.args)
         return identifier, payload

@@ -30,7 +30,7 @@ def get_dummy_connection(node_type: NodeType, peer_id=None) -> WSChiaConnectionD
     return WSChiaConnectionDummy(node_type, bytes32(get_random_bytes(32)) if peer_id is None else peer_id)
 
 
-def plot_sync_identifier(current_sync_id: uint64, message_id: uint64):
+def plot_sync_identifier(current_sync_id: uint64, message_id: uint64) -> PlotSyncIdentifier:
     return PlotSyncIdentifier(uint64(int(time.time())), current_sync_id, message_id)
 
 
