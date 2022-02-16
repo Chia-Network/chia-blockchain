@@ -33,7 +33,6 @@ from chia.protocols.wallet_protocol import (
     RequestSESInfo,
     RespondSESInfo,
     RequestHeaderBlocks,
-    RespondHeaderBlocks,
 )
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -63,6 +62,7 @@ from chia.wallet.util.wallet_sync_utils import (
     subscribe_to_phs,
     subscribe_to_coin_updates,
     last_change_height_cs,
+    fetch_header_blocks_in_range,
 )
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -832,7 +832,7 @@ class WalletNode:
                     old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
                     if syncing:
                         # This usually happens the first time we start up the wallet. We roll back slightly to be
-                        # safe, but we don't want to rollback too much (hence 32)
+                        # safe, but we don't want to rollback too much (hence 16)
                         fork_point: int = max(0, current_height - 16)
                     else:
                         # In this case we will not rollback so it's OK to check some older updates as well, to ensure
@@ -1170,6 +1170,7 @@ class WalletNode:
         self, block: HeaderBlock, peer: WSChiaConnection, peer_request_cache: PeerRequestCache
     ) -> bool:
         assert self.wallet_state_manager is not None
+        assert self.server is not None
         if self.wallet_state_manager.blockchain.contains_height(block.height):
             stored_hash = self.wallet_state_manager.blockchain.height_to_hash(block.height)
             stored_record = self.wallet_state_manager.blockchain.try_block_record(stored_hash)
@@ -1225,33 +1226,13 @@ class WalletNode:
                         self.log.error("Failed validation 2")
                         return False
 
-            blocks: List[HeaderBlock] = []
-            for i in range(start - (start % 32), end + 1, 32):
-                request_start = min(uint32(i), end)
-                request_end = min(uint32(i + 31), end)
-                request_h_response = RequestHeaderBlocks(request_start, request_end)
-                if (request_start, request_end) in peer_request_cache.block_requests:
-                    self.log.info(f"Using cache for blocks {request_start} - {request_end}")
-                    res_h_blocks: Optional[RespondHeaderBlocks] = peer_request_cache.block_requests[
-                        (request_start, request_end)
-                    ]
-                else:
-                    start_time = time.time()
-                    random_peer: Optional[WSChiaConnection] = self.get_full_node_peer()
-                    if random_peer is None:
-                        self.log.error("No full node connections")
-                        return False
-                    res_h_blocks = await random_peer.request_header_blocks(request_h_response)
-                    if res_h_blocks is None:
-                        self.log.error("Failed validation 2.5")
-                        return False
-                    end_time = time.time()
-                    peer_request_cache.block_requests[(request_start, request_end)] = res_h_blocks
-                    self.log.info(
-                        f"Fetched blocks: {request_start} - {request_end} | duration: {end_time - start_time}"
-                    )
-                assert res_h_blocks is not None
-                blocks.extend([bl for bl in res_h_blocks.header_blocks if bl.height >= start])
+            all_peers = self.server.get_full_node_connections()
+            blocks: Optional[List[HeaderBlock]] = await fetch_header_blocks_in_range(
+                start, end, peer_request_cache, all_peers, peer.peer_node_id
+            )
+            if blocks is None:
+                self.log.error(f"Error fetching blocks {start} {end}")
+                return False
 
             if compare_to_recent and weight_proof.recent_chain_data[0].header_hash != blocks[-1].header_hash:
                 self.log.error("Failed validation 3")
