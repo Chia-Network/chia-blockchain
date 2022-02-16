@@ -806,9 +806,8 @@ class TestWalletSimulator:
         AMOUNT_TO_SEND = 4000000000000
         coins = list(await wallet.select_coins(AMOUNT_TO_SEND))
 
-        tx = await wallet.generate_signed_transaction(
-            AMOUNT_TO_SEND,
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+        [tx] = await wallet.generate_signed_transaction(
+            [Payment((await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()), AMOUNT_TO_SEND, [])],
             0,
             coins=coins,
             origin_id=coins[2].name(),

@@ -480,9 +480,8 @@ class PoolWallet:
         )
 
     async def generate_fee_transaction(self, fee: uint64, coin_announcements=None) -> TransactionRecord:
-        fee_tx = await self.standard_wallet.generate_signed_transaction(
-            uint64(0),
-            (await self.standard_wallet.get_new_puzzlehash()),
+        [fee_tx] = await self.standard_wallet.generate_signed_transaction(
+            [Payment((await self.standard_wallet.get_new_puzzlehash()), uint64(0), [])],
             fee=fee,
             origin_id=None,
             coins=None,
