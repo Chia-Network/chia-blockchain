@@ -67,6 +67,7 @@ from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.log_exceptions import log_exceptions
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
@@ -144,7 +145,10 @@ class FullNode:
         self._transaction_queue_task = None
 
         self._transaction_task_pool = WorkerPool(
-            worker_async_callable=self._transaction_worker, desired_worker_count=200
+            name="transaction task pool",
+            log=self.log,
+            worker_async_callable=self._transaction_worker,
+            desired_worker_count=200,
         )
 
     def _set_state_changed_callback(self, callback: Callable):
@@ -258,8 +262,8 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.start())
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry):
-        peer = entry.peer
         try:
+            peer = entry.peer
             inc_status, err = await self.respond_transaction(entry.transaction, entry.spend_name, peer, entry.test)
             self.transaction_responses.append((entry.spend_name, inc_status, err))
             if len(self.transaction_responses) > 50:
@@ -727,11 +731,10 @@ class FullNode:
         cancel_task_safe(task=self._sync_task, log=self.log)
 
     async def _await_closed(self):
-        if self._transaction_pool_task is not None:
-            try:
-                await self._transaction_pool_task
-            except asyncio.CancelledError:
-                pass
+        with log_exceptions(log=self.log, consume=True):
+            if self._transaction_pool_task is not None:
+                with contextlib.suppress(asyncio.CancelledError):
+                    await self._transaction_pool_task
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
             cancel_task_safe(task, self.log)
         await self.connection.close()
