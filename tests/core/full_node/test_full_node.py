@@ -10,6 +10,7 @@ from blspy import G2Element
 
 from clvm.casts import int_to_bytes
 import pytest
+import pytest_asyncio
 
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.pot_iterations import is_overflow_block
@@ -106,7 +107,7 @@ def event_loop():
     yield loop
 
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module")
 async def wallet_nodes():
     async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 400000000})
     nodes, wallets = await async_gen.__anext__()
@@ -122,25 +123,25 @@ async def wallet_nodes():
         yield _
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def setup_four_nodes(db_version):
     async for _ in setup_simulators_and_wallets(5, 0, {}, starting_port=51000, db_version=db_version):
         yield _
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def setup_two_nodes(db_version):
     async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=51100, db_version=db_version):
         yield _
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def setup_two_nodes_and_wallet():
     async for _ in setup_simulators_and_wallets(2, 1, {}, starting_port=51200, db_version=2):
         yield _
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def wallet_nodes_mainnet(db_version):
     async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK_TYPE": 0}, starting_port=40000, db_version=db_version)
     nodes, wallets = await async_gen.__anext__()

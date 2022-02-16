@@ -6,6 +6,7 @@ from shutil import rmtree
 from typing import Optional, List, Dict
 
 import pytest
+import pytest_asyncio
 from blspy import G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -81,12 +82,12 @@ PREFARMED_BLOCKS = 4
 
 
 class TestPoolWalletRpc:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def one_wallet_node_and_rpc(self):
         rmtree(get_pool_plot_dir(), ignore_errors=True)
         async for nodes in setup_simulators_and_wallets(1, 1, {}):
@@ -122,7 +123,7 @@ class TestPoolWalletRpc:
             await client.await_closed()
             await rpc_cleanup()
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def setup(self, two_wallet_nodes):
         rmtree(get_pool_plot_dir(), ignore_errors=True)
         full_nodes, wallets = two_wallet_nodes

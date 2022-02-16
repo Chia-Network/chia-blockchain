@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 import aiosqlite
 import tempfile
 import random
@@ -39,7 +40,7 @@ def rand_bytes(num) -> bytes:
     return bytes(ret)
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
