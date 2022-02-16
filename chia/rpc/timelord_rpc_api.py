@@ -1,0 +1,21 @@
+from typing import Any, Callable, Dict, List, Optional
+
+from chia.timelord.timelord import Timelord
+from chia.util.ws_message import WsRpcMessage, create_payload_dict
+
+
+class TimelordRpcApi:
+    def __init__(self, timelord: Timelord):
+        self.service = timelord
+        self.service_name = "chia_timelord"
+
+    def get_routes(self) -> Dict[str, Callable]:
+        return {}
+
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> List[WsRpcMessage]:
+        payloads = []
+
+        if change in ("finished_pot_challenge"):
+            payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
+
+        return payloads

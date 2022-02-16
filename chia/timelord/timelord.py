@@ -7,7 +7,7 @@ import random
 import time
 import traceback
 from concurrent.futures import ProcessPoolExecutor
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from chiavdf import create_discriminant, prove
 
@@ -151,6 +151,13 @@ class Timelord:
 
     async def _await_closed(self):
         pass
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.state_changed_callback = callback
+
+    def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None):
+        if self.state_changed_callback is not None:
+            self.state_changed_callback(change, change_data)
 
     def set_server(self, server: ChiaServer):
         self.server = server
@@ -994,6 +1001,9 @@ class Timelord:
                             f" iters, "
                             f"Estimated IPS: {ips}, Chain: {chain}"
                         )
+                        self._state_changed(
+                            "finished_pot_challenge", {"estimated_ips": ips, "iters": iterations_needed, "chain": chain}
+                        )
 
                     vdf_info: VDFInfo = VDFInfo(
                         challenge,
@@ -1025,6 +1035,7 @@ class Timelord:
                         if self.server is not None:
                             message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
                             await self.server.send_to_all([message], NodeType.FULL_NODE)
+
         except ConnectionResetError as e:
             log.debug(f"Connection reset with VDF client {e}")
 

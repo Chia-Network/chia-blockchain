@@ -17,7 +17,7 @@ class TimelordAPI:
         self.timelord = timelord
 
     def _set_state_changed_callback(self, callback: Callable):
-        pass
+        self.timelord.state_changed_callback = callback
 
     @api_request
     async def new_peak_timelord(self, new_peak: timelord_protocol.NewPeakTimelord):
