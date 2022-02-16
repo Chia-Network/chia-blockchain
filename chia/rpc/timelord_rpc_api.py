@@ -15,6 +15,9 @@ class TimelordRpcApi:
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> List[WsRpcMessage]:
         payloads = []
 
+        if change_data is None:
+            change_data = {}
+
         if change in ("finished_pot_challenge", "new_compact_proof"):
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
