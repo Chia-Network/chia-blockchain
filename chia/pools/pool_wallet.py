@@ -485,7 +485,6 @@ class PoolWallet:
             fee=fee,
             origin_id=None,
             coins=None,
-            primaries=None,
             ignore_max_send_amount=False,
             coin_announcements_to_consume=coin_announcements,
         )
