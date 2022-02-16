@@ -1,7 +1,57 @@
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Dict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 import click
+
+from chia.util.network import is_trusted_inner
+
+
+async def print_connections(client, time, NodeType, trusted_peers: Dict):
+    connections = await client.get_connections()
+    print("Connections:")
+    print("Type      IP                                     Ports       NodeID      Last Connect" + "      MiB Up|Dwn")
+    for con in connections:
+        last_connect_tuple = time.struct_time(time.localtime(con["last_message_time"]))
+        last_connect = time.strftime("%b %d %T", last_connect_tuple)
+        mb_down = con["bytes_read"] / (1024 * 1024)
+        mb_up = con["bytes_written"] / (1024 * 1024)
+
+        host = con["peer_host"]
+        # Strip IPv6 brackets
+        host = host.strip("[]")
+
+        trusted: bool = is_trusted_inner(host, con["node_id"], trusted_peers, False)
+        # Nodetype length is 9 because INTRODUCER will be deprecated
+        if NodeType(con["type"]) is NodeType.FULL_NODE:
+            peak_height = con.get("peak_height", None)
+            connection_peak_hash = con.get("peak_hash", None)
+            if connection_peak_hash is None:
+                connection_peak_hash = "No Info"
+            else:
+                if connection_peak_hash.startswith(("0x", "0X")):
+                    connection_peak_hash = connection_peak_hash[2:]
+                connection_peak_hash = f"{connection_peak_hash[:8]}..."
+            con_str = (
+                f"{NodeType(con['type']).name:9} {host:38} "
+                f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
+                f" {con['node_id'].hex()[:8]}... "
+                f"{last_connect}  "
+                f"{mb_up:7.1f}|{mb_down:<7.1f}"
+                f"\n                                                 "
+            )
+            if peak_height is not None:
+                con_str += f"-Height: {peak_height:8.0f}    -Hash: {connection_peak_hash}    -Trusted: {trusted}"
+            else:
+                con_str += f"-Height: No Info    -Hash: {connection_peak_hash}     -Trusted: {trusted}"
+        else:
+            con_str = (
+                f"{NodeType(con['type']).name:9} {host:38} "
+                f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
+                f" {con['node_id'].hex()[:8]}... "
+                f"{last_connect}  "
+                f"{mb_up:7.1f}|{mb_down:<7.1f}"
+            )
+        print(con_str)
 
 
 async def show_async(
@@ -15,10 +65,8 @@ async def show_async(
     block_by_header_hash: str,
 ) -> None:
     import aiohttp
-    import time
     import traceback
-
-    from time import localtime, struct_time
+    import time
     from typing import List, Optional
     from chia.consensus.block_record import BlockRecord
     from chia.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -84,7 +132,7 @@ async def show_async(
                     while curr is not None and not curr.is_transaction_block:
                         curr = await client.get_block_record(curr.prev_hash)
                     peak_time = curr.timestamp
-                peak_time_struct = struct_time(localtime(peak_time))
+                peak_time_struct = time.struct_time(time.localtime(peak_time))
 
                 print(
                     "      Time:",
@@ -115,51 +163,8 @@ async def show_async(
             if show_connections:
                 print("")
         if show_connections:
-            connections = await client.get_connections()
-            print("Connections:")
-            print(
-                "Type      IP                                     Ports       NodeID      Last Connect"
-                + "      MiB Up|Dwn"
-            )
-            for con in connections:
-                last_connect_tuple = struct_time(localtime(con["last_message_time"]))
-                last_connect = time.strftime("%b %d %T", last_connect_tuple)
-                mb_down = con["bytes_read"] / (1024 * 1024)
-                mb_up = con["bytes_written"] / (1024 * 1024)
-
-                host = con["peer_host"]
-                # Strip IPv6 brackets
-                host = host.strip("[]")
-                # Nodetype length is 9 because INTRODUCER will be deprecated
-                if NodeType(con["type"]) is NodeType.FULL_NODE:
-                    peak_height = con["peak_height"]
-                    connection_peak_hash = con["peak_hash"]
-                    if connection_peak_hash is None:
-                        connection_peak_hash = "No Info"
-                    else:
-                        if connection_peak_hash.startswith(("0x", "0X")):
-                            connection_peak_hash = connection_peak_hash[2:]
-                        connection_peak_hash = f"{connection_peak_hash[:8]}..."
-                    if peak_height is None:
-                        peak_height = 0
-                    con_str = (
-                        f"{NodeType(con['type']).name:9} {host:38} "
-                        f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
-                        f" {con['node_id'].hex()[:8]}... "
-                        f"{last_connect}  "
-                        f"{mb_up:7.1f}|{mb_down:<7.1f}"
-                        f"\n                                                 "
-                        f"-SB Height: {peak_height:8.0f}    -Hash: {connection_peak_hash}"
-                    )
-                else:
-                    con_str = (
-                        f"{NodeType(con['type']).name:9} {host:38} "
-                        f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
-                        f" {con['node_id'].hex()[:8]}... "
-                        f"{last_connect}  "
-                        f"{mb_up:7.1f}|{mb_down:<7.1f}"
-                    )
-                print(con_str)
+            trusted_peers: Dict = config["full_node"].get("trusted_peers", {})
+            await print_connections(client, time, NodeType, trusted_peers)
             # if called together with state, leave a blank line
             if state:
                 print("")
@@ -217,8 +222,8 @@ async def show_async(
                     difficulty = block.weight
                 if block.is_transaction_block:
                     assert full_block.transactions_info is not None
-                    block_time = struct_time(
-                        localtime(
+                    block_time = time.struct_time(
+                        time.localtime(
                             full_block.foliage_transaction_block.timestamp
                             if full_block.foliage_transaction_block
                             else None

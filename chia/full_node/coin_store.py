@@ -7,7 +7,7 @@ from chia.types.coin_record import CoinRecord
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
-from time import time
+import time
 import logging
 
 log = logging.getLogger(__name__)
@@ -114,7 +114,7 @@ class CoinStore:
         Returns a list of the CoinRecords that were added by this block
         """
 
-        start = time()
+        start = time.monotonic()
 
         additions = []
 
@@ -146,10 +146,10 @@ class CoinStore:
         await self._add_coin_records(additions)
         await self._set_spent(tx_removals, height)
 
-        end = time()
+        end = time.monotonic()
         log.log(
             logging.WARNING if end - start > 10 else logging.DEBUG,
-            f"It took {end - start:0.2f}s to apply {len(tx_additions)} additions and "
+            f"Height {height}: It took {end - start:0.2f}s to apply {len(tx_additions)} additions and "
             + f"{len(tx_removals)} removals to the coin store. Make sure "
             + "blockchain database is on a fast drive",
         )
@@ -305,8 +305,7 @@ class CoinStore:
         self,
         include_spent_coins: bool,
         puzzle_hashes: List[bytes32],
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        min_height: uint32 = uint32(0),
     ) -> List[CoinState]:
         if len(puzzle_hashes) == 0:
             return []
@@ -321,9 +320,9 @@ class CoinStore:
             f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
             f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
             f'WHERE puzzle_hash in ({"?," * (len(puzzle_hashes) - 1)}?) '
-            f"AND confirmed_index>=? AND confirmed_index<? "
+            f"AND (confirmed_index>=? OR spent_index>=?)"
             f"{'' if include_spent_coins else 'AND spent_index=0'}",
-            puzzle_hashes_db + (start_height, end_height),
+            puzzle_hashes_db + (min_height, min_height),
         ) as cursor:
 
             for row in await cursor.fetchall():
@@ -360,12 +359,11 @@ class CoinStore:
                 coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
             return list(coins)
 
-    async def get_coin_state_by_ids(
+    async def get_coin_states_by_ids(
         self,
         include_spent_coins: bool,
         coin_ids: List[bytes32],
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        min_height: uint32 = uint32(0),
     ) -> List[CoinState]:
         if len(coin_ids) == 0:
             return []
@@ -379,9 +377,9 @@ class CoinStore:
         async with self.coin_record_db.execute(
             f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
             f'coin_parent, amount, timestamp FROM coin_record WHERE coin_name in ({"?," * (len(coin_ids) - 1)}?) '
-            f"AND confirmed_index>=? AND confirmed_index<? "
+            f"AND (confirmed_index>=? OR spent_index>=?)"
             f"{'' if include_spent_coins else 'AND spent_index=0'}",
-            coin_ids_db + (start_height, end_height),
+            coin_ids_db + (min_height, min_height),
         ) as cursor:
 
             for row in await cursor.fetchall():
