@@ -92,7 +92,7 @@ class WalletBlockchain(BlockchainInterface):
         self._sub_slot_iters = records[-1].sub_slot_iters
         self._difficulty = uint64(records[-1].weight - records[-2].weight)
         await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
-        self.clean_block_records()
+        await self.clean_block_records()
 
     async def receive_block(self, block: HeaderBlock) -> Tuple[ReceiveBlockResult, Optional[Err]]:
         if self.contains_block(block.header_hash):
@@ -147,7 +147,7 @@ class WalletBlockchain(BlockchainInterface):
             self._sub_slot_iters = block_record.sub_slot_iters
             self._difficulty = uint64(block_record.weight - self.block_record(block_record.prev_hash).weight)
             await self.set_peak_block(block, latest_timestamp)
-            self.clean_block_records()
+            await self.clean_block_records()
             return ReceiveBlockResult.NEW_PEAK, None
         return ReceiveBlockResult.ADDED_AS_ORPHAN, None
 
@@ -183,6 +183,7 @@ class WalletBlockchain(BlockchainInterface):
     async def set_finished_sync_up_to(self, height: uint32):
         if height > await self.get_finished_sync_up_to():
             await self._basic_store.set_object("FINISHED_SYNC_UP_TO", height)
+            await self.clean_block_records()
 
     async def get_finished_sync_up_to(self):
         h: Optional[uint32] = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
@@ -213,12 +214,12 @@ class WalletBlockchain(BlockchainInterface):
     def add_block_record(self, block_record: BlockRecord):
         self._block_records[block_record.header_hash] = block_record
 
-    def clean_block_records(self):
+    async def clean_block_records(self):
         """
         Cleans the cache so that we only maintain relevant blocks. This removes
         block records that have height < peak - CACHE_SIZE.
         """
-        height_limit = max(0, self.get_peak_height() - self.CACHE_SIZE)
+        height_limit = max(0, (await self.get_finished_sync_up_to()) - self.CACHE_SIZE)
         if len(self._block_records) < self.CACHE_SIZE:
             return None
 

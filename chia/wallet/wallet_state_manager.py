@@ -87,6 +87,7 @@ class WalletStateManager:
 
     # TODO Don't allow user to send tx until wallet is synced
     sync_mode: bool
+    sync_target: uint32
     genesis: FullBlock
 
     state_changed_callback: Optional[Callable]
@@ -157,6 +158,7 @@ class WalletStateManager:
 
         self.wallet_node = wallet_node
         self.sync_mode = False
+        self.sync_target = uint32(0)
         self.finished_sync_up_to = uint32(0)
         self.weight_proof_handler = WalletWeightProofHandler(self.constants)
         self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants, self.weight_proof_handler)
@@ -458,11 +460,12 @@ class WalletStateManager:
             return True
         return False
 
-    def set_sync_mode(self, mode: bool):
+    def set_sync_mode(self, mode: bool, sync_height: uint32 = uint32(0)):
         """
         Sets the sync mode. This changes the behavior of the wallet node.
         """
         self.sync_mode = mode
+        self.sync_target = sync_height
         self.state_changed("sync_changed")
 
     async def get_confirmed_spendable_balance_for_wallet(self, wallet_id: int, unspent_records=None) -> uint128:
