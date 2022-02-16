@@ -1003,7 +1003,7 @@ class Timelord:
                         )
                         self.state_changed(
                             "finished_pot_challenge",
-                            {"estimated_ips": ips, "iters": iterations_needed, "chain": chain.value},
+                            {"estimated_ips": ips, "iterations_needed": iterations_needed, "chain": chain.value},
                         )
 
                     vdf_info: VDFInfo = VDFInfo(
