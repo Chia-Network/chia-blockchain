@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Tuple
 
 import pytest
 from blspy import G1Element
@@ -143,7 +143,7 @@ async def run_sync_step(receiver: Receiver, sync_step: SyncStepData, expected_st
         assert receiver._last_sync_time == last_sync_time_before
 
 
-def plot_sync_setup():
+def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
     harvester_connection = get_dummy_connection(NodeType.HARVESTER)
     receiver = Receiver(harvester_connection, dummy_callback)
 
