@@ -623,7 +623,7 @@ class WeightProofHandler:
             max_workers=self._num_processes,
             initializer=setproctitle,
             initargs=("chia_full_node",),
-        )as executor:
+        ) as executor:
             # The shutdown file manager must be inside of the executor manager so that
             # we request the workers close prior to waiting for them to close.
             with _create_shutdown_file() as shutdown_file:
