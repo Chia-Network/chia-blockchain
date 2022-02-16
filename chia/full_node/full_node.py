@@ -1210,6 +1210,16 @@ class FullNode:
         msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
         await self.server.send_to_all([msg], NodeType.FARMER)
 
+        self._state_changed(
+            "signage_point",
+            {
+                "sp_index": request.index_from_challenge,
+                "sps_sub_slot": self.constants.NUM_SPS_SUB_SLOT,
+                "cc": request.challenge_chain_vdf.output.get_hash(),
+                "rc": request.reward_chain_vdf.output.get_hash(),
+            },
+        )
+
     async def peak_post_processing(
         self,
         block: FullBlock,

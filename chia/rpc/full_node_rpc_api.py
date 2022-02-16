@@ -86,13 +86,11 @@ class FullNodeRpcApi:
                     "metrics",
                 )
             )
-            return payloads
 
-        if change == "block":
-            payloads.append(create_payload_dict("block", change_data, self.service_name, "metrics"))
-            return payloads
+        if change in ("block", "signage_point"):
+            payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
-        return []
+        return payloads
 
     # this function is just here for backwards-compatibility. It will probably
     # be removed in the future
