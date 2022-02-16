@@ -18,6 +18,7 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     RespondHeaderBlocks,
     RequestHeaderBlocks,
+    RejectHeaderBlocks,
 )
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import hash_coin_list, Coin
@@ -293,25 +294,28 @@ async def _fetch_header_blocks_inner(
     res = await random_peer.request_header_blocks(request)
     if isinstance(res, RespondHeaderBlocks):
         return res
+    elif isinstance(res, RejectHeaderBlocks):
+        # Peer is not synced, close connection
+        await random_peer.close()
+
+    bad_peer_id = random_peer.peer_node_id
+    if len(all_peers) == 1:
+        # No more peers to fetch from
+        return None
     else:
-        bad_peer_id = random_peer.peer_node_id
-        if len(all_peers) == 1:
-            # No more peers to fetch from
-            return None
+        if selected_peer_node_id == bad_peer_id:
+            # Select another peer fallback
+            while random_peer != bad_peer_id and len(all_peers) > 1:
+                random_peer = random.choice(all_peers)
         else:
-            if selected_peer_node_id == bad_peer_id:
-                # Select another peer fallback
-                while random_peer != bad_peer_id and len(all_peers) > 1:
-                    random_peer = random.choice(all_peers)
-            else:
-                # Use the selected peer instead
-                random_peer = [p for p in all_peers if p.peer_node_id == selected_peer_node_id][0]
-            # Retry
-            res = await random_peer.request_header_blocks(request)
-            if isinstance(res, RespondHeaderBlocks):
-                return res
-            else:
-                return None
+            # Use the selected peer instead
+            random_peer = [p for p in all_peers if p.peer_node_id == selected_peer_node_id][0]
+        # Retry
+        res = await random_peer.request_header_blocks(request)
+        if isinstance(res, RespondHeaderBlocks):
+            return res
+        else:
+            return None
 
 
 async def fetch_header_blocks_in_range(
