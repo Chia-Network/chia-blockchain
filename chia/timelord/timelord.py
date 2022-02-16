@@ -1035,6 +1035,9 @@ class Timelord:
                         if self.server is not None:
                             message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
                             await self.server.send_to_all([message], NodeType.FULL_NODE)
+                        self._state_changed(
+                            "new_compact_proof", {"header_hash": header_hash, "height": height, "field_vdf": field_vdf}
+                        )
 
         except ConnectionResetError as e:
             log.debug(f"Connection reset with VDF client {e}")
