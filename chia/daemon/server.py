@@ -3,12 +3,12 @@ import json
 import logging
 import os
 import signal
+import ssl
 import subprocess
 import sys
 import time
 import traceback
 import uuid
-
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
@@ -39,6 +39,7 @@ from chia.util.path import mkdir
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
+from chia import __version__
 
 io_pool_exc = ThreadPoolExecutor()
 
@@ -99,6 +100,8 @@ if getattr(sys, "frozen", False):
         "chia_timelord": "start_timelord",
         "chia_timelord_launcher": "timelord_launcher",
         "chia_full_node_simulator": "start_simulator",
+        "chia_seeder": "start_seeder",
+        "chia_crawler": "start_crawler",
     }
 
     def executable_for_service(service_name: str) -> str:
@@ -153,6 +156,19 @@ class WebSocketServer:
 
     async def start(self):
         self.log.info("Starting Daemon Server")
+
+        if ssl.OPENSSL_VERSION_NUMBER < 0x10101000:
+            self.log.warning(
+                (
+                    "Deprecation Warning: Your version of openssl (%s) does not support TLS1.3. "
+                    "A future version of Chia will require TLS1.3."
+                ),
+                ssl.OPENSSL_VERSION,
+            )
+        else:
+            if self.ssl_context is not None:
+                # Daemon is internal connections, so override to TLS1.3 only
+                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
 
         def master_close_cb():
             asyncio.create_task(self.stop())
@@ -330,6 +346,8 @@ class WebSocketServer:
             response = await self.register_service(websocket, cast(Dict[str, Any], data))
         elif command == "get_status":
             response = self.get_status()
+        elif command == "get_version":
+            response = self.get_version()
         elif command == "get_plotters":
             response = await self.get_plotters()
         else:
@@ -366,6 +384,8 @@ class WebSocketServer:
             "passphrase_hint": passphrase_hint,
             "passphrase_requirements": requirements,
         }
+        # Help diagnose GUI launch issues
+        self.log.debug(f"Keyring status: {response}")
         return response
 
     async def unlock_keyring(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -379,6 +399,18 @@ class WebSocketServer:
             if Keychain.master_passphrase_is_valid(key, force_reload=True):
                 Keychain.set_cached_master_passphrase(key)
                 success = True
+
+                # Attempt to silently migrate legacy keys if necessary. Non-fatal if this fails.
+                try:
+                    if not Keychain.migration_checked_for_current_version():
+                        self.log.info("Will attempt to migrate legacy keys...")
+                        Keychain.migrate_legacy_keys_silently()
+                        self.log.info("Migration of legacy keys complete.")
+                    else:
+                        self.log.debug("Skipping legacy key migration (previously attempted).")
+                except Exception:
+                    self.log.exception("Failed to migrate keys silently. Run `chia keys migrate` manually.")
+
                 # Inform the GUI of keyring status changes
                 self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
             else:
@@ -567,6 +599,10 @@ class WebSocketServer:
 
     def get_status(self) -> Dict[str, Any]:
         response = {"success": True, "genesis_initialized": True}
+        return response
+
+    def get_version(self) -> Dict[str, Any]:
+        response = {"success": True, "version": __version__}
         return response
 
     async def get_plotters(self) -> Dict[str, Any]:
@@ -833,6 +869,7 @@ class WebSocketServer:
         for item in self.plots_queue:
             if item["queue"] == queue and item["state"] is PlotState.SUBMITTED and item["parallel"] is False:
                 next_plot_id = item["id"]
+                break
 
         if next_plot_id is not None:
             loop.create_task(self._start_plotting(next_plot_id, loop, queue))
@@ -1034,6 +1071,7 @@ class WebSocketServer:
         error = None
         success = False
         testing = False
+        already_running = False
         if "testing" in request:
             testing = request["testing"]
 
@@ -1047,9 +1085,17 @@ class WebSocketServer:
                 self.services.pop(service_command)
                 error = None
             else:
-                error = f"Service {service_command} already running"
+                self.log.info(f"Service {service_command} already running")
+                already_running = True
+        elif service_command in self.connections:
+            # If the service was started manually (not launched by the daemon), we should
+            # have a connection to it.
+            self.log.info(f"Service {service_command} already registered")
+            already_running = True
 
-        if error is None:
+        if already_running:
+            success = True
+        elif error is None:
             try:
                 exe_command = service_command
                 if testing is True:
@@ -1084,6 +1130,12 @@ class WebSocketServer:
         else:
             process = self.services.get(service_name)
             is_running = process is not None and process.poll() is None
+            if not is_running:
+                # Check if we have a connection to the requested service. This might be the
+                # case if the service was started manually (i.e. not started by the daemon).
+                service_connections = self.connections.get(service_name)
+                if service_connections is not None:
+                    is_running = len(service_connections) > 0
             response = {
                 "success": True,
                 "service_name": service_name,
@@ -1260,7 +1312,7 @@ async def kill_process(
     if sys.platform == "win32" or sys.platform == "cygwin":
         log.info("sending CTRL_BREAK_EVENT signal to %s", service_name)
         # pylint: disable=E1101
-        kill(process.pid, signal.SIGBREAK)  # type: ignore
+        kill(process.pid, signal.SIGBREAK)
 
     else:
         log.info("sending term signal to %s", service_name)

@@ -10,6 +10,9 @@ import yaml
 
 from chia.util.path import mkdir
 
+PEER_DB_PATH_KEY_DEPRECATED = "peer_db_path"  # replaced by "peers_file_path"
+WALLET_PEERS_PATH_KEY_DEPRECATED = "wallet_peers_path"  # replaced by "wallet_peers_file_path"
+
 
 def initial_config_file(filename: Union[str, Path]) -> str:
     return pkg_resources.resource_string(__name__, f"initial-{filename}").decode()

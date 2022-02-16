@@ -1,4 +1,6 @@
 import pytest
+import tempfile
+from pathlib import Path
 
 
 # TODO: tests.setup_nodes (which is also imported by tests.util.blockchain) creates a
@@ -12,20 +14,30 @@ import pytest
 #       fixtures avoids the issue.
 
 
-@pytest.fixture(scope="function")
-async def empty_blockchain():
+@pytest.fixture(scope="function", params=[1, 2])
+async def empty_blockchain(request):
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
     from tests.util.blockchain import create_blockchain
     from tests.setup_nodes import test_constants
 
-    bc1, connection, db_path = await create_blockchain(test_constants)
+    bc1, connection, db_path = await create_blockchain(test_constants, request.param)
     yield bc1
 
     await connection.close()
     bc1.shut_down()
     db_path.unlink()
+
+
+@pytest.fixture(scope="function", params=[1, 2])
+def db_version(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", params=[1000000, 2300000])
+def softfork_height(request):
+    return request.param
 
 
 block_format_version = "rc4"
@@ -80,3 +92,9 @@ async def default_10000_blocks_compact():
         normalized_to_identity_cc_ip=True,
         normalized_to_identity_cc_sp=True,
     )
+
+
+@pytest.fixture(scope="function")
+async def tmp_dir():
+    with tempfile.TemporaryDirectory() as folder:
+        yield Path(folder)

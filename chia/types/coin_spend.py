@@ -20,8 +20,12 @@ class CoinSpend(Streamable):
     puzzle_reveal: SerializedProgram
     solution: SerializedProgram
 
+    # TODO: this function should be moved out of the full node. It cannot be
+    # called on untrusted input
     def additions(self) -> List[Coin]:
         return additions_for_solution(self.coin.name(), self.puzzle_reveal, self.solution, INFINITE_COST)
 
+    # TODO: this function should be moved out of the full node. It cannot be
+    # called on untrusted input
     def reserved_fee(self) -> int:
         return fee_for_solution(self.puzzle_reveal, self.solution, INFINITE_COST)

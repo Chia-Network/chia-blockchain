@@ -203,7 +203,9 @@ class FullNodeAPI:
             fetch_task = asyncio.create_task(
                 tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id)
             )
-            self.full_node.full_node_store.tx_fetch_tasks[task_id] = fetch_task
+            # TODO: address hint error and remove ignore
+            #       error: Invalid index type "bytes" for "Dict[bytes32, Task[Any]]"; expected type "bytes32"  [index]
+            self.full_node.full_node_store.tx_fetch_tasks[task_id] = fetch_task  # type: ignore[index]
             return None
         return None
 
@@ -310,7 +312,10 @@ class FullNodeAPI:
             msg = make_msg(ProtocolMessageTypes.reject_block, reject)
             return msg
         header_hash = self.full_node.blockchain.height_to_hash(request.height)
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
+        #       expected "bytes32"  [arg-type]
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
         if block is not None:
             if not request.include_transaction_block and block.transactions_generator is not None:
                 block = dataclasses.replace(block, transactions_generator=None)
@@ -335,8 +340,11 @@ class FullNodeAPI:
         if not request.include_transaction_block:
             blocks: List[FullBlock] = []
             for i in range(request.start_height, request.end_height + 1):
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
+                #       expected "bytes32"  [arg-type]
                 block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-                    self.full_node.blockchain.height_to_hash(uint32(i))
+                    self.full_node.blockchain.height_to_hash(uint32(i))  # type: ignore[arg-type]
                 )
                 if block is None:
                     reject = RejectBlocks(request.start_height, request.end_height)
@@ -351,8 +359,11 @@ class FullNodeAPI:
         else:
             blocks_bytes: List[bytes] = []
             for i in range(request.start_height, request.end_height + 1):
+                # TODO: address hint error and remove ignore
+                #       error: Argument 1 to "get_full_block_bytes" of "BlockStore" has incompatible type
+                #       "Optional[bytes32]"; expected "bytes32"  [arg-type]
                 block_bytes: Optional[bytes] = await self.full_node.block_store.get_full_block_bytes(
-                    self.full_node.blockchain.height_to_hash(uint32(i))
+                    self.full_node.blockchain.height_to_hash(uint32(i))  # type: ignore[arg-type]
                 )
                 if block_bytes is None:
                     reject = RejectBlocks(request.start_height, request.end_height)
@@ -887,6 +898,9 @@ class FullNodeAPI:
                     timestamp = uint64(int(curr.timestamp + 1))
 
             self.log.info("Starting to make the unfinished block")
+            # TODO: address hint error and remove ignore
+            #       error: Argument 16 to "create_unfinished_block" has incompatible type "bytes"; expected "bytes32"
+            #       [arg-type]
             unfinished_block: UnfinishedBlock = create_unfinished_block(
                 self.full_node.constants,
                 total_iters_pos_slot,
@@ -903,7 +917,7 @@ class FullNodeAPI:
                 sp_vdfs,
                 timestamp,
                 self.full_node.blockchain,
-                b"",
+                b"",  # type: ignore[arg-type]
                 block_generator,
                 aggregate_signature,
                 additions,
@@ -922,17 +936,23 @@ class FullNodeAPI:
             if unfinished_block.is_transaction_block():
                 foliage_transaction_block_hash = unfinished_block.foliage.foliage_transaction_block_hash
             else:
-                foliage_transaction_block_hash = bytes([0] * 32)
+                foliage_transaction_block_hash = bytes32([0] * 32)
 
+            # TODO: address hint error and remove ignore
+            #       error: Argument 3 to "RequestSignedValues" has incompatible type "Optional[bytes32]"; expected
+            #       "bytes32"  [arg-type]
             message = farmer_protocol.RequestSignedValues(
                 quality_string,
                 foliage_sb_data_hash,
-                foliage_transaction_block_hash,
+                foliage_transaction_block_hash,  # type: ignore[arg-type]
             )
             await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
 
             # Adds backup in case the first one fails
             if unfinished_block.is_transaction_block() and unfinished_block.transactions_generator is not None:
+                # TODO: address hint error and remove ignore
+                #       error: Argument 16 to "create_unfinished_block" has incompatible type "bytes"; expected
+                #       "bytes32"  [arg-type]
                 unfinished_block_backup = create_unfinished_block(
                     self.full_node.constants,
                     total_iters_pos_slot,
@@ -949,7 +969,7 @@ class FullNodeAPI:
                     sp_vdfs,
                     timestamp,
                     self.full_node.blockchain,
-                    b"",
+                    b"",  # type: ignore[arg-type]
                     None,
                     G2Element(),
                     None,
@@ -1019,10 +1039,13 @@ class FullNodeAPI:
                 self.full_node.full_node_store.add_candidate_block(
                     farmer_request.quality_string, height, unfinished_block, False
                 )
+                # TODO: address hint error and remove ignore
+                #       error: Argument 3 to "RequestSignedValues" has incompatible type "Optional[bytes32]"; expected
+                #       "bytes32"  [arg-type]
                 message = farmer_protocol.RequestSignedValues(
                     farmer_request.quality_string,
                     unfinished_block.foliage.foliage_block_data.get_hash(),
-                    unfinished_block.foliage.foliage_transaction_block_hash,
+                    unfinished_block.foliage.foliage_transaction_block_hash,  # type: ignore[arg-type]
                 )
                 await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
         return None
@@ -1101,7 +1124,10 @@ class FullNodeAPI:
 
     @api_request
     async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Optional[Message]:
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
+        #       expected "bytes32"  [arg-type]
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)  # type: ignore[arg-type]  # noqa: E501
 
         # We lock so that the coin store does not get modified
         if (
@@ -1109,7 +1135,10 @@ class FullNodeAPI:
             or block.is_transaction_block() is False
             or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
         ):
-            reject = wallet_protocol.RejectAdditionsRequest(request.height, request.header_hash)
+            # TODO: address hint error and remove ignore
+            #       error: Argument 2 to "RejectAdditionsRequest" has incompatible type "Optional[bytes32]"; expected
+            #       "bytes32"  [arg-type]
+            reject = wallet_protocol.RejectAdditionsRequest(request.height, request.header_hash)  # type: ignore[arg-type]  # noqa: E501
 
             msg = make_msg(ProtocolMessageTypes.reject_additions_request, reject)
             return msg
@@ -1272,7 +1301,10 @@ class FullNodeAPI:
             return reject_msg
 
         header_hash = self.full_node.blockchain.height_to_hash(height)
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
+        #       expected "bytes32"  [arg-type]
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
 
         if block is None or block.transactions_generator is None:
             return reject_msg
@@ -1307,7 +1339,10 @@ class FullNodeAPI:
                 return msg
             header_hashes.append(self.full_node.blockchain.height_to_hash(uint32(i)))
 
-        blocks: List[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(header_hashes)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "get_blocks_by_hash" of "BlockStore" has incompatible type
+        #       "List[Optional[bytes32]]"; expected "List[bytes32]"  [arg-type]
+        blocks: List[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(header_hashes)  # type: ignore[arg-type]  # noqa: E501
         header_blocks = []
         for block in blocks:
             added_coins_records = await self.full_node.coin_store.get_coins_added_at_height(block.height)
@@ -1385,6 +1420,7 @@ class FullNodeAPI:
 
         hint_coin_ids = []
         # Add peer to the "Subscribed" dictionary
+        max_items = self.full_node.config.get("max_subscribe_items", 200000)
         for puzzle_hash in request.puzzle_hashes:
             ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash)
             hint_coin_ids.extend(ph_hint_coins)
@@ -1392,7 +1428,7 @@ class FullNodeAPI:
                 self.full_node.ph_subscriptions[puzzle_hash] = set()
             if (
                 peer.peer_node_id not in self.full_node.ph_subscriptions[puzzle_hash]
-                and self.full_node.peer_sub_counter[peer.peer_node_id] < 100000
+                and self.full_node.peer_sub_counter[peer.peer_node_id] < max_items
             ):
                 self.full_node.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
                 self.full_node.peer_puzzle_hash[peer.peer_node_id].add(puzzle_hash)
@@ -1400,12 +1436,12 @@ class FullNodeAPI:
 
         # Send all coins with requested puzzle hash that have been created after the specified height
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
-            include_spent_coins=True, puzzle_hashes=request.puzzle_hashes, start_height=request.min_height
+            include_spent_coins=True, puzzle_hashes=request.puzzle_hashes, min_height=request.min_height
         )
 
         if len(hint_coin_ids) > 0:
-            hint_states = await self.full_node.coin_store.get_coin_state_by_ids(
-                include_spent_coins=True, coin_ids=hint_coin_ids, start_height=request.min_height
+            hint_states = await self.full_node.coin_store.get_coin_states_by_ids(
+                include_spent_coins=True, coin_ids=hint_coin_ids, min_height=request.min_height
             )
             states.extend(hint_states)
 
@@ -1423,20 +1459,20 @@ class FullNodeAPI:
 
         if peer.peer_node_id not in self.full_node.peer_sub_counter:
             self.full_node.peer_sub_counter[peer.peer_node_id] = 0
-
+        max_items = self.full_node.config.get("max_subscribe_items", 200000)
         for coin_id in request.coin_ids:
             if coin_id not in self.full_node.coin_subscriptions:
                 self.full_node.coin_subscriptions[coin_id] = set()
             if (
                 peer.peer_node_id not in self.full_node.coin_subscriptions[coin_id]
-                and self.full_node.peer_sub_counter[peer.peer_node_id] < 100000
+                and self.full_node.peer_sub_counter[peer.peer_node_id] < max_items
             ):
                 self.full_node.coin_subscriptions[coin_id].add(peer.peer_node_id)
                 self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
                 self.full_node.peer_sub_counter[peer.peer_node_id] += 1
 
-        states: List[CoinState] = await self.full_node.coin_store.get_coin_state_by_ids(
-            include_spent_coins=True, coin_ids=request.coin_ids, start_height=request.min_height
+        states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
+            include_spent_coins=True, coin_ids=request.coin_ids, min_height=request.min_height
         )
 
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)

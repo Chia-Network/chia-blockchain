@@ -8,7 +8,7 @@ from typing import Optional
 
 from chia.cmds.passphrase_funcs import get_current_passphrase
 from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
-from chia.util.keychain import KeyringMaxUnlockAttempts
+from chia.util.keychain import Keychain, KeyringMaxUnlockAttempts
 from chia.util.service_groups import services_for_groups
 
 
@@ -35,7 +35,9 @@ async def create_start_daemon_connection(root_path: Path) -> Optional[DaemonProx
     if connection:
         passphrase = None
         if await connection.is_keyring_locked():
-            passphrase = get_current_passphrase()
+            passphrase = Keychain.get_cached_master_passphrase()
+            if not Keychain.master_passphrase_is_valid(passphrase):
+                passphrase = get_current_passphrase()
 
         if passphrase:
             print("Unlocking daemon keyring")

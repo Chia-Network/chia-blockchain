@@ -97,13 +97,17 @@ class LastState:
                 self.passed_ses_height_but_not_yet_included = False
             else:
                 self.infused_ses = False
-                self.passed_ses_height_but_not_yet_included = self.passed_ses_height_but_not_yet_included
+                # Since we have a new sub slot which is not an end of subepoch,
+                # we will use the last value that we saw for
+                # passed_ses_height_but_not_yet_included
             self.last_challenge_sb_or_eos_total_iters = self.total_iters
         else:
-            self.passed_ses_height_but_not_yet_included = self.passed_ses_height_but_not_yet_included
-            self.new_epoch = False
+            assert False
 
-        self.reward_challenge_cache.append((self.get_challenge(Chain.REWARD_CHAIN), self.total_iters))
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "append" of "list" has incompatible type "Tuple[Optional[bytes32], uint128]";
+        #       expected "Tuple[bytes32, uint128]"  [arg-type]
+        self.reward_challenge_cache.append((self.get_challenge(Chain.REWARD_CHAIN), self.total_iters))  # type: ignore[arg-type]  # noqa: E501
         log.info(f"Updated timelord peak to {self.get_challenge(Chain.REWARD_CHAIN)}, total iters: {self.total_iters}")
         while len(self.reward_challenge_cache) > 2 * self.constants.MAX_SUB_SLOT_BLOCKS:
             self.reward_challenge_cache.pop(0)

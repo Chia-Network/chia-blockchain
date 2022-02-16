@@ -45,6 +45,7 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
     supported: bool = is_madmax_supported()
 
     if get_madmax_executable_path_for_ksize(plotters_root_path).exists():
+        version = None
         try:
             proc = run_command(
                 [os.fspath(get_madmax_executable_path_for_ksize(plotters_root_path)), "--version"],
@@ -54,7 +55,8 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
             )
             version = proc.stdout.strip()
         except Exception as e:
-            print(f"Failed to determine madmax version: {e}")
+            tb = traceback.format_exc()
+            log.error(f"Failed to determine madmax version: {e} {tb}")
 
         if version is not None:
             installed = True
@@ -199,8 +201,9 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
     call_args.append("-t")
     # s if s[-1] == os.path.sep else s + os.path.sep
     call_args.append(dir_with_trailing_slash(args.tmpdir))
-    call_args.append("-2")
-    call_args.append(dir_with_trailing_slash(args.tmpdir2))
+    if len(args.tmpdir2) > 0:
+        call_args.append("-2")
+        call_args.append(dir_with_trailing_slash(args.tmpdir2))
     call_args.append("-d")
     call_args.append(dir_with_trailing_slash(args.finaldir))
     if plot_keys.pool_contract_address is not None:
@@ -214,8 +217,10 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
     call_args.append(str(args.buckets))
     call_args.append("-v")
     call_args.append(str(args.buckets3))
-    call_args.append("-w")
-    call_args.append(str(int(args.waitforcopy)))
+    if args.waitforcopy:
+        call_args.append("-w")
+    if args.tmptoggle:
+        call_args.append("-G")
     call_args.append("-K")
     call_args.append(str(args.rmulti2))
     if args.size != 32:

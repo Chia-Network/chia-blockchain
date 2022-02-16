@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import os
 import logging
 import logging.config
@@ -79,6 +80,10 @@ class Service:
         chia_ca_crt, chia_ca_key = chia_ssl_ca_paths(root_path, self.config)
         inbound_rlp = self.config.get("inbound_rate_limit_percent")
         outbound_rlp = self.config.get("outbound_rate_limit_percent")
+        if NodeType == NodeType.WALLET:
+            inbound_rlp = service_config.get("inbound_rate_limit_percent", inbound_rlp)
+            outbound_rlp = service_config.get("outbound_rate_limit_percent", 60)
+
         assert inbound_rlp and outbound_rlp
         self._server = ChiaServer(
             advertised_port,
@@ -133,6 +138,7 @@ class Service:
         self._enable_signals()
 
         await self._node._start(**kwargs)
+        self._node._shut_down = False
 
         for port in self._upnp_ports:
             if self.upnp is None:
@@ -143,7 +149,8 @@ class Service:
         await self._server.start_server(self._on_connect_callback)
 
         self._reconnect_tasks = [
-            start_reconnect_task(self._server, _, self._log, self._auth_connect_peers) for _ in self._connect_peers
+            start_reconnect_task(self._server, _, self._log, self._auth_connect_peers, self.config.get("prefer_ipv6"))
+            for _ in self._connect_peers
         ]
         self._log.info(f"Started {self._service_name} service on network_id: {self._network_id}")
 
@@ -175,13 +182,20 @@ class Service:
 
         global main_pid
         main_pid = os.getpid()
-        signal.signal(signal.SIGINT, self._accept_signal)
-        signal.signal(signal.SIGTERM, self._accept_signal)
+        loop = asyncio.get_running_loop()
+        loop.add_signal_handler(
+            signal.SIGINT,
+            functools.partial(self._accept_signal, signal_number=signal.SIGINT),
+        )
+        loop.add_signal_handler(
+            signal.SIGTERM,
+            functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
+        )
         if platform == "win32" or platform == "cygwin":
             # pylint: disable=E1101
             signal.signal(signal.SIGBREAK, self._accept_signal)  # type: ignore
 
-    def _accept_signal(self, signal_number: int, stack_frame):
+    def _accept_signal(self, signal_number: int, stack_frame=None):
         self._log.info(f"got signal {signal_number}")
 
         # we only handle signals in the main process. In the ProcessPoolExecutor
@@ -241,6 +255,8 @@ class Service:
             # this is a blocking call, waiting for the UPnP thread to exit
             self.upnp.shutdown()
 
+        self._did_start = False
+        self._is_stopping.clear()
         self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
 
 

@@ -86,7 +86,6 @@ class SpendSim:
             coin,
             uint32(self.block_height + 1),
             uint32(0),
-            False,
             coinbase,
             self.timestamp,
         )
@@ -109,7 +108,7 @@ class SpendSim:
             return None
         return simple_solution_generator(bundle)
 
-    async def farm_block(self, puzzle_hash: bytes32 = (b"0" * 32)):
+    async def farm_block(self, puzzle_hash: bytes32 = bytes32(b"0" * 32)):
         # Fees get calculated
         fees = uint64(0)
         if self.mempool_manager.mempool.spends:
@@ -217,6 +216,20 @@ class SimClient:
 
     async def get_coin_record_by_name(self, name: bytes32) -> CoinRecord:
         return await self.service.mempool_manager.coin_store.get_coin_record(name)
+
+    async def get_coin_records_by_parent_ids(
+        self,
+        parent_ids: List[bytes32],
+        start_height: Optional[int] = None,
+        end_height: Optional[int] = None,
+        include_spent_coins: bool = False,
+    ) -> List[CoinRecord]:
+        kwargs: Dict[str, Any] = {"include_spent_coins": include_spent_coins, "parent_ids": parent_ids}
+        if start_height is not None:
+            kwargs["start_height"] = start_height
+        if end_height is not None:
+            kwargs["end_height"] = end_height
+        return await self.service.mempool_manager.coin_store.get_coin_records_by_parent_ids(**kwargs)
 
     async def get_coin_records_by_puzzle_hash(
         self,
