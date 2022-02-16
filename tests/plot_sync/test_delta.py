@@ -1,4 +1,5 @@
 import logging
+from typing import List
 
 import pytest
 from blspy import G1Element
@@ -47,55 +48,43 @@ def test_list_delta(delta: DeltaType) -> None:
     assert delta.empty()
 
 
-def test_path_list_delta_from_lists() -> None:
-    delta: PathListDelta
-    assert PathListDelta.from_lists([], []).empty()
-    delta = PathListDelta.from_lists(["1"], ["0"])
-    assert delta.additions == ["0"]
-    assert delta.removals == ["1"]
-    delta = PathListDelta.from_lists(["1", "2", "3"], ["1", "2", "3"])
-    assert delta.additions == []
-    assert delta.removals == []
-    delta = PathListDelta.from_lists(["1", "2"], ["1", "2", "3"])
-    assert delta.additions == ["3"]
-    assert delta.removals == []
-    delta = PathListDelta.from_lists(["1"], ["1", "2", "3"])
-    assert delta.additions == ["2", "3"]
-    assert delta.removals == []
-    delta = PathListDelta.from_lists([], ["1", "2", "3"])
-    assert delta.additions == ["1", "2", "3"]
-    assert delta.removals == []
-    delta = PathListDelta.from_lists(["-1"], ["1", "2", "3"])
-    assert delta.additions == ["1", "2", "3"]
-    assert delta.removals == ["-1"]
-    delta = PathListDelta.from_lists(["-1", "1"], ["2", "3"])
-    assert delta.additions == ["2", "3"]
-    assert delta.removals == ["-1", "1"]
-    delta = PathListDelta.from_lists(["-1", "1", "2"], ["2", "3"])
-    assert delta.additions == ["3"]
-    assert delta.removals == ["-1", "1"]
+@pytest.mark.parametrize(
+    ["old", "new", "result"],
+    [
+        [[], [], PathListDelta()],
+        [["1"], ["0"], PathListDelta(["0"], ["1"])],
+        [["1", "2", "3"], ["1", "2", "3"], PathListDelta([], [])],
+        [["2", "1", "3"], ["2", "3", "1"], PathListDelta([], [])],
+        [["2"], ["2", "3", "1"], PathListDelta(["3", "1"], [])],
+        [["2"], ["1", "3"], PathListDelta(["1", "3"], ["2"])],
+        [["1"], ["1", "2", "3"], PathListDelta(["2", "3"], [])],
+        [[], ["1", "2", "3"], PathListDelta(["1", "2", "3"], [])],
+        [["-1"], ["1", "2", "3"], PathListDelta(["1", "2", "3"], ["-1"])],
+        [["-1", "1"], ["2", "3"], PathListDelta(["2", "3"], ["-1", "1"])],
+        [["-1", "1", "2"], ["2", "3"], PathListDelta(["3"], ["-1", "1"])],
+        [["-1", "2", "3"], ["2", "3"], PathListDelta([], ["-1"])],
+        [["-1", "2", "3", "-2"], ["2", "3"], PathListDelta([], ["-1", "-2"])],
+        [["-2", "2", "3", "-1"], ["2", "3"], PathListDelta([], ["-2", "-1"])],
+    ],
+)
+def test_path_list_delta_from_lists(old: List[str], new: List[str], result: PathListDelta) -> None:
+    assert PathListDelta.from_lists(old, new) == result
 
 
-def test_delta() -> None:
+def test_delta_empty() -> None:
     delta: Delta = Delta()
+    all_deltas: List[DeltaType] = [delta.valid, delta.invalid, delta.keys_missing, delta.duplicates]
     assert delta.empty()
-    for d in [delta.valid, delta.invalid, delta.keys_missing]:
-        if type(d) == PlotListDelta:
-            d.additions["0"] = dummy_plot("0")
-        elif type(d) == PathListDelta:
-            d.additions.append("0")
-        else:
-            assert False, "Invalid delta type"
+    for d1 in all_deltas:
+        delta.valid.additions["0"] = dummy_plot("0")
+        delta.invalid.additions.append("0")
+        delta.keys_missing.additions.append("0")
+        delta.duplicates.additions.append("0")
         assert not delta.empty()
-        d.clear()
+        for d2 in all_deltas:
+            if d2 is not d1:
+                d2.clear()
+            assert not delta.empty()
+        assert not delta.empty()
+        d1.clear()
         assert delta.empty()
-    delta.valid.additions["0"] = dummy_plot("0")
-    delta.invalid.additions.append("0")
-    delta.keys_missing.additions.append("0")
-    assert not delta.empty()
-    delta.valid.clear()
-    assert not delta.empty()
-    delta.invalid.clear()
-    assert not delta.empty()
-    delta.keys_missing.clear()
-    assert delta.empty()
