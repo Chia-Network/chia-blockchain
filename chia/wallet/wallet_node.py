@@ -610,7 +610,6 @@ class WalletNode:
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
-                    nonlocal num_concurrent_tasks
                     assert self.wallet_state_manager is not None
                     if header_hash is not None:
                         assert height is not None
@@ -633,6 +632,7 @@ class WalletNode:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while adding state: {e} {tb}")
             finally:
+                nonlocal num_concurrent_tasks
                 num_concurrent_tasks -= 1
 
         for idx, potential_state in enumerate(items):
