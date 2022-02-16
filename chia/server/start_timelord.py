@@ -49,7 +49,7 @@ def service_kwargs_for_timelord(
     )
 
     if config.get("start_rpc_server", True):
-        kwargs["rpc_info"] = (TimelordRpcApi, config.get("rpc_port", 8556))
+        kwargs["rpc_info"] = (TimelordRpcApi, config.get("rpc_port", 8557))
 
     return kwargs
 

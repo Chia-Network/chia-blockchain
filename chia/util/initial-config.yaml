@@ -306,7 +306,7 @@ timelord:
   slow_bluebox_process_count: 1
 
   start_rpc_server: True
-  rpc_port: 8556
+  rpc_port: 8557
 
   ssl:
     private_crt:  "config/ssl/timelord/private_timelord.crt"
