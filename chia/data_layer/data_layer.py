@@ -241,8 +241,12 @@ class DataLayer:
             f"Target wallet generation: {singleton_record.generation}."
         )
 
-        downloaded = await download_data(self.data_store, subscription, singleton_record.root)
+        try:
+            downloaded = await download_data(self.data_store, subscription, singleton_record.root)
+        except Exception:
+            downloaded = False
         if not downloaded:
+            await self.data_store.rollback_to_generation(tree_id, (0 if old_root is None else old_root.generation))
             raise RuntimeError("Could not download the data.")
         self.log.info(f"Successfully downloaded data for {tree_id}.")
 
@@ -254,6 +258,7 @@ class DataLayer:
                 f"Wallet generation: {to_check[0].generation}"
             )
         else:
+            await self.data_store.rollback_to_generation(tree_id, (0 if old_root is None else old_root.generation))
             raise RuntimeError("Can't find data on chain in our datastore.")
         to_check.pop(0)
         min_generation = (0 if old_root is None else old_root.generation) + 1
@@ -276,6 +281,7 @@ class DataLayer:
             to_check.pop(0)
             is_valid = await self._validate_batch(tree_id, to_check, 0, max_generation)
             if not is_valid:
+                await self.data_store.rollback_to_generation(tree_id, (0 if old_root is None else old_root.generation))
                 raise RuntimeError("Could not validate on-chain data.")
 
         self.log.info(

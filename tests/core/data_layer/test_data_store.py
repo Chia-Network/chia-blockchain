@@ -985,3 +985,16 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
     root_end = await data_store.get_tree_root(tree_id)
     diffs = await data_store.get_kv_diff(tree_id, root_start.node_hash, root_end.node_hash)
     assert diffs == expected_diff
+
+
+@pytest.mark.asyncio
+async def test_rollback_to_generation(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_0123_example(data_store, tree_id)
+    expected_hashes = []
+    roots = await data_store.get_roots_between(tree_id, 1, 5)
+    for generation, root in enumerate(roots):
+        expected_hashes.append((generation + 1, root.node_hash))
+    for generation, expected_hash in reversed(expected_hashes):
+        await data_store.rollback_to_generation(tree_id, generation)
+        root = await data_store.get_tree_root(tree_id)
+        assert root.node_hash == expected_hash
