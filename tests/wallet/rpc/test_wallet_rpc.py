@@ -569,6 +569,11 @@ class TestWalletRpc:
 
             await client.add_key(mnemonic)
 
+            # Test an invalid mnemonic (checksum failure). The raised exception wraps a JSON error (used by the GUI).
+            with pytest.raises(ValueError) as excinfo:
+                await client.add_key(["abandon"] * 24)
+            assert str(excinfo.value) == "{'error': 'Invalid order of mnemonic words', 'success': False}"
+
             pks = await client.get_public_keys()
             assert len(pks) == 2
 
