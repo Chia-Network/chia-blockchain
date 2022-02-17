@@ -5,7 +5,6 @@ import os
 import random
 import shutil
 import ssl
-import sys
 import tempfile
 import time
 from argparse import Namespace
@@ -323,7 +322,7 @@ class BlockTools:
 
         except KeyboardInterrupt:
             shutil.rmtree(self.temp_dir, ignore_errors=True)
-            sys.exit(1)
+            raise
 
     async def refresh_plots(self):
         self.plot_manager.refresh_parameter.batch_size = (

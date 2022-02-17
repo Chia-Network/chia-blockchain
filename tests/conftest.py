@@ -2,7 +2,11 @@ import pytest
 import pytest_asyncio
 import tempfile
 from pathlib import Path
+from typing import Union, Any
 
+from _pytest.runner import CallInfo
+from _pytest.runner import CollectReport
+from _pytest.runner import TestReport
 
 # TODO: tests.setup_nodes (which is also imported by tests.util.blockchain) creates a
 #       global BlockTools at tests.setup_nodes.bt.  This results in an attempt to create
@@ -13,6 +17,16 @@ from pathlib import Path
 #       creation, including the filesystem modification, away from the import but
 #       that seems like a separate step and until then locating the imports in the
 #       fixtures avoids the issue.
+
+
+@pytest.hookimpl
+def pytest_exception_interact(
+    node: Union[pytest.Item, pytest.Collector],
+    call: CallInfo[Any],
+    report: Union[CollectReport, TestReport],
+) -> None:
+    if call.excinfo is not None and isinstance(call.excinfo.value, KeyboardInterrupt):
+        pytest.exit("Cancelled by KeyboardInterrupt")
 
 
 @pytest_asyncio.fixture(scope="function", params=[1, 2])
