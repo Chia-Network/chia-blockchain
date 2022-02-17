@@ -1,8 +1,10 @@
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.util.ints import uint64, uint32
+from chia.util.ints import uint64, uint32, uint8
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.util.db_wrapper import DBWrapper
 from typing import Tuple
 from pathlib import Path
@@ -44,6 +46,24 @@ def rand_g1() -> G1Element:
 def rand_g2() -> G2Element:
     sk = AugSchemeMPL.key_gen(rand_bytes(96))
     return AugSchemeMPL.sign(sk, b"foobar")
+
+
+def rand_class_group_element() -> ClassgroupElement:
+    # TODO: address hint errors and remove ignores
+    #       error: Argument 1 to "ClassgroupElement" has incompatible type "bytes"; expected "bytes100"  [arg-type]
+    return ClassgroupElement(rand_bytes(100))  # type: ignore[arg-type]
+
+
+def rand_vdf() -> VDFInfo:
+    return VDFInfo(rand_hash(), uint64(random.randint(100000, 1000000000)), rand_class_group_element())
+
+
+def rand_vdf_proof() -> VDFProof:
+    return VDFProof(
+        uint8(1),  # witness_type
+        rand_hash(),  # witness
+        bool(random.randint(0, 1)),  # normalized_to_identity
+    )
 
 
 async def setup_db(name: str, db_version: int) -> DBWrapper:

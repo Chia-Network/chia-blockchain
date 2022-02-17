@@ -3,6 +3,7 @@ import logging
 from typing import List
 
 import pytest
+import pytest_asyncio
 from blspy import AugSchemeMPL
 
 from chia.consensus.pot_iterations import is_overflow_block
@@ -27,7 +28,7 @@ from tests.util.rpc import validate_get_routes
 
 
 class TestRpc:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_nodes(self):
         async for _ in setup_simulators_and_wallets(2, 0, {}):
             yield _

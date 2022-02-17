@@ -3,6 +3,7 @@ import asyncio
 from typing import List, Optional
 
 import pytest
+import pytest_asyncio
 from clvm.casts import int_to_bytes
 from colorlog import getLogger
 
@@ -46,12 +47,12 @@ def event_loop():
 
 
 class TestSimpleSyncProtocol:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node_simulator(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_two_node_simulator(self):
         async for _ in setup_simulators_and_wallets(2, 1, {}):
             yield _

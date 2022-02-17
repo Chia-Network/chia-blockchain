@@ -1,1 +1,1 @@
-job_timeout = 45
+job_timeout = 60

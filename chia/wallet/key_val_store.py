@@ -3,7 +3,6 @@ from typing import Any
 import aiosqlite
 
 from chia.util.db_wrapper import DBWrapper
-from chia.util.streamable import Streamable
 
 
 class KeyValStore:
@@ -47,9 +46,9 @@ class KeyValStore:
 
         return object_type.from_bytes(row[1])
 
-    async def set_object(self, key: str, obj: Streamable):
+    async def set_object(self, key: str, obj: Any):
         """
-        Adds object to key val store
+        Adds object to key val store. Obj MUST support __bytes__ and bytes() methods.
         """
         async with self.db_wrapper.lock:
             cursor = await self.db_connection.execute(

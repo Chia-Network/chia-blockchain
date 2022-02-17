@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 
 from typing import List, Tuple, Optional, Dict
 from blspy import PrivateKey, AugSchemeMPL, G2Element
@@ -38,7 +39,7 @@ NO_LINEAGE_PROOF = LineageProof()
 class TestCATLifecycle:
     cost: Dict[str, int] = {}
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def setup_sim(self):
         sim = await SpendSim.create()
         sim_client = SimClient(sim)
