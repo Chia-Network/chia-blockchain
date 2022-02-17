@@ -485,6 +485,7 @@ class TestWalletSimulator:
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
 
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
@@ -504,6 +505,7 @@ class TestWalletSimulator:
         )
         for i in range(0, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+            await asyncio.sleep(0.2)
 
         funds = sum(
             [
