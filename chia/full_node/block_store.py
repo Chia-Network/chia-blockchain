@@ -52,6 +52,8 @@ class BlockStore:
             # peak. The "key" field is there to make update statements simple
             await self.db.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
 
+            # If any of these indices are altered, they should also be altered
+            # in the chia/cmds/db_upgrade.py file
             await self.db.execute("CREATE INDEX IF NOT EXISTS height on full_blocks(height)")
 
             # Sub epoch segments for weight proofs
@@ -61,6 +63,8 @@ class BlockStore:
                 "challenge_segments blob)"
             )
 
+            # If any of these indices are altered, they should also be altered
+            # in the chia/cmds/db_upgrade.py file
             await self.db.execute(
                 "CREATE INDEX IF NOT EXISTS is_fully_compactified ON"
                 " full_blocks(is_fully_compactified, in_main_chain) WHERE in_main_chain=1"
