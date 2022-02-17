@@ -30,7 +30,7 @@ class CATLineageStore:
         self.db_wrapper = db_wrapper
         self.db_connection = self.db_wrapper.db
         await self.db_connection.execute(
-            (f"CREATE TABLE IF NOT EXISTS {self.table_name}(" " coin_id text PRIMARY_KEY," " lineage blob)")
+            (f"CREATE TABLE IF NOT EXISTS {self.table_name}(" " coin_id text PRIMARY KEY," " lineage blob)")
         )
 
         await self.db_connection.commit()
