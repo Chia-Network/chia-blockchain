@@ -296,44 +296,26 @@ class TestDaemon:
                 assert keychain.get_private_key_by_fingerprint(test_fingerprint) is None
 
                 await ws.send_str(
-                    create_payload(
-                        "add_private_key",
-                        {"mnemonic": test_mnemonic, "passphrase": ""},
-                        "test",
-                        "daemon")
+                    create_payload("add_private_key", {"mnemonic": test_mnemonic, "passphrase": ""}, "test", "daemon")
                 )
                 # Expect: key was added successfully
                 await check_success_case(await ws.receive())
 
                 # When: missing mnemonic
-                await ws.send_str(
-                    create_payload(
-                        "add_private_key",
-                        {"passphrase": ""},
-                        "test",
-                        "daemon")
-                )
+                await ws.send_str(create_payload("add_private_key", {"passphrase": ""}, "test", "daemon"))
                 # Expect: Failure due to missing mnemonic
                 await check_missing_param_case(await ws.receive())
 
                 # When: missing passphrase
-                await ws.send_str(
-                    create_payload(
-                        "add_private_key",
-                        {"mnemonic": test_mnemonic},
-                        "test",
-                        "daemon")
-                )
+                await ws.send_str(create_payload("add_private_key", {"mnemonic": test_mnemonic}, "test", "daemon"))
                 # Expect: Failure due to missing passphrase
                 await check_missing_param_case(await ws.receive())
 
                 # When: using a mmnemonic with an incorrect word (typo)
                 await ws.send_str(
                     create_payload(
-                        "add_private_key",
-                        {"mnemonic": mnemonic_with_typo, "passphrase": ""},
-                        "test",
-                        "daemon")
+                        "add_private_key", {"mnemonic": mnemonic_with_typo, "passphrase": ""}, "test", "daemon"
+                    )
                 )
                 # Expect: Failure due to misspelled mnemonic
                 await check_mnemonic_with_typo_case(await ws.receive())
@@ -341,10 +323,8 @@ class TestDaemon:
                 # When: using a mnemonic with an incorrect word count
                 await ws.send_str(
                     create_payload(
-                        "add_private_key",
-                        {"mnemonic": mnemonic_with_missing_word, "passphrase": ""},
-                        "test",
-                        "daemon")
+                        "add_private_key", {"mnemonic": mnemonic_with_missing_word, "passphrase": ""}, "test", "daemon"
+                    )
                 )
                 # Expect: Failure due to invalid mnemonic
                 await check_invalid_mnemonic_length_case(await ws.receive())
@@ -352,10 +332,8 @@ class TestDaemon:
                 # When: using using an incorrect mnemnonic
                 await ws.send_str(
                     create_payload(
-                        "add_private_key",
-                        {"mnemonic": " ".join(["abandon"] * 24), "passphrase": ""},
-                        "test",
-                        "daemon")
+                        "add_private_key", {"mnemonic": " ".join(["abandon"] * 24), "passphrase": ""}, "test", "daemon"
+                    )
                 )
                 # Expect: Failure due to checksum error
                 await check_invalid_mnemonic_case(await ws.receive())
