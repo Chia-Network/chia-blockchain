@@ -1,8 +1,9 @@
-from typing import Optional, Callable
+from typing import Callable, Optional
+
+from blspy import G1Element, G2Element
+from clvm_rs import serialized_length
 
 from chia.types.blockchain_format.program import SerializedProgram
-from clvm_rs import serialized_length
-from blspy import G1Element, G2Element
 
 
 def skip_list(buf: memoryview, skip_item: Callable[[memoryview], memoryview]) -> memoryview:
