@@ -280,7 +280,7 @@ async def environment(tmp_path: Path, farmer_multi_harvester: Tuple[List[Service
 
     # Invalidate the plots in `dir_invalid`
     for path in dir_invalid.path_list():
-        with open(path, "r+b") as file:
+        with open(path, "wb") as file:
             file.write(bytes(100))
 
     harvester_services: List[Service]
